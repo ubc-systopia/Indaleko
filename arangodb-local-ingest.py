@@ -6,6 +6,73 @@ from arango import ArangoClient
 import argparse
 
 
+class IndalekoDB:
+
+    def __init__(self, hostname='localhost', port=8529, username='root', password = None, database='Indaleko'):
+        self.hostname = hostname
+        self.port = port
+        self.username = username
+        self.password = None
+        self.database = database
+        self.client = None
+        self.db = None
+
+    def set_hostname(self, hostname : str):
+        self.hostname = hostname
+        return self
+
+    def set_port(self, port : int):
+        assert port > 1023 and port < 65536, 'Invalid port number specified'
+        self.port = port
+        return self
+
+    def set_username(self, username: str):
+        self.username = username
+        return self
+
+    def set_password(self, password: str):
+        self.password = password
+        return self
+
+    def set_database(self, database: str):
+        self.database = database
+        return self
+
+    def connect(self):
+        if self.client is None:
+            url = 'http://{}:{}'.format(self.hostname, self.port)
+            self.client = ArangoClient(hosts=url)
+            assert self.client is not None
+        if self.db is None:
+            self.db = self.client.db(self.database, self.username, self.password, auth_method='basic')
+
+class IndalekoCollection:
+
+    def __init__(self, db, name):
+        self.db = db
+        self.name = name
+        self.collection = db.collection(self.name)
+
+
+    def create_index(self, fields: list, unique: bool):
+        self.collection.create_index(fields, unique)
+        return self
+
+
+class IndaelkoSchema:
+
+    def __init__(self):
+        pass
+
+class IndalekoIndex:
+
+    def __init__(self, collection: IndalekoCollection, fields: list, unique=False):
+        self.collection = collection
+        self.fields = fields
+        self.unique = unique
+        self.index = self.collection.create_index(fields=self.fields, unique=self.unique)
+
+
 
 class ContainerRelationship:
 
@@ -230,8 +297,14 @@ def setup_collections(db, collection_names, reset=False):
         if not db.has_collection(name):
             if edge: print('Creating edge collection ', name)
             db.create_collection(name, edge=edge)
-
-
+    # this is down and dirty, should be parameterized and cleaned up.
+    data_collection = db.collection('DataObjects')
+    data_collection.add_persistent_index(fields=['url'], unique=True)
+    contains_collection = db.collection('contains')
+    contains_collection.add_persistent_index(fields=['uuid1','uuid2'], unique=True)
+    contained_by_collection = db.collection('contained_by')
+    contained_by_collection.add_persistent_index(fields=['uuid1'], unique=False)
+    contained_by_collection.add_persistent_index(fields=['uuid2'], unique=False)
 
 def main():
     parser = argparse.ArgumentParser()
