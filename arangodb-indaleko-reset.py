@@ -4,7 +4,7 @@ def reset_collections(db_name, collection_names):
     # ArangoDB connection settings
     arango_url = "http://localhost:8529"
     arango_username = "tony"
-    arango_password = None
+    arango_password = 'Kwishut$23!'
     arango_db_name = db_name
 
     # Initialize the ArangoDB client
