@@ -61,14 +61,16 @@ class FileSystemObject:
             'modified': self.stat_info.st_mtime,
             'accessed': self.stat_info.st_atime
         }
-        db['DataObjects'].insert(self.to_dict())
+        self.dbinfo = db['DataObjects'].insert(self.to_dict())
         FileSystemObject.ObjectCount += 1
 
 
     def add_contain_relationship(self, db, child_obj):
         assert stat.S_ISDIR(self.stat_info.st_mode), 'Should only add contain relationships from directories'
-        db['contains'].insert(json.dumps({'from': self.uuid, 'to': child_obj.uuid}))
-        db['contained_by'].insert(json.dumps({'from': child_obj.uuid, 'to': self.uuid}))
+        parent_id = self.dbinfo['_id']
+        child_id = child_obj.dbinfo['_id']
+        db['contains'].insert(json.dumps({'_from': parent_id, '_to': child_id, 'uuid1' : self.uuid, 'uuid2' : child_obj.uuid}))
+        db['contained_by'].insert(json.dumps({'_from': child_id, '_to': parent_id, 'uuid1' : child_obj.uuid, 'uuid2' : self.uuid}))
         FileSystemObject.RelationshipCount += 2
 
     def windows_attributes_to_data(self):
@@ -185,9 +187,9 @@ class FileSystemObject:
 
 
 Indaleko_Collections = {
-        'DataObjects': FileSystemObject.DataObjectSchema,
-        'contains' : ContainerRelationship.ContainsRelationshipSchema,
-        'contained_by' : ContainerRelationship.ContainsRelationshipSchema
+        'DataObjects': {'schema' : FileSystemObject.DataObjectSchema, 'edge' : False},
+        'contains' : {'schema' : ContainerRelationship.ContainsRelationshipSchema, 'edge' : True},
+        'contained_by' : {'schema' : ContainerRelationship.ContainsRelationshipSchema, 'edge' : True}
     }
 
 def process_directory(db, path, root_obj=None):
@@ -220,10 +222,14 @@ def process_directory(db, path, root_obj=None):
 def setup_collections(db, collection_names, reset=False):
     # Iterate over the collection names
     for name in collection_names:
+        edge = False
+        if 'edge' in collection_names[name]:
+            edge = collection_names[name]['edge']
         if reset and db.has_collection(name):
             db.delete_collection(name)
         if not db.has_collection(name):
-            db.create_collection(name)
+            if edge: print('Creating edge collection ', name)
+            db.create_collection(name, edge=edge)
 
 
 
