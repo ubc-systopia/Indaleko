@@ -4,6 +4,7 @@ import uuid
 import stat
 from arango import ArangoClient
 import argparse
+import datetime
 
 
 class IndalekoDB:
@@ -46,17 +47,6 @@ class IndalekoDB:
         if self.db is None:
             self.db = self.client.db(self.database, self.username, self.password, auth_method='basic')
 
-class IndalekoCollection:
-
-    def __init__(self, db, name):
-        self.db = db
-        self.name = name
-        self.collection = db.collection(self.name)
-
-
-    def create_index(self, fields: list, unique: bool):
-        self.collection.create_index(fields, unique)
-        return self
 
 
 class IndaelkoSchema:
@@ -65,12 +55,36 @@ class IndaelkoSchema:
         pass
 
 class IndalekoIndex:
-
-    def __init__(self, collection: IndalekoCollection, fields: list, unique=False):
+    def __init__(self, collection: 'IndalekoCollection', index_type: str, fields: list, unique=False):
         self.collection = collection
         self.fields = fields
         self.unique = unique
-        self.index = self.collection.create_index(fields=self.fields, unique=self.unique)
+        self.index_type = index_type
+        assert index_type == 'persistent', 'Only support persistent indices'
+        self.index = self.collection.add_persistent_index(fields=self.fields, unique=self.unique)
+
+    def find_entries(self, **kwargs):
+        return [document for document in self.collection.find(kwargs)]
+
+
+class IndalekoCollection:
+
+    def __init__(self, db, name: str, edge: bool = False, reset: bool = False) -> None:
+        self.db = db
+        self.name = name
+        if reset and db.has_collection(name):
+            db.delete_collection(name)
+        if not db.has_collection(name):
+            db.create_collection(name, edge=edge)
+        self.collection = db.collection(self.name)
+        self.indices = {}
+
+    def create_index(self, name: str, index_type: str, fields: list, unique: bool) -> 'IndalekoCollection':
+        self.indices[name] = IndalekoIndex(self.collection, index_type, fields, unique)
+        return self
+
+    def find_entries(self, **kwargs):
+        return [document for document in self.collection.find(kwargs)]
 
 
 
@@ -124,9 +138,9 @@ class FileSystemObject:
         self.stat_info = os.stat(path)
         self.size = self.stat_info.st_size
         self.timestamps = {
-            'created': self.stat_info.st_ctime,
-            'modified': self.stat_info.st_mtime,
-            'accessed': self.stat_info.st_atime
+            'created': datetime.datetime.fromtimestamp(self.stat_info.st_ctime).isoformat(),
+            'modified': datetime.datetime.fromtimestamp(self.stat_info.st_mtime).isoformat(),
+            'accessed': datetime.datetime.fromtimestamp(self.stat_info.st_atime).isoformat(),
         }
         self.dbinfo = db['DataObjects'].insert(self.to_dict())
         FileSystemObject.ObjectCount += 1
@@ -170,13 +184,15 @@ class FileSystemObject:
         data = {
             'url': self.url,
             'timestamps': {
-                'created': self.stat_info.st_ctime,
-                'modified': self.stat_info.st_mtime,
-                'accessed': self.stat_info.st_atime,
+                'created': datetime.datetime.fromtimestamp(self.stat_info.st_ctime).isoformat(),
+                'modified': datetime.datetime.fromtimestamp(self.stat_info.st_mtime).isoformat(),
+                'accessed': datetime.datetime.fromtimestamp(self.stat_info.st_atime).isoformat(),
             },
             'size': self.size,
             'mode': self.stat_info.st_mode,
-            'posix attributes' : self.posix_attributes_to_data()
+            'posix attributes' : self.posix_attributes_to_data(),
+            'dev' : self.stat_info.st_dev,
+            'inode' : self.stat_info.st_ino
         }
         if hasattr(self.stat_info, 'st_file_attributes'):
             # windows only
@@ -252,18 +268,54 @@ class FileSystemObject:
     '''
 
 
-
 Indaleko_Collections = {
-        'DataObjects': {'schema' : FileSystemObject.DataObjectSchema, 'edge' : False},
-        'contains' : {'schema' : ContainerRelationship.ContainsRelationshipSchema, 'edge' : True},
-        'contained_by' : {'schema' : ContainerRelationship.ContainsRelationshipSchema, 'edge' : True}
+        'DataObjects': {
+            'schema' : FileSystemObject.DataObjectSchema,
+            'edge' : False,
+            'indices' : {
+                'url' : {
+                    'fields' : ['url'],
+                    'unique' : True,
+                    'type' : 'persistent'
+                },
+                'file identity' : {
+                    'fields' : ['dev', 'inode'],
+                    'unique' : True,
+                    'type' : 'persistent'
+                },
+            },
+        },
+        'contains' : {
+            'schema' : ContainerRelationship.ContainsRelationshipSchema,
+            'edge' : True,
+            'indices' : {
+                'container' : {
+                    'fields' : ['uuid1', 'uuid2'],
+                    'unique' : True,
+                    'type' : 'persistent',
+                }
+            }
+        },
+        'contained_by' : {
+            'schema' : ContainerRelationship.ContainsRelationshipSchema,
+            'edge' : True,
+            'indices' : {
+                'contained_by' : {
+                    'fields' : ['uuid1', 'uuid2'],
+                    'unique' : True,
+                    'type' : 'persistent',
+                },
+            },
+        },
     }
 
-def process_directory(db, path, root_obj=None):
+def process_directory(db, path, root_obj=None) -> int:
     LastCount = 0
+    count = 0
     if None is root_obj:
         root_obj = FileSystemObject(db, path, True)
     for root, dirs, files in os.walk(path):
+        count = FileSystemObject.ObjectCount
         if LastCount + 5000 < FileSystemObject.ObjectCount:
             print('Object Count now ', FileSystemObject.ObjectCount)
             LastCount = FileSystemObject.ObjectCount
@@ -283,10 +335,29 @@ def process_directory(db, path, root_obj=None):
                 # transient file
                 continue
             root_obj.add_contain_relationship(db, dir_obj)
+    return count
 
 
+def setup_collections(db, collection_names, reset=False) -> dict:
+    collections = {}
+    for name in collection_names:
+        assert name not in collections, 'Duplicate collection name'
+        edge = False
+        if 'edge' in collection_names[name]:
+            assert type(collection_names[name]['edge']) is bool
+            edge = collection_names[name]['edge']
+        edge = False
+        collections[name] = IndalekoCollection(db, name, edge, reset)
+        # TODO: add indices
+        if 'indices' in collection_names[name]:
+            for index in collection_names[name]['indices']:
+                print('index name is {}'.format(index))
+                e = collection_names[name]['indices'][index]
+                assert e['type'] == 'persistent', 'Only support persistent'
+                collections[name].create_index(index, e['type'], e['fields'], e['unique'])
+    return collections
 
-def setup_collections(db, collection_names, reset=False):
+def old_setup_collections(db, collection_names, reset=False):
     # Iterate over the collection names
     for name in collection_names:
         edge = False
@@ -300,6 +371,7 @@ def setup_collections(db, collection_names, reset=False):
     # this is down and dirty, should be parameterized and cleaned up.
     data_collection = db.collection('DataObjects')
     data_collection.add_persistent_index(fields=['url'], unique=True)
+    data_collection.add_persistent_index(fields=['dev', 'inode'], unique=True) # should trigger an error on collision?
     contains_collection = db.collection('contains')
     contains_collection.add_persistent_index(fields=['uuid1','uuid2'], unique=True)
     contained_by_collection = db.collection('contained_by')
@@ -335,9 +407,13 @@ def main():
 
     setup_collections(db, Indaleko_Collections, args.reset)
 
+    start = datetime.datetime.utcnow()
     # Replace 'volume_path' with the path of the Windows volume you want to scan
-    process_directory(db, args.path)
-
+    count = process_directory(db, args.path)
+    end = datetime.datetime.utcnow()
+    execution_time = end - start
+    if count > 0:
+        print('Added {} in {} time ({} seconds per entry)'.format(count, execution_time, execution_time.total_seconds() / count))
 
 if __name__ == "__main__":
     main()
