@@ -3,6 +3,7 @@ import json
 import uuid
 import stat
 from arango import ArangoClient
+import arango
 import argparse
 import datetime
 
@@ -86,6 +87,8 @@ class IndalekoCollection:
     def find_entries(self, **kwargs):
         return [document for document in self.collection.find(kwargs)]
 
+    def insert(self, document: dict) -> 'IndalekoCollection':
+        return self.collection.insert(document)
 
 
 class ContainerRelationship:
@@ -131,7 +134,7 @@ class FileSystemObject:
         # Define other fields in the schema
     }
 
-    def __init__(self, db, path : str, root=False):
+    def __init__(self, collection: IndalekoCollection, path : str, root=False):
         self.root = root
         self.uuid = str(uuid.uuid4())
         self.url = 'file:///' + path
@@ -142,17 +145,26 @@ class FileSystemObject:
             'modified': datetime.datetime.fromtimestamp(self.stat_info.st_mtime).isoformat(),
             'accessed': datetime.datetime.fromtimestamp(self.stat_info.st_atime).isoformat(),
         }
-        self.dbinfo = db['DataObjects'].insert(self.to_dict())
+        self.collection = collection
+        documents = collection.find_entries(dev=self.stat_info.st_dev,
+                                            inode=self.stat_info.st_ino)
+        '''Note: this is much faster than catching the exception and then doing
+   l     the lookup, at least in the case where there are a lot of collisions.'''
+        if len(documents) > 0:
+            self.dbinfo = documents[0]
+        else:
+            self.dbinfo = collection.insert(self.to_dict())
         FileSystemObject.ObjectCount += 1
 
 
-    def add_contain_relationship(self, db, child_obj):
+    def add_contain_relationship(self, collections: dict, child_obj: 'FileSystemObject') -> 'FileSystemObject':
         assert stat.S_ISDIR(self.stat_info.st_mode), 'Should only add contain relationships from directories'
         parent_id = self.dbinfo['_id']
         child_id = child_obj.dbinfo['_id']
-        db['contains'].insert(json.dumps({'_from': parent_id, '_to': child_id, 'uuid1' : self.uuid, 'uuid2' : child_obj.uuid}))
-        db['contained_by'].insert(json.dumps({'_from': child_id, '_to': parent_id, 'uuid1' : child_obj.uuid, 'uuid2' : self.uuid}))
+        collections['contains'].insert(json.dumps({'_from': parent_id, '_to': child_id, 'uuid1' : self.uuid, 'uuid2' : child_obj.uuid}))
+        collections['contained_by'].insert(json.dumps({'_from': child_id, '_to': parent_id, 'uuid1' : child_obj.uuid, 'uuid2' : self.uuid}))
         FileSystemObject.RelationshipCount += 2
+        return self
 
     def windows_attributes_to_data(self):
         attributes = self.stat_info.st_file_attributes
@@ -309,11 +321,11 @@ Indaleko_Collections = {
         },
     }
 
-def process_directory(db, path, root_obj=None) -> int:
+def process_directory(collections: dict, path: str, root_obj=None) -> int:
     LastCount = 0
     count = 0
     if None is root_obj:
-        root_obj = FileSystemObject(db, path, True)
+        root_obj = FileSystemObject(collections['DataObjects'], path, True)
     for root, dirs, files in os.walk(path):
         count = FileSystemObject.ObjectCount
         if LastCount + 5000 < FileSystemObject.ObjectCount:
@@ -322,19 +334,21 @@ def process_directory(db, path, root_obj=None) -> int:
         for name in files:
             file_path = os.path.join(root, name)
             try:
-                file_obj = FileSystemObject(db, file_path)
+                file_obj = FileSystemObject(
+                    collections['DataObjects'], file_path)
             except FileNotFoundError:
                 # transient file
                 continue
-            root_obj.add_contain_relationship(db, file_obj)
+            root_obj.add_contain_relationship(collections, file_obj)
         for name in dirs:
             dir_path = os.path.join(root, name)
             try:
-                dir_obj = FileSystemObject(db, dir_path)
+                dir_obj = FileSystemObject(
+                    collections['DataObjects'], dir_path)
             except FileNotFoundError:
                 # transient file
                 continue
-            root_obj.add_contain_relationship(db, dir_obj)
+            root_obj.add_contain_relationship(collections, dir_obj)
     return count
 
 
@@ -348,35 +362,12 @@ def setup_collections(db, collection_names, reset=False) -> dict:
             edge = collection_names[name]['edge']
         edge = False
         collections[name] = IndalekoCollection(db, name, edge, reset)
-        # TODO: add indices
         if 'indices' in collection_names[name]:
             for index in collection_names[name]['indices']:
-                print('index name is {}'.format(index))
                 e = collection_names[name]['indices'][index]
                 assert e['type'] == 'persistent', 'Only support persistent'
                 collections[name].create_index(index, e['type'], e['fields'], e['unique'])
     return collections
-
-def old_setup_collections(db, collection_names, reset=False):
-    # Iterate over the collection names
-    for name in collection_names:
-        edge = False
-        if 'edge' in collection_names[name]:
-            edge = collection_names[name]['edge']
-        if reset and db.has_collection(name):
-            db.delete_collection(name)
-        if not db.has_collection(name):
-            if edge: print('Creating edge collection ', name)
-            db.create_collection(name, edge=edge)
-    # this is down and dirty, should be parameterized and cleaned up.
-    data_collection = db.collection('DataObjects')
-    data_collection.add_persistent_index(fields=['url'], unique=True)
-    data_collection.add_persistent_index(fields=['dev', 'inode'], unique=True) # should trigger an error on collision?
-    contains_collection = db.collection('contains')
-    contains_collection.add_persistent_index(fields=['uuid1','uuid2'], unique=True)
-    contained_by_collection = db.collection('contained_by')
-    contained_by_collection.add_persistent_index(fields=['uuid1'], unique=False)
-    contained_by_collection.add_persistent_index(fields=['uuid2'], unique=False)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -405,11 +396,11 @@ def main():
     db = client.db(arango_db_name, username=arango_username,
                 password=arango_password, auth_method='basic')
 
-    setup_collections(db, Indaleko_Collections, args.reset)
+    collections = setup_collections(db, Indaleko_Collections, args.reset)
 
     start = datetime.datetime.utcnow()
     # Replace 'volume_path' with the path of the Windows volume you want to scan
-    count = process_directory(db, args.path)
+    count = process_directory(collections, args.path)
     end = datetime.datetime.utcnow()
     execution_time = end - start
     if count > 0:
