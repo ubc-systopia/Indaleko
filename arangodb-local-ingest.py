@@ -146,14 +146,26 @@ class FileSystemObject:
             'accessed': datetime.datetime.fromtimestamp(self.stat_info.st_atime).isoformat(),
         }
         self.collection = collection
-        documents = collection.find_entries(dev=self.stat_info.st_dev,
-                                            inode=self.stat_info.st_ino)
         '''Note: this is much faster than catching the exception and then doing
-   l     the lookup, at least in the case where there are a lot of collisions.'''
-        if len(documents) > 0:
-            self.dbinfo = documents[0]
-        else:
+        the lookup, at least in the case where there are a lot of collisions.'''
+        #if len(documents) > 0:
+        #    self.dbinfo = documents[0]
+        #else:
+        #    self.dbinfo = collection.insert(self.to_dict())
+        try:
             self.dbinfo = collection.insert(self.to_dict())
+        except arango.exceptions.DocumentInsertError as e:
+            documents = collection.find_entries(dev=self.stat_info.st_dev,
+                                            inode=self.stat_info.st_ino)
+            if len(documents) > 0:
+                self.dbinfo = documents[0]
+            else:
+                print('Exception {} on file {}'.format(e, path))
+                documents = collection.find_entries(url=self.url)
+                if len(documents) > 0:
+                    self.dbinfo = documents[0]
+                else:
+                    raise e
         FileSystemObject.ObjectCount += 1
 
 
@@ -339,6 +351,10 @@ def process_directory(collections: dict, path: str, root_obj=None) -> int:
             except FileNotFoundError:
                 # transient file
                 continue
+            except Exception as e:
+                # not sure what triggers this.
+                print('Processing File {}, exception {}\n**Ignored**'.format(file_path, e))
+                continue
             root_obj.add_contain_relationship(collections, file_obj)
         for name in dirs:
             dir_path = os.path.join(root, name)
@@ -347,6 +363,11 @@ def process_directory(collections: dict, path: str, root_obj=None) -> int:
                     collections['DataObjects'], dir_path)
             except FileNotFoundError:
                 # transient file
+                continue
+            except Exception as e:
+                # not sure what triggers this.
+                print(
+                    'Processing File {}, exception {}\n**Ignored**'.format(file_path, e))
                 continue
             root_obj.add_contain_relationship(collections, dir_obj)
     return count
