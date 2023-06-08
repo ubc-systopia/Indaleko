@@ -240,4 +240,20 @@ Thus, the overhead is _not_ in the enumeration, it is in the processing of the
 file.  I might want to consider adding the os operations (stat) again because
 this will help isolate the _database_ costs against the _OS_ costs.
 
+2023-06-04: Follow-up on the previous suggestion. I modified the
+enumerate-volume.py script to perform an actual stat on each file/directory.  I
+ignore any errors (e.g., transient files) and use the stat data to perform a
+trivial computation.  I then re-ran said script.  As expected, this is much
+slower than just enumerating the shape of the tree.
+
+```
+PS C:\Users\TonyMason\source\repos\arangodb> python .\enumerate-volume.py
+Total files: 2800767
+Total directories: 329120
+Enumerated 3129887 in 0:05:32.352318 time (0.00010618668277800445 seconds per entry)
+```
+So, there is substantial overhead in extracting the metadata, but it is _not_ at
+the same order of magnitude as sending it to the database.  This does suggest I
+may be able to speed this up.
+
 
