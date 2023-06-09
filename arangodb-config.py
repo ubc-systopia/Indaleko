@@ -54,7 +54,7 @@ class ArangoDBConfig:
     def to_dict(self):
         return {
             'config' : self.config,
-            'host' : self.config,
+            'host' : self.host,
             'port' : self.port,
             'user' : self.user,
             'password' : self.password,

@@ -1,33 +1,58 @@
-# Powershell script to collect hardware data
-
-# Fetch CPU information
-$CPU = Get-WmiObject -Class Win32_Processor
-Write-Host "CPU: " $CPU.Name
-Write-Host "Cores: " $CPU.NumberOfCores
-Write-Host "Logical Processors: " $CPU.ThreadCount
-
-# Fetch Memory information
-$RAM = Get-WmiObject -Class Win32_ComputerSystem
-Write-Host "Total Physical Memory (MB): " ($RAM.TotalPhysicalMemory / 1MB)
+# Define an object to store hardware data
+$hardwareData = @{
+    CPU             = @{
+        Name              = (Get-WmiObject -Class Win32_Processor).Name
+        Cores             = (Get-WmiObject -Class Win32_Processor).NumberOfCores
+        LogicalProcessors = (Get-WmiObject -Class Win32_Processor).ThreadCount
+    }
+    RAM             = @{
+        TotalPhysicalMemory = (Get-WmiObject -Class Win32_ComputerSystem).TotalPhysicalMemory / 1MB
+    }
+    Disks           = @()
+    OperatingSystem = @{
+        Caption        = (Get-WmiObject -Class Win32_OperatingSystem).Caption
+        OSArchitecture = (Get-WmiObject -Class Win32_OperatingSystem).OSArchitecture
+        Version        = (Get-WmiObject -Class Win32_OperatingSystem).Version
+    }
+    NetworkAdapters = @()
+    MachineGuid     = ""
+}
 
 # Fetch Storage information
-$Disks = Get-WmiObject -Class Win32_LogicalDisk -Filter "DriveType = 3"
-foreach ($Disk in $Disks) {
-    Write-Host "Disk: " $Disk.DeviceID
-    Write-Host "   Size (GB): " ($Disk.Size / 1GB)
-    Write-Host "   Free Space (GB): " ($Disk.FreeSpace / 1GB)
+$disks = Get-WmiObject -Class Win32_LogicalDisk -Filter "DriveType = 3"
+foreach ($disk in $disks) {
+    $diskData = @{
+        DeviceID  = $disk.DeviceID
+        Size      = $disk.Size / 1GB
+        FreeSpace = $disk.FreeSpace / 1GB
+    }
+    $hardwareData.Disks += $diskData
 }
-
-# Fetch Operating System information
-$OS = Get-WmiObject -Class Win32_OperatingSystem
-Write-Host "Operating System: " $OS.Caption
-Write-Host "OS Architecture: " $OS.OSArchitecture
-Write-Host "Version: " $OS.Version
 
 # Fetch Network Adapter Configuration
-$NetworkAdapters = Get-WmiObject -Class Win32_NetworkAdapterConfiguration -Filter "IPEnabled = True"
-foreach ($Adapter in $NetworkAdapters) {
-    Write-Host "Network Adapter: " $Adapter.Description
-    Write-Host "   IP Address(es): " $Adapter.IPAddress
-    Write-Host "   MAC Address: " $Adapter.MACAddress
+$networkAdapters = Get-WmiObject -Class Win32_NetworkAdapterConfiguration -Filter "IPEnabled = True"
+foreach ($adapter in $networkAdapters) {
+    $adapterData = @{
+        Description = $adapter.Description
+        IPAddress   = $adapter.IPAddress
+        MACAddress  = $adapter.MACAddress
+    }
+    $hardwareData.NetworkAdapters += $adapterData
 }
+
+# Fetch MachineGuid
+$registryPath = "HKLM:\SOFTWARE\Microsoft\Cryptography"
+$valueName = "MachineGuid"
+try {
+    $hardwareData.MachineGuid = (Get-ItemProperty -Path $registryPath -Name $valueName).$valueName
+}
+catch {
+    Write-Host "Error retrieving MachineGuid: $_"
+}
+
+# Convert the object to JSON format
+$jsonData = ConvertTo-Json -InputObject $hardwareData
+
+# Output the JSON data
+Write-Output $jsonData
+

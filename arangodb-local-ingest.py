@@ -392,23 +392,35 @@ def setup_collections(db, collection_names, reset=False) -> dict:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-host', type=str, default='localhost', help='URL to use for ArangoDB')
-    parser.add_argument('-port', type=int, default=8529, help='port number to use')
-    parser.add_argument('-user', type=str, default='tony', help='user name')
-    parser.add_argument('-password', type=str, required=True, help='user password')
-    parser.add_argument('-database', type=str, default='Indaleko', help='Name of the database to use')
-    parser.add_argument('-path', type=str, default='C:\\', help='the path where indexing should start')
-    parser.add_argument('-reset', action='store_true', default=False, help='Clean database before running')
+    parser.add_argument('--config', type=str, default='config.json', help='Configuration file to use')
+    parser.add_argument('--host', type=str, help='URL to use for ArangoDB (overrides config file)')
+    parser.add_argument('--port', type=int, help='Port number to use (overrides config file)')
+    parser.add_argument('--user', type=str, help='user name (overrides config file)')
+    parser.add_argument('--password', type=str, help='user password (overrides config file)')
+    parser.add_argument('--database', type=str, help='Name of the database to use (overrides config file)')
+    parser.add_argument('--path', type=str, default='C:\\', help='the path where indexing should start')
+    parser.add_argument('--reset', action='store_true', default=False, help='Clean database before running')
     args = parser.parse_args()
-    assert args.port > 1023 and args.port < 65536, 'Invalid port number'
-
-    print(args)
+    # load the config information from the config file
+    with open(args.config,'rt') as fd:
+        config = json.load(fd)
+    if args.host != None:
+        config['host'] = args.host
+    if args.port != None:
+        config['port'] = args.port
+    if args.user != None:
+        config['user'] = args.user
+    if args.password != None:
+        config['password'] = args.password
+    if args.database != None:
+        config['database'] = args.database
+    assert config['port'] > 1023 and config['port'] < 65536, 'Invalid port number'
 
     # ArangoDB connection settings
-    arango_url = 'http://{}:{}'.format(args.host, args.port)
-    arango_username = args.user
-    arango_password = args.password
-    arango_db_name = args.database
+    arango_url = 'http://{}:{}'.format(config['host'], config['port'])
+    arango_username = config['user']
+    arango_password = config['password']
+    arango_db_name = config['database']
 
     # Initialize the ArangoDB client
     client = ArangoClient(hosts=arango_url)
