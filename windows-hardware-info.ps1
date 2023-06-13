@@ -1,3 +1,5 @@
+#Requires -RunAsAdministrator
+
 # Define an object to store hardware data
 $hardwareData = @{
     CPU             = @{
