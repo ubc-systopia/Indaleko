@@ -52,10 +52,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('topdir')
     parser.add_argument('--label', type=str, help="Add a descriptive label to the output", default="")
+    parser.add_argument('--dostat', action='store_true', default=False, help='Perform file stat while enumerating')
     args = parser.parse_args()
     start = datetime.datetime.utcnow()
-    file_count, dir_count = count_files_and_directories(args.topdir)
-    print(args.label)
+    file_count, dir_count = count_files_and_directories(args.topdir, args.dostat)
+    if type(args.label) is str and len(args.label) > 0:
+        print(args.label)
     print("Total files:", file_count)
     print("Total directories:", dir_count)
     count = file_count + dir_count
