@@ -390,6 +390,7 @@ def setup_collections(db, collection_names, reset=False) -> dict:
                 collections[name].create_index(index, e['type'], e['fields'], e['unique'])
     return collections
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='config.json', help='Configuration file to use')
