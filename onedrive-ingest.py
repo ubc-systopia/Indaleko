@@ -5,6 +5,7 @@ import msal
 import requests
 import logging
 import sys
+import datetime
 
 class MicrosoftGraphCredentials:
 
@@ -12,12 +13,23 @@ class MicrosoftGraphCredentials:
         self.config = json.load(open(config, 'rt'))
         self.cache_file = cache_file
         self.__load_cache__()
+        self.__chosen_account__ = -1
+        self.__output_file_name__ = None
         # Note: this will prompt for credentials, if needed
         self.app = msal.PublicClientApplication(self.config['client_id'],
                                                 authority=self.config['authority'],
-                                                token_cache=self.cache)
+                                                # token_cache=self.cache
+                                                )
         self.__get_token__()
 
+    def __get_chosen_account__(self) -> int:
+        if self.__chosen_account__ < 0:
+            self.__chosen_account__ = self.__choose_account__()
+        return self.__chosen_account__
+
+    def reset_chosen_account(self) -> 'MicrosoftGraphCredentials':
+        self.__chosen_account__ = -1
+        return self
 
     def __load_cache__(self):
         if hasattr(self, 'cache'):
@@ -51,6 +63,16 @@ class MicrosoftGraphCredentials:
                     choice = -1
             return choice
 
+    def get_account_name(self):
+        if self.__output_file_name__ is None:
+            assert self.__choose_account__() >= 0, 'No account chosen'
+            accounts = self.app.get_accounts()
+            if accounts:
+                self.__output_file_name__ = accounts[self.__get_chosen_account__()].get("username")
+        return self.__output_file_name__
+
+    def get_output_file_name(self):
+        return f'data/microsoft-onedrive-data-{self.get_account_name()}-{datetime.datetime.utcnow()}-data.json'
 
     def __get_token__(self):
         if hasattr(self, 'token') and self.token is not None:
@@ -94,11 +116,18 @@ class MicrosoftGraphCredentials:
     def get_token(self):
         return self.__get_token__()
 
+    def clear_token(self) -> 'MicrosoftGraphCredentials':
+        '''Use this to clear a stale or invalid token.'''
+        self.token = None
+        return self
 
 def get_onedrive_metadata_recursive(cred: MicrosoftGraphCredentials, folder_id=None):
-    headers = {
-        'Authorization': f'Bearer {cred.get_token()}'
-    }
+
+    def get_headers():
+        return {
+            'Authorization': f'Bearer {cred.get_token()}'
+        }
+    headers = get_headers()
     metadata_list = []
 
     if folder_id is None:
@@ -120,8 +149,10 @@ def get_onedrive_metadata_recursive(cred: MicrosoftGraphCredentials, folder_id=N
             endpoint = data.get('@odata.nextLink')
         else:
             print(f"Error: {response.status_code} - {response.text}")
-            endpoint = None
-
+            if 401 == response.status_code: # seems to indicate a stale token
+                cred.clear_token()
+                headers = get_headers()
+            # try again
     return metadata_list
 
 
@@ -147,8 +178,15 @@ def get_onedrive_metadata(cred: MicrosoftGraphCredentials):
 '''
 
 def main():
-    logging.basicConfig(level=logging.DEBUG)
+    # First, let's figure out the name we're using
+    graphcreds = MicrosoftGraphCredentials()
+    # Now parse the arguments
+    logging_levels = sorted(set([l for l in logging.getLevelNamesMapping()]))
     parser = argparse.ArgumentParser()
+    parser.add_argument('--loglevel', type=int, default=logging.WARNING, choices=logging_levels,
+                        help='Logging level to use (lower number = more logging)')
+    parser.add_argument('--output', type=str, default=graphcreds.get_output_file_name(),
+                        help='Name and location of where to save the fetched metadata')
     parser.add_argument('--config', type=str, default='msgraph-config.json',
                         help='Name and location from whence to retrieve the Microsoft Graph Config info')
     parser.add_argument('--host', type=str,
@@ -165,12 +203,11 @@ def main():
                         default=False, help='Clean database before running')
     args = parser.parse_args()
     print(args)
-    # TODO: need to rework this config stuff.  Microsoft's SDK has its own
-    # magical stuff so it will be easier to use their expected format than
-    # try to fit it into the JSON format.
-    graphcreds = MicrosoftGraphCredentials()
     metadata = get_onedrive_metadata_recursive(graphcreds)
-    print(len(metadata))
+    if len(metadata) > 0:
+        with open(args.output, 'wt') as output_file:
+            json.dump(metadata, output_file, indent=4)
+        print(f'Saved {len(metadata)} records to {args.output}')
 
 if __name__ == '__main__':
     main()
