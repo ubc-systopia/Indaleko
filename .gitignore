@@ -1,2 +1,4 @@
 data/*
+config/*
+__pycache__/*
 wmiobject-list.txt
