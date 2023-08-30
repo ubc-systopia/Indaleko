@@ -10,15 +10,15 @@ import datetime
 class MicrosoftGraphCredentials:
 
     def __init__(self, config: str = 'data/msgraph-parameters.json', cache_file: str = 'data/msgraph-cache.bin'):
+        self.__chosen_account__ = -1
         self.config = json.load(open(config, 'rt'))
         self.cache_file = cache_file
         self.__load_cache__()
-        self.__chosen_account__ = -1
         self.__output_file_name__ = None
         # Note: this will prompt for credentials, if needed
         self.app = msal.PublicClientApplication(self.config['client_id'],
                                                 authority=self.config['authority'],
-                                                # token_cache=self.cache
+                                                token_cache=self.cache
                                                 )
         self.__get_token__()
 
@@ -43,6 +43,8 @@ class MicrosoftGraphCredentials:
 
 
     def __choose_account__(self) -> int:
+        if self.__chosen_account__ >= 0:
+            return self.__chosen_account__
         accounts = self.app.get_accounts()
         if accounts:
             choice = -1
@@ -61,18 +63,20 @@ class MicrosoftGraphCredentials:
                     choice = choice - 1
                 except ValueError:
                     choice = -1
-            return choice
+            if choice >= 0:
+                self.__chosen_account__ = choice
+        return self.__chosen_account__
 
     def get_account_name(self):
         if self.__output_file_name__ is None:
-            assert self.__choose_account__() >= 0, 'No account chosen'
+            assert self.__get_chosen_account__() >= 0, 'No account chosen'
             accounts = self.app.get_accounts()
             if accounts:
                 self.__output_file_name__ = accounts[self.__get_chosen_account__()].get("username")
         return self.__output_file_name__
 
     def get_output_file_name(self):
-        return f'data/microsoft-onedrive-data-{self.get_account_name()}-{datetime.datetime.utcnow()}-data.json'
+        return f'data/microsoft-onedrive-data-{self.get_account_name()}-{datetime.datetime.utcnow()}-data.json'.replace(' ', '_').replace(':', '-')
 
     def __get_token__(self):
         if hasattr(self, 'token') and self.token is not None:
@@ -81,12 +85,10 @@ class MicrosoftGraphCredentials:
         result = None
         accounts = self.app.get_accounts()
         logging.info(f'{len(accounts)} account(s) exist in cache, hopefully with tokens.  Checking.')
-        chosen_account = -1
-        if len(accounts) > 0:
-            chosen_account = self.__choose_account__()
-            print(f'Choice is {chosen_account}')
-            if chosen_account >= 0:
-                result = self.app.acquire_token_silent(self.config['scope'], account=accounts[chosen_account])
+        if self.__chosen_account__ < 0 and len(accounts) > 0:
+                self.chosen_account = self.__choose_account__()
+        if self.__chosen_account__ >= 0:
+            result = self.app.acquire_token_silent(self.config['scope'], account=accounts[self.__chosen_account__])
         if result is None:
             logging.info('Suitable token not found in cache. Request from user.')
             flow = self.app.initiate_device_flow(scopes=self.config['scope'])
@@ -203,11 +205,13 @@ def main():
                         default=False, help='Clean database before running')
     args = parser.parse_args()
     print(args)
+    start = datetime.datetime.utcnow()
     metadata = get_onedrive_metadata_recursive(graphcreds)
+    end = datetime.datetime.utcnow()
     if len(metadata) > 0:
         with open(args.output, 'wt') as output_file:
             json.dump(metadata, output_file, indent=4)
-        print(f'Saved {len(metadata)} records to {args.output}')
+        print(f'Saved {len(metadata)} records to {args.output} in {end-start} seconds ({(end-start)/len(metadata)} seconds per record)')
 
 if __name__ == '__main__':
     main()

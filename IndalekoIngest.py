@@ -1,38 +1,61 @@
 import argparse
 import datetime
 import json
+import logging
 
 class IndalekoIngest:
     '''
     Base class for all ingestors.  Provides a common interface for all
     ingestors.
     '''
-    def __init__(self, basename : str, get_metadata):
-        self.get_metadata = get_metadata
-        assert type(get_metadata) == type(lambda: None), 'get_metadata must be a function that returns a list of metadata'
-        self.output_file = f'data/{basename}-{datetime.datetime.utcnow()}-data.json'
-        parser = argparse.ArgumentParser()
-        parser.add_argument('--output', type=str, default=self.output_file,
-                            help='Name and location of where to save the fetched metadata')
+    config_dir = 'config/'
+    data_dir = 'data/'
+    timestamp = datetime.datetime.utcnow()
 
-    def get_parser(self) -> argparse.ArgumentParser:
-        '''Return default parser for all ingestors so they can augment it.'''
-        return self.parser
+    def __init__(self):
+        self.parser = argparse.ArgumentParser()
+        logging_levels = sorted(
+            set([l for l in logging.getLevelNamesMapping()]))
+        self.parser.add_argument('--loglevel', type=int, default=logging.WARNING, choices=logging_levels,
+                                 help='Logging level to use (lower number = more logging)')
+        self.parser.add_argument('--output', type=str, default=None, help='Name of output file for captured data')
+        self.args = None
+        self.output_file = None
+        self.metadata = []
 
-    def capture_metadata(self, args):
-        '''Capture metadata from the source and write it to the output file.'''
-        self.metadata_list = self.get_metadata(args)
-        self.output_file = args.output
-        self.write_output()
+    def get_metadata(self):
+        assert False, 'get_metadata must be overridden by a subclass'
+
+    def main(self):
+        '''This is the entry point for all ingestors'''
+        if self.args is None:
+            self.args = self.parser.parse_args()
+        self.start = datetime.datetime.utcnow()
+        self.metadata = self.get_metadata()
+        self.end = datetime.datetime.utcnow()
+        self.get_output_file()
+        self.record_metadata()
+
+    def _get_output_file(self) -> str:
+        '''Override this in derived classes if needed.'''
+        return self.output_file
+
+    def get_output_file(self) -> str:
+        '''This is used to get the output file. Note that a derived class should
+        override _get_output_file as this will preserve the override from the
+        command line.'''
+        if self.output_file is None and self.args.output is not None:
+            self.output_file = self.args.output.replace(' ', '_').replace(':', '-')
+        else:
+            self.output_file = self._get_output_file()
+        return self.output_file
+
+
+    def record_metadata(self):
+        if self.output_file is not None and len(self.metadata) > 0:
+            with open(self.output_file, 'wt') as output_file:
+                json.dump(self.metadata, output_file, indent=4)
+            elapsed = self.end - self.start
+            print(
+                f'Saved {len(self.metadata)} records to {self.output_file} in {elapsed} seconds ({elapsed/len(self.metadata)} seconds per record)')
         return self
-
-    def write_output(self):
-        with open(self.output_file, 'wt') as f:
-            json.dump(self.metadata_list, f, indent=4)
-        return self
-
-def main():
-    print('This is a library, do not invoke directly.')
-
-if __name__ == "__main__":
-    main()
