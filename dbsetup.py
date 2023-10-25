@@ -141,7 +141,9 @@ def cleanup(config :IndalekoDBConfig):
             remove_volume(config.config['database']['volume'])
 
 def startup(config: IndalekoDBConfig):
-    pass
+    cmd = f"docker start {config.config['database']['container']}"
+    logging.debug(f"Running command: {cmd}")
+    return run_command(cmd)
 
 def main():
     new_config = False
