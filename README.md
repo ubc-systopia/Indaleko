@@ -134,4 +134,40 @@ So, what do I need to accomplish this:
     a storage event might have a reference that correlates with process
     information.
 
-The puprose of this work really is
+The focus of this work is to try and demonstrate the ability to support a range
+of queries.  The first query really should be something simple.  For example:
+
+  * Show me files that have 2016 in their name
+
+Subsequent queries should focus on demonstrating this index goes beyond simple
+queries:
+
+  * Find photos that have my face in them
+
+Of course the real goal is to be able to process queries that are not
+expressible in existing storage systems:
+
+  * Find files that I saved last week from a given application
+    - Web browser ("downloads")
+    - E-mail program ("attachments")
+
+So, my goal is to get these pieces built.  While building the ingestion scripts
+I started with a model of directly adding content to the database.  I'm moving
+away from that model to a file capture model, which permits bulk uploading and
+that should be faster.
+
+The three cloud metadata ingestion scripts generate files, the local one does
+not, so my next task is to convert the local one to save to files as well.  Then
+the next step is to figure out how to do bulk importing.
+
+Once I have bulk importing working at some level, I'd like to start identifying
+data that I want to normalize. Conceptually, I think of data normalization as
+being distinct from the indexing, though I could implement them as part of
+existing scripts.
+
+The reason for this is that once I have indexing across silos, I can build the
+query infrastructure piece: combine the schema with the GPT interface, and have
+it generate GraphQL queries, which can be submitted to ArangoDB.  With those
+pieces in place, I can expand this to incorporate semantic information, and
+finally I can get to building the activity context service.
+

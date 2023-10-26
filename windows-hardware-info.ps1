@@ -1,5 +1,12 @@
 #Requires -RunAsAdministrator
 
+# The file name where we will save the ouput:
+param(
+    [string]$outputFile = ""
+)
+
+
+
 # Define an object to store hardware data
 $hardwareData = @{
     CPU             = @{
@@ -52,9 +59,21 @@ catch {
     Write-Host "Error retrieving MachineGuid: $_"
 }
 
+
 # Convert the object to JSON format
 $jsonData = ConvertTo-Json -InputObject $hardwareData
 
+# if the output file is not specified, output to a default name
+if ($outputFile -eq "") {
+    if (-not $hardwareData.MachineGuid -eq "") {
+        $outputFile = ".\config\windows-hardware-info-$($hardwareData["MachineGuid"]).json"
+    }
+    else {
+        $outputFile = ".\config\windows-hardware-info.json"
+    }
+}
+
 # Output the JSON data
-Write-Output $jsonData
+# Write-Output $jsonData
+$jsonData | Out-File -FilePath $outputFile -Encoding utf8
 
