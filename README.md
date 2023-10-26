@@ -171,3 +171,22 @@ it generate GraphQL queries, which can be submitted to ArangoDB.  With those
 pieces in place, I can expand this to incorporate semantic information, and
 finally I can get to building the activity context service.
 
+### 2023-10-16
+
+Late yesterday I changed the logic of the "get local machine configuration"
+powershell script so it saves it to a file that embeds the machine GUID.  My
+thinking here was that this is (mostly) static information that, at least for
+now, I can just capture.
+
+The reason this is important is because I want to be able to properly address
+all files, not just those that have drive letters because **I** know that drive
+letters are not nearly as "baked in" to Windows as users think.  Years of
+Windows file system experience.
+
+This powershell script has to be run with administrative credentials, which is
+why I want to just capture the data, at least for now.  For a real packaged
+system it would be better to have it done dynamically and to do this inside a
+privileged service (which I have done work on in the past.)
+
+Now I can get back to the local ingest script.
+
