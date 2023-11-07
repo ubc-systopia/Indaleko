@@ -190,3 +190,38 @@ privileged service (which I have done work on in the past.)
 
 Now I can get back to the local ingest script.
 
+### 2023-11-078
+
+I have been systematically working through the local ingestion script to try
+and split it out into a common core (applicable to all local environments) and
+the platform specific portions.
+
+In parallel, we're working on getting the iCloud ingestion work going as well
+(Zee is looking into this.)  I'm ignoring that for the time being.
+
+So now I seem to have a local ingest script for Windows working.  Limited
+testing thus far, but it is generating a raw data file.
+
+So, now I have a skeleton of what the _ingest_ looks like.  The next step is to
+begin adding the normalizers.  Ideally, I'll end up with a model for the
+normalizers that's generalizable.  At the moment, the ingest logic is not quite
+where I want it to be (e.g., common framework) though there's a fair bit of
+material.  Logically, I want a flow where the storage specific elements know how
+to process their own data.
+
+Thus, the question becomes: what data is _required_ (e.g., expected) and what
+data is _permitted_ (e.g., useful but optional.) During this first pass, I am
+focusing on the required bits, since those will become the key aspects of the
+data schema.  I'll have to revisit what to do about optional data in the future.
+
+The other aspect I need to capture here is the relationships, which I don't
+think are being well-captured (yet).  I note that in the local ingest I already
+am explicitly adding the full path and a URI (at least for the Windows version,
+haven't massaged this to do what is needed on Linux.)  For example, I may want
+to capture the inode number of the containing directory, not just its path.
+
+This allows me to have a separate json file that contains data relationships as
+well, since I think those are going to be loaded into different collections in
+ArangoDB.  I don't want to lose that information, but the drive here was to make
+bulk uploading as fast as possible.
+

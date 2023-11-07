@@ -83,11 +83,11 @@ class LocalIngest:
         self.logger = logging.getLogger(__name__)
         self.parser.add_argument('--loglevel', type=int, default=logging.WARNING, choices=logging_levels,
                             help='Logging level to use (lower number = more logging)')
-        self.parser.add_argument('--outdir', type=str, default=self.output_dir, help='Directory to use for output file')
-        self.parser.add_argument('--output', type=str, default=self.output_file,
+        self.parser.add_argument('--outdir', type=str, default=self.DefaultOutputDir, help='Directory to use for output file')
+        self.parser.add_argument('--output', type=str, default=self.DefaultOutputFile,
                             help='Name and location of where to save the fetched metadata')
-        self.parser.add_argument('--confdir', type=str, default=self.config_dir, help='Directory to use for config file')
-        self.parser.add_argument('--config', type=str, default=self.config_file,
+        self.parser.add_argument('--confdir', type=str, default=self.DefaultConfigDir, help='Directory to use for config file')
+        self.parser.add_argument('--config', type=str, default=self.DefaultConfigFile,
                             help='Name and location from whence to retrieve the Microsoft Graph Config info')
 
     def __setup_defaults__(self) -> 'LocalIngest':
@@ -104,6 +104,11 @@ class LocalIngest:
         self.logger.debug(f"Output file set to {self.args.output}")
         self.logger.debug(f"Config file set to {self.args.config}")
         return self.args
+
+
+    def add_arguments(self, *args, **kwargs) -> 'LocalIngest':
+        self.parser.add_argument(*args, **kwargs)
+        return self
 
 
     def set_output_dir(self, dir_name : str) -> 'LocalIngest':

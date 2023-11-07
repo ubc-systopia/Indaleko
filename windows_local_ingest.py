@@ -1,18 +1,10 @@
-import argparse
-import json
-import os
-import logging
-import sys
-import uuid
-import datetime
-import re
-import ctypes
 import local_ingest
-import platform
-import subprocess
-import json
-import multiprocessing
+import datetime
 import os
+import re
+import uuid
+import json
+import logging
 
 class IndalekoWindowsMachineConfig:
     '''
@@ -20,15 +12,28 @@ class IndalekoWindowsMachineConfig:
     look for and load the captured configuration data.  We have this separation
     because currently the machine guid requires admin privileges to get.
     '''
-    def __init__(self, hwinfo : str = None):
+    def __init__(self, config_dir : str):
         self.config_file = self.__find_hw_info_file__()
+        self.config_dir = config_dir
+        self.config_data = None
+        assert self.config_dir is not None, 'No config directory specified'
+        self.config_data = self.get_config_data()
+
+    def __load__config_data__(self):
+        with open(self.config_file, 'rt', encoding='utf-8-sig') as fd:
+            self.config_data = json.load(fd)
+
+
+    def get_config_data(self):
+        if self.config_data is None:
+            self.__load__config_data__()
+        return self.config_data
 
     def __find_hw_info_file__(self, configdir = './config'):
         candidates = [x for x in os.listdir(configdir) if x.startswith('windows-hardware-info') and x.endswith('.json')]
         assert len(candidates) > 0, 'At least one windows-hardware-info file should exist'
         for candidate in candidates:
             file, guid, timestamp = self.get_guid_timestamp_from_file_name(candidate)
-        print(timestamp)
         return configdir + '/' + candidates[-1]
 
     @staticmethod
@@ -63,94 +68,123 @@ class IndalekoWindowsMachineConfig:
         return candidate_files[0][1]
 
 
+def windows_to_posix(filename):
+    """
+    Convert a Win32 filename to a POSIX-compliant one.
+    """
+    # Define a mapping of Win32 reserved characters to POSIX-friendly characters
+    win32_to_posix = {
+        '<': '_lt_', '>': '_gt_', ':': '_cln_', '"': '_qt_',
+        '/': '_sl_', '\\': '_bsl_', '|': '_bar_', '?': '_qm_', '*': '_ast_'
+    }
 
-class WindowsHardwareInfo:
+    for win32_char, posix_char in win32_to_posix.items():
+        filename = filename.replace(win32_char, posix_char)
 
-    def __init__(self, config_dir : str = './config'):
-        self.config_dir = config_dir
-        self.config_files = [x for x in os.listdir(self.config_dir) if x.startswith('windows-hardware-info')]
-        assert len(self.config_files) > 0, 'At least one windows-hardware-info file should exist'
-        self.win_machine_info = self.config_files[-1] # newest one gets used - note don't handle the multi GUID case
-        self.machine_config = self.__get_most_recent_config_info__()
-        self.__build_drive_map__()
+    return filename
 
-    def __build_drive_map__(self):
-        '''Given the config data, build a map of drive letters to volume
-        GUIDs'''
-        self.drive_map = {}
-        for volume in self.machine_config['VolumeInfo']:
-            if volume['DriveLetter'] is None:
+def posix_to_windows(filename):
+    """
+    Convert a POSIX-compliant filename to a Win32 one.
+    """
+    # Define a mapping of POSIX-friendly characters back to Win32 reserved characters
+    posix_to_win32 = {
+        '_lt_': '<', '_gt_': '>', '_cln_': ':', '_qt_': '"',
+        '_sl_': '/', '_bsl_': '\\', '_bar_': '|', '_qm_': '?', '_ast_': '*'
+    }
+
+    for posix_char, win32_char in posix_to_win32.items():
+        filename = filename.replace(posix_char, win32_char)
+
+    return filename
+
+def construct_windows_output_file_name(path : str, configdir = './config'):
+    wincfg = IndalekoWindowsMachineConfig(config_dir=configdir)
+    machine_guid = wincfg.get_config_data()['MachineGuid']
+    drive = os.path.splitdrive(path)[0][0].upper()
+    drive_guid = drive
+    for vol in wincfg.get_config_data()['VolumeInfo']:
+        if vol['DriveLetter'] == drive:
+            drive_guid = vol['UniqueId']
+            assert 'Volume' in drive_guid, f'{drive_guid} is not a volume GUID'
+            drive_guid = drive_guid[-38:-2]
+            break
+        else:
+            drive_guid=drive # ugly, but what else can I do at this point?
+    timestamp = timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    return posix_to_windows(f'windows-local-fs-data-machine={machine_guid}-drive={drive_guid}-date={timestamp}.json')
+
+
+def get_default_index_path():
+    return os.path.expanduser("~")
+
+def convert_windows_path_to_guid_uri(path : str, config : IndalekoWindowsMachineConfig) -> str:
+    drive = os.path.splitdrive(path)[0][0].upper()
+    uri = '\\\\?\\' + drive + ':' # default format for lettered drives without GUIDs
+    for vol in config.get_config_data()['VolumeInfo']:
+        if vol['DriveLetter'] == drive:
+            uri = vol['UniqueId']
+    return uri
+
+def walk_files_and_directories(path: str, config : IndalekoWindowsMachineConfig) -> list:
+    files_data = []
+    dirs_data = []
+    last_drive = None
+    last_uri = None
+    for root, dirs, files in os.walk(path):
+        for name in files:
+            file_path = os.path.join(root, name)
+            try:
+                stat_data = os.stat(file_path)
+            except:
+                # at least for now, we just skip errors
+                logging.warning(f'Unable to stat {file_path}')
                 continue
-            self.drive_map[volume['DriveLetter']] = volume['UniqueId']
-
-    def __load_machine_config_info__(self):
-        assert self.win_machine_info is not None, 'Config file must be specified'
-        assert os.path.exists(os.path.join(self.config_dir, self.win_machine_info)), 'Machine info file not found'
-        self.data = {}
-        with open(os.path.join(self.config_dir, self.win_machine_info), 'r', encoding='utf-8-sig') as fd:
-            self.data = fd.read()
-        return json.loads(self.data)
-
-    def __get_config_info__(self, config_file : str):
-        assert config_file is not None, 'Config file must be specified'
-        self.win_machine_info = config_file
-        return self.__load_machine_config_info__()
-
-    def __get_most_recent_config_info__(self):
-        '''
-        Load the configuration data that's been previously captured.  Uses the
-        most recent config file.
-        '''
-        self.win_machine_info = IndalekoWindowsMachineConfig.get_most_recent_config_file(self.config_dir)
-        return self.__load_machine_config_info__(self.win_machine_info)
-
-
-
-class WindowsLocalFileSystemMetadata(local_ingest.LocalFileSystemMetadata):
-
-    def __init__(self, config_dir : str = './config'):
-        self.config_dir = config_dir
-        super().__init__()
-        self.machine_config = IndalekoWindowsMachine()
-        self.__get_machine_config_info__()
-
-    def get_output_file_name(self):
-        ofn = 'data/windows-local-file-system-data'
-        ofn += '.json'
-        return ofn
-
-    def get_volume_guid_for_path(path):
-        """
-        Get the volume GUID for the given path on Windows.
-        """
-        # Define the function from the kernel32.dll
-        GetVolumeNameForVolumeMountPointW = ctypes.windll.kernel32.GetVolumeNameForVolumeMountPointW
-
-        # Create a buffer for the result
-        volume_path_name = ctypes.create_unicode_buffer(261)  # MAX_PATH + 1
-
-        # Call the function
-        if not GetVolumeNameForVolumeMountPointW(path, volume_path_name, len(volume_path_name)):
-            raise ctypes.WinError()
-
-        return volume_path_name.value
-
-
-    @staticmethod
-    def get_volume_name_from_file(file_name: str) -> str:
-        drive_letter = os.path.splitdrive(file_name)[0]+'\\'
-        return WindowsLocalFileSystemMetadata.get_volume_guid_for_path(drive_letter)
-
+            stat_dict = {key : getattr(stat_data, key) for key in dir(stat_data) if key.startswith('st_')}
+            stat_dict['file'] = name
+            stat_dict['path'] = root
+            if last_drive != os.path.splitdrive(root)[0][0].upper():
+                # one entry cache - high hit rate expected
+                last_drive = os.path.splitdrive(root)[0][0].upper()
+                last_uri = convert_windows_path_to_guid_uri(root, config)
+            last_uri = convert_windows_path_to_guid_uri(root, config)
+            stat_dict['URI'] = os.path.join(last_uri, name)
+            files_data.append(stat_dict)
+        for name in dirs:
+            dir_path = os.path.join(root, name)
+            try :
+                stat_data = os.stat(dir_path)
+            except:
+                logging.warning(f'Unable to stat {dir_path}')
+                continue
+            stat_dict = {key : getattr(stat_data, key) for key in dir(stat_data) if key.startswith('st_')}
+            stat_dict['file'] = name
+            stat_dict['path'] = root
+            if last_drive != os.path.splitdrive(root)[0][0].upper():
+                # one entry cache - high hit rate expected
+                last_drive = os.path.splitdrive(root)[0][0].upper()
+                last_uri = convert_windows_path_to_guid_uri(root, config)
+            stat_dict['URI'] = os.path.join(last_uri, name)
+            dirs_data.append(stat_dict)
+    return dirs_data + files_data
 
 
 def main():
+    # Now parse the arguments
     li = local_ingest.LocalIngest()
-    li.set_output_file('windows-local-file-system-data.json')
-    li.set_config_file('windows-local-file-system-data.json')
-    li.parse_args()
-    print(li.args)
-    wmc = IndalekoWindowsMachineConfig()
-    print(wmc.get_most_recent_config_file('./config'))
+    li.add_arguments('--path', type=str, default=get_default_index_path(), help='Path to index')
+    args = li.parse_args()
+    machine_config = IndalekoWindowsMachineConfig(config_dir=args.confdir)
+    # now I have the path being parsed, let's figure out the drive GUID
+    li.set_output_file(construct_windows_output_file_name(args.path))
+    args = li.parse_args()
+    data = walk_files_and_directories(args.path, machine_config)
+    # now I just need to save the data
+    output_file = os.path.join(args.outdir, args.output).replace(':', '_')
+    with open(output_file, 'wt') as fd:
+        json.dump(data, fd, indent=4)
 
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     main()
