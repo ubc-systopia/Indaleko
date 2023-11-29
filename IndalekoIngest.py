@@ -59,3 +59,6 @@ class IndalekoIngest:
             print(
                 f'Saved {len(self.metadata)} records to {self.output_file} in {elapsed} seconds ({elapsed/len(self.metadata)} seconds per record)')
         return self
+
+    def get_metadata(self):
+        assert False, 'get_metadata must be overridden by a subclass'

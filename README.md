@@ -225,3 +225,38 @@ well, since I think those are going to be loaded into different collections in
 ArangoDB.  I don't want to lose that information, but the drive here was to make
 bulk uploading as fast as possible.
 
+### 2023-11-14
+
+Let's start with a minimum set of fields we want for our index:
+
+* Label - this is what corresponds to the "name" of the file
+* URI - this is how we get back to the file
+* Object ID - this is a UUID
+* Local ID - this is an "inode number"
+* Timestamps:
+  - Creation Time
+  - Access Time
+  - Modification/Change Time
+    * Note that NTFS has both, one being the _data_ and the other being the
+      _metadata_.
+* Size
+* Source
+  - UUID that identifies where we got the data
+  - Version
+  - Source specific metadata
+* Raw Data
+* Semantic attributes (key-value list)
+  - Semantic Type/Identifier
+  - Semantic Data
+
+
+In addition, there's a relationship we want to capture, the container/contained
+relationship.  I need to figure out how we describe this, since it likely goes
+into a _different_ collection in ArangoDB.
+
+Relationships I want to capture:
+
+* Container relationship (bi-directionally)
+* Causal (versioned) relationship - not needed for indexing?
+
+
