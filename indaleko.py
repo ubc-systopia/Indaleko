@@ -4,6 +4,315 @@ import uuid
 import json
 import datetime
 
+'''
+The purpose of this package is to define the core data types used in Indaleko.
+
+Indaleko is a Unified Private Index (UPI) service that enables the indexing of
+storage content (e.g., files, databases, etc.) in a way that extracts useful
+metadata and then uses it for creating a rich index service that can be used in
+a variety of ways, including improving search results, enabling development of
+non-traditional data visualizations, and mining relationships between objects to
+enable new insights.
+
+Indaleko is not a storage engine.  Rather, it is a metadata service that relies
+upon storage engines to provide the data to be indexed.  The storage engines can
+be local (e.g., a local file system,) remote (e.g., a cloud storage service,) or
+even non-traditional (e.g., applications that provide access to data in some
+way, such as Discord, Teams, Slack, etc.)
+
+Indaleko uses three distinct classes of metadata to enable its functionality:
+
+* Storage metadata - this is the metadata that is provided by the storage
+  services
+* Semantic metadata - this is the metadata that is extracted from the objects,
+  either by the storage service or by semantic transducers that act on the files
+  when it is available on the local device(s).
+* Activity context - this is metadata that captures information about how the
+  file was used, such as when it was accessed, by what application, as well as
+  ambient information, such as the location of the device, the person with whom
+  the user was interacting, ambient conditions (e.g., temperature, humidity, the
+  music the user is listening to, etc.) and even external events (e.g., current
+  news, weather, etc.)
+
+To do this, Indaleko stores information of various types in databases.  One of
+the purposes of this package is to encapsulate the data types used in the system
+as well as the schemas used to validate the data.
+
+The general architecture of Indaleko attempts to be flexible, while still
+capturing essential metadata that is used as part of the indexing functionality.
+Thus, to that end, we define both a generic schema and in some cases a flexible
+set of properties that can be extracted and stored.  Since this is a prototype
+system, we have strived to "keep it simple" yet focus on allowing us to explore
+a broad range of storage systems, semantic transducers, and activity data sources.
+'''
+
+class IndalekoObject:
+    '''
+    This defines the information that makes up an Indaleko Object (the
+    things we store in the index)
+    '''
+    Schema = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema#",
+        "$id" : "https://activitycontext.work/schema/indaleko-object.json",
+        "title": "Indaleko Object Schema",
+        "description": "Schema for the JSON representation of an Indaleko Object, which is used for indexing storage content.",
+        "type": "object",
+        "properties": {
+            "Label": {
+                "type": "string",
+                "description": "The label for this object.",
+            },
+            "URI" : {
+                "type": "string",
+                "description" : "URI for retrieving this object.",
+            },
+            "ObjectIdentifier": {
+                "type" : "string",
+                "description" : "The UUID we generated for this object.",
+                "format" : "uuid",
+            },
+            "LocalIdentifier": {
+                "type" : "string",
+                "description" : "The local identifier used by the storage system to find this, such as a UUID or inode number."
+            },
+            "Timestamps": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "Label": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "UUID representing the semantic meaning of this timestamp."
+                        },
+                        "Value": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Timestamp in ISO date and time format."
+                        }
+                    },
+                    "required": ["Label", "Value"],
+                },
+                "description": "List of timestamps with UUID-based semantic meanings associated with this object."
+            },
+            "Size" : {
+                "type" : "integer",
+            },
+            "Source" : {
+                "type" : "object",
+                "properties" : {
+                    "SourceIdentifier" : {
+                        "type" : "string",
+                        "format" : "uuid",
+                        "description" : "UUID identifying the source of this object.",
+                    },
+                    "Version" : {
+                        "type" : "integer",
+                        "description" : "Source data version, for allowing backwards compatibility.",
+                    },
+                    "Metadata" : {
+                        "type:": "string",
+                        "description" : "Source specific metadata associated with this object.",
+                    },
+                    "required" : ["SourceIdentifier", "Version", "Metadata"],
+                },
+                "RawData" : {
+                    "type" : "string",
+                    "description" : "The raw data captured for this object.",
+                },
+                "SemanticAttributes" : {
+                    "type" : "array",
+                    "attributes" : {
+                        "type" : "object",
+                        "properties" : {
+                            "UUID" : {
+                                "type" : "string",
+                                "description" : "The UUID for this attribute.",
+                                "format" : "uuid",
+                            },
+                            "Data" : {
+                                "type" : "string",
+                                "description" : "The data associated with this attribute.",
+                            },
+                        },
+                        "required" : ["UUID", "Data"],
+                    },
+                    "description" : "Semantic attributes associated with this object.",
+                },
+            },
+        },
+    }
+
+class IndalekoRelationship:
+    '''
+    This schema defines the fields that are required as part of identifying
+    relationships between objects.
+    '''
+    Schema = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema#",
+        "$id" : "https://activitycontext.work/schema/indaleko-relationship.json",
+        "title" : "Indaleko Relationship Schema",
+        "description" : "Schema for the JSON representation of an Indaleko Relationship, which is used for identifying related objects.",
+        "type" : "object",
+        "properties" : {
+            "object1" : {
+                "type" : "string",
+                "format" : "uuid",
+                "description" : "The Indaleko UUID for the first object in the relationship.",
+            },
+            "object2" : {
+                "type" : "string",
+                "format" : "uuid",
+                "description" : "The Indaleko UUID for the second object in the relationship.",
+            },
+            "relationship" : {
+                "type" : "string",
+                "description" : "The UUID specifying the specific relationship between the two objects.",
+                "format" : "uuid",
+            },
+            "metadata" :  {
+                "type" : "array",
+                "items" : {
+                    "type" : "object",
+                    "properties" : {
+                        "UUID" : {
+                            "type" : "string",
+                            "format" : "uuid",
+                            "description" : "The UUID for this metadata.",
+                        },
+                        "Data" : {
+                            "type" : "string",
+                            "description" : "The data associated with this metadata.",
+                        },
+                    },
+                    "required" : ["UUID", "Data"],
+                },
+                "description" : "Optional metadata associated with this relationship.",
+            },
+        },
+        "required" : ["object1", "object2" , "relationship"],
+    }
+
+class IndalekoSource:
+        '''This schema defines the fields that are required as part of this
+        metadata.  Additional (optional) metadata can be included.'''
+        Schema = {
+            "$schema": "https://json-schema.org/draft/2020-12/schema#",
+            "$id": "https://activitycontext.work/schema/source.json",
+            "title": "Data source schema",
+            "description": "This schema describes information about the sources of metadata within the Indaleko system.",
+            "type": "object",
+            "properties": {
+                "identifier": {
+                    "description": "This is the UUID of the given source for this metadata.",
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "version": {
+                    "description": "This is the version of the source provider. Versioning allows evolution of the data generated by the source.",
+                    "type": "string",
+                },
+            },
+            "required": ["identifier", "version"]
+        }
+
+
+        def __init__(self, identifier : uuid.UUID, version : str, description : str) -> None:
+            '''The identifier is a UUID, the version is a string, and the
+            description is freeform text describing this source.'''
+            ### Start with the public fields
+            if not isinstance(identifier, uuid.UUID):
+                raise TypeError('identifier must be a UUID')
+            self.__identifier = identifier
+            if type(version) is not str:
+                raise TypeError('version must be a string')
+            self.__version = version
+            ## now we have internal fields that are not part of the stored data type
+            if type(description) is not str and type(description) is not None:
+                raise TypeError('description must be a string or None')
+            self.__description = description
+            self.__db_key = datetime.datetime.utcnow() # preserve date this was created
+
+            def to_dict(self) -> dict:
+                return {
+                    'SourceIdentifier': str(self.__identifier),
+                    'Version': self.__version,
+                }
+
+            def __str__(self) -> str:
+                return json.dumps(self.to_dict())
+
+
+        def set_db_key(self, db_key : str) -> 'IndalekoSource':
+            self.__db_key = db_key
+            return self
+
+
+        def get_db_key(self) -> str:
+            return self.__db_key
+
+
+        def to_dict(self) -> dict:
+            return {
+                'SourceIdentifier': str(self.__identifier),
+                'Version': self.__version,
+            }
+
+
+        def get_source_identifier(self) -> uuid.UUID:
+            return self.__identifier
+
+
+        def get_version(self) -> str:
+            return self.__version
+
+
+        def get_description(self) -> str:
+            return self.__description
+
+
+        def to_dict(self) -> dict:
+            return {
+                'SourceIdentifier': str(self.__identifier),
+                'Version': self.__version,
+                'Description': self.__description,
+                'DBKey': self.__db_key,
+            }
+
+
+        def __str__(self) -> str:
+            return json.dumps(self.to_dict())
+
+
+        def get_schema(self) -> str:
+            return json.dumps(self.Schema, indent=4)
+
+
+class IndalekoRecord:
+    '''This defines the format of a "record" within Indaleko'''
+
+    keyword_map = (
+        ('__raw_data__', 'Data'),
+        ('__attributes__', 'Attributes'),
+        ('__source__', 'Source'),
+    )
+
+    def __init__(self, raw_data : bytes, attributes : dict, source : IndalekoSource) -> None:
+        self.__raw_data__ = raw_data
+        self.__attributes__ = attributes
+        self.__source__ = source
+
+    def to_json(self):
+        tmp = {}
+        for field, keyword in self.keyword_map:
+            if hasattr(self, field):
+                tmp[keyword] = self.__dict__[field]
+        return json.dumps(tmp, indent=4)
+
+
+
+
+
 class Indaleko:
     '''This is the python implementation of the Indaleko data format.'''
 
