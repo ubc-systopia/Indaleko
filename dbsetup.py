@@ -10,6 +10,7 @@ import datetime
 import logging
 from indaleko import *
 from arango import ArangoClient
+import arango.exceptions
 
 
 def resetdb(args : argparse.Namespace) -> None:
@@ -54,6 +55,10 @@ class IndalekoDBConfig:
         else:
             self.config = self.__generate_new_config__()
             self.updated = True
+        self.collections = {'Objects' : {'schema' : IndalekoObject.Schema, 'collection' : None},
+                            'Relationships' : {'schema' : IndalekoRelationship.Schema, 'collection' : None},
+                            'Sources' : {'schema' : IndalekoSource.Schema, 'collection' : None},
+        }
 
 
     def start(self):
@@ -69,9 +74,19 @@ class IndalekoDBConfig:
         if self.updated:
             # This is a new config, so we need to set up the user and then the
             # database
-            self.setup_database('Indaleko')
+            self.setup_database(self.config['database']['database'])
             self.setup_user(self.config['database']['user_name'], self.config['database']['user_password'], [{'database': 'Indaleko', 'permission': 'rw'}])
-        self.db = None
+        # let's create the user's database access object
+        self.db = self.client.db(self.config['database']['database'],
+                                 username=self.config['database']['user_name'],
+                                 password=self.config['database']['user_password'],
+                                 auth_method='basic',
+                                 verify=True)
+        assert self.db is not None, 'Could not connect to database'
+        logging.info(f'Connected to database {self.config["database"]["database"]}')
+        self.setup_collections()
+        logging.info('Indaleko collections created')
+
 
     @staticmethod
     def generate_random_password(length=15):
@@ -147,7 +162,8 @@ class IndalekoDBConfig:
 
     def setup_collection(self, collection_name : str, schema : dict = None):
         if self.db is None:
-            self.db_connect()
+            result = self.db.create_collection(collection_name, schema=schema)
+            logging.debug(f'Created collection {collection_name}: {result}')
 
     def setup_user(self, uname : str, upwd : str, access: list):
         assert uname is not None, 'No username provided'
@@ -172,6 +188,19 @@ class IndalekoDBConfig:
             print(perms)
             self.sys_db.update_permission(uname, permission=a['permission'], database=a['database'])
 
+
+    def setup_collections(self):
+        assert self.collections is not None, 'No collections found'
+        for collection in self.collections:
+            try:
+                self.collections[collection]['collection'] = self.db.create_collection(collection, schema=self.collections[collection]['schema'])
+                logging.info('Created collection {collection} with schema {schema}, returned {object}'.format(collection=collection, schema=self.collections[collection]['schema'], object=self.collections[collection]['collection']))
+            except arango.exceptions.CollectionCreateError as e:
+                logging.error(f'Could not create collection {collection} with schema {self.collections[collection]['schema']}: {e}')
+                self.collections[collection]['collection'] = self.db.create_collection(collection)
+                logging.warning(f'Created collection {collection} without schema')
+
+
     def setup_database(self, dbname : str, reset: bool = False) -> bool:
         assert dbname is not None, 'No database name found'
         assert self.sys_db is not None, 'No system database found'
@@ -183,10 +212,6 @@ class IndalekoDBConfig:
         return True
 
 
-
-    def setup_collections(self):
-        client = ArangoClient()
-        assert self.config is not None, 'No config found'
 
 def create_volume(config : IndalekoDBConfig = None):
     assert config is not None, 'No config found'
@@ -276,7 +301,9 @@ def main():
         setup(config)
     logging.info('Starting database')
     startup(config)
+    logging.info('Configuring database')
     config.start()
+    logging.info('Database setup and configuration complete')
 
 
 if __name__ == '__main__':
