@@ -8,6 +8,8 @@ import string
 import subprocess
 import datetime
 import logging
+from indaleko import *
+from arango import ArangoClient
 
 
 def resetdb(args : argparse.Namespace) -> None:
@@ -25,7 +27,9 @@ def run_command(command : str) -> None:
 def stop_container(container_name_or_id : str) -> None:
     cmd = f"docker stop {container_name_or_id}"
     logging.debug(f"Running command: {cmd}")
-    return run_command(cmd)
+    res = run_command(cmd)
+    assert res is not None, f"Could not stop container {container_name_or_id}"
+
 
 def remove_container(container_name_or_id : str) -> None:
     cmd=f"docker rm {container_name_or_id}"
@@ -51,9 +55,32 @@ class IndalekoDBConfig:
             self.config = self.__generate_new_config__()
             self.updated = True
 
+
+    def start(self):
+        '''Once the container is running, this method will set up connections to
+        the database and configure it if needed'''
+        self.client = ArangoClient(f"http://{self.config['database']['host']}:{self.config['database']['port']}")
+        if 'admin_user' not in self.config['database']:
+            self.config['database']['admin_user'] = 'root'
+        if 'admin_passwd' not in self.config['database']:
+            self.config['database']['admin_passwd'] = self.config['database']['passwd']
+        self.sys_db = self.client.db('_system', username=self.config['database']['admin_user'],
+                                     password=self.config['database']['admin_passwd'], auth_method='basic')
+        if self.updated:
+            # This is a new config, so we need to set up the user and then the
+            # database
+            self.setup_database('Indaleko')
+            self.setup_user(self.config['database']['user_name'], self.config['database']['user_password'], [{'database': 'Indaleko', 'permission': 'rw'}])
+        self.db = None
+
     @staticmethod
     def generate_random_password(length=15):
-        alphabet = string.ascii_letters + string.digits + string.punctuation
+        alphabet = string.ascii_letters + string.digits
+        return ''.join(secrets.choice(alphabet) for i in range(length))
+
+    @staticmethod
+    def generate_random_username(length=8) -> dict:
+        alphabet = string.ascii_letters + string.digits
         return ''.join(secrets.choice(alphabet) for i in range(length))
 
 
@@ -68,14 +95,16 @@ class IndalekoDBConfig:
         assert type(config) == configparser.ConfigParser, 'ConfigParser not created'
         timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
         config['database'] = {}
+        config['database']['database'] = 'Indaleko'
         config['database']['timestamp'] = timestamp
-        config['database']['passwd'] = IndalekoDBConfig.generate_random_password()
+        config['database']['admin_user'] = 'root'
+        config['database']['admin_passwd'] = IndalekoDBConfig.generate_random_password()
         config['database']['container'] = 'arango-indaleko-' + timestamp
         config['database']['volume'] = 'indaleko-db-1-' + timestamp
         config['database']['host'] = 'localhost'
         config['database']['port'] = '8529'
-        # config['database']['user'] = ''
-        # config['database']['database'] = args.database
+        config['database']['user_name'] = self.generate_random_username()
+        config['database']['user_password'] = self.generate_random_password()
         self.updated = True
         return config
 
@@ -96,11 +125,68 @@ class IndalekoDBConfig:
             self.updated = False
             os.remove(self.config_file)
 
-    def set_password(self, passwd : str):
+    def set_admin_password(self, passwd : str):
         assert self.config is not None, 'No config found'
         assert passwd is not None, 'No password provided'
-        self.config['database']['passwd'] = passwd
+        self.config['database']['admin_passwd'] = passwd
         self.updated = True
+
+    def db_connect(self) -> bool:
+        assert self.config is not None, 'No config found'
+        assert self.config['database'] is not None, 'No database config found'
+        assert self.config['database']['database'] is not None, 'No database name found'
+        assert self.config['database']['user'] is not None, 'No database user found'
+        assert self.config['database']['admin_passwd'] is not None, 'No database password found'
+        try:
+            self.db = self.client.db(self.config['database']['database'], username=self.config['database']['user'],
+                                     password=self.config['database']['admin_passwd'], auth_method='basic')
+            return True
+        except Exception as e:
+            logging.error(f'Could not connect to database: {e}')
+            return False
+
+    def setup_collection(self, collection_name : str, schema : dict = None):
+        if self.db is None:
+            self.db_connect()
+
+    def setup_user(self, uname : str, upwd : str, access: list):
+        assert uname is not None, 'No username provided'
+        assert len(uname) > 0, 'Username must be at least one character'
+        assert upwd is not None, 'No password provided'
+        assert len(upwd) > 0, 'Password must be at least one character'
+        assert access is not None, 'No access list found'
+        assert type(access) == list, 'Access must be a list'
+        assert self.sys_db is not None, 'No system database found'
+        ulist = self.sys_db.users()
+        found = False
+        for u in ulist:
+            if u['username'] == uname:
+                found = True
+                break
+        if not found:
+            self.sys_db.create_user(username=uname, password=upwd, active=True)
+        for a in access:
+            assert type(a) is dict, 'Access must be a list of dictionaries'
+            perms = self.sys_db.permission(username=uname, database=a['database'])
+            # TODO - figure out what is in perms
+            print(perms)
+            self.sys_db.update_permission(uname, permission=a['permission'], database=a['database'])
+
+    def setup_database(self, dbname : str, reset: bool = False) -> bool:
+        assert dbname is not None, 'No database name found'
+        assert self.sys_db is not None, 'No system database found'
+        if reset:
+            if dbname in self.sys_db.databases():
+                self.sys_db.delete_database(dbname)
+        assert dbname not in self.sys_db.databases(), f'Database {dbname} already exists, reset not specified {self.sys_db.databases()}'
+        assert self.sys_db.create_database(dbname), 'Database creation failed'
+        return True
+
+
+
+    def setup_collections(self):
+        client = ArangoClient()
+        assert self.config is not None, 'No config found'
 
 def create_volume(config : IndalekoDBConfig = None):
     assert config is not None, 'No config found'
@@ -113,13 +199,24 @@ def create_container(config : IndalekoDBConfig = None):
     # docker run -e ARANGO_ROOT_PASSWORD=Kwishut22 -d -p 8529:8529 --mount source=ArangoDB-wam-db-1,target=/var/lib/arangodb3 --name arangodb-instance arangodb
     assert config is not None, 'No config found'
     cmd = "docker run "
-    passwd = config.config['database']['passwd']
+    passwd = config.config['database']['admin_passwd']
     cmd += f'-e ARANGO_ROOT_PASSWORD="{passwd}" '
     cmd += "-d "
     cmd += f"-p {config.config['database']['port']}:8529 "
     cmd += f"--mount source={config.config['database']['volume']},target=/var/lib/arangodb3 "
     cmd += f"--name {config.config['database']['container']} "
     cmd += "arangodb"
+    logging.debug(f"Running command: {cmd}")
+    return run_command(cmd)
+
+def create_user(config : IndalekoDBConfig = None):
+    assert config is not None, 'No config found'
+    assert config.config['database']['user'] is not None, 'No database user found'
+
+
+
+
+    cmd = f"docker exec -it {config.config['database']['container']} arangosh --server.password {config.config['database']['admin_passwd']} --javascript.execute-string 'require(\"@arangodb/users\").save(\"{config.config['database']['user']}\", \"{config.config['database']['admin_passwd']}\")'"
     logging.debug(f"Running command: {cmd}")
     return run_command(cmd)
 
@@ -131,6 +228,7 @@ def setup(config : IndalekoDBConfig = None):
     create_volume(config)
     create_container(config)
 
+
 def cleanup(config :IndalekoDBConfig):
     assert config is not None, 'No config found'
     if 'database' in config.config:
@@ -141,8 +239,12 @@ def cleanup(config :IndalekoDBConfig):
             remove_volume(config.config['database']['volume'])
 
 def startup(config: IndalekoDBConfig):
+    running_containers = run_command('docker ps')
+    logging.debug(f"Running containers (pre-stop):\n{running_containers}")
     cmd = f"docker start {config.config['database']['container']}"
     logging.debug(f"Running command: {cmd}")
+    running_containers = run_command('docker ps')
+    logging.debug(f"Running containers (post-stop):\n{running_containers}")
     return run_command(cmd)
 
 def main():
@@ -174,6 +276,7 @@ def main():
         setup(config)
     logging.info('Starting database')
     startup(config)
+    config.start()
 
 
 if __name__ == '__main__':
