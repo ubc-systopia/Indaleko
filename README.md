@@ -259,4 +259,16 @@ Relationships I want to capture:
 * Container relationship (bi-directionally)
 * Causal (versioned) relationship - not needed for indexing?
 
+### 2023-12-05
 
+Improved the automated set-up script for the database container.  That now seems
+to be basically working, though there's always more features that _could_ be
+added.
+
+Biggest point is that it now extracts the Schema from Indaleko.py and creates
+the corresponding collection _with_ the Schema.  The purpose of having those
+schema is because I can use them as part of the query production chain (e.g.,
+use the OpenAI API + Schema + Natural Language Query and get a GraphQL query
+back.) This will then provide the basis for exploring search functionality,
+though I expect future work will use search to provide alternative interfaces
+(e.g., the relationship graph walking model we've explored before.)
