@@ -199,12 +199,18 @@ class IndalekoDBConfig:
             self.sys_db.update_permission(uname, permission=a['permission'], database=a['database'])
 
 
-    def setup_collections(self):
+    def setup_collections(self, reset: bool = False) -> None:
         assert self.collections is not None, 'No collections found'
         for collection in self.collections:
             try:
-                self.collections[collection]['collection'] = self.db.create_collection(collection, schema=self.collections[collection]['schema'])
-                logging.info('Created collection {collection} with schema {schema}, returned {object}'.format(collection=collection, schema=self.collections[collection]['schema'], object=self.collections[collection]['collection']))
+                if collection in self.db.collections():
+                    assert reset, 'Collection {collection} already exists and reset not specified'
+                    self.db.delete_collection(collection)
+                    logging.info('Deleted collection {collection} with schema {schema}, returned {object}'.format(collection=collection, schema=self.collections[collection]['schema'], object=self.collections[collection]['collection']))
+                else:
+                    self.collections[collection]['collection'] = self.db.collection(collection)
+                logging.info('Opened collection {collection} with schema {schema}, returned {object}'.format(collection=collection, schema=self.collections[collection]['schema'], object=self.collections[collection]['collection']))
+                continue
             except arango.exceptions.CollectionCreateError as e:
                 logging.error(f'Could not create collection {collection} with schema {self.collections[collection]['schema']}: {e}')
                 self.collections[collection]['collection'] = self.db.create_collection(collection)
@@ -247,10 +253,6 @@ def create_container(config : IndalekoDBConfig = None):
 def create_user(config : IndalekoDBConfig = None):
     assert config is not None, 'No config found'
     assert config.config['database']['user'] is not None, 'No database user found'
-
-
-
-
     cmd = f"docker exec -it {config.config['database']['container']} arangosh --server.password {config.config['database']['admin_passwd']} --javascript.execute-string 'require(\"@arangodb/users\").save(\"{config.config['database']['user']}\", \"{config.config['database']['admin_passwd']}\")'"
     logging.debug(f"Running command: {cmd}")
     return run_command(cmd)
