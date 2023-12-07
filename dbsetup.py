@@ -11,6 +11,8 @@ import logging
 from indaleko import *
 from arango import ArangoClient
 import arango.exceptions
+import requests
+import time
 
 
 def resetdb(args : argparse.Namespace) -> None:
@@ -64,6 +66,15 @@ class IndalekoDBConfig:
     def start(self):
         '''Once the container is running, this method will set up connections to
         the database and configure it if needed'''
+        url = f"http://{self.config['database']['host']}:{self.config['database']['port']}"
+        while True:
+            try:
+                response = requests.get(url + '/_api/agency/readiness')
+                logging.debug(f"Response from {url + '/_api/agency/readiness'}: {response.json()}")
+                break # this means the connection is now up - if it weren't, we'd get an exception
+            except Exception as e:
+                logging.debug(f"Exception from {url + '/_api/agency/readiness'}: {type(e)} {e}")
+            time.sleep(2)
         self.client = ArangoClient(f"http://{self.config['database']['host']}:{self.config['database']['port']}")
         if 'admin_user' not in self.config['database']:
             self.config['database']['admin_user'] = 'root'
@@ -106,7 +117,6 @@ class IndalekoDBConfig:
 
     def __generate_new_config__(self):
         config = configparser.ConfigParser()
-        print(type(config))
         assert type(config) == configparser.ConfigParser, 'ConfigParser not created'
         timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
         config['database'] = {}
@@ -185,7 +195,7 @@ class IndalekoDBConfig:
             assert type(a) is dict, 'Access must be a list of dictionaries'
             perms = self.sys_db.permission(username=uname, database=a['database'])
             # TODO - figure out what is in perms
-            print(perms)
+            # print(perms)
             self.sys_db.update_permission(uname, permission=a['permission'], database=a['database'])
 
 
@@ -281,8 +291,9 @@ def main():
     parser.add_argument('--passwd', '-p', help='Database password to use', default=None)
     parser.add_argument('--reset', '-r', help='Reset the database', action='store_true', default=False)
     parser.add_argument('--log', '-l', help='Log file to use', default=logfile)
+    parser.add_argument('--logdir', help='Log directory to use', default='./logs')
     args = parser.parse_args()
-    logging.basicConfig(filename=args.log, level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+    logging.basicConfig(filename=os.path.join(args.logdir, args.log), level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
     logging.info(f'Begin run at {starttime}')
     if not os.path.exists(args.config):
         logging.info('No config file found, generating new one')
