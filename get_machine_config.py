@@ -2,10 +2,9 @@ import platform
 import subprocess
 import json
 import multiprocessing
-import time
 import datetime
 import os
-import queue
+import platform
 
 class IndalekoWindowsMachine:
 
@@ -15,7 +14,7 @@ class IndalekoWindowsMachine:
         self.platform = platform.system()
         assert self.platform == 'Windows', 'Windows specific configuration requires execution on windows platform'
         self.data = {}
-        self.operations = self.capture_wmi_operations()
+        self.operations = self.l()
         self.operations += self.capture_partition_operations()
         self.operations += self.capture_volume_operations()
         self.operations += self.capture_machine_operations()
@@ -87,6 +86,25 @@ class IndalekoWindowsMachine:
             except json.decoder.JSONDecodeError as e:
                 output = json.loads('{}')
         return output
+
+
+class IndalekoLinuxMachine:
+
+    def __init__(self):
+        self.platform = platform.system()
+        assert self.platform == 'Linux', 'Linux specific configuration requires execution on linux platform'
+        self.data = {}
+
+
+        self.operations = self.capture_linux_operations()
+        cpu_count = min(multiprocessing.cpu_count(), 48)
+        self.pool = multiprocessing.Pool(cpu_count)
+        self.results = self.pool.map(IndalekoLinuxMachine.process_operation, self.operations)
+        for item in self.results:
+            dt, name, output, exec_time = item
+            if len(output) == 0:
+                continue
+
 
 def main():
     import argparse

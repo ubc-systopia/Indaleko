@@ -2,12 +2,10 @@ import argparse
 import json
 import os
 import logging
-import sys
 import uuid
 import datetime
-import re
 import datetime
-import ctypes
+import platform
 
 
 class ContainerRelationship:
@@ -77,7 +75,26 @@ class LocalIngest:
             self.parser = parser
         else:
             self.parser = argparse.ArgumentParser()
-        logging_levels = sorted(set([l for l in logging.getLevelNamesMapping()]))
+        if platform.python_version() < '3.12':
+            logging_levels = []
+            if hasattr(logging, 'CRITICAL'):
+                logging_levels.append('CRITICAL')
+            if hasattr(logging, 'ERROR'):
+                logging_levels.append('ERROR')
+            if hasattr(logging, 'WARNING'):
+                logging_levels.append('WARNING')
+            if hasattr(logging, 'WARN'):
+                logging_levels.append('WARN')
+            if hasattr(logging, 'INFO'):
+                logging_levels.append('INFO')
+            if hasattr(logging, 'DEBUG'):
+                logging_levels.append('DEBUG')
+            if hasattr(logging, 'NOTSET'):
+                logging_levels.append('NOTSET')
+            if hasattr(logging, 'FATAL'):
+                logging_levels.append('FATAL')
+        else:
+            logging_levels = sorted(set([l for l in logging.getLevelNamesMapping()]))
         self.__setup_defaults__()
         logging.basicConfig(level=logging.WARNING)
         self.logger = logging.getLogger(__name__)
@@ -148,10 +165,14 @@ class LocalIngest:
         return self
 
 def main():
-    # Now parse the arguments
-    li = LocalIngest()
-    args = li.parse_args()
-    print(args)
+    # Note that this script is designed to be a class library, so if someone
+    # runs it directly, I'll point them at the correct version to run.
+    # We _could_ change it so that it runs the correct version, but that
+    # seems unnecessary.
+    print('This script is a general library used by platform specific ingesters.')
+    print('You are running on ' + platform.system())
+    print(f'The ingester script should be called something like {platform.system().lower()}_local_ingest.py')
+    print('Please run that script instead.')
 
 if __name__ == "__main__":
     main()
