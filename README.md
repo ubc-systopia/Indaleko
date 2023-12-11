@@ -1,3 +1,24 @@
+# Installation
+- You need to have `Python 3.12.0` installed.
+  - If you want to have multiple versions of python on your system, you can use `pyenv`.
+
+## OneDrive Config format:
+- First you need to register an application in your (portal)[https://entra.microsoft.com/].
+  - Go the `Applications->App registrations-> + New registration`.
+  - Go to `Authentication-> + Add a platform -> Mobile and desktop applications`. Put `http://localhost` in the **redirect url** field
+  - Set **Allow public client flows** to **Yes**.
+- Create a config file named `msgraph-parameters.json` inside your `data` folder. Copy the following `json` object and put it the file. Replace `[see your panel]` with your the data shown in your panel.
+
+```json
+{
+    "client_id": "[see your panel]",
+    "tenant_id": "[see your panel]",
+    "authority": "https://login.microsoftonline.com/consumers",
+    "scope": ["User.Read", "files.read.all"]
+}
+``````
+- Run `python onedrive-ingest.py`. You need to sign in to your Mirosoft account and give permissions for reading your files on OneDrive. Follow the instructions on the terminal.
+
 # Test Scripts
 
 These are some test scripts I have written for the Indaleko project.  There's
