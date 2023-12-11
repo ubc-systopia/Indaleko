@@ -212,7 +212,7 @@ class IndalekoDBConfig:
                 logging.info('Opened collection {collection} with schema {schema}, returned {object}'.format(collection=collection, schema=self.collections[collection]['schema'], object=self.collections[collection]['collection']))
                 continue
             except arango.exceptions.CollectionCreateError as e:
-                logging.error(f'Could not create collection {collection} with schema {self.collections[collection]['schema']}: {e}')
+                logging.error(f'Could not create collection {collection} with schema {self.collections[collection]["schema"]}: {e}')
                 self.collections[collection]['collection'] = self.db.create_collection(collection)
                 logging.warning(f'Created collection {collection} without schema')
 
@@ -295,6 +295,12 @@ def main():
     parser.add_argument('--log', '-l', help='Log file to use', default=logfile)
     parser.add_argument('--logdir', help='Log directory to use', default='./logs')
     args = parser.parse_args()
+
+    # make sure the following folders exist:
+    #  1- `logs`: for the logs
+    #  2- `config`: for the adb .ini configs
+    list(map(lambda x: os.makedirs(x, exist_ok=True), [args.logdir, "./config"]))
+
     logging.basicConfig(filename=os.path.join(args.logdir, args.log), level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
     logging.info(f'Begin run at {starttime}')
     if not os.path.exists(args.config):
