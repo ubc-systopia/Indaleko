@@ -76,7 +76,7 @@ class MicrosoftGraphCredentials:
         return self.__output_file_name__
 
     def get_output_file_name(self):
-        return f'data/microsoft-onedrive-data-{self.get_account_name()}-{datetime.datetime.utcnow()}-data.json'.replace(' ', '_').replace(':', '-')
+        return f'data/microsoft-onedrive-data-{self.get_account_name()}-{datetime.datetime.now(datetime.UTC)}-data.json'.replace(' ', '_').replace(':', '-')
 
     def __get_token__(self):
         if hasattr(self, 'token') and self.token is not None:
@@ -204,10 +204,10 @@ def main():
     parser.add_argument('--reset', action='store_true',
                         default=False, help='Clean database before running')
     args = parser.parse_args()
-    print(args)
-    start = datetime.datetime.utcnow()
+    print("args:", args)
+    start = datetime.datetime.now(datetime.UTC)
     metadata = get_onedrive_metadata_recursive(graphcreds)
-    end = datetime.datetime.utcnow()
+    end = datetime.datetime.now(datetime.UTC)
     if len(metadata) > 0:
         with open(args.output, 'wt') as output_file:
             json.dump(metadata, output_file, indent=4)
