@@ -2,12 +2,10 @@ import argparse
 import json
 import os
 import logging
-import sys
 import uuid
 import datetime
-import re
 import datetime
-import ctypes
+import platform
 
 
 class ContainerRelationship:
@@ -150,6 +148,8 @@ class LocalIngest:
 def main():
     # Now parse the arguments
     li = LocalIngest()
+    print('local platform is: ' + platform.system())
+    li.add_arguments('--platform', type=str, default='windows', help='Platform to use for metadata retrieval')
     args = li.parse_args()
     print(args)
 
