@@ -57,90 +57,83 @@ class IndalekoObject:
         "title": "Indaleko Object Schema",
         "description": "Schema for the JSON representation of an Indaleko Object, which is used for indexing storage content.",
         "type": "object",
-        "properties": {
-            "Label": {
-                "type": "string",
-                "description": "The label for this object.",
-            },
-            "URI" : {
-                "type": "string",
-                "description" : "URI for retrieving this object.",
-            },
-            "ObjectIdentifier": {
-                "type" : "string",
-                "description" : "The UUID we generated for this object.",
-                "format" : "uuid",
-            },
-            "LocalIdentifier": {
-                "type" : "string",
-                "description" : "The local identifier used by the storage system to find this, such as a UUID or inode number."
-            },
-            "Timestamps": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "Label": {
-                            "type": "string",
-                            "format": "uuid",
-                            "description": "UUID representing the semantic meaning of this timestamp."
-                        },
-                        "Value": {
-                            "type": "string",
-                            "format": "date-time",
-                            "description": "Timestamp in ISO date and time format."
-                        }
-                    },
-                    "required": ["Label", "Value"],
+        "rule" : {
+            "type" : "object",
+            "properties" : {
+                "Label" : {
+                    "type" : "string",
+                    "description" : "The object label (like a file name)."
                 },
-                "description": "List of timestamps with UUID-based semantic meanings associated with this object."
-            },
-            "Size" : {
-                "type" : "integer",
-            },
-            "Source" : {
-                "type" : "object",
-                "properties" : {
-                    "SourceIdentifier" : {
-                        "type" : "string",
-                        "format" : "uuid",
-                        "description" : "UUID identifying the source of this object.",
+                "URI" : {
+                    "type" : "string",
+                    "description" : "The URI of the object."
+                },
+                "ObjectIdentifier" : {
+                    "type" : "string",
+                    "description" : "The object identifier (UUID).",
+                    "format" : "uuid",
+                },
+                "LocalIdentifier": {
+                    "type" : "string",
+                    "description" : "The local identifier used by the storage system to find this, such as a UUID or inode number."
+                },
+                "Timestamps" : {
+                    "type" : "array",
+                    "properties" : {
+                        "Label" : {
+                            "type" : "string",
+                            "description" : "UUID representing the semantic meaning of this timestamp.",
+                            "format": "uuid",
+                        },
+                        "Value" : {
+                            "type" : "string",
+                            "description" : "Timestamp in ISO date and time format.",
+                            "format" : "date-time",
+                        },
                     },
-                    "Version" : {
-                        "type" : "integer",
-                        "description" : "Source data version, for allowing backwards compatibility.",
-                    },
-                    "Metadata" : {
-                        "type:": "string",
-                        "description" : "Source specific metadata associated with this object.",
-                    },
-                    "required" : ["SourceIdentifier", "Version", "Metadata"],
+                    "required" : [
+                        "Label",
+                        "Value"
+                    ],
+                    "description" : "List of timestamps with UUID-based semantic meanings associated with this object."
+                },
+                "Size" : {
+                    "type" : "integer",
+                    "description" : "Size of the object in bytes."
                 },
                 "RawData" : {
                     "type" : "string",
-                    "description" : "The raw data captured for this object.",
+                    "description" : "Raw data captured for this object.",
+                    "contentEncoding" : "base64",
+                    "contentMediaType" : "application/octet-stream",
                 },
                 "SemanticAttributes" : {
                     "type" : "array",
-                    "attributes" : {
-                        "type" : "object",
-                        "properties" : {
-                            "UUID" : {
-                                "type" : "string",
-                                "description" : "The UUID for this attribute.",
-                                "format" : "uuid",
-                            },
-                            "Data" : {
-                                "type" : "string",
-                                "description" : "The data associated with this attribute.",
-                            },
-                        },
-                        "required" : ["UUID", "Data"],
-                    },
                     "description" : "Semantic attributes associated with this object.",
-                },
+                    "properties" : {
+                        "UUID" : {
+                            "type" : "string",
+                            "description" : "The UUID for this attribute.",
+                            "format" : "uuid",
+                        },
+                        "Data" : {
+                            "type" : "string",
+                            "description" : "The data associated with this attribute.",
+                        },
+                    },
+                    "required" : [
+                        "UUID",
+                        "Data"
+                    ]
+                }
             },
-        },
+            "required" : [
+                "URI",
+                "ObjectIdentifier",
+                "Timestamps",
+                "Size",
+            ]
+        }
     }
 
 class IndalekoRelationship:
@@ -154,43 +147,45 @@ class IndalekoRelationship:
         "title" : "Indaleko Relationship Schema",
         "description" : "Schema for the JSON representation of an Indaleko Relationship, which is used for identifying related objects.",
         "type" : "object",
-        "properties" : {
-            "object1" : {
-                "type" : "string",
-                "format" : "uuid",
-                "description" : "The Indaleko UUID for the first object in the relationship.",
-            },
-            "object2" : {
-                "type" : "string",
-                "format" : "uuid",
-                "description" : "The Indaleko UUID for the second object in the relationship.",
-            },
-            "relationship" : {
-                "type" : "string",
-                "description" : "The UUID specifying the specific relationship between the two objects.",
-                "format" : "uuid",
-            },
-            "metadata" :  {
-                "type" : "array",
-                "items" : {
-                    "type" : "object",
-                    "properties" : {
-                        "UUID" : {
-                            "type" : "string",
-                            "format" : "uuid",
-                            "description" : "The UUID for this metadata.",
-                        },
-                        "Data" : {
-                            "type" : "string",
-                            "description" : "The data associated with this metadata.",
-                        },
-                    },
-                    "required" : ["UUID", "Data"],
+        "rule" : {
+            "properties" : {
+                "object1" : {
+                    "type" : "string",
+                    "format" : "uuid",
+                    "description" : "The Indaleko UUID for the first object in the relationship.",
                 },
-                "description" : "Optional metadata associated with this relationship.",
+                "object2" : {
+                    "type" : "string",
+                    "format" : "uuid",
+                    "description" : "The Indaleko UUID for the second object in the relationship.",
+                },
+                "relationship" : {
+                    "type" : "string",
+                    "description" : "The UUID specifying the specific relationship between the two objects.",
+                    "format" : "uuid",
+                },
+                "metadata" :  {
+                    "type" : "array",
+                    "items" : {
+                        "type" : "object",
+                        "properties" : {
+                            "UUID" : {
+                                "type" : "string",
+                                "format" : "uuid",
+                                "description" : "The UUID for this metadata.",
+                            },
+                            "Data" : {
+                                "type" : "string",
+                                "description" : "The data associated with this metadata.",
+                            },
+                        },
+                        "required" : ["UUID", "Data"],
+                    },
+                    "description" : "Optional metadata associated with this relationship.",
+                },
             },
+            "required" : ["object1", "object2" , "relationship"],
         },
-        "required" : ["object1", "object2" , "relationship"],
     }
 
 class IndalekoSource:
@@ -202,18 +197,20 @@ class IndalekoSource:
             "title": "Data source schema",
             "description": "This schema describes information about the sources of metadata within the Indaleko system.",
             "type": "object",
-            "properties": {
-                "identifier": {
-                    "description": "This is the UUID of the given source for this metadata.",
-                    "type": "string",
-                    "format": "uuid"
+            "rule" : {
+                "properties": {
+                    "identifier": {
+                        "description": "This is the UUID of the given source for this metadata.",
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "version": {
+                        "description": "This is the version of the source provider. Versioning allows evolution of the data generated by the source.",
+                        "type": "string",
+                    },
                 },
-                "version": {
-                    "description": "This is the version of the source provider. Versioning allows evolution of the data generated by the source.",
-                    "type": "string",
-                },
-            },
-            "required": ["identifier", "version"]
+                "required": ["identifier", "version"]
+            }
         }
 
 
@@ -505,6 +502,7 @@ def main():
     parser.add_argument('--version', action='version', version='%(prog)s 1.0')
     args = parser.parse_args()
     print(args)
+
 
 if __name__ == "__main__":
     main()

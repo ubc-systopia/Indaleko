@@ -259,4 +259,85 @@ Relationships I want to capture:
 * Container relationship (bi-directionally)
 * Causal (versioned) relationship - not needed for indexing?
 
+### 2023-12-05
+
+Improved the automated set-up script for the database container.  That now seems
+to be basically working, though there's always more features that _could_ be
+added.
+
+Biggest point is that it now extracts the Schema from Indaleko.py and creates
+the corresponding collection _with_ the Schema.  The purpose of having those
+schema is because I can use them as part of the query production chain (e.g.,
+use the OpenAI API + Schema + Natural Language Query and get a GraphQL query
+back.) This will then provide the basis for exploring search functionality,
+though I expect future work will use search to provide alternative interfaces
+(e.g., the relationship graph walking model we've explored before.)
+
+### 2023-12-06
+
+I re-organized some code today, putting files that are from prior iterations of
+work into the "old" directory.  There's still some useful work that needs to be
+extracted from them.
+
+I also added logic to the dbsetup.py script so it will _wait_ for ArangoDB to
+start running before it actually tries to create the Indaleko database and the
+various collections.
+
+One of the motivations for this was that I started looking at indices again.  I
+had a number of indices that I set up previously (see arangodb-local-ingest.py)
+and I'm trying to extract the useful work there for setting up the indices.
+That in turn led me to set up the main() method in indalekocollections.py (a new
+file I added to capture some of that prior work product) so I could put test
+code right there, rather than writing yet another random little script.  This,
+in turn, led me to reuse the database config code (from dbsetup.py) and it
+balked when it found the collections already existed.  So I modified it to just
+load them up.  Then I verified that the three collections I expected _do_ in
+fact exist and now I have the basis of a script for further testing.  I want to
+define the indices to create for the various collections, which are then, in
+turn, formed into a list of collections.  In this way I can move towards a model
+where this is dynamically created from said list, as I'm increasingly convinced
+we're going to need more collections.
+
+The other motivation here is that as I was talking with Zee about building the
+data ingester for Mac, I realized there is a challenge that I didn't have back
+when I first added the relationship stuff: because I was inserting it
+contemporaneously, I had exactly the data I needed in order to add the
+relationships.  But when I bulk upload I won't have that data (e.g., the `_id`
+field that ArangoDB adds to each entry and uses as part of creating the edge
+relationships.)  I spent some time trying to explain sources to Zee as well and
+realized I need to be more clear about this.
+
+A _Source_ is a unique identifier that specifies what component generated the
+given file.  So, for example, the Google Drive indexer should have a source
+identifier and that would go into the Sources collection.  In turn, the GDrive
+_ingester_ would be a source as well and have its own source identifier.
+
+My original model was that I'd embed the raw metadata inside the object itself,
+but now I'm wondering if maybe that's the wrong model.  For example, I could
+have objects that go into per-indexer collections.  This sort of separation
+might make sense given that the raw metadata doesn't really provide much benefit
+to the core index.  Instead, I could create a causal relationship showing that
+the data was ingested _from_ the raw metadata.  That would then provide us with
+a model in which parallel ingesters could process that original metadata and
+show their own contributions - a sort of provenance graph relationship.
+
+Another element that I ran across yesterday and wanted to capture is likely to
+be quite important once we start trying to optimize query results.
+
+https://about.xethub.com/blog/you-dont-need-a-vector-database
+
+Specifically, it talks about how to combine two different techniques, one is
+essentially a "coarse filtering" mechanism and the second is a "fine filtering"
+mechanism.
+
+* Retrieval Augmented Generation (RAG) is a process of finding a subset of
+  documents quickly using a "low precision, high recall algorithm."  This can
+  reduce billions of documents to around 1,000 documents (I'm paraphrasing right
+  from that blog post.)
+
+* A vector database, with vector embeddings extracted from the document, can
+  then be used to "re-rank" the original set to improve the results.
+
+So I think this approach is solid and justifies further exploration as we begin
+building exploring the query space.
 

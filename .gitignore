@@ -1,5 +1,6 @@
 data/*
 config/*
+logs/*
 __pycache__/*
 wmiobject-list.txt
 *.log

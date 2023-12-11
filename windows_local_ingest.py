@@ -5,6 +5,7 @@ import re
 import uuid
 import json
 import logging
+import platform
 
 class IndalekoWindowsMachineConfig:
     '''
@@ -126,46 +127,38 @@ def convert_windows_path_to_guid_uri(path : str, config : IndalekoWindowsMachine
             uri = vol['UniqueId']
     return uri
 
+def build_stat_dict(name: str, root : str, config : IndalekoWindowsMachineConfig, last_uri = None, last_drive = None) -> tuple:
+    file_path = os.path.join(root, name)
+    last_uri = file_path
+    try:
+        stat_data = os.stat(file_path)
+    except:
+        # at least for now, we just skip errors
+        logging.warning(f'Unable to stat {file_path}')
+        return None
+    stat_dict = {key : getattr(stat_data, key) for key in dir(stat_data) if key.startswith('st_')}
+    stat_dict['file'] = name
+    stat_dict['path'] = root
+    if platform.system() == 'Windows':
+        if last_drive != os.path.splitdrive(root)[0][0].upper():
+            # one entry cache - high hit rate expected
+            last_drive = os.path.splitdrive(root)[0][0].upper()
+        last_uri = convert_windows_path_to_guid_uri(root, config)
+    stat_dict['URI'] = os.path.join(last_uri, name)
+    return (stat_dict, last_uri, last_drive)
+
 def walk_files_and_directories(path: str, config : IndalekoWindowsMachineConfig) -> list:
     files_data = []
     dirs_data = []
     last_drive = None
     last_uri = None
     for root, dirs, files in os.walk(path):
-        for name in files:
-            file_path = os.path.join(root, name)
-            try:
-                stat_data = os.stat(file_path)
-            except:
-                # at least for now, we just skip errors
-                logging.warning(f'Unable to stat {file_path}')
-                continue
-            stat_dict = {key : getattr(stat_data, key) for key in dir(stat_data) if key.startswith('st_')}
-            stat_dict['file'] = name
-            stat_dict['path'] = root
-            if last_drive != os.path.splitdrive(root)[0][0].upper():
-                # one entry cache - high hit rate expected
-                last_drive = os.path.splitdrive(root)[0][0].upper()
-                last_uri = convert_windows_path_to_guid_uri(root, config)
-            last_uri = convert_windows_path_to_guid_uri(root, config)
-            stat_dict['URI'] = os.path.join(last_uri, name)
-            files_data.append(stat_dict)
-        for name in dirs:
-            dir_path = os.path.join(root, name)
-            try :
-                stat_data = os.stat(dir_path)
-            except:
-                logging.warning(f'Unable to stat {dir_path}')
-                continue
-            stat_dict = {key : getattr(stat_data, key) for key in dir(stat_data) if key.startswith('st_')}
-            stat_dict['file'] = name
-            stat_dict['path'] = root
-            if last_drive != os.path.splitdrive(root)[0][0].upper():
-                # one entry cache - high hit rate expected
-                last_drive = os.path.splitdrive(root)[0][0].upper()
-                last_uri = convert_windows_path_to_guid_uri(root, config)
-            stat_dict['URI'] = os.path.join(last_uri, name)
-            dirs_data.append(stat_dict)
+        for name in files + dirs:
+            entry = build_stat_dict(name, root, config, last_uri, last_drive)
+            if entry is not None:
+                files_data.append(entry[0])
+                last_uri = entry[1]
+                last_drive = entry[2]
     return dirs_data + files_data
 
 
