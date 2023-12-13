@@ -171,7 +171,7 @@ def main():
     # seems unnecessary.
     print('This script is a general library used by platform specific ingesters.')
     print('You are running on ' + platform.system())
-    print(f'The ingester script should be called something like {platform.system().lower()}_local_ingest.py')
+    print(f'The ingester script should be called something like {platform.system().lower()}_local_index.py')
     print('Please run that script instead.')
 
 if __name__ == "__main__":

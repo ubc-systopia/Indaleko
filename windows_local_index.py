@@ -1,4 +1,4 @@
-import local_ingest
+import local_index
 import datetime
 import os
 import re
@@ -164,7 +164,7 @@ def walk_files_and_directories(path: str, config : IndalekoWindowsMachineConfig)
 
 def main():
     # Now parse the arguments
-    li = local_ingest.LocalIngest()
+    li = local_index.LocalIngest()
     li.add_arguments('--path', type=str, default=get_default_index_path(), help='Path to index')
     args = li.parse_args()
     machine_config = IndalekoWindowsMachineConfig(config_dir=args.confdir)
