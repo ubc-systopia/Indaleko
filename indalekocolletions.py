@@ -60,6 +60,10 @@ class IndalekoCollection:
     def insert(self, document: dict) -> 'IndalekoCollection':
         return self.collection.insert(document)
 
+    def add_schema(self, schema: dict) -> 'IndalekoCollection':
+        self.collection.configure(schema=schema)
+        return self
+
 Indaleko_Collections = {
         'Objects': {
             'schema' : IndalekoObject.Schema,
