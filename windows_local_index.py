@@ -6,6 +6,8 @@ import uuid
 import json
 import logging
 import platform
+from indaleko import IndalekoRecord, IndalekoSource
+import msgpack
 
 class IndalekoWindowsMachineConfig:
     '''
@@ -13,29 +15,89 @@ class IndalekoWindowsMachineConfig:
     look for and load the captured configuration data.  We have this separation
     because currently the machine guid requires admin privileges to get.
     '''
-    def __init__(self, config_dir : str):
-        self.config_file = self.__find_hw_info_file__()
+    def __init__(self : 'IndalekoWindowsMachineConfig', config_dir : str = './config'):
         self.config_dir = config_dir
+        self.config_files = []
         self.config_data = None
-        assert self.config_dir is not None, 'No config directory specified'
-        self.config_data = self.get_config_data()
+        self.__find_config_files__()
+        if len(self.config_files) > 0:
+            self.set_config_file(self.config_files[-1])
+        else:
+            self.config_file = None
+        if self.config_file is not None:
+            self.__load__config_file__()
+            self.config_data = self.get_config_data()
 
-    def __load__config_data__(self):
+    def __find_config_files__(self : 'IndalekoWindowsMachineConfig') -> None:
+        self.config_files = [x for x in os.listdir(self.config_dir) if x.startswith('windows-hardware-info') and x.endswith('.json')]
+        return
+
+    def __load__config_file__(self : 'IndalekoWindowsMachineConfig') -> None:
+        assert self.config_file is not None, 'No config file specified'
         with open(self.config_file, 'rt', encoding='utf-8-sig') as fd:
             self.config_data = json.load(fd)
+        self.extract_volume_info()
+        return
 
+    def set_config_file(self : 'IndalekoWindowsMachineConfig', config_file : str) -> None:
+        self.config_file = os.path.join(self.config_dir, config_file)
+        self.__load__config_file__()
+        return
 
-    def get_config_data(self):
+    def get_config_data(self : 'IndalekoWindowsMachineConfig') -> dict:
         if self.config_data is None:
-            self.__load__config_data__()
+            self.__load__config_file__()
         return self.config_data
 
-    def __find_hw_info_file__(self, configdir = './config'):
+    def find_config_files(self : 'IndalekoWindowsMachineConfig', config_dir  : str  = './config') -> list:
+        return [x for x in os.listdir(config_dir) if x.startswith('windows-hardware-info') and x.endswith('.json')]
+
+
+    def __find_hw_info_file__(self : 'IndalekoWindowsMachineConfig', configdir : str = './config'):
         candidates = [x for x in os.listdir(configdir) if x.startswith('windows-hardware-info') and x.endswith('.json')]
         assert len(candidates) > 0, 'At least one windows-hardware-info file should exist'
         for candidate in candidates:
             file, guid, timestamp = self.get_guid_timestamp_from_file_name(candidate)
         return configdir + '/' + candidates[-1]
+
+    class WindowsDriveInfo(IndalekoRecord):
+
+        WindowsDriveInfo_UUID_str = 'a0b3b3e0-0b1a-4e1f-8b1a-4e1f8b1a4e1f'
+        WindowsDriveInfo_UUID = uuid.UUID(WindowsDriveInfo_UUID_str)
+        WindowsDriveInfo_Version = '1.0'
+        WindowsDriveInfo_Description = 'Windows Drive Info'
+
+        def __init__(self, drive_data : dict) -> None:
+            assert 'GUID' not in drive_data, 'GUID should not be in drive_data'
+            assert 'UniqueId' in drive_data, 'UniqueId must be in drive_data'
+            assert drive_data['UniqueId'].startswith('\\\\?\\Volume{')
+            drive_data['GUID'] = self.__find_volume_guid__(drive_data['UniqueId'])
+            super().__init__(msgpack.packb(drive_data),
+                             drive_data,
+                             IndalekoSource(self.WindowsDriveInfo_UUID,
+                                            self.WindowsDriveInfo_Version,
+                                            self.WindowsDriveInfo_Description))
+
+
+        @staticmethod
+        def __find_volume_guid__(vol_name : str) -> str:
+            assert vol_name is not None, 'Volume name cannot be None'
+            assert type(vol_name) is str, 'Volume name must be a string'
+            assert vol_name.startswith('\\\\?\\Volume{')
+            return vol_name[11:-2]
+
+        def get_vol_guid(self):
+            return self.get_attributes()['GUID']
+
+    def extract_volume_info(self: 'IndalekoWindowsMachineConfig') -> None:
+        self.volume_data = {}
+        for voldata in self.config_data['VolumeInfo']:
+            wdi = self.WindowsDriveInfo(voldata)
+            assert wdi.get_vol_guid() not in self.volume_data, f'Volume GUID {wdi.get_vol_guid()} already in volume_data'
+            self.volume_data[wdi.get_vol_guid()] = wdi
+
+    def get_volume_info(self: 'IndalekoWindowsMachineConfig') -> dict:
+        return self.volume_data
 
     @staticmethod
     def get_guid_timestamp_from_file_name(file_name : str) -> tuple:

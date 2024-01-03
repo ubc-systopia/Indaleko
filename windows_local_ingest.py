@@ -65,7 +65,7 @@ class WindowsLocalIngest():
         info = self.indaleko_services.lookup_service(name)
         return info
 
-    def __init__(self, reset: bool = False) -> None:
+    def __init__(self, data_dir: str = './data', reset: bool = False) -> None:
         # Register our services
         self.indaleko_services = IndalekoServices(reset=reset)
         if len(self.lookup_service(self.WindowsMachineConfigService['name'])) == 0:
@@ -80,6 +80,7 @@ class WindowsLocalIngest():
             self.WindowsLocalIngesterService['name'],
         )
         self.collections = IndalekoCollections()
+        self.set_data_dir(data_dir)
 
 
     def get_source(self, source_name: str) -> IndalekoSource:
@@ -88,18 +89,20 @@ class WindowsLocalIngest():
         source = self.lookup_service(source_name)[0]
         return IndalekoSource(uuid.UUID(source['identifier']), source['version'], source['description'])
 
+    def add_record_to_collection(self, collection_name: str, record: dict) -> None:
+        entries = self.collections.get_collection(collection_name).find_entries(_key=record['_key'])
+        if len(entries) < 1:
+            self.collections.get_collection(collection_name).insert(record)
+            print(f'Inserted {record} into {collection_name}')
 
-    def get_config_data(self) -> dict:
-        # this loads the data from the database if it is present.  If not, it
-        # will store it.  TODO: probably need to have a versionable mechnism
-        # here, to handle reconfig events.  I note there is dynamic data in here
-        # so this comparison may not be trivial.
+    def __find_data_files__(self: 'WindowsMachineConfig') -> None:
+        self.data_files = [x for x in os.listdir(self.data_dir) if x.startswith('windows-local-fs-data') and x.endswith('.json')]
+        return
 
-        return IndalekoWindowsMachineConfig().get_config_data()
-
-    def save_config_data(self):
-        # This saves the configuration data to the database.
-        pass
+    def set_data_dir(self : 'WindowsLocalIngest', data_dir : str) -> None:
+        self.data_dir = data_dir
+        self.__find_data_files__()
+        return
 
 
 def find_data_files(dir: str ='./data'):
@@ -107,12 +110,6 @@ def find_data_files(dir: str ='./data'):
 
 def find_config_files(dir: str ='./config'):
     return [x for x in os.listdir(dir) if x.startswith('windows-hardware-info') and x.endswith('.json')]
-
-def load_config_file(config_file: str):
-    with open(config_file, 'r') as f:
-        config_data = json.load(f)
-    return config_data
-
 
 def main():
     data_files = find_data_files()
@@ -129,13 +126,53 @@ def main():
     parser.add_argument('--version', action='version', version='%(prog)s 1.0')
     parser.add_argument('--reset', action='store_true', help='Reset the service collection.')
     args = parser.parse_args()
-    if args.datadir != './data':
-        data_files = find_data_files(args.datadir)
-    ingester = WindowsLocalIngest(reset=args.reset)
+    ingester = WindowsLocalIngest(data_dir=args.datadir, reset=args.reset)
     machine_config = IndalekoWindowsMachineConfig(args.configdir)
     cfg = machine_config.get_config_data()
     config_data = base64.b64encode(msgpack.packb(cfg))
-    config_record = IndalekoRecord(msgpack.packb(cfg), cfg, ingester.get_source(ingester.WindowsMachineConfigService['name']).get_source_identifier())
+    # config_record = IndalekoRecord(msgpack.packb(cfg), cfg, ingester.get_source(ingester.WindowsMachineConfigService['name']).get_source_identifier())
+    config_info = {
+        'platform' : {
+            'software' : {
+                'OS' : cfg['OperatingSystem']['Caption'],
+                'Architecture' : cfg['OperatingSystem']['OSArchitecture'],
+                'Version' : cfg['OperatingSystem']['Version']
+            },
+            'hardware' : {
+                'CPU' : cfg['CPU']['Name'],
+                'Version' : cfg['CPU']['Name'],
+                'Cores' : cfg['CPU']['Cores'],
+            },
+        },
+        'source' : WindowsLocalIngest.WindowsMachineConfigService['identifier'],
+        'version' : WindowsLocalIngest.WindowsMachineConfigService['version'],
+        'captured' : {
+            'Label' : 'Timestamp',
+            'Value' : datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        },
+        'Attributes' : cfg,
+        'Data' : config_data.decode('ascii'),
+        '_key' : cfg['MachineGuid']
+    }
+    # looks ready to save to the database
+    ingester.add_record_to_collection('MachineConfig', config_info)
+    volinfo = machine_config.get_volume_info()
+    for vol in volinfo:
+        vol_record = {
+            'volume' : volinfo[vol].get_vol_guid(),
+            'source' : IndalekoWindowsMachineConfig.WindowsDriveInfo.WindowsDriveInfo_UUID_str,
+            'version' : IndalekoWindowsMachineConfig.WindowsDriveInfo.WindowsDriveInfo_Version,
+            'captured' : {
+                'Label' : 'Timestamp',
+                'Value' : datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            },
+            'Attributes' : volinfo[vol].get_attributes(),
+            'Data' : volinfo[vol].get_raw_data(),
+            'Machine' : cfg['MachineGuid'], # TODO - should we have a relationship?
+            '_key' : volinfo[vol].get_vol_guid(),
+        }
+        ingester.add_record_to_collection('MachineConfig', vol_record)
+
 
 if __name__ == "__main__":
     main()

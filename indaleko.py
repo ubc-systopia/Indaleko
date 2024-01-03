@@ -261,6 +261,9 @@ class IndalekoSource:
         def get_source_identifier(self) -> uuid.UUID:
             return self.__identifier
 
+        def get_source_identifier_str(self) -> str:
+            return str(self.__identifier)
+
 
         def get_version(self) -> str:
             return self.__version
@@ -298,19 +301,34 @@ class IndalekoRecord:
 
     def __init__(self, raw_data : bytes, attributes : dict, source : IndalekoSource) -> None:
         assert type(raw_data) is bytes, 'raw_data must be bytes'
+        assert type(attributes) is dict, 'attributes must be a dict'
+        assert type(source) is IndalekoSource, 'source must be an IndalekoSource'
         self.__raw_data__ = base64.b64encode(raw_data).decode('ascii')
         self.__attributes__ = attributes
-        self.__source__ = source
+        self.__source__ = {
+            'source': str(source.get_source_identifier()),
+            'version': source.get_version(),
+            'description': source.get_description(),
+        }
 
     def to_json(self):
         tmp = {}
         for field, keyword in self.keyword_map:
             if hasattr(self, field):
-                print(f'Found {field} of type {type(field)} in {self.__class__.__name__}')
                 tmp[keyword] = self.__dict__[field]
-        print(tmp)
         return json.dumps(tmp, indent=4)
 
+    def get_attributes(self) -> dict:
+        return self.__attributes__
+
+    def get_source(self) -> str:
+        return str(self.__source__.get_source_identifier())
+
+    def get_source_uuid(self) -> uuid.UUID:
+        return self.__source__.get_source_identifier()
+
+    def get_raw_data(self) -> str:
+        return self.__raw_data__
 
 class IndalekoMachineConfig:
         '''
