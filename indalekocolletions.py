@@ -1,6 +1,6 @@
 import argparse
 from arango import ArangoClient
-from indaleko import IndalekoObject, IndalekoRelationship, IndalekoSource
+from indaleko import IndalekoObject, IndalekoRelationship, IndalekoSource, IndalekoMachineConfig
 from dbsetup import IndalekoDBConfig
 import logging
 import datetime
@@ -37,7 +37,6 @@ class IndalekoCollection:
         self.name = name
         self.definition = definition
         assert type(definition) is dict, 'Collection definition must be a dictionary'
-        print(definition)
         assert 'schema' in definition, 'Collection must have a schema'
         assert 'edge' in definition, 'Collection must have an edge flag'
         assert 'indices' in definition, 'Collection must have indices'
@@ -142,16 +141,23 @@ class IndalekoCollections:
                     },
                 },
             },
+            'MachineConfig' : {
+                'schema' : IndalekoMachineConfig.Schema,
+                'edge' : False,
+                'indices' : { },
+            }
         }
 
     def __init__(self, reset: bool = False) -> None:
         self.db_config = IndalekoDBConfig()
         self.db_config.start()
         self.collections = {}
-        print(self.Indaleko_Collections)
-        print(type(self.Indaleko_Collections))
         for name in self.Indaleko_Collections:
             self.collections[name] = IndalekoCollection(name, self.Indaleko_Collections[name], self.db_config, reset)
+
+    def get_collection(self, name: str) -> IndalekoCollection:
+        assert name in self.collections, f'Collection {name} does not exist.'
+        return self.collections[name]
 
 
 def main():

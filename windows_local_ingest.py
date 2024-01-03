@@ -15,7 +15,7 @@ import base64
 from IndalekoServices import IndalekoServices
 import jsonlines
 import logging
-
+from indalekocolletions import *
 
 class WindowsLocalIngest():
 
@@ -79,6 +79,7 @@ class WindowsLocalIngest():
             self.WindowsLocalIndexerService['name'],
             self.WindowsLocalIngesterService['name'],
         )
+        self.collections = IndalekoCollections()
 
 
     def get_source(self, source_name: str) -> IndalekoSource:
@@ -135,7 +136,6 @@ def main():
     cfg = machine_config.get_config_data()
     config_data = base64.b64encode(msgpack.packb(cfg))
     config_record = IndalekoRecord(msgpack.packb(cfg), cfg, ingester.get_source(ingester.WindowsMachineConfigService['name']).get_source_identifier())
-    print(config_record.to_json())
 
 if __name__ == "__main__":
     main()
