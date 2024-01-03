@@ -34,13 +34,13 @@ class IndalekoWindowsMachine:
     @staticmethod
     def process_operation(item: tuple) -> tuple():
         data_class, data_name, command, max_execution_time = item
-        start = datetime.datetime.utcnow()
+        start = datetime.datetime.now(datetime.timezone.utc)
         try:
             operation_results = IndalekoWindowsMachine.capture_powershell_output(
                 command, max_execution_time)
         except subprocess.TimeoutExpired as e:
             operation_results = {}
-        end = datetime.datetime.utcnow()
+        end = datetime.datetime.now(datetime.timezone.utc)
         result = (data_class, data_name, operation_results, str(end - start))
         return result
 
@@ -117,9 +117,9 @@ def main():
         with open(args.output, 'rt') as fd:
             data = json.load(fd)
     else:
-        start = datetime.datetime.utcnow()
+        start = datetime.datetime.now(datetime.timezone.utc)
         machineinfo = IndalekoWindowsMachine()
-        end = datetime.datetime.utcnow()
+        end = datetime.datetime.now(datetime.timezone.utc)
         with open(args.output, 'wt') as fd:
             json.dump(machineinfo.data, fd)
         data = machineinfo.data

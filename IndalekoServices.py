@@ -60,22 +60,29 @@ class IndalekoServices:
         }
     }
 
-    IndalekoServices = 'IndalekoServices'
+    IndalekoServices = 'Services'
 
     ServiceTypes = (
         'Indexer',
         'Ingester',
     )
 
+    CollectionDefinition = {
+                'schema' : ServicesSchema,
+                'edge' : False,
+                'indices' : {
+                    'name' : {
+                        'fields' : ['name'],
+                        'unique' : True,
+                        'type' : 'persistent'
+                    },
+                },
+            }
+
     def __init__(self, reset: bool = False) -> None:
         self.db_config = IndalekoDBConfig()
         self.db_config.start()
-        if self.db_config.db.has_collection(self.IndalekoServices) and reset:
-            self.db_config.db.delete_collection(self.IndalekoServices)
-        if self.db_config.db.has_collection(self.IndalekoServices):
-            self.service_collection = IndalekoCollection(self.db_config.db, self.IndalekoServices, edge=False)
-        else:
-            self.create_indaleko_services_collection()
+        self.service_collection = IndalekoCollection('Services', self.CollectionDefinition, self.db_config, reset=reset)
 
 
     def create_indaleko_services_collection(self) -> IndalekoCollection:
@@ -95,9 +102,10 @@ class IndalekoServices:
         return self.service_collection.find_entries(name =  name)
 
 
-    def register_service(self, name: str, description: str, version: str, service_type : str = 'Indexer') -> 'IndalekoServices':
+    def register_service(self, name: str, description: str, version: str, service_type : str = 'Indexer', service_id : str  = None) -> 'IndalekoServices':
         assert service_type in IndalekoServices.ServiceTypes, f'Invalid service type {service_type} specified.'
-        service_id = str(uuid.uuid4())
+        if service_id is None:
+            service_id = str(uuid.uuid4())
         new_service = {
             'name': name,
             'description': description,

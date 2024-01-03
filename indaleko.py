@@ -3,6 +3,7 @@ from typing import Any
 import uuid
 import json
 import datetime
+import base64
 
 '''
 The purpose of this package is to define the core data types used in Indaleko.
@@ -214,12 +215,13 @@ class IndalekoSource:
         }
 
 
-        def __init__(self, identifier : uuid.UUID, version : str, description : str) -> None:
+        def __init__(self, identifier : str, version : str, description : str) -> None:
             '''The identifier is a UUID, the version is a string, and the
             description is freeform text describing this source.'''
             ### Start with the public fields
-            if not isinstance(identifier, uuid.UUID):
-                raise TypeError('identifier must be a UUID')
+            if type(identifier) is uuid.UUID:
+                identifier = str(identifier)
+            assert type(identifier) is str, 'identifier must be a string'
             self.__identifier = identifier
             if type(version) is not str:
                 raise TypeError('version must be a string')
@@ -228,7 +230,7 @@ class IndalekoSource:
             if type(description) is not str and type(description) is not None:
                 raise TypeError('description must be a string or None')
             self.__description = description
-            self.__db_key = datetime.datetime.utcnow() # preserve date this was created
+            self.__db_key = datetime.datetime.now(datetime.timezone.utc) # preserve date this was created
 
             def to_dict(self) -> dict:
                 return {
@@ -295,7 +297,8 @@ class IndalekoRecord:
     )
 
     def __init__(self, raw_data : bytes, attributes : dict, source : IndalekoSource) -> None:
-        self.__raw_data__ = raw_data
+        assert type(raw_data) is bytes, 'raw_data must be bytes'
+        self.__raw_data__ = base64.b64encode(raw_data).decode('ascii')
         self.__attributes__ = attributes
         self.__source__ = source
 
@@ -303,7 +306,9 @@ class IndalekoRecord:
         tmp = {}
         for field, keyword in self.keyword_map:
             if hasattr(self, field):
+                print(f'Found {field} of type {type(field)} in {self.__class__.__name__}')
                 tmp[keyword] = self.__dict__[field]
+        print(tmp)
         return json.dumps(tmp, indent=4)
 
 
@@ -352,7 +357,7 @@ class Indaleko:
             if type(description) is not str and type(description) is not None:
                 raise TypeError('description must be a string or None')
             self.__description = description
-            self.__db_key = datetime.datetime.utcnow() # preserve date this was created
+            self.__db_key = datetime.datetime.now(datetime.timezone.utc) # preserve date this was created
 
             def to_dict(self) -> dict:
                 return {
@@ -457,7 +462,7 @@ class Indaleko:
             if not isinstance(data, bytes):
                 raise TypeError('data must be bytes')
             self.__data = data
-            self.__timestamp = datetime.datetime.utcnow()
+            self.__timestamp = datetime.datetime.now(datetime.timezone.utc)
 
 
         def get_source(self) -> 'Source':
@@ -478,6 +483,14 @@ class Indaleko:
                 'Data': self.__data,
                 'Timestamp': self.__timestamp,
             }
+
+        def to_json(self) -> str:
+            return json.dumps({
+                'Source': self.__source.get_source_identifer(),
+                'Attributes': self.__attributes,
+                'Data': self.__data,
+                'Timestamp': self.__timestamp,
+            }, indent=4)
 
     class Machine:
         '''This class is intended to capture information about the specific

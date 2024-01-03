@@ -33,22 +33,36 @@ class IndalekoIndex:
 
 class IndalekoCollection:
 
-    def __init__(self, db, name: str, edge: bool = False, reset: bool = False) -> None:
-        '''Parameters:
-            db: ArangoDB database object (with appropriate credentials)
-            name: name of the collection
-            edge: if True, the collection is an edge collection
-            reset: if True, the collection is deleted and recreated
-        '''
-        self.db = db
+    def __init__(self, name : str, definition : dict, db : IndalekoDBConfig = None, reset : bool = False) -> None:
         self.name = name
-        self.edge = edge
-        if reset and db.has_collection(name):
-            db.delete_collection(name)
-        if not db.has_collection(name):
-            db.create_collection(name, edge=edge)
-        self.collection = db.collection(self.name)
+        self.definition = definition
+        assert type(definition) is dict, 'Collection definition must be a dictionary'
+        print(definition)
+        assert 'schema' in definition, 'Collection must have a schema'
+        assert 'edge' in definition, 'Collection must have an edge flag'
+        assert 'indices' in definition, 'Collection must have indices'
+        assert db is None or type(db) is IndalekoDBConfig, 'db must be None or an IndalekoDBConfig object'
+        if db is None:
+            self.db_config = IndalekoDBConfig()
+            self.db_config.start()
+        else:
+            self.db_config = db
+        assert db is not None, 'db must be a valid IndalekoDBConfig object'
+        self.collection_name = self.name
         self.indices = {}
+        self.create_collection(self.collection_name, definition, reset=reset)
+
+    def create_collection(self, name : str, config : dict, reset : bool = False) -> 'IndalekoCollection':
+        if self.db_config.db.has_collection(name) and not reset:
+            self.collection = self.db_config.db.collection(name)
+        else:
+            self.collection = self.db_config.db.create_collection(name, edge=config['edge'])
+            if 'schema' in config:
+                self.collection.configure(schema=config['schema'])
+            if 'indices' in config:
+                for index in config['indices']:
+                    self.create_index(index, config['indices'][index]['type'], config['indices'][index]['fields'], config['indices'][index]['unique'])
+        return self.collection
 
     def create_index(self, name: str, index_type: str, fields: list, unique: bool) -> 'IndalekoCollection':
         self.indices[name] = IndalekoIndex(self.collection, index_type, fields, unique)
@@ -64,96 +78,98 @@ class IndalekoCollection:
         self.collection.configure(schema=schema)
         return self
 
-Indaleko_Collections = {
-        'Objects': {
-            'schema' : IndalekoObject.Schema,
-            'edge' : False,
-            'indices' : {
-                'URI' : {
-                    'fields' : ['URI'],
-                    'unique' : True,
-                    'type' : 'persistent'
-                },
-                'file identity' : {
-                    'fields' : ['ObjectIdentifier'],
-                    'unique' : True,
-                    'type' : 'persistent'
-                },
-                'local identity' : {
-                    'fields' : ['LocalIdentifier'],
-                    'unique' : True,
-                    'type' : 'persistent'
-                },
-            },
-        },
-        'Relationships' : {
-            'schema' : IndalekoRelationship.Schema,
-            'edge' : True,
-            'indices' : {
-                'relationship' : {
-                    'fields' : ['relationship'],
-                    'unique' : False,
-                    'type' : 'persistent'
-                },
-                'vertex1' : {
-                    'fields' : ['object1'],
-                    'unique' : False,
-                    'type' : 'persistent'
-                },
-                'vertex2' : {
-                    'fields' : ['object2'],
-                    'unique' : False,
-                    'type' : 'persistent'
-                },
-                'edge' : {
-                    'fields' : ['object1', 'object2'],
-                    'unique' : False,
-                    'type' : 'persistent'
-                },
-            }
-        },
-        'Sources' : {
-            'schema' : IndalekoSource.Schema,
-            'edge' : False,
-            'indices' : {
-                'identifier' : {
-                    'fields' : ['identifier'],
-                    'unique' : False,
-                    'type' : 'persistent'
-                },
-            },
-        },
-    }
 
+class IndalekoCollections:
+    '''
+    This class is used to manage the collections in the Indaleko database.
+    '''
+    Indaleko_Collections = {
+            'Objects': {
+                'schema' : IndalekoObject.Schema,
+                'edge' : False,
+                'indices' : {
+                    'URI' : {
+                        'fields' : ['URI'],
+                        'unique' : True,
+                        'type' : 'persistent'
+                    },
+                    'file identity' : {
+                        'fields' : ['ObjectIdentifier'],
+                        'unique' : True,
+                        'type' : 'persistent'
+                    },
+                    'local identity' : {
+                        'fields' : ['LocalIdentifier'],
+                        'unique' : True,
+                        'type' : 'persistent'
+                    },
+                },
+            },
+            'Relationships' : {
+                'schema' : IndalekoRelationship.Schema,
+                'edge' : True,
+                'indices' : {
+                    'relationship' : {
+                        'fields' : ['relationship'],
+                        'unique' : False,
+                        'type' : 'persistent'
+                    },
+                    'vertex1' : {
+                        'fields' : ['object1'],
+                        'unique' : False,
+                        'type' : 'persistent'
+                    },
+                    'vertex2' : {
+                        'fields' : ['object2'],
+                        'unique' : False,
+                        'type' : 'persistent'
+                    },
+                    'edge' : {
+                        'fields' : ['object1', 'object2'],
+                        'unique' : False,
+                        'type' : 'persistent'
+                    },
+                }
+            },
+            'Sources' : {
+                'schema' : IndalekoSource.Schema,
+                'edge' : False,
+                'indices' : {
+                    'identifier' : {
+                        'fields' : ['identifier'],
+                        'unique' : False,
+                        'type' : 'persistent'
+                    },
+                },
+            },
+        }
+
+    def __init__(self, reset: bool = False) -> None:
+        self.db_config = IndalekoDBConfig()
+        self.db_config.start()
+        self.collections = {}
+        print(self.Indaleko_Collections)
+        print(type(self.Indaleko_Collections))
+        for name in self.Indaleko_Collections:
+            self.collections[name] = IndalekoCollection(name, self.Indaleko_Collections[name], self.db_config, reset)
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    args = parser.parse_args()
     starttime = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    parser = argparse.ArgumentParser()
     logfile = f'indalekocollections-test-{starttime}.log'
-    parser = argparse.ArgumentParser(description='Set up and start the database(s) for Indaleko')
+    parser = argparse.ArgumentParser(description='Set up and create the collections for the Indaleko database.')
+    parser.add_argument('--reset', '-r', help='Reset the database', action='store_true')
     parser.add_argument('--config', '-c', help='Path to the config file', default='./config/indaleko-db-config.ini')
     parser.add_argument('--log', '-l', help='Log file to use', default=logfile)
     parser.add_argument('--logdir', help='Log directory to use', default='./logs')
     args = parser.parse_args()
     logging.basicConfig(filename=os.path.join(args.logdir, args.log), level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
     logging.info(f'Begin Indaleko Collections test at {starttime}')
-    config = IndalekoDBConfig()
-    config.start()
-    collections = config.db.collections()
-    logging.debug(f'Collections are {collections}')
-    collections = {}
-    for collection in Indaleko_Collections:
-        c = config.db.collection(collection)
-        if c is None:
-            logging.warning(f'Collection {collection} not found in database!')
-        else:
-            collections[collection] = c
-            logging.info(f'Found collection: {collection}')
+    collections = IndalekoCollections()
     endtime = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
     logging.info(f'End Indaleko Collections test at {endtime}')
-
+    assert collections is not None, 'Collections object should not be None'
 
 
 
