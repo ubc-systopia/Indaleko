@@ -91,6 +91,10 @@ class IndalekoObject:
                             "description" : "Timestamp in ISO date and time format.",
                             "format" : "date-time",
                         },
+                        "Description" : {
+                            "type" : "string",
+                            "description" : "Description of the timestamp.",
+                        },
                     },
                     "required" : [
                         "Label",
@@ -136,6 +140,12 @@ class IndalekoObject:
             ]
         }
     }
+
+    '''UUIDs we associate with specific timestamps that we capture'''
+    CREATION_TIMESTAMP = '6b3f16ec-52d2-4e9b-afd0-e02a875ec6e6' # a/ka/ "birth time"
+    MODIFICATION_TIMESTAMP = '434f7ac1-f71a-4cea-a830-e2ea9a47db5a' # last time data contents modified
+    ACCESS_TIMESTAMP = '581b5332-4d37-49c7-892a-854824f5d66f' # last time file accessed (maybe)
+    CHANGE_TIMESTAMP = '3bdc4130-774f-4e99-914e-0bec9ee47aab' # last time anything about the file changed
 
 class IndalekoRelationship:
     '''

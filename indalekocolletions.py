@@ -97,9 +97,9 @@ class IndalekoCollections:
                         'unique' : True,
                         'type' : 'persistent'
                     },
-                    'local identity' : {
+                    'local identity' : { # Question: should this be combined with other info to allow uniqueness?
                         'fields' : ['LocalIdentifier'],
-                        'unique' : True,
+                        'unique' : False,
                         'type' : 'persistent'
                     },
                 },

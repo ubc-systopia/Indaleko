@@ -198,21 +198,22 @@ def normalize_index_data(data: dict, cfg : IndalekoWindowsMachineConfig) -> dict
         'Path' : data['path'],
         'URI' : data['URI'],
         'ObjectIdentifier' : oid,
-        'LocalIdentifier' : data['st_ino'],
-        'Timestamps' : {
-            'Created' : datetime.datetime.fromtimestamp(data['st_birthtime'], datetime.timezone.utc).isoformat(),
-            'Modified' : datetime.datetime.fromtimestamp(data['st_mtime'], datetime.timezone.utc).isoformat(),
-            'Accessed' : datetime.datetime.fromtimestamp(data['st_atime'], datetime.timezone.utc).isoformat(),
-            'Changed' : datetime.datetime.fromtimestamp(data['st_ctime'], datetime.timezone.utc).isoformat(),
-        },
+        'LocalIdentifier' : str(data['st_ino']),
+        'Timestamps' : [
+            {
+                'Label' : IndalekoObject.CREATION_TIMESTAMP,
+                'Value' : datetime.datetime.fromtimestamp(data['st_birthtime'], datetime.timezone.utc).isoformat(),
+                'Description' : 'Created'
+            },
+        ],
         'Size' : data['st_size'],
-        'FileId' : data['st_ino'],
+        'FileId' : str(data['st_ino']),
         # these are the data fields for the "record" format
         'RawData' : base64.b64encode(msgpack.packb(data)).decode('ascii'),
         'Attributes' : data, # at least for now, I just keep all of the original data as attributes.
         'source' : {
-            'identifier' : WindowsLocalIngest.WindowsLocalIngesterService['identifier'],
-            'version' : WindowsLocalIngest.WindowsLocalIngesterService['version'],
+           'identifier' : WindowsLocalIngest.WindowsLocalIngesterService['identifier'],
+           'version' : WindowsLocalIngest.WindowsLocalIngesterService['version'],
         },
         'Machine' : cfg.get_config_data()['MachineGuid'],
         # TODO: there are likely other things of interest here, such as the
