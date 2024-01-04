@@ -95,7 +95,7 @@ class WindowsLocalIngest():
             self.collections.get_collection(collection_name).insert(record)
             print(f'Inserted {record} into {collection_name}')
 
-    def __find_data_files__(self: 'WindowsMachineConfig') -> None:
+    def __find_data_files__(self: 'WindowsLocalIngest') -> None:
         self.data_files = [x for x in os.listdir(self.data_dir) if x.startswith('windows-local-fs-data') and x.endswith('.json')]
         return
 
@@ -104,12 +104,128 @@ class WindowsLocalIngest():
         self.__find_data_files__()
         return
 
+    def set_data_file(self: 'WindowsLocalIngest', data_file: str) -> None:
+        self.data_file = os.path.join(self.data_dir, data_file)
+        self.data = {}
+        with open(self.data_file, 'rt', encoding ='utf-8-sig') as fd:
+            self.data = json.load(fd)
+        return
+
+    def load_data(self) -> None:
+        self.__find_data_files__()
+        for file in self.data_files:
+            self.load_data_file(file)
+        return
 
 def find_data_files(dir: str ='./data'):
     return [x for x in os.listdir(dir) if x.startswith('windows-local-fs-data') and x.endswith('.json')]
 
 def find_config_files(dir: str ='./config'):
     return [x for x in os.listdir(dir) if x.startswith('windows-hardware-info') and x.endswith('.json')]
+
+class WindowsFileAttributes:
+
+    FILE_ATTRIBUTES = {
+        'FILE_ATTRIBUTE_READONLY' : 0x00000001,
+        'FILE_ATTRIBUTE_HIDDEN' : 0x00000002,
+        'FILE_ATTRIBUTE_SYSTEM' : 0x00000004,
+        'FILE_ATTRIBUTE_DIRECTORY' : 0x00000010,
+        'FILE_ATTRIBUTE_ARCHIVE' : 0x00000020,
+        'FILE_ATTRIBUTE_DEVICE' : 0x00000040,
+        'FILE_ATTRIBUTE_NORMAL' : 0x00000080,
+        'FILE_ATTRIBUTE_TEMPORARY' : 0x00000100,
+        'FILE_ATTRIBUTE_SPARSE_FILE' : 0x00000200,
+        'FILE_ATTRIBUTE_REPARSE_POINT' : 0x00000400,
+        'FILE_ATTRIBUTE_COMPRESSED' : 0x00000800,
+        'FILE_ATTRIBUTE_OFFLINE' : 0x00001000,
+        'FILE_ATTRIBUTE_NOT_CONTENT_INDEXED' : 0x00002000,
+        'FILE_ATTRIBUTE_ENCRYPTED' : 0x00004000,
+        'FILE_ATTRIBUTE_INTEGRITY_STREAM' : 0x00008000,
+        'FILE_ATTRIBUTE_VIRTUAL' : 0x00010000,
+        'FILE_ATTRIBUTE_NO_SCRUB_DATA' : 0x00020000,
+        'FILE_ATTRIBUTE_EA' : 0x00040000,
+        'FILE_ATTRIBUTE_PINNED' : 0x00080000,
+        'FILE_ATTRIBUTE_UNPINNED' : 0x00100000,
+        'FILE_ATTRIBUTE_RECALL_ON_OPEN' : 0x00040000,
+        'FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS' : 0x00400000,
+        'FILE_ATTRIBUTE_STRICTLY_SEQUENTIAL' : 0x20000000,
+        'FILE_ATTRIBUTE_OPEN_REPARSE_POINT' : 0x00200000,
+        'FILE_ATTRIBUTE_OPEN_NO_RECALL' : 0x00100000,
+        'FILE_ATTRIBUTE_FIRST_PIPE_INSTANCE' : 0x00080000,
+    }
+
+    @staticmethod
+    def map_file_attributes(attributes : int):
+        fattrs = []
+        if (0 == attributes):
+            fattrs = ['FILE_ATTRIBUTE_NORMAL']
+        for attr in WindowsFileAttributes.FILE_ATTRIBUTES:
+            if attributes & WindowsFileAttributes.FILE_ATTRIBUTES[attr] == WindowsFileAttributes.FILE_ATTRIBUTES[attr]:
+                fattrs.append(attr)
+        return ' | '.join(fattrs)
+
+class UnixFileAttributes:
+    FILE_ATTRIBUTES = {
+        'S_IFSOCK' : 0o140000, # socket
+        'S_IFLNK' : 0o120000, # symbolic link
+        'S_IFREG' : 0o100000, # regular file
+        'S_IFBLK' : 0o060000, # block device
+        'S_IFDIR' : 0o040000, # directory
+        'S_IFCHR' : 0o020000, # character device
+        'S_IFIFO' : 0o010000, # FIFO
+    }
+
+    @staticmethod
+    def map_file_attributes(attributes : int):
+        fattrs = []
+        for attr in UnixFileAttributes.FILE_ATTRIBUTES:
+            if attributes & UnixFileAttributes.FILE_ATTRIBUTES[attr] == UnixFileAttributes.FILE_ATTRIBUTES[attr]:
+                fattrs.append(attr)
+        return ' | '.join(fattrs)
+
+def normalize_index_data(data: dict, cfg : IndalekoWindowsMachineConfig) -> dict:
+    '''
+    Given some metadata, this will create a record that can be inserted into the
+    Object collection.
+    '''
+    assert cfg is not None, 'cfg cannot be None'
+    assert data is not None, 'Data cannot be None'
+    assert type(data) is dict, 'Data must be a dictionary'
+    oid = str(uuid.uuid4())
+    object = {
+        '_key' : oid,
+        'Label' : data['file'],
+        'Path' : data['path'],
+        'URI' : data['URI'],
+        'ObjectIdentifier' : oid,
+        'LocalIdentifier' : data['st_ino'],
+        'Timestamps' : {
+            'Created' : datetime.datetime.fromtimestamp(data['st_birthtime'], datetime.timezone.utc).isoformat(),
+            'Modified' : datetime.datetime.fromtimestamp(data['st_mtime'], datetime.timezone.utc).isoformat(),
+            'Accessed' : datetime.datetime.fromtimestamp(data['st_atime'], datetime.timezone.utc).isoformat(),
+            'Changed' : datetime.datetime.fromtimestamp(data['st_ctime'], datetime.timezone.utc).isoformat(),
+        },
+        'Size' : data['st_size'],
+        'FileId' : data['st_ino'],
+        # these are the data fields for the "record" format
+        'RawData' : base64.b64encode(msgpack.packb(data)).decode('ascii'),
+        'Attributes' : data, # at least for now, I just keep all of the original data as attributes.
+        'source' : {
+            'identifier' : WindowsLocalIngest.WindowsLocalIngesterService['identifier'],
+            'version' : WindowsLocalIngest.WindowsLocalIngesterService['version'],
+        },
+        'Machine' : cfg.get_config_data()['MachineGuid'],
+        # TODO: there are likely other things of interest here, such as the
+        # containing device (volume).
+    }
+    if 'st_mode' in data:
+        object['UnixFileAttributes'] = UnixFileAttributes.map_file_attributes(data['st_mode'])
+    if 'st_file_attributes' in data:
+        object['WindowsFileAttributes'] = WindowsFileAttributes.map_file_attributes(data['st_file_attributes'])
+    if data['URI'].startswith('\\\\?\\Volume{'):
+        object['Volume'] = data['URI'][11:47]
+    return object
+
 
 def main():
     data_files = find_data_files()
@@ -157,6 +273,8 @@ def main():
     # looks ready to save to the database
     ingester.add_record_to_collection('MachineConfig', config_info)
     volinfo = machine_config.get_volume_info()
+    # Note: I'm saving this information in the configuration database, but it is
+    # distinctly possible that we need a different spot for it.  TBD
     for vol in volinfo:
         vol_record = {
             'volume' : volinfo[vol].get_vol_guid(),
@@ -172,6 +290,134 @@ def main():
             '_key' : volinfo[vol].get_vol_guid(),
         }
         ingester.add_record_to_collection('MachineConfig', vol_record)
+    logging.debug(f'Start processing {args.input}')
+    ingester.set_data_file(args.input)
+    logging.debug(f'Finish processing {args.input}')
+    print(len(ingester.data))
+    ## Now we have data that we can parse, isn't this exciting?
+    dir_data_by_path = {}
+    dir_data = []
+    file_data = []
+    for item in ingester.data:
+        item = normalize_index_data(item, machine_config)
+        if 'S_IFDIR' in item['UnixFileAttributes'] or \
+            'FILE_ATTRIBUTE_DIRECTORY' in item['WindowsFileAttributes']:
+            if 'Path' not in item:
+                print(item)
+            dir_data_by_path[os.path.join(item['Path'],item['Label'] )] = item
+            dir_data.append(item)
+        else:
+            file_data.append(item)
+    for item in dir_data:
+        assert 'Container' not in item, 'directories should not have multiple links'
+        if item['Path'] in dir_data_by_path:
+            item['Container'] = [dir_data_by_path[item['Path']]['ObjectIdentifier']]
+    for item in file_data:
+        assert not 'S_IFDIR' in item['UnixFileAttributes'], 'directories should not be in file_data'
+        assert not 'FILE_ATTRIBUTE_DIRECTORY' in item['WindowsFileAttributes'], 'directories should not be in file_data'
+        if item['Path'] in dir_data_by_path:
+            if 'Container' not in item:
+                item['Container'] = []
+            assert type(item['Container']) is list, f'{item['Container']} must be a list'
+            item['Container'].append(dir_data_by_path[item['Path']]['ObjectIdentifier'])
+    # Next I need to capture some relationships that will go into edge
+    # collection(s).
+    contained_by_relationship_uuid = '3d4b772d-b4b0-4203-a410-ecac5dc6dafa'
+    containing_relationship_uuid = 'cde81295-f171-45be-8607-8100f4611430'
+    machine_relationship_uuid = 'f3dde8a2-cff5-41b9-bd00-0f41330895e1'
+    volume_relationship_uuid = 'db1a48c0-91d9-4f16-bd65-845433e6cba9'
+    source_relationship_uuid = 'c7c72ead-7705-4421-8bb4-2d6bd9502f58'
+    contained_by_edges = []
+    containing_edges = []
+    machine_edges = []
+    volume_edges = []
+    source_edges = []
+    for item in dir_data + file_data:
+        if 'Container' not in item:
+            print(f'Skipping item {item['ObjectIdentifier']} because it has no container')
+            continue
+        for c in item['Container']:
+            edge = {
+                '_from' : 'Objects/' + item['ObjectIdentifier'],
+                '_to' : 'Objects/' + c,
+                'relationship' : contained_by_relationship_uuid
+            }
+            contained_by_edges.append(edge)
+            edge = {
+                '_from' : 'Objects/' + c,
+                '_to' : 'Objects/' + item['ObjectIdentifier'],
+                'relationship' : containing_relationship_uuid
+            }
+            containing_edges.append(edge)
+            edge = {
+                '_from' : 'MachineConfig/' + cfg['MachineGuid'],
+                '_to' : 'Objects/' + item['ObjectIdentifier'],
+                'relationship' : machine_relationship_uuid
+            }
+            machine_edges.append(edge)
+            edge = {
+                '_from' : 'MachineConfig/' + item['Volume'],
+                '_to' : 'Objects/' + item['ObjectIdentifier'],
+                'relationship' : volume_relationship_uuid
+            }
+            volume_edges.append(edge)
+            edge = {
+                '_from' : 'Services/' + WindowsLocalIngest.WindowsLocalIngesterService['identifier'],
+                '_to' : 'Objects/' + item['ObjectIdentifier'],
+                'relationship' : source_relationship_uuid
+            }
+            source_edges.append(edge)
+
+    # This is some ragged code at this point, but it demonstrates
+    # how to ingest the data and put it into a format that will allow bulk
+    # uploading into ArangoDB, which is the **entire point** of this extra
+    # activity - after all, I had already done the work of capturing the data
+    # and sticking it into Arango previously.  It was just quite slow.
+    print(f'Number of directories: {len(dir_data)}')
+    print(f'Number of files: {len(file_data)}')
+    print(f'Number of contained_by edges: {len(contained_by_edges)}')
+    print(f'Number of containing edges: {len(containing_edges)}')
+    print(f'Number of machine edges: {len(machine_edges)}')
+    print(f'Number of volume edges: {len(volume_edges)}')
+    print(f'Number of source edges: {len(source_edges)}')
+
+    with jsonlines.open('./data/dir_data.jsonl', mode='w') as fd:
+        for item in dir_data:
+            fd.write(item)
+    with jsonlines.open('./data/file_data.jsonl', mode='w') as fd:
+        for item in file_data:
+            fd.write(item)
+    with jsonlines.open('./data/contained_by_edges.jsonl', mode='w') as fd:
+        for item in contained_by_edges:
+            fd.write(item)
+    with jsonlines.open('./data/containing_edges.jsonl', mode='w') as fd:
+        for item in containing_edges:
+            fd.write(item)
+    with jsonlines.open('./data/machine_edges.jsonl', mode='w') as fd:
+        for item in machine_edges:
+            fd.write(item)
+    with jsonlines.open('./data/volume_edges.jsonl', mode='w') as fd:
+        for item in volume_edges:
+            fd.write(item)
+    with jsonlines.open('./data/source_edges.jsonl', mode='w') as fd:
+        for item in source_edges:
+            fd.write(item)
+
+    with open('./data/dir_data.json', 'wt', encoding='utf-8') as fd:
+        json.dump(dir_data, fd, indent=4)
+    with open('./data/file_data.json', 'wt', encoding='utf-8') as fd:
+        json.dump(file_data, fd, indent=4)
+    with open('./data/contained_by_edges.json', 'wt', encoding='utf-8') as fd:
+        json.dump(contained_by_edges, fd, indent=4)
+    with open('./data/containing_edges.json', 'wt', encoding='utf-8') as fd:
+        json.dump(containing_edges, fd, indent=4)
+    with open('./data/machine_edges.json', 'wt', encoding='utf-8') as fd:
+        json.dump(machine_edges, fd, indent=4)
+    with open('./data/volume_edges.json', 'wt', encoding='utf-8') as fd:
+        json.dump(volume_edges, fd, indent=4)
+    with open('./data/source_edges.json', 'wt', encoding='utf-8') as fd:
+        json.dump(source_edges, fd, indent=4)
+
 
 
 if __name__ == "__main__":

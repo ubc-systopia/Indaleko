@@ -63,7 +63,7 @@ class LocalFileSystemMetadata:
         assert False, 'get_uri_for_file not implemented in base class: please override'
 
 
-class LocalIngest:
+class LocalIndex:
 
     DefaultOutputDir = './data'
     DefaultConfigDir = './config'
@@ -107,9 +107,9 @@ class LocalIngest:
         self.parser.add_argument('--config', type=str, default=self.DefaultConfigFile,
                             help='Name and location from whence to retrieve the Microsoft Graph Config info')
 
-    def __setup_defaults__(self) -> 'LocalIngest':
-        self.set_output_dir(LocalIngest.DefaultOutputDir).set_output_file(LocalIngest.DefaultOutputFile)
-        self.set_config_dir(LocalIngest.DefaultConfigDir).set_config_file(LocalIngest.DefaultConfigFile)
+    def __setup_defaults__(self) -> 'LocalIndex':
+        self.set_output_dir(LocalIndex.DefaultOutputDir).set_output_file(LocalIndex.DefaultOutputFile)
+        self.set_config_dir(LocalIndex.DefaultConfigDir).set_config_file(LocalIndex.DefaultConfigFile)
         return self
 
     def parse_args(self) -> argparse.Namespace:
@@ -123,12 +123,12 @@ class LocalIngest:
         return self.args
 
 
-    def add_arguments(self, *args, **kwargs) -> 'LocalIngest':
+    def add_arguments(self, *args, **kwargs) -> 'LocalIndex':
         self.parser.add_argument(*args, **kwargs)
         return self
 
 
-    def set_output_dir(self, dir_name : str) -> 'LocalIngest':
+    def set_output_dir(self, dir_name : str) -> 'LocalIndex':
         self.output_dir = dir_name
         for action in self.parser._actions:
             if 'outdir' == action.dest:
@@ -137,7 +137,7 @@ class LocalIngest:
                 break
         return self
 
-    def set_output_file(self, file_name : str) -> 'LocalIngest':
+    def set_output_file(self, file_name : str) -> 'LocalIndex':
         self.output_file = file_name
         for action in self.parser._actions:
             if 'output' == action.dest:
@@ -146,7 +146,7 @@ class LocalIngest:
                 break
         return self
 
-    def set_config_dir(self, dir_name : str) -> 'LocalIngest':
+    def set_config_dir(self, dir_name : str) -> 'LocalIndex':
         self.config_dir = dir_name
         for action in self.parser._actions:
             if 'confdir' == action.dest:
@@ -155,7 +155,7 @@ class LocalIngest:
                 break
         return self
 
-    def set_config_file(self, file_name : str) -> 'LocalIngest':
+    def set_config_file(self, file_name : str) -> 'LocalIndex':
         self.config_file = file_name
         for action in self.parser._actions:
             if 'config' == action.dest:

@@ -185,8 +185,11 @@ def convert_windows_path_to_guid_uri(path : str, config : IndalekoWindowsMachine
     drive = os.path.splitdrive(path)[0][0].upper()
     uri = '\\\\?\\' + drive + ':' # default format for lettered drives without GUIDs
     for vol in config.get_config_data()['VolumeInfo']:
+        if vol['DriveLetter'] is None:
+            continue
         if vol['DriveLetter'] == drive:
             uri = vol['UniqueId']
+        # print(f'Unable to find volume GUID for drive {drive}')
     return uri
 
 def build_stat_dict(name: str, root : str, config : IndalekoWindowsMachineConfig, last_uri = None, last_drive = None) -> tuple:
@@ -206,27 +209,27 @@ def build_stat_dict(name: str, root : str, config : IndalekoWindowsMachineConfig
             # one entry cache - high hit rate expected
             last_drive = os.path.splitdrive(root)[0][0].upper()
         last_uri = convert_windows_path_to_guid_uri(root, config)
-    stat_dict['URI'] = os.path.join(last_uri, name)
+    assert last_uri.startswith('\\\\?\\Volume{'), f'last_uri {last_uri} does not start with \\\\?\\Volume{{'
+    stat_dict['URI'] = os.path.join(last_uri, os.path.splitdrive(root)[1], name)
     return (stat_dict, last_uri, last_drive)
 
 def walk_files_and_directories(path: str, config : IndalekoWindowsMachineConfig) -> list:
-    files_data = []
-    dirs_data = []
+    data = []
     last_drive = None
     last_uri = None
     for root, dirs, files in os.walk(path):
-        for name in files + dirs:
+        for name in dirs + files:
             entry = build_stat_dict(name, root, config, last_uri, last_drive)
             if entry is not None:
-                files_data.append(entry[0])
+                data.append(entry[0])
                 last_uri = entry[1]
                 last_drive = entry[2]
-    return dirs_data + files_data
+    return data
 
 
 def main():
     # Now parse the arguments
-    li = local_index.LocalIngest()
+    li = local_index.LocalIndex()
     li.add_arguments('--path', type=str, default=get_default_index_path(), help='Path to index')
     args = li.parse_args()
     machine_config = IndalekoWindowsMachineConfig(config_dir=args.confdir)

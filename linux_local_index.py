@@ -92,7 +92,7 @@ def get_default_index_path():
 
 def main():
     # Now parse the arguments
-    li = local_index.LocalIngest()
+    li = local_index.LocalIndex()
     li.add_arguments('--path', type=str, default=get_default_index_path(), help='Path to index')
     args = li.parse_args()
     print(args)
