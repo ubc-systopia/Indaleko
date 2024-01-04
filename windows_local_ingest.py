@@ -341,30 +341,40 @@ def main():
             edge = {
                 '_from' : 'Objects/' + item['ObjectIdentifier'],
                 '_to' : 'Objects/' + c,
+                'object1' : item['ObjectIdentifier'],
+                'object2' : c,
                 'relationship' : contained_by_relationship_uuid
             }
             contained_by_edges.append(edge)
             edge = {
                 '_from' : 'Objects/' + c,
                 '_to' : 'Objects/' + item['ObjectIdentifier'],
+                'object1' : c,
+                'object2' : item['ObjectIdentifier'],
                 'relationship' : containing_relationship_uuid
             }
             containing_edges.append(edge)
             edge = {
                 '_from' : 'MachineConfig/' + cfg['MachineGuid'],
                 '_to' : 'Objects/' + item['ObjectIdentifier'],
-                'relationship' : machine_relationship_uuid
+                'relationship' : machine_relationship_uuid,
+                'object1' : cfg['MachineGuid'],
+                'object2' : item['ObjectIdentifier'],
             }
             machine_edges.append(edge)
             edge = {
                 '_from' : 'MachineConfig/' + item['Volume'],
                 '_to' : 'Objects/' + item['ObjectIdentifier'],
+                'object1' : item['Volume'],
+                'object2' : item['ObjectIdentifier'],
                 'relationship' : volume_relationship_uuid
             }
             volume_edges.append(edge)
             edge = {
                 '_from' : 'Services/' + WindowsLocalIngest.WindowsLocalIngesterService['identifier'],
                 '_to' : 'Objects/' + item['ObjectIdentifier'],
+                'object1' : WindowsLocalIngest.WindowsLocalIngesterService['identifier'],
+                'object2' : item['ObjectIdentifier'],
                 'relationship' : source_relationship_uuid
             }
             source_edges.append(edge)
