@@ -5,7 +5,7 @@ from arango import ArangoClient
 import argparse
 import datetime
 from windows_local_index import IndalekoWindowsMachineConfig
-from indalekocolletions import *
+from IndalekoCollections import *
 from dbsetup import IndalekoDBConfig
 from indaleko import *
 import msgpack
@@ -13,7 +13,6 @@ import base64
 from IndalekoServices import IndalekoServices
 import jsonlines
 import logging
-from indalekocolletions import *
 
 class WindowsLocalIngest():
 

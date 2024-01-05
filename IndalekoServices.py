@@ -4,7 +4,7 @@ import json
 import datetime
 from indaleko import *
 from dbsetup import IndalekoDBConfig
-from indalekocolletions import *
+from IndalekoCollections import *
 
 '''
 The purpose of this package is to create a common class structure for managing
