@@ -1,9 +1,7 @@
 import os
 import json
 import uuid
-import stat
 from arango import ArangoClient
-import arango
 import argparse
 import datetime
 from windows_local_index import IndalekoWindowsMachineConfig
