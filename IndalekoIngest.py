@@ -72,7 +72,7 @@ class IndalekoIngest():
         if 'log_file' in kwargs:
             self.log_file = kwargs['log_file']
         else:
-            self.log_file = self.DefaultLogDir
+            self.log_file = self.get_default_logfile_name()
         if 'output_file' in kwargs:
             self.output_file = kwargs['output_file']
         else:
@@ -84,8 +84,10 @@ class IndalekoIngest():
         if 'log_level' in kwargs:
             self.log_level = kwargs['log_level']
         else:
-            self.log_level = logging.WARNING
-        print(self.log_dir)
+            self.log_level = logging.DEBUG
+        self.indaleko_services = IndalekoServices()
+        self.collections = IndalekoCollections()
+        self.indaleko_services = IndalekoServices()
 
     def parse_args(self, pre_parser : argparse.ArgumentParser = None) -> argparse.Namespace:
         '''
@@ -125,16 +127,23 @@ class IndalekoIngest():
         self.parser.add_argument('--logdir', type=str, default=self.log_dir, help='Directory to use for log file')
         self.parser.add_argument('--logfile', type=str, default=self.log_file, help='Name of log file.')
         args = self.parser.parse_args()
+        logfile = os.path.join(args.logdir, args.logfile)
+        print(logfile)
         logging.basicConfig(
-            filename = os.path.join(args.logdir, args.logfile),
+            filename = logfile,
             level=self.log_level,
             format='%(asctime)s - %(levelname)s - %(message)s'
         )
         self.logger = logging.getLogger(__name__)
+        logging.info(f'Log level set to {args.loglevel}')
+        logging.info(f'Log starts at {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
         return args
 
     def get_default_outfile_name(self : 'IndalekoIngest') -> str:
         return f'indaleko-ingest-output-{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}.jsonl'
+
+    def get_default_logfile_name(self : 'IndalekoIngest') -> str:
+        return f'indaleko-ingest-log-{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}.log'
 
     def get_default_config_file_name(self : 'IndalekoIngest') -> str:
         return 'indaleko-db-config.ini'
@@ -149,7 +158,62 @@ class IndalekoIngest():
         cfg = machine_config.get_config_data()
 
     def register_service(self, service : dict) -> IndalekoServices:
-        pass
+        assert service is not None, 'Service cannot be None'
+        assert 'name' in service, 'Service must have a name'
+        assert 'description' in service, 'Service must have a description'
+        assert 'version' in service, 'Service must have a version'
+        assert 'identifier' in service, 'Service must have an identifier'
+        existing_service = self.lookup_service(service['name'])
+        if len(existing_service) > 0:
+            # TODO - how do we want to deal with updates?  For now, just
+            # assert these are the same
+            assert existing_service[0]['version'] == service['version'], f"Version for service {service['name']} does not match."
+            assert existing_service[0]['identifier'] == service['identifier'], f"Identifier for service {service['name']} does not match."
+
+        return self.indaleko_services.register_service(service['name'], service['description'], service['version'], service['type'], service['identifier'])
+
+    def lookup_service(self, service_name : str) -> list:
+        '''
+        Given a name, this method will lookup the service in the database.
+        If it does not exist an empty list is returned.
+        '''
+        assert service_name is not None, 'Service name cannot be None'
+        service = self.indaleko_services.lookup_service(service_name)
+        if service is None:
+            return service
+        assert 'name' in service, 'Service must have a name'
+        assert service['name'] == service_name, f"Service name {service_name} does not match service name {service['name']}"
+        assert 'version' in service, 'Service must have a version'
+        assert 'identifier' in service, 'Service must have an identifier'
+        return service
+
+    def lookup_machine_config(self : 'IndalekoIngest', machine_uuid : str) -> IndalekoMachineConfig:
+        '''
+        This method will lookup the machine configuration, based upon the
+        passed-in UUID.
+        '''
+        try:
+            m_uuid = uuid.UUID(machine_uuid)
+        except ValueError:
+            assert False, f"Invalid UUID: {machine_uuid}"
+        collection = self.collections.get_collection('MachineConfig')
+        configs = collection.find_entries(_key = machine_uuid)
+        # configs = self.collections.get_collection('MachineConfig').find_entries({'_key' : m_uuid})
+        if len(configs) < 1:
+            return None
+        # there should be only one entry since the key has to be unique
+        assert len(configs) == 1, f"Found {len(configs)} machine configs for UUID {machine_uuid} (not expected)"
+        self.config_data = configs[0]
+        return self
+
+    def lookup_source(self, source_name : str) -> IndalekoSource:
+        '''
+        This method will lookup the source, based upon the passed-in name.
+        '''
+        assert source_name is not None, "Source name cannot be None"
+        source = self.lookup_service(source_name)[0]
+        return IndalekoSource(uuid.UUID(source['identifier']), source['version'], source['description'])
+
 
     '''
     Beyond this point are the methods that should be overriden in the derived class.
@@ -195,7 +259,8 @@ def main():
     parser = argparse.ArgumentParser(description='Test the IndalekoIngester class.')
     parser.add_argument('--version', action='version', version='%(prog)s 1.0')
     args = ingest.parse_args(parser)
-    print(args)
+    mcfg = ingest.lookup_machine_config('2e169bb7-0024-4dc1-93dc-18b7d2d28190')
+    print(mcfg.config_data)
 
 if __name__ == "__main__":
     main()

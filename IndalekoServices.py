@@ -84,6 +84,15 @@ class IndalekoServices:
         self.db_config.start()
         self.service_collection = IndalekoCollection('Services', self.CollectionDefinition, self.db_config, reset=reset)
 
+    @staticmethod
+    def create_existing_service(self, service_data : dict):
+        assert service_data is not None, 'service_data must be a valid dictionary.'
+        assert 'name' in service_data, 'service_data must contain a name field.'
+        assert 'version' in service_data, 'service_data must contain a version field.'
+        assert 'identifier' in service_data, 'service_data must contain an identifier field.'
+
+
+
 
     def create_indaleko_services_collection(self) -> IndalekoCollection:
         '''
@@ -99,7 +108,12 @@ class IndalekoServices:
         '''
         This method is used to lookup a service by name.
         '''
-        return self.service_collection.find_entries(name =  name)
+        entries = self.service_collection.find_entries(name =  name)
+        assert len(entries) < 2, f'Multiple entries found for service {name}, not handle.'
+        if len(entries) == 0:
+            return None
+        else:
+            return entries[0]
 
 
     def register_service(self, name: str, description: str, version: str, service_type : str = 'Indexer', service_id : str  = None) -> 'IndalekoServices':
