@@ -10,6 +10,9 @@ from indaleko import IndalekoRecord, IndalekoSource
 import msgpack
 
 class IndalekoWindowsMachineConfig:
+
+    WindowsMachineConfigFilePrefix = 'windows-hardware-info'
+
     '''
     This is the analog to the version in the config script.  In this class we
     look for and load the captured configuration data.  We have this separation
@@ -29,7 +32,7 @@ class IndalekoWindowsMachineConfig:
             self.config_data = self.get_config_data()
 
     def __find_config_files__(self : 'IndalekoWindowsMachineConfig') -> None:
-        self.config_files = [x for x in os.listdir(self.config_dir) if x.startswith('windows-hardware-info') and x.endswith('.json')]
+        self.config_files = [x for x in os.listdir(self.config_dir) if x.startswith(self.WindowsMachineConfigFilePrefix) and x.endswith('.json')]
         return
 
     def __load__config_file__(self : 'IndalekoWindowsMachineConfig') -> None:
@@ -50,11 +53,11 @@ class IndalekoWindowsMachineConfig:
         return self.config_data
 
     def find_config_files(self : 'IndalekoWindowsMachineConfig', config_dir  : str  = './config') -> list:
-        return [x for x in os.listdir(config_dir) if x.startswith('windows-hardware-info') and x.endswith('.json')]
+        return [x for x in os.listdir(config_dir) if x.startswith(self.WindowsMachineConfigFilePrefix) and x.endswith('.json')]
 
 
     def __find_hw_info_file__(self : 'IndalekoWindowsMachineConfig', configdir : str = './config'):
-        candidates = [x for x in os.listdir(configdir) if x.startswith('windows-hardware-info') and x.endswith('.json')]
+        candidates = [x for x in os.listdir(configdir) if x.startswith(self.WindowsMachineConfigFilePrefix) and x.endswith('.json')]
         assert len(candidates) > 0, 'At least one windows-hardware-info file should exist'
         for candidate in candidates:
             file, guid, timestamp = self.get_guid_timestamp_from_file_name(candidate)
@@ -130,6 +133,14 @@ class IndalekoWindowsMachineConfig:
         candidate_files.sort(key=lambda x: x[0])
         return candidate_files[0][1]
 
+class IndalekoWindowsLocalIndexer:
+    '''
+    Definitions & methods used by the Windows local indexer.
+    '''
+    WindowsLocalIndexFilePrefix = 'windows-local-fs-data'
+
+    def __init__(self):
+        pass
 
 def windows_to_posix(filename):
     """
@@ -175,7 +186,7 @@ def construct_windows_output_file_name(path : str, configdir = './config'):
         else:
             drive_guid=drive # ugly, but what else can I do at this point?
     timestamp = timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    return posix_to_windows(f'windows-local-fs-data-machine={machine_guid}-drive={drive_guid}-date={timestamp}.json')
+    return posix_to_windows(f'{IndalekoWindowsLocalIndexer.WindowsLocalIndexFilePrefix}-machine={machine_guid}-drive={drive_guid}-date={timestamp}.json')
 
 
 def get_default_index_path():

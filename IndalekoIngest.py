@@ -56,7 +56,7 @@ class IndalekoIngest():
         if 'log_level' in kwargs:
             self.log_level = kwargs['log_level']
         else:
-            self.log_level = logging.WARNING
+            self.log_level = logging.DEBUG
         if 'output_dir' in kwargs:
             self.output_dir = kwargs['output_dir']
         else:
@@ -81,10 +81,19 @@ class IndalekoIngest():
             self.config_file = kwargs['config_file']
         else:
             self.config_file = self.get_default_config_file_name()
-        if 'log_level' in kwargs:
-            self.log_level = kwargs['log_level']
+        if 'input_file' in kwargs:
+            self.input_file = kwargs['input_file']
+
+    def start(self, logfile : str = None, loglevel = logging.DEBUG) -> None:
+        if logfile is None:
+            logfile = self.get_default_logfile_name()
+        if logfile is None:
+            logging.basicConfig(level=loglevel, format='%(asctime)s - %(levelname)s - %(message)s')
         else:
-            self.log_level = logging.DEBUG
+            logging.basicConfig(filename=os.path.join(self.log_dir, logfile),
+                                level=loglevel,
+                                format='%(asctime)s - %(levelname)s - %(message)s')
+        logging.info(f"Starting IndalekoIngest at {datetime.datetime.now(datetime.UTC).isoformat()}")
         self.indaleko_services = IndalekoServices()
         self.collections = IndalekoCollections()
         self.indaleko_services = IndalekoServices()
@@ -94,7 +103,7 @@ class IndalekoIngest():
         Returns an ArgumentParser object that can be used to parse the command
         line arguments for the ingestor.dir
         '''
-        self.parser = argparse.ArgumentParser(parents=[pre_parser], add_help=False)
+        self.parser = argparse.ArgumentParser(parents=[pre_parser])
         if platform.python_version() < '3.12':
             logging_levels = []
             if hasattr(logging, 'CRITICAL'):
@@ -126,17 +135,8 @@ class IndalekoIngest():
                             help='Logging level to use (lower number = more logging)')
         self.parser.add_argument('--logdir', type=str, default=self.log_dir, help='Directory to use for log file')
         self.parser.add_argument('--logfile', type=str, default=self.log_file, help='Name of log file.')
+        self.parser.add_argument('--input', type=str, default=self.get_default_input_file(), help='Name of input file.')
         args = self.parser.parse_args()
-        logfile = os.path.join(args.logdir, args.logfile)
-        print(logfile)
-        logging.basicConfig(
-            filename = logfile,
-            level=self.log_level,
-            format='%(asctime)s - %(levelname)s - %(message)s'
-        )
-        self.logger = logging.getLogger(__name__)
-        logging.info(f'Log level set to {args.loglevel}')
-        logging.info(f'Log starts at {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
         return args
 
     def get_default_outfile_name(self : 'IndalekoIngest') -> str:
@@ -241,8 +241,6 @@ class IndalekoIngest():
         the derived class..
         '''
         assert False, "Do not call get_default_input_file() on the base class - override it in the derived class."
-
-
 
 def main():
     # Now parse the arguments

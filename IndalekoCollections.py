@@ -1,12 +1,11 @@
 import argparse
 from arango import ArangoClient
 from indaleko import IndalekoObject, IndalekoRelationship, IndalekoSource, IndalekoMachineConfig
-from dbsetup import IndalekoDBConfig
 import logging
 import datetime
 import os
-
-class IndalekoIndex:
+from IndalekoDBConfig import IndalekoDBConfig
+class IndalekoCollectionIndex:
 
     def __init__(self, collection: 'IndalekoCollection', index_type: str, fields: list, unique=False):
         '''Parameters:
@@ -64,7 +63,7 @@ class IndalekoCollection:
         return self.collection
 
     def create_index(self, name: str, index_type: str, fields: list, unique: bool) -> 'IndalekoCollection':
-        self.indices[name] = IndalekoIndex(self.collection, index_type, fields, unique)
+        self.indices[name] = IndalekoCollectionIndex(self.collection, index_type, fields, unique)
         return self
 
     def find_entries(self, **kwargs):
@@ -148,8 +147,11 @@ class IndalekoCollections:
             }
         }
 
-    def __init__(self, reset: bool = False) -> None:
-        self.db_config = IndalekoDBConfig()
+    def __init__(self, db_config: IndalekoDBConfig = None, reset: bool = False) -> None:
+        if db_config is None:
+            self.db_config = IndalekoDBConfig()
+        else:
+            self.db_config = db_config
         self.db_config.start()
         self.collections = {}
         for name in self.Indaleko_Collections:
