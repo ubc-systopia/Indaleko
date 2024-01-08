@@ -169,7 +169,7 @@ class IndalekoIngest():
             # assert these are the same
             assert existing_service[0]['version'] == service['version'], f"Version for service {service['name']} does not match."
             assert existing_service[0]['identifier'] == service['identifier'], f"Identifier for service {service['name']} does not match."
-
+        logging.info(f"Registering service {service['name']}")
         return self.indaleko_services.register_service(service['name'], service['description'], service['version'], service['type'], service['identifier'])
 
     def lookup_service(self, service_name : str) -> list:
@@ -205,14 +205,6 @@ class IndalekoIngest():
         assert len(configs) == 1, f"Found {len(configs)} machine configs for UUID {machine_uuid} (not expected)"
         self.config_data = configs[0]
         return self
-
-    def lookup_source(self, source_name : str) -> IndalekoSource:
-        '''
-        This method will lookup the source, based upon the passed-in name.
-        '''
-        assert source_name is not None, "Source name cannot be None"
-        source = self.lookup_service(source_name)[0]
-        return IndalekoSource(uuid.UUID(source['identifier']), source['version'], source['description'])
 
 
     '''
@@ -259,6 +251,7 @@ def main():
     parser = argparse.ArgumentParser(description='Test the IndalekoIngester class.')
     parser.add_argument('--version', action='version', version='%(prog)s 1.0')
     args = ingest.parse_args(parser)
+    logging.info('Testing the machine configuration lookup (using the UUID for my Windows machine.)')
     mcfg = ingest.lookup_machine_config('2e169bb7-0024-4dc1-93dc-18b7d2d28190')
     print(mcfg.config_data)
 

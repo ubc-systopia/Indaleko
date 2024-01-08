@@ -362,3 +362,48 @@ mechanism.
 So I think this approach is solid and justifies further exploration as we begin
 building exploring the query space.
 
+### 2024-01-05
+
+This week has been productive.  I buckled down and built a windows ingester.  It
+takes the information collected by the windows _indexer_, which is written to a
+file, and then it opens it, processes it:
+
+* Extracts and normalizes specific fields
+* Saves the "raw" content that was gathered by the indexer in the first place
+* generates a uuid (and that becomes the _key_ to the object.)
+
+Note the collections have a schema to enforce format of data in the document.
+Most fields are _not_ required, but when present they are required to be in a
+particular format.  The ingester emits six different _json lines_ files that can
+be given to arangoimport.  From what I can tell, `arangoimport` is using the
+HTTP bulk uploader interface.  On my machine it indicates it will be using 64
+_threads_ to do its work. Overkill for my 45 file initial test sample, but it
+did demonstrate that it can successfully upload the data into the database.
+
+I'm now turning my attention to taking the "down and dirty" windows ingester and
+converting it into a class library that I can use to build specialized ingesters
+for the various storage engines.  This makes sense because in the end I want the
+ingesters to generate the same common fields, while allowing individual
+ingesters to capture metadata that we don't really know how to handle (yet).
+
+The goal remains the same:
+
+* Indexer to pull down the initial state of the files in the storage silo.
+* Ingester to extract normalized common metadata from the storage system, while
+  capturing _all_ of the metadata captured by the indexer.
+* Natural Language query tool built from the GPT API and combined with the data
+  schemas to generate GraphQL queries.
+
+That is the primary goal at this stage.  Once I can get query results back I can
+start looking at how to rank the returned information.  I can also measure
+various performance costs, such as the time for initial ingestion, the amount of
+storage used, and the CPU cycles used by the database.
+
+General goals of portability seem to be working reasonably well, too, since I
+have a linux indexer.  I expect, once the class library is done, the Linux
+ingester will not be too difficult.
+
+Having multiple storage silos indexed is important because one benefit of this
+approach is that it can find "what I'm looking for" _regardless_ of where it
+might be stored - an important point to help differentiate this work, since
+that's not a capability of existing systems.
