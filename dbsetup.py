@@ -204,16 +204,15 @@ class IndalekoDBConfig:
         for collection in self.collections:
             try:
                 if collection in self.db.collections():
-                    assert reset, 'Collection {collection} already exists and reset not specified'
+                    assert reset, f'Collection {collection} already exists and reset not specified'
                     self.db.delete_collection(collection)
-                    logging.info('Deleted collection {collection} with schema {schema}, returned {object}'.format(collection=collection, schema=self.collections[collection]['schema'], object=self.collections[collection]['collection']))
+                    logging.info(f'Deleted collection {collection} with schema {self.collections[collection]['schema']}, returned {object}'.format(collection=collection, schema=self.collections[collection]['schema'], object=self.collections[collection]['collection']))
                 else:
-                    self.collections[collection]['collection'] = self.db.collection(collection)
-                logging.info('Opened collection {collection} with schema {schema}, returned {object}'.format(collection=collection, schema=self.collections[collection]['schema'], object=self.collections[collection]['collection']))
+                self.collections[collection]['collection'] = self.db.create_collection(collection)
+                logging.info(f'Opened collection {collection} with schema {self.collections[collection]['schema']}, returned {object}'.format(collection=collection, schema=self.collections[collection]['schema'], object=self.collections[collection]['collection']))
                 continue
             except arango.exceptions.CollectionCreateError as e:
                 logging.error(f'Could not create collection {collection} with schema {self.collections[collection]["schema"]}: {e}')
-                self.collections[collection]['collection'] = self.db.create_collection(collection)
                 logging.warning(f'Created collection {collection} without schema')
 
 
