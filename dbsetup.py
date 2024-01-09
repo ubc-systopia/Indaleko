@@ -8,7 +8,7 @@ import string
 import subprocess
 import datetime
 import logging
-from indaleko import *
+from Indaleko import *
 from arango import ArangoClient
 import arango.exceptions
 import requests

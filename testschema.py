@@ -1,5 +1,5 @@
-from indaleko import *
-from dbsetup import IndalekoDBConfig
+from Indaleko import *
+from IndalekoDBConfig import IndalekoDBConfig
 
 
 test_schema =  {

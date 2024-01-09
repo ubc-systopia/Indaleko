@@ -6,7 +6,7 @@ import uuid
 import json
 import logging
 import platform
-from indaleko import IndalekoRecord, IndalekoSource
+from Indaleko import IndalekoRecord, IndalekoSource
 import msgpack
 
 class IndalekoWindowsMachineConfig:

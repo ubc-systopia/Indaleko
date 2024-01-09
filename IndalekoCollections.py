@@ -1,6 +1,6 @@
 import argparse
 from arango import ArangoClient
-from indaleko import IndalekoObject, IndalekoRelationship, IndalekoSource, IndalekoMachineConfig
+from Indaleko import IndalekoObject, IndalekoRelationship, IndalekoSource, IndalekoMachineConfig
 import logging
 import datetime
 import os

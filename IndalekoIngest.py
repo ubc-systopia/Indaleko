@@ -85,6 +85,7 @@ class IndalekoIngest():
             self.input_file = kwargs['input_file']
 
     def start(self, logfile : str = None, loglevel = logging.DEBUG) -> None:
+        '''This will start up the various services required for ingestion.'''
         if logfile is None:
             logfile = self.get_default_logfile_name()
         if logfile is None:
@@ -97,6 +98,14 @@ class IndalekoIngest():
         self.indaleko_services = IndalekoServices()
         self.collections = IndalekoCollections()
         self.indaleko_services = IndalekoServices()
+
+    def ingest(self : 'IndalekoIngest') -> None:
+        '''
+        This method is the main entry point for the ingestor. It will drive the
+        ingestion process, with specialization provided by the ingester implementation.
+        '''
+        assert False, "Not implemented in the base class - needs a specialized class for the platform."
+
 
     def parse_args(self, pre_parser : argparse.ArgumentParser = None) -> argparse.Namespace:
         '''

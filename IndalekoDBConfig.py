@@ -5,7 +5,7 @@ import secrets
 import string
 import datetime
 import logging
-from indaleko import *
+from Indaleko import *
 from arango import ArangoClient
 import requests
 import time

@@ -108,6 +108,14 @@ class IndalekoWindowsLocalIngest(IndalekoIngest):
     def get_default_logfile_name(self : 'IndalekoIngest') -> str:
         return f'{self.WindowsLocalIngestLogPrefix}-{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}.log'
 
+    def ingest(self : 'WindowsLocalIngest') -> None:
+        logging.debug(f'Ingesting')
+        pass
+
+    def start(self : 'WindowsLocalIngest', args : argparse.Namespace) -> None:
+        super().start(self.get_default_logfile_name(), args.loglevel)
+        logging.debug(f'Starting Windows local ingest at {datetime.datetime.now(datetime.UTC).isoformat()}')
+        logging.info(f'Ingesting file {args.input}')
 
 def main():
     ingest_args = {
@@ -154,7 +162,8 @@ def main():
     ingester.set_default_input_file(default_data_file)
     ingester.set_default_config_file(default_config_file)
     args = ingester.parse_args(pre_parser=pre_parser)
-    ingester.start(ingester.get_default_logfile_name(), args.loglevel)
+    ingester.start(args)
+    logging.warning(f'Note the windows local ingester is currently NOT operational.')
     logging.info(f'Done with ingest at {datetime.datetime.now(datetime.UTC).isoformat()}')
 
 if __name__ == "__main__":

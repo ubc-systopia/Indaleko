@@ -1,8 +1,7 @@
 import argparse
 import uuid
-import json
 import datetime
-from indaleko import *
+from Indaleko import *
 from dbsetup import IndalekoDBConfig
 from IndalekoCollections import *
 
