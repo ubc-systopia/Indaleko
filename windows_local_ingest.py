@@ -45,7 +45,7 @@ class IndalekoWindowsLocalIngest(IndalekoIngest):
     WindowsLocalDataFilePrefix = 'windows-local-ingest'
     WindowsLocalIngestLogPrefix = 'windows-local-ingest-log'
 
-    def __init__(self, **kwargs):
+    def __init__(self : 'IndalekoWindowsLocalIngest', **kwargs):
         self.timestamp = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d%H%M%S")
         default_args = {
             'Indexer' : IndalekoWindowsLocalIngest.WindowsLocalIndexer_UUID,
@@ -89,30 +89,70 @@ class IndalekoWindowsLocalIngest(IndalekoIngest):
                 if x.startswith(IndalekoWindowsMachineConfig.WindowsMachineConfigFilePrefix)
                 and x.endswith('.json')]
 
-    def set_default_input_file(self, filename : str) -> None:
+    def set_default_input_file(self : 'IndalekoWindowsLocalIngest', filename : str) -> None:
         assert filename is not None, 'filename must be a valid string'
         self.default_input_file = os.path.join(self.output_dir, filename)
         assert os.path.isfile(self.default_input_file), 'default_input_file must be a valid file'
 
-    def set_default_config_file(self, filename : str) -> None:
+    def set_default_config_file(self : 'IndalekoWindowsLocalIngest', filename : str) -> None:
         assert filename is not None, 'filename must be a valid string'
         self.default_config_file = os.path.join(self.config_dir, filename)
         assert os.path.isfile(self.default_config_file), 'default_config_file must be a valid file'
 
-    def get_default_input_file(self: IndalekoIngest) -> str:
+    def get_default_input_file(self: 'IndalekoWindowsLocalIngest') -> str:
         return self.default_input_file
 
-    def get_default_config_file(self: IndalekoIngest) -> str:
+    def get_default_config_file(self: 'IndalekoWindowsLocalIngest') -> str:
         return self.default_config_file
 
-    def get_default_logfile_name(self : 'IndalekoIngest') -> str:
+    def get_default_logfile_name(self : 'IndalekoWindowsLocalIngest') -> str:
         return f'{self.WindowsLocalIngestLogPrefix}-{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}.log'
 
-    def ingest(self : 'WindowsLocalIngest') -> None:
+    def ingest(self : 'IndalekoWindowsLocalIngest') -> None:
         logging.debug(f'Ingesting')
+        # Steps for ingestion:
+        # 1. Make sure the machine config is in the database.  If not, capture
+        #    it.  If it is, we just use it.  Might want to deal with checking to
+        #    see if it has changed and, if so, capture it again. For now, we
+        #    just capture it on first use.
+        # 2. Make sure we have captured any local storage state (e.g., "volume"
+        #    state) since this is important to have later.  Storage has this
+        #    tendency to "move around" on device(s), such as with removable
+        #    storage or even partial dismantling of an old computer system.
+        # 3. Read the index file specified. This is where ingestion really
+        #    starts:
+        #    a. Process the data, splitting it into directory and file
+        #    information.  I do this to minimize ordering dependencies between
+        #    the two.  For directories, I can assert they never have two
+        #    parents.  This restriction is _not_ valid for files.
+        #    b. Normalize metadata into the common format. For Windows, this
+        #    includes both the UNIX and Windows file attributes, while for
+        #    non-Windows systems this is typically just the POSIX file
+        #    attributes.  This may need to be generalized for other storage
+        #    systems, where they have "rich" metadata.
+        #    c. Construct the "relationships" between the various objects of the
+        #    system.  This includes:
+        #      (i) parent-child relationships between directories and files
+        #      (both directions.)
+        #      (ii) "volume" relationships between directories and files and
+        #      the storage volumes they are on.
+        #      (iii) capture the machine on which the given objects are located.
+        #      (iv) associate the captured data with the source of the capture.
+        #   Note that this list is likely to grow in the future.  To allow
+        #   supporting storage silo specific features, this should have a
+        #   generic base layer implementation and that can then be augmented by
+        #   the platform specific ingester.
+        # 4. Write the data for each _type_ of object into a set of jsonl files.
+        #    We chose the jsonl format because it does not require loading and
+        #    validating the entire file is json.  Rather it processes it one
+        #    line at a time.  For debugging purposes, I also emit a json version
+        #    of the data.
+        # Note that the output of this process is just a set of files that still
+        # need to be bulk uploaded to the database.  This _could_ be done via
+        # the script interface.
         pass
 
-    def start(self : 'WindowsLocalIngest', args : argparse.Namespace) -> None:
+    def start(self : 'IndalekoWindowsLocalIngest', args : argparse.Namespace) -> None:
         super().start(self.get_default_logfile_name(), args.loglevel)
         logging.debug(f'Starting Windows local ingest at {datetime.datetime.now(datetime.UTC).isoformat()}')
         logging.info(f'Ingesting file {args.input}')
