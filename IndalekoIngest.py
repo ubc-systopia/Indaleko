@@ -37,6 +37,7 @@ class IndalekoIngest():
         as a parameter. The configuration object is a dictionary that contains
         all the configuration parameters for the ingestor.
         '''
+        self.timestamp = datetime.datetime.now(datetime.UTC).isoformat()
         assert kwargs is not None, "Configuration object cannot be None"
         if 'Indexer' in kwargs:
             self.Indexer_UUID_str = kwargs['Indexer']
@@ -94,7 +95,7 @@ class IndalekoIngest():
             logging.basicConfig(filename=os.path.join(self.log_dir, logfile),
                                 level=loglevel,
                                 format='%(asctime)s - %(levelname)s - %(message)s')
-        logging.info(f"Starting IndalekoIngest at {datetime.datetime.now(datetime.UTC).isoformat()}")
+        logging.info(f"Starting IndalekoIngest at {self.timestamp}")
         self.indaleko_services = IndalekoServices()
         self.collections = IndalekoCollections()
         self.indaleko_services = IndalekoServices()
@@ -149,13 +150,16 @@ class IndalekoIngest():
         return args
 
     def get_default_outfile_name(self : 'IndalekoIngest') -> str:
-        return f'indaleko-ingest-output-{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}.jsonl'
+        return f'indaleko-ingest-output-{self.timestamp}.jsonl'
 
     def get_default_logfile_name(self : 'IndalekoIngest') -> str:
-        return f'indaleko-ingest-log-{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}.log'
+        return f'indaleko-ingest-log-{self.timestamp}.log'
 
     def get_default_config_file_name(self : 'IndalekoIngest') -> str:
         return 'indaleko-db-config.ini'
+
+    def get_default_config_dir(self : 'IndalekoIngest') -> str:
+        return self.config_dir
 
     def ingest(self : 'IndalekoIngest') -> None:
         '''

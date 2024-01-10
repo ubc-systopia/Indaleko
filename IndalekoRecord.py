@@ -102,19 +102,29 @@ class IndalekoRecord:
     def to_json(self, indent : int = 4):
         return json.dumps(self.to_dict(), indent=4)
 
+    def set_attributes(self, attributes : dict) -> None:
+        self.__attributes__ = attributes
+
     def get_attributes(self) -> dict:
         return self.__attributes__
 
-    def get_source(self) -> tuple:
-        return (self.__source__.get_source_identifier(), self.__source__.get_version())
+    def set_source(self, source : dict):
+        assert self.validate_source(source), 'source is not valid'
+        self.__source__ = {
+            'Identifier' : source['Identifier'],
+            'Version' : source['Version'],
+        }
 
-    def get_source_version(self) -> str:
-        return str(self.__source__.get_source_identifier())
+    def get_source(self) -> dict:
+        return self.__source__
 
-    def get_source_uuid(self) -> uuid.UUID:
-        return self.__source__.get_source_identifier()
+    def set_data(self, raw_data : bytes) -> None:
+        self.__raw_data__ = base64.b64encode(raw_data).decode('ascii')
 
-    def get_raw_data(self) -> str:
+    def set_base64_data(self, base64_data : str) -> None:
+        self.__raw_data__ = base64_data
+
+    def get_data(self) -> str:
         return self.__raw_data__
 
     def get_schema(self) -> str:
@@ -125,14 +135,26 @@ class IndalekoRecord:
         valid = True
         if type(source) is not dict:
             valid = False
-        if 'Identifier' not in source:
+        elif 'Identifier' not in source:
             valid = False
-        if 'Version' not in source:
+        elif 'Version' not in source:
             valid = False
-        if not IndalekoRecord.validate_uuid_string(source['Identifier']):
+        elif not IndalekoRecord.validate_uuid_string(source['Identifier']):
             valid = False
-        if type(source['Version']) is not str:
+        elif type(source['Version']) is not str:
             valid = False
+        return valid
+
+    @staticmethod
+    def validate_iso_timestamp(source : str) -> bool:
+        valid = True
+        if type(source) is not str:
+            valid = False
+        else:
+            try:
+                datetime.datetime.fromisoformat(source)
+            except ValueError:
+                valid = False
         return valid
 
 

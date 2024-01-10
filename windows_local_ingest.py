@@ -5,6 +5,8 @@ from windows_local_index import IndalekoWindowsLocalIndexer, IndalekoWindowsMach
 import logging
 import datetime
 from IndalekoIndex import IndalekoIndex
+from IndalekoRecord import IndalekoRecord
+from IndalekoWindowsMachineConfig import IndalekoWindowsMachineConfig
 
 class IndalekoWindowsLocalIngest(IndalekoIngest):
     '''This is the specialization of the Indaleko ingester for Windows.'''
@@ -108,6 +110,44 @@ class IndalekoWindowsLocalIngest(IndalekoIngest):
     def get_default_logfile_name(self : 'IndalekoWindowsLocalIngest') -> str:
         return f'{self.WindowsLocalIngestLogPrefix}-{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}.log'
 
+    def lookup_machine_config(self : 'IndalekoWindowsLocalIngest', machine_id : str) -> dict:
+        '''
+        This method uses the machine_id to see if the machine configuration
+        is stored in the database.  If it is, it loads that and returns it to
+        the caller.
+        '''
+        if hasattr(self, 'machine_config'):
+            print('returning cached value of machine_config')
+            return self.machine_config
+        self.machine_config = IndalekoWindowsMachineConfig()
+        print('returning newly loaded value of machine_config')
+        return self.machine_config
+
+    def get_machine_config(self : 'IndalekoWindowsLocalIngest', machine_id : str = None, config_dir : str = None, config_file : str = None) -> dict:
+        '''This function returns the machine configuration for the given machine_id.
+            machine_id: the identifier for the machine
+        '''
+        # load the machine config from the latest file captured
+        if config_dir is None:
+            config_dir = IndalekoWindowsMachineConfig.DefaultConfigDir
+        file_machine_config = IndalekoWindowsMachineConfig(config_dir = config_dir, config_file = config_file)
+        print(f'file_machine_config = {file_machine_config.get_config_data()}')
+        if machine_id is None:
+            config_data = file_machine_config.get_config_data()
+            assert type(config_data) is list, 'config_data must be a list'
+            assert len(config_data) == 1, 'config_data must have exactly one entry'
+            config_data = config_data[0]
+            assert type(config_data) is dict, 'config_data must be a dict'
+            machine_id = config_data['_key']
+        print(f'machine_id = {machine_id}')
+        db_machine_config = self.lookup_machine_config(machine_id)
+        # TODO: compare these two and see if they match.  If not, throw an error
+        # because we don't deal with that case yet.
+        print(f'db_machine_config = {db_machine_config}')
+        if file_machine_config != db_machine_config:
+            print('WARNING: machine config does not match')
+        return db_machine_config
+
     def ingest(self : 'IndalekoWindowsLocalIngest') -> None:
         logging.debug(f'Ingesting')
         # Steps for ingestion:
@@ -150,7 +190,8 @@ class IndalekoWindowsLocalIngest(IndalekoIngest):
         # Note that the output of this process is just a set of files that still
         # need to be bulk uploaded to the database.  This _could_ be done via
         # the script interface.
-        pass
+        machine_config = self.get_machine_config()
+        print(machine_config)
 
     def start(self : 'IndalekoWindowsLocalIngest', args : argparse.Namespace) -> None:
         super().start(self.get_default_logfile_name(), args.loglevel)
@@ -204,6 +245,7 @@ def main():
     args = ingester.parse_args(pre_parser=pre_parser)
     ingester.start(args)
     logging.warning(f'Note the windows local ingester is currently NOT operational.')
+    ingester.ingest()
     logging.info(f'Done with ingest at {datetime.datetime.now(datetime.UTC).isoformat()}')
 
 if __name__ == "__main__":

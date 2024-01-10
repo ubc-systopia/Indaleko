@@ -1,6 +1,9 @@
 import argparse
 from arango import ArangoClient
-from Indaleko import IndalekoObject, IndalekoRelationship, IndalekoSource, IndalekoMachineConfig
+from IndalekoObject import IndalekoObject
+from IndalekoRelationship import IndalekoRelationship
+from IndalekoSource import IndalekoSource
+from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
 import logging
 import datetime
 import os
@@ -141,7 +144,7 @@ class IndalekoCollections:
                 },
             },
             'MachineConfig' : {
-                'schema' : IndalekoMachineConfig.Schema,
+                'schema' : IndalekoMachineConfigSchema,
                 'edge' : False,
                 'indices' : { },
             }
