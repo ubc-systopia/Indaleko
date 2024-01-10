@@ -123,33 +123,28 @@ class IndalekoWindowsLocalIngest(IndalekoIngest):
         print('returning newly loaded value of machine_config')
         return self.machine_config
 
-    def get_machine_config(self : 'IndalekoWindowsLocalIngest', machine_id : str = None, config_dir : str = None, config_file : str = None) -> dict:
-        '''This function returns the machine configuration for the given machine_id.
-            machine_id: the identifier for the machine
+    def get_machine_config(self : 'IndalekoWindowsLocalIngest',
+                           machine_id : str = None,
+                           config_dir : str = None,
+                           config_file : str = None) -> IndalekoWindowsMachineConfig:
         '''
-        # load the machine config from the latest file captured
-        if config_dir is None:
-            config_dir = IndalekoWindowsMachineConfig.DefaultConfigDir
-        file_machine_config = IndalekoWindowsMachineConfig(config_dir = config_dir, config_file = config_file)
-        print(f'file_machine_config = {file_machine_config.get_config_data()}')
-        if machine_id is None:
-            config_data = file_machine_config.get_config_data()
-            assert type(config_data) is list, 'config_data must be a list'
-            assert len(config_data) == 1, 'config_data must have exactly one entry'
-            config_data = config_data[0]
-            assert type(config_data) is dict, 'config_data must be a dict'
-            machine_id = config_data['_key']
-        print(f'machine_id = {machine_id}')
-        db_machine_config = self.lookup_machine_config(machine_id)
-        # TODO: compare these two and see if they match.  If not, throw an error
-        # because we don't deal with that case yet.
-        print(f'db_machine_config = {db_machine_config}')
-        if file_machine_config != db_machine_config:
-            print('WARNING: machine config does not match')
-        return db_machine_config
+        This method loads th current machine configuration.  If the machine_id
+        is provided, it will load the configuration from the database.  If not,
+        it will find the most recent configuration file in the config_dir and
+        load that.
+        '''
+        if not hasattr(self, 'machine_config'):
+            if machine_id is not None:
+                self.machine_config = IndalekoWindowsMachineConfig.load_config_from_db(machine_id)
+            else:
+                self.machine_config = IndalekoWindowsMachineConfig.load_config_from_file(config_dir = config_dir,
+                                                                                         config_file = config_file)
+                self.machine_config.write_config_to_db()
+        return self.machine_config
 
     def ingest(self : 'IndalekoWindowsLocalIngest') -> None:
         logging.debug(f'Ingesting')
+        logging.info(f'Ingesting file {self.default_input_file}, Step 1: get machine config')
         # Steps for ingestion:
         # 1. Make sure the machine config is in the database.  If not, capture
         #    it.  If it is, we just use it.  Might want to deal with checking to
@@ -191,7 +186,6 @@ class IndalekoWindowsLocalIngest(IndalekoIngest):
         # need to be bulk uploaded to the database.  This _could_ be done via
         # the script interface.
         machine_config = self.get_machine_config()
-        print(machine_config)
 
     def start(self : 'IndalekoWindowsLocalIngest', args : argparse.Namespace) -> None:
         super().start(self.get_default_logfile_name(), args.loglevel)

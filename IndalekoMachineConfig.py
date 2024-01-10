@@ -124,6 +124,14 @@ class IndalekoMachineConfig(IndalekoRecord):
             return self.machine_id
         return None
 
+    def write_config_to_db(self) -> None:
+        '''
+        This method writes the configuration to the database.
+        '''
+        assert hasattr(self, 'machine_id'), 'machine_id must be set before writing to the database.'
+        assert self.validate_uuid_string(self.machine_id), f'machine_id {self.machine_id} is not a valid UUID.'
+        self.collection.insert(self.to_json(), overwrite=True)
+
     @staticmethod
     def load_config_from_file(config_file : str) -> dict:
         '''
