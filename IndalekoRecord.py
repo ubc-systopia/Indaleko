@@ -50,11 +50,13 @@ class IndalekoRecord:
     @staticmethod
     def validate_uuid_string(uuid_string : str) -> bool:
         if type(uuid_string) is not str:
+            print(f'uuid is not a string it is a {type(uuid)}')
             return False
         try:
             uuid.UUID(uuid_string)
             return True
         except ValueError:
+            print('uuid is not valid')
             return False
 
 
@@ -122,6 +124,7 @@ class IndalekoRecord:
         self.__raw_data__ = base64.b64encode(raw_data).decode('ascii')
 
     def set_base64_data(self, base64_data : str) -> None:
+        assert type(base64_data) is str, 'base64_data must be a string'
         self.__raw_data__ = base64_data
 
     def get_data(self) -> str:
@@ -134,14 +137,19 @@ class IndalekoRecord:
     def validate_source(source : dict) -> bool:
         valid = True
         if type(source) is not dict:
+            print('source is not a dict')
             valid = False
         elif 'Identifier' not in source:
+            print('source does not contain an Identifier field')
             valid = False
         elif 'Version' not in source:
+            print('source does not contain a Version field')
             valid = False
         elif not IndalekoRecord.validate_uuid_string(source['Identifier']):
+            print('source Identifier is not a valid UUID')
             valid = False
         elif type(source['Version']) is not str:
+            print('source Version is not a string')
             valid = False
         return valid
 

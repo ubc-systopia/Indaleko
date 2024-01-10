@@ -8,30 +8,119 @@ from IndalekoMachineConfig import IndalekoMachineConfig
 import uuid
 import datetime
 import msgpack
+import datetime
+import argparse
+import re
+import msgpack
+import base64
 
 class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
     '''
     The IndalekoWindowsMachineConfig class is used to capture information about
-    a Windows machine.  It is a subclass of IndalekoMachineConfig, which is
-    shared across all platforms.
+    a Windows machine.  It is a specialization of the IndalekoMachineConfig
+    class, which is shared across all platforms.
     '''
 
     WindowsMachineConfigFilePrefix = 'windows-hardware-info'
 
-    def __init__(self : 'IndalekoWindowsMachineConfig'):
+    WindowsMachineConfig_UUID = '3360a328-a6e9-41d7-8168-45518f85d73e'
+
+    WindowsMachineConfigService = {
+        'name': 'WindowsMachineConfig',
+        'description': 'This service provides the configuration information for a Windows machine.',
+        'version': '1.0',
+        'identifier': WindowsMachineConfig_UUID,
+        'created': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        'type': 'Indexer',
+    }
+
+
+
+    def __init__(self : 'IndalekoWindowsMachineConfig', timestamp : datetime = None, db : IndalekoDBConfig = None):
+        super().__init__(timestamp=timestamp, db=db)
+
+
+    @staticmethod
+    def find_config_files(dir : str) -> list:
+        return [x for x in os.listdir(dir)
+                if x.startswith(IndalekoWindowsMachineConfig.WindowsMachineConfigFilePrefix)
+                and x.endswith('.json')]
+
+    @staticmethod
+    def load_config_from_file(config_dir : str = None, config_file : str = None) -> 'IndalekoWindowsMachineConfig':
+        config_data ={}
+        if config_dir is None and config_file is None:
+            # nothing specified, so we'll search and find
+            config_dir = IndalekoWindowsMachineConfig.DefaultConfigDir
+        if config_file is None:
+            # now we have a config_dir, so we'll find the most recent file
+            assert config_dir is not None, 'config_dir must be specified'
+            config_file = IndalekoWindowsMachineConfig.get_most_recent_config_file(config_dir)
+            config_file = os.path.join(config_dir, config_file)
+        if config_file is not None:
+            _, guid, timestamp = IndalekoWindowsMachineConfig.get_guid_timestamp_from_file_name(config_file)
+            print(42, timestamp)
+            assert os.path.exists(config_file), f'Config file {config_file} does not exist'
+            assert os.path.isfile(config_file), f'Config file {config_file} is not a file'
+            with open(config_file, 'rt', encoding='utf-8-sig') as fd:
+                config_data = json.load(fd)
+            assert str(guid) == config_data['MachineGuid'], f'GUID mismatch: {guid} != {config_data["MachineGuid"]}'
+        print(json.dumps(config_data, indent=4))
+        config = IndalekoWindowsMachineConfig.build_config( os=config_data['OperatingSystem']['Caption'],
+                                                            arch=config_data['OperatingSystem']['OSArchitecture'],
+                                                            os_version=config_data['OperatingSystem']['Version'],
+                                                            cpu=config_data['CPU']['Name'],
+                                                            cpu_version=config_data['CPU']['Name'],
+                                                            cpu_cores=config_data['CPU']['Cores'],
+                                                            source_id=IndalekoWindowsMachineConfig.WindowsMachineConfigService['identifier'],
+                                                            source_version=IndalekoWindowsMachineConfig.WindowsMachineConfigService['version'],
+                                                            timestamp=timestamp.isoformat(),
+                                                            attributes=config_data,
+                                                            data=base64.b64encode(msgpack.packb(config_data)).decode('ascii'),
+                                                            machine_id=config_data['MachineGuid']
+                                                        )
+        return config
+
+
+    @staticmethod
+    def get_guid_timestamp_from_file_name(file_name : str) -> tuple:
         '''
-        This is a somewhat complex constructor.  The data it returns must be in
-        the format of a record returned from the database.  However, if there is
-        no entry in the database, one must be constructed from some external
-        source, e.g., a "configuration file" of some sort.
-
-        Thus, the process is:
-
-            1. Given a machine_id, look for it in the database.
-            2. If this is not found, take a config file and build a d
+        Get the machine configuration captured by powershell.
+        Note that this PS script requires admin privileges so it might
+        be easier to do this in an application that elevates on Windows so it
+        can be done dynamically.  For now, we assume it has been captured.
         '''
-        pass
+        # Regular expression to match the GUID and timestamp
+        pattern = r"(?:.*[/\\])?windows-hardware-info-(?P<guid>[a-fA-F0-9\-]+)-(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d+Z)\.json"
+        pattern = r"(?:.*[/\\])?windows-hardware-info-(?P<guid>[a-fA-F0-9\-]+)-(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d+Z)\.json"
+        match = re.match(pattern, file_name)
+        assert match, f'Filename format not recognized for {file_name}.'
+        guid = uuid.UUID(match.group("guid"))
+        timestamp = match.group("timestamp").replace("-", ":")
+        assert timestamp[-1] == 'Z', 'Timestamp must end with Z'
+        # %f can only handle up to 6 digits and it seems Windows gives back
+        # more sometimes. Note this truncates, it doesn't round.  I doubt
+        # it matters.
+        timestamp_parts = timestamp.split('.')
+        fractional_part = timestamp_parts[1][:6] # truncate to 6 digits
+        ymd, hms = timestamp_parts[0].split('T')
+        timestamp = ymd.replace(':', '-') + 'T' + hms + '.' + fractional_part + '+00:00'
+        timestamp = datetime.datetime.fromisoformat(timestamp)
+        return (file_name, guid, timestamp)
 
+    @staticmethod
+    def get_most_recent_config_file(config_dir : str) -> str:
+        candidates = [x for x in os.listdir(config_dir) if x.startswith('windows-hardware-info') and x.endswith('.json')]
+        assert len(candidates) > 0, 'At least one windows-hardware-info file should exist'
+        candidate_files = [(timestamp, filename) for filename, guid, timestamp in [IndalekoWindowsMachineConfig.get_guid_timestamp_from_file_name(x) for x in candidates]]
+        candidate_files.sort(key=lambda x: x[0])
+        candidate = candidate_files[0][1]
+        print(candidate)
+        if config_dir is not None:
+            candidate = os.path.join(config_dir, candidate)
+        return candidate
+
+class old_IndalekoWindowsMachineConfig(IndalekoRecord):
     @staticmethod
     def create_config_from_db(machine_id : str) -> 'IndalekoWindowsMachineConfig':
         '''
@@ -247,33 +336,20 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
     def get_volume_info(self: 'IndalekoWindowsMachineConfig') -> dict:
         return self.volume_data
 
-    @staticmethod
-    def get_guid_timestamp_from_file_name(file_name : str) -> tuple:
-        '''
-        Get the machine configuration captured by powershell.
-        Note that this PS script requires admin privileges so it might
-        be easier to do this in an application that elevates on Windows so it
-        can be done dynamically.  For now, we assume it has been captured.
-        '''
-        # Regular expression to match the GUID and timestamp
-        pattern = r"windows-hardware-info-(?P<guid>[a-fA-F0-9\-]+)-(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d+Z)\.json"
-        match = re.match(pattern, file_name)
-        assert match, 'Filename format not recognized.'
-        guid = uuid.UUID(match.group("guid"))
-        timestamp = match.group("timestamp").replace("-", ":")
-        # %f can only handle up to 6 digits and it seems Windows gives back
-        # more sometimes. Note this truncates, it doesn't round.  I doubt
-        # it matters.
-        decimal_position = timestamp.rindex('.')
-        if len(timestamp) - decimal_position - 2 > 6:
-            timestamp = timestamp[:decimal_position + 7] + "Z"
-        timestamp = datetime.datetime.strptime(timestamp, "%Y:%m:%dT%H:%M:%S.%fZ")
-        return (file_name, guid, timestamp)
 
-    @staticmethod
-    def get_most_recent_config_file(config_dir : str):
-        candidates = [x for x in os.listdir(config_dir) if x.startswith('windows-hardware-info') and x.endswith('.json')]
-        assert len(candidates) > 0, 'At least one windows-hardware-info file should exist'
-        candidate_files = [(timestamp, filename) for filename, guid, timestamp in [IndalekoWindowsMachineConfig.get_guid_timestamp_from_file_name(x) for x in candidates]]
-        candidate_files.sort(key=lambda x: x[0])
-        return candidate_files[0][1]
+def main():
+    config_file = IndalekoWindowsMachineConfig.get_most_recent_config_file(IndalekoWindowsMachineConfig.DefaultConfigDir)
+    print(config_file)
+    _, guid, timestamp = IndalekoWindowsMachineConfig.get_guid_timestamp_from_file_name(config_file)
+    file_record = IndalekoWindowsMachineConfig.load_config_from_file(IndalekoWindowsMachineConfig.DefaultConfigDir, config_file)
+    print('file_record:')
+    print(file_record.to_dict())
+    # db_record = IndalekoWindowsMachineConfig.load_config_from_db(str(guid))
+    # if db_record is None:
+    #    print(f'GUID {guid} not found in database')
+    #else:
+    #    print(f'GUID {guid} found in database')
+    #    print(db_record.to_json())
+
+if __name__ == "__main__":
+    main()

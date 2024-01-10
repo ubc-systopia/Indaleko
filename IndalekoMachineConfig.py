@@ -6,6 +6,7 @@ from IndalekoCollections import IndalekoCollections
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
 import datetime
+import uuid
 
 class IndalekoMachineConfig(IndalekoRecord):
     '''
@@ -104,19 +105,33 @@ class IndalekoMachineConfig(IndalekoRecord):
         '''
         assert False, 'This method should be overridden by the derived classes.'
 
+    def set_machine_id(self, machine_id)-> None:
+        '''
+        This method sets the machine ID for the machine configuration.
+        '''
+        if type(machine_id) is str:
+            assert self.validate_uuid_string(machine_id), f'machine_id {machine_id} is not a valid UUID.'
+        elif type(machine_id) is uuid.UUID:
+            machine_id = str(machine_id)
+        self.machine_id = machine_id
+        return self
+
+    def get_machine_id(self) -> str:
+        '''
+        This method returns the machine ID for the machine configuration.
+        '''
+        if hasattr(self, 'machine_id'):
+            return self.machine_id
+        return None
+
     @staticmethod
     def load_config_from_file(config_file : str) -> dict:
         '''
         This method creates a new IndalekoMachineConfig object from an
-        existing config file.
+        existing config file.  This must be overriden by the platform specific
+        machine configuration implementation.
         '''
-        assert config_file is not None, "No config file specified."
-        assert os.path.exists(config_file), f"Config file {config_file} does not exist."
-        assert os.path.isfile(config_file), f"Config file {config_file} is not a file."
-        with open(config_file, 'rt', encoding='utf-8-sig') as fd:
-            config_data = json.load(fd)
-        # we don't have enough information here to build a valid record yet.
-        return config_data # TODO: get enough info to build a valid record!
+        assert False, 'This method should be overridden by the derived classes.'
 
     @staticmethod
     def load_config_from_db(machine_id : str) -> 'IndalekoMachineConfig':
@@ -147,6 +162,7 @@ class IndalekoMachineConfig(IndalekoRecord):
         machine_config.set_captured(entry['captured'])
         machine_config.set_base64_data(entry['Data'])
         machine_config.set_attributes(entry['Attributes'])
+        machine_config.set_machine_id(machine_id)
         return machine_config
 
     def to_json(self, indent : int = 4) -> str:
@@ -156,7 +172,62 @@ class IndalekoMachineConfig(IndalekoRecord):
         record = super().to_dict()
         record['platform'] = self.platform
         record['captured'] = self.captured
+        if hasattr(self, 'machine_id'):
+            record['_key'] = self.machine_id
+        print('***\n\n\n***', record)
         return json.dumps(record, indent=indent)
+
+    @staticmethod
+    def build_config(**kwargs) -> 'IndalekoMachineConfig':
+        assert 'os' in kwargs, 'OS must be specified'
+        assert type(kwargs['os']) is str, 'OS must be a string'
+        assert 'arch' in kwargs, 'Architecture must be specified'
+        assert type(kwargs['arch']) is str, 'Architecture must be a string'
+        assert 'os_version' in kwargs, 'OS version must be specified'
+        assert type(kwargs['os_version']) is str, 'OS version must be a string'
+        assert 'cpu' in kwargs, 'CPU must be specified'
+        assert type(kwargs['cpu']) is str, 'CPU must be a string'
+        assert 'cpu_version' in kwargs, 'CPU version must be specified'
+        assert type(kwargs['cpu_version']) is str, 'CPU version must be a string'
+        assert 'cpu_cores' in kwargs, 'CPU cores must be specified'
+        assert type(kwargs['cpu_cores']) is int, 'CPU cores must be an integer'
+        assert 'source_id' in kwargs, 'Source must be specified'
+        assert type(kwargs['source_id']) is str, 'Source must be a dict'
+        assert 'source_version' in kwargs, 'Source version must be specified'
+        assert type(kwargs['source_version']) is str, 'Source version must be a string'
+        assert 'attributes' in kwargs, 'Attributes must be specified'
+        assert 'data' in kwargs, 'Data must be specified'
+        assert 'machine_id' in kwargs, 'Machine ID must be specified'
+        if 'timestamp' in kwargs:
+            assert IndalekoMachineConfig.validate_iso_timestamp(kwargs['timestamp']), f'Timestamp {kwargs["timestamp"]} is not a valid ISO timestamp'
+            timestamp = kwargs['timestamp']
+        else:
+            timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        if 'machine_config' not in kwargs:
+            machine_config = IndalekoMachineConfig()
+        else:
+            machine_config = kwargs['machine_config']
+        machine_config.set_platform({
+            'software' : {
+                'OS' : kwargs['os'],
+                'Architecture' : kwargs['arch'],
+                'Version' : kwargs['os_version']
+            },
+            'hardware' : {
+                'CPU' : kwargs['cpu'],
+                'Version' : kwargs['cpu_version'],
+                'Cores' : kwargs['cpu_cores'],
+            },
+        })
+        machine_config.set_captured(timestamp)
+        machine_config.set_source({
+            'Identifier' : kwargs['source_id'],
+            'Version' : kwargs['source_version'],
+        })
+        machine_config.set_attributes(kwargs['attributes'])
+        machine_config.set_base64_data(kwargs['data'])
+        machine_config.set_machine_id(kwargs['machine_id'])
+        return machine_config
 
 
 
@@ -174,6 +245,7 @@ def main():
         # look it up in the database
         machine_config = IndalekoMachineConfig.load_config_from_db(args.machine_id)
         print(machine_config.to_json())
+
 
 
 if __name__ == "__main__":
