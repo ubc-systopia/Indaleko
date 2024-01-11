@@ -106,7 +106,7 @@ class IndalekoObject(IndalekoRecord):
 
     def __init__(self, source:dict, raw_data:bytes, **kwargs):
         # the only _required_ field is the source
-        assert type(source) is dict, 'source must be a dict'
+        assert isinstance(source, dict), 'source must be a dict'
         assert 'Identifier' in source, 'source must contain an Identifier field'
         assert 'Version' in source, 'source must contain a Version field'
         # there are four required object fields:

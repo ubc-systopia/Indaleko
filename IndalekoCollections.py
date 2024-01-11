@@ -1,5 +1,4 @@
 import argparse
-from arango import ArangoClient
 from IndalekoObject import IndalekoObject
 from IndalekoRelationship import IndalekoRelationship
 from IndalekoSource import IndalekoSource
@@ -38,7 +37,7 @@ class IndalekoCollection:
     def __init__(self, name : str, definition : dict, db : IndalekoDBConfig = None, reset : bool = False) -> None:
         self.name = name
         self.definition = definition
-        assert type(definition) is dict, 'Collection definition must be a dictionary'
+        assert isinstance(definition, dict), 'Collection definition must be a dictionary'
         assert 'schema' in definition, 'Collection must have a schema'
         assert 'edge' in definition, 'Collection must have an edge flag'
         assert 'indices' in definition, 'Collection must have indices'

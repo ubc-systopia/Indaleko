@@ -2,7 +2,8 @@ import os
 import uuid
 import argparse
 from IndalekoServices import IndalekoServices
-from IndalekoCollections import *
+from IndalekoCollections import IndalekoCollections
+from IndalekoMachineConfig import IndalekoMachineConfig
 import logging
 import platform
 import datetime
@@ -131,7 +132,7 @@ class IndalekoIngest():
             if hasattr(logging, 'FATAL'):
                 logging_levels.append('FATAL')
         else:
-            logging_levels = sorted(set([l for l in logging.getLevelNamesMapping()]))
+            logging_levels = sorted(set([level for level in logging.getLevelNamesMapping()]))
 
         self.parser.add_argument('--outdir', type=str, default=self.output_dir, help='Directory to use for output file')
         self.parser.add_argument('--output', type=str, default=self.output_file,
@@ -158,15 +159,6 @@ class IndalekoIngest():
 
     def get_default_config_dir(self : 'IndalekoIngest') -> str:
         return self.config_dir
-
-    def ingest(self : 'IndalekoIngest') -> None:
-        '''
-        This method is the main entry point for the ingestor. It will drive the
-        ingestion process, with specialization provided by the ingester implementation.
-        '''
-        assert False, "Not implemented (yet)"
-        machine_config = self.get_ingester_machine_config()
-        cfg = machine_config.get_config_data()
 
     def register_service(self, service : dict) -> IndalekoServices:
         assert service is not None, 'Service cannot be None'
@@ -204,7 +196,7 @@ class IndalekoIngest():
         passed-in UUID.
         '''
         try:
-            m_uuid = uuid.UUID(machine_uuid)
+            _ = uuid.UUID(machine_uuid)
         except ValueError:
             assert False, f"Invalid UUID: {machine_uuid}"
         collection = self.collections.get_collection('MachineConfig')
@@ -259,7 +251,7 @@ def main():
     assert ingest is not None, "Could not create ingester."
     parser = argparse.ArgumentParser(description='Test the IndalekoIngester class.')
     parser.add_argument('--version', action='version', version='%(prog)s 1.0')
-    args = ingest.parse_args(parser)
+    _ = ingest.parse_args(parser)
     logging.info('Testing the machine configuration lookup (using the UUID for my Windows machine.)')
     mcfg = ingest.lookup_machine_config('2e169bb7-0024-4dc1-93dc-18b7d2d28190')
     print(mcfg.config_data)

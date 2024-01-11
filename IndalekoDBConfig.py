@@ -4,8 +4,8 @@ import configparser
 import secrets
 import string
 import datetime
-from Indaleko import *
 from arango import ArangoClient
+from IndalekoCollections import IndalekoCollections
 import requests
 import time
 
@@ -141,7 +141,7 @@ class IndalekoDBConfig:
         assert upwd is not None, 'No password provided'
         assert len(upwd) > 0, 'Password must be at least one character'
         assert access is not None, 'No access list found'
-        assert type(access) == list, 'Access must be a list'
+        assert isinstance(access, list), 'Access must be a list'
         assert self.sys_db is not None, 'No system database found'
         ulist = self.sys_db.users()
         found = False
@@ -152,10 +152,10 @@ class IndalekoDBConfig:
         if not found:
             self.sys_db.create_user(username=uname, password=upwd, active=True)
         for a in access:
-            assert type(a) is dict, 'Access must be a list of dictionaries'
+            assert isinstance(a, dict), 'Access must be a list of dictionaries'
             perms = self.sys_db.permission(username=uname, database=a['database'])
             # TODO - figure out what is in perms
-            # print(perms)
+            assert perms is not None, 'Perms is None, which is unexpected.'
             self.sys_db.update_permission(uname, permission=a['permission'], database=a['database'])
 
 

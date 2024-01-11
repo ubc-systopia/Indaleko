@@ -1,5 +1,3 @@
-from typing import Any
-
 '''
 The purpose of this package is to define the core data types used in Indaleko.
 

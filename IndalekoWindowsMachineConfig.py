@@ -147,7 +147,7 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
         @staticmethod
         def __find_volume_guid__(vol_name : str) -> str:
             assert vol_name is not None, 'Volume name cannot be None'
-            assert type(vol_name) is str, 'Volume name must be a string'
+            assert isinstance(vol_name, str), 'Volume name must be a string'
             assert vol_name.startswith('\\\\?\\Volume{')
             return vol_name[11:-2]
 
