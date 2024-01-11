@@ -5,7 +5,9 @@ operations.
 import os
 
 class IndalekoIndex:
-
+    """
+    Class used to manage indices for IndalekoCollection objects.
+    """
     DefaultDataDir = './data'
     DefaultConfigDir = './config'
 

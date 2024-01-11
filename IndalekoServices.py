@@ -1,10 +1,4 @@
-import argparse
-import uuid
-import datetime
-from dbsetup import IndalekoDBConfig
-from IndalekoCollections import IndalekoCollection
-
-'''
+"""
 The purpose of this package is to create a common class structure for managing
 Indaleko Services.
 
@@ -21,9 +15,19 @@ The types of services envisioned here are:
 
 I expect there will be other kinds of services in the future, but that's the
 list for now.
-'''
+"""
+import argparse
+import uuid
+import datetime
+from IndalekoDBConfig import IndalekoDBConfig
+from IndalekoCollections import IndalekoCollection
+
 
 class IndalekoService:
+    """
+    In Indaleko, a service is a component that provides some kind of
+    functionality.  This class manages registration and lookup of services.
+    """
     def __init__(self, name: str = None, id: str = None, description: str = None, version: str = None, service_type: str = 'Indexer'):
         assert name is not None or id is not None, 'Either name or id must be specified.'
         pass
@@ -32,7 +36,7 @@ class IndalekoService:
 
 class IndalekoServices:
 
-    ServicesSchema = {
+    services_schema = {
         "$schema": "https://json-schema.org/draft/2020-12/schema#",
         "$id": "https://activitycontext.work/schema/serviceprovider.json",
         "title": "Service provider schema",
@@ -58,54 +62,52 @@ class IndalekoServices:
         }
     }
 
-    IndalekoServices = 'Services'
+    indaleko_services = 'Services'
 
-    ServiceTypes = (
+    service_types = (
         'Indexer',
         'Ingester',
+        'SemanticTransducer',
+        'ActivityContextGenerator',
+        'ActivityDataCollector',
     )
 
     CollectionDefinition = {
-                'schema' : ServicesSchema,
-                'edge' : False,
-                'indices' : {
-                    'name' : {
-                        'fields' : ['name'],
-                        'unique' : True,
-                        'type' : 'persistent'
-                    },
-                },
-            }
+        'schema' : services_schema,
+        'edge' : False,
+        'indices' : {
+            'name' : {
+                'fields' : ['name'],
+                'unique' : True,
+                'type' : 'persistent'
+            },
+        },
+    }
 
     def __init__(self, reset: bool = False) -> None:
         self.db_config = IndalekoDBConfig()
         self.db_config.start()
-        self.service_collection = IndalekoCollection('Services', self.CollectionDefinition, self.db_config, reset=reset)  # noqa: F405
-
-    @staticmethod
-    def create_existing_service(self, service_data : dict):
-        assert service_data is not None, 'service_data must be a valid dictionary.'
-        assert 'name' in service_data, 'service_data must contain a name field.'
-        assert 'version' in service_data, 'service_data must contain a version field.'
-        assert 'identifier' in service_data, 'service_data must contain an identifier field.'
-
-
+        self.service_collection = IndalekoCollection('Services',
+                                                     self.CollectionDefinition,
+                                                     self.db_config,
+                                                     reset=reset)
 
 
     def create_indaleko_services_collection(self) -> IndalekoCollection:
-        '''
+        """
         This method creates the IndalekoServices collection in the database.
-        '''
-        assert not self.db_config.db.has_collection(self.IndalekoServices), f'{self.IndalekoServices} collection already exists, cannot create it.'
-        self.service_collection = IndalekoCollection(self.db_config.db, self.IndalekoServices, edge=False)
-        self.service_collection.add_schema(IndalekoServices.ServicesSchema)
+        """
+        assert not self.db_config.db.has_collection(self.indaleko_services), \
+         f'{self.indaleko_services} collection already exists, cannot create it.'
+        self.service_collection = IndalekoCollection(self.db_config.db, self.indaleko_services)
+        self.service_collection.add_schema(IndalekoServices.services_schema)
         self.service_collection.create_index('name', 'persistent', ['name'], unique=True)
         return self.service_collection
 
     def lookup_service(self, name: str) -> dict:
-        '''
+        """
         This method is used to lookup a service by name.
-        '''
+        """
         entries = self.service_collection.find_entries(name =  name)
         assert len(entries) < 2, f'Multiple entries found for service {name}, not handle.'
         if len(entries) == 0:
@@ -114,8 +116,17 @@ class IndalekoServices:
             return entries[0]
 
 
-    def register_service(self, name: str, description: str, version: str, service_type : str = 'Indexer', service_id : str  = None) -> 'IndalekoServices':
-        assert service_type in IndalekoServices.ServiceTypes, f'Invalid service type {service_type} specified.'
+    def register_service(self,
+                         name: str,
+                         description: str,
+                         version: str,
+                         service_type : str = 'Indexer',
+                         service_id : str  = None) -> 'IndalekoServices':
+        """
+        This method registers a service with the given name, description, and
+        version in the database.
+        """
+        assert service_type in IndalekoServices.service_types, f'Invalid service type {service_type} specified.'
         if service_id is None:
             service_id = str(uuid.uuid4())
         new_service = {
@@ -130,6 +141,7 @@ class IndalekoServices:
         return self.lookup_service(name)
 
 def main():
+    """Test the IndalekoServices class."""
     parser = argparse.ArgumentParser()
     parser.add_argument('--version', action='version', version='%(prog)s 1.0')
     parser.add_argument('--reset', action='store_true', help='Reset the service collection.')

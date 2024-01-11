@@ -1,4 +1,6 @@
-
+"""
+This class defines constants and functions that are specific to Windows.
+"""
 class IndalekoWindows:
 
     FILE_ATTRIBUTES = {

@@ -1,14 +1,17 @@
+"""
+This class is used to manage the configuration information for a Windows machine.
+"""
 import os
 import json
-from IndalekoRecord import IndalekoRecord
-from IndalekoDBConfig import IndalekoDBConfig
-from IndalekoMachineConfig import IndalekoMachineConfig
 import uuid
 import datetime
-import msgpack
 import argparse
 import re
 import base64
+import msgpack
+from IndalekoRecord import IndalekoRecord
+from IndalekoDBConfig import IndalekoDBConfig
+from IndalekoMachineConfig import IndalekoMachineConfig
 
 class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
     '''

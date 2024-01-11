@@ -1,4 +1,9 @@
-
+"""
+This module defines the IndalekoSource class.  This class is used to define the
+source of metadata that has been inserted into the database.  In many cases
+there will be a chain of sources, e.g., the source of the indexing information,
+the ingester, the semantic transducer, etc.
+"""
 import uuid
 from IndalekoRecord import IndalekoRecord
 import argparse
@@ -32,12 +37,13 @@ class IndalekoSource(IndalekoRecord):
         super().__init__(b'',
                          {'Description' : description},
                          {
-                            'Identifier' : str(uuid.UUID),
+                            'Identifier' : str(identifier),
                             'Version' : version,
                          })
 
 
 def main():
+    """Test code for this module."""
     source_uuid = '2a44214d-fa65-4175-a14b-928102cbca3f'
     parser = argparse.ArgumentParser()
     parser.add_argument('--description', type=str, default='This is a test description.', help='The description of the source.')

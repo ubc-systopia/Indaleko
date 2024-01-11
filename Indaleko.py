@@ -1,4 +1,4 @@
-'''
+"""
 The purpose of this package is to define the core data types used in Indaleko.
 
 Indaleko is a Unified Private Index (UPI) service that enables the indexing of
@@ -38,9 +38,10 @@ Thus, to that end, we define both a generic schema and in some cases a flexible
 set of properties that can be extracted and stored.  Since this is a prototype
 system, we have strived to "keep it simple" yet focus on allowing us to explore
 a broad range of storage systems, semantic transducers, and activity data sources.
-'''
+"""
 
 def main():
+    """Test code for Indaleko.py"""
     print('At the present time, there is no test code in Indaleko.py')
 
 if __name__ == "__main__":

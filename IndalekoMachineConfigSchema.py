@@ -70,6 +70,7 @@ IndalekoMachineConfigSchema = {
     }
 
 def main():
+    """Test the IndalekoMachineConfigSchema class."""
     print(IndalekoMachineConfigSchema)
 
 if __name__ == "__main__":

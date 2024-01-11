@@ -1,12 +1,41 @@
+"""
+This is the generic class for an Indaleko Ingester.
+
+An ingester takes information about some (or all) of the data that is stored in
+various storage repositories available to this machine.  It processes the output
+from indexers and then generates additional metadata to associate with the
+storage object (s) in the database.
+
+Examples of ingesters include:
+
+* A file system specific metadata normalizer, which takes indexing information
+  collected about one or more files and then converts that into a normalized
+  form to be stored in the database. This includes common metadata such as
+  length, label (the "name" of the file), timestamps, and so on.
+
+* A semantic metadata generator, which takes the input from the indexer and then
+  performs operations on one or more files described by the indexer to extract
+  or compute metadata based upon the content of the file.  For example, this
+  might include a "bag of words" from a text file, EXIF data from a JPEG
+  file, or even commonly used checksums (e.g., MD5, SHA1, SHA256, etc.) that are
+  computed from the file's contents.
+
+* Environmental metadata generators, which take information about the
+  environment in which the file is stored, such as the volume on which it is
+  stored, additional non-standard metadata features that might be available,
+  etc.
+
+"""
+
+import logging
+import platform
+import datetime
 import os
 import uuid
 import argparse
 from IndalekoServices import IndalekoServices
 from IndalekoCollections import IndalekoCollections
 from IndalekoMachineConfig import IndalekoMachineConfig
-import logging
-import platform
-import datetime
 
 class IndalekoIngest():
     '''
@@ -15,20 +44,20 @@ class IndalekoIngest():
     of this class to handle platform-specific ingestion.
     '''
 
-    Indexer_UUID_str = None
-    Indexer_UUID = None
-    MachineConfig_UUID_str = None
-    MachineConfig_UUID = None
-    Ingester_UUID_str = None
-    Ingester_UUID = None
+    indexer_uuid_str = None
+    indexer_uuid = None
+    machine_config_uuid_str = None
+    machine_config_uuid = None
+    ingester_uuid_str = None
+    ingester_uuid = None
 
-    MachineConfigService = None
-    IndexerService = None
-    IngesterService = None
+    machine_config_service = None
+    indexer_service = None
+    ingester_service = None
 
-    DefaultOutputDir = './data'
-    DefaultConfigDir = './config'
-    DefaultLogDir = './logs'
+    default_output_dir = './data'
+    default_config_dir = './config'
+    default_log_dir = './logs'
 
     def __init__(self : 'IndalekoIngest', **kwargs : dict) -> None:
         '''
@@ -43,20 +72,20 @@ class IndalekoIngest():
         else:
             self.test = False
         if 'Indexer' in kwargs:
-            self.Indexer_UUID_str = kwargs['Indexer']
-            self.Indexer_UUID = uuid.UUID(self.Indexer_UUID_str)
+            self.indexer_uuid_str = kwargs['Indexer']
+            self.indexer_uuid = uuid.UUID(self.indexer_uuid_str)
         if 'MachineConfig' in kwargs:
-            self.MachineConfig_UUID_str = kwargs['MachineConfig']
-            self.MachineConfig_UUID = uuid.UUID(self.MachineConfig_UUID_str)
+            self.machine_config_uuid_str = kwargs['MachineConfig']
+            self.machine_config_uuid = uuid.UUID(self.machine_config_uuid_str)
         if 'Ingester' in kwargs:
-            self.Ingester_UUID_str = kwargs['Ingester']
-            self.Ingester_UUID = uuid.UUID(self.Ingester_UUID_str)
+            self.ingester_uuid_str = kwargs['Ingester']
+            self.ingester_uuid = uuid.UUID(self.ingester_uuid_str)
         if 'MachineConfigService' in kwargs:
-            self.MachineConfigService = kwargs['MachineConfigService']
+            self.machine_config_service = kwargs['MachineConfigService']
         if 'IndexerService' in kwargs:
-            self.IndexerService = kwargs['IndexerService']
+            self.indexer_service = kwargs['IndexerService']
         if 'IngesterService' in kwargs:
-            self.IngesterService = kwargs['IngesterService']
+            self.ingester_service = kwargs['IngesterService']
         if 'log_level' in kwargs:
             self.log_level = kwargs['log_level']
         else:
@@ -64,15 +93,15 @@ class IndalekoIngest():
         if 'output_dir' in kwargs:
             self.output_dir = kwargs['output_dir']
         else:
-            self.output_dir = self.DefaultOutputDir
+            self.output_dir = self.default_output_dir
         if 'config_dir' in kwargs:
             self.config_dir = kwargs['config_dir']
         else:
-            self.config_dir = self.DefaultConfigDir
+            self.config_dir = self.default_config_dir
         if 'log_dir' in kwargs:
             self.log_dir = kwargs['log_dir']
         else:
-            self.log_dir = self.DefaultLogDir
+            self.log_dir = self.default_log_dir
         if 'log_file' in kwargs:
             self.log_file = kwargs['log_file']
         else:
@@ -87,6 +116,11 @@ class IndalekoIngest():
             self.config_file = self.get_default_config_file_name()
         if 'input_file' in kwargs:
             self.input_file = kwargs['input_file']
+        self.indaleko_services = None
+        self.collections = None
+        self.indaleko_services = None
+        self.parser = None
+        self.config_data = None
 
     def start(self, logfile : str = None, loglevel = logging.DEBUG) -> None:
         '''This will start up the various services required for ingestion.'''
@@ -98,23 +132,16 @@ class IndalekoIngest():
             logging.basicConfig(filename=os.path.join(self.log_dir, logfile),
                                 level=loglevel,
                                 format='%(asctime)s - %(levelname)s - %(message)s')
-        logging.info(f"Starting IndalekoIngest at {self.timestamp}")
+        logging.info("Starting IndalekoIngest at %s", self.timestamp)
         self.indaleko_services = IndalekoServices()
         self.collections = IndalekoCollections()
         self.indaleko_services = IndalekoServices()
-
-    def ingest(self : 'IndalekoIngest') -> None:
-        '''
-        This method is the main entry point for the ingestor. It will drive the
-        ingestion process, with specialization provided by the ingester implementation.
-        '''
-        assert False, "Not implemented in the base class - needs a specialized class for the platform."
 
 
     def parse_args(self, pre_parser : argparse.ArgumentParser = None) -> argparse.Namespace:
         '''
         Returns an ArgumentParser object that can be used to parse the command
-        line arguments for the ingestor.dir
+        line arguments for the ingester.
         '''
         self.parser = argparse.ArgumentParser(parents=[pre_parser])
         if platform.python_version() < '3.12':
@@ -138,33 +165,72 @@ class IndalekoIngest():
         else:
             logging_levels = sorted(set([level for level in logging.getLevelNamesMapping()]))
 
-        self.parser.add_argument('--outdir', type=str, default=self.output_dir, help='Directory to use for output file')
-        self.parser.add_argument('--output', type=str, default=self.output_file,
-                            help='Name to use for file into which the fetched metadata is saved.')
-        self.parser.add_argument('--confdir', type=str, default=self.config_dir, help='Directory to use for config file')
-        self.parser.add_argument('--config', type=str, default=self.config_file,
-                            help='Name to use for retrieving the database configuration file.')
-        self.parser.add_argument('--loglevel', type=int, default=self.log_level, choices=logging_levels,
-                            help='Logging level to use (lower number = more logging)')
-        self.parser.add_argument('--logdir', type=str, default=self.log_dir, help='Directory to use for log file')
-        self.parser.add_argument('--logfile', type=str, default=self.log_file, help='Name of log file.')
-        self.parser.add_argument('--input', type=str, default=self.get_default_input_file(), help='Name of input file.')
+        self.parser.add_argument('--outdir',
+                                 type=str,
+                                 default=self.output_dir,
+                                 help='Directory to use for output file')
+        self.parser.add_argument('--output',
+                                 type=str,
+                                 default=self.output_file,
+                                 help='Name to use for file into which the fetched metadata is saved.')
+        self.parser.add_argument('--confdir',
+                                 type=str,
+                                 default=self.config_dir,
+                                 help='Directory to use for config file')
+        self.parser.add_argument('--config',
+                                 type=str,
+                                 default=self.config_file,
+                                 help='Name to use for retrieving the database configuration file.')
+        self.parser.add_argument('--loglevel',
+                                 type=int,
+                                 default=self.log_level,
+                                 choices=logging_levels,
+                                 help='Logging level to use (lower number = more logging)')
+        self.parser.add_argument('--logdir',
+                                 type=str,
+                                 default=self.log_dir,
+                                 help='Directory to use for log file')
+        self.parser.add_argument('--logfile',
+                                 type=str,
+                                 default=self.log_file,
+                                 help='Name of log file.')
+        self.parser.add_argument('--input',
+                                 type=str,
+                                 default=self.get_default_input_file(),
+                                 help='Name of input file.')
         args = self.parser.parse_args()
         return args
 
     def get_default_outfile_name(self : 'IndalekoIngest') -> str:
+        """
+        This method constructs a default output file name. Should be overridden
+        in derived class.
+        """
         return f'indaleko-ingest-output-{self.timestamp}.jsonl'
 
     def get_default_logfile_name(self : 'IndalekoIngest') -> str:
+        """
+        This method constructs a default log file name. Should be overridden in
+        derived class.
+        """
         return f'indaleko-ingest-log-{self.timestamp}.log'
 
     def get_default_config_file_name(self : 'IndalekoIngest') -> str:
+        """
+        This method constructs a default config file name. Should be overridden
+        in derived class.
+        """
         return 'indaleko-db-config.ini'
 
     def get_default_config_dir(self : 'IndalekoIngest') -> str:
+        """
+        This method returns the default configuration directory. Could be
+        overridden in derived class.
+        """
         return self.config_dir
 
     def register_service(self, service : dict) -> IndalekoServices:
+        """Used to register a service provider in the database."""
         assert service is not None, 'Service cannot be None'
         assert 'name' in service, 'Service must have a name'
         assert 'description' in service, 'Service must have a description'
@@ -172,12 +238,18 @@ class IndalekoIngest():
         assert 'identifier' in service, 'Service must have an identifier'
         existing_service = self.lookup_service(service['name'])
         if len(existing_service) > 0:
-            # TODO - how do we want to deal with updates?  For now, just
+            # How do we want to deal with updates?  For now, just
             # assert these are the same
-            assert existing_service[0]['version'] == service['version'], f"Version for service {service['name']} does not match."
-            assert existing_service[0]['identifier'] == service['identifier'], f"Identifier for service {service['name']} does not match."
-        logging.info(f"Registering service {service['name']}")
-        return self.indaleko_services.register_service(service['name'], service['description'], service['version'], service['type'], service['identifier'])
+            assert existing_service[0]['version'] == service['version'], \
+                f"Version for service {service['name']} does not match."
+            assert existing_service[0]['identifier'] == service['identifier'], \
+            f"Identifier for service {service['name']} does not match."
+        logging.info("Registering service %s", service['name'])
+        return self.indaleko_services.register_service(service['name'],
+                                                       service['description'],
+                                                       service['version'],
+                                                       service['type'],
+                                                       service['identifier'])
 
     def lookup_service(self, service_name : str) -> list:
         '''
@@ -189,7 +261,8 @@ class IndalekoIngest():
         if service is None:
             return service
         assert 'name' in service, 'Service must have a name'
-        assert service['name'] == service_name, f"Service name {service_name} does not match service name {service['name']}"
+        assert service['name'] == service_name, \
+            f"Service name {service_name} does not match service name {service['name']}"
         assert 'version' in service, 'Service must have a version'
         assert 'identifier' in service, 'Service must have an identifier'
         return service
@@ -209,29 +282,28 @@ class IndalekoIngest():
         if len(configs) < 1:
             return None
         # there should be only one entry since the key has to be unique
-        assert len(configs) == 1, f"Found {len(configs)} machine configs for UUID {machine_uuid} (not expected)"
+        assert len(configs) == 1, \
+            f"Found {len(configs)} machine configs for UUID {machine_uuid} (not expected)"
         self.config_data = configs[0]
         return self
 
 
-    '''
-    Beyond this point are the methods that should be overriden in the derived class.
-    '''
-
     def get_ingester_machine_config(self : 'IndalekoIngest') -> dict:
-        '''
+        """
         This method returns the machine configuration for the ingester. This
         method should be overridden by the derived class.
-        '''
-        assert False, "Do not call get_ingester_machine_config() on the base class - override it in the derived class."
+        """
+        raise AssertionError("Do not call get_ingester_machine_config() on the base class \
+                             - override it in the derived class.")
 
     def get_indexer_output_file(self : 'IndalekoIngest') -> None:
-        '''
+        """
         This method should return the name of the output file that the
         ingester produces. Since this format varies by indexer, this method
         should be overridden by the derived class.
-        '''
-        assert False, "Do not call get_indexer_output_file() on the base class - override it in the derived class."
+        """
+        raise AssertionError("Do not call get_indexer_output_file() on the base class \
+                                - override it in the derived class.")
 
     def get_input_file_list(self : 'IndalekoIngest') -> list:
         '''
@@ -239,7 +311,8 @@ class IndalekoIngest():
         Since this format varies by indexer, this method should be overridden by
         the derived class..
         '''
-        assert False, "Do not call get_input_file_list() on the base class - override it in the derived class."
+        raise AssertionError("Do not call get_input_file_list() on the base class \
+                                - override it in the derived class.")
 
     def get_default_input_file(self : 'IndalekoIngest') -> str:
         '''
@@ -247,13 +320,14 @@ class IndalekoIngest():
         Since this format varies by indexer, this method should be overridden by
         the derived class..
         '''
-        assert False, "Do not call get_default_input_file() on the base class - override it in the derived class."
+        raise AssertionError("Do not call get_default_input_file() on the base class \
+                                - override it in the derived class.")
 
 def main():
+    """Test code for IndalekoIngest.py"""
     # Now parse the arguments
     ingest = IndalekoIngest(test=True)
     assert ingest is not None, "Could not create ingester."
 
 if __name__ == "__main__":
     main()
-
