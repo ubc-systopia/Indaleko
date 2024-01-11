@@ -1,17 +1,13 @@
 import os
 import json
 from IndalekoRecord import IndalekoRecord
-from IndalekoSource import IndalekoSource
-from IndalekoCollections import IndalekoCollection, IndalekoCollections
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoMachineConfig import IndalekoMachineConfig
 import uuid
 import datetime
 import msgpack
-import datetime
 import argparse
 import re
-import msgpack
 import base64
 
 class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
@@ -38,7 +34,7 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
 
     def __init__(self : 'IndalekoWindowsMachineConfig', timestamp : datetime = None, db : IndalekoDBConfig = None):
         super().__init__(timestamp=timestamp, db=db)
-
+        self.extract_volume_info()
 
     @staticmethod
     def find_config_files(dir : str) -> list:
@@ -120,181 +116,13 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             candidate = os.path.join(config_dir, candidate)
         return candidate
 
-class old_IndalekoWindowsMachineConfig(IndalekoRecord):
-    @staticmethod
-    def create_config_from_db(machine_id : str) -> 'IndalekoWindowsMachineConfig':
+    def write_config_to_db(self) -> None:
         '''
-        This method creates a new IndalekoWindowsMachineConfig object from an
-        existing database entry.
+        This method writes the configuration to the database.
         '''
-        assert IndalekoRecord.validate_uuid_string(machine_id), 'machine_id must be a valid UUID'
-        pass
-
-    @staticmethod
-    def create_config_from_file(config_file : str) -> 'IndalekoWindowsMachineConfig':
-        '''
-        This method creates a new IndalekoWindowsMachineConfig object from an
-        existing config file.
-        '''
-        pass
-
-    @staticmethod
-    def create_config_from_description(description: dict) -> 'IndalekoWindowsMachineConfig':
-        '''
-        This method creates a new IndalekoWindowsMachineConfig object from an
-        existing description.
-        '''
-        pass
-
-    def old_stuff(self):
-        return
-        # There are two sources of machine configuration data:
-        # 1. The database
-        # 2. The config file
-        # I want to handle the four permutations of this as gracefully as
-        # possible.
-        # If neither, we're done - this is an error.
-        # If we have a config file and the data is in the database, we use the
-        # database and verify if they are the same.  We don't handle the
-        # mismatch case yet.
-        # If we have a config file and the data is not in the database, we add
-        # it to the database.
-        # Right now, we don't have another way to extract the machine ID except
-        # from the config file, so the "no config file" isn't really handled.
-        #
-        # Step 1: find the config file.
-        self.config_dir = IndalekoMachineConfig.DefaultConfigDir
-        if 'config_dir' in kwargs:
-            if kwargs['config_dir'] is not None and os.path.isdir(kwargs['config_dir']):
-                self.config_dir = kwargs['config_dir']
-        if 'config_file' in kwargs and kwargs['config_file'] is not None:
-            if self.config_dir is not None:
-                config_file = os.path.join(self.config_dir, kwargs['config_file'])
-                assert os.path.exists(config_file) and os.path.isfile(config_file), f'Config file {config_file} does not exist'
-        else:
-            assert self.config_dir is not None, 'No config file or directory specified'
-            config_file = self.find_config_files(self.config_dir)[-1]
-        self.config_file = config_file
-        if self.config_dir is None:
-            self.config_file_data = self.load_config_file(self.config_file)
-        else:
-            self.config_file_data = self.load_config_file(os.path.join(self.config_dir, self.config_file))
-        # Step 2: let's see if the machine ID was passed into us
-        machine_id = None
-        if 'machine_id' in kwargs and IndalekoRecord.validate_uuid_string(kwargs['machine_id']):
-            machine_id = kwargs['machine_id']
-        if machine_id is None:
-            machine_id =self.config_file_data['MachineGuid']
-        # Step 2: see if we can find this in the database
-        self.machine_config_collection = None
-        if 'collection' in kwargs:
-            self.machine_config_collection = kwargs['collection']
-        elif 'db' in kwargs:
-            self.machine_config_collection = IndalekoCollections(db=kwargs['db'])['MachineConfig']
-        else:
-            self.machine_config_collection = IndalekoCollections().get_collection('MachineConfig')
-        assert self.machine_config_collection is not None, 'MachineConfig collection not found'
-        self.config_db_data = self.machine_config_collection.find_entries(_key=machine_id)
-        if self.config_db_data is not None and len(self.config_db_data) > 0:
-            assert type(self.config_db_data) is list, 'config_db_data should be a list'
-            self.config_data = self.config_db_data[0]
-        elif self.config_file_data is not None and len(self.config_file_data) > 0:
-            self.config_data = self.config_file_data
-            self.machine_config_collection.add_record(self.config_data)
-        return
-
-    staticmethod
-    def add_config_to_db(config_data : dict, source : dict, timestamp : datetime = None) -> 'IndalekoWindowsMachineConfig':
-        '''
-        This method takes the name of a config file, loads it, and adds it to
-        the database.
-        '''
-        pass
-
-
-    def add_config_to_db(self: 'IndalekoWindowsMachineConfig', config_data : dict, source : dict, timestamp : datetime = None) -> None:
-        assert type(source) is dict, 'source must be a dict'
-        assert 'Identifier' in source, 'source must contain an Identifier field'
-        assert 'Version' in source, 'source must contain a Version field'
-        assert 'MachineGuid' in config_data, 'MachineGuid must be in config_data'
-        assert 'OperatingSystem' in config_data, 'OperatingSystem must be in config_data'
-        assert 'CPU' in config_data, 'CPU must be in config_data'
-        if timestamp is None:
-            timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        config_info = {
-            'platform' : {
-                'software' : {
-                    'OS' : config_data['OperatingSystem']['Caption'],
-                    'Architecture' : config_data['OperatingSystem']['OSArchitecture'],
-                    'Version' : config_data['OperatingSystem']['Version']
-                },
-                'hardware' : {
-                    'CPU' : config_data['CPU']['Name'],
-                    'Version' : config_data['CPU']['Name'],
-                    'Cores' : config_data['CPU']['Cores'],
-                },
-            },
-            'source' : source['identifier'],
-            'version' : source['version'],
-            'captured' : {
-                'Label' : 'Timestamp',
-                'Value' : timestamp,
-            },
-            'Attributes' : config_data,
-            'Data' : config_data.decode('ascii'),
-            '_key' : config_data['MachineGuid']
-        }
-        assert self.machine_config_collection is not None, 'MachineConfig collection not found'
-        self.machine_config_collection.add_record(config_data)
-        return
-
-    @staticmethod
-    def find_config_files(dir : str) -> list:
-        return [x for x in os.listdir(dir)
-                if x.startswith(IndalekoWindowsMachineConfig.WindowsMachineConfigFilePrefix)
-                and x.endswith('.json')]
-
-
-    @staticmethod
-    def load_config_file(file: str) -> dict:
-        config_data = None
-        assert os.path.exists(file) and os.path.isfile(file), 'config file does not exit or is not a file'
-        with open(file, 'rt', encoding='utf-8-sig') as fd:
-            config_data = json.load(fd)
-        return config_data
-
-
-    def set_config_file(self : 'IndalekoWindowsMachineConfig', config_file : str) -> None:
-        self.config_file = os.path.join(self.config_dir, config_file)
-        self.config_data = IndalekoWindowsMachineConfig.load_config_file(self.config_file)
-        return
-
-    def get_config_data(self : 'IndalekoWindowsMachineConfig') -> dict:
-        assert self.config_file is not None, 'No config file specified/found'
-        if self.config_dir is not None:
-            config_file = os.path.join(self.config_dir, self.config_file)
-        else:
-            config_file = self.config_file
-        if self.config_data is None:
-            self.config_data = IndalekoWindowsMachineConfig.load_config_file(config_file)[0]
-        return self.config_data
-
-    def find_config_files(self : 'IndalekoWindowsMachineConfig', config_dir  : str  = './config') -> list:
-        return [x for x in os.listdir(config_dir) if x.startswith(self.WindowsMachineConfigFilePrefix) and x.endswith('.json')]
-
-    def get_config_dir(self : 'IndalekoWindowsMachineConfig') -> str:
-        return self.config_dir
-
-    def get_config_file(self : 'IndalekoWindowsMachineConfig') -> str:
-        return self.config_file
-
-
-    def __find_hw_info_file__(self : 'IndalekoWindowsMachineConfig', configdir : str = './config'):
-        candidates = [x for x in os.listdir(configdir) if x.startswith(self.WindowsMachineConfigFilePrefix) and x.endswith('.json')]
-        assert len(candidates) > 0, 'At least one windows-hardware-info file should exist'
-        for candidate in candidates:
-            file, guid, timestamp = self.get_guid_timestamp_from_file_name(candidate)
-        return configdir + '/' + candidates[-1]
+        assert hasattr(self, 'machine_id'), 'machine_id must be set before writing to the database.'
+        assert self.validate_uuid_string(self.machine_id), f'machine_id {self.machine_id} is not a valid UUID.'
+        self.collection.insert(self.to_json(), overwrite=True)
 
     class WindowsDriveInfo(IndalekoRecord):
 
@@ -338,12 +166,14 @@ class old_IndalekoWindowsMachineConfig(IndalekoRecord):
 
 
 def main():
+    parser = argparse.ArgumentParser()
     config_file = IndalekoWindowsMachineConfig.get_most_recent_config_file(IndalekoWindowsMachineConfig.DefaultConfigDir)
     print(config_file)
     _, guid, timestamp = IndalekoWindowsMachineConfig.get_guid_timestamp_from_file_name(config_file)
     file_record = IndalekoWindowsMachineConfig.load_config_from_file(IndalekoWindowsMachineConfig.DefaultConfigDir, config_file)
     print('file_record:')
     print(file_record.to_dict())
+    assert parser is not None, 'Parser must  be valid'
     # db_record = IndalekoWindowsMachineConfig.load_config_from_db(str(guid))
     # if db_record is None:
     #    print(f'GUID {guid} not found in database')

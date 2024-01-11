@@ -3,7 +3,6 @@ import msgpack
 import argparse
 import os
 import uuid
-import random
 
 class IndalekoObject(IndalekoRecord):
     '''

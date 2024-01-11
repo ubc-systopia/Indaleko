@@ -9,7 +9,7 @@ class IndalekoIndex:
     DefaultDataDir = './data'
     DefaultConfigDir = './config'
 
-    def __init__(self, collection: 'IndalekoCollection', index_type: str, fields: list, unique: bool) -> None:
+    def __init__(self, collection, index_type: str, fields: list, unique: bool) -> None:
         pass
 
     @staticmethod

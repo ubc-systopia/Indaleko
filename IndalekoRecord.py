@@ -49,7 +49,7 @@ class IndalekoRecord:
 
     @staticmethod
     def validate_uuid_string(uuid_string : str) -> bool:
-        if type(uuid_string) is not str:
+        if not isinstance(uuid_string, str):
             print(f'uuid is not a string it is a {type(uuid)}')
             return False
         try:
@@ -61,9 +61,9 @@ class IndalekoRecord:
 
 
     def __init__(self, raw_data : bytes, attributes : dict, source : dict) -> None:
-        assert type(raw_data) is bytes, 'raw_data must be bytes'
-        assert type(attributes) is dict, f'attributes must be a dict (not {type(attributes)})'
-        assert type(source) is dict, 'source must be a dict'
+        assert isinstance(raw_data, bytes), 'raw_data must be bytes'
+        assert isinstance(attributes, dict), f'attributes must be a dict (not {type(attributes)})'
+        assert isinstance(source, dict), 'source must be a dict'
         assert 'Identifier' in source, 'source must contain an Identifier field'
         assert 'Version' in source, 'source must contain a Version field'
 
@@ -124,7 +124,7 @@ class IndalekoRecord:
         self.__raw_data__ = base64.b64encode(raw_data).decode('ascii')
 
     def set_base64_data(self, base64_data : str) -> None:
-        assert type(base64_data) is str, 'base64_data must be a string'
+        assert isinstance(base64_data, str), 'base64_data must be a string'
         self.__raw_data__ = base64_data
 
     def get_data(self) -> str:
@@ -136,7 +136,7 @@ class IndalekoRecord:
     @staticmethod
     def validate_source(source : dict) -> bool:
         valid = True
-        if type(source) is not dict:
+        if isinstance(source, dict):
             print('source is not a dict')
             valid = False
         elif 'Identifier' not in source:
@@ -148,7 +148,7 @@ class IndalekoRecord:
         elif not IndalekoRecord.validate_uuid_string(source['Identifier']):
             print('source Identifier is not a valid UUID')
             valid = False
-        elif type(source['Version']) is not str:
+        elif not isinstance(source['Version'], str):
             print('source Version is not a string')
             valid = False
         return valid
@@ -156,7 +156,7 @@ class IndalekoRecord:
     @staticmethod
     def validate_iso_timestamp(source : str) -> bool:
         valid = True
-        if type(source) is not str:
+        if isinstance(source, str):
             valid = False
         else:
             try:

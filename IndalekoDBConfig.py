@@ -4,7 +4,6 @@ import configparser
 import secrets
 import string
 import datetime
-import logging
 from Indaleko import *
 from arango import ArangoClient
 import requests

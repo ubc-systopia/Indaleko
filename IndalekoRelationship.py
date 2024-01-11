@@ -4,7 +4,6 @@ import msgpack
 import argparse
 import os
 import random
-import json
 
 class IndalekoRelationship(IndalekoRecord):
     '''
@@ -59,11 +58,11 @@ class IndalekoRelationship(IndalekoRecord):
     }
 
     def validate_vertex(self, vertex : dict) -> bool:
-        assert type(vertex) is dict, 'vertex must be a dict'
+        assert isinstance(vertex, dict), 'vertex must be a dict'
         assert 'object' in vertex, 'object1 must be specified.'
         assert 'collection' in vertex, 'collection must be specified.'
         assert self.validate_uuid_string(vertex['object']), 'object must be a valid UUID.'
-        assert type(vertex['collection']) is str, 'collection must be a string.'
+        assert isinstance(vertex['collection'], str), 'collection must be a string.'
         # todo: might want to validate that this is a valid collection in the database.
         return True
 
@@ -76,7 +75,7 @@ class IndalekoRelationship(IndalekoRecord):
                  relationship: str,
                  attributes : dict) -> None:
         assert self.validate_source(source), f'source ({source}) must be a valid source.'
-        assert type(raw_data) is bytes, 'raw_data must be bytes'
+        assert isinstance(raw_data, bytes), 'raw_data must be bytes'
         assert self.validate_vertex(vertex1), 'vertex1 must be a valid vertex.'
         assert self.validate_vertex(vertex2), 'vertex2 must be a valid vertex.'
         assert self.validate_uuid_string(relationship), 'relationship must be a valid UUID.'
@@ -88,10 +87,10 @@ class IndalekoRelationship(IndalekoRecord):
 
     def to_dict(self):
         obj = super().to_dict()
-        obj['_from'] = f'{self.vertex1['collection']}/{self.vertex1['object']}'
-        obj['_to'] = f'{self.vertex2['collection']}/{self.vertex2['object']}'
-        obj['object1'] = f'{self.vertex1['object']}'
-        obj['object2'] = f'{self.vertex2['object']}'
+        obj['_from'] = f'{self.vertex1["collection"]}/{self.vertex1["object"]}'
+        obj['_to'] = f'{self.vertex2["collection"]}/{self.vertex2["object"]}'
+        obj['object1'] = f'{self.vertex1["object"]}'
+        obj['object2'] = f'{self.vertex2["object"]}'
         obj['relationship'] = f'{self.relationship}'
         return obj
 
