@@ -68,3 +68,9 @@ IndalekoMachineConfigSchema = {
             "required" : ["source", "version", "captured"],
         }
     }
+
+def main():
+    print(IndalekoMachineConfigSchema)
+
+if __name__ == "__main__":
+    main()

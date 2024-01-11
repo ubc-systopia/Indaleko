@@ -81,7 +81,7 @@ class IndalekoMachineConfig(IndalekoRecord):
                 'Label' : 'Timestamp',
                 'Value' : timestamp['Value'],
             }
-        elif isinstance(timestamp, datetime):
+        elif isinstance(timestamp, datetime.datetime):
             timestamp = timestamp.isoformat()
         else:
             assert isinstance(timestamp, str), f'timestamp must be a string or timestamp (not {type(timestamp)})'
@@ -91,7 +91,7 @@ class IndalekoMachineConfig(IndalekoRecord):
         }
         return self
 
-    def get_captured(self) -> datetime:
+    def get_captured(self) -> datetime.datetime:
         '''
         This method returns the timestamp for the machine configuration.
         '''

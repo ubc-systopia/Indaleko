@@ -136,8 +136,8 @@ class IndalekoRecord:
     @staticmethod
     def validate_source(source : dict) -> bool:
         valid = True
-        if isinstance(source, dict):
-            print('source is not a dict')
+        if not isinstance(source, dict):
+            print(f'source {source} is not a dict {type(source)}')
             valid = False
         elif 'Identifier' not in source:
             print('source does not contain an Identifier field')
@@ -156,7 +156,7 @@ class IndalekoRecord:
     @staticmethod
     def validate_iso_timestamp(source : str) -> bool:
         valid = True
-        if isinstance(source, str):
+        if not isinstance(source, str):
             valid = False
         else:
             try:

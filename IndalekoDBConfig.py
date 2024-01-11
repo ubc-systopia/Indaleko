@@ -5,7 +5,6 @@ import secrets
 import string
 import datetime
 from arango import ArangoClient
-from IndalekoCollections import IndalekoCollections
 import requests
 import time
 
@@ -160,6 +159,7 @@ class IndalekoDBConfig:
 
 
     def setup_collections(self, reset: bool = False) -> None:
+        from IndalekoCollections import IndalekoCollections
         self.collections = IndalekoCollections()
 
 

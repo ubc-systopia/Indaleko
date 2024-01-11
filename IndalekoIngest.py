@@ -38,6 +38,10 @@ class IndalekoIngest():
         '''
         self.timestamp = datetime.datetime.now(datetime.UTC).isoformat()
         assert kwargs is not None, "Configuration object cannot be None"
+        if 'test' in kwargs:
+            self.test = kwargs['test']
+        else:
+            self.test = False
         if 'Indexer' in kwargs:
             self.Indexer_UUID_str = kwargs['Indexer']
             self.Indexer_UUID = uuid.UUID(self.Indexer_UUID_str)
@@ -249,12 +253,6 @@ def main():
     # Now parse the arguments
     ingest = IndalekoIngest(test=True)
     assert ingest is not None, "Could not create ingester."
-    parser = argparse.ArgumentParser(description='Test the IndalekoIngester class.')
-    parser.add_argument('--version', action='version', version='%(prog)s 1.0')
-    _ = ingest.parse_args(parser)
-    logging.info('Testing the machine configuration lookup (using the UUID for my Windows machine.)')
-    mcfg = ingest.lookup_machine_config('2e169bb7-0024-4dc1-93dc-18b7d2d28190')
-    print(mcfg.config_data)
 
 if __name__ == "__main__":
     main()
