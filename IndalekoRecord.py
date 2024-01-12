@@ -7,7 +7,7 @@ import argparse
 import os
 import random
 import msgpack
-
+from IndalekoRecordSchema import IndalekoRecordSchema
 class IndalekoRecord:
     '''
     This defines the format of a "record" within Indaleko.
@@ -21,31 +21,14 @@ class IndalekoRecord:
         ('__timestamp__', 'RecordTimestamp'), # this is the timestamp for this record.
     )
 
-    Schema = {
-        "$schema": "https://json-schema.org/draft/2020-12/schema#",
-        "$id": "https://fsgeek.ca/indaleko/schema/record.json",
-        "title": "Indaleko Record Schema",
-        "description": "Schema for the JSON representation of an abstract record within Indaleko.",
+    Schema = IndalekoRecordSchema.get_schema()
 
-        "type": "object",
-        "properties": {
-            "Source Identifier": { "$ref" : "schema/source.json" },
-            "Timestamp": {
-                "type" : "string",
-                "description" : "The timestamp of when this record was created.",
-                "format" : "date-time",
-            },
-            "Attributes" : {
-                "type" : "object",
-                "description" : "The attributes extracted from the source data.",
-            },
-            "Data" : {
-                "type" : "string",
-                "description" : "The raw (uninterpreted) data from the source.",
-            }
-        },
-        "required": ["Source Identifier", "Timestamp", "Attributes", "Data"]
-    }
+    @staticmethod
+    def get_schema():
+        """
+        Return the schema for data managed by this class.
+        """
+        return IndalekoRecord.Schema
 
     @staticmethod
     def validate_uuid_string(uuid_string : str) -> bool:
@@ -146,10 +129,6 @@ class IndalekoRecord:
         """Return the raw data for this record. Note output is bytes."""
         return base64.b64decode(self.__raw_data__)
 
-    def get_schema(self) -> str:
-        """Return the schema for this record."""
-        return json.dumps(self.Schema, indent=4)
-
     @staticmethod
     def validate_source(source : dict) -> bool:
         """Given a source description as a dictionary, ensure it is valid."""
@@ -219,6 +198,7 @@ def main():
     print(f'added field 4:\n{record.to_json()}')
     del record['field2']
     print(f'deleted field2 {record.to_json()}')
+    IndalekoRecordSchema.is_valid_record(record.to_dict())
 
 if __name__ == "__main__":
     main()

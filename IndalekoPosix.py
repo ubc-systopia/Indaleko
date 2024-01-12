@@ -18,9 +18,9 @@ class IndalekoPosix:
         """This function maps the file attributes to the string representation."""
         file_attributes = []
         for attr in IndalekoPosix.FILE_ATTRIBUTES.items():
-            if attributes & IndalekoPosix.FILE_ATTRIBUTES[attr] == \
-                IndalekoPosix.FILE_ATTRIBUTES[attr]:
-                file_attributes.append(attr)
+            if attributes & IndalekoPosix.FILE_ATTRIBUTES[attr[0]] == \
+                IndalekoPosix.FILE_ATTRIBUTES[attr[0]]:
+                file_attributes.append(attr[0])
         return ' | '.join(file_attributes)
 
 def main():
@@ -36,9 +36,9 @@ def main():
     if args.attr == 0xFF:
         print('Testing all attributes')
         for attributes in IndalekoPosix.FILE_ATTRIBUTES.items():
-            print(f'{attributes} = {IndalekoPosix.FILE_ATTRIBUTES[attributes]}')
+            print(f'{attributes} = {IndalekoPosix.FILE_ATTRIBUTES[attributes[0]]}')
             print(f'{attributes} = \
-                  {IndalekoPosix.map_file_attributes(IndalekoPosix.FILE_ATTRIBUTES[attributes])}')
+                  {IndalekoPosix.map_file_attributes(IndalekoPosix.FILE_ATTRIBUTES[attributes[0]])}')
     else:
         print(f'{args.attr} = {IndalekoPosix.map_file_attributes(args.attr)}')
 

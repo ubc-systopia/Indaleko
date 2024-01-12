@@ -9,12 +9,16 @@ import datetime
 import os
 from IndalekoObject import IndalekoObject
 from IndalekoRelationship import IndalekoRelationship
-from IndalekoSource import IndalekoSource
+from IndalekoServices import IndalekoServices
 from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
 from IndalekoDBConfig import IndalekoDBConfig
 class IndalekoCollectionIndex:
 
-    def __init__(self, collection: 'IndalekoCollection', index_type: str, fields: list, unique=False):
+    def __init__(self,
+                 collection: 'IndalekoCollection',
+                 index_type: str,
+                 fields: list,
+                 unique=False):
         """Parameters:
             This class is used to create indices for IndalekoCollection objects.
 
@@ -42,7 +46,6 @@ class IndalekoCollectionIndex:
 
 
 class IndalekoCollection:
-
     """
     An IndalekoCollection object is used to manage a collection of documents in the
     Indaleko database.
@@ -107,14 +110,18 @@ class IndalekoCollection:
         """Given a list of keyword arguments, return a list of documents that match the criteria."""
         return [document for document in self.collection.find(kwargs)]
 
-    def insert(self, document: dict) -> 'IndalekoCollection':
+    def insert(self, document: dict, overwrite : bool = False) -> 'IndalekoCollection':
         """Insert a document into the collection."""
-        return self.collection.insert(document)
+        return self.collection.insert(document, overwrite=overwrite)
 
     def add_schema(self, schema: dict) -> 'IndalekoCollection':
         """Add a schema to the collection."""
         self.collection.configure(schema=schema)
         return self
+
+    def delete(self, key: str) -> 'IndalekoCollection':
+        """Delete the document with the given key."""
+        return self.collection.delete(key)
 
 
 class IndalekoCollections:
@@ -170,19 +177,19 @@ class IndalekoCollections:
                     },
                 }
             },
-            'Sources' : {
-                'schema' : IndalekoSource.Schema,
+            'Services' : {
+                'schema' : IndalekoServices.Schema,
                 'edge' : False,
                 'indices' : {
                     'identifier' : {
-                        'fields' : ['identifier'],
-                        'unique' : False,
+                        'fields' : ['name'],
+                        'unique' : True,
                         'type' : 'persistent'
                     },
                 },
             },
             'MachineConfig' : {
-                'schema' : IndalekoMachineConfigSchema,
+                'schema' : IndalekoMachineConfigSchema.Schema,
                 'edge' : False,
                 'indices' : { },
             }
@@ -193,10 +200,15 @@ class IndalekoCollections:
             self.db_config = IndalekoDBConfig()
         else:
             self.db_config = db_config
+        logging.debug('Starting database')
         self.db_config.start()
         self.collections = {}
         for name in self.Indaleko_Collections.items():
-            self.collections[name] = IndalekoCollection(name, self.Indaleko_Collections[name], self.db_config, reset)
+            name = name[0]
+            logging.debug('Processing collection %s', name)
+            self.collections[name] = IndalekoCollection(name,
+                                                        self.Indaleko_Collections[name],
+                                                        self.db_config, reset)
 
     def get_collection(self, name: str) -> IndalekoCollection:
         """Return the collection with the given name."""
@@ -208,12 +220,21 @@ def main():
     """Test the IndalekoCollections class."""
     start_time = datetime.datetime.now(datetime.UTC).isoformat()
     parser = argparse.ArgumentParser()
-    logfile = f'indalekocollections-test-{start_time}.log'
-    parser = argparse.ArgumentParser(description='Set up and create the collections for the Indaleko database.')
-    parser.add_argument('--reset', '-r', help='Reset the database', action='store_true')
-    parser.add_argument('--config', '-c', help='Path to the config file', default='./config/indaleko-db-config.ini')
-    parser.add_argument('--log', '-l', help='Log file to use', default=logfile)
-    parser.add_argument('--logdir', help='Log directory to use', default='./logs')
+    logfile = f'indalekocollections-test-{start_time.replace(':','-')}.log'
+    parser = argparse.ArgumentParser(
+        description='Set up and create the collections for the Indaleko database.')
+    parser.add_argument('--reset',
+                        '-r',
+                        help='Reset the database', action='store_true')
+    parser.add_argument('--config',
+                        '-c',
+                        help='Path to the config file', default='./config/indaleko-db-config.ini')
+    parser.add_argument('--log',
+                        '-l',
+                        help='Log file to use', default=logfile)
+    parser.add_argument('--logdir',
+                        help='Log directory to use',
+                        default='./logs')
     args = parser.parse_args()
     logging.basicConfig(filename=os.path.join(args.logdir, args.log),
                         level=logging.DEBUG,

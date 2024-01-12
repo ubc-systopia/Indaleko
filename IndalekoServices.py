@@ -35,6 +35,9 @@ class IndalekoService:
 
 
 class IndalekoServices:
+    '''
+    This class defines the service model for Indaleko.
+    '''
 
     services_schema = {
         "$schema": "https://json-schema.org/draft/2020-12/schema#",

@@ -29,3 +29,10 @@ class IndalekoIndex:
                 if x.startswith(prefix)
                 and x.endswith(suffix)]
 
+
+def main():
+    """Test code for this module."""
+    print('Currently there is no test code for this module.')
+
+if __name__ == "__main__":
+    main()

@@ -2,6 +2,7 @@ import argparse
 import datetime
 import json
 import uuid
+import socket
 
 from IndalekoCollections import IndalekoCollections
 from IndalekoDBConfig import IndalekoDBConfig
@@ -14,8 +15,11 @@ class IndalekoMachineConfig(IndalekoRecord):
     platform specific machine configuration classes.
     """
 
-    IndalekoMachineConfig_UUID_str = "e65e412e-7862-4d81-affd-2bbd4f6b9a01"
-    IndalekoMachineConfig_version_str = "1.0"
+    indaleko_machine_config_uuid_str = "e65e412e-7862-4d81-affd-2bbd4f6b9a01"
+    indaleko_machine_config_version_str = "1.0"
+    indaleko_machine_config_captured_label_str = "eb7eaeed-6b21-4b6a-a586-dddca6a1d5a4"
+
+    default_config_dir = "./config"
 
     def __init__(
         self: "IndalekoMachineConfig",
@@ -33,8 +37,8 @@ class IndalekoMachineConfig(IndalekoRecord):
             b"",
             {},
             {
-                "Identifier": IndalekoMachineConfig.IndalekoMachineConfig_UUID_str,
-                "Version": IndalekoMachineConfig.IndalekoMachineConfig_version_str,
+                "Identifier": IndalekoMachineConfig.indaleko_machine_config_uuid_str,
+                "Version": IndalekoMachineConfig.indaleko_machine_config_version_str,
             },
         )
         self.platform = {}
@@ -87,7 +91,7 @@ class IndalekoMachineConfig(IndalekoRecord):
         """
         This method returns the platform information for the machine.
         """
-        if hasattr(self, "platform"):
+        if hasattr(self, "Platform"):
             return self.platform
         return None
 
@@ -118,8 +122,9 @@ class IndalekoMachineConfig(IndalekoRecord):
                 timestamp, str
             ), f"timestamp must be a string or timestamp (not {type(timestamp)})"
         self.captured = {
-            "Label": "Timestamp",
+            "Label": IndalekoMachineConfig.indaleko_machine_config_captured_label_str,
             "Value": timestamp,
+            "Description" : "Timestamp when this machine configuration was captured.",
         }
         return self
 
@@ -127,7 +132,7 @@ class IndalekoMachineConfig(IndalekoRecord):
         """
         This method returns the timestamp for the machine configuration.
         """
-        if hasattr(self, "captured"):
+        if hasattr(self, "Captured"):
             return self.captured
         return None
 
@@ -168,6 +173,8 @@ class IndalekoMachineConfig(IndalekoRecord):
         assert self.validate_uuid_string(
             self.machine_id
         ), f"machine_id {self.machine_id} is not a valid UUID."
+        print('Writing configuration to database.')
+        print(self.to_json())
         self.collection.insert(self.to_json(), overwrite=True)
 
     @staticmethod
@@ -180,6 +187,28 @@ class IndalekoMachineConfig(IndalekoRecord):
         raise AssertionError("This method should be overridden by the derived classes.")
 
     @staticmethod
+    def find_configs_in_db(source_id : str) -> list:
+        """
+        This method finds all the machine configs in the database.
+        """
+        if not IndalekoMachineConfig.validate_uuid_string(source_id):
+            raise AssertionError(f"source_id {source_id} is not a valid UUID.")
+        collections = IndalekoCollections()
+        machine_config_collection = collections.get_collection("MachineConfig")
+        entries = machine_config_collection.find_entries(source=source_id)
+        return entries
+
+    @staticmethod
+    def delete_config_in_db(machine_id: str) -> None:
+        """
+        This method deletes the specified machine config from the database.
+        """
+        assert IndalekoMachineConfig.validate_uuid_string(
+            machine_id
+        ), f"machine_id {machine_id} is not a valid UUID."
+        IndalekoCollections().get_collection("MachineConfig").delete(machine_id)
+
+    @staticmethod
     def load_config_from_db(machine_id: str) -> "IndalekoMachineConfig":
         """
         This method loads the configuration from the database.
@@ -187,48 +216,51 @@ class IndalekoMachineConfig(IndalekoRecord):
         assert IndalekoMachineConfig.validate_uuid_string(
             machine_id
         ), f"machine_id {machine_id} is not a valid UUID."
-        collections = IndalekoCollections()
-        machine_config_collection = collections.get_collection("MachineConfig")
-        entries = machine_config_collection.find_entries(_key=machine_id)
+        entries = IndalekoCollections().get_collection("MachineConfig").find_entries(_key=machine_id)
         if len(entries) == 0:
             return None  # not found
         assert (
             len(entries) == 1
         ), f"Found {len(entries)} entries for machine_id {machine_id} - multiple entries case not handled."
         entry = entries[0]
-        print(json.dumps(entry["platform"], indent=4))
+        print(json.dumps(entry["Platform"], indent=4))
         machine_config = IndalekoMachineConfig()
-        machine_config.set_platform(entry["platform"])
+        machine_config.set_platform(entry["Platform"])
         # temporary: I've changed the shape of the database, so I'll need to
         # work around it temporarily
-        if isinstance(entry["source"], str) and "version" in entry:
+        if isinstance(entry["Source"], str) and "Version" in entry:
             machine_config.set_source(
                 {
-                    "Identifier": entry["source"],
-                    "Version": entry["version"],
+                    "Identifier": entry["Source"],
+                    "Version": entry["Version"],
                 }
             )
         else:
             assert isinstance(
-                entry["source"], dict
-            ), f'entry["source"] must be a dict, not {type(entry["source"])}'
-            machine_config.set_source(entry["source"])
-        machine_config.set_captured(entry["captured"])
+                entry["Source"], dict
+            ), f'entry[Source"] must be a dict, not {type(entry["Source"])}'
+            machine_config.set_source(entry["Source"])
+        machine_config.set_captured(entry["Captured"])
         machine_config.set_base64_data(entry["Data"])
         machine_config.set_attributes(entry["Attributes"])
         machine_config.set_machine_id(machine_id)
         return machine_config
+
+    @staticmethod
+    def get_machine_name() -> str:
+        """This retrieves a user friendly machine name."""
+        return socket.gethostname()
 
     def to_json(self, indent: int = 4) -> str:
         """
         This method returns the JSON representation of the machine config.
         """
         record = super().to_dict()
-        record["platform"] = self.platform
-        record["captured"] = self.captured
+        record["Platform"] = self.platform
+        record["Captured"] = self.captured
         if hasattr(self, "machine_id"):
             record["_key"] = self.machine_id
-        print("***\n\n\n***", record)
+        record["hostname"] = IndalekoMachineConfig.get_machine_name()
         return json.dumps(record, indent=indent)
 
     @staticmethod
@@ -246,12 +278,12 @@ class IndalekoMachineConfig(IndalekoRecord):
         assert isinstance(kwargs["cpu_version"], str), "CPU version must be a string"
         assert "cpu_cores" in kwargs, "CPU cores must be specified"
         assert isinstance(kwargs["cpu_cores"], int), "CPU cores must be an integer"
-        assert "source_id" in kwargs, "Source must be specified"
-        assert isinstance(kwargs["source_id"], str), "Source must be a dict"
-        assert "source_version" in kwargs, "Source version must be specified"
+        assert "source_id" in kwargs, "source must be specified"
+        assert isinstance(kwargs["source_id"], str), "source must be a dict"
+        assert "source_version" in kwargs, "source version must be specified"
         assert isinstance(
             kwargs["source_version"], str
-        ), "Source version must be a string"
+        ), "source version must be a string"
         assert "attributes" in kwargs, "Attributes must be specified"
         assert "data" in kwargs, "Data must be specified"
         assert "machine_id" in kwargs, "Machine ID must be specified"

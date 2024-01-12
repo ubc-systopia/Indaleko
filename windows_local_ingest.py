@@ -88,7 +88,7 @@ class IndalekoWindowsLocalIngest(IndalekoIngest):
         assert config_dir is not None, 'config_dir must be a valid path'
         assert os.path.isdir(config_dir), 'config_dir must be a valid directory'
         return [x for x in os.listdir(config_dir)
-                if x.startswith(IndalekoWindowsMachineConfig.WindowsMachineConfigFilePrefix)
+                if x.startswith(IndalekoWindowsMachineConfig.windows_machine_config_file_prefix)
                 and x.endswith('.json')]
 
     def set_default_input_file(self : 'IndalekoWindowsLocalIngest', filename : str) -> None:

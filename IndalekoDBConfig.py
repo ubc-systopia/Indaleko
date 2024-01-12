@@ -35,6 +35,7 @@ class IndalekoDBConfig:
         if self.started:
             return
         url = f"http://{self.config['database']['host']}:{self.config['database']['port']}"
+        logging.debug('Connecting to %s', url)
         while True:
             try:
                 response = requests.get(url + '/_api/agency/readiness', timeout=5)
@@ -42,12 +43,16 @@ class IndalekoDBConfig:
                               url + '/_api/agency/readiness',
                               response.json())
                 break # this means the connection is now up - if it weren't, we'd get an exception
-            except Exception as e:
-                logging.debug("Exception from %s: %s %s", url + '/_api/agency/readiness', type(e), e)
+            except requests.RequestException as e:
+                logging.debug("Exception from %s: %s %s",
+                              url + '/_api/agency/readiness',
+                              type(e),
+                              e)
             time.sleep(2)
         connect_arg = f"http://{self.config['database']['host']}"
         connect_arg += ':'
-        connect_arg += "{self.config['database']['port']}"
+        connect_arg += f"{self.config['database']['port']}"
+        logging.debug('Connecting to %s', connect_arg)
         self.client = ArangoClient(connect_arg)
         if 'admin_user' not in self.config['database']:
             self.config['database']['admin_user'] = 'root'
@@ -147,15 +152,12 @@ class IndalekoDBConfig:
         assert self.config['database']['database'] is not None, 'No database name found'
         assert self.config['database']['user'] is not None, 'No database user found'
         assert self.config['database']['admin_passwd'] is not None, 'No database password found'
-        try:
-            self.db = self.client.db(self.config['database']['database'],
-                                     username=self.config['database']['user'],
-                                     password=self.config['database']['admin_passwd'],
-                                     auth_method='basic')
-            return True
-        except Exception as e:
-            logging.error('Could not connect to database: %s', e)
-            return False
+        self.db = self.client.db(self.config['database']['database'],
+                                    username=self.config['database']['user'],
+                                    password=self.config['database']['admin_passwd'],
+                                    auth_method='basic')
+        return True
+
 
     def setup_user(self, user_name : str, user_password : str, access: list):
         """Set up a user in the database."""
@@ -178,7 +180,9 @@ class IndalekoDBConfig:
             assert isinstance(a, dict), 'Access must be a list of dictionaries'
             perms = self.sys_db.permission(username=user_name, database=a['database'])
             assert perms is not None, 'Perms is None, which is unexpected.'
-            self.sys_db.update_permission(user_name, permission=a['permission'], database=a['database'])
+            self.sys_db.update_permission(user_name,
+                                          permission=a['permission'],
+                                          database=a['database'])
 
 
 
@@ -194,4 +198,8 @@ class IndalekoDBConfig:
         assert self.sys_db.create_database(dbname), 'Database creation failed'
         return True
 
+def main():
+    print('Currently there is no test code for this module.')
 
+if __name__ == "__main__":
+    main()
