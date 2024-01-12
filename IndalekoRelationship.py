@@ -11,60 +11,17 @@ import uuid
 import argparse
 import os
 import random
+import json
 import msgpack
 from IndalekoRecord import IndalekoRecord
+from IndalekoRelationshipSchema import IndalekoRelationshipSchema
 
 class IndalekoRelationship(IndalekoRecord):
     '''
     This schema defines the fields that are required as part of identifying
     relationships between objects.
     '''
-    Schema = {
-        "$schema": "https://json-schema.org/draft/2020-12/schema#",
-        "$id" : "https://activitycontext.work/schema/indaleko-relationship.json",
-        "title" : "Indaleko Relationship Schema",
-        "description" : "Schema for the JSON representation of an Indaleko Relationship, which is used for identifying related objects.",
-        "type" : "object",
-        "rule" : {
-            "properties" : {
-                "object1" : {
-                    "type" : "string",
-                    "format" : "uuid",
-                    "description" : "The Indaleko UUID for the first object in the relationship.",
-                },
-                "object2" : {
-                    "type" : "string",
-                    "format" : "uuid",
-                    "description" : "The Indaleko UUID for the second object in the relationship.",
-                },
-                "relationship" : {
-                    "type" : "string",
-                    "description" : "The UUID specifying the specific relationship between the two objects.",
-                    "format" : "uuid",
-                },
-                "metadata" :  {
-                    "type" : "array",
-                    "items" : {
-                        "type" : "object",
-                        "properties" : {
-                            "UUID" : {
-                                "type" : "string",
-                                "format" : "uuid",
-                                "description" : "The UUID for this metadata.",
-                            },
-                            "Data" : {
-                                "type" : "string",
-                                "description" : "The data associated with this metadata.",
-                            },
-                        },
-                        "required" : ["UUID", "Data"],
-                    },
-                    "description" : "Optional metadata associated with this relationship.",
-                },
-            },
-            "required" : ["object1", "object2" , "relationship"],
-        },
-    }
+    Schema = IndalekoRelationshipSchema.get_schema()
 
     def validate_vertex(self, vertex : dict) -> bool:
         """
@@ -99,7 +56,8 @@ class IndalekoRelationship(IndalekoRecord):
 
     def to_dict(self):
         """Return a dictionary representation of this object."""
-        obj = super().to_dict()
+        obj = {}
+        obj['Record'] = super().to_dict()
         obj['_from'] = f'{self.vertex1["collection"]}/{self.vertex1["object"]}'
         obj['_to'] = f'{self.vertex2["collection"]}/{self.vertex2["object"]}'
         obj['object1'] = f'{self.vertex1["object"]}'
@@ -109,6 +67,9 @@ class IndalekoRelationship(IndalekoRecord):
 
 def main():
     """Test the IndalekoRelationship class."""
+    if IndalekoRelationshipSchema.is_valid_schema(IndalekoRelationship.get_schema()):
+        print('Schema is valid.')
+    print(json.dumps(IndalekoRelationship.get_schema(), indent=4))
     random_raw_data = msgpack.packb(os.urandom(64))
     source_uuid = str(uuid.uuid4())
     parser = argparse.ArgumentParser()
@@ -145,7 +106,9 @@ def main():
         vertex2,
         str(uuid.uuid4()),
         attributes)
-    print(r)
+    print(json.dumps(r.to_dict(), indent=4))
+    if IndalekoRelationshipSchema.is_valid_relationship(r.to_dict()):
+        print('Relationship is valid.')
 
 if __name__ == "__main__":
     main()

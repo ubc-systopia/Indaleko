@@ -7,12 +7,13 @@ import argparse
 import logging
 import datetime
 import os
-from IndalekoObject import IndalekoObject
-from IndalekoRelationship import IndalekoRelationship
-from IndalekoServices import IndalekoServices
+from IndalekoObjectSchema import IndalekoObjectSchema
+from IndalekoRelationshipSchema import IndalekoRelationshipSchema
+from IndalekoServicesSchema import IndalekoServicesSchema
 from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
 from IndalekoDBConfig import IndalekoDBConfig
 class IndalekoCollectionIndex:
+    '''Manages an index for an IndalekoCollection object.'''
 
     def __init__(self,
                  collection: 'IndalekoCollection',
@@ -130,7 +131,7 @@ class IndalekoCollections:
     """
     Indaleko_Collections = {
             'Objects': {
-                'schema' : IndalekoObject.Schema,
+                'schema' : IndalekoObjectSchema.get_schema(),
                 'edge' : False,
                 'indices' : {
                     'URI' : {
@@ -152,7 +153,7 @@ class IndalekoCollections:
                 },
             },
             'Relationships' : {
-                'schema' : IndalekoRelationship.Schema,
+                'schema' : IndalekoRelationshipSchema.get_schema(),
                 'edge' : True,
                 'indices' : {
                     'relationship' : {
@@ -178,7 +179,7 @@ class IndalekoCollections:
                 }
             },
             'Services' : {
-                'schema' : IndalekoServices.Schema,
+                'schema' : IndalekoServicesSchema.get_schema(),
                 'edge' : False,
                 'indices' : {
                     'identifier' : {
@@ -189,7 +190,7 @@ class IndalekoCollections:
                 },
             },
             'MachineConfig' : {
-                'schema' : IndalekoMachineConfigSchema.Schema,
+                'schema' : IndalekoMachineConfigSchema.get_schema(),
                 'edge' : False,
                 'indices' : { },
             }

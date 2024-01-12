@@ -1,3 +1,6 @@
+'''
+Indaleko Machine Configuration class.
+'''
 import argparse
 import datetime
 import json
@@ -7,6 +10,7 @@ import socket
 from IndalekoCollections import IndalekoCollections
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoRecord import IndalekoRecord
+from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
 
 
 class IndalekoMachineConfig(IndalekoRecord):
@@ -20,6 +24,8 @@ class IndalekoMachineConfig(IndalekoRecord):
     indaleko_machine_config_captured_label_str = "eb7eaeed-6b21-4b6a-a586-dddca6a1d5a4"
 
     default_config_dir = "./config"
+
+    Schema = IndalekoMachineConfigSchema.get_schema()
 
     def __init__(
         self: "IndalekoMachineConfig",
@@ -173,8 +179,10 @@ class IndalekoMachineConfig(IndalekoRecord):
         assert self.validate_uuid_string(
             self.machine_id
         ), f"machine_id {self.machine_id} is not a valid UUID."
-        print('Writing configuration to database.')
-        print(self.to_json())
+        if not IndalekoMachineConfigSchema.is_valid_record(self.to_dict()):
+            print("Invalid record:")
+            print(json.dumps(self.to_dict(), indent=4))
+            raise AssertionError("Invalid record.")
         self.collection.insert(self.to_json(), overwrite=True)
 
     @staticmethod
@@ -251,17 +259,24 @@ class IndalekoMachineConfig(IndalekoRecord):
         """This retrieves a user friendly machine name."""
         return socket.gethostname()
 
-    def to_json(self, indent: int = 4) -> str:
+    def to_dict(self) -> dict:
         """
-        This method returns the JSON representation of the machine config.
+        This method returns the dictionary representation of the machine config.
         """
-        record = super().to_dict()
+        record = {}
+        record['Record'] = super().to_dict()
         record["Platform"] = self.platform
         record["Captured"] = self.captured
         if hasattr(self, "machine_id"):
             record["_key"] = self.machine_id
         record["hostname"] = IndalekoMachineConfig.get_machine_name()
-        return json.dumps(record, indent=indent)
+        return record
+
+    def to_json(self, indent: int = 4) -> str:
+        """
+        This method returns the JSON representation of the machine config.
+        """
+        return json.dumps(self.to_dict(), indent=indent)
 
     @staticmethod
     def build_config(**kwargs) -> "IndalekoMachineConfig":
@@ -348,7 +363,10 @@ def main():
         ), f"machine_id {args.machine_id} is not a valid UUID."
         # look it up in the database
         machine_config = IndalekoMachineConfig.load_config_from_db(args.machine_id)
-        print(machine_config.to_json())
+        if machine_config is None:
+            print(f"Machine config {args.machine_id} not found in database.")
+            return
+        print(json.dumps(machine_config.to_dict(), indent=4))
 
 
 if __name__ == "__main__":

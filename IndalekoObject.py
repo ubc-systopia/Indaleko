@@ -3,6 +3,7 @@ import msgpack
 import argparse
 import os
 import uuid
+import json
 
 from IndalekoObjectSchema import IndalekoObjectSchema
 
@@ -47,10 +48,11 @@ class IndalekoObject(IndalekoRecord):
                          })
 
     def to_dict(self):
-        obj = super().to_dict()
+        obj = {}
+        obj['Record'] = super().to_dict()
         obj['_key'] = self.args['ObjectIdentifier']
         for key, value in self.args.items():
-            obj[key] = value
+           obj[key] = value
         return obj
 
 
@@ -107,8 +109,9 @@ def main():
     }
     objattrs['Attributes'] = fattrs
     obj = IndalekoObject({'Identifier' : args.source, 'Version' : '1.0'}, args.raw_data, **objattrs)
-    print(obj)
-    IndalekoObjectSchema.is_valid_object(obj.to_dict())
+    print(json.dumps(obj.to_dict(), indent=4))
+    if IndalekoObjectSchema.is_valid_object(obj.to_dict()):
+        print('Object is valid.')
 
 if __name__ == "__main__":
     main()
