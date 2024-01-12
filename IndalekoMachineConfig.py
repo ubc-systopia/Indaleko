@@ -60,7 +60,6 @@ class IndalekoMachineConfig(IndalekoRecord):
         """
         This method sets the platform information for the machine.
         """
-        print("\n", platform, "\n")
         assert isinstance(
             platform, dict
         ), f"platform must be a dict (not {type(platform)})"
@@ -138,7 +137,7 @@ class IndalekoMachineConfig(IndalekoRecord):
         """
         This method returns the timestamp for the machine configuration.
         """
-        if hasattr(self, "Captured"):
+        if hasattr(self, "captured"):
             return self.captured
         return None
 
@@ -231,7 +230,6 @@ class IndalekoMachineConfig(IndalekoRecord):
             len(entries) == 1
         ), f"Found {len(entries)} entries for machine_id {machine_id} - multiple entries case not handled."
         entry = entries[0]
-        print(json.dumps(entry["Platform"], indent=4))
         machine_config = IndalekoMachineConfig()
         machine_config.set_platform(entry["Platform"])
         # temporary: I've changed the shape of the database, so I'll need to
@@ -266,6 +264,7 @@ class IndalekoMachineConfig(IndalekoRecord):
         record = {}
         record['Record'] = super().to_dict()
         record["Platform"] = self.platform
+        assert self.captured is not None, "Captured timestamp must be set."
         record["Captured"] = self.captured
         if hasattr(self, "machine_id"):
             record["_key"] = self.machine_id

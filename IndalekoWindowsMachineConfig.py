@@ -9,6 +9,8 @@ import argparse
 import re
 import base64
 import msgpack
+import arango
+
 from IndalekoRecord import IndalekoRecord
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoMachineConfig import IndalekoMachineConfig
@@ -69,7 +71,6 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             with open(config_file, 'rt', encoding='utf-8-sig') as fd:
                 config_data = json.load(fd)
             assert str(guid) == config_data['MachineGuid'], f'GUID mismatch: {guid} != {config_data["MachineGuid"]}'
-        print(json.dumps(config_data, indent=4))
         config = IndalekoWindowsMachineConfig()
         config = IndalekoMachineConfig.build_config(machine_config=IndalekoWindowsMachineConfig(),
                                                     os=config_data['OperatingSystem']['Caption'],
@@ -121,7 +122,6 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
         candidate_files = [(timestamp, filename) for filename, guid, timestamp in [IndalekoWindowsMachineConfig.get_guid_timestamp_from_file_name(x) for x in candidates]]
         candidate_files.sort(key=lambda x: x[0])
         candidate = candidate_files[0][1]
-        print(candidate)
         if config_dir is not None:
             candidate = os.path.join(config_dir, candidate)
         return candidate
@@ -133,7 +133,7 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
         WindowsDriveInfo_Version = '1.0'
         WindowsDriveInfo_Description = 'Windows Drive Info'
 
-        def __init__(self, machine_id : str, drive_data : dict) -> None:
+        def __init__(self, machine_id : str, drive_data : dict, captured: dict) -> None:
             assert 'GUID' not in drive_data, 'GUID should not be in drive_data'
             assert 'UniqueId' in drive_data, 'UniqueId must be in drive_data'
             assert drive_data['UniqueId'].startswith('\\\\?\\Volume{')
@@ -145,6 +145,8 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
                                 'Identifier' : self.WindowsDriveInfo_UUID_str,
                                 'Version' : self.WindowsDriveInfo_Version,
                              })
+            assert isinstance(captured, dict), 'captured must be a dict'
+            self.captured = captured
 
         @staticmethod
         def __find_volume_guid__(vol_name : str) -> str:
@@ -160,27 +162,37 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             obj = {}
             obj['Record'] = super().to_dict()
             obj['Machine'] = self.machine_id
+            obj['Captured'] = self.captured
             obj['_key'] = self.get_vol_guid()
             return obj
 
     def extract_volume_info(self: 'IndalekoWindowsMachineConfig') -> None:
         for voldata in self.get_attributes()['VolumeInfo']:
-            wdi = self.WindowsDriveInfo(self.machine_id, voldata)
+            wdi = self.WindowsDriveInfo(self.machine_id, voldata, self.get_captured())
             assert wdi.get_vol_guid() not in self.volume_data, f'Volume GUID {wdi.get_vol_guid()} already in volume_data'
             self.volume_data[wdi.get_vol_guid()] = wdi
 
     def get_volume_info(self: 'IndalekoWindowsMachineConfig') -> dict:
         return self.volume_data
 
-    def write_volume_info_to_db(self: 'IndalekoWindowsMachineConfig', volume_data : WindowsDriveInfo) -> None:
-        assert isinstance(volume_data, self.WindowsDriveInfo), 'volume_data must be a WindowsDriveInfo'
-        self.collection.insert(volume_data.to_json(), overwrite=True)
+    def write_volume_info_to_db(self: 'IndalekoWindowsMachineConfig', volume_data : WindowsDriveInfo) -> bool:
+        assert isinstance(volume_data, self.WindowsDriveInfo), \
+            'volume_data must be a WindowsDriveInfo'
+        success = False
+        try:
+            self.collection.insert(volume_data.to_json(), overwrite=True)
+            success = True
+        except arango.exceptions.DocumentInsertError as error:
+            print(f'Error inserting volume data: {error}')
+            print(volume_data.to_json(indent=4))
+        return success
 
     def write_config_to_db(self) -> None:
         super().write_config_to_db()
-        print('**** writing volume info to db ****')
         for vol_guid in self.volume_data:
-            self.write_volume_info_to_db(self.volume_data[vol_guid])
+            if not self.write_volume_info_to_db(self.volume_data[vol_guid]):
+                print('DB write failed, aborting')
+                break
 
 
 def main():
@@ -220,13 +232,12 @@ def main():
         print('Adding machine configuration to the database.')
         config = IndalekoWindowsMachineConfig.load_config_from_file()
         config.write_config_to_db()
-        # print(config.to_json())
+
         return
 
 
-
-
 def foo():
+    '''Some code I am not using at the moment but expect to use again above (in main.)'''
     config_file = IndalekoWindowsMachineConfig.get_most_recent_config_file(IndalekoWindowsMachineConfig.default_config_dir)
     print(config_file)
     _, guid, timestamp = IndalekoWindowsMachineConfig.get_guid_timestamp_from_file_name(config_file)
