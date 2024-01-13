@@ -4,12 +4,14 @@ operations.
 '''
 import os
 
+from Indaleko import Indaleko
+
 class IndalekoIndex:
     """
     Class used to manage indices for IndalekoCollection objects.
     """
-    DefaultDataDir = './data'
-    DefaultConfigDir = './config'
+    default_data_dir = Indaleko.default_data_dir
+    default_config_dir = Indaleko.default_config_dir
 
     def __init__(self, collection, index_type: str, fields: list, unique: bool) -> None:
         pass

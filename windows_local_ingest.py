@@ -1,11 +1,11 @@
-from IndalekoIngest import *
+'''This module implements the Windows local ingest process.  This is a test file.'''
+from IndalekoIngest import IndalekoIngest
 import argparse
 from IndalekoIngest import IndalekoIngest
 from windows_local_index import IndalekoWindowsLocalIndexer, IndalekoWindowsMachineConfig
 import logging
 import datetime
 from IndalekoIndex import IndalekoIndex
-from IndalekoRecord import IndalekoRecord
 from IndalekoWindowsMachineConfig import IndalekoWindowsMachineConfig
 
 class IndalekoWindowsLocalIngest(IndalekoIngest):
@@ -213,10 +213,10 @@ def main():
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument('--data_dir', '-d',
                              help='Path to the data directory',
-                             default=IndalekoIndex.DefaultDataDir)
+                             default=IndalekoIndex.default_data_dir)
     pre_parser.add_argument('--config_dir', '-c',
                             help='Path to the config directory',
-                            default=IndalekoIndex.DefaultConfigDir)
+                            default=IndalekoIndex.default_config_dir)
     # pre_parser.add_argument('--logdir', type=str, default=IndalekoIngest.DefaultLogDir, help='Directory to use for log file')
     # pre_parser.add_argument('--logfile', type=str, default=WindowsIngest.WindowsLocalIngestLogPrefix, help='Name of log file.')
     # pre_parser.add_argument('--log_level', '-l')

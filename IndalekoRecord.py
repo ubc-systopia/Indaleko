@@ -8,6 +8,7 @@ import os
 import random
 import msgpack
 from IndalekoRecordSchema import IndalekoRecordSchema
+from Indaleko import Indaleko
 class IndalekoRecord:
     '''
     This defines the format of a "record" within Indaleko.
@@ -33,15 +34,7 @@ class IndalekoRecord:
     @staticmethod
     def validate_uuid_string(uuid_string : str) -> bool:
         """Given a string, verify that it is in fact a valid uuid."""
-        if not isinstance(uuid_string, str):
-            print(f'uuid is not a string it is a {type(uuid)}')
-            return False
-        try:
-            uuid.UUID(uuid_string)
-            return True
-        except ValueError:
-            print('uuid is not valid')
-            return False
+        return Indaleko.validate_uuid_string(uuid_string)
 
 
     def __init__(self, raw_data : bytes, attributes : dict, source : dict) -> None:
@@ -153,16 +146,7 @@ class IndalekoRecord:
     @staticmethod
     def validate_iso_timestamp(source : str) -> bool:
         """Given a string, ensure it is a valid ISO timestamp."""
-        valid = True
-        if not isinstance(source, str):
-            valid = False
-        else:
-            try:
-                datetime.datetime.fromisoformat(source)
-            except ValueError:
-                valid = False
-        return valid
-
+        return Indaleko.validate_iso_timestamp(source)
 
 def main():
     """Test the IndalekoRecord class."""

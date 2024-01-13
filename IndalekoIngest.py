@@ -36,6 +36,7 @@ import argparse
 from IndalekoServices import IndalekoServices
 from IndalekoCollections import IndalekoCollections
 from IndalekoMachineConfig import IndalekoMachineConfig
+from Indaleko import Indaleko
 
 class IndalekoIngest():
     '''
@@ -55,9 +56,9 @@ class IndalekoIngest():
     indexer_service = None
     ingester_service = None
 
-    default_output_dir = './data'
-    default_config_dir = './config'
-    default_log_dir = './logs'
+    default_output_dir = Indaleko.default_data_dir
+    default_config_dir = Indaleko.default_config_dir
+    default_log_dir = Indaleko.default_log_dir
 
     def __init__(self : 'IndalekoIngest', **kwargs : dict) -> None:
         '''

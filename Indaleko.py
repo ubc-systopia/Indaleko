@@ -39,6 +39,41 @@ set of properties that can be extracted and stored.  Since this is a prototype
 system, we have strived to "keep it simple" yet focus on allowing us to explore
 a broad range of storage systems, semantic transducers, and activity data sources.
 """
+import uuid
+import datetime
+
+class Indaleko:
+    '''This class defines constants used by Indaleko.'''
+    default_data_dir = './data'
+    default_config_dir = './config'
+    default_log_dir = './logs'
+
+    @staticmethod
+    def validate_uuid_string(uuid_string : str) -> bool:
+        """Given a string, verify that it is in fact a valid uuid."""
+        if not isinstance(uuid_string, str):
+            print(f'uuid is not a string it is a {type(uuid)}')
+            return False
+        try:
+            uuid.UUID(uuid_string)
+            return True
+        except ValueError:
+            print('uuid is not valid')
+            return False
+
+    @staticmethod
+    def validate_iso_timestamp(source : str) -> bool:
+        """Given a string, ensure it is a valid ISO timestamp."""
+        valid = True
+        if not isinstance(source, str):
+            valid = False
+        else:
+            try:
+                datetime.datetime.fromisoformat(source)
+            except ValueError:
+                valid = False
+        return valid
+
 
 def main():
     """Test code for Indaleko.py"""

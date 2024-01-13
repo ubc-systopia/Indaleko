@@ -55,7 +55,8 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
         return IndalekoMachineConfig.find_configs_in_db(source_id=source_id)
 
     @staticmethod
-    def load_config_from_file(config_dir : str = None, config_file : str = None) -> 'IndalekoWindowsMachineConfig':
+    def load_config_from_file(config_dir : str = None,
+                              config_file : str = None) -> 'IndalekoWindowsMachineConfig':
         config_data ={}
         if config_dir is None and config_file is None:
             # nothing specified, so we'll search and find
@@ -65,27 +66,30 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             assert config_dir is not None, 'config_dir must be specified'
             config_file = IndalekoWindowsMachineConfig.get_most_recent_config_file(config_dir)
         if config_file is not None:
-            _, guid, timestamp = IndalekoWindowsMachineConfig.get_guid_timestamp_from_file_name(config_file)
+            _, guid, timestamp = IndalekoWindowsMachineConfig.get_guid_timestamp_from_file_name(
+                config_file)
             assert os.path.exists(config_file), f'Config file {config_file} does not exist'
             assert os.path.isfile(config_file), f'Config file {config_file} is not a file'
             with open(config_file, 'rt', encoding='utf-8-sig') as fd:
                 config_data = json.load(fd)
-            assert str(guid) == config_data['MachineGuid'], f'GUID mismatch: {guid} != {config_data["MachineGuid"]}'
+            assert str(guid) == config_data['MachineGuid'],\
+                  f'GUID mismatch: {guid} != {config_data["MachineGuid"]}'
         config = IndalekoWindowsMachineConfig()
-        config = IndalekoMachineConfig.build_config(machine_config=IndalekoWindowsMachineConfig(),
-                                                    os=config_data['OperatingSystem']['Caption'],
-                                                    arch=config_data['OperatingSystem']['OSArchitecture'],
-                                                    os_version=config_data['OperatingSystem']['Version'],
-                                                    cpu=config_data['CPU']['Name'],
-                                                    cpu_version=config_data['CPU']['Name'],
-                                                    cpu_cores=config_data['CPU']['Cores'],
-                                                    source_id=IndalekoWindowsMachineConfig.windows_machine_config_service['identifier'],
-                                                    source_version=IndalekoWindowsMachineConfig.windows_machine_config_service['version'],
-                                                    timestamp=timestamp.isoformat(),
-                                                    attributes=config_data,
-                                                    data=base64.b64encode(msgpack.packb(config_data)).decode('ascii'),
-                                                    machine_id=config_data['MachineGuid']
-                                                )
+        config = IndalekoMachineConfig.build_config(
+            machine_config=IndalekoWindowsMachineConfig(),
+            os=config_data['OperatingSystem']['Caption'],
+            arch=config_data['OperatingSystem']['OSArchitecture'],
+            os_version=config_data['OperatingSystem']['Version'],
+            cpu=config_data['CPU']['Name'],
+            cpu_version=config_data['CPU']['Name'],
+            cpu_cores=config_data['CPU']['Cores'],
+            source_id=IndalekoWindowsMachineConfig.windows_machine_config_service['identifier'],
+            source_version=IndalekoWindowsMachineConfig.windows_machine_config_service['version'],
+            timestamp=timestamp.isoformat(),
+            attributes=config_data,
+            data=base64.b64encode(msgpack.packb(config_data)).decode('ascii'),
+            machine_id=config_data['MachineGuid']
+        )
         config.extract_volume_info()
         return config
 
@@ -99,8 +103,8 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
         '''
         # Regular expression to match the GUID and timestamp
         pattern = r"(?:.*[/\\])?windows-hardware-info-(?P<guid>[a-fA-F0-9\-]+)-(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d+Z)\.json"
-        pattern = r"(?:.*[/\\])?windows-hardware-info-(?P<guid>[a-fA-F0-9\-]+)-(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d+Z)\.json"
         match = re.match(pattern, file_name)
+
         assert match, f'Filename format not recognized for {file_name}.'
         guid = uuid.UUID(match.group("guid"))
         timestamp = match.group("timestamp").replace("-", ":")
@@ -117,9 +121,14 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
 
     @staticmethod
     def get_most_recent_config_file(config_dir : str) -> str:
-        candidates = [x for x in os.listdir(config_dir) if x.startswith('windows-hardware-info') and x.endswith('.json')]
+        '''Get the most recent machine configuration file.'''
+        candidates = [x for x in os.listdir(config_dir) if
+                      x.startswith('windows-hardware-info') and x.endswith('.json')]
         assert len(candidates) > 0, 'At least one windows-hardware-info file should exist'
-        candidate_files = [(timestamp, filename) for filename, guid, timestamp in [IndalekoWindowsMachineConfig.get_guid_timestamp_from_file_name(x) for x in candidates]]
+        candidate_files = [(timestamp, filename)
+                           for filename, guid, timestamp in
+                           [IndalekoWindowsMachineConfig.get_guid_timestamp_from_file_name(x)
+                            for x in candidates]]
         candidate_files.sort(key=lambda x: x[0])
         candidate = candidate_files[0][1]
         if config_dir is not None:
@@ -127,7 +136,7 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
         return candidate
 
     class WindowsDriveInfo(IndalekoRecord):
-
+        '''This class is used to capture information about a Windows drive.'''
         WindowsDriveInfo_UUID_str = 'a0b3b3e0-0b1a-4e1f-8b1a-4e1f8b1a4e1f'
         WindowsDriveInfo_UUID = uuid.UUID(WindowsDriveInfo_UUID_str)
         WindowsDriveInfo_Version = '1.0'
@@ -156,6 +165,7 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             return vol_name[11:-2]
 
         def get_vol_guid(self):
+            '''Return the GUID of the volume.'''
             return self.get_attributes()['GUID']
 
         def to_dict(self):
@@ -167,15 +177,30 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             return obj
 
     def extract_volume_info(self: 'IndalekoWindowsMachineConfig') -> None:
-        for voldata in self.get_attributes()['VolumeInfo']:
-            wdi = self.WindowsDriveInfo(self.machine_id, voldata, self.get_captured())
-            assert wdi.get_vol_guid() not in self.volume_data, f'Volume GUID {wdi.get_vol_guid()} already in volume_data'
+        '''Extract the volume information from the machine configuration.'''
+        for volume_data in self.get_attributes()['VolumeInfo']:
+            wdi = self.WindowsDriveInfo(self.machine_id, volume_data, self.get_captured())
+            assert wdi.get_vol_guid() not in self.volume_data,\
+                  f'Volume GUID {wdi.get_vol_guid()} already in volume_data'
             self.volume_data[wdi.get_vol_guid()] = wdi
 
     def get_volume_info(self: 'IndalekoWindowsMachineConfig') -> dict:
+        '''This returns the volume information.'''
         return self.volume_data
 
-    def write_volume_info_to_db(self: 'IndalekoWindowsMachineConfig', volume_data : WindowsDriveInfo) -> bool:
+    def map_drive_letter_to_volume_guid(self: 'IndalekoWindowsMachineConfig', drive_letter : str) -> str:
+        '''Map a drive letter to a volume GUID.'''
+        assert drive_letter is not None, 'drive_letter must be a valid string'
+        assert len(drive_letter) == 1, 'drive_letter must be a single character'
+        drive_letter = drive_letter.upper()
+        for vol in self.get_volume_info().values():
+            if vol['DriveLetter'] == drive_letter:
+                return vol['GUID']
+        return None
+
+    def write_volume_info_to_db(self: 'IndalekoWindowsMachineConfig',
+                                volume_data : WindowsDriveInfo) -> bool:
+        '''Write the volume information to the database.'''
         assert isinstance(volume_data, self.WindowsDriveInfo), \
             'volume_data must be a WindowsDriveInfo'
         success = False
@@ -188,23 +213,30 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
         return success
 
     def write_config_to_db(self) -> None:
+        '''Write the machine configuration to the database.'''
         super().write_config_to_db()
-        for vol_guid in self.volume_data:
-            if not self.write_volume_info_to_db(self.volume_data[vol_guid]):
+        for _, vol_data in self.volume_data.items():
+            if not self.write_volume_info_to_db(vol_data):
                 print('DB write failed, aborting')
                 break
 
 
 def main():
+    '''This is the main handler for the Indaleko Windows Machine Config service.'''
     parser = argparse.ArgumentParser()
     parser.add_argument('--version', action='version', version='%(prog)s 1.0')
-    parser.add_argument('--delete', '-d', action='store_true', help='Delete the machine configuration if it exists in the database.')
-    parser.add_argument('--uuid', '-u', type=str, default=None, help='The UUID of the machine.')
-    parser.add_argument('--list', '-l', action='store_true', help='List the machine configurations in the database.')
-    parser.add_argument('--files', '-f', action='store_true', help='List the machine configuration files in the default directory.')
-    parser.add_argument('--add', '-a', action='store_true', help='Add a machine configuration (from the file) to the database.')
+    parser.add_argument('--delete', '-d', action='store_true',
+                        help='Delete the machine configuration if it exists in the database.')
+    parser.add_argument('--uuid', '-u', type=str, default=None,
+                        help='The UUID of the machine.')
+    parser.add_argument('--list', '-l', action='store_true',
+                        help='List the machine configurations in the database.')
+    parser.add_argument('--files', '-f', action='store_true',
+                        help='List the machine configuration files in the default directory.')
+    parser.add_argument('--add', '-a', action='store_true',
+                        help='Add a machine configuration (from the file) to the database.')
     args = parser.parse_args()
-    if (args.list):
+    if args.list:
         print('Listing machine configurations in the database.')
         configs = IndalekoWindowsMachineConfig.find_configs_in_db()
         for config in configs:
@@ -217,14 +249,17 @@ def main():
             print(f'\tPlatform: {config["platform"]["software"]["OS"]}')
             return
     if args.delete:
-        assert args.uuid is not None, 'UUID must be specified when deleting a machine configuration.'
-        assert IndalekoWindowsMachineConfig.validate_uuid_string(args.uuid), f'UUID {args.uuid} is not a valid UUID.'
+        assert args.uuid is not None, \
+            'UUID must be specified when deleting a machine configuration.'
+        assert IndalekoWindowsMachineConfig.validate_uuid_string(args.uuid),\
+            f'UUID {args.uuid} is not a valid UUID.'
         print(f'Deleting machine configuration with UUID {args.uuid}')
         IndalekoWindowsMachineConfig.delete_config_in_db(args.uuid)
         return
     if args.files:
         print('Listing machine configuration files in the default directory.')
-        files = IndalekoWindowsMachineConfig.find_config_files(IndalekoWindowsMachineConfig.default_config_dir)
+        files = IndalekoWindowsMachineConfig.find_config_files(
+            IndalekoWindowsMachineConfig.default_config_dir)
         for file in files:
             print(file)
         return
@@ -236,15 +271,17 @@ def main():
         return
 
 
-def foo():
+def old_main():
     '''Some code I am not using at the moment but expect to use again above (in main.)'''
-    config_file = IndalekoWindowsMachineConfig.get_most_recent_config_file(IndalekoWindowsMachineConfig.default_config_dir)
+    config_file = IndalekoWindowsMachineConfig.get_most_recent_config_file(
+        IndalekoWindowsMachineConfig.default_config_dir)
     print(config_file)
     _, guid, timestamp = IndalekoWindowsMachineConfig.get_guid_timestamp_from_file_name(config_file)
     print(guid)
     db_record = IndalekoWindowsMachineConfig.load_config_from_db(str(guid))
     print(db_record.get_captured()['Value']['Value'], '\n', timestamp)
-    file_record = IndalekoWindowsMachineConfig.load_config_from_file(IndalekoWindowsMachineConfig.default_config_dir, config_file)
+    file_record = IndalekoWindowsMachineConfig.load_config_from_file(
+        IndalekoWindowsMachineConfig.default_config_dir, config_file)
     print('file_record:')
     print(file_record.to_dict())
     # assert parser is not None, 'Parser must  be valid'
