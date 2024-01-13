@@ -45,6 +45,9 @@ class IndalekoIngest():
     of this class to handle platform-specific ingestion.
     '''
 
+    default_file_prefix = 'indaleko'
+    default_file_suffix = '.jsonl'
+
     indexer_uuid_str = None
     indexer_uuid = None
     machine_config_uuid_str = None
@@ -66,57 +69,34 @@ class IndalekoIngest():
         as a parameter. The configuration object is a dictionary that contains
         all the configuration parameters for the ingestor.
         '''
-        self.timestamp = datetime.datetime.now(datetime.UTC).isoformat()
-        assert kwargs is not None, "Configuration object cannot be None"
-        if 'test' in kwargs:
-            self.test = kwargs['test']
+        if 'file_prefix' in kwargs:
+            self.file_prefix = kwargs['file_prefix']
         else:
-            self.test = False
-        if 'Indexer' in kwargs:
-            self.indexer_uuid_str = kwargs['Indexer']
-            self.indexer_uuid = uuid.UUID(self.indexer_uuid_str)
-        if 'MachineConfig' in kwargs:
-            self.machine_config_uuid_str = kwargs['MachineConfig']
-            self.machine_config_uuid = uuid.UUID(self.machine_config_uuid_str)
-        if 'Ingester' in kwargs:
-            self.ingester_uuid_str = kwargs['Ingester']
-            self.ingester_uuid = uuid.UUID(self.ingester_uuid_str)
-        if 'MachineConfigService' in kwargs:
-            self.machine_config_service = kwargs['MachineConfigService']
-        if 'IndexerService' in kwargs:
-            self.indexer_service = kwargs['IndexerService']
-        if 'IngesterService' in kwargs:
-            self.ingester_service = kwargs['IngesterService']
-        if 'log_level' in kwargs:
-            self.log_level = kwargs['log_level']
+            self.file_prefix = IndalekoIngest.default_file_prefix
+        self.file_prefix = self.file_prefix.replace('-', '_')
+        if 'file_suffix' in kwargs:
+            self.file_suffix = kwargs['file_suffix'].replace('-', '_')
         else:
-            self.log_level = logging.DEBUG
+            self.file_suffix = IndalekoIngest.default_file_suffix
+        self.file_suffix = self.file_suffix.replace('-', '_')
+        if 'timestamp' in kwargs:
+            self.timestamp = kwargs['timestamp']
+        else:
+            self.timestamp = datetime.datetime.now(datetime.UTC).isoformat()
+        if 'platform' in kwargs:
+            self.platform = kwargs['platform']
+        if 'ingester' in kwargs:
+            self.ingester = kwargs['ingester']
         if 'output_dir' in kwargs:
             self.output_dir = kwargs['output_dir']
         else:
             self.output_dir = self.default_output_dir
-        if 'config_dir' in kwargs:
-            self.config_dir = kwargs['config_dir']
-        else:
-            self.config_dir = self.default_config_dir
+        if 'input_file' in kwargs:
+            self.input_file = kwargs['input_file']
         if 'log_dir' in kwargs:
             self.log_dir = kwargs['log_dir']
         else:
             self.log_dir = self.default_log_dir
-        if 'log_file' in kwargs:
-            self.log_file = kwargs['log_file']
-        else:
-            self.log_file = self.get_default_logfile_name()
-        if 'output_file' in kwargs:
-            self.output_file = kwargs['output_file']
-        else:
-            self.output_file = self.get_default_outfile_name()
-        if 'config_file' in kwargs:
-            self.config_file = kwargs['config_file']
-        else:
-            self.config_file = self.get_default_config_file_name()
-        if 'input_file' in kwargs:
-            self.input_file = kwargs['input_file']
         self.indaleko_services = None
         self.collections = None
         self.indaleko_services = None
@@ -138,83 +118,47 @@ class IndalekoIngest():
         self.collections = IndalekoCollections()
         self.indaleko_services = IndalekoServices()
 
-
-    def parse_args(self, pre_parser : argparse.ArgumentParser = None) -> argparse.Namespace:
-        '''
-        Returns an ArgumentParser object that can be used to parse the command
-        line arguments for the ingester.
-        '''
-        self.parser = argparse.ArgumentParser(parents=[pre_parser])
-        if platform.python_version() < '3.12':
-            logging_levels = []
-            if hasattr(logging, 'CRITICAL'):
-                logging_levels.append('CRITICAL')
-            if hasattr(logging, 'ERROR'):
-                logging_levels.append('ERROR')
-            if hasattr(logging, 'WARNING'):
-                logging_levels.append('WARNING')
-            if hasattr(logging, 'WARN'):
-                logging_levels.append('WARN')
-            if hasattr(logging, 'INFO'):
-                logging_levels.append('INFO')
-            if hasattr(logging, 'DEBUG'):
-                logging_levels.append('DEBUG')
-            if hasattr(logging, 'NOTSET'):
-                logging_levels.append('NOTSET')
-            if hasattr(logging, 'FATAL'):
-                logging_levels.append('FATAL')
-        else:
-            logging_levels = sorted(set([level for level in logging.getLevelNamesMapping()]))
-
-        self.parser.add_argument('--outdir',
-                                 type=str,
-                                 default=self.output_dir,
-                                 help='Directory to use for output file')
-        self.parser.add_argument('--output',
-                                 type=str,
-                                 default=self.output_file,
-                                 help='Name to use for file into which the fetched metadata is saved.')
-        self.parser.add_argument('--confdir',
-                                 type=str,
-                                 default=self.config_dir,
-                                 help='Directory to use for config file')
-        self.parser.add_argument('--config',
-                                 type=str,
-                                 default=self.config_file,
-                                 help='Name to use for retrieving the database configuration file.')
-        self.parser.add_argument('--loglevel',
-                                 type=int,
-                                 default=self.log_level,
-                                 choices=logging_levels,
-                                 help='Logging level to use (lower number = more logging)')
-        self.parser.add_argument('--logdir',
-                                 type=str,
-                                 default=self.log_dir,
-                                 help='Directory to use for log file')
-        self.parser.add_argument('--logfile',
-                                 type=str,
-                                 default=self.log_file,
-                                 help='Name of log file.')
-        self.parser.add_argument('--input',
-                                 type=str,
-                                 default=self.get_default_input_file(),
-                                 help='Name of input file.')
-        args = self.parser.parse_args()
-        return args
-
-    def get_default_outfile_name(self : 'IndalekoIngest') -> str:
+    def get_default_outfile_name(self : 'IndalekoIngest', target_dir : str = None) -> str:
         """
         This method constructs a default output file name. Should be overridden
         in derived class.
         """
-        return f'indaleko-ingest-output-{self.timestamp}.jsonl'
+        if hasattr(self, 'platform'):
+            ingest_platform = self.platform
+        else:
+            ingest_platform = 'unknown'
+        ingest_platform = ingest_platform.replace('-', '_')
+        if hasattr(self, 'ingester'):
+            ingester = self.ingester
+        else:
+            ingester = 'unknown_ingester'
+        ingester = ingester.replace('-', '_')
+        if hasattr(self, 'machine_id'):
+            machine_id = self.machine_id
+        else:
+            machine_id = 'unknown_machine_id'
+        machine_id = machine_id.replace('-', '_')
+        if hasattr(self, 'timestamp'):
+            timestamp = self.timestamp
+        else:
+            timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        if target_dir is None:
+            target_dir = self.output_dir
+        return os.path.join(
+            target_dir,
+            f'{self.file_prefix}-\
+              platform={ingest_platform}-\
+              ingester={ingester}-\
+              machine={machine_id}-\
+              timestamp={timestamp}\
+              {self.file_suffix}'.replace(' ', ''))
 
     def get_default_logfile_name(self : 'IndalekoIngest') -> str:
         """
         This method constructs a default log file name. Should be overridden in
         derived class.
         """
-        return f'indaleko-ingest-log-{self.timestamp}.log'
+        return self.get_default_outfile_name(target_dir=self.log_dir).replace('.jsonl', '.log')
 
     def get_default_config_file_name(self : 'IndalekoIngest') -> str:
         """
@@ -327,8 +271,9 @@ class IndalekoIngest():
 def main():
     """Test code for IndalekoIngest.py"""
     # Now parse the arguments
-    ingest = IndalekoIngest(test=True)
-    assert ingest is not None, "Could not create ingester."
+    ingester = IndalekoIngest(test=True)
+    assert ingester is not None, "Could not create ingester."
+    print(ingester.get_default_outfile_name())
 
 if __name__ == "__main__":
     main()

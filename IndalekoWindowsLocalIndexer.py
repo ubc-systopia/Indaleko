@@ -7,7 +7,6 @@ import datetime
 import os
 import logging
 import platform
-import jsonlines
 
 from Indaleko import Indaleko
 from IndalekoIndexer import IndalekoIndexer
@@ -19,7 +18,6 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
     '''
     windows_platform = 'Windows'
     windows_local_indexer = 'local-fs'
-    windows_local_file_indexer_prefix = 'windows-local-fs-data'
 
     @staticmethod
     def windows_to_posix(filename):
@@ -152,7 +150,8 @@ def main():
                             default=os.path.expanduser('~'))
     pre_args, _ = pre_parser.parse_known_args()
     # Step 3: now we can compute the machine config and drive GUID
-    machine_config = IndalekoWindowsMachineConfig.load_config_from_file(pre_args.configdir)
+    machine_config = IndalekoWindowsMachineConfig.load_config_from_file(config_file=pre_args.config)
+
     drive = os.path.splitdrive(pre_args.path)[0][0].upper()
     drive_guid = machine_config.map_drive_letter_to_volume_guid(drive)
     if drive_guid is None:

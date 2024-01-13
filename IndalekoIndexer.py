@@ -67,8 +67,8 @@ class IndalekoIndexer:
 
     def find_indexer_files(self,
                    search_dir : str,
-                   prefix : str = 'indaleko-index',
-                   suffix : str = '.json') -> list:
+                   prefix : str = default_file_prefix,
+                   suffix : str = default_file_suffix) -> list:
         '''This function finds the files to ingest:
             search_dir: path to the search directory
             prefix: prefix of the file to ingest
