@@ -79,6 +79,8 @@ class IndalekoIngest():
         else:
             self.file_suffix = IndalekoIngest.default_file_suffix
         self.file_suffix = self.file_suffix.replace('-', '_')
+        if 'machine_id' in kwargs:
+            self.machine_id = kwargs['machine_id']
         if 'timestamp' in kwargs:
             self.timestamp = kwargs['timestamp']
         else:
@@ -160,19 +162,6 @@ class IndalekoIngest():
         """
         return self.get_default_outfile_name(target_dir=self.log_dir).replace('.jsonl', '.log')
 
-    def get_default_config_file_name(self : 'IndalekoIngest') -> str:
-        """
-        This method constructs a default config file name. Should be overridden
-        in derived class.
-        """
-        return 'indaleko-db-config.ini'
-
-    def get_default_config_dir(self : 'IndalekoIngest') -> str:
-        """
-        This method returns the default configuration directory. Could be
-        overridden in derived class.
-        """
-        return self.config_dir
 
     def register_service(self, service : dict) -> IndalekoServices:
         """Used to register a service provider in the database."""

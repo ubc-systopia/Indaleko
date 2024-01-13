@@ -28,12 +28,16 @@ class IndalekoWindowsLocalIngest(IndalekoIngest):
         'created': datetime.datetime.now(datetime.timezone.utc).isoformat(),
         'type': 'Ingester',
     }
+    windows_platform = IndalekoWindowsLocalIndexer.windows_platform
+    windows_local_ingester = 'local-fs-ingester'
 
+    def __init__(self, **kwargs) -> None:
+        assert 'machine_config' in kwargs, 'machine_config must be specified'
+        self.machine_config = kwargs['machine_config']
+        if 'machine_id' not in kwargs:
+            kwargs['machine_id'] = self.machine_config.machine_id
+        super().__init__(**kwargs)
 
-    def __init__(self, data_dir : str, reset: bool = False) -> None:
-        super().__init__(reset=reset)
-        self.data_dir = data_dir
-        assert os.path.isdir(self.data_dir), f'{self.data_dir} must be a directory'
 
     def find_indexer_files(self) -> list:
         return [x for x in super().find_indexer_files(self.data_dir)
@@ -109,7 +113,19 @@ def main():
     args = parser.parse_args()
     print(args)
     # next thing to do is generate a log file name and initialize logging
-    # ingester = IndalekoWindowsLocalIngest(args.datadir, args.input, reset=args.reset)
+    # ingester = IndalekoWindowsLocalIngest(args.datadir, args.input,
+    # reset=args.reset)
+    timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    ingester = IndalekoWindowsLocalIngest(
+        machine_config=machine_config,
+        timestamp=timestamp,
+        platform=IndalekoWindowsLocalIndexer.windows_platform,
+        ingester = IndalekoWindowsLocalIngest.windows_local_ingester,
+        output_dir=args.datadir,
+        input_file=args.input,
+        log_dir=args.logdir
+    )
+    print(ingester.get_default_outfile_name())
 
 if __name__ == '__main__':
     main()
