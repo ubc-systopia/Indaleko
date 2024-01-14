@@ -13,6 +13,7 @@ import os
 import random
 import json
 import msgpack
+from Indaleko import Indaleko
 from IndalekoRecord import IndalekoRecord
 from IndalekoRelationshipSchema import IndalekoRelationshipSchema
 
@@ -92,11 +93,11 @@ def main():
     }
     vertex1 = {
         'object' : str(uuid.uuid4()),
-        'collection' : 'Objects',
+        'collection' : Indaleko.Indaleko_Objects,
     }
     vertex2 = {
         'object' : str(uuid.uuid4()),
-        'collection' : 'Objects',
+        'collection' : Indaleko.Indaleko_Objects,
     }
     r = IndalekoRelationship({
         'Identifier' : args.source,

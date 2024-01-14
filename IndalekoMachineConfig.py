@@ -11,6 +11,7 @@ from IndalekoCollections import IndalekoCollections
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoRecord import IndalekoRecord
 from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
+from Indaleko import Indaleko
 
 
 class IndalekoMachineConfig(IndalekoRecord):
@@ -53,7 +54,7 @@ class IndalekoMachineConfig(IndalekoRecord):
             "Value": timestamp,
         }
         collections = IndalekoCollections(db_config=db)
-        self.collection = collections.get_collection("MachineConfig")
+        self.collection = collections.get_collection(Indaleko.Indaleko_MachineConfig)
         assert self.collection is not None, "MachineConfig collection does not exist."
 
     def set_platform(self, platform: dict) -> None:
@@ -201,7 +202,7 @@ class IndalekoMachineConfig(IndalekoRecord):
         if not IndalekoMachineConfig.validate_uuid_string(source_id):
             raise AssertionError(f"source_id {source_id} is not a valid UUID.")
         collections = IndalekoCollections()
-        machine_config_collection = collections.get_collection("MachineConfig")
+        machine_config_collection = collections.get_collection(Indaleko.Indaleko_MachineConfig)
         entries = machine_config_collection.find_entries(source=source_id)
         return entries
 
@@ -213,7 +214,7 @@ class IndalekoMachineConfig(IndalekoRecord):
         assert IndalekoMachineConfig.validate_uuid_string(
             machine_id
         ), f"machine_id {machine_id} is not a valid UUID."
-        IndalekoCollections().get_collection("MachineConfig").delete(machine_id)
+        IndalekoCollections().get_collection(Indaleko.Indaleko_MachineConfig).delete(machine_id)
 
     @staticmethod
     def load_config_from_db(machine_id: str) -> "IndalekoMachineConfig":
@@ -223,7 +224,7 @@ class IndalekoMachineConfig(IndalekoRecord):
         assert IndalekoMachineConfig.validate_uuid_string(
             machine_id
         ), f"machine_id {machine_id} is not a valid UUID."
-        entries = IndalekoCollections().get_collection("MachineConfig").find_entries(_key=machine_id)
+        entries = IndalekoCollections().get_collection(Indaleko.Indaleko_MachineConfig).find_entries(_key=machine_id)
         if len(entries) == 0:
             return None  # not found
         assert (

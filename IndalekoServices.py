@@ -19,19 +19,13 @@ list for now.
 import argparse
 import uuid
 import datetime
+import json
+import arango
 from IndalekoDBConfig import IndalekoDBConfig
-from IndalekoCollections import IndalekoCollection
+from IndalekoCollections import IndalekoCollection, IndalekoCollections
 from IndalekoServicesSchema import IndalekoServicesSchema
-
-class IndalekoService:
-    """
-    In Indaleko, a service is a component that provides some kind of
-    functionality.  This class manages registration and lookup of services.
-    """
-    def __init__(self, name: str = None, id: str = None, description: str = None, version: str = None, service_type: str = 'Indexer'):
-        assert name is not None or id is not None, 'Either name or id must be specified.'
-
-
+from Indaleko import Indaleko
+from IndalekoRecord import IndalekoRecord
 
 class IndalekoServices:
     '''
@@ -41,8 +35,11 @@ class IndalekoServices:
     Schema = IndalekoServicesSchema.get_schema()
 
     indaleko_services = 'Services'
+    assert indaleko_services in Indaleko.Collections, \
+        f'{indaleko_services} must be in Indaleko_Collections'
 
     service_types = (
+        'Test',
         'Indexer',
         'Ingester',
         'SemanticTransducer',
@@ -82,12 +79,26 @@ class IndalekoServices:
         self.service_collection.create_index('name', 'persistent', ['name'], unique=True)
         return self.service_collection
 
-    def lookup_service(self, name: str) -> dict:
+    def lookup_service_by_name(self, name: str) -> dict:
         """
         This method is used to lookup a service by name.
         """
         entries = self.service_collection.find_entries(name =  name)
-        assert len(entries) < 2, f'Multiple entries found for service {name}, not handle.'
+        assert len(entries) < 2, f'Multiple entries found for service {name}, not handled.'
+        if len(entries) == 0:
+            return None
+        else:
+            return entries[0]
+
+    def lookup_service_by_identifier(self, service_identifier: str) -> dict:
+        """
+        This method is used to lookup a service by name.
+        """
+        if not Indaleko.validate_uuid_string(service_identifier):
+            raise ValueError(f'{service_identifier} is not a valid UUID.')
+        entries = self.service_collection.find_entries(identifier =  service_identifier)
+        assert len(entries) < 2, \
+            f'Multiple entries found for service {service_identifier}, not handled.'
         if len(entries) == 0:
             return None
         else:
@@ -104,7 +115,8 @@ class IndalekoServices:
         This method registers a service with the given name, description, and
         version in the database.
         """
-        assert service_type in IndalekoServices.service_types, f'Invalid service type {service_type} specified.'
+        assert service_type in IndalekoServices.service_types, \
+            f'Invalid service type {service_type} specified.'
         if service_id is None:
             service_id = str(uuid.uuid4())
         new_service = {
@@ -116,22 +128,183 @@ class IndalekoServices:
             '_key' : service_id,
         }
         self.service_collection.insert(new_service)
-        return self.lookup_service(name)
+        return self.lookup_service_by_name(name)
+
+class IndalekoService(IndalekoRecord):
+    """
+    In Indaleko, a service is a component that provides some kind of
+    functionality.  This class manages registration and lookup of services.
+    """
+    indaleko_service_uuid_str = '951724c8-9957-4455-8132-d786b7383b47'
+    indaleko_service_version = '1.0'
+
+    def __init__(self, **kwargs):
+        '''
+        This class takes the following optional arguments:
+        * service_collection -the collection to use for service
+            lookup/registration.  Note that if this is not specified the
+            database configuration will be used and the default collection is
+            used.
+        * service_identifier - the identifier for the service.  This is used
+            to look up an existing service.  If this is specified, the service
+            will be looked up by its identifier.
+        * service_name - the name of the service.  This is used to look up
+            the service if the identifier is not specified.  If the service
+            does not exist, it will be created.  See Indaleko.Collections for
+            known services.
+        '''
+        super().__init__(raw_data=b'',
+                         attributes={},
+                         source={'Identifier' : IndalekoService.indaleko_service_uuid_str,
+                                 'Version' : IndalekoService.indaleko_service_version
+                        })
+        self.collection = None
+        self.service_identifier = None
+        self.service_name = None
+        self.service_version = None
+        self.service_description = None
+        self.service_version = None
+        self.service_type = None
+        self.creation_date = self.__timestamp__
+        if 'service_identifier' in kwargs:
+            self.service_identifier = kwargs['service_identifier']
+        if 'service_name' in kwargs:
+            self.service_name = kwargs['service_name']
+        if 'service_description' in kwargs:
+            self.service_description = kwargs['service_description']
+        if 'service_version' in kwargs:
+            self.service_version = kwargs['service_version']
+        if 'service_type' in kwargs:
+            self.service_type = kwargs['service_type']
+        if 'creation_date' in kwargs:
+            self.creation_date = kwargs['creation_date']
+        if self.collection is None:
+            self.collection = IndalekoCollections().get_collection(Indaleko.Indaleko_Services)
+        assert isinstance(self.collection, IndalekoCollection), \
+            'service_collection must be an IndalekoCollection'
+        found = False
+        if self.service_identifier is None:
+            found = self.lookup_service_by_name()
+        else:
+            found = self.lookup_service_by_identifier()
+        if not found:
+            if self.service_name is None:
+                raise ValueError('service_name must be specified.')
+            if self.service_version is None:
+                raise ValueError('service_version must be specified.')
+            if self.service_type is None or self.service_type not in IndalekoServices.service_types:
+                raise ValueError('service_type must be one of ' +
+                                 f'{IndalekoServices.service_types}, ' +
+                                  f'is {self.service_type}')
+            self.register_service()
+
+    def load_record_data(self, record_data : dict) -> None:
+        """Load the record data from the given dictionary."""
+        assert isinstance(record_data, dict), 'record_data must be a dict'
+        assert 'Identifier' in record_data, 'Identifier must be specified'
+        assert 'Version' in record_data, 'Version must be specified'
+        assert 'Name' in record_data, 'Name must be specified'
+        assert 'Type' in record_data, 'Type must be specified'
+        assert 'Created' in record_data, 'Created must be specified'
+        self.service_identifier = record_data['Identifier']
+        self.service_version = record_data['Version']
+        self.service_name = record_data['Name']
+        self.service_type = record_data['Type']
+        self.creation_date = record_data['Created']
+        if 'Description' in record_data:
+            self.service_description = record_data['Description']
+        return
+
+    def lookup_service_by_name(self) -> bool:
+        '''Given a string name for the service, look up that service.'''
+        self.service = None
+        data = self.collection.find_entries(Name = self.service_name)
+        if not isinstance(data, list) or len(data) == 0:
+            print('Service name {self.service_name} not found.')
+            return False
+        data = data[0]
+        if not isinstance(data, dict):
+            raise ValueError(f'Invalid service {data} found.')
+        self.load_record_data(data)
+        return True
+
+    def lookup_service_by_identifier(self) -> bool:
+        '''
+        Given a string identifier (UUID) for the service, look up that
+        service.
+        '''
+        self.service = None
+        if not Indaleko.validate_uuid_string(self.service_identifier):
+            raise ValueError(f'{self.service_identifier} is not a valid UUID.')
+        data = self.collection.find_entries(Identifier = self.service_identifier)
+        if not isinstance(data, list) or len(data) == 0:
+            print('Service id {self.service_identifier} not found.')
+            return False
+        data = data[0]
+        if not isinstance(data, dict):
+            raise ValueError(f'Invalid service {data} found.')
+        self.load_record_data(data)
+        return True
+
+    def register_service(self : 'IndalekoService') -> dict:
+        '''
+        This method registers a service with the given name, description,
+        version, identifier (if specified,) type, and creation date (if
+        specified.)
+        '''
+        if self.service_identifier is None:
+            self.service_identifier = str(uuid.uuid4())
+        if self.creation_date is None:
+            self.creation_date = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        assert self.service_type in IndalekoServices.service_types, \
+            f'Invalid service type {self.service_type} specified.'
+        try:
+            self.collection.insert(self.to_dict())
+        except arango.exceptions.DocumentInsertError as error:
+            print(f'Error inserting service {self.service_name}: {error}')
+            print(self.to_json())
+            raise error
+        return self.get_service_data()
+
+    def get_service_data(self) -> dict:
+        """Return the data for this service."""
+        return {
+            'Name' : self.service_name,
+            'Description' : self.service_description,
+            'Version' : self.service_version,
+            'Identifier' : self.service_identifier,
+            'Type' : self.service_type,
+            'Created' : self.creation_date
+        }
+
+    def to_dict(self) -> dict:
+        """Return a dictionary representation of this object."""
+        data = self.get_service_data()
+        data['Record'] = super().to_dict()
+        data['_key'] = data['Identifier']
+        return data
+
+    def to_json(self, indent : int = 4) -> str:
+        """Return a JSON representation of this object."""
+        return json.dumps(self.to_dict(), indent=indent)
 
 def main():
     """Test the IndalekoServices class."""
     parser = argparse.ArgumentParser()
+    parser.add_argument('--identifier', type=str, default='4debd7e6-c71a-4830-a0a1-8b4e599faea6', help='The identifier of the service to look up.')
     parser.add_argument('--version', action='version', version='%(prog)s 1.0')
     parser.add_argument('--reset', action='store_true', help='Reset the service collection.')
     args = parser.parse_args()
-    services = IndalekoServices(reset=args.reset)
-    print(services)
-    service = services.lookup_service('test')
-    if len(service) == 0:
-        print('Service not found, creating it')
-        services.register_service('test', 'This is a test service.', '1.0')
-    else:
-        print(service)
+    service = IndalekoService(service_name='test',
+                              service_identifier=args.identifier,
+                              service_description='This is a test service.',
+                              service_version='1.0',
+                              service_type='Test')
+    print('Dump record after the lookup by name test:')
+    print(service.to_json())
+    service = IndalekoService(service_identifier='4debd7e6-c71a-4830-a0a1-8b4e599faea6')
+    print('Dump record after the lookup by identifier test:')
+    print(service.to_json())
 
 
 if __name__ == "__main__":

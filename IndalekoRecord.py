@@ -1,4 +1,4 @@
-
+'''This defines the format of a "record" within Indaleko.  Other classes will inherit from this base class.'''
 import uuid
 import base64
 import json
@@ -17,9 +17,8 @@ class IndalekoRecord:
     keyword_map = (
         ('__raw_data__', 'Data'), # this is the raw captured data
         ('__attributes__', 'Attributes'),
-        ('__source__', 'Source'), # this identifies the data source.
-        ('__identifier__', 'RecordIdentifier'), # this identifies this specific record.
-        ('__timestamp__', 'RecordTimestamp'), # this is the timestamp for this record.
+        ('__source__', 'Source Identifier'), # this identifies the data source.
+        ('__timestamp__', 'Timestamp'), # this is the timestamp for this record.
     )
 
     Schema = IndalekoRecordSchema.get_schema()
@@ -172,7 +171,7 @@ def main():
     record = IndalekoRecord(args.raw_data,
                             attributes,
                             {
-                                'Identifier' : args.source,
+                                'Source Identifier' : args.source,
                                 'Version' : '1.0'
                             })
     print(f'initial record :\n{record.to_json()}')

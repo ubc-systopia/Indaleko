@@ -3,7 +3,6 @@ This module handles data ingestion into Indaleko from the Windows local data
 indexer.
 '''
 import argparse
-import os
 import datetime
 import platform
 import logging
@@ -37,9 +36,17 @@ class IndalekoWindowsLocalIngest(IndalekoIngest):
         if 'machine_id' not in kwargs:
             kwargs['machine_id'] = self.machine_config.machine_id
         super().__init__(**kwargs)
+        self.data_dir = None
 
 
     def find_indexer_files(self) -> list:
+        '''This function finds the files to ingest:
+            search_dir: path to the search directory
+            prefix: prefix of the file to ingest
+            suffix: suffix of the file to ingest (default is .json)
+        '''
+        if self.data_dir is None:
+            raise ValueError('data_dir must be specified')
         return [x for x in super().find_indexer_files(self.data_dir)
                 if IndalekoWindowsLocalIndexer.windows_platform in x and
                 IndalekoWindowsLocalIndexer.windows_local_indexer in x]

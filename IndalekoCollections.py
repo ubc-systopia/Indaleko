@@ -7,10 +7,7 @@ import argparse
 import logging
 import datetime
 import os
-from IndalekoObjectSchema import IndalekoObjectSchema
-from IndalekoRelationshipSchema import IndalekoRelationshipSchema
-from IndalekoServicesSchema import IndalekoServicesSchema
-from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
+from Indaleko import Indaleko
 from IndalekoDBConfig import IndalekoDBConfig
 class IndalekoCollectionIndex:
     '''Manages an index for an IndalekoCollection object.'''
@@ -129,73 +126,6 @@ class IndalekoCollections:
     """
     This class is used to manage the collections in the Indaleko database.
     """
-    Indaleko_Collections = {
-            'Objects': {
-                'schema' : IndalekoObjectSchema.get_schema(),
-                'edge' : False,
-                'indices' : {
-                    'URI' : {
-                        'fields' : ['URI'],
-                        'unique' : True,
-                        'type' : 'persistent'
-                    },
-                    'file identity' : {
-                        'fields' : ['ObjectIdentifier'],
-                        'unique' : True,
-                        'type' : 'persistent'
-                    },
-                    'local identity' : {
-                        # Question: should this be combined with other info to allow uniqueness?
-                        'fields' : ['LocalIdentifier'],
-                        'unique' : False,
-                        'type' : 'persistent'
-                    },
-                },
-            },
-            'Relationships' : {
-                'schema' : IndalekoRelationshipSchema.get_schema(),
-                'edge' : True,
-                'indices' : {
-                    'relationship' : {
-                        'fields' : ['relationship'],
-                        'unique' : False,
-                        'type' : 'persistent'
-                    },
-                    'vertex1' : {
-                        'fields' : ['object1'],
-                        'unique' : False,
-                        'type' : 'persistent'
-                    },
-                    'vertex2' : {
-                        'fields' : ['object2'],
-                        'unique' : False,
-                        'type' : 'persistent'
-                    },
-                    'edge' : {
-                        'fields' : ['object1', 'object2'],
-                        'unique' : False,
-                        'type' : 'persistent'
-                    },
-                }
-            },
-            'Services' : {
-                'schema' : IndalekoServicesSchema.get_schema(),
-                'edge' : False,
-                'indices' : {
-                    'identifier' : {
-                        'fields' : ['name'],
-                        'unique' : True,
-                        'type' : 'persistent'
-                    },
-                },
-            },
-            'MachineConfig' : {
-                'schema' : IndalekoMachineConfigSchema.get_schema(),
-                'edge' : False,
-                'indices' : { },
-            }
-        }
-
     def __init__(self, db_config: IndalekoDBConfig = None, reset: bool = False) -> None:
         if db_config is None:
             self.db_config = IndalekoDBConfig()
@@ -204,11 +134,11 @@ class IndalekoCollections:
         logging.debug('Starting database')
         self.db_config.start()
         self.collections = {}
-        for name in self.Indaleko_Collections.items():
+        for name in Indaleko.Collections.items():
             name = name[0]
             logging.debug('Processing collection %s', name)
             self.collections[name] = IndalekoCollection(name,
-                                                        self.Indaleko_Collections[name],
+                                                        Indaleko.Collections[name],
                                                         self.db_config, reset)
 
     def get_collection(self, name: str) -> IndalekoCollection:

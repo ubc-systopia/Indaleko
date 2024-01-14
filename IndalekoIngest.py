@@ -28,11 +28,9 @@ Examples of ingesters include:
 """
 
 import logging
-import platform
 import datetime
 import os
 import uuid
-import argparse
 from IndalekoServices import IndalekoServices
 from IndalekoCollections import IndalekoCollections
 from IndalekoMachineConfig import IndalekoMachineConfig
@@ -67,7 +65,7 @@ class IndalekoIngest():
         '''
         Constructor for the IndalekoIngest class. Takes a configuration object
         as a parameter. The configuration object is a dictionary that contains
-        all the configuration parameters for the ingestor.
+        all the configuration parameters for the ingester.
         '''
         if 'file_prefix' in kwargs:
             self.file_prefix = kwargs['file_prefix']
@@ -99,6 +97,9 @@ class IndalekoIngest():
             self.log_dir = kwargs['log_dir']
         else:
             self.log_dir = self.default_log_dir
+        if 'services' in kwargs:
+            self.services = kwargs['services']
+            self.register_services()
         self.indaleko_services = None
         self.collections = None
         self.indaleko_services = None
@@ -162,6 +163,12 @@ class IndalekoIngest():
         """
         return self.get_default_outfile_name(target_dir=self.log_dir).replace('.jsonl', '.log')
 
+    def register_services(self : 'IndalekoIngest') -> None:
+        '''
+        This method is used to register the various services that are used by
+        the ingester.  This should be overridden by the derived class.
+        '''
+        raise AssertionError("Not implemented.")
 
     def register_service(self, service : dict) -> IndalekoServices:
         """Used to register a service provider in the database."""
@@ -191,7 +198,7 @@ class IndalekoIngest():
         If it does not exist an empty list is returned.
         '''
         assert service_name is not None, 'Service name cannot be None'
-        service = self.indaleko_services.lookup_service(service_name)
+        service = self.indaleko_services.lookup_service_by_name(service_name)
         if service is None:
             return service
         assert 'name' in service, 'Service must have a name'

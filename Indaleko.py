@@ -41,12 +41,90 @@ a broad range of storage systems, semantic transducers, and activity data source
 """
 import uuid
 import datetime
+from IndalekoObjectSchema import IndalekoObjectSchema
+from IndalekoServicesSchema import IndalekoServicesSchema
+from IndalekoRelationshipSchema import IndalekoRelationshipSchema
+from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
 
 class Indaleko:
     '''This class defines constants used by Indaleko.'''
     default_data_dir = './data'
     default_config_dir = './config'
     default_log_dir = './logs'
+
+    Indaleko_Objects = 'Objects'
+    Indaleko_Relationships = 'Relationships'
+    Indaleko_Services = 'Services'
+    Indaleko_MachineConfig = 'MachineConfig'
+
+    Collections = {
+        Indaleko_Objects: {
+            'schema' : IndalekoObjectSchema.get_schema(),
+            'edge' : False,
+            'indices' : {
+                'URI' : {
+                    'fields' : ['URI'],
+                    'unique' : True,
+                    'type' : 'persistent'
+                },
+                'file identity' : {
+                    'fields' : ['ObjectIdentifier'],
+                    'unique' : True,
+                    'type' : 'persistent'
+                },
+                'local identity' : {
+                    # Question: should this be combined with other info to allow uniqueness?
+                    'fields' : ['LocalIdentifier'],
+                    'unique' : False,
+                    'type' : 'persistent'
+                },
+            },
+        },
+        Indaleko_Relationships : {
+            'schema' : IndalekoRelationshipSchema.get_schema(),
+            'edge' : True,
+            'indices' : {
+                'relationship' : {
+                    'fields' : ['relationship'],
+                    'unique' : False,
+                    'type' : 'persistent'
+                },
+                'vertex1' : {
+                    'fields' : ['object1'],
+                    'unique' : False,
+                    'type' : 'persistent'
+                },
+                'vertex2' : {
+                    'fields' : ['object2'],
+                    'unique' : False,
+                    'type' : 'persistent'
+                },
+                'edge' : {
+                    'fields' : ['object1', 'object2'],
+                    'unique' : False,
+                    'type' : 'persistent'
+                },
+            }
+        },
+        Indaleko_Services : {
+            'schema' : IndalekoServicesSchema.get_schema(),
+            'edge' : False,
+            'indices' : {
+                'identifier' : {
+                    'fields' : ['name'],
+                    'unique' : True,
+                    'type' : 'persistent'
+                },
+            },
+        },
+        Indaleko_MachineConfig : {
+            'schema' : IndalekoMachineConfigSchema.get_schema(),
+            'edge' : False,
+            'indices' : { },
+        }
+    }
+
+
 
     @staticmethod
     def validate_uuid_string(uuid_string : str) -> bool:
