@@ -78,7 +78,6 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
                 config_data = json.load(fd)
             assert str(guid) == config_data['MachineGuid'],\
                   f'GUID mismatch: {guid} != {config_data["MachineGuid"]}'
-        config = IndalekoWindowsMachineConfig()
         config = IndalekoMachineConfig.build_config(
             machine_config=IndalekoWindowsMachineConfig(),
             os=config_data['OperatingSystem']['Caption'],
@@ -87,8 +86,8 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             cpu=config_data['CPU']['Name'],
             cpu_version=config_data['CPU']['Name'],
             cpu_cores=config_data['CPU']['Cores'],
-            source_id=IndalekoWindowsMachineConfig.windows_machine_config_service['identifier'],
-            source_version=IndalekoWindowsMachineConfig.windows_machine_config_service['version'],
+            source_id=IndalekoWindowsMachineConfig.windows_machine_config_service['service_identifier'],
+            source_version=IndalekoWindowsMachineConfig.windows_machine_config_service['service_version'],
             timestamp=timestamp.isoformat(),
             attributes=config_data,
             data=base64.b64encode(msgpack.packb(config_data)).decode('ascii'),
@@ -276,28 +275,6 @@ def main():
         config.write_config_to_db()
 
         return
-
-
-def old_main():
-    '''Some code I am not using at the moment but expect to use again above (in main.)'''
-    config_file = IndalekoWindowsMachineConfig.get_most_recent_config_file(
-        IndalekoWindowsMachineConfig.default_config_dir)
-    print(config_file)
-    _, guid, timestamp = IndalekoWindowsMachineConfig.get_guid_timestamp_from_file_name(config_file)
-    print(guid)
-    db_record = IndalekoWindowsMachineConfig.load_config_from_db(str(guid))
-    print(db_record.get_captured()['Value']['Value'], '\n', timestamp)
-    file_record = IndalekoWindowsMachineConfig.load_config_from_file(
-        IndalekoWindowsMachineConfig.default_config_dir, config_file)
-    print('file_record:')
-    print(file_record.to_dict())
-    # assert parser is not None, 'Parser must  be valid'
-    db_record = IndalekoWindowsMachineConfig.load_config_from_db(str(guid))
-    if db_record is None:
-        print(f'GUID {guid} not found in database')
-    else:
-        print(f'GUID {guid} found in database')
-        print(db_record.to_json())
 
 if __name__ == "__main__":
     main()

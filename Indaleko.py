@@ -111,7 +111,7 @@ class Indaleko:
             'edge' : False,
             'indices' : {
                 'identifier' : {
-                    'fields' : ['name'],
+                    'fields' : ['Name'],
                     'unique' : True,
                     'type' : 'persistent'
                 },

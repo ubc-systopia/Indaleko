@@ -134,6 +134,20 @@ def main():
         log_dir=args.logdir
     )
     print(ingester.get_default_outfile_name())
+    # At this point I need to do the following:
+    # 1. Make sure that the indexer service has been registered.
+    # 2. Make sure that the ingester service has been registered.
+    #
+    # Once this is done, the next step is to read the input file and then do the
+    # data ingestion step.  Data ingestion means:
+    # * Preserving the original data.
+    # * Extracting and normalizing some of the data from the indexer.
+    # * Creating a set of objects that will be written to files for bulk
+    #   uploading to the database.  In the alternative, this could be done via
+    #   the bulk uploader API itself, rather than an intermediate form.  From an
+    #   implementation point, theres' not much difference.
+
+
 
 if __name__ == '__main__':
     main()

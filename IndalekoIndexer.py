@@ -9,7 +9,7 @@ import jsonlines
 import json
 
 from Indaleko import Indaleko
-
+from IndalekoServices import IndalekoService
 
 class IndalekoIndexer:
     '''
@@ -17,7 +17,22 @@ class IndalekoIndexer:
     mechanisms for managing the data and configuration files that are used by
     the indexers.
     '''
+    indaleko_generic_indexer_uuid = '4a80a080-9cc9-4856-bf43-7b646557ac2d'
+    indaleko_generic_indexer_service_name = "Indaleko Generic Indexer"
+    indaleko_generic_indexer_service_description = "This is the base (non-specialized) Indaleko Indexer. You should not see it in the database."
+    indaleko_generic_indexer_service_version = '1.0'
 
+    # define the parameters for the generic indexer service.  These should be
+    # overridden by the derived classes.
+    indaleko_generic_indexer_service = {
+        'service_name' : indaleko_generic_indexer_service_name,
+        'service_description' : indaleko_generic_indexer_service_description,
+        'service_version' : indaleko_generic_indexer_service_version,
+        'service_type' : 'Indexer',
+        'service_identifier' : indaleko_generic_indexer_uuid,
+    }
+
+    # we use a common file naming mechanism.  These are overridable defaults.
     default_file_prefix = 'indaleko'
     default_file_suffix = '.jsonl'
 
@@ -63,7 +78,28 @@ class IndalekoIndexer:
             self.path = kwargs['path']
         else:
             self.path = os.path.expanduser('~')
-
+        self.service_name = IndalekoIndexer.indaleko_generic_indexer_service_name
+        if 'service_name' in kwargs:
+            self.service_name = kwargs['service_name']
+        self.service_description = \
+            self.indaleko_generic_indexer_service_description
+        if 'service_description' in kwargs:
+            self.service_description = kwargs['service_description']
+        self.service_version = self.indaleko_generic_indexer_service_version
+        if 'service_version' in kwargs:
+            self.service_version = kwargs['service_version']
+        self.service_type = 'Indexer'
+        if 'service_type' in kwargs:
+            self.service_type = kwargs['service_type']
+        self.service_identifier = self.indaleko_generic_indexer_uuid
+        if 'service_identifier' in kwargs:
+            self.service_identifier = kwargs['service_identifier']
+        self.machine_config_service = IndalekoService(service_name=self.service_name,
+                              service_identifier=self.service_identifier,
+                              service_description=self.service_description,
+                              service_version=self.service_version,
+                              service_type=self.service_type)
+        assert self.machine_config_service is not None, "Indexer service does not exist."
 
     def find_indexer_files(self,
                    search_dir : str,

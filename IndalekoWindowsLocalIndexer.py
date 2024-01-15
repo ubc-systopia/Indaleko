@@ -12,12 +12,27 @@ from Indaleko import Indaleko
 from IndalekoIndexer import IndalekoIndexer
 from IndalekoWindowsMachineConfig import IndalekoWindowsMachineConfig
 
+
 class IndalekoWindowsLocalIndexer(IndalekoIndexer):
     '''
     This is the class that indexes Windows local file systems.
     '''
     windows_platform = 'Windows'
     windows_local_indexer = 'local-fs'
+
+    indaleko_windows_local_indexer_uuid = '0793b4d5-e549-4cb6-8177-020a738b66b7'
+    indaleko_windows_local_indexer_service_name = 'Windows Local Indexer'
+    indaleko_windows_local_indexer_service_description = 'This service indexes the local filesystems of a Windows machine.'
+    indaleko_windows_local_indexer_service_version = '1.0'
+    indaleko_windows_local_indexer_service_type = 'Indexer'
+
+    indaleko_windows_local_indexer_service ={
+        'service_name' : indaleko_windows_local_indexer_service_name,
+        'service_description' : indaleko_windows_local_indexer_service_description,
+        'service_version' : indaleko_windows_local_indexer_service_version,
+        'service_type' : indaleko_windows_local_indexer_service_type,
+        'service_identifier' : indaleko_windows_local_indexer_uuid,
+    }
 
     @staticmethod
     def windows_to_posix(filename):
@@ -56,6 +71,7 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
         super().__init__(**kwargs,
                          platform=IndalekoWindowsLocalIndexer.windows_platform,
                          indexer=IndalekoWindowsLocalIndexer.windows_local_indexer,
+                         **IndalekoWindowsLocalIndexer.indaleko_windows_local_indexer_service
         )
 
     def convert_windows_path_to_guid_uri(self, path : str) -> str:
