@@ -441,3 +441,248 @@ database.  Future versions may automate more of this pipeline.
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ```
+
+## How to use Indaleko?
+
+In this section, we'll talk about how to set up your system to use Indaleko.
+The process is a combination of manual and automated steps.
+
+### Install Pre-requisites
+
+Things you should have installed:
+
+* **Docker** this is needed because we use ArangoDB and run it in a
+  containerized environment.  The _data_ is stored on the local host system.
+  While it is possible to configure this to use a remote database, that step is
+  not presently automated.
+
+* **Python** this is needed to run the Indaleko scripts.  Note there are a
+  number of libraries that need to be installed.  There is a `requirements.txt`
+  file that captures the current configuration that we have been using, though
+  it may work with other versions of the various libraries.  It is distinctly
+  possible we've added some dependency and failed to capture it in the
+  requirements.txt file, in which case, please open an issue and/or a pull
+  request.
+
+* **Powershell** _this is Windows Only_.  There is a powershell script that
+  gathers configuration information about your Windows machine.  It requires
+  elevation ("administrative privileges") and you must enable running powershell
+  scripts (which is disabled by default.)  The script writes data into the
+  `config` directory, where it is then parsed and extracted by the setup
+  scripts.
+
+* **ArangoDB Client Tools** In order to upload the files into Arango, you need
+  to install the ArangoDB client tools on your system.  There are versions for
+  Windows, MacOS X, and Linux.  **Note:** you should _not_ run the ArangoDB
+  database locally.  Keep it in the container to minimize compatibility issues.
+  This may require manually disabling it (this was required on Windows, for
+  example.)
+
+### Set up the database
+
+The `dbsetup.py` script will set up the database.  It generates a config file
+that is stored in the `config` directory.  **Note that this file is a sensitive
+file and will not be checked into git by default (it is in `.gitignore`).  If
+you lose this file, you will need to reset your database.
+
+This script will pull the most recent version of the ArangoDB docker image,
+provision a shared volume for storing the database, create a random password for
+the root account, _which is stored in the config file_. It also creates an
+Indaleko account, with a separate password that only has access to the Indaleko
+database.  It will create the various collections used by Indaleko, including
+the various schema.
+
+To look at the various options for this script, you can use the `--help`
+command.  By default this script tries to "do the right thing" when you first
+invoke it (part of our philosophy of making the tool easiest to use for new
+users.)
+
+You can confirm the database is set up and running by accessing your
+[ArangoDB](http://localhost:8529) local database connection.  You can extract
+the password from the `indaleko-db-config.ini` file, which is located in the
+`config` directory by default.  **Do not** distribute this file.  It contains
+passwords for your database.
+
+### Set up your machine configuration
+
+Note that there are currently three platforms we are supporting:
+
+* Windows - this has been used on Windows 11.
+* MacOS X - this has been used on MacOS X, though that work is still in
+  progress.
+* Linux - this has been used on Ubuntu 22.04, though that work is still in
+  progress.
+
+The following sections will describe how to configure the various systems.
+
+#### Windows
+
+There are multiple steps required to set up Indaleko on your Windows machine.
+Assuming you have installed the database, you should be able to index and ingest
+the data on your local machine.
+
+##### Capture System Configuration
+
+Capturing the system configuration on Windows is done using the powershell
+script [`windows-hardware-info.ps1`](windows-hardware-info.ps1), which must be
+run with administrative privileges (the script is explicitly set to require
+this, since some of the commands fail otherwise).  There are many resources
+available for explaining this.  Here is a video [3 easy ways to run Windows
+Powershell as admin on Windows 10 and
+11](https://www.youtube.com/watch?v=3IKQ0PwIAdo) but it's certainly not the only
+resource.
+
+**Note:** the output is written into the `config` directory, which is **not
+saved** to git (the entire directory is excluded in `.gitignore`).  While you
+can override this, this is **not recommended** due to the sensitive information
+captured by this script.
+
+Once you have captured your configuration information, you can run the Python script
+`IndalekoWindowsMachineConfig.py`.  This script will locate and parse the file
+that was saved by the Powershell script and insert it into the database.
+
+The script has various override options, but aims to "do the right thing" if you
+run it without arguments.  To see the arguments, you can use the `--help` option.
+
+##### Index Your Storage
+
+Once your machine configuration has been saved, you can begin creating data
+index files.  This is done by executing the Python script
+`IndalekoWindowsLocalIndexer.py` using your installed version of Python.
+
+By default, this will index your home directory, which is usually something like
+`C:\Users\MyName`.  If you want to override this you can use the `--path`
+option.  You can see all of the override options by using the `--help` command.
+
+This script will write the output index file to the `data` directory. Note that
+this directory is **excluded from checkin to git** by default as it is listed in
+the `.gitignore` file.  Logs (if any) will be (by default) written to the 'logs'
+directory.
+
+Without any options given, it will write the file with a structured name that
+includes the platform, machine id, volume id, and the timestamp of when the data
+was captured.
+
+The index data can be used in subsequent ingestion steps.
+
+##### Process Your Storage Indexing
+
+An _ingester_ is an agent that takes the indexing data you have previously
+captured and then performs additional analysis on it.  This is the step that
+loads data into the database.  As of this writing, there is only a single
+ingester written for Windows, which is the script
+`IndalekoWindowsLocalIngester.py`.  This script knows the format of the index
+file output, retrieves it, normalizes data that was captured by the indexer, and
+then writes out the resulting data.
+
+By default, it will take one of the data files (ideally the most recent) and
+ingest it.  The _output_ of this is a set of files that can be manually loaded
+into the database. The files generated have long names, but those names capture
+information about the ingested data.  Note that the timestamp of the output file
+will match the timestamp of the index file unless you override it.
+
+There are many override options.  To see your options you can use the `--help`
+command.  This command will also show you which file it will ingest unless you
+override it.
+
+While the ingestion script does write a small amount of data to the database, it
+is writing to intermediate files in order to allow bulk uploading.  The bulk
+uploader requires the `arangoimport` tool, which was installed with the ArangoDB
+Client tools package.
+
+There are two output files, one represents file and directory metadata.  This is
+uploaded to the `Objects` collection, which must be specified on the command
+line.
+
+`arangoimport -c Objects <name of file with metadata>.jsonl`
+
+We use the json lines format for these files.  Depending upon the size of your
+file, this uploading process can take considerable time.
+
+The second file represents the relationships between the objects and this is
+uploaded to the `Relationships` collection, which also must be specified on the
+command line.  Note that these collections should already exist inside the
+Arango database.
+
+`arangoimport -c Relationships <name of file with metadata>.jsonl`
+
+The `arangoimport` tool will tell you how many objects were successfully
+inserted.  This should show no errors or warnings.  If it does, there is an
+issue and it will need to be resolved before using the rest of the Indaleko
+facilities.
+
+#### MacOS
+
+This section describes how to set up Indaleko on MacOS X.
+
+##### Capture System Configuration
+
+Run `MacHardwareInfoGenerator.py` to get the config your mac. It is saved in the `.config` directory. It saves the meta-data about your Mac including the name and size of the volumes, hardware info, etc.
+
+```python
+python MacHardwareInfoGenerator.py -d ./config
+```
+
+The output will be saved inside the `config` directory with this name pattern `macos-hardware-info-[GUID]-[TIMESTAMP].json`. The following is a sample of what you should see:
+
+```json
+{
+    "MachineGuid": "74457f40-621b-444b-950b-21d8b943b28e",
+    "OperatingSystem": {
+        "Caption": "macOS",
+        "OSArchitecture": "arm64",
+        "Version": "20.6.0"
+    },
+    "CPU": {
+        "Name": "arm",
+        "Cores": 8
+    },
+    "VolumeInfo": [
+        {
+            "UniqueId": "/dev/disk3s1s1",
+            "VolumeName": "disk3s1s1",
+            "Size": "228.27 GB",
+            "Filesystem": "apfs"
+        },
+        {
+            "UniqueId": "/dev/disk3s6",
+            "VolumeName": "disk3s6",
+            "Size": "228.27 GB",
+            "Filesystem": "apfs"
+        }
+    ]
+}
+```
+
+#### Index Your Storage
+
+Once you have captured the configuration, the first step is to index your storage.
+
+#### Process Your Storage Indexing
+
+This is the process we call _ingestion_, which takes the raw indexing data,
+normalizes it, and captures it into files that can be bulk uploaded into the
+database.  Future versions may automate more of this pipeline.
+
+
+#### Linux
+
+# License
+
+```
+    Indaleklo Project README file
+    Copyright (C) 2024 Tony Mason
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+```
