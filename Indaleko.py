@@ -124,8 +124,6 @@ class Indaleko:
         }
     }
 
-
-
     @staticmethod
     def validate_uuid_string(uuid_string : str) -> bool:
         """Given a string, verify that it is in fact a valid uuid."""

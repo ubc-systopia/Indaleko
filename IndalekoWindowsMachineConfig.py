@@ -14,6 +14,7 @@ import arango
 from IndalekoRecord import IndalekoRecord
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoMachineConfig import IndalekoMachineConfig
+from IndalekoServices import IndalekoService
 
 class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
     '''
@@ -23,16 +24,17 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
     '''
 
     windows_machine_config_file_prefix = 'windows-hardware-info'
-
     windows_machine_config_uuid_str = '3360a328-a6e9-41d7-8168-45518f85d73e'
+    windows_machine_config_service_name = "Windows Machine Configuration"
+    windows_machine_config_service_description = "This service provides the configuration information for a Windows machine."
+    windows_machine_config_service_version = "1.0"
 
     windows_machine_config_service = {
-        'name': 'WindowsMachineConfig',
-        'description': 'This service provides the configuration information for a Windows machine.',
-        'version': '1.0',
-        'identifier': windows_machine_config_uuid_str,
-        'created': datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        'type': 'Indexer',
+        'service_name' : windows_machine_config_service_name,
+        'service_description' : windows_machine_config_service_description,
+        'service_version' : windows_machine_config_service_version,
+        'service_type' : 'Machine Configuration',
+        'service_identifier' : windows_machine_config_uuid_str,
     }
 
 
@@ -40,7 +42,9 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
     def __init__(self : 'IndalekoWindowsMachineConfig',
                  timestamp : datetime = None,
                  db : IndalekoDBConfig = None):
-        super().__init__(timestamp=timestamp, db=db)
+        super().__init__(timestamp=timestamp,
+                         db=db,
+                         **IndalekoWindowsMachineConfig.windows_machine_config_service)
         self.volume_data = {}
 
     @staticmethod
@@ -188,7 +192,8 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
         '''This returns the volume information.'''
         return self.volume_data
 
-    def map_drive_letter_to_volume_guid(self: 'IndalekoWindowsMachineConfig', drive_letter : str) -> str:
+    def map_drive_letter_to_volume_guid(self: 'IndalekoWindowsMachineConfig',
+                                        drive_letter : str) -> str:
         '''Map a drive letter to a volume GUID.'''
         assert drive_letter is not None, 'drive_letter must be a valid string'
         assert len(drive_letter) == 1, 'drive_letter must be a single character'
@@ -222,7 +227,8 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
 
 
 def main():
-    '''This is the main handler for the Indaleko Windows Machine Config service.'''
+    '''This is the main handler for the Indaleko Windows Machine Config
+    service.'''
     parser = argparse.ArgumentParser()
     parser.add_argument('--version', action='version', version='%(prog)s 1.0')
     parser.add_argument('--delete', '-d', action='store_true',
@@ -236,6 +242,7 @@ def main():
     parser.add_argument('--add', '-a', action='store_true',
                         help='Add a machine configuration (from the file) to the database.')
     args = parser.parse_args()
+    IndalekoWindowsMachineConfig()
     if args.list:
         print('Listing machine configurations in the database.')
         configs = IndalekoWindowsMachineConfig.find_configs_in_db()

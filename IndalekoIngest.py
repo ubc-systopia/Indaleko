@@ -168,7 +168,10 @@ class IndalekoIngest():
         This method is used to register the various services that are used by
         the ingester.  This should be overridden by the derived class.
         '''
-        raise AssertionError("Not implemented.")
+        if not hasattr(self, 'services'):
+            raise AssertionError("No services to register.")
+        for service in self.services:
+            print(service)
 
     def register_service(self, service : dict) -> IndalekoServices:
         """Used to register a service provider in the database."""

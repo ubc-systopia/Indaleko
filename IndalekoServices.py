@@ -40,11 +40,12 @@ class IndalekoServices:
 
     service_types = (
         'Test',
+        "Machine Configuration",
         'Indexer',
         'Ingester',
-        'SemanticTransducer',
-        'ActivityContextGenerator',
-        'ActivityDataCollector',
+        'Semantic Transducer',
+        'Activity Context Generator',
+        'Activity Data Collector',
     )
 
     CollectionDefinition = {
@@ -183,10 +184,12 @@ class IndalekoService(IndalekoRecord):
         assert isinstance(self.collection, IndalekoCollection), \
             'service_collection must be an IndalekoCollection'
         found = False
-        if self.service_identifier is None:
-            found = self.lookup_service_by_name()
-        else:
+        if self.service_identifier is not None:
             found = self.lookup_service_by_identifier()
+        else:
+            if self.service_name is None:
+                raise ValueError('service_name must be specified.')
+            found = self.lookup_service_by_name()
         if not found:
             if self.service_name is None:
                 raise ValueError('service_name must be specified.')
@@ -276,6 +279,48 @@ class IndalekoService(IndalekoRecord):
             'Type' : self.service_type,
             'Created' : self.creation_date
         }
+
+    @staticmethod
+    def create_service_data(**kwargs) -> dict:
+        '''
+        This method creates the service data for the given arguments. The
+        following values are mandatory:
+        * service_name - the name of the service (a string)
+        * service_version - the version of the service (a string)
+        * service_type - the type of the service (a string)
+        The following values are optional:
+        * service_identifier - the identifier for the service (a UUID).  If it
+        is not provided, one is generated.
+        * service_description - the description of the service (a string).  If
+        it is not provided, nothing is stored.
+        * creation_date - the creation date of the service (a string).  If it is
+        not provided, the current date/time is used.
+
+        '''
+        service_data = {}
+        if 'service_name' in kwargs:
+            service_data['Name'] = kwargs['service_name']
+        else:
+            raise ValueError('service_name must be specified.')
+        if 'service_description' in kwargs:
+            service_data['Description'] = kwargs['service_description']
+        if 'service_version' in kwargs:
+            service_data['Version'] = kwargs['service_version']
+        else:
+            raise ValueError('service_version must be specified.')
+        if 'service_identifier' in kwargs:
+            service_data['Identifier'] = kwargs['service_identifier']
+        else: # generate a new one
+            service_data['Identifier'] = str(uuid.uuid4())
+        if 'service_type' in kwargs:
+            service_data['Type'] = kwargs['service_type']
+        if 'creation_date' in kwargs:
+            service_data['Created'] = kwargs['creation_date']
+        else:
+            service_data['Created'] = \
+                datetime.datetime.now(datetime.timezone.utc).isoformat()
+        return service_data
+
 
     def to_dict(self) -> dict:
         """Return a dictionary representation of this object."""

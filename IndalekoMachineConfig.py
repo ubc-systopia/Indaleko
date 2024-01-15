@@ -12,6 +12,7 @@ from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoRecord import IndalekoRecord
 from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
 from Indaleko import Indaleko
+from IndalekoServices import IndalekoService
 
 
 class IndalekoMachineConfig(IndalekoRecord):
@@ -32,6 +33,7 @@ class IndalekoMachineConfig(IndalekoRecord):
         self: "IndalekoMachineConfig",
         timestamp: datetime = None,
         db: IndalekoDBConfig = None,
+        **kwargs
     ):
         """
         Constructor for the IndalekoMachineConfig class. Takes a
@@ -56,6 +58,29 @@ class IndalekoMachineConfig(IndalekoRecord):
         collections = IndalekoCollections(db_config=db)
         self.collection = collections.get_collection(Indaleko.Indaleko_MachineConfig)
         assert self.collection is not None, "MachineConfig collection does not exist."
+        service_name = "Indaleko Machine Config Service"
+        if "service_name" in kwargs:
+            service_name = kwargs["service_name"]
+        service_identifier = self.indaleko_machine_config_uuid_str
+        if "service_identifier" in kwargs:
+            service_identifier = kwargs["service_identifier"]
+        service_description = None
+        if "service_description" in kwargs:
+            service_description = kwargs["service_description"]
+        service_version = self.indaleko_machine_config_version_str
+        if "service_version" in kwargs:
+            service_version = kwargs["service_version"]
+        service_type = "Machine Configuration"
+        if "service_type" in kwargs:
+            service_type = kwargs["service_type"]
+        self.machine_config_service = IndalekoService(service_name=service_name,
+                              service_identifier=service_identifier,
+                              service_description=service_description,
+                              service_version=service_version,
+                              service_type=service_type)
+        assert self.machine_config_service is not None, "MachineConfig service does not exist."
+
+
 
     def set_platform(self, platform: dict) -> None:
         """
