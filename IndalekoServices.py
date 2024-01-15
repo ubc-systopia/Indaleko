@@ -236,7 +236,6 @@ class IndalekoService(IndalekoRecord):
         Given a string identifier (UUID) for the service, look up that
         service.
         '''
-        self.service = None
         if not Indaleko.validate_uuid_string(self.service_identifier):
             raise ValueError(f'{self.service_identifier} is not a valid UUID.')
         data = self.collection.find_entries(Identifier = self.service_identifier)

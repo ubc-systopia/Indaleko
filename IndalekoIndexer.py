@@ -7,6 +7,7 @@ import datetime
 import logging
 import jsonlines
 import json
+import re
 
 from Indaleko import Indaleko
 from IndalekoServices import IndalekoService
@@ -94,12 +95,14 @@ class IndalekoIndexer:
         self.service_identifier = self.indaleko_generic_indexer_uuid
         if 'service_identifier' in kwargs:
             self.service_identifier = kwargs['service_identifier']
-        self.machine_config_service = IndalekoService(service_name=self.service_name,
-                              service_identifier=self.service_identifier,
-                              service_description=self.service_description,
-                              service_version=self.service_version,
-                              service_type=self.service_type)
-        assert self.machine_config_service is not None, "Indexer service does not exist."
+        self.indexer_service = IndalekoService(
+            service_name=self.service_name,
+            service_identifier=self.service_identifier,
+            service_description=self.service_description,
+            service_version=self.service_version,
+            service_type=self.service_type
+        )
+        assert self.indexer_service is not None, "Indexer service does not exist."
 
     def find_indexer_files(self,
                    search_dir : str,
@@ -118,7 +121,7 @@ class IndalekoIndexer:
                 if x.startswith(prefix)
                 and x.endswith(suffix)]
 
-    def generate_index_file_name(self, target_dir : str = None) -> str:
+    def generate_indexer_file_name(self, target_dir : str = None) -> str:
         '''This will generate a file name for the indexer output file.'''
         if hasattr(self, 'platform'):
             platform = self.platform
@@ -158,6 +161,43 @@ class IndalekoIndexer:
                    {self.file_suffix}'.replace(' ', '')
         )
 
+    @staticmethod
+    def extract_metadata_from_indexer_file_name(file_name : str) -> dict:
+        '''
+        This script extracts metadata from an indexer file name, based upon
+        the format used by generate_indexer_file_name.
+        '''
+        base_file_name, file_suffix = os.path.splitext(os.path.basename(file_name))
+
+        # Define the regular expression pattern to match the structured filename
+        pattern = (
+            r'(?P<file_prefix>[^-]+)-'
+            r'platform=(?P<platform>[^-]+)-'
+            r'indexer=(?P<indexer>[^-]+)-'
+            r'machine=(?P<machine_id>[^-]+)-'
+            r'storage=(?P<storage_description>[^-]+)-'
+            r'timestamp=(?P<timestamp>.+)'
+        )
+        # Match the pattern to the filename
+        match = re.match(pattern, base_file_name)
+        if not match:
+            raise ValueError("Filename format not recognized")
+        # Extract the metadata into a dictionary
+        metadata = match.groupdict()
+        # Perform any necessary post-processing (e.g., replacing underscores back with hyphens)
+        for key in metadata:
+            metadata[key] = metadata[key].replace('_', '-')
+        if 'timestamp' in metadata:
+            # 2024-01-15T19-47-11.670000+00-00
+            timestamp = metadata['timestamp'].replace('-', ':')
+            timestamp_parts = timestamp.split('.')
+            fractional_part = timestamp_parts[1][:6] # truncate to 6 digits
+            ymd, hms = timestamp_parts[0].split('T')
+            timestamp = ymd.replace(':', '-') + 'T' + hms + '.' + fractional_part + '+00:00'
+            metadata['timestamp'] = timestamp
+        metadata['file_suffix'] = file_suffix
+        return metadata
+
     def build_stat_dict(self, name: str, root : str) -> tuple:
         '''This function builds a stat dict for a given file.'''
         file_path = os.path.join(root, name)
@@ -172,6 +212,7 @@ class IndalekoIndexer:
         stat_dict['file'] = name
         stat_dict['path'] = root
         stat_dict['URI'] = os.path.join(last_uri, name)
+        stat_dict['Indexer'] = self.service_identifier
         return (stat_dict, last_uri)
 
     def index(self) -> dict:
@@ -203,10 +244,12 @@ class IndalekoIndexer:
 def main():
     """Test code for this module."""
     indexer = IndalekoIndexer()
-    output_file = indexer.generate_index_file_name()
+    output_file = indexer.generate_indexer_file_name()
     with open(output_file, 'wt', encoding='utf-8-sig') as output:
         output.write('Hello, world!\n')
         print(f'Wrote {output_file}.')
+    metadata = indexer.extract_metadata_from_indexer_file_name(output_file)
+    print(json.dumps(metadata, indent=4))
 
 if __name__ == "__main__":
     main()

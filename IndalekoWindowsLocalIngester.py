@@ -6,14 +6,16 @@ import argparse
 import datetime
 import platform
 import logging
+import json
+import os
 
-from IndalekoIngest import IndalekoIngest
+from IndalekoIngester import IndalekoIngester
 from IndalekoWindowsMachineConfig import IndalekoWindowsMachineConfig
 from Indaleko import Indaleko
 from IndalekoWindowsLocalIndexer import IndalekoWindowsLocalIndexer
 from IndalekoServices import IndalekoService
 
-class IndalekoWindowsLocalIngest(IndalekoIngest):
+class IndalekoWindowsLocalIngester(IndalekoIngester):
     '''
     This class handles ingestion of metadata from the Indaleko Windows
     indexing service.
@@ -36,8 +38,13 @@ class IndalekoWindowsLocalIngest(IndalekoIngest):
         self.machine_config = kwargs['machine_config']
         if 'machine_id' not in kwargs:
             kwargs['machine_id'] = self.machine_config.machine_id
+        if 'timestamp' not in kwargs:
+            kwargs['timestamp'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        if 'platform' not in kwargs:
+            kwargs['platform'] = IndalekoWindowsLocalIngester.windows_platform
+        if 'ingester' not in kwargs:
+            kwargs['ingester'] = IndalekoWindowsLocalIngester.windows_local_ingester
         super().__init__(**kwargs)
-        self.data_dir = None
 
 
     def find_indexer_files(self) -> list:
@@ -51,6 +58,14 @@ class IndalekoWindowsLocalIngest(IndalekoIngest):
         return [x for x in super().find_indexer_files(self.data_dir)
                 if IndalekoWindowsLocalIndexer.windows_platform in x and
                 IndalekoWindowsLocalIndexer.windows_local_indexer in x]
+
+    def ingest(self) -> None:
+        '''
+        This function ingests the indexer file and emits the data needed to
+        upload to the database.
+        '''
+        logging.warning('Ingesting not yet implemented.')
+
 
 def main():
     '''
@@ -81,7 +96,7 @@ def main():
     # step 1: find the machine configuration file
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument('--configdir', '-c',
-                            help='Path to the config directory',
+                            help=f'Path to the config directory (default is {Indaleko.default_config_dir})',
                             default=Indaleko.default_config_dir)
     pre_args, _ = pre_parser.parse_known_args()
     config_files = IndalekoWindowsMachineConfig.find_config_files(pre_args.configdir)
@@ -94,9 +109,10 @@ def main():
     pre_parser.add_argument('--config',
                             choices=config_files,
                             default=default_config_file,
-                            help='Configuration file to use.')
-    pre_parser.add_argument('--datadir', '-d',
-                            help='Path to the data directory',
+                            help=f'Configuration file to use. (default: {default_config_file})')
+    pre_parser.add_argument('--datadir',
+                            help=f'Path to the data directory (default is {Indaleko.default_data_dir})',
+                            type=str,
                             default=Indaleko.default_data_dir)
     pre_args, _ = pre_parser.parse_known_args()
     machine_config = IndalekoWindowsMachineConfig.load_config_from_file(config_file=default_config_file)
@@ -107,46 +123,67 @@ def main():
         machine_config=machine_config
     )
     indexer_files = indexer.find_indexer_files(pre_args.datadir)
-    parser = argparse.ArgumentParser(add_help=False, parents=[pre_parser])
-    parser.add_argument('--input', '-i',
+    parser = argparse.ArgumentParser(parents=[pre_parser])
+    parser.add_argument('--input',
                         choices=indexer_files,
                         default=indexer_files[-1],
                         help='Windows Local Indexer file to ingest.')
     parser.add_argument('--reset', action='store_true', help='Reset the service collection.')
-    parser.add_argument('--logdir', '-l', help='Path to the log directory', default=Indaleko.default_log_dir)
+    parser.add_argument('--logdir',
+                        help=f'Path to the log directory (default is {Indaleko.default_log_dir})',
+                        default=Indaleko.default_log_dir)
     parser.add_argument('--loglevel',
                         choices=logging_levels,
                         default=logging.DEBUG,
                         help='Logging level to use.')
     args = parser.parse_args()
-    print(args)
-    # next thing to do is generate a log file name and initialize logging
-    # ingester = IndalekoWindowsLocalIngest(args.datadir, args.input,
-    # reset=args.reset)
+    metadata = IndalekoWindowsLocalIndexer.extract_metadata_from_indexer_file_name(args.input)
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    ingester = IndalekoWindowsLocalIngest(
+    if 'machine_id' in metadata:
+        if metadata['machine_id'] != machine_config.machine_id:
+            print('Warning: machine ID of indexer file ' +\
+                  f'({metadata["machine_id"]}) does not match machine ID of ingester ' +\
+                    f'({machine_config.machine_id}.)')
+        machine_id = metadata['machine_id']
+    if 'timestamp' in metadata:
+        timestamp = metadata['timestamp']
+    if 'platform' in metadata:
+        indexer_platform = metadata['platform']
+        if indexer_platform != IndalekoWindowsLocalIngester.windows_platform:
+            print('Warning: platform of indexer file ' +\
+                  f'({indexer_platform}) name does not match platform of ingester ' +\
+                    f'({IndalekoWindowsLocalIngester.windows_platform}.)')
+    if 'storage_description' in metadata:
+        storage_description = metadata['storage_description']
+    if 'file_prefix' in metadata:
+        file_prefix = metadata['file_prefix']
+    if 'file_suffix' in metadata:
+        file_suffix = metadata['file_suffix']
+    ingester = IndalekoWindowsLocalIngester(
         machine_config=machine_config,
+        machine_id = machine_id,
         timestamp=timestamp,
         platform=IndalekoWindowsLocalIndexer.windows_platform,
-        ingester = IndalekoWindowsLocalIngest.windows_local_ingester,
+        ingester = IndalekoWindowsLocalIngester.windows_local_ingester,
+        storage_description = storage_description,
+        file_prefix = file_prefix,
+        file_suffix = file_suffix,
         output_dir=args.datadir,
         input_file=args.input,
         log_dir=args.logdir
     )
-    print(ingester.get_default_outfile_name())
-    # At this point I need to do the following:
-    # 1. Make sure that the indexer service has been registered.
-    # 2. Make sure that the ingester service has been registered.
-    #
-    # Once this is done, the next step is to read the input file and then do the
-    # data ingestion step.  Data ingestion means:
-    # * Preserving the original data.
-    # * Extracting and normalizing some of the data from the indexer.
-    # * Creating a set of objects that will be written to files for bulk
-    #   uploading to the database.  In the alternative, this could be done via
-    #   the bulk uploader API itself, rather than an intermediate form.  From an
-    #   implementation point, theres' not much difference.
-
+    output_file = ingester.generate_ingester_file_name()
+    log_file_name = ingester.generate_ingester_file_name(
+        target_dir=args.logdir).replace('.jsonl', '.log') # gross
+    log_file_name = log_file_name.replace(':', '-')
+    logging.basicConfig(filename=os.path.join(log_file_name),
+                                level=logging.DEBUG,
+                                format='%(asctime)s - %(levelname)s - %(message)s',
+                                force=True)
+    logging.info('Ingesting %s ' , args.input)
+    logging.info('Output file %s ' , output_file)
+    ingester.ingest()
+    logging.info('Done')
 
 
 if __name__ == '__main__':

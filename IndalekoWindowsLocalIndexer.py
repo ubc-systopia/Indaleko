@@ -108,6 +108,9 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
             assert last_uri.startswith('\\\\?\\Volume{'), \
                 f'last_uri {last_uri} does not start with \\\\?\\Volume{{'
         stat_dict['URI'] = os.path.join(last_uri, os.path.splitdrive(root)[1], name)
+        stat_dict['Indexer'] = self.service_identifier
+        if last_uri.startswith('\\\\?\\Volume{'):
+            stat_dict['Volume GUID'] = last_uri[11:-2]
         return (stat_dict, last_uri, last_drive)
 
 
@@ -175,7 +178,7 @@ def main():
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     indexer = IndalekoWindowsLocalIndexer(machine_config=machine_config,
                                           timestamp=timestamp)
-    output_file = indexer.generate_index_file_name()
+    output_file = indexer.generate_indexer_file_name()
     parser= argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--datadir', '-d',
                         help='Path to the data directory',
@@ -197,8 +200,8 @@ def main():
                                           path=args.path,
                                           machine_config=machine_config,
                                           storage_description=drive_guid)
-    output_file = indexer.generate_index_file_name()
-    log_file_name = indexer.generate_index_file_name(target_dir=args.logdir)
+    output_file = indexer.generate_indexer_file_name()
+    log_file_name = indexer.generate_indexer_file_name(target_dir=args.logdir)
     log_file_name = log_file_name.replace('.jsonl', '.log') #gross
     logging.basicConfig(filename=os.path.join(log_file_name),
                                 level=args.loglevel,
