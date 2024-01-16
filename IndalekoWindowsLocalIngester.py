@@ -20,7 +20,8 @@ from IndalekoServices import IndalekoService
 from IndalekoObject import IndalekoObject
 from IndalekoUnix import UnixFileAttributes
 from IndalekoWindows import IndalekoWindows
-
+from IndalekoRelationshipContains import IndalekoRelationshipContains
+from IndalekoRelationshipContained import IndalekoRelationshipContainedBy
 class IndalekoWindowsLocalIngester(IndalekoIngester):
     '''
     This class handles ingestion of metadata from the Indaleko Windows
@@ -72,6 +73,7 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
             'Identifier' : self.windows_local_ingester_uuid,
             'Version' : '1.0'
         }
+        print(self.output_file)
 
 
     def find_indexer_files(self) -> list:
@@ -169,34 +171,79 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
         dir_data_by_path = {}
         dir_data = []
         file_data = []
+        # Step 1: build the normalized data
         for item in self.indexer_data:
             obj = self.normalize_index_data(item)
             if 'S_IFDIR' in obj.args['UnixFileAttributes'] or \
                'FILE_ATTRIBUTE_DIRECTORY' in obj.args['WindowsFileAttributes']:
                 if 'Path' not in obj:
-                    logging.warning('Directory object %s does not have a path',
-                                    obj['ObjectIdentifier'])
+                    logging.warning('Directory object does not have a path: %s', obj.to_json())
                     continue # skip
-                dir_data_by_path[os.path.join(obj.args['Path'], obj.args['Label'])] = obj
-                dir_data.append(object)
+                dir_data_by_path[os.path.join(obj['Path'], obj['Volume GUID'])] = obj
+                dir_data.append(obj)
             else:
                 file_data.append(obj)
-        for item in dir_data: # build the directory data
-            assert 'Container' not in item, 'Directories should not have multiple links'
-            if item['Path'] in dir_data_by_path:
-                item['Container'] = dir_data_by_path[item['Path']]['ObjectIdentifier']
-        for item in file_data: # build the file data
-            assert not 'S_IFDIR' in item['UnixFileAttributes'], 'Directories should not be in file data'
-            assert not 'FILE_ATTRIBUTE_DIRECTORY' in item['WindowsFileAttributes'], \
-                'Directories should not be in file data'
-            if item['Path'] in dir_data_by_path:
-                if 'Container' not in item:
-                    item['Container'] = []
-                assert isinstance(item['Container'], list), 'Container must be a list'
-                item['Container'].append(dir_data_by_path[item['Path']]['ObjectIdentifier'])
-        # at this point we have our vertices.  Still need to build the edges,
-        # but this is a good start.
-
+        # Step 2: build a table of paths to directory uuids
+        dirmap = {}
+        for item in dir_data:
+            fqp = os.path.join(item['Path'], item['Name'])
+            id = item.args['ObjectIdentifier']
+            dirmap[fqp] = id
+        # now, let's build a list of the edges, using our map.
+        dir_edges = []
+        source = {
+            'Identifier' : self.windows_local_ingester_uuid,
+            'Version' : '1.0',
+        }
+        for item in dir_data + file_data:
+            parent = item['Path']
+            if parent not in dirmap:
+                continue
+            parent_id = dirmap[parent]
+            dir_edge = IndalekoRelationshipContains(
+                relationship = \
+                    IndalekoRelationshipContains.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR,
+                object1 = {
+                    'collection' : 'Objects',
+                    'object' : item.args['ObjectIdentifier'],
+                },
+                object2 = {
+                    'collection' : 'Objects',
+                    'object' : parent_id,
+                },
+                source = source
+            )
+            dir_edges.append(dir_edge)
+            dir_edge = IndalekoRelationshipContainedBy(
+                relationship = \
+                    IndalekoRelationshipContainedBy.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR,
+                object1 = {
+                    'collection' : 'Objects',
+                    'object' : parent_id,
+                },
+                object2 = {
+                    'collection' : 'Objects',
+                    'object' : item.args['ObjectIdentifier'],
+                },
+                source = source
+            )
+            dir_edges.append(dir_edge)
+        # Save the data to the ingester output file
+        self.write_data_to_file(dir_data + file_data + dir_edges, self.output_file)
+        with open('test1.json', 'wt', encoding='utf-8-sig') as writer:
+            for entry in dir_data:
+                writer.write(entry.to_json() + '\n')
+        with jsonlines.open('test1.jsonl', mode='w') as output:
+            for entry in dir_data:
+                output.write(entry.to_dict())
+        edge_file = self.generate_output_file_name(
+            machine=self.machine_id,
+            storage=self.storage_description,
+            collection='Relationships',
+            timestamp=self.timestamp,
+            output_dir=self.data_dir,
+        )
+        print(edge_file)
 
 def main():
     '''

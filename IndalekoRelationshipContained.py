@@ -3,9 +3,10 @@ This module defines the "contained by" relationship.  e.g. a file or directory
 is contained by a directory or volume.  A volume is contained by a machine.
 '''
 
-from IndalekoRecord import IndalekoRecord
+from Indaleko import Indaleko
+from IndalekoRelationship import IndalekoRelationship
 
-class IndalekoRelationshipContainedBy(IndalekoRecord):
+class IndalekoRelationshipContainedBy(IndalekoRelationship):
     '''This class defines the "contained by" relationship.'''
 
     CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR = '3d4b772d-b4b0-4203-a410-ecac5dc6dafa'
@@ -20,12 +21,14 @@ class IndalekoRelationshipContainedBy(IndalekoRecord):
         relationship.
         '''
         super().__init__(**kwargs)
-        self.relationship_type = 'contained by'
-        if 'relationship_type' in kwargs:
-            self.relationship_type = kwargs['relationship_type']
         self.parent = None
         if 'parent' in kwargs:
             self.parent = kwargs['parent']
         self.child = None
         if 'child' in kwargs:
             self.child = kwargs['child']
+        if 'relationship' not in kwargs:
+            raise ValueError('Relationship UUID must be specified')
+        assert Indaleko.validate_uuid_string(kwargs['relationship']), \
+            'relationship must be a valid UUID'
+        self.relationship = kwargs['relationship']

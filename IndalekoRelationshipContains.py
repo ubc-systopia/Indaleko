@@ -22,27 +22,14 @@ class IndalekoRelationshipContains(IndalekoRelationship):
         dictionary that contains all the configuration parameters for the
         relationship.
         '''
-        if 'Relationship' not in kwargs:
-            raise ValueError('Relationship UUID must be specified')
         super().__init__(**kwargs)
-        self.relationship_type = 'contains'
-        if 'relationship_type' in kwargs:
-            self.relationship_type = kwargs['relationship_type']
         self.parent = None
         if 'parent' in kwargs:
             self.parent = kwargs['parent']
         self.child = None
         if 'child' in kwargs:
             self.child = kwargs['child']
-        if 'relationship_type' in kwargs:
-            assert Indaleko.validate_uuid_string(kwargs['relationship_type']), 'relationship_type must be a valid UUID'
-            self.relationship_type = kwargs['relationship_type']
-
-    def to_dict(self) -> dict:
-        '''Return a dictionary representation of the object.'''
-        obj = super().to_dict()
-        return obj
-
-    def to_json(self, indent : int = 4) -> str:
-        '''Return a JSON representation of the object.'''
-        return json.dumps(self.to_dict())
+        if 'relationship' not in kwargs:
+            raise ValueError('Relationship UUID must be specified')
+        assert Indaleko.validate_uuid_string(kwargs['relationship']), 'relationship must be a valid UUID'
+        self.relationship = kwargs['relationship']

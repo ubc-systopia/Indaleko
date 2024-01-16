@@ -68,6 +68,8 @@ class IndalekoRecord:
         self.__attributes__[key] = value
 
     def __getitem__(self, key):
+        if key not in self.__attributes__:
+            raise KeyError(f'key {key} not found')
         return self.__attributes__[key]
 
     def __iter__(self):
@@ -88,7 +90,6 @@ class IndalekoRecord:
         for field, keyword in self.keyword_map:
             if hasattr(self, field):
                 tmp[keyword] = self.__dict__[field]
-        print(tmp)
         return tmp
 
     def to_json(self, indent : int = 4):

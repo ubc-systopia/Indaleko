@@ -119,7 +119,7 @@ class IndalekoIndexer:
         assert suffix is not None, 'suffix must be a valid string'
         return [x for x in os.listdir(search_dir)
                 if x.startswith(prefix)
-                and x.endswith(suffix)]
+                and x.endswith(suffix) and 'indexer' in x]
 
     def generate_indexer_file_name(self, target_dir : str = None) -> str:
         '''This will generate a file name for the indexer output file.'''
@@ -209,8 +209,8 @@ class IndalekoIndexer:
             logging.warning('Unable to stat %s : %s', file_path, e)
             return None
         stat_dict = {key : getattr(stat_data, key) for key in dir(stat_data) if key.startswith('st_')}
-        stat_dict['file'] = name
-        stat_dict['path'] = root
+        stat_dict['Name'] = name
+        stat_dict['Path'] = root
         stat_dict['URI'] = os.path.join(last_uri, name)
         stat_dict['Indexer'] = self.service_identifier
         return (stat_dict, last_uri)

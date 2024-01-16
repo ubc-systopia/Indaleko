@@ -13,6 +13,7 @@ class UnixFileAttributes:
 
     @staticmethod
     def map_file_attributes(attributes : int):
+        '''Given an integer representing file attributes on UNIX'''
         file_attributes = []
         for attr in UnixFileAttributes.FILE_ATTRIBUTES:
             if attributes & UnixFileAttributes.FILE_ATTRIBUTES[attr] \

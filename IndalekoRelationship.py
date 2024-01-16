@@ -24,6 +24,22 @@ class IndalekoRelationship(IndalekoRecord):
     '''
     Schema = IndalekoRelationshipSchema.get_schema()
 
+    class RelationshipConfiguration:
+        '''This subclass will be a central hub for the registration data for relationships.'''
+        _instance = None
+
+        def __new__(cls):
+            if cls._instance is None:
+                # cls._instance = super(IndalekoRelationship.RelationshipConfiguration).__new__(cls)
+                cls._instance.relationships = {}
+            return cls._instance
+
+        def initialize(self):
+            raise NotImplementedError('initialize not implemented')
+
+        def add_relationship(self, relationship : dict) -> None:
+            raise NotImplementedError('add_relationship not implemented')
+
     def validate_vertex(self, vertex : dict) -> bool:
         """
         This is used to verify that the given vertex has the minimum
@@ -49,13 +65,15 @@ class IndalekoRelationship(IndalekoRecord):
         self.vertex1 = kwargs['object1']
         self.vertex2 = kwargs['object2']
         self.relationship = kwargs['relationship']
-        self.metadata = None
+        self.metadata = {}
         if 'metadata' in kwargs:
             self.metadata = kwargs['metadata']
         assert self.validate_vertex(self.vertex1), 'vertex1 must be a valid vertex.'
         assert self.validate_vertex(self.vertex2), 'vertex2 must be a valid vertex.'
         assert self.validate_uuid_string(self.relationship), 'relationship must be a valid UUID.'
         assert isinstance(self.metadata, dict), 'metadata must be a dictionary.'
+        if 'raw_data' not in kwargs:
+            kwargs['raw_data'] = b''
         super().__init__(**kwargs)
 
 

@@ -43,9 +43,9 @@ class IndalekoMachineConfig(IndalekoRecord):
         if timestamp is None:
             timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
         super().__init__(
-            b"",
-            {},
-            {
+            raw_data = b"",
+            attributes = {},
+            source = {
                 "Identifier": IndalekoMachineConfig.indaleko_machine_config_uuid_str,
                 "Version": IndalekoMachineConfig.indaleko_machine_config_version_str,
             },
