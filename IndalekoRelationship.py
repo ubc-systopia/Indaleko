@@ -45,12 +45,13 @@ class IndalekoRelationship(IndalekoRecord):
         assert 'relationship' in kwargs, 'Relationship UUID must be specified'
         assert 'object1' in kwargs, 'Object1 must be specified'
         assert 'object2' in kwargs, 'Object2 must be specified'
-        assert 'Metadata' in kwargs, 'Metadata must be specified'
         assert 'Record' not in kwargs, 'Record must not be specified'
         self.vertex1 = kwargs['object1']
         self.vertex2 = kwargs['object2']
         self.relationship = kwargs['relationship']
-        self.metadata = kwargs['metadata']
+        self.metadata = None
+        if 'metadata' in kwargs:
+            self.metadata = kwargs['metadata']
         assert self.validate_vertex(self.vertex1), 'vertex1 must be a valid vertex.'
         assert self.validate_vertex(self.vertex2), 'vertex2 must be a valid vertex.'
         assert self.validate_uuid_string(self.relationship), 'relationship must be a valid UUID.'
@@ -114,7 +115,9 @@ def main():
         raw_data = args.raw_data,
         object1 = vertex1,
         object2 = vertex2,
-        metadata = attributes)
+        metadata = attributes,
+        relationship = str(uuid.uuid4())
+    )
     print(json.dumps(r.to_dict(), indent=4))
     if IndalekoRelationshipSchema.is_valid_relationship(r.to_dict()):
         print('Relationship is valid.')
