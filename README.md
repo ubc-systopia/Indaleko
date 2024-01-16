@@ -196,3 +196,54 @@ This prototype system is still under active development.  It would be surprising
 if it does not continue to change as the project moves forward.
 
 Last Updated: January 16, 2024
+
+## How to use Indaleko?
+
+## 1. Set up Indaleko
+
+See `dbsetup.py` to set up the database. It creates the necessary folders, `config` and `data` directories.
+
+## 2. Create your machine config?
+
+### MacOS
+- Run `MacHardwareInfoGenerator.py` to get the config your mac. It is saved in the `.config` directory. It saves the meta-data about your mac including the name and size of the volumes, hardware info, etc.
+ 
+```python
+python MacHardwareInfoGenerator.py -d ./config
+```
+
+The output will be saved inside the `config` directory with this name pattern `macos-hardware-info-[GUID]-[TIMESTAMP].json`. The following is a sample of what you should see:
+
+```json
+{
+    "MachineGuid": "74457f40-621b-444b-950b-21d8b943b28e",
+    "OperatingSystem": {
+        "Caption": "macOS",
+        "OSArchitecture": "arm64",
+        "Version": "20.6.0"
+    },
+    "CPU": {
+        "Name": "arm",
+        "Cores": 8
+    },
+    "VolumeInfo": [
+        {
+            "UniqueId": "/dev/disk3s1s1",
+            "VolumeName": "disk3s1s1",
+            "Size": "228.27 GB",
+            "Filesystem": "apfs"
+        },
+        {
+            "UniqueId": "/dev/disk3s6",
+            "VolumeName": "disk3s6",
+            "Size": "228.27 GB",
+            "Filesystem": "apfs"
+        }
+    ]
+}
+```
+
+## 3. Index your machine
+
+## 4. Ingest your indexed data
+=======
