@@ -86,6 +86,12 @@ class IndalekoIngester():
         self.data_dir = Indaleko.default_data_dir
         if 'data_dir' in kwargs:
             self.data_dir = kwargs['data_dir']
+        self.output_dir = self.data_dir
+        if 'output_dir' in kwargs:
+            self.output_dir = kwargs['output_dir']
+        self.input_dir = self.data_dir
+        if 'input_dir' in kwargs:
+            self.input_dir = kwargs['input_dir']
         assert self.data_dir is not None, 'data_dir must be specified'
         self.config_dir = Indaleko.default_config_dir
         if 'config_dir' in kwargs:

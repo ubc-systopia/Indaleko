@@ -14,7 +14,6 @@ import arango
 from IndalekoRecord import IndalekoRecord
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoMachineConfig import IndalekoMachineConfig
-from IndalekoServices import IndalekoService
 
 class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
     '''

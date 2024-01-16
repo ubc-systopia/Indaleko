@@ -1,7 +1,11 @@
 """
 This class defines constants and functions that are specific to Windows.
 """
+
+import argparse
+
 class IndalekoWindows:
+    '''This contains Windows specific definitions used in Indaleko'''
 
     FILE_ATTRIBUTES = {
         'FILE_ATTRIBUTE_READONLY' : 0x00000001,
@@ -34,24 +38,32 @@ class IndalekoWindows:
 
     @staticmethod
     def map_file_attributes(attributes : int):
-        fattrs = []
-        if (0 == attributes):
-            fattrs = ['FILE_ATTRIBUTE_NORMAL']
-        for attr in IndalekoWindows.FILE_ATTRIBUTES:
-            if attributes & IndalekoWindows.FILE_ATTRIBUTES[attr] == IndalekoWindows.FILE_ATTRIBUTES[attr]:
-                fattrs.append(attr)
-        return ' | '.join(fattrs)
+        '''
+        Given an integer representing file attributes on Windows,
+        return a string representation of the attributes.
+        '''
+        file_attributes = []
+        if 0 == attributes:
+            file_attributes = ['FILE_ATTRIBUTE_NORMAL']
+        for attr, value in IndalekoWindows.FILE_ATTRIBUTES.items():
+            if attributes & value == value:
+                file_attributes.append(attr)
+        return ' | '.join(file_attributes)
 
 def main():
-    import argparse
+    '''This is the test code for the IndalekoWindows class.'''
     parser = argparse.ArgumentParser(description='Indaleko Windows test logic')
-    parser.add_argument('--attr', '-a', default = 0xFFFFFFFF, type = int, help = 'file attribute bits to test')
+    parser.add_argument('--attr',
+                        '-a',
+                        default = 0xFFFFFFFF,
+                        type = int,
+                        help = 'file attribute bits to test')
     args = parser.parse_args()
-    if (args.attr == 0xFFFFFFFF):
+    if args.attr == 0xFFFFFFFF:
         print('Testing all attributes')
-        for attr in IndalekoWindows.FILE_ATTRIBUTES:
-            print(f'{attr} = {IndalekoWindows.FILE_ATTRIBUTES[attr]}')
-            print(f'{attr} = {IndalekoWindows.map_file_attributes(IndalekoWindows.FILE_ATTRIBUTES[attr])}')
+        for attr, value in IndalekoWindows.FILE_ATTRIBUTES.items():
+            print(f'{attr} = {value}')
+            print(f'{attr} = {value}')
     else:
         print(f'{args.attr} = {IndalekoWindows.map_file_attributes(args.attr)}')
 

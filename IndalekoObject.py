@@ -52,7 +52,7 @@ class IndalekoObject(IndalekoRecord):
         obj['Record'] = super().to_dict()
         obj['_key'] = self.args['ObjectIdentifier']
         for key, value in self.args.items():
-           obj[key] = value
+            obj[key] = value
         return obj
 
 
