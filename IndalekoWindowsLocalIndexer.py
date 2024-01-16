@@ -12,12 +12,27 @@ from Indaleko import Indaleko
 from IndalekoIndexer import IndalekoIndexer
 from IndalekoWindowsMachineConfig import IndalekoWindowsMachineConfig
 
+
 class IndalekoWindowsLocalIndexer(IndalekoIndexer):
     '''
     This is the class that indexes Windows local file systems.
     '''
     windows_platform = 'Windows'
     windows_local_indexer = 'local-fs'
+
+    indaleko_windows_local_indexer_uuid = '0793b4d5-e549-4cb6-8177-020a738b66b7'
+    indaleko_windows_local_indexer_service_name = 'Windows Local Indexer'
+    indaleko_windows_local_indexer_service_description = 'This service indexes the local filesystems of a Windows machine.'
+    indaleko_windows_local_indexer_service_version = '1.0'
+    indaleko_windows_local_indexer_service_type = 'Indexer'
+
+    indaleko_windows_local_indexer_service ={
+        'service_name' : indaleko_windows_local_indexer_service_name,
+        'service_description' : indaleko_windows_local_indexer_service_description,
+        'service_version' : indaleko_windows_local_indexer_service_version,
+        'service_type' : indaleko_windows_local_indexer_service_type,
+        'service_identifier' : indaleko_windows_local_indexer_uuid,
+    }
 
     @staticmethod
     def windows_to_posix(filename):
@@ -56,6 +71,7 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
         super().__init__(**kwargs,
                          platform=IndalekoWindowsLocalIndexer.windows_platform,
                          indexer=IndalekoWindowsLocalIndexer.windows_local_indexer,
+                         **IndalekoWindowsLocalIndexer.indaleko_windows_local_indexer_service
         )
 
     def convert_windows_path_to_guid_uri(self, path : str) -> str:
@@ -66,6 +82,7 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
         if mapped_guid is not None:
             uri = '\\\\?\\Volume{' + mapped_guid + '}\\'
         else:
+            print(f'Ugh, cannot map {drive} to a GUID')
             uri = '\\\\?\\' + drive + ':'
         return uri
 
@@ -76,7 +93,8 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
         constructed from the file system metadata ("stat") for that file.
         '''
         file_path = os.path.join(root, name)
-        last_uri = file_path
+        if last_uri is None:
+            last_uri = file_path
         try:
             stat_data = os.stat(file_path)
         except Exception as e: # pylint: disable=broad-except
@@ -84,14 +102,18 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
             logging.warning('Unable to stat %s : %s', file_path, e)
             return None
         stat_dict = {key : getattr(stat_data, key) for key in dir(stat_data) if key.startswith('st_')}
-        stat_dict['file'] = name
-        stat_dict['path'] = root
+        stat_dict['Name'] = name
+        stat_dict['Path'] = root
         if last_drive != os.path.splitdrive(root)[0][0].upper():
             last_drive = os.path.splitdrive(root)[0][0].upper()
             last_uri = self.convert_windows_path_to_guid_uri(root)
             assert last_uri.startswith('\\\\?\\Volume{'), \
                 f'last_uri {last_uri} does not start with \\\\?\\Volume{{'
         stat_dict['URI'] = os.path.join(last_uri, os.path.splitdrive(root)[1], name)
+        stat_dict['Indexer'] = self.service_identifier
+        assert last_uri.startswith('\\\\?\\Volume{')
+        if last_uri.startswith('\\\\?\\Volume{'):
+            stat_dict['Volume GUID'] = last_uri[11:-2]
         return (stat_dict, last_uri, last_drive)
 
 
@@ -146,9 +168,10 @@ def main():
     # Step 2: figure out the default config file
     pre_parser = argparse.ArgumentParser(add_help=False, parents=[pre_parser])
     pre_parser.add_argument('--config', choices=config_files, default=default_config_file)
-    pre_parser.add_argument('--path', '-p', help='Path to the directory to index', type=str,
+    pre_parser.add_argument('--path', help='Path to the directory to index', type=str,
                             default=os.path.expanduser('~'))
     pre_args, _ = pre_parser.parse_known_args()
+
     # Step 3: now we can compute the machine config and drive GUID
     machine_config = IndalekoWindowsMachineConfig.load_config_from_file(config_file=pre_args.config)
 
@@ -159,7 +182,7 @@ def main():
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     indexer = IndalekoWindowsLocalIndexer(machine_config=machine_config,
                                           timestamp=timestamp)
-    output_file = indexer.generate_index_file_name()
+    output_file = indexer.generate_indexer_file_name()
     parser= argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--datadir', '-d',
                         help='Path to the data directory',
@@ -181,8 +204,8 @@ def main():
                                           path=args.path,
                                           machine_config=machine_config,
                                           storage_description=drive_guid)
-    output_file = indexer.generate_index_file_name()
-    log_file_name = indexer.generate_index_file_name(target_dir=args.logdir)
+    output_file = indexer.generate_indexer_file_name()
+    log_file_name = indexer.generate_indexer_file_name(target_dir=args.logdir)
     log_file_name = log_file_name.replace('.jsonl', '.log') #gross
     logging.basicConfig(filename=os.path.join(log_file_name),
                                 level=args.loglevel,

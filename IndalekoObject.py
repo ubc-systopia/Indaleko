@@ -40,9 +40,9 @@ class IndalekoObject(IndalekoRecord):
         assert '_key' not in args, '_key is a reserved parameter'
         assert 'Data' not in args, 'Data is a reserved parameter'
         self.args = args
-        super().__init__(msgpack.packb(raw_data),
-                         attributes,
-                         {
+        super().__init__(raw_data = msgpack.packb(raw_data),
+                         attributes = attributes,
+                         source = {
                              'Identifier' : source['Identifier'],
                               'Version' : source['Version']
                          })
@@ -52,7 +52,7 @@ class IndalekoObject(IndalekoRecord):
         obj['Record'] = super().to_dict()
         obj['_key'] = self.args['ObjectIdentifier']
         for key, value in self.args.items():
-           obj[key] = value
+            obj[key] = value
         return obj
 
 
@@ -83,8 +83,8 @@ def main():
         'st_reparse_tag': 0,
         'st_size': 4096,
         'st_uid': 0,
-        'file': 'ms',
-        'path': 'D:\\dist',
+        'File': 'ms',
+        'Path': 'D:\\dist',
         'URI': '\\\\?\\Volume{3397d97b-2ca5-11ed-b2fc-b40ede9a5a3c}\\dist\\ms'
     }
     objattrs = {

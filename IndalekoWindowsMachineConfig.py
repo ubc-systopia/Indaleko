@@ -23,16 +23,17 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
     '''
 
     windows_machine_config_file_prefix = 'windows-hardware-info'
-
     windows_machine_config_uuid_str = '3360a328-a6e9-41d7-8168-45518f85d73e'
+    windows_machine_config_service_name = "Windows Machine Configuration"
+    windows_machine_config_service_description = "This service provides the configuration information for a Windows machine."
+    windows_machine_config_service_version = "1.0"
 
     windows_machine_config_service = {
-        'name': 'WindowsMachineConfig',
-        'description': 'This service provides the configuration information for a Windows machine.',
-        'version': '1.0',
-        'identifier': windows_machine_config_uuid_str,
-        'created': datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        'type': 'Indexer',
+        'service_name' : windows_machine_config_service_name,
+        'service_description' : windows_machine_config_service_description,
+        'service_version' : windows_machine_config_service_version,
+        'service_type' : 'Machine Configuration',
+        'service_identifier' : windows_machine_config_uuid_str,
     }
 
 
@@ -40,7 +41,9 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
     def __init__(self : 'IndalekoWindowsMachineConfig',
                  timestamp : datetime = None,
                  db : IndalekoDBConfig = None):
-        super().__init__(timestamp=timestamp, db=db)
+        super().__init__(timestamp=timestamp,
+                         db=db,
+                         **IndalekoWindowsMachineConfig.windows_machine_config_service)
         self.volume_data = {}
 
     @staticmethod
@@ -74,7 +77,6 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
                 config_data = json.load(fd)
             assert str(guid) == config_data['MachineGuid'],\
                   f'GUID mismatch: {guid} != {config_data["MachineGuid"]}'
-        config = IndalekoWindowsMachineConfig()
         config = IndalekoMachineConfig.build_config(
             machine_config=IndalekoWindowsMachineConfig(),
             os=config_data['OperatingSystem']['Caption'],
@@ -83,8 +85,8 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             cpu=config_data['CPU']['Name'],
             cpu_version=config_data['CPU']['Name'],
             cpu_cores=config_data['CPU']['Cores'],
-            source_id=IndalekoWindowsMachineConfig.windows_machine_config_service['identifier'],
-            source_version=IndalekoWindowsMachineConfig.windows_machine_config_service['version'],
+            source_id=IndalekoWindowsMachineConfig.windows_machine_config_service['service_identifier'],
+            source_version=IndalekoWindowsMachineConfig.windows_machine_config_service['service_version'],
             timestamp=timestamp.isoformat(),
             attributes=config_data,
             data=base64.b64encode(msgpack.packb(config_data)).decode('ascii'),
@@ -148,9 +150,9 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             assert drive_data['UniqueId'].startswith('\\\\?\\Volume{')
             drive_data['GUID'] = self.__find_volume_guid__(drive_data['UniqueId'])
             self.machine_id = machine_id
-            super().__init__(msgpack.packb(drive_data),
-                             drive_data,
-                             {
+            super().__init__(raw_data = msgpack.packb(drive_data),
+                             attributes = drive_data,
+                             source = {
                                 'Identifier' : self.WindowsDriveInfo_UUID_str,
                                 'Version' : self.WindowsDriveInfo_Version,
                              })
@@ -188,7 +190,8 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
         '''This returns the volume information.'''
         return self.volume_data
 
-    def map_drive_letter_to_volume_guid(self: 'IndalekoWindowsMachineConfig', drive_letter : str) -> str:
+    def map_drive_letter_to_volume_guid(self: 'IndalekoWindowsMachineConfig',
+                                        drive_letter : str) -> str:
         '''Map a drive letter to a volume GUID.'''
         assert drive_letter is not None, 'drive_letter must be a valid string'
         assert len(drive_letter) == 1, 'drive_letter must be a single character'
@@ -222,7 +225,8 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
 
 
 def main():
-    '''This is the main handler for the Indaleko Windows Machine Config service.'''
+    '''This is the main handler for the Indaleko Windows Machine Config
+    service.'''
     parser = argparse.ArgumentParser()
     parser.add_argument('--version', action='version', version='%(prog)s 1.0')
     parser.add_argument('--delete', '-d', action='store_true',
@@ -236,6 +240,7 @@ def main():
     parser.add_argument('--add', '-a', action='store_true',
                         help='Add a machine configuration (from the file) to the database.')
     args = parser.parse_args()
+    IndalekoWindowsMachineConfig()
     if args.list:
         print('Listing machine configurations in the database.')
         configs = IndalekoWindowsMachineConfig.find_configs_in_db()
@@ -269,28 +274,6 @@ def main():
         config.write_config_to_db()
 
         return
-
-
-def old_main():
-    '''Some code I am not using at the moment but expect to use again above (in main.)'''
-    config_file = IndalekoWindowsMachineConfig.get_most_recent_config_file(
-        IndalekoWindowsMachineConfig.default_config_dir)
-    print(config_file)
-    _, guid, timestamp = IndalekoWindowsMachineConfig.get_guid_timestamp_from_file_name(config_file)
-    print(guid)
-    db_record = IndalekoWindowsMachineConfig.load_config_from_db(str(guid))
-    print(db_record.get_captured()['Value']['Value'], '\n', timestamp)
-    file_record = IndalekoWindowsMachineConfig.load_config_from_file(
-        IndalekoWindowsMachineConfig.default_config_dir, config_file)
-    print('file_record:')
-    print(file_record.to_dict())
-    # assert parser is not None, 'Parser must  be valid'
-    db_record = IndalekoWindowsMachineConfig.load_config_from_db(str(guid))
-    if db_record is None:
-        print(f'GUID {guid} not found in database')
-    else:
-        print(f'GUID {guid} found in database')
-        print(db_record.to_json())
 
 if __name__ == "__main__":
     main()

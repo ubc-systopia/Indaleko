@@ -111,7 +111,7 @@ class Indaleko:
             'edge' : False,
             'indices' : {
                 'identifier' : {
-                    'fields' : ['name'],
+                    'fields' : ['Name'],
                     'unique' : True,
                     'type' : 'persistent'
                 },
@@ -123,8 +123,6 @@ class Indaleko:
             'indices' : { },
         }
     }
-
-
 
     @staticmethod
     def validate_uuid_string(uuid_string : str) -> bool:

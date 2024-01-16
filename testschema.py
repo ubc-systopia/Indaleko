@@ -1,6 +1,8 @@
-from Indaleko import *
+import json
 from IndalekoDBConfig import IndalekoDBConfig
-
+from IndalekoObject import IndalekoObject
+from IndalekoRelationshipSchema import IndalekoRelationshipSchema
+from IndalekoSourceSchema import IndalekoSourceSchema
 
 test_schema =  {
     "$schema": "https://json-schema.org/draft/2020-12/schema#",
@@ -216,6 +218,7 @@ test_schema5 = {
 
 
 def main():
+    '''Test schema insertion into Arango.'''
     print(json.dumps(test_schema3, indent=4))
 
     config = IndalekoDBConfig()
@@ -223,8 +226,9 @@ def main():
     if config.db.has_collection('schematest'):
         config.db.delete_collection('schematest')
     collection = config.db.create_collection('schematest', schema=IndalekoObject.Schema)
-    collection.configure(schema=IndalekoRelationship.Schema)
-    collection.configure(schema=IndalekoSource.Schema)
+    json.dumps(IndalekoObject.Schema, indent=4)
+    collection.configure(schema=IndalekoRelationshipSchema.get_schema())
+    collection.configure(schema=IndalekoSourceSchema.get_schema())
     #collection.configure(schema=test_schema)
     #print(collection)
     #uuid1 = str(uuid.uuid4())

@@ -24,6 +24,22 @@ class IndalekoRelationship(IndalekoRecord):
     '''
     Schema = IndalekoRelationshipSchema.get_schema()
 
+    class RelationshipConfiguration:
+        '''This subclass will be a central hub for the registration data for relationships.'''
+        _instance = None
+
+        def __new__(cls):
+            if cls._instance is None:
+                # cls._instance = super(IndalekoRelationship.RelationshipConfiguration).__new__(cls)
+                cls._instance.relationships = {}
+            return cls._instance
+
+        def initialize(self):
+            raise NotImplementedError('initialize not implemented')
+
+        def add_relationship(self, relationship : dict) -> None:
+            raise NotImplementedError('add_relationship not implemented')
+
     def validate_vertex(self, vertex : dict) -> bool:
         """
         This is used to verify that the given vertex has the minimum
@@ -36,23 +52,29 @@ class IndalekoRelationship(IndalekoRecord):
         assert isinstance(vertex['collection'], str), 'collection must be a string.'
         return True
 
-
-    def __init__(self,
-                 source : dict,
-                 raw_data : bytes,
-                 vertex1 : dict,
-                 vertex2 : dict,
-                 relationship: str,
-                 attributes : dict) -> None:
-        assert self.validate_source(source), f'source ({source}) must be a valid source.'
-        assert isinstance(raw_data, bytes), 'raw_data must be bytes'
-        assert self.validate_vertex(vertex1), 'vertex1 must be a valid vertex.'
-        assert self.validate_vertex(vertex2), 'vertex2 must be a valid vertex.'
-        assert self.validate_uuid_string(relationship), 'relationship must be a valid UUID.'
-        self.vertex1 = vertex1
-        self.vertex2 = vertex2
-        self.relationship = relationship
-        super().__init__(raw_data, attributes, source)
+    def __init__(self, **kwargs):
+        """
+        Constructor for the IndalekoRelationship class. Takes a configuration
+        object as a parameter. The configuration object is a dictionary that
+        contains all the configuration parameters for the relationship.
+        """
+        assert 'relationship' in kwargs, 'Relationship UUID must be specified'
+        assert 'object1' in kwargs, 'Object1 must be specified'
+        assert 'object2' in kwargs, 'Object2 must be specified'
+        assert 'Record' not in kwargs, 'Record must not be specified'
+        self.vertex1 = kwargs['object1']
+        self.vertex2 = kwargs['object2']
+        self.relationship = kwargs['relationship']
+        self.metadata = {}
+        if 'metadata' in kwargs:
+            self.metadata = kwargs['metadata']
+        assert self.validate_vertex(self.vertex1), 'vertex1 must be a valid vertex.'
+        assert self.validate_vertex(self.vertex2), 'vertex2 must be a valid vertex.'
+        assert self.validate_uuid_string(self.relationship), 'relationship must be a valid UUID.'
+        assert isinstance(self.metadata, dict), 'metadata must be a dictionary.'
+        if 'raw_data' not in kwargs:
+            kwargs['raw_data'] = b''
+        super().__init__(**kwargs)
 
 
     def to_dict(self):
@@ -61,10 +83,14 @@ class IndalekoRelationship(IndalekoRecord):
         obj['Record'] = super().to_dict()
         obj['_from'] = f'{self.vertex1["collection"]}/{self.vertex1["object"]}'
         obj['_to'] = f'{self.vertex2["collection"]}/{self.vertex2["object"]}'
-        obj['object1'] = f'{self.vertex1["object"]}'
-        obj['object2'] = f'{self.vertex2["object"]}'
-        obj['relationship'] = f'{self.relationship}'
+        obj['Object1'] = f'{self.vertex1["object"]}'
+        obj['Object2'] = f'{self.vertex2["object"]}'
+        obj['Relationship'] = f'{self.relationship}'
         return obj
+
+    def to_json(self, indent : int = 4) -> str:
+        """Return a JSON representation of this object."""
+        return json.dumps(self.to_dict(), indent=indent)
 
 def main():
     """Test the IndalekoRelationship class."""
@@ -99,14 +125,17 @@ def main():
         'object' : str(uuid.uuid4()),
         'collection' : Indaleko.Indaleko_Objects,
     }
-    r = IndalekoRelationship({
-        'Identifier' : args.source,
-        'Version' : '1.0'},
-        args.raw_data,
-        vertex1,
-        vertex2,
-        str(uuid.uuid4()),
-        attributes)
+    r = IndalekoRelationship(
+        source = {
+            'Identifier' : args.source,
+            'Version' : '1.0'
+        },
+        raw_data = args.raw_data,
+        object1 = vertex1,
+        object2 = vertex2,
+        metadata = attributes,
+        relationship = str(uuid.uuid4())
+    )
     print(json.dumps(r.to_dict(), indent=4))
     if IndalekoRelationshipSchema.is_valid_relationship(r.to_dict()):
         print('Relationship is valid.')
