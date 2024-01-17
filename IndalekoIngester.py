@@ -86,6 +86,12 @@ class IndalekoIngester():
         self.data_dir = Indaleko.default_data_dir
         if 'data_dir' in kwargs:
             self.data_dir = kwargs['data_dir']
+        self.output_dir = self.data_dir
+        if 'output_dir' in kwargs:
+            self.output_dir = kwargs['output_dir']
+        self.input_dir = self.data_dir
+        if 'input_dir' in kwargs:
+            self.input_dir = kwargs['input_dir']
         assert self.data_dir is not None, 'data_dir must be specified'
         self.config_dir = Indaleko.default_config_dir
         if 'config_dir' in kwargs:
@@ -117,8 +123,56 @@ class IndalekoIngester():
         )
         assert self.ingester_service is not None, 'Ingester service does not exist'
 
+    def generate_output_file_name(self, **kwargs) -> str:
+        '''
+        Given a set of parameters, generate a file name for the output
+        file.
+        '''
+        prefix = 'indaleko'
+        suffix = 'jsonl'
+        output_dir = self.output_dir
+        if 'prefix' in kwargs:
+            prefix = kwargs['prefix']
+            del kwargs['prefix']
+        if 'suffix' in kwargs:
+            suffix = kwargs['suffix']
+            del kwargs['suffix']
+        output_dir = self.data_dir
+        if 'output_dir' in kwargs:
+            output_dir = kwargs['output_dir']
+            del kwargs['output_dir']
+        if output_dir is None:
+            output_dir = self.data_dir
+        platform = self.platform
+        if 'platform' in kwargs:
+            platform = kwargs['platform']
+            del kwargs['platform']
+        timestamp = self.timestamp
+        if 'timestamp' in kwargs:
+            timestamp = kwargs['timestamp']
+            del kwargs['timestamp']
+        name = prefix
+        name += f'-{platform}'
+        for key, value in kwargs.items():
+            name += f'-{key}={value}'
+        name += f'-{timestamp}'.replace(':', '-')
+        name += f'.{suffix}'
+        return os.path.join(output_dir, name)
 
     def generate_ingester_file_name(self, target_dir : str = None) -> str:
+        '''This will generate a file name for the ingester output file.'''
+        return self.generate_output_file_name(
+            prefix = self.file_prefix,
+            suffix = self.file_suffix,
+            platform = self.platform,
+            ingester = self.ingester,
+            machine = self.machine_id,
+            storage = self.storage_description,
+            timestamp = self.timestamp,
+            output_dir = target_dir,
+        )
+
+    def generate_ingester_file_name_old(self, target_dir : str = None) -> str:
         '''This will generate a file name for the ingester output file.'''
         if target_dir is None:
             target_dir = self.data_dir
@@ -142,7 +196,14 @@ class IndalekoIngester():
         if jsonlines_output:
             with jsonlines.open(file_name, mode='w') as writer:
                 for entry in data:
-                    writer.write(entry)
+                    try:
+                        writer.write(entry.to_dict())
+                    except TypeError as err:
+                        print('Error writing entry to JSONLines file: %s', err)
+                        print('Entry: %s', entry)
+                        logging.error('Error writing entry to JSONLines file: %s', err)
+                        logging.error('Entry: %s', entry)
+                        raise err
             logging.info('Wrote JSONLines data to %s', file_name)
         else:
             json.dump(data, file_name, indent=4)

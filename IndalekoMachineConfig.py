@@ -43,9 +43,9 @@ class IndalekoMachineConfig(IndalekoRecord):
         if timestamp is None:
             timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
         super().__init__(
-            b"",
-            {},
-            {
+            raw_data = b"",
+            attributes = {},
+            source = {
                 "Identifier": IndalekoMachineConfig.indaleko_machine_config_uuid_str,
                 "Version": IndalekoMachineConfig.indaleko_machine_config_version_str,
             },
@@ -222,13 +222,13 @@ class IndalekoMachineConfig(IndalekoRecord):
     @staticmethod
     def find_configs_in_db(source_id : str) -> list:
         """
-        This method finds all the machine configs in the database.
+        This method finds all the machine configs with given source_id.
         """
         if not IndalekoMachineConfig.validate_uuid_string(source_id):
             raise AssertionError(f"source_id {source_id} is not a valid UUID.")
         collections = IndalekoCollections()
         machine_config_collection = collections.get_collection(Indaleko.Indaleko_MachineConfig)
-        entries = machine_config_collection.find_entries(source=source_id)
+        entries = machine_config_collection.find_entries(**{'Record.`Source Identifier`.Identifier':source_id})
         return entries
 
     @staticmethod

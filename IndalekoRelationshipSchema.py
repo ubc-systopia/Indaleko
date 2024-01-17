@@ -19,22 +19,22 @@ class IndalekoRelationshipSchema(IndalekoRecordSchema):
             "type" : "object",
             "rule" : {
                 "properties" : {
-                    "object1" : {
+                    "Object1" : {
                         "type" : "string",
                         "format" : "uuid",
                         "description" : "The Indaleko UUID for the first object in the relationship.",
                     },
-                    "object2" : {
+                    "Object2" : {
                         "type" : "string",
                         "format" : "uuid",
                         "description" : "The Indaleko UUID for the second object in the relationship.",
                     },
-                    "relationship" : {
+                    "Relationship" : {
                         "type" : "string",
                         "description" : "The UUID specifying the specific relationship between the two objects.",
                         "format" : "uuid",
                     },
-                    "metadata" :  {
+                    "Metadata" :  {
                         "type" : "array",
                         "items" : {
                             "type" : "object",
@@ -54,7 +54,7 @@ class IndalekoRelationshipSchema(IndalekoRecordSchema):
                         "description" : "Optional metadata associated with this relationship.",
                     },
                 },
-                "required" : ["object1", "object2" , "relationship"],
+                "required" : ["Object1", "Object2" , "Relationship"],
             },
         }
         assert 'Record' not in relationship_schema, 'Record must not be specified.'

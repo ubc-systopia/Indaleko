@@ -6,4 +6,6 @@ __pycache__/*
 .vscode/
 wmiobject-list.txt
 *.log
-
+*.json
+scratch.py
+*.jsonl

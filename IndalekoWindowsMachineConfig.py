@@ -14,7 +14,6 @@ import arango
 from IndalekoRecord import IndalekoRecord
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoMachineConfig import IndalekoMachineConfig
-from IndalekoServices import IndalekoService
 
 class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
     '''
@@ -151,9 +150,9 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             assert drive_data['UniqueId'].startswith('\\\\?\\Volume{')
             drive_data['GUID'] = self.__find_volume_guid__(drive_data['UniqueId'])
             self.machine_id = machine_id
-            super().__init__(msgpack.packb(drive_data),
-                             drive_data,
-                             {
+            super().__init__(raw_data = msgpack.packb(drive_data),
+                             attributes = drive_data,
+                             source = {
                                 'Identifier' : self.WindowsDriveInfo_UUID_str,
                                 'Version' : self.WindowsDriveInfo_Version,
                              })
