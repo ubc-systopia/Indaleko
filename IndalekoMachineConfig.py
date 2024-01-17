@@ -257,10 +257,13 @@ class IndalekoMachineConfig(IndalekoRecord):
         ), f"Found {len(entries)} entries for machine_id {machine_id} - multiple entries case not handled."
         entry = entries[0]
         machine_config = IndalekoMachineConfig()
+        print(entry)
         machine_config.set_platform(entry["Platform"])
         # temporary: I've changed the shape of the database, so I'll need to
         # work around it temporarily
-        if isinstance(entry["Source"], str) and "Version" in entry:
+        if 'Source' in entry and \
+            isinstance(entry["Source"], str) and \
+            "Version" in entry:
             machine_config.set_source(
                 {
                     "Identifier": entry["Source"],

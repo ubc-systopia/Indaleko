@@ -151,7 +151,7 @@ def main():
     """Test the IndalekoCollections class."""
     start_time = datetime.datetime.now(datetime.UTC).isoformat()
     parser = argparse.ArgumentParser()
-    logfile = f'indalekocollections-test-{start_time.replace(':','-')}.log'
+    logfile = f'indalekocollections-test-{start_time.replace(":","-")}.log'
     parser = argparse.ArgumentParser(
         description='Set up and create the collections for the Indaleko database.')
     parser.add_argument('--reset',
