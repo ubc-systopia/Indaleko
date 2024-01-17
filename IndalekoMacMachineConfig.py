@@ -1,3 +1,20 @@
+'''
+Project Indaleko
+Copyright (C) 2024 Tony Mason
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+'''
 import os
 import json
 import uuid
@@ -47,7 +64,7 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
     @staticmethod
     def find_configs_in_db(source_id) -> list:
         return IndalekoMachineConfig.find_configs_in_db(source_id=source_id)
-    
+
     @staticmethod
     def load_config_from_file(config_dir : str = None,
                               config_file : str = None) -> 'IndalekoMacOSMachineConfig':
@@ -88,7 +105,7 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
     @staticmethod
     def get_guid_timestamp_from_file_name(file_name : str) -> tuple:
         '''
-        Use file name to extract the guid 
+        Use file name to extract the guid
         '''
         # Regular expression to match the GUID and timestamp
         pattern = r"(?:.*[/\\])?macos-hardware-info-(?P<guid>[a-fA-F0-9\-]+)-(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d+Z)\.json"
@@ -127,7 +144,7 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
 
     class MacOSDriveInfo(IndalekoRecord):
         '''This class is used to capture information about a macOS drive.'''
-        MacOSDriveInfo_UUID_str = 'e23f71d8-0973-455b-af20-b9bc6ee8ebd6' # created manually 
+        MacOSDriveInfo_UUID_str = 'e23f71d8-0973-455b-af20-b9bc6ee8ebd6' # created manually
         MacOSDriveInfo_UUID = uuid.UUID(MacOSDriveInfo_UUID_str)
         MacOSDriveInfo_Version = '1.0'
         MacOSDriveInfo_Description = 'macOS Drive Info'
@@ -135,7 +152,7 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
         def __init__(self, machine_id : str, drive_data : dict, captured: dict) -> None:
             assert 'GUID' not in drive_data, 'GUID should not be in drive_data'
             assert 'UniqueId' in drive_data, 'UniqueId must be in drive_data'
-            assert drive_data['UniqueId'].startswith('/dev/') 
+            assert drive_data['UniqueId'].startswith('/dev/')
             drive_data['GUID'] = self.__find_volume_guid__(drive_data['UniqueId'])
             self.machine_id = machine_id
             super().__init__(msgpack.packb(drive_data),
@@ -180,7 +197,7 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
 
     def map_drive_letter_to_volume_guid(self: 'IndalekoMacOSMachineConfig', drive_letter : str) -> str:
         '''Map a drive letter to a volume GUID.'''
-        # Drive letters are not used in macOS 
+        # Drive letters are not used in macOS
         return None
 
     def write_volume_info_to_db(self: 'IndalekoMacOSMachineConfig',
