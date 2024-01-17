@@ -6,15 +6,22 @@ import argparse
 import datetime
 import platform
 import logging
-import json
 import os
+import json
+import jsonlines
+import uuid
+import msgpack
 
 from IndalekoIngester import IndalekoIngester
 from IndalekoWindowsMachineConfig import IndalekoWindowsMachineConfig
 from Indaleko import Indaleko
 from IndalekoWindowsLocalIndexer import IndalekoWindowsLocalIndexer
 from IndalekoServices import IndalekoService
-
+from IndalekoObject import IndalekoObject
+from IndalekoUnix import UnixFileAttributes
+from IndalekoWindows import IndalekoWindows
+from IndalekoRelationshipContains import IndalekoRelationshipContains
+from IndalekoRelationshipContained import IndalekoRelationshipContainedBy
 class IndalekoWindowsLocalIngester(IndalekoIngester):
     '''
     This class handles ingestion of metadata from the Indaleko Windows
@@ -34,17 +41,39 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
     windows_local_ingester = 'local-fs-ingester'
 
     def __init__(self, **kwargs) -> None:
-        assert 'machine_config' in kwargs, 'machine_config must be specified'
+        if 'input_file' not in kwargs:
+            raise ValueError('input_file must be specified')
+        if 'machine_config' not in kwargs:
+            raise ValueError('machine_config must be specified')
         self.machine_config = kwargs['machine_config']
         if 'machine_id' not in kwargs:
             kwargs['machine_id'] = self.machine_config.machine_id
+        else:
+            kwargs['machine_id'] = self.machine_config.machine_id
+            if kwargs['machine_id'] != self.machine_config.machine_id:
+                logging.warning('Warning: machine ID of indexer file ' +\
+                      f'({kwargs["machine_id"]}) does not match machine ID of ingester ' +\
+                        f'({self.machine_config.machine_id}.)')
         if 'timestamp' not in kwargs:
             kwargs['timestamp'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
         if 'platform' not in kwargs:
             kwargs['platform'] = IndalekoWindowsLocalIngester.windows_platform
         if 'ingester' not in kwargs:
             kwargs['ingester'] = IndalekoWindowsLocalIngester.windows_local_ingester
+        if 'input_file' not in kwargs:
+            kwargs['input_file'] = None
         super().__init__(**kwargs)
+        self.input_file = kwargs['input_file']
+        if 'output_file' not in kwargs:
+            self.output_file = self.generate_ingester_file_name()
+        else:
+            self.output_file = kwargs['output_file']
+        self.indexer_data = []
+        self.source = {
+            'Identifier' : self.windows_local_ingester_uuid,
+            'Version' : '1.0'
+        }
+        print(self.output_file)
 
 
     def find_indexer_files(self) -> list:
@@ -59,13 +88,162 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
                 if IndalekoWindowsLocalIndexer.windows_platform in x and
                 IndalekoWindowsLocalIndexer.windows_local_indexer in x]
 
+    def load_indexer_data_from_file(self : 'IndalekoWindowsLocalIngester') -> None:
+        '''This function loads the indexer data from the file.'''
+        if self.input_file is None:
+            raise ValueError('input_file must be specified')
+        if self.input_file.endswith('.jsonl'):
+            with jsonlines.open(self.input_file) as reader:
+                for entry in reader:
+                    self.indexer_data.append(entry)
+        elif self.input_file.endswith('.json'):
+            with open(self.input_file, 'r', encoding='utf-8-sig') as file:
+                self.indexer_data = json.load(file)
+        else:
+            raise ValueError(f'Input file {self.input_file} is an unknown type')
+        if not isinstance(self.indexer_data, list):
+            raise ValueError('indexer_data is not a list')
+
+    def normalize_index_data(self, data: dict) -> IndalekoObject:
+        '''
+        Given some metadata, this will create a record that can be inserted into the
+        Object collection.
+        '''
+        if data is None:
+            raise ValueError('Data cannot be None')
+        if not isinstance(data, dict):
+            raise ValueError('Data must be a dictionary')
+        oid = str(uuid.uuid4())
+        kwargs = {
+            'source' : self.source,
+            'raw_data' : msgpack.packb(data),
+            'URI' : data['URI'],
+            'ObjectIdentifier' : oid,
+            'Timestamps' : [
+                {
+                    'Label' : IndalekoObject.CREATION_TIMESTAMP,
+                    'Value' : datetime.datetime.fromtimestamp(data['st_birthtime'],
+                                                              datetime.timezone.utc).isoformat(),
+                    'Description' : 'Created',
+                },
+                {
+                    'Label' : IndalekoObject.MODIFICATION_TIMESTAMP,
+                    'Value' : datetime.datetime.fromtimestamp(data['st_mtime'],
+                                                              datetime.timezone.utc).isoformat(),
+                    'Description' : 'Modified',
+                },
+                {
+                    'Label' : IndalekoObject.ACCESS_TIMESTAMP,
+                    'Value' : datetime.datetime.fromtimestamp(data['st_atime'],
+                                                              datetime.timezone.utc).isoformat(),
+                    'Description' : 'Accessed',
+                },
+                {
+                    'Label' : IndalekoObject.CHANGE_TIMESTAMP,
+                    'Value' : datetime.datetime.fromtimestamp(data['st_ctime'],
+                                                              datetime.timezone.utc).isoformat(),
+                    'Description' : 'Changed',
+                },
+            ],
+            'Size' : data['st_size'],
+            'Attributes' : data,
+            'Machine' : self.machine_config.machine_id,
+        }
+        if 'Volume GUID' in data:
+            kwargs['Volume'] = data['Volume GUID']
+        elif data['URI'].startswith('\\\\?\\Volume{'):
+            kwargs['Volume'] = data['URI'][11:47]
+        if 'st_mode' in data:
+            kwargs['UnixFileAttributes'] = UnixFileAttributes.map_file_attributes(data['st_mode'])
+        if 'st_file_attributes' in data:
+            kwargs['WindowsFileAttributes'] = \
+                IndalekoWindows.map_file_attributes(data['st_file_attributes'])
+        return IndalekoObject(**kwargs)
+
+
     def ingest(self) -> None:
         '''
         This function ingests the indexer file and emits the data needed to
         upload to the database.
         '''
         logging.warning('Ingesting not yet implemented.')
-
+        self.load_indexer_data_from_file()
+        dir_data_by_path = {}
+        dir_data = []
+        file_data = []
+        # Step 1: build the normalized data
+        for item in self.indexer_data:
+            obj = self.normalize_index_data(item)
+            if 'S_IFDIR' in obj.args['UnixFileAttributes'] or \
+               'FILE_ATTRIBUTE_DIRECTORY' in obj.args['WindowsFileAttributes']:
+                if 'Path' not in obj:
+                    logging.warning('Directory object does not have a path: %s', obj.to_json())
+                    continue # skip
+                dir_data_by_path[os.path.join(obj['Path'], obj['Volume GUID'])] = obj
+                dir_data.append(obj)
+            else:
+                file_data.append(obj)
+        # Step 2: build a table of paths to directory uuids
+        dirmap = {}
+        for item in dir_data:
+            fqp = os.path.join(item['Path'], item['Name'])
+            id = item.args['ObjectIdentifier']
+            dirmap[fqp] = id
+        # now, let's build a list of the edges, using our map.
+        dir_edges = []
+        source = {
+            'Identifier' : self.windows_local_ingester_uuid,
+            'Version' : '1.0',
+        }
+        for item in dir_data + file_data:
+            parent = item['Path']
+            if parent not in dirmap:
+                continue
+            parent_id = dirmap[parent]
+            dir_edge = IndalekoRelationshipContains(
+                relationship = \
+                    IndalekoRelationshipContains.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR,
+                object1 = {
+                    'collection' : 'Objects',
+                    'object' : item.args['ObjectIdentifier'],
+                },
+                object2 = {
+                    'collection' : 'Objects',
+                    'object' : parent_id,
+                },
+                source = source
+            )
+            dir_edges.append(dir_edge)
+            dir_edge = IndalekoRelationshipContainedBy(
+                relationship = \
+                    IndalekoRelationshipContainedBy.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR,
+                object1 = {
+                    'collection' : 'Objects',
+                    'object' : parent_id,
+                },
+                object2 = {
+                    'collection' : 'Objects',
+                    'object' : item.args['ObjectIdentifier'],
+                },
+                source = source
+            )
+            dir_edges.append(dir_edge)
+        # Save the data to the ingester output file
+        self.write_data_to_file(dir_data + file_data + dir_edges, self.output_file)
+        with open('test1.json', 'wt', encoding='utf-8-sig') as writer:
+            for entry in dir_data:
+                writer.write(entry.to_json() + '\n')
+        with jsonlines.open('test1.jsonl', mode='w') as output:
+            for entry in dir_data:
+                output.write(entry.to_dict())
+        edge_file = self.generate_output_file_name(
+            machine=self.machine_id,
+            storage=self.storage_description,
+            collection='Relationships',
+            timestamp=self.timestamp,
+            output_dir=self.data_dir,
+        )
+        print(edge_file)
 
 def main():
     '''
@@ -159,6 +337,7 @@ def main():
         file_prefix = metadata['file_prefix']
     if 'file_suffix' in metadata:
         file_suffix = metadata['file_suffix']
+    input_file = os.path.join(args.datadir, args.input)
     ingester = IndalekoWindowsLocalIngester(
         machine_config=machine_config,
         machine_id = machine_id,
@@ -168,8 +347,8 @@ def main():
         storage_description = storage_description,
         file_prefix = file_prefix,
         file_suffix = file_suffix,
-        output_dir=args.datadir,
-        input_file=args.input,
+        data_dir=args.datadir,
+        input_file=input_file,
         log_dir=args.logdir
     )
     output_file = ingester.generate_ingester_file_name()

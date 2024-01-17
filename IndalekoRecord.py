@@ -36,26 +36,40 @@ class IndalekoRecord:
         return Indaleko.validate_uuid_string(uuid_string)
 
 
-    def __init__(self, raw_data : bytes, attributes : dict, source : dict) -> None:
-        assert isinstance(raw_data, bytes), 'raw_data must be bytes'
-        assert isinstance(attributes, dict), f'attributes must be a dict (not {type(attributes)})'
-        assert isinstance(source, dict), 'source must be a dict'
-        assert 'Identifier' in source, 'source must contain an Identifier field'
-        assert 'Version' in source, 'source must contain a Version field'
-
-        self.__raw_data__ = base64.b64encode(raw_data).decode('ascii')
-        self.__attributes__ = attributes
-        self.__source__ = {
-            'Identifier' : source['Identifier'],
-            'Version' : source['Version'],
-        }
-        self.__identifier__ = str(uuid.uuid4())
+    def __init__(self, **kwargs) -> None:
+        if 'raw_data' not in kwargs:
+            raise ValueError('raw_data must be specified')
+        self.__raw_data__ = kwargs['raw_data']
+        assert isinstance(self.__raw_data__, bytes), \
+            f'raw_data must be bytes (is {type(self.__raw_data__)})'
+        if isinstance(kwargs['raw_data'], str):
+            self.set_base64_data(kwargs['raw_data'])
+        else:
+            self.set_data(kwargs['raw_data'])
+        self.__attributes__ = {}
+        if 'attributes' in kwargs:
+            self.__attributes__ = kwargs['attributes']
+        assert isinstance(self.__attributes__, dict), 'attributes must be a dict'
+        if 'source' not in kwargs:
+            raise ValueError('source must be specified')
+        self.__source__ = kwargs['source']
+        assert self.validate_source(self.__source__), 'source is not valid'
+        if 'identifier' in kwargs:
+            self.__identifier__ = kwargs['identifier']
+            assert self.validate_uuid_string(self.__identifier__), 'identifier is not valid'
+        else:
+            self.__identifier__ = str(uuid.uuid4())
         self.__timestamp__ = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        if 'timestamp' in kwargs:
+            self.__timestamp__ = kwargs['timestamp']
+            assert self.validate_iso_timestamp(self.__timestamp__), 'timestamp is not valid'
 
     def __setitem__(self, key, value):
         self.__attributes__[key] = value
 
     def __getitem__(self, key):
+        if key not in self.__attributes__:
+            raise KeyError(f'key {key} not found')
         return self.__attributes__[key]
 
     def __iter__(self):
@@ -159,7 +173,7 @@ def main():
                         default=source_uuid, help='The source UUID of the data.')
     parser.add_argument('--raw-data',
                         '-r',
-                        type=str,
+                        type=bytes,
                         default=random_raw_data,
                         help='The raw data to be stored.')
     args = parser.parse_args()
@@ -168,10 +182,11 @@ def main():
         'field2' : random.randint(101,200),
         'field3' : random.randint(201,300),
     }
-    record = IndalekoRecord(args.raw_data,
-                            attributes,
-                            {
-                                'Source Identifier' : args.source,
+    print(type(random_raw_data))
+    record = IndalekoRecord(raw_data = random_raw_data,
+                            attributes = attributes,
+                            source = {
+                                'Identifier' : args.source,
                                 'Version' : '1.0'
                             })
     print(f'initial record :\n{record.to_json()}')
