@@ -128,7 +128,7 @@ class IndalekoDBConfig:
 
     def __load_config__(self):
         self.config = configparser.ConfigParser()
-        self.config.read(self.config_file)
+        self.config.read(self.config_file, encoding='utf-8-sig')
 
 
     def delete_config(self):
