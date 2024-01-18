@@ -1,6 +1,6 @@
-data/*
-config/*
-logs/*
+data*/*
+config*/*
+logs*/*
 __pycache__/*
 .trunk/
 .vscode/

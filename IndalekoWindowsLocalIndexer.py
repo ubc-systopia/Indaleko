@@ -18,7 +18,7 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
     This is the class that indexes Windows local file systems.
     '''
     windows_platform = 'Windows'
-    windows_local_indexer = 'local-fs'
+    windows_local_indexer = 'fs-indexer'
 
     indaleko_windows_local_indexer_uuid = '0793b4d5-e549-4cb6-8177-020a738b66b7'
     indaleko_windows_local_indexer_service_name = 'Windows Local Indexer'
@@ -206,7 +206,6 @@ def main():
                                           storage_description=drive_guid)
     output_file = indexer.generate_indexer_file_name()
     log_file_name = indexer.generate_indexer_file_name(target_dir=args.logdir)
-    log_file_name = log_file_name.replace('.jsonl', '.log') #gross
     logging.basicConfig(filename=os.path.join(log_file_name),
                                 level=args.loglevel,
                                 format='%(asctime)s - %(levelname)s - %(message)s',

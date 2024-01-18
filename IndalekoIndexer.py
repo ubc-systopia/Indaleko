@@ -7,8 +7,7 @@ import datetime
 import logging
 import jsonlines
 import json
-import re
-
+import uuid
 from Indaleko import Indaleko
 from IndalekoServices import IndalekoService
 
@@ -121,7 +120,7 @@ class IndalekoIndexer:
                 if x.startswith(prefix)
                 and x.endswith(suffix) and 'indexer' in x]
 
-    def generate_indexer_file_name(self, target_dir : str = None) -> str:
+    def generate_indexer_file_name(self, target_dir : str = None, suffix : str = None) -> str:
         '''This will generate a file name for the indexer output file.'''
         if hasattr(self, 'platform'):
             platform = self.platform
@@ -133,33 +132,29 @@ class IndalekoIndexer:
         else:
             indexer = 'unknown_indexer'
         indexer = indexer.replace('-', '_')
+        machine_id = str(uuid.UUID('00000000-0000-0000-0000-000000000000').hex)
         if hasattr(self, 'machine_id'):
-            machine_id = self.machine_id
-        else:
-            machine_id = 'unknown_machine_id'
-        machine_id = machine_id.replace('-', '_')
+            machine_id = str(uuid.UUID(self.machine_id).hex)
+        storage_description = str(uuid.UUID('00000000-0000-0000-0000-000000000000').hex)
         if hasattr(self, 'storage_description'):
-            storage_description = self.storage_description
-        else:
-            storage_description = 'unknown_storage_description'
-        storage_description = storage_description.replace('-', '_')
+            storage_description = str(uuid.UUID(self.storage_description).hex)
         if hasattr(self, 'timestamp'):
             timestamp = self.timestamp
         else:
             timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        timestamp = timestamp.replace(':', '-')
         if target_dir is None:
             target_dir = self.data_dir
-        return os.path.join(
-                target_dir,
-                f'{self.file_prefix}-\
-                   platform={platform}-\
-                   indexer={indexer}-\
-                   machine={machine_id}-\
-                   storage={storage_description}-\
-                   timestamp={timestamp}\
-                   {self.file_suffix}'.replace(' ', '')
-        )
+        kwargs = {
+            'platform' : platform,
+            'service' : indexer,
+            'machine' : machine_id,
+            'storage' : storage_description,
+            'timestamp' : timestamp,
+        }
+        if suffix is not None:
+            kwargs['suffix'] = suffix
+        name = Indaleko.generate_file_name(**kwargs)
+        return os.path.join(target_dir,name)
 
     @staticmethod
     def extract_metadata_from_indexer_file_name(file_name : str) -> dict:
@@ -167,36 +162,14 @@ class IndalekoIndexer:
         This script extracts metadata from an indexer file name, based upon
         the format used by generate_indexer_file_name.
         '''
-        base_file_name, file_suffix = os.path.splitext(os.path.basename(file_name))
-
-        # Define the regular expression pattern to match the structured filename
-        pattern = (
-            r'(?P<file_prefix>[^-]+)-'
-            r'platform=(?P<platform>[^-]+)-'
-            r'indexer=(?P<indexer>[^-]+)-'
-            r'machine=(?P<machine_id>[^-]+)-'
-            r'storage=(?P<storage_description>[^-]+)-'
-            r'timestamp=(?P<timestamp>.+)'
-        )
-        # Match the pattern to the filename
-        match = re.match(pattern, base_file_name)
-        if not match:
+        data = Indaleko.extract_keys_from_file_name(file_name)
+        if data is None:
             raise ValueError("Filename format not recognized")
-        # Extract the metadata into a dictionary
-        metadata = match.groupdict()
-        # Perform any necessary post-processing (e.g., replacing underscores back with hyphens)
-        for key in metadata:
-            metadata[key] = metadata[key].replace('_', '-')
-        if 'timestamp' in metadata:
-            # 2024-01-15T19-47-11.670000+00-00
-            timestamp = metadata['timestamp'].replace('-', ':')
-            timestamp_parts = timestamp.split('.')
-            fractional_part = timestamp_parts[1][:6] # truncate to 6 digits
-            ymd, hms = timestamp_parts[0].split('T')
-            timestamp = ymd.replace(':', '-') + 'T' + hms + '.' + fractional_part + '+00:00'
-            metadata['timestamp'] = timestamp
-        metadata['file_suffix'] = file_suffix
-        return metadata
+        if 'machine' in data:
+            data['machine'] = str(uuid.UUID(data['machine']))
+        if 'storage' in data:
+            data['storage'] = str(uuid.UUID(data['storage']))
+        return data
 
     def build_stat_dict(self, name: str, root : str) -> tuple:
         '''This function builds a stat dict for a given file.'''
@@ -247,7 +220,7 @@ def main():
     output_file = indexer.generate_indexer_file_name()
     with open(output_file, 'wt', encoding='utf-8-sig') as output:
         output.write('Hello, world!\n')
-        print(f'Wrote {output_file}.')
+        print(f'Wrote {output_file}')
     metadata = indexer.extract_metadata_from_indexer_file_name(output_file)
     print(json.dumps(metadata, indent=4))
 
