@@ -21,6 +21,7 @@ import uuid
 import datetime
 import json
 import arango
+import logging
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoCollections import IndalekoCollection, IndalekoCollections
 from IndalekoServicesSchema import IndalekoServicesSchema
@@ -221,9 +222,9 @@ class IndalekoService(IndalekoRecord):
     def lookup_service_by_name(self) -> bool:
         '''Given a string name for the service, look up that service.'''
         self.service = None
-        data = self.collection.find_entries(Name = self.service_name)
+        data = self.collection.find_entries(Name=self.service_name)
         if not isinstance(data, list) or len(data) == 0:
-            print('Service name {self.service_name} not found.')
+            logging.warning('Service name %s not found.', self.service_name)
             return False
         data = data[0]
         if not isinstance(data, dict):
@@ -240,7 +241,7 @@ class IndalekoService(IndalekoRecord):
             raise ValueError(f'{self.service_identifier} is not a valid UUID.')
         data = self.collection.find_entries(Identifier = self.service_identifier)
         if not isinstance(data, list) or len(data) == 0:
-            print('Service id {self.service_identifier} not found.')
+            print(f'Service id {self.service_identifier} not found.')
             return False
         data = data[0]
         if not isinstance(data, dict):

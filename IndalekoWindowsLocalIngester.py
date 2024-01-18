@@ -1,6 +1,22 @@
 '''
 This module handles data ingestion into Indaleko from the Windows local data
 indexer.
+
+Indaleko Windows Local Ingester
+Copyright (C) 2024 Tony Mason
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import argparse
 import datetime
@@ -187,8 +203,8 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
         dirmap = {}
         for item in dir_data:
             fqp = os.path.join(item['Path'], item['Name'])
-            id = item.args['ObjectIdentifier']
-            dirmap[fqp] = id
+            identifier = item.args['ObjectIdentifier']
+            dirmap[fqp] = identifier
         # now, let's build a list of the edges, using our map.
         dir_edges = []
         source = {
