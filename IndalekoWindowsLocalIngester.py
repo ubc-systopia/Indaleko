@@ -187,8 +187,8 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
         dirmap = {}
         for item in dir_data:
             fqp = os.path.join(item['Path'], item['Name'])
-            id = item.args['ObjectIdentifier']
-            dirmap[fqp] = id
+            identifier = item.args['ObjectIdentifier']
+            dirmap[fqp] = identifier
         # now, let's build a list of the edges, using our map.
         dir_edges = []
         source = {
