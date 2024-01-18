@@ -3,9 +3,6 @@ IndakeloRelationshipContains module defines the "contains" relationship,
 e.g., a directory contains a file or directory, a volume contains files and
 directories, etc.
 '''
-
-import json
-
 from IndalekoRelationship import IndalekoRelationship
 from Indaleko import Indaleko
 
