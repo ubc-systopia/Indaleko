@@ -54,7 +54,7 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
     )
 
     windows_platform = IndalekoWindowsLocalIndexer.windows_platform
-    windows_local_ingester = 'local-fs-ingester'
+    windows_local_ingester = 'local_fs_ingester'
 
     def __init__(self, **kwargs) -> None:
         if 'input_file' not in kwargs:
@@ -68,7 +68,7 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
             kwargs['machine_id'] = self.machine_config.machine_id
             if kwargs['machine_id'] != self.machine_config.machine_id:
                 logging.warning('Warning: machine ID of indexer file ' +\
-                      f'({kwargs["machine_id"]}) does not match machine ID of ingester ' +\
+                      f'({kwargs["machine"]}) does not match machine ID of ingester ' +\
                         f'({self.machine_config.machine_id}.)')
         if 'timestamp' not in kwargs:
             kwargs['timestamp'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
@@ -81,7 +81,7 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
         super().__init__(**kwargs)
         self.input_file = kwargs['input_file']
         if 'output_file' not in kwargs:
-            self.output_file = self.generate_ingester_file_name()
+            self.output_file = self.generate_file_name()
         else:
             self.output_file = kwargs['output_file']
         self.indexer_data = []
@@ -254,6 +254,8 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
                 output.write(entry.to_dict())
         edge_file = self.generate_output_file_name(
             machine=self.machine_id,
+            platform=self.platform,
+            service='local_ingest',
             storage=self.storage_description,
             collection='Relationships',
             timestamp=self.timestamp,
@@ -333,12 +335,13 @@ def main():
     args = parser.parse_args()
     metadata = IndalekoWindowsLocalIndexer.extract_metadata_from_indexer_file_name(args.input)
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    if 'machine_id' in metadata:
-        if metadata['machine_id'] != machine_config.machine_id:
+    machine_id = 'unknown'
+    if 'machine' in metadata:
+        if metadata['machine'] != machine_config.machine_id:
             print('Warning: machine ID of indexer file ' +\
-                  f'({metadata["machine_id"]}) does not match machine ID of ingester ' +\
-                    f'({machine_config.machine_id}.)')
-        machine_id = metadata['machine_id']
+                  f'({metadata["machine"]}) does not match machine ID of ingester ' +\
+                    f'({machine_config.machine_id})')
+        machine_id = metadata['machine']
     if 'timestamp' in metadata:
         timestamp = metadata['timestamp']
     if 'platform' in metadata:
@@ -347,10 +350,13 @@ def main():
             print('Warning: platform of indexer file ' +\
                   f'({indexer_platform}) name does not match platform of ingester ' +\
                     f'({IndalekoWindowsLocalIngester.windows_platform}.)')
-    if 'storage_description' in metadata:
-        storage_description = metadata['storage_description']
+    storage = 'unknown'
+    if 'storage' in metadata:
+        storage = metadata['storage']
+    file_prefix = IndalekoIngester.default_file_prefix
     if 'file_prefix' in metadata:
         file_prefix = metadata['file_prefix']
+    file_suffix = IndalekoIngester.default_file_suffix
     if 'file_suffix' in metadata:
         file_suffix = metadata['file_suffix']
     input_file = os.path.join(args.datadir, args.input)
@@ -360,17 +366,16 @@ def main():
         timestamp=timestamp,
         platform=IndalekoWindowsLocalIndexer.windows_platform,
         ingester = IndalekoWindowsLocalIngester.windows_local_ingester,
-        storage_description = storage_description,
+        storage_description = storage,
         file_prefix = file_prefix,
         file_suffix = file_suffix,
         data_dir=args.datadir,
         input_file=input_file,
         log_dir=args.logdir
     )
-    output_file = ingester.generate_ingester_file_name()
-    log_file_name = ingester.generate_ingester_file_name(
-        target_dir=args.logdir).replace('.jsonl', '.log') # gross
-    log_file_name = log_file_name.replace(':', '-')
+    output_file = ingester.generate_file_name()
+    log_file_name = ingester.generate_file_name(
+        target_dir=args.logdir, suffix='.log')
     logging.basicConfig(filename=os.path.join(log_file_name),
                                 level=logging.DEBUG,
                                 format='%(asctime)s - %(levelname)s - %(message)s',
