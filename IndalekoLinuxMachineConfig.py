@@ -22,6 +22,8 @@ import subprocess
 import argparse
 import json
 import uuid
+import psutil # see https://psutil.readthedocs.io/en/latest/
+import netifaces # see https://pypi.org/project/netifaces/
 
 from IndalekoMachineConfig import IndalekoMachineConfig
 
@@ -67,20 +69,85 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
 
     @staticmethod
     def parse_ip_addr_output():
-        output = IndalekoLinuxMachineConfig.execute_command(['ip', '-c', 'addr'])
+        output = IndalekoLinuxMachineConfig.execute_command(['ip', 'addr'])
         interfaces = {}
-        current_interface = None
-
-        for line in output.split('\n'):
-            print(f"Line: {line}")
+        interface_info = {}
+        lines = output.split('\n')
+        while len(lines) > 0: # sometimes we need multiple lines
+            line = lines.pop(0)
             if 'mtu' in line:
-                print('New interface found')
-                # New interface found, extract its name and initialize its characteristics list
-                # current_interface = line.split(':')[1].strip()
-                #interfaces[current_interface] = []
-            # elif current_interface:
-                # Add characteristics to the current interface
-                # interfaces[current_interface].append(line.strip())
+                if len(interface_info) > 0:
+                    interfaces[interface_info['name']] = interface_info
+                interface_info = {}
+                line.strip()
+                _, interface_name, interface_data = line.split(':')
+                interface_info['name'] = interface_name.strip()
+                interface_data = [d.strip() for d in interface_data.split(' ') if len(d.strip()) > 0]
+                if not interface_data[0].startswith('<') or not interface_data[0].endswith('>'):
+                    raise Exception(f"Unexpected format for interface data: {interface_data}")
+                interface_flags = interface_data.pop(0)[1:-1].split(' ')
+                interface_info['flags'] = interface_flags
+                while len(interface_data) > 0:
+                    key = interface_data.pop(0)
+                    value = interface_data.pop(0)
+                    interface_info[key] = value
+            elif 'inet6' in line:
+                interface_data = [d.strip() for d in line.split(' ') if len(d.strip()) > 0]
+                inet6_flags = []
+                while len(interface_data) > 0:
+                    key = interface_data.pop(0)
+                    if key == 'inet6':
+                        inet6_addr = interface_data.pop(0)
+                    else:
+                        inet6_flags.append(key)
+                line = lines.pop(0) # next line is continuation
+                if 'valid_lft' not in line:
+                    raise Exception(f"Unexpected format for interface data: {line}")
+                interface_data = [d.strip() for d in line.split(' ') if len(d.strip()) > 0]
+                inet6_data = {}
+                while len(interface_data) > 0:
+                    key = interface_data.pop(0)
+                    inet6_data[key] = interface_data.pop(0)
+                if 'inet6' not in interface_info:
+                    interface_info['inet6'] = []
+                interface_info['inet6'].append({
+                  'address': inet6_addr,
+                    'flags': inet6_flags,
+                    'data': inet6_data,
+                })
+            elif 'inet' in line:
+                interface_data = [d.strip() for d in line.split(' ') if len(d.strip()) > 0]
+                inet4_flags = []
+                while len(interface_data) > 0:
+                    key = interface_data.pop(0)
+                    if key == 'inet':
+                        inet4_addr = interface_data.pop(0)
+                    else:
+                        inet4_flags.append(key)
+                line = lines.pop(0) # next line is continuation
+                if 'valid_lft' not in line:
+                    raise Exception(f"Unexpected format for interface data: {line}")
+                interface_data = [d.strip() for d in line.split(' ') if len(d.strip()) > 0]
+                inet4_data = {}
+                while len(interface_data) > 0:
+                    key = interface_data.pop(0)
+                    inet4_data[key] = interface_data.pop(0)
+                if 'inet' not in interface_info:
+                    interface_info['inet'] = []
+                interface_info['inet'].append({
+                  'address': inet4_addr,
+                    'flags': inet4_flags,
+                    'data': inet4_data,
+                })
+            elif 'brd' in line:
+                interface_data = [d.strip() for d in line.split(' ') if len(d.strip()) > 0]
+                while len(interface_data) > 0:
+                    key = interface_data.pop(0)
+                    if len(interface_data) == 0:
+                        continue
+                    interface_info[key] = interface_data.pop(0)
+        if len(interface_info) > 0:
+            interfaces[interface_info['name']] = interface_info
         return interfaces
 
 
@@ -108,9 +175,9 @@ def main():
     print(f"Config dir: {args.configdir}")
     print(json.dumps(IndalekoLinuxMachineConfig.gather_system_information(),indent=4))
     cpu_data, ram_data, disk_data, net_data = IndalekoLinuxMachineConfig.extract_some_data1()
-    #print(json.dumps(cpu_data, indent=4))
-    #print(json.dumps(ram_data, indent=4))
-    #print(json.dumps(disk_data, indent=4))
+    print(json.dumps(cpu_data, indent=4))
+    print(json.dumps(ram_data, indent=4))
+    print(json.dumps(disk_data, indent=4))
     print(json.dumps(net_data, indent=4))
 
 

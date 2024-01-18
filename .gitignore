@@ -9,3 +9,4 @@ wmiobject-list.txt
 *.json
 scratch.py
 *.jsonl
+wam/
