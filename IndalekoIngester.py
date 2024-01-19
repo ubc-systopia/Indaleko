@@ -138,6 +138,17 @@ class IndalekoIngester():
             service_identifier = self.service_identifier,
         )
         assert self.ingester_service is not None, 'Ingester service does not exist'
+        self.dir_count = 0
+        self.file_count = 0
+        self.error_count = 0
+
+    def get_counts(self) -> dict:
+        '''Return a dictionary of the counts.'''
+        return {
+            'dir_count' : self.dir_count,
+            'file_count' : self.file_count,
+            'error_count' : self.error_count,
+        }
 
     def generate_output_file_name(self, **kwargs) -> str:
         '''
@@ -214,6 +225,7 @@ def main():
     print(fname)
     metadata = ingester.extract_metadata_from_ingester_file_name(fname)
     print(json.dumps(metadata, indent=4))
+
 
 if __name__ == "__main__":
     main()
