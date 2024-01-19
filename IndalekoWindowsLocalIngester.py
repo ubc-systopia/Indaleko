@@ -131,7 +131,7 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
         oid = str(uuid.uuid4())
         kwargs = {
             'source' : self.source,
-            'raw_data' : msgpack.packb(data),
+            'raw_data' : msgpack.packb(bytes(json.dumps(data).encode('utf-8'))),
             'URI' : data['URI'],
             'ObjectIdentifier' : oid,
             'Timestamps' : [
@@ -181,14 +181,19 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
         This function ingests the indexer file and emits the data needed to
         upload to the database.
         '''
-        logging.warning('Ingesting not yet implemented.')
         self.load_indexer_data_from_file()
         dir_data_by_path = {}
         dir_data = []
         file_data = []
         # Step 1: build the normalized data
         for item in self.indexer_data:
-            obj = self.normalize_index_data(item)
+            try:
+                obj = self.normalize_index_data(item)
+            except OSError as e:
+                logging.error('Error normalizing data: %s', e)
+                logging.error('Data: %s', item)
+                self.error_count += 1
+                continue
             if 'S_IFDIR' in obj.args['UnixFileAttributes'] or \
                'FILE_ATTRIBUTE_DIRECTORY' in obj.args['WindowsFileAttributes']:
                 if 'Path' not in obj:
@@ -196,8 +201,10 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
                     continue # skip
                 dir_data_by_path[os.path.join(obj['Path'], obj['Volume GUID'])] = obj
                 dir_data.append(obj)
+                self.dir_count += 1
             else:
                 file_data.append(obj)
+                self.file_count += 1
         # Step 2: build a table of paths to directory uuids
         dirmap = {}
         for item in dir_data:
@@ -378,6 +385,9 @@ def main():
     logging.info('Ingesting %s ' , args.input)
     logging.info('Output file %s ' , output_file)
     ingester.ingest()
+    counts = ingester.get_counts()
+    for count_type, count_value in counts.items():
+        logging.info('%s: %d', count_type, count_value)
     logging.info('Done')
 
 

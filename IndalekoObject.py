@@ -58,6 +58,8 @@ class IndalekoObject(IndalekoRecord):
         assert '_key' not in args, '_key is a reserved parameter'
         assert 'Data' not in args, 'Data is a reserved parameter'
         self.args = args
+        if not isinstance(raw_data, bytes):
+            raise ValueError('raw_data must be bytes')
         super().__init__(raw_data = msgpack.packb(raw_data),
                          attributes = attributes,
                          source = {
