@@ -151,15 +151,13 @@ class IndalekoIngester():
         if output_dir is None:
             output_dir = self.data_dir
         kwargs['ingester'] = self.ingester
-        kwargs['machine'] = self.machine_id.replace('-', '_')
-        kwargs['storage'] = self.storage_description.replace('-', '_')
+        kwargs['machine'] = str(uuid.UUID(self.machine_id).hex)
+        kwargs['storage'] = str(uuid.UUID(self.storage_description).hex)
         name = Indaleko.generate_file_name(**kwargs)
         return os.path.join(output_dir, name)
 
     def generate_file_name(self, target_dir : str = None, suffix = None) -> str:
         '''This will generate a file name for the ingester output file.'''
-        print('machine_id : %s', self.machine_id)
-        print('storage_description : %s', self.storage_description)
         if suffix is None:
             suffix = self.file_suffix
         return self.generate_output_file_name(
@@ -170,6 +168,7 @@ class IndalekoIngester():
             ingester = self.ingester,
             machine = str(uuid.UUID(self.machine_id).hex),
             storage = str(uuid.UUID(self.storage_description).hex),
+            collection = 'Objects',
             timestamp = self.timestamp,
             output_dir = target_dir,
         )
@@ -198,8 +197,6 @@ class IndalekoIngester():
                     try:
                         writer.write(entry.to_dict())
                     except TypeError as err:
-                        print('Error writing entry to JSONLines file: %s', err)
-                        print('Entry: %s', entry)
                         logging.error('Error writing entry to JSONLines file: %s', err)
                         logging.error('Entry: %s', entry)
                         raise err

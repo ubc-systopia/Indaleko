@@ -89,7 +89,6 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
             'Identifier' : self.windows_local_ingester_uuid,
             'Version' : '1.0'
         }
-        print(self.output_file)
 
 
     def find_indexer_files(self) -> list:
@@ -245,13 +244,7 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
             )
             dir_edges.append(dir_edge)
         # Save the data to the ingester output file
-        self.write_data_to_file(dir_data + file_data + dir_edges, self.output_file)
-        with open('test1.json', 'wt', encoding='utf-8-sig') as writer:
-            for entry in dir_data:
-                writer.write(entry.to_json() + '\n')
-        with jsonlines.open('test1.jsonl', mode='w') as output:
-            for entry in dir_data:
-                output.write(entry.to_dict())
+        self.write_data_to_file(dir_data + file_data, self.output_file)
         edge_file = self.generate_output_file_name(
             machine=self.machine_id,
             platform=self.platform,
@@ -261,7 +254,9 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
             timestamp=self.timestamp,
             output_dir=self.data_dir,
         )
-        print(edge_file)
+        self.write_data_to_file(dir_edges, edge_file)
+
+
 
 def main():
     '''
