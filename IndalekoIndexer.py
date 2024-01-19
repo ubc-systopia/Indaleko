@@ -84,8 +84,9 @@ class IndalekoIndexer:
             self.timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
         if 'platform' in kwargs:
             self.platform = kwargs['platform']
-        if 'indexer' in kwargs:
-            self.indexer = kwargs['indexer']
+        if 'indexer_name' in kwargs:
+            assert isinstance(kwargs['indexer_name'], str), 'indexer_name must be a string'
+            self.indexer_name = kwargs['indexer_name']
         if 'machine_id' in kwargs:
             self.machine_id = kwargs['machine_id']
         if 'storage_description' in kwargs:
@@ -144,10 +145,10 @@ class IndalekoIndexer:
             platform = 'unknown_platform'
         platform = platform.replace('-', '_')
         if hasattr(self, 'indexer'):
-            indexer = self.indexer
+            indexer_name = self.indexer_name
         else:
-            indexer = 'unknown_indexer'
-        indexer = indexer.replace('-', '_')
+            indexer_name = 'unknown_indexer'
+        indexer_name = indexer_name.replace('-', '_')
         machine_id = str(uuid.UUID('00000000-0000-0000-0000-000000000000').hex)
         if hasattr(self, 'machine_id'):
             machine_id = str(uuid.UUID(self.machine_id).hex)
@@ -162,7 +163,7 @@ class IndalekoIndexer:
             target_dir = self.data_dir
         kwargs = {
             'platform' : platform,
-            'service' : indexer,
+            'service' : indexer_name,
             'machine' : machine_id,
             'storage' : storage_description,
             'timestamp' : timestamp,

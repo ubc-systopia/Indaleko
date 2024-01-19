@@ -101,7 +101,7 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
             raise ValueError('data_dir must be specified')
         return [x for x in super().find_indexer_files(self.data_dir)
                 if IndalekoWindowsLocalIndexer.windows_platform in x and
-                IndalekoWindowsLocalIndexer.windows_local_indexer in x]
+                IndalekoWindowsLocalIndexer.windows_local_indexer_name in x]
 
     def load_indexer_data_from_file(self : 'IndalekoWindowsLocalIngester') -> None:
         '''This function loads the indexer data from the file.'''
@@ -317,7 +317,7 @@ def main():
     indexer = IndalekoWindowsLocalIndexer(
         search_dir=pre_args.datadir,
         prefix=IndalekoWindowsLocalIndexer.windows_platform,
-        suffix=IndalekoWindowsLocalIndexer.windows_local_indexer,
+        suffix=IndalekoWindowsLocalIndexer.windows_local_indexer_name,
         machine_config=machine_config
     )
     indexer_files = indexer.find_indexer_files(pre_args.datadir)

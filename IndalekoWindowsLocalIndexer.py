@@ -34,7 +34,7 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
     This is the class that indexes Windows local file systems.
     '''
     windows_platform = 'Windows'
-    windows_local_indexer = 'fs-indexer'
+    windows_local_indexer_name = 'fs-indexer'
 
     indaleko_windows_local_indexer_uuid = '0793b4d5-e549-4cb6-8177-020a738b66b7'
     indaleko_windows_local_indexer_service_name = 'Windows Local Indexer'
@@ -86,7 +86,7 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
             kwargs['machine_id'] = self.machine_config.machine_id
         super().__init__(**kwargs,
                          platform=IndalekoWindowsLocalIndexer.windows_platform,
-                         indexer=IndalekoWindowsLocalIndexer.windows_local_indexer,
+                         indexer_name=IndalekoWindowsLocalIndexer.windows_local_indexer_name,
                          **IndalekoWindowsLocalIndexer.indaleko_windows_local_indexer_service
         )
 
