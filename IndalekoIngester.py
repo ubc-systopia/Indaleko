@@ -84,9 +84,9 @@ class IndalekoIngester():
         if 'file_suffix' in kwargs:
             self.file_suffix = kwargs['file_suffix']
         self.file_suffix = self.file_suffix.replace('-', '_')
-        self.machine_id = 'unknown'
+        self.machine_id = str(uuid.UUID('00000000-0000-0000-0000-000000000000').hex)
         if 'machine_id' in kwargs:
-            self.machine_id = kwargs['machine_id']
+            self.machine_id = str(uuid.UUID(kwargs['machine_id']).hex)
         self.timestamp = datetime.datetime.now(datetime.UTC).isoformat()
         if 'timestamp' in kwargs:
             self.timestamp = kwargs['timestamp']
@@ -96,9 +96,9 @@ class IndalekoIngester():
         self.ingester = 'unknown'
         if 'ingester' in kwargs:
             self.ingester = kwargs['ingester']
-        self.storage_description = 'unknown'
+        self.storage_description = str(uuid.UUID('00000000-0000-0000-0000-000000000000').hex)
         if 'storage_description' in kwargs:
-            self.storage_description = kwargs['storage_description']
+            self.storage_description = str(uuid.UUID(kwargs['storage_description']).hex)
         self.data_dir = Indaleko.default_data_dir
         if 'data_dir' in kwargs:
             self.data_dir = kwargs['data_dir']
@@ -144,64 +144,47 @@ class IndalekoIngester():
         Given a set of parameters, generate a file name for the output
         file.
         '''
-        prefix = 'indaleko'
-        suffix = 'jsonl'
-        output_dir = self.output_dir
-        if 'prefix' in kwargs:
-            prefix = kwargs['prefix']
-            del kwargs['prefix']
-        if 'suffix' in kwargs:
-            suffix = kwargs['suffix']
-            del kwargs['suffix']
-        output_dir = self.data_dir
+        output_dir = None
         if 'output_dir' in kwargs:
             output_dir = kwargs['output_dir']
             del kwargs['output_dir']
         if output_dir is None:
             output_dir = self.data_dir
-        platform = self.platform
-        if 'platform' in kwargs:
-            platform = kwargs['platform']
-            del kwargs['platform']
-        timestamp = self.timestamp
-        if 'timestamp' in kwargs:
-            timestamp = kwargs['timestamp']
-            del kwargs['timestamp']
-        name = prefix
-        name += f'-{platform}'
-        for key, value in kwargs.items():
-            name += f'-{key}={value}'
-        name += f'-{timestamp}'.replace(':', '-')
-        name += f'.{suffix}'
+        kwargs['ingester'] = self.ingester
+        kwargs['machine'] = self.machine_id.replace('-', '_')
+        kwargs['storage'] = self.storage_description.replace('-', '_')
+        name = Indaleko.generate_file_name(**kwargs)
         return os.path.join(output_dir, name)
 
-    def generate_ingester_file_name(self, target_dir : str = None) -> str:
+    def generate_file_name(self, target_dir : str = None, suffix = None) -> str:
         '''This will generate a file name for the ingester output file.'''
+        print('machine_id : %s', self.machine_id)
+        print('storage_description : %s', self.storage_description)
+        if suffix is None:
+            suffix = self.file_suffix
         return self.generate_output_file_name(
             prefix = self.file_prefix,
-            suffix = self.file_suffix,
+            suffix = suffix,
             platform = self.platform,
+            service= 'ingest',
             ingester = self.ingester,
-            machine = self.machine_id,
-            storage = self.storage_description,
+            machine = str(uuid.UUID(self.machine_id).hex),
+            storage = str(uuid.UUID(self.storage_description).hex),
             timestamp = self.timestamp,
             output_dir = target_dir,
         )
 
-    def generate_ingester_file_name_old(self, target_dir : str = None) -> str:
-        '''This will generate a file name for the ingester output file.'''
-        if target_dir is None:
-            target_dir = self.data_dir
-        return os.path.join(
-                target_dir,
-                f'{self.file_prefix}-\
-                   platform={self.platform}-\
-                   ingester={self.ingester}-\
-                   machine={self.machine_id}-\
-                   storage={self.storage_description}-\
-                   timestamp={self.timestamp}\
-                   {self.file_suffix}'.replace(' ', '')
-        )
+    @staticmethod
+    def extract_metadata_from_ingester_file_name(file_name : str) -> dict:
+        '''
+        This will extract the metadata from the given file name.
+        '''
+        data = Indaleko.extract_keys_from_file_name(file_name)
+        if 'machine' in data:
+            data['machine'] = str(uuid.UUID(data['machine']))
+        if 'storage' in data:
+            data['storage'] = str(uuid.UUID(data['storage']))
+        return data
 
     def write_data_to_file(self, data : list, file_name : str = None, jsonlines_output : bool = True) -> None:
         '''This will write the given data to the specified file.'''
@@ -230,7 +213,10 @@ def main():
     # Now parse the arguments
     ingester = IndalekoIngester(test=True)
     assert ingester is not None, "Could not create ingester."
-    print(ingester.generate_ingester_file_name())
+    fname = ingester.generate_file_name()
+    print(fname)
+    metadata = ingester.extract_metadata_from_ingester_file_name(fname)
+    print(json.dumps(metadata, indent=4))
 
 if __name__ == "__main__":
     main()

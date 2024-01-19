@@ -57,6 +57,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import uuid
 import datetime
+import os
 from IndalekoObjectSchema import IndalekoObjectSchema
 from IndalekoServicesSchema import IndalekoServicesSchema
 from IndalekoRelationshipSchema import IndalekoRelationshipSchema
@@ -166,10 +167,118 @@ class Indaleko:
                 valid = False
         return valid
 
+    @staticmethod
+    def generate_file_name(**kwargs) -> str:
+        '''
+        Given a key/value store of labels and values, this generates a file
+        name in a common format.
+        Special labels:
+            * prefix: string to prepend to the file name
+            * platform: identifies the platform from which the data originated
+            * service: identifies the service that generated the data (indexer,
+              ingester, etc.)
+            * timestamp: timestamp to use in the file name
+            * suffix: string to append to the file name
+        '''
+        max_len = 255
+        prefix = 'indaleko'
+        suffix = 'jsonl'
+        if 'max_len' in kwargs:
+            max_len = kwargs['max_len']
+            if isinstance(max_len, str):
+                max_len = int(max_len)
+            if not isinstance(max_len, int):
+                raise ValueError('max_len must be an integer')
+            del kwargs['max_len']
+        ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        if 'platform' not in kwargs:
+            raise ValueError('platform must be specified')
+        platform = kwargs['platform']
+        del kwargs['platform']
+        if 'service' not in kwargs:
+            raise ValueError('service must be specified')
+        service = kwargs['service']
+        del kwargs['service']
+        if 'timestamp' in kwargs:
+            ts = kwargs['timestamp']
+            del kwargs['timestamp']
+        if 'prefix' in kwargs:
+            prefix = kwargs['prefix']
+            del kwargs['prefix']
+        if 'suffix' in kwargs:
+            suffix = kwargs['suffix']
+            del kwargs['suffix']
+        if '-' in prefix:
+            raise ValueError('prefix must not contain a hyphen')
+        if '-' in suffix:
+            raise ValueError('suffix must not contain a hyphen')
+        if suffix.startswith('.'):
+            suffix = suffix[1:] # avoid ".." for suffix
+        if '-' in platform:
+            raise ValueError('platform must not contain a hyphen')
+        if '-' in service:
+            raise ValueError('service must not contain a hyphen')
+        name = prefix
+        name += f'-plt={platform}'
+        name += f'-svc={service}'
+        for key, value in kwargs.items():
+            if '-' in key or '-' in value:
+                raise ValueError(f'key and value must not contain a hyphen: {key, value}')
+            name += f'-{key}={value}'
+        name += f'-ts={ts.replace(':','#').replace('-','_')}'
+        name += f'.{suffix}'
+        if len(name) > max_len:
+            raise ValueError('file name is too long' + '\n' + name + '\n' + str(len(name)))
+        return name
+
+    @staticmethod
+    def extract_keys_from_file_name(file_name : str) -> dict:
+        '''
+        Given a file name, extract the keys and values from the file name.
+        '''
+        base_file_name, file_suffix = os.path.splitext(os.path.basename(file_name))
+        file_name = base_file_name + file_suffix
+        data = {}
+        if not isinstance(file_name, str):
+            raise ValueError('file_name must be a string')
+        fields = file_name.split('-')
+        print('Indaleko.py', fields)
+        prefix = fields.pop(0)
+        data['prefix'] = prefix
+        platform = fields.pop(0)
+        if not platform.startswith('plt='):
+            raise ValueError('platform field must start with plt=')
+        data['platform'] = platform[4:]
+        service = fields.pop(0)
+        if not service.startswith('svc='):
+            raise ValueError('service field must start with svc=')
+        data['service'] = service[4:]
+        trailer = fields.pop(-1)
+        print(trailer)
+        suffix = trailer.split('.')[-1]
+        if not trailer.startswith('ts='):
+            raise ValueError('timestamp field must start with ts=')
+        ts_field = trailer[3:-len(suffix)-1]
+        data['suffix'] = suffix
+        data['timestamp'] = ts_field.replace('_','-').replace('#',':')
+        ts_check = datetime.datetime.fromisoformat(data['timestamp'])
+        if ts_check is None:
+            raise ValueError('timestamp is not valid')
+        while len(fields) > 0:
+            field = fields.pop(0)
+            if '=' not in field:
+                raise ValueError('field must be of the form key=value')
+            key, value = field.split('=')
+            data[key] = value
+        return data
 
 def main():
     """Test code for Indaleko.py"""
-    print('At the present time, there is no test code in Indaleko.py')
+    print('Test 1: generate a file name')
+    name = Indaleko.generate_file_name(platform='test', service='test')
+    print(name)
+    print('Test 2: extract keys from file name')
+    print(Indaleko.extract_keys_from_file_name(name))
 
 if __name__ == "__main__":
     main()
