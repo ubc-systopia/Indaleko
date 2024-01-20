@@ -90,6 +90,8 @@ class IndalekoIndexer:
         if 'machine_id' in kwargs:
             self.machine_id = kwargs['machine_id']
         if 'storage_description' in kwargs:
+            assert isinstance(kwargs['storage_description'], str), \
+                f'storage_description must be a string, not {type(kwargs["storage_description"])}'
             self.storage_description = kwargs['storage_description']
         if 'path' in kwargs:
             self.path = kwargs['path']
@@ -119,6 +121,9 @@ class IndalekoIndexer:
             service_type=self.service_type
         )
         assert self.indexer_service is not None, "Indexer service does not exist."
+        self.dir_count = 0
+        self.file_count = 0
+        self.error_count = 0
 
     def find_indexer_files(self,
                    search_dir : str,
@@ -136,6 +141,16 @@ class IndalekoIndexer:
         return [x for x in os.listdir(search_dir)
                 if x.startswith(prefix)
                 and x.endswith(suffix) and 'indexer' in x]
+
+    def get_counts(self):
+        '''
+        Retrieves counters about the indexer.
+        '''
+        return {
+            'dir_count' : self.dir_count,
+            'file_count' : self.file_count,
+            'error_count' : self.error_count,
+        }
 
     def generate_indexer_file_name(self, target_dir : str = None, suffix : str = None) -> str:
         '''This will generate a file name for the indexer output file.'''

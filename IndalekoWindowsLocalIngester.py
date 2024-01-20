@@ -236,6 +236,7 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
                 source = source
             )
             dir_edges.append(dir_edge)
+            self.edge_count += 1
             dir_edge = IndalekoRelationshipContainedBy(
                 relationship = \
                     IndalekoRelationshipContainedBy.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR,
@@ -250,6 +251,7 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
                 source = source
             )
             dir_edges.append(dir_edge)
+            self.edge_count += 1
         # Save the data to the ingester output file
         self.write_data_to_file(dir_data + file_data, self.output_file)
         edge_file = self.generate_output_file_name(

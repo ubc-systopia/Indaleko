@@ -141,6 +141,7 @@ class IndalekoIngester():
         self.dir_count = 0
         self.file_count = 0
         self.error_count = 0
+        self.edge_count = 0
 
     def get_counts(self) -> dict:
         '''Return a dictionary of the counts.'''
@@ -148,6 +149,7 @@ class IndalekoIngester():
             'dir_count' : self.dir_count,
             'file_count' : self.file_count,
             'error_count' : self.error_count,
+            'edge_count' : self.edge_count,
         }
 
     def generate_output_file_name(self, **kwargs) -> str:
