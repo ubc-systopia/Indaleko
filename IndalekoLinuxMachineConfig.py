@@ -22,8 +22,9 @@ import subprocess
 import argparse
 import json
 import uuid
-import psutil # see https://psutil.readthedocs.io/en/latest/
+#import psutil # see https://psutil.readthedocs.io/en/latest/
 import netifaces # see https://pypi.org/project/netifaces/
+import datetime
 
 from IndalekoMachineConfig import IndalekoMachineConfig
 
@@ -171,6 +172,9 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
 def main():
     parse = argparse.ArgumentParser()
     parse.add_argument('--configdir', type=str, default='./config', help='Directory where configuration data is written.')
+    parse.add_argument('--timestamp', type=str,
+                       default=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                       help='Timestamp to use')
     args = parse.parse_args()
     print(f"Config dir: {args.configdir}")
     print(json.dumps(IndalekoLinuxMachineConfig.gather_system_information(),indent=4))
