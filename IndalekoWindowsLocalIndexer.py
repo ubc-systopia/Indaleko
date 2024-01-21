@@ -107,17 +107,22 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
         '''
         Given a file name and a root directory, this will return a dict
         constructed from the file system metadata ("stat") for that file.
+        Note: on error this returns an empty dictionary.  If the full path to
+        the file does not exist, this returns None.
         '''
         file_path = os.path.join(root, name)
+        if not os.path.exists(file_path):
+            logging.warning('File %s does not exist', file_path)
+            return None
         if last_uri is None:
             last_uri = file_path
         try:
             stat_data = os.stat(file_path)
         except Exception as e: # pylint: disable=broad-except
-            # at least for now, we just skip errors
+            # at least for now, we log and skip errors
             logging.warning('Unable to stat %s : %s', file_path, e)
             self.error_count += 1
-            return None
+            return {}
         stat_dict = {key : getattr(stat_data, key) \
                      for key in dir(stat_data) if key.startswith('st_')}
         stat_dict['Name'] = name
@@ -142,14 +147,19 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
         for root, dirs, files in os.walk(self.path):
             for name in dirs + files:
                 entry = self.build_stat_dict(name, root, last_uri, last_drive)
+                if entry is None:
+                    self.not_found_count += 1
+                    continue
+                if len(entry) == 0:
+                    self.error_count += 1
+                    continue
                 if name in dirs:
                     self.dir_count += 1
                 else:
                     self.file_count += 1
-                if entry is not None:
-                    data.append(entry[0])
-                    last_uri = entry[1]
-                    last_drive = entry[2]
+                data.append(entry[0])
+                last_uri = entry[1]
+                last_drive = entry[2]
         return data
 
 
