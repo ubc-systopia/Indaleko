@@ -243,8 +243,13 @@ class IndalekoMachineConfig(IndalekoRecord):
         if not IndalekoMachineConfig.validate_uuid_string(source_id):
             raise AssertionError(f"source_id {source_id} is not a valid UUID.")
         collections = IndalekoCollections()
-        machine_config_collection = collections.get_collection(Indaleko.Indaleko_MachineConfig)
-        entries = machine_config_collection.find_entries(**{'Record.`Source Identifier`.Identifier':source_id})
+        # Using spaces in names complicates things, but this does work.
+        cursor = collections.db_config.db.aql.execute(
+            f'FOR doc IN {Indaleko.Indaleko_MachineConfig} FILTER '+\
+             'doc.Record["Source Identifier"].Identifier == ' +\
+             '@source_id RETURN doc',
+            bind_vars={'source_id': source_id})
+        entries = [entry for entry in cursor]
         return entries
 
     @staticmethod

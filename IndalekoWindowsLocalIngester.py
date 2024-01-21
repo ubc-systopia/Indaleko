@@ -89,7 +89,6 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
             'Identifier' : self.windows_local_ingester_uuid,
             'Version' : '1.0'
         }
-        print(self.output_file)
 
 
     def find_indexer_files(self) -> list:
@@ -102,7 +101,7 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
             raise ValueError('data_dir must be specified')
         return [x for x in super().find_indexer_files(self.data_dir)
                 if IndalekoWindowsLocalIndexer.windows_platform in x and
-                IndalekoWindowsLocalIndexer.windows_local_indexer in x]
+                IndalekoWindowsLocalIndexer.windows_local_indexer_name in x]
 
     def load_indexer_data_from_file(self : 'IndalekoWindowsLocalIngester') -> None:
         '''This function loads the indexer data from the file.'''
@@ -132,7 +131,7 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
         oid = str(uuid.uuid4())
         kwargs = {
             'source' : self.source,
-            'raw_data' : msgpack.packb(data),
+            'raw_data' : msgpack.packb(bytes(json.dumps(data).encode('utf-8'))),
             'URI' : data['URI'],
             'ObjectIdentifier' : oid,
             'Timestamps' : [
@@ -182,14 +181,19 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
         This function ingests the indexer file and emits the data needed to
         upload to the database.
         '''
-        logging.warning('Ingesting not yet implemented.')
         self.load_indexer_data_from_file()
         dir_data_by_path = {}
         dir_data = []
         file_data = []
         # Step 1: build the normalized data
         for item in self.indexer_data:
-            obj = self.normalize_index_data(item)
+            try:
+                obj = self.normalize_index_data(item)
+            except OSError as e:
+                logging.error('Error normalizing data: %s', e)
+                logging.error('Data: %s', item)
+                self.error_count += 1
+                continue
             if 'S_IFDIR' in obj.args['UnixFileAttributes'] or \
                'FILE_ATTRIBUTE_DIRECTORY' in obj.args['WindowsFileAttributes']:
                 if 'Path' not in obj:
@@ -197,8 +201,10 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
                     continue # skip
                 dir_data_by_path[os.path.join(obj['Path'], obj['Volume GUID'])] = obj
                 dir_data.append(obj)
+                self.dir_count += 1
             else:
                 file_data.append(obj)
+                self.file_count += 1
         # Step 2: build a table of paths to directory uuids
         dirmap = {}
         for item in dir_data:
@@ -230,6 +236,7 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
                 source = source
             )
             dir_edges.append(dir_edge)
+            self.edge_count += 1
             dir_edge = IndalekoRelationshipContainedBy(
                 relationship = \
                     IndalekoRelationshipContainedBy.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR,
@@ -244,14 +251,9 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
                 source = source
             )
             dir_edges.append(dir_edge)
+            self.edge_count += 1
         # Save the data to the ingester output file
-        self.write_data_to_file(dir_data + file_data + dir_edges, self.output_file)
-        with open('test1.json', 'wt', encoding='utf-8-sig') as writer:
-            for entry in dir_data:
-                writer.write(entry.to_json() + '\n')
-        with jsonlines.open('test1.jsonl', mode='w') as output:
-            for entry in dir_data:
-                output.write(entry.to_dict())
+        self.write_data_to_file(dir_data + file_data, self.output_file)
         edge_file = self.generate_output_file_name(
             machine=self.machine_id,
             platform=self.platform,
@@ -261,7 +263,9 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
             timestamp=self.timestamp,
             output_dir=self.data_dir,
         )
-        print(edge_file)
+        self.write_data_to_file(dir_edges, edge_file)
+
+
 
 def main():
     '''
@@ -315,7 +319,7 @@ def main():
     indexer = IndalekoWindowsLocalIndexer(
         search_dir=pre_args.datadir,
         prefix=IndalekoWindowsLocalIndexer.windows_platform,
-        suffix=IndalekoWindowsLocalIndexer.windows_local_indexer,
+        suffix=IndalekoWindowsLocalIndexer.windows_local_indexer_name,
         machine_config=machine_config
     )
     indexer_files = indexer.find_indexer_files(pre_args.datadir)
@@ -383,6 +387,9 @@ def main():
     logging.info('Ingesting %s ' , args.input)
     logging.info('Output file %s ' , output_file)
     ingester.ingest()
+    counts = ingester.get_counts()
+    for count_type, count_value in counts.items():
+        logging.info('%s: %d', count_type, count_value)
     logging.info('Done')
 
 

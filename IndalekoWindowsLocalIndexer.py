@@ -34,7 +34,7 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
     This is the class that indexes Windows local file systems.
     '''
     windows_platform = 'Windows'
-    windows_local_indexer = 'fs-indexer'
+    windows_local_indexer_name = 'fs-indexer'
 
     indaleko_windows_local_indexer_uuid = '0793b4d5-e549-4cb6-8177-020a738b66b7'
     indaleko_windows_local_indexer_service_name = 'Windows Local Indexer'
@@ -86,7 +86,7 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
             kwargs['machine_id'] = self.machine_config.machine_id
         super().__init__(**kwargs,
                          platform=IndalekoWindowsLocalIndexer.windows_platform,
-                         indexer=IndalekoWindowsLocalIndexer.windows_local_indexer,
+                         indexer_name=IndalekoWindowsLocalIndexer.windows_local_indexer_name,
                          **IndalekoWindowsLocalIndexer.indaleko_windows_local_indexer_service
         )
 
@@ -116,8 +116,10 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
         except Exception as e: # pylint: disable=broad-except
             # at least for now, we just skip errors
             logging.warning('Unable to stat %s : %s', file_path, e)
+            self.error_count += 1
             return None
-        stat_dict = {key : getattr(stat_data, key) for key in dir(stat_data) if key.startswith('st_')}
+        stat_dict = {key : getattr(stat_data, key) \
+                     for key in dir(stat_data) if key.startswith('st_')}
         stat_dict['Name'] = name
         stat_dict['Path'] = root
         if last_drive != os.path.splitdrive(root)[0][0].upper():
@@ -140,6 +142,10 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
         for root, dirs, files in os.walk(self.path):
             for name in dirs + files:
                 entry = self.build_stat_dict(name, root, last_uri, last_drive)
+                if name in dirs:
+                    self.dir_count += 1
+                else:
+                    self.file_count += 1
                 if entry is not None:
                     data.append(entry[0])
                     last_uri = entry[1]
@@ -230,7 +236,9 @@ def main():
     logging.info('Output file %s ' , output_file)
     data = indexer.index()
     indexer.write_data_to_file(data, output_file)
-    logging.info('Found %d files', len(data))
+    counts = indexer.get_counts()
+    for count_type, count_value in counts.items():
+        logging.info('%s: %d', count_type, count_value)
     logging.info('Done')
 
 if __name__ == '__main__':

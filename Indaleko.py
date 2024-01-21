@@ -242,7 +242,6 @@ class Indaleko:
         if not isinstance(file_name, str):
             raise ValueError('file_name must be a string')
         fields = file_name.split('-')
-        print('Indaleko.py', fields)
         prefix = fields.pop(0)
         data['prefix'] = prefix
         platform = fields.pop(0)
@@ -254,7 +253,6 @@ class Indaleko:
             raise ValueError('service field must start with svc=')
         data['service'] = service[4:]
         trailer = fields.pop(-1)
-        print(trailer)
         suffix = trailer.split('.')[-1]
         if not trailer.startswith('ts='):
             raise ValueError('timestamp field must start with ts=')
