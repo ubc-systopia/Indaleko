@@ -155,9 +155,9 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
             assert drive_data['UniqueId'].startswith('/dev/')
             drive_data['GUID'] = self.__find_volume_guid__(drive_data['UniqueId'])
             self.machine_id = machine_id
-            super().__init__(msgpack.packb(drive_data),
-                             drive_data,
-                             {
+            super().__init__(raw_data=msgpack.packb(drive_data),
+                             attributes=drive_data,
+                             source={
                                 'Identifier': self.MacOSDriveInfo_UUID_str,
                                 'Version': self.MacOSDriveInfo_Version,
                              })
