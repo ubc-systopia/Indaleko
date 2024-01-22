@@ -161,7 +161,7 @@ class IndalekoIndexer:
         else:
             platform = 'unknown_platform'
         platform = platform.replace('-', '_')
-        if hasattr(self, 'indexer'):
+        if hasattr(self, 'indexer_name'):
             indexer_name = self.indexer_name
         else:
             indexer_name = 'unknown_indexer'

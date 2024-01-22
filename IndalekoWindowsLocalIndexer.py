@@ -112,7 +112,13 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
         '''
         file_path = os.path.join(root, name)
         if not os.path.exists(file_path):
-            logging.warning('File %s does not exist', file_path)
+            if name in os.listdir(root):
+                if os.path.lexists(file_path):
+                    logging.warning('File %s is an invalid link', file_path)
+                else:
+                    logging.warning('File %s exists in directory %s but not accessible', name, root)
+            else:
+                logging.warning('File %s does not exist', file_path)
             return None
         if last_uri is None:
             last_uri = file_path
@@ -237,7 +243,7 @@ def main():
                                           machine_config=machine_config,
                                           storage_description=drive_guid)
     output_file = indexer.generate_indexer_file_name()
-    log_file_name = indexer.generate_indexer_file_name(target_dir=args.logdir)
+    log_file_name = indexer.generate_indexer_file_name(target_dir=args.logdir, suffix='log')
     logging.basicConfig(filename=os.path.join(log_file_name),
                                 level=args.loglevel,
                                 format='%(asctime)s - %(levelname)s - %(message)s',
