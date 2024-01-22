@@ -22,6 +22,9 @@ import datetime
 import json
 import uuid
 import socket
+import platform
+import os
+import logging
 
 from IndalekoCollections import IndalekoCollections
 from IndalekoDBConfig import IndalekoDBConfig
@@ -388,35 +391,105 @@ class IndalekoMachineConfig(IndalekoRecord):
         machine_config.set_machine_id(kwargs["machine_id"])
         return machine_config
 
+def get_script_name(platform_name : str = platform.system()) -> str:
+    '''This routine returns the name of the script.'''
+    script_name = f'Indaleko{platform_name}MachineConfig.py'
+    return script_name
+
+
+def check_linux_prerequisites() -> None:
+    '''This routine checks that the Linux system prerequisites are met.'''
+    # Linux has no pre-requisites at the current time.
+    return True
+
+def check_macos_prerequisites() -> None:
+    '''This routine checks that the MacOS system prerequisites are met.'''
+    # TBD
+    return False
+
+def check_windows_prerequisites(config_dir : str = Indaleko.default_config_dir) -> None:
+    '''This routine checks that the Windows system prerequisites are met.'''
+    # This is tough to do cleanly, since the default name is defined in
+    # IndalekoWindowsMachineConfig.py and that includes this file.
+    candidates = [x for x in os.listdir(config_dir) if x.startswith('windows')]
+    if len(candidates) == 0:
+        print(f'No Windows machine config files found in {config_dir}')
+        print('To create a Windows machine config, run: '+ \
+              'windows-hardware-info.ps1 from an elevated PowerShell prompt.')
+        print('Note: this will require enable execution of PowerShell scripts.')
+    return False
+
+def add_command(args: argparse.Namespace) -> None:
+    '''This routine adds a machine config to the database.'''
+    logging.info(f'Adding machine config for {args.platform}')
+    if args.platform == 'Linux':
+        check_linux_prerequisites()
+        logging.info('Linux prerequisites met')
+        cmd_string = f'python3 {get_script_name(args.platform)}'
+        cmd_string += f' --configdir {args.configdir}'
+        cmd_string += f' --timestamp {args.timestamp}'
+        logging.info(f'Recommending: <{cmd_string}> for Linux machine config')
+        print(f'Please run:\n\t{cmd_string}')
+    elif args.platform == 'Darwin':
+        check_macos_prerequisites()
+    elif args.platform == 'Windows':
+        check_windows_prerequisites()
+    return
+
+def list_command(args: argparse.Namespace) -> None:
+    '''This routine lists the machine configs in the database.'''
+    return
+
+def delete_command(args: argparse.Namespace) -> None:
+    '''This routine deletes a machine config from the database.'''
+    return
 
 def main():
-    """This is test code for the IndalekoMachineConfig class."""
-    starttime = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    '''
+    This is the main function for the IndalekoMachineConfig class.
+    '''
+    timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat()
+    file_name = Indaleko.generate_file_name(
+        suffix='log',
+        platform=platform.system(),
+        service='machine_config',
+        timestamp=timestamp)
+    default_log_file = os.path.join(Indaleko.default_log_dir, file_name)
     parser = argparse.ArgumentParser()
-    logfile = f"indalekomachineconfig-test-{starttime}.log"
-    parser = argparse.ArgumentParser(
-        description="Test base class for MachineConfig for the Indaleko database."
-    )
+    subparsers = parser.add_subparsers(dest='command', required=True)
+    parser_add = subparsers.add_parser('add', help='Add a machine config')
+    parser_add.add_argument('--platform', type=str, default=platform.system(), help='Platform to use')
+    parser_list = subparsers.add_parser('list', help='List machine configs')
+    parser_list.add_argument('--files', default=False, action='store_true', help='Source ID')
+    parser_list.add_argument('--db', type=str, default=True, help='Source ID')
+    parser_delete = subparsers.add_parser('delete', help='Delete a machine config')
+    parser_delete.add_argument('--platform', type=str, default=platform.system(), help='Platform to use')
     parser.add_argument(
-        "--machine_id",
-        "-m",
-        help="Machine ID to load from database",
-        default="2e169bb7-0024-4dc1-93dc-18b7d2d28190",
-    )
-    parser.add_argument("--log", "-l", help="Log file to use", default=logfile)
-    parser.add_argument("--logdir", help="Log directory to use", default="./logs")
+        '--log',
+        type=str,
+        default=default_log_file,
+        help='Log file name to use')
+    parser.add_argument('--configdir',
+                        type=str,
+                        default=IndalekoMachineConfig.default_config_dir,
+                        help='Configuration directory to use')
+    parser.add_argument('--timestamp', type=str,
+                       default=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                       help='Timestamp to use')
     args = parser.parse_args()
-    if args.machine_id is not None:
-        assert IndalekoMachineConfig.validate_uuid_string(
-            args.machine_id
-        ), f"machine_id {args.machine_id} is not a valid UUID."
-        # look it up in the database
-        machine_config = IndalekoMachineConfig.load_config_from_db(args.machine_id)
-        if machine_config is None:
-            print(f"Machine config {args.machine_id} not found in database.")
-            return
-        print(json.dumps(machine_config.to_dict(), indent=4))
-
+    if args.log is not None:
+        logging.basicConfig(filename=args.log, level=logging.DEBUG)
+        logging.info('Starting Indaleko Machine Config')
+        logging.info(f'Logging to {args.log}')
+    if args.command == 'add':
+        add_command(args)
+    elif args.command == 'list':
+        list_command(args)
+    elif args.command == 'delete':
+        delete_command(args)
+    else:
+        raise AssertionError(f'Unknown command {args.command}')
+    logging.info('Done with Indaleko Machine Config')
 
 if __name__ == "__main__":
     main()

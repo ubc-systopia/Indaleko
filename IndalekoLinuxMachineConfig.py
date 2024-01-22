@@ -22,9 +22,14 @@ import subprocess
 import argparse
 import json
 import uuid
-import psutil # see https://psutil.readthedocs.io/en/latest/
+#import psutil # see https://psutil.readthedocs.io/en/latest/
 import netifaces # see https://pypi.org/project/netifaces/
+import datetime
+import logging
+import platform
+import os
 
+from Indaleko import Indaleko
 from IndalekoMachineConfig import IndalekoMachineConfig
 
 class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
@@ -167,10 +172,12 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
         }
         net_data = IndalekoLinuxMachineConfig.parse_ip_addr_output()
         return cpu_data, ram_data, disk_data, net_data
-
-def main():
+def old_main():
     parse = argparse.ArgumentParser()
     parse.add_argument('--configdir', type=str, default='./config', help='Directory where configuration data is written.')
+    parse.add_argument('--timestamp', type=str,
+                       default=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                       help='Timestamp to use')
     args = parse.parse_args()
     print(f"Config dir: {args.configdir}")
     print(json.dumps(IndalekoLinuxMachineConfig.gather_system_information(),indent=4))
@@ -179,6 +186,40 @@ def main():
     print(json.dumps(ram_data, indent=4))
     print(json.dumps(disk_data, indent=4))
     print(json.dumps(net_data, indent=4))
+
+
+def main():
+    '''UI implementation for Linux machine configuration processing.'''
+    timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat()
+    file_name = Indaleko.generate_file_name(
+        suffix='log',
+        platform=platform.system(),
+        service='machine_config',
+        timestamp=timestamp)
+    default_log_file = os.path.join(Indaleko.default_log_dir, file_name)
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest='command', required=True)
+    parser_add = subparsers.add_parser('add', help='Add a machine config')
+    parser_add.add_argument('--platform', type=str, default=platform.system(), help='Platform to use')
+    parser_list = subparsers.add_parser('list', help='List machine configs')
+    parser_list.add_argument('--files', default=False, action='store_true', help='Source ID')
+    parser_list.add_argument('--db', type=str, default=True, help='Source ID')
+    parser_delete = subparsers.add_parser('delete', help='Delete a machine config')
+    parser_delete.add_argument('--platform', type=str, default=platform.system(), help='Platform to use')
+    parser.add_argument(
+        '--log',
+        type=str,
+        default=default_log_file,
+        help='Log file name to use')
+    parser.add_argument('--configdir',
+                        type=str,
+                        default=IndalekoMachineConfig.default_config_dir,
+                        help='Configuration directory to use')
+    parser.add_argument('--timestamp', type=str,
+                       default=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                       help='Timestamp to use')
+    args = parser.parse_args()
+    print(args)
 
 
 if __name__ == '__main__':

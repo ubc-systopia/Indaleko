@@ -168,6 +168,25 @@ class Indaleko:
         return valid
 
     @staticmethod
+    def generate_iso_timestamp_for_file(ts : str = None) -> str:
+        """Create an ISO timestamp for the current time."""
+        if ts is None:
+            ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        ts_check = Indaleko.extract_iso_timestamp_from_file_timestamp(ts)
+        if ts_check != ts: # validate that the timestamp is reversible
+            raise ValueError(f'timestamp mismatch {ts} != {ts_check}')
+        return f"-ts={ts.replace(':','#').replace('-','_')}"
+
+    @staticmethod
+    def extract_iso_timestamp_from_file_timestamp(file_timestamp : str) -> str:
+        """Given a file timestamp, convert it to an ISO timestamp."""
+        ts = file_timestamp.replace('_','-').replace('#',':')
+        ts_check = datetime.datetime.fromisoformat(ts)
+        if ts_check is None:
+            raise ValueError('timestamp is not valid')
+        return ts
+
+    @staticmethod
     def generate_file_name(**kwargs) -> str:
         '''
         Given a key/value store of labels and values, this generates a file
@@ -190,7 +209,6 @@ class Indaleko:
             if not isinstance(max_len, int):
                 raise ValueError('max_len must be an integer')
             del kwargs['max_len']
-        ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
         if 'platform' not in kwargs:
             raise ValueError('platform must be specified')
         platform = kwargs['platform']
@@ -199,8 +217,9 @@ class Indaleko:
             raise ValueError('service must be specified')
         service = kwargs['service']
         del kwargs['service']
+        ts = Indaleko.generate_iso_timestamp_for_file()
         if 'timestamp' in kwargs:
-            ts = kwargs['timestamp']
+            ts = Indaleko.generate_iso_timestamp_for_file(kwargs['timestamp'])
             del kwargs['timestamp']
         if 'prefix' in kwargs:
             prefix = kwargs['prefix']
@@ -225,7 +244,7 @@ class Indaleko:
             if '-' in key or '-' in value:
                 raise ValueError(f'key and value must not contain a hyphen: {key, value}')
             name += f'-{key}={value}'
-        name += f'-ts={ts.replace(':','#').replace('-','_')}'
+        name += ts
         name += f'.{suffix}'
         if len(name) > max_len:
             raise ValueError('file name is too long' + '\n' + name + '\n' + str(len(name)))
@@ -258,10 +277,7 @@ class Indaleko:
             raise ValueError('timestamp field must start with ts=')
         ts_field = trailer[3:-len(suffix)-1]
         data['suffix'] = suffix
-        data['timestamp'] = ts_field.replace('_','-').replace('#',':')
-        ts_check = datetime.datetime.fromisoformat(data['timestamp'])
-        if ts_check is None:
-            raise ValueError('timestamp is not valid')
+        data['timestamp'] = Indaleko.extract_iso_timestamp_from_file_timestamp(ts_field)
         while len(fields) > 0:
             field = fields.pop(0)
             if '=' not in field:
