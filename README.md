@@ -322,7 +322,6 @@ python3 IndalekoWindowsMachineConfig.py --add
 _should_ report an error. Issue #32 is a suggestion to improve this so that one can just use the
 `IndalekoMachineConfig.py` script directly and have it "do the right thing".
 
-
 #### Windows
 
 There are multiple steps required to set up Indaleko on your Windows machine.
