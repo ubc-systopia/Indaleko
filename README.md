@@ -270,6 +270,58 @@ Note that there are currently three platforms we are supporting:
 
 The following sections will describe how to configure the various systems.
 
+To install your machine configuration, you should run the correct configuration
+script for your system.  Currently there are three scripts defined:
+
+* `IndalekoLinuxMachineConfig.py` - this script captures and stores machine
+  configuration for a Linux machine.  As of this writing, this script is under
+  development.  This note should be updated when it works.
+
+* `IndalekoMacMachineConfig.py` - this script captures and stores machine
+  configuration for a Mac OS X machine.
+
+* `IndalekoWindowsMachineConfig.py` - this script captures and stores machine
+  configuration for a Windows machine.
+
+Machine configuration information is likely to change.  Currently we are
+capturing:
+
+* A name for the machine.
+* An ID (typically a UUID) assigned by the OS to the machine.  This means it is
+  really related to the _installation_ and not necessarily the hardware.
+* Local storage devices, including naming information (e.g., "mount points"
+  which for UNIX based systems are usually relative to a root namespace, while
+  Windows allows for UNIX style mount points and/or distinct drive letters.)
+  The idea is to capture information that allows us to identify the _hardware_
+  since being able to find information is difficult if the hardware is portable
+  (e.g, portable USB storage) or if the "mount point" changes (removable storage
+  again, but also re-installation of an OS, or even mounting of an old storage
+  device onto a new system.)
+* Other information of interest, such as CPU information, memory information,
+  network device information.
+
+For the moment we aren't requiring any of this.  When we have volume
+information, we associate it with the file via a UUID for the volume.  Note:
+Windows calls them GUIDs ("Globally Unique Identifiers") but they are UUIDs
+("Universally Unique Identifiers").
+
+To add the machine configuration to the database you can run the correct script
+on your machine.  Some machines may require a pre-requisite step.  For example,
+Windows requires executing the script `window-hardware-info.ps1` to capture the
+machine information, some of which requires elevated privileges to obtain. Other
+systems may have similar requirements.
+
+Assuming any pre-requisite script has been run, you can load the configuration
+data into the database something like the following:
+
+```sh
+python3 IndalekoWindowsMachineConfig.py --add
+```
+
+**Note**: use the **correct** script for your platform.  The incorrect script
+_should_ report an error. Issue #32 is a suggestion to improve this so that one can just use the
+`IndalekoMachineConfig.py` script directly and have it "do the right thing".
+
 #### Windows
 
 There are multiple steps required to set up Indaleko on your Windows machine.

@@ -124,6 +124,7 @@ class IndalekoIndexer:
         self.dir_count = 0
         self.file_count = 0
         self.error_count = 0
+        self.not_found_count = 0
 
     def find_indexer_files(self,
                    search_dir : str,
@@ -150,6 +151,7 @@ class IndalekoIndexer:
             'dir_count' : self.dir_count,
             'file_count' : self.file_count,
             'error_count' : self.error_count,
+            'not_found_count' : self.not_found_count,
         }
 
     def generate_indexer_file_name(self, target_dir : str = None, suffix : str = None) -> str:
@@ -159,7 +161,7 @@ class IndalekoIndexer:
         else:
             platform = 'unknown_platform'
         platform = platform.replace('-', '_')
-        if hasattr(self, 'indexer'):
+        if hasattr(self, 'indexer_name'):
             indexer_name = self.indexer_name
         else:
             indexer_name = 'unknown_indexer'
