@@ -25,6 +25,7 @@ from arango import ArangoClient
 import requests
 import time
 import argparse
+import json
 
 from Indaleko import Indaleko
 
@@ -33,12 +34,18 @@ class IndalekoDBConfig:
     Class used to read a configuration file, connect to, and set-up (if
     needed) the database.
     """
-    def __init__(self, config_file: str = './config/indaleko-db-config.ini'):
+    def __init__(self, config_file: str = './config/indaleko-db-config.ini',no_new_config : bool = False):
         self.config_file = config_file
         self.config = None
         self.updated = False
         if os.path.exists(config_file):
             self.__load_config__()
+            if 'database' not in self.config:
+                assert not no_new_config, 'No database section found in config file, but no new config set'
+                logging.warning('No database section found in config file %s', config_file)
+                logging.warning('Generating new config')
+                self.config = self.__generate_new_config__()
+                self.updated = True
         else:
             self.config = self.__generate_new_config__()
             self.updated = True
@@ -141,6 +148,8 @@ class IndalekoDBConfig:
 
 
     def __save_config__(self):
+        """Save the config information in the object."""
+        logging.debug('Saving config to %s', self.config_file)
         with open(self.config_file, 'wt', encoding='utf-8-sig') as config_file:
             self.config.write(config_file)
 
@@ -148,6 +157,10 @@ class IndalekoDBConfig:
     def __load_config__(self):
         self.config = configparser.ConfigParser()
         self.config.read(self.config_file, encoding='utf-8-sig')
+        logging.debug('Loaded config from %s', self.config_file)
+        if 'database' not in self.config:
+            logging.error('No database section found in config file %s', self.config_file)
+            raise ValueError('No database section found in config file')
 
 
     def delete_config(self):
@@ -155,6 +168,7 @@ class IndalekoDBConfig:
         if self.config is not None:
             self.config = None
             self.updated = False
+            logging.debug('Deleting config %s', self.config_file)
             os.remove(self.config_file)
 
     def set_admin_password(self, passwd : str):
@@ -232,10 +246,9 @@ class IndalekoDBConfig:
         assert self.config is not None, 'No config found'
         assert self.config['database'] is not None, 'No database config found'
         assert ipaddr is not None, 'No IP address provided'
-        assert Indaleko.validate_hostname(ipaddr) or Indaleko.validate_ipaddr(ipaddr), \
+        assert Indaleko.validate_hostname(ipaddr) or Indaleko.validate_ip_address(ipaddr), \
             f'Invalid IP address or host name: {ipaddr}'
         self.config['database']['host'] = ipaddr
-        self.updated = True
         self.__save_config__()
         self.updated = False # we just saved it, so it's not updated anymore
 
@@ -270,6 +283,9 @@ def main():
     logging.info('Info logging enabled')
     logging.debug('Debug logging enabled')
     logging.debug('Logging to %s', args.log)
+
+    db_config = IndalekoDBConfig()
+
     if args.ipaddr is not None:
         if not (Indaleko.validate_hostname(args.ipaddr) or Indaleko.validate_ipaddr(args.ipaddr)):
             logging.critical('Invalid IP address or host name: %s', args.ipaddr)
@@ -279,7 +295,6 @@ def main():
         logging.info('Setting IP address to %s', args.ipaddr)
         IndalekoDBConfig.config['database']['host'] = args.ipaddr
 
-    db_config = IndalekoDBConfig()
     try:
         db_config.start()
     except Exception as e:
