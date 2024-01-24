@@ -407,3 +407,82 @@ Having multiple storage silos indexed is important because one benefit of this
 approach is that it can find "what I'm looking for" _regardless_ of where it
 might be stored - an important point to help differentiate this work, since
 that's not a capability of existing systems.
+
+### 2024-01-22
+
+I've been poking at the edges of searches now that I have a bunch of file
+medatadata loaded into Arango.  While Arango allows for "full text" search, what
+this means is that it will search against a list of words. File names, however,
+are not nearly so neat as documents, where spaces and punctuation allow easy
+tokenization of words.  Instead, we have to worry about files without spaces in
+their names. After all, one of the points in the _Burrito_ paper is that people
+embed metadata in file names. Indeed, I've often opined that this is a nice
+demonstration of the failings of storage to permit this to be stored in a
+cleaner fashion.  EAs were a great idea that's just never quite "caught on."
+
+At any rate, let me capture a bit of what I've been learning about how searches
+work in ArangoDB.
+
+First, Arango relies upon _views_ for search.  This seems to be the "results of
+a query" style output. The documentation says these views are "eventually
+consistent" and that is fine for my purposes since the data sets isn't mutating
+rapidly _and_ the place where Indaleko's indexing is most useful is for cold
+data, not hot data.  This is an interesting observation since much of storage
+focuses on efficiency for the "hot data."
+
+Here's a simple example (from ChatGPT-4) showing how to create a view in a
+python script:
+
+```text
+from arango import ArangoClient
+
+# Initialize the ArangoDB client
+client = ArangoClient(hosts='http://localhost:8529')
+
+# Connect to "_system" database as root user
+sys_db = client.db('_system', username='root', password='')
+
+# Create a new ArangoSearch view
+sys_db.create_arangosearch_view(
+    name='fileSearchView',
+    properties={
+        'links': {
+            'yourCollectionName': {
+                'includeAllFields': False,
+                'fields': {
+                    'fileName': {
+                        'analyzers': ['text_en']
+                    }
+                }
+            }
+        }
+    }
+)
+```
+
+Queries can then be made against that view:
+
+```python
+  # Connect to your database
+  db = client.db('yourDatabaseName', username='root', password='')
+
+  # Write an AQL query
+  query = """
+  FOR doc IN fileSearchView
+      SEARCH doc.fileName == @fileName
+      RETURN doc
+  """
+
+  # Bind parameters
+  bind_vars = {'fileName': 'specificFileName'}
+
+  # Execute the query
+  result = db.aql.execute(query, bind_vars=bind_vars)
+
+  # Print the results
+  for doc in result:
+      print(doc)
+```
+
+ArangoDB does allows us to have multiple views.
+

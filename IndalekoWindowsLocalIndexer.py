@@ -173,27 +173,7 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
 def main():
     '''This is the main handler for the Indaleko Windows Local Indexer
     service.'''
-    if platform.python_version() < '3.12':
-        logging_levels = []
-        if hasattr(logging, 'CRITICAL'):
-            logging_levels.append('CRITICAL')
-        if hasattr(logging, 'ERROR'):
-            logging_levels.append('ERROR')
-        if hasattr(logging, 'WARNING'):
-            logging_levels.append('WARNING')
-        if hasattr(logging, 'WARN'):
-            logging_levels.append('WARN')
-        if hasattr(logging, 'INFO'):
-            logging_levels.append('INFO')
-        if hasattr(logging, 'DEBUG'):
-            logging_levels.append('DEBUG')
-        if hasattr(logging, 'NOTSET'):
-            logging_levels.append('NOTSET')
-        if hasattr(logging, 'FATAL'):
-            logging_levels.append('FATAL')
-    else:
-        logging_levels = sorted(set([level for level in logging.getLevelNamesMapping()]))
-
+    logging_levels = Indaleko.get_logging_levels()
 
     # Step 1: find the machine configuration file
     pre_parser = argparse.ArgumentParser(add_help=False)

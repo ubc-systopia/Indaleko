@@ -58,6 +58,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import uuid
 import datetime
 import os
+import platform
+import logging
+import socket
+import ipaddress
+
 from IndalekoObjectSchema import IndalekoObjectSchema
 from IndalekoServicesSchema import IndalekoServicesSchema
 from IndalekoRelationshipSchema import IndalekoRelationshipSchema
@@ -142,6 +147,31 @@ class Indaleko:
     }
 
     @staticmethod
+    def validate_ip_address(ip : str) -> bool:
+        """Given a string, verify that it is in fact a valid IP address."""
+        if not isinstance(ip, str):
+            print(f'ip is not a string it is a {type(ip)}')
+            return False
+        try:
+            ipaddress.ip_address(ip)
+            return True
+        except ValueError:
+            print('ip is not valid')
+            return False
+
+    def validate_hostname(hostname : str) -> bool:
+        """Given a string, verify that it is in fact a valid hostname."""
+        if not isinstance(hostname, str):
+            print(f'hostname is not a string it is a {type(hostname)}')
+            return False
+        try:
+            socket.gethostbyname(hostname)
+            return True
+        except socket.error:
+            print('hostname is not valid')
+            return False
+
+    @staticmethod
     def validate_uuid_string(uuid_string : str) -> bool:
         """Given a string, verify that it is in fact a valid uuid."""
         if not isinstance(uuid_string, str):
@@ -187,6 +217,30 @@ class Indaleko:
         return ts
 
     @staticmethod
+    def get_logging_levels() -> list:
+        """Return a list of valid logging levels."""
+    if platform.python_version() < '3.12':
+        logging_levels = []
+        if hasattr(logging, 'CRITICAL'):
+            logging_levels.append('CRITICAL')
+        if hasattr(logging, 'ERROR'):
+            logging_levels.append('ERROR')
+        if hasattr(logging, 'WARNING'):
+            logging_levels.append('WARNING')
+        if hasattr(logging, 'WARN'):
+            logging_levels.append('WARN')
+        if hasattr(logging, 'INFO'):
+            logging_levels.append('INFO')
+        if hasattr(logging, 'DEBUG'):
+            logging_levels.append('DEBUG')
+        if hasattr(logging, 'NOTSET'):
+            logging_levels.append('NOTSET')
+        if hasattr(logging, 'FATAL'):
+            logging_levels.append('FATAL')
+    else:
+        logging_levels = sorted(set([level for level in logging.getLevelNamesMapping()]))
+
+    @staticmethod
     def generate_file_name(**kwargs) -> str:
         '''
         Given a key/value store of labels and values, this generates a file
@@ -210,9 +264,10 @@ class Indaleko:
                 raise ValueError('max_len must be an integer')
             del kwargs['max_len']
         if 'platform' not in kwargs:
-            raise ValueError('platform must be specified')
-        platform = kwargs['platform']
-        del kwargs['platform']
+            target_platform = platform.system()
+        else:
+            target_platform = kwargs['platform']
+            del kwargs['platform']
         if 'service' not in kwargs:
             raise ValueError('service must be specified')
         service = kwargs['service']
@@ -233,12 +288,12 @@ class Indaleko:
             raise ValueError('suffix must not contain a hyphen')
         if suffix.startswith('.'):
             suffix = suffix[1:] # avoid ".." for suffix
-        if '-' in platform:
+        if '-' in target_platform:
             raise ValueError('platform must not contain a hyphen')
         if '-' in service:
             raise ValueError('service must not contain a hyphen')
         name = prefix
-        name += f'-plt={platform}'
+        name += f'-plt={target_platform}'
         name += f'-svc={service}'
         for key, value in kwargs.items():
             if '-' in key or '-' in value:

@@ -22,7 +22,7 @@ import argparse
 import subprocess
 import datetime
 import logging
-from Indaleko import *
+from Indaleko import Indaleko
 from arango import ArangoClient
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoCollections import IndalekoCollections
@@ -121,30 +121,56 @@ def main():
     starttime = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
     logfile = f'dbsetup-{starttime}.log'
     parser = argparse.ArgumentParser(description='Set up and start the database(s) for Indaleko')
-    parser.add_argument('--config', '-c', help='Path to the config file', default='./config/indaleko-db-config.ini')
+    parser.add_argument('--config_dir', default=Indaleko.default_config_dir, help='Directory where the config file is stored')
+    parser.add_argument('--data_dir', default=Indaleko.default_data_dir, help='Directory where the database data is stored')
+    parser.add_argument('--log_dir', help='Log directory to use', default=Indaleko.default_log_dir)
     parser.add_argument('--passwd', '-p', help='Database password to use', default=None)
-    parser.add_argument('--reset', '-r', help='Reset the database', action='store_true', default=False)
+    parser.add_argument('--reset', '-r', help='Delete the existing database, generate a new config file, build new database', action='store_true', default=False)
+    parser.add_argument('--regen', help='Regenerate the database using the same config file.', action='store_true', default=False)
     parser.add_argument('--log', '-l', help='Log file to use', default=logfile)
-    parser.add_argument('--logdir', help='Log directory to use', default='./logs')
     args = parser.parse_args()
+
+    def create_secure_directory(directory : str) -> None:
+        """Create a directory with secure permissions"""
+        os.makedirs(directory, exist_ok=True)
+        os.chmod(directory, 0o700)
+
+    def database_is_local(config : IndalekoDBConfig) -> bool:
+        """Check if the database is local or remote."""
+        return config.get_ipaddr() == 'localhost' or config.get_ipaddr() == '127.0.0.1' or config.get_ipaddr() == '::1'
 
     # make sure the following folders exist:
     #  1- `logs`: for the logs
     #  2- `config`: for the adb .ini configs
-    list(map(lambda x: os.makedirs(x, exist_ok=True), [args.logdir, "./config"]))
+    list(map(lambda x: create_secure_directory(x), [args.log_dir, args.config_dir, args.data_dir]))
 
     logging.basicConfig(filename=os.path.join(args.logdir, args.log), level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
     logging.info(f'Begin run at {starttime}')
+    assert not (args.reset and args.regen), 'Cannot reset and regenerate at the same time'
     if not os.path.exists(args.config):
         logging.info('No config file found, generating new one')
         new_config = True
-    elif args.reset:
-        logging.info('Resetting database')
+    elif args.reset or args.regen:
+        if not database_is_local(config):
+            logging.error('Cannot reset or regenerate remote database')
+            print('Cannot reset or regenerate remote database.  Terminating.')
+            exit(1)
+        if args.reset:
+            logging.info('Resetting database')
+        else:
+            logging.info('Regenerating database')
         config = IndalekoDBConfig(args.config) # load existing
         logging.info('Cleanup previous database')
         cleanup(config)
-        config.delete_config()
-        new_config = True
+        if args.reset:
+            logging.info('Deleting config file')
+            config.delete_config()
+            new_config = True
+        # TODO: we could probably delete the collections
+        # and re-create them from a remote if that would be useful.
+    else:
+        logging.info('Loading existing config')
+        config = IndalekoDBConfig(args.config)
     # load existing or generate new
     config = IndalekoDBConfig(args.config) # load config file if it exists
     if new_config:

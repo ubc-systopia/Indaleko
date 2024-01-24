@@ -172,6 +172,31 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
         }
         net_data = IndalekoLinuxMachineConfig.parse_ip_addr_output()
         return cpu_data, ram_data, disk_data, net_data
+
+    @staticmethod
+    def add_command_handler(args) -> None:
+        '''
+        Add a machine configuration.
+        '''
+        print(f"Add command handler: {args}")
+
+    @staticmethod
+    def list_command_handler(args) -> None:
+        '''
+        List machine configurations.
+        '''
+        print(f"List command handler: {args}")
+        return IndalekoMachineConfig.find_configs_in_db(
+            source_id = IndalekoLinuxMachineConfig.linux_machine_config_uuid_str
+            )
+
+    @staticmethod
+    def delete_command_handler(args) -> None:
+        '''
+        Delete a machine configuration.
+        '''
+        print(f"Delete command handler: {args}")
+
 def old_main():
     parse = argparse.ArgumentParser()
     parse.add_argument('--configdir', type=str, default='./config', help='Directory where configuration data is written.')
@@ -190,14 +215,38 @@ def old_main():
 
 def main():
     '''UI implementation for Linux machine configuration processing.'''
-    timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat()
-    file_name = Indaleko.generate_file_name(
-        suffix='log',
-        platform=platform.system(),
-        service='machine_config',
-        timestamp=timestamp)
-    default_log_file = os.path.join(Indaleko.default_log_dir, file_name)
-    parser = argparse.ArgumentParser()
+    pre_parser = argparse.ArgumentParser(add_help=False)
+    pre_parser.add_argument('--log', type=str, default=None, help='Log file name to use')
+    pre_parser.add_argument('--configdir',
+                            default=Indaleko.default_config_dir,
+                            type=str,
+                            help='Configuration directory to use')
+    pre_parser.add_argument('--timestamp',
+                            type=str,
+                            help='Timestamp to use')
+    pre_args, _ = pre_parser.parse_known_args()
+    if pre_args.timestamp is None:
+        timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat()
+    else:
+        timestamp=pre_args.timestamp
+        Indaleko.validate_timestamp(timestamp)
+    if pre_args.configdir is None:
+        config_dir = Indaleko.default_config_dir
+    else:
+        config_dir = pre_args.configdir
+    if not os.path.isdir(config_dir):
+        raise Exception(f"Configuration directory does not exist: {config_dir}")
+    log_file_name = None
+    if pre_args.log is None:
+        file_name = Indaleko.generate_file_name(
+            suffix='log',
+            platform=platform.system(),
+            service='machine_config',
+            timestamp=timestamp)
+        log_file_name = os.path.join(Indaleko.default_log_dir, file_name)
+    else:
+        log_file_name = pre_args.log
+    parser = argparse.ArgumentParser(parents=[pre_parser], description='Indaleko Linux Machine Config')
     subparsers = parser.add_subparsers(dest='command', required=True)
     parser_add = subparsers.add_parser('add', help='Add a machine config')
     parser_add.add_argument('--platform', type=str, default=platform.system(), help='Platform to use')
@@ -206,21 +255,27 @@ def main():
     parser_list.add_argument('--db', type=str, default=True, help='Source ID')
     parser_delete = subparsers.add_parser('delete', help='Delete a machine config')
     parser_delete.add_argument('--platform', type=str, default=platform.system(), help='Platform to use')
-    parser.add_argument(
-        '--log',
-        type=str,
-        default=default_log_file,
-        help='Log file name to use')
-    parser.add_argument('--configdir',
-                        type=str,
-                        default=IndalekoMachineConfig.default_config_dir,
-                        help='Configuration directory to use')
-    parser.add_argument('--timestamp', type=str,
-                       default=datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                       help='Timestamp to use')
     args = parser.parse_args()
-    print(args)
-
+    if log_file_name is not None:
+        logging.basicConfig(filename=log_file_name, level=logging.DEBUG)
+        logging.info('Starting Indaleko Linux Machine Config')
+        logging.info(f"Logging to {log_file_name}")
+        logging.critical('Critical logging enabled')
+        logging.error('Error logging enabled')
+        logging.warning('Warning logging enabled')
+        logging.info('Info logging enabled')
+        logging.debug('Debug logging enabled')
+    if args.command == 'add':
+        IndalekoLinuxMachineConfig.add_command_handler(args)
+    elif args.command == 'list':
+        IndalekoLinuxMachineConfig.list_command_handler(args)
+    elif args.command == 'delete':
+        IndalekoLinuxMachineConfig.delete_command_handler(args)
+    else:
+        logging.error('Unexpected command: %s', args.command)
+        raise Exception(f"Unexpected command: {args.command}")
+    if log_file_name is not None:
+        logging.info('Done with Indaleko Linux Machine Config')
 
 if __name__ == '__main__':
     main()

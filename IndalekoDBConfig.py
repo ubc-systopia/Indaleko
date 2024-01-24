@@ -24,7 +24,9 @@ import datetime
 from arango import ArangoClient
 import requests
 import time
+import argparse
 
+from Indaleko import Indaleko
 
 class IndalekoDBConfig:
     """
@@ -215,8 +217,72 @@ class IndalekoDBConfig:
         assert self.sys_db.create_database(dbname), 'Database creation failed'
         return True
 
+    def get_ipaddr(self) -> str:
+        """Get the IP address of the database."""
+        assert self.config is not None, 'No config found'
+        assert self.config['database'] is not None, 'No database config found'
+        assert self.config['database']['host'] is not None, 'No database host found'
+        return self.config['database']['host']
+
+    def update_ipaddr(self, ipaddr : str) -> None:
+        """
+        Update the IP address in the config file.
+        This is useful when moving the config to an additional machine.
+        """
+        assert self.config is not None, 'No config found'
+        assert self.config['database'] is not None, 'No database config found'
+        assert ipaddr is not None, 'No IP address provided'
+        assert Indaleko.validate_hostname(ipaddr) or Indaleko.validate_ipaddr(ipaddr), \
+            f'Invalid IP address or host name: {ipaddr}'
+        self.config['database']['host'] = ipaddr
+        self.updated = True
+        self.__save_config__()
+
 def main():
-    print('Currently there is no test code for this module.')
+    '''
+    This is a simple operation to verify the connection to the database is
+    working as expected.
+    '''
+    timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat()
+    parser = argparse.ArgumentParser(description='Test the database configuration.')
+    parser.add_argument('--logdir' , type=str, default=Indaleko.default_log_dir, help='Log directory')
+    parser.add_argument('--log', type=str, default=None, help='Log file name')
+    parser.add_argument('--loglevel', type=int, default=logging.DEBUG, help='Log level')
+    parser.add_argument('--ipaddr', type=str, default=None, help='IP address for database')
+    parser.add_argument('--timestamp', type=str, default=timestamp, help='Timestamp for log file name')
+    args = parser.parse_args()
+
+    if args.log is None:
+        args.log=os.path.join(args.logdir, Indaleko.generate_file_name(
+            suffix='log',
+            service='db_config',
+            timestamp=timestamp
+        ))
+    logging.basicConfig(
+        filename=args.log,
+        level=args.loglevel,
+        format='%(asctime)s %(levelname)s %(message)s')
+    logging.info('Testing DB Config')
+    logging.critical('Critical logging enabled')
+    logging.error('Error logging enabled')
+    logging.warning('Warning logging enabled')
+    logging.info('Info logging enabled')
+    logging.debug('Debug logging enabled')
+    logging.debug('Logging to %s', args.log)
+    if args.ipaddr is not None:
+        logging.info('Setting IP address to %s', args.ipaddr)
+        IndalekoDBConfig.config['database']['host'] = args.ipaddr
+
+    db_config = IndalekoDBConfig()
+    try:
+        db_config.start()
+    except Exception as e:
+        logging.critical('Exception %s', e)
+        logging.info('Database connection failed')
+        print(f'Database connection failed. For more information see {args.log}')
+        raise e from None
+    logging.info('Database connection successful')
+    print(f'Database connection successful. For more information see {args.log}')
 
 if __name__ == "__main__":
     main()
