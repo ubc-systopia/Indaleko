@@ -23,53 +23,58 @@ import subprocess
 import datetime
 import logging
 from Indaleko import Indaleko
-from arango import ArangoClient
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoCollections import IndalekoCollections
 
 
 def resetdb(args : argparse.Namespace) -> None:
+    """Reset the database"""
     assert args.reset is True, 'resetdb called without --reset'
 
 def run_command(command : str) -> None:
+    """Run a command, capture and process the output"""
     try:
+        logging.debug('Running command: %s', command)
         output = subprocess.check_output(command, stderr = subprocess.STDOUT, shell=True)
-        logging.debug(f"Command `{command}` returned:\n{output.decode('utf-8').strip()}")
+        logging.debug("Command `%s` returned:\n%s", command, output.decode('utf-8').strip())
         return output.decode('utf-8').strip()
     except subprocess.CalledProcessError as e:
-        logging.debug(f"Command `{command}` failed with error:\n{e.output.decode('utf-8').strip()}")
-        return None
+        logging.debug("Command `%s` failed with error:\n%s",
+                      command,
+                      e.output.decode('utf-8').strip())
+        raise e
 
 def stop_container(container_name_or_id : str) -> None:
+    """Stop the docker container for the database"""
     cmd = f"docker stop {container_name_or_id}"
-    logging.debug(f"Running command: {cmd}")
-    res = run_command(cmd)
-    assert res is not None, f"Could not stop container {container_name_or_id}"
+    run_command(cmd)
 
 
 def remove_container(container_name_or_id : str) -> None:
+    """Remove the docker container for the database"""
     cmd=f"docker rm {container_name_or_id}"
-    logging.debug(f"Running command: {cmd}")
-    return run_command(cmd)
+    run_command(cmd)
+
 
 def remove_volume(volume_name : str) -> None:
+    """Remove the docker volume for the database"""
     cmd = f"docker volume rm {volume_name}"
-    logging.debug(f"Running command: {cmd}")
-    return run_command(f"docker volume rm {volume_name}")
-
-def get_latest_image(image_name : str = 'arangodb/arangodb') -> str:
-    return run_command(f"docker pull {image_name}:latest")
+    run_command(cmd)
 
 
-def create_volume(config : IndalekoDBConfig = None):
+def get_latest_image(image_name : str = 'arangodb/arangodb') -> None:
+    """Get the latest docker image for the database"""
+    run_command(f"docker pull {image_name}:latest")
+
+
+def create_volume(config : IndalekoDBConfig = None) -> None:
+    """Create the docker volume for the database"""
     assert config is not None, 'No config found'
-    # return run_command(f"docker volume create {volume_name}")
     cmd = f"docker volume create {config.config['database']['volume']}"
-    logging.debug(f"Running command: {cmd}")
-    # return run_command(cmd)
+    run_command(cmd)
 
 def create_container(config : IndalekoDBConfig = None):
-    # docker run -e ARANGO_ROOT_PASSWORD=Kwishut22 -d -p 8529:8529 --mount source=ArangoDB-wam-db-1,target=/var/lib/arangodb3 --name arangodb-instance arangodb
+    """Create the container for the database"""
     assert config is not None, 'No config found'
     cmd = "docker run "
     passwd = config.config['database']['admin_passwd']
@@ -79,17 +84,21 @@ def create_container(config : IndalekoDBConfig = None):
     cmd += f"--mount source={config.config['database']['volume']},target=/var/lib/arangodb3 "
     cmd += f"--name {config.config['database']['container']} "
     cmd += "arangodb"
-    logging.debug(f"Running command: {cmd}")
-    return run_command(cmd)
+    run_command(cmd)
 
 def create_user(config : IndalekoDBConfig = None):
+    """Create the user (not root) account in the database"""
     assert config is not None, 'No config found'
     assert config.config['database']['user'] is not None, 'No database user found'
-    cmd = f"docker exec -it {config.config['database']['container']} arangosh --server.password {config.config['database']['admin_passwd']} --javascript.execute-string 'require(\"@arangodb/users\").save(\"{config.config['database']['user']}\", \"{config.config['database']['admin_passwd']}\")'"
-    logging.debug(f"Running command: {cmd}")
-    return run_command(cmd)
+    cmd = f"docker exec -it {config.config['database']['container']} "
+    cmd += f"arangosh --server.password {config.config['database']['admin_passwd']} "
+    cmd += "--javascript.execute-string "
+    cmd += f"'require(\"@arangodb/users\").save(\"{config.config['database']['user']}\", "
+    cmd += f"\"{config.config['database']['admin_passwd']}\")'"
+    run_command(cmd)
 
 def setup(config : IndalekoDBConfig = None):
+    """Setup the container and volume for the database"""
     if config is None:
         config = IndalekoDBConfig()
     assert config is not None, 'No config found'
@@ -99,6 +108,7 @@ def setup(config : IndalekoDBConfig = None):
 
 
 def cleanup(config :IndalekoDBConfig):
+    """Cleanup the database and associated resources"""
     assert config is not None, 'No config found'
     if 'database' in config.config:
         if 'container' in config.config['database']:
@@ -108,26 +118,48 @@ def cleanup(config :IndalekoDBConfig):
             remove_volume(config.config['database']['volume'])
 
 def startup(config: IndalekoDBConfig):
+    """Start the database"""
     running_containers = run_command('docker ps')
-    logging.debug(f"Running containers (pre-stop):\n{running_containers}")
+    logging.debug("Running containers (pre-stop):\n%s", running_containers)
     cmd = f"docker start {config.config['database']['container']}"
-    logging.debug(f"Running command: {cmd}")
+    logging.debug("Running command: %s", cmd)
     running_containers = run_command('docker ps')
-    logging.debug(f"Running containers (post-stop):\n{running_containers}")
+    logging.debug("Running containers (post-stop):\n%s", running_containers)
     return run_command(cmd)
 
+
 def main():
+    """Main entry point for the program"""
     new_config = False
     starttime = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
     logfile = f'dbsetup-{starttime}.log'
     parser = argparse.ArgumentParser(description='Set up and start the database(s) for Indaleko')
-    parser.add_argument('--config_dir', default=Indaleko.default_config_dir, help='Directory where the config file is stored')
-    parser.add_argument('--data_dir', default=Indaleko.default_data_dir, help='Directory where the database data is stored')
-    parser.add_argument('--log_dir', help='Log directory to use', default=Indaleko.default_log_dir)
-    parser.add_argument('--passwd', '-p', help='Database password to use', default=None)
-    parser.add_argument('--reset', '-r', help='Delete the existing database, generate a new config file, build new database', action='store_true', default=False)
-    parser.add_argument('--regen', help='Regenerate the database using the same config file.', action='store_true', default=False)
-    parser.add_argument('--log', '-l', help='Log file to use', default=logfile)
+    parser.add_argument('--config_dir',
+                        default=Indaleko.default_config_dir,
+                        help='Directory where the config file is stored')
+    parser.add_argument('--data_dir',
+                        default=Indaleko.default_data_dir,
+                        help='Directory where the database data is stored')
+    parser.add_argument('--config',
+                        help='Config file to use',
+                        default=os.path.join(Indaleko.default_config_dir, 'indaleko-db-config.ini'))
+    parser.add_argument('--log_dir',
+                        help='Log directory to use',
+                        default=Indaleko.default_log_dir)
+    parser.add_argument('--passwd',
+                        help='Database password to use',
+                        default=None)
+    parser.add_argument('--reset',
+                        help='Delete the existing database,' +
+                        ' generate a new config file, build new database',
+                        action='store_true',
+                        default=False)
+    parser.add_argument('--regen',
+                        help='Regenerate the database using the same config file.',
+                        action='store_true', default=False)
+    parser.add_argument('--log',
+                        help='Log file to use',
+                        default=logfile)
     args = parser.parse_args()
 
     def create_secure_directory(directory : str) -> None:
@@ -137,15 +169,18 @@ def main():
 
     def database_is_local(config : IndalekoDBConfig) -> bool:
         """Check if the database is local or remote."""
-        return config.get_ipaddr() == 'localhost' or config.get_ipaddr() == '127.0.0.1' or config.get_ipaddr() == '::1'
+        return config.get_ipaddr() == 'localhost' \
+            or config.get_ipaddr() == '127.0.0.1' \
+            or config.get_ipaddr() == '::1'
 
-    # make sure the following folders exist:
-    #  1- `logs`: for the logs
-    #  2- `config`: for the adb .ini configs
-    list(map(lambda x: create_secure_directory(x), [args.log_dir, args.config_dir, args.data_dir]))
+    create_secure_directory(args.log_dir)
+    create_secure_directory(args.config_dir)
+    create_secure_directory(args.data_dir)
 
-    logging.basicConfig(filename=os.path.join(args.logdir, args.log), level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-    logging.info(f'Begin run at {starttime}')
+    logging.basicConfig(filename=os.path.join(args.log_dir, args.log),
+                        level=logging.DEBUG,
+                        format='%(asctime)s - %(levelname)s - %(message)s')
+    logging.info('Begin run at %s', starttime)
     assert not (args.reset and args.regen), 'Cannot reset and regenerate at the same time'
     if not os.path.exists(args.config):
         logging.info('No config file found, generating new one')
@@ -166,7 +201,7 @@ def main():
             logging.info('Deleting config file')
             config.delete_config()
             new_config = True
-        # TODO: we could probably delete the collections
+        # we could probably delete the collections
         # and re-create them from a remote if that would be useful.
     else:
         logging.info('Loading existing config')

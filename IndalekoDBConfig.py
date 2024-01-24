@@ -232,10 +232,9 @@ class IndalekoDBConfig:
         assert self.config is not None, 'No config found'
         assert self.config['database'] is not None, 'No database config found'
         assert ipaddr is not None, 'No IP address provided'
-        assert Indaleko.validate_hostname(ipaddr) or Indaleko.validate_ipaddr(ipaddr), \
+        assert Indaleko.validate_hostname(ipaddr) or Indaleko.validate_ip_address(ipaddr), \
             f'Invalid IP address or host name: {ipaddr}'
         self.config['database']['host'] = ipaddr
-        self.updated = True
         self.__save_config__()
 
 def main():
@@ -269,11 +268,15 @@ def main():
     logging.info('Info logging enabled')
     logging.debug('Debug logging enabled')
     logging.debug('Logging to %s', args.log)
-    if args.ipaddr is not None:
-        logging.info('Setting IP address to %s', args.ipaddr)
-        IndalekoDBConfig.config['database']['host'] = args.ipaddr
 
     db_config = IndalekoDBConfig()
+
+    if args.ipaddr is not None:
+        logging.info('Setting IP address to %s', args.ipaddr)
+        db_config.update_ipaddr(args.ipaddr)
+        logging.info('IP address set to %s', db_config.get_ipaddr())
+        logging.info('Config Updated')
+
     try:
         db_config.start()
     except Exception as e:
