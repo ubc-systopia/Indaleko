@@ -237,6 +237,7 @@ class IndalekoDBConfig:
         self.config['database']['host'] = ipaddr
         self.updated = True
         self.__save_config__()
+        self.updated = False # we just saved it, so it's not updated anymore
 
 def main():
     '''
@@ -270,6 +271,11 @@ def main():
     logging.debug('Debug logging enabled')
     logging.debug('Logging to %s', args.log)
     if args.ipaddr is not None:
+        if not (Indaleko.validate_hostname(args.ipaddr) or Indaleko.validate_ipaddr(args.ipaddr)):
+            logging.critical('Invalid IP address or host name: %s', args.ipaddr)
+            logging.warning('Exiting')
+            print(f'Invalid IP address or host name: {args.ipaddr}')
+            exit(1)
         logging.info('Setting IP address to %s', args.ipaddr)
         IndalekoDBConfig.config['database']['host'] = args.ipaddr
 
