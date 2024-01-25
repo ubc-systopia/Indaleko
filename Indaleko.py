@@ -79,6 +79,8 @@ class Indaleko:
     Indaleko_Services = 'Services'
     Indaleko_MachineConfig = 'MachineConfig'
 
+    Indaleko_Prefix = 'indaleko'
+
     Collections = {
         Indaleko_Objects: {
             'schema' : IndalekoObjectSchema.get_schema(),
@@ -254,7 +256,7 @@ class Indaleko:
             * suffix: string to append to the file name
         '''
         max_len = 255
-        prefix = 'indaleko'
+        prefix = Indaleko.Indaleko_Prefix
         suffix = 'jsonl'
         if 'max_len' in kwargs:
             max_len = kwargs['max_len']

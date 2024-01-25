@@ -153,26 +153,6 @@ def create_container(config : IndalekoDBConfig = None):
     ]
     run_command(cmd)
 
-def create_user(config : IndalekoDBConfig = None):
-    """Create the user (not root) account in the database"""
-    assert config is not None, 'No config found'
-    assert config.config['database']['user'] is not None, 'No database user found'
-    script = 'require("@arangodb/users").save("'
-    script += f'"{config.config["database"]["user"]}", '
-    script += f'"{config.config["database"]["admin_passwd"]}")'
-    cmd = [
-        'docker',
-        'exec',
-        '-it',
-        config.config['database']['container'],
-        'arangosh',
-        '--server.password',
-        config.config['database']['admin_passwd'],
-        '--javascript.execute-string',
-        script
-    ]
-    run_command(cmd)
-
 def setup(config : IndalekoDBConfig = None):
     """Setup the container and volume for the database"""
     if config is None:
@@ -363,6 +343,13 @@ def stop_command(args : argparse.Namespace) -> None:
     logging.info('Removing volume %s', volume_name)
     remove_volume(volume_name)
 
+def setup_command(args : argparse.Namespace) -> None:
+    """
+    This provides the default behavior, which is to set up a clean instance
+    of the database.
+    """
+    print('Set up a clean instance of the database')
+    print('Not yet implemented')
 
 def main():
     """Main entry point for the program"""
@@ -375,30 +362,41 @@ def main():
                         default=Indaleko.default_log_dir)
     parser.add_argument('--log', help='Log file to write',
                         default=f'dbsetup-{starttime}.log')
-    command_subparser = parser.add_subparsers(dest='command', required=True)
+    command_subparser = parser.add_subparsers(dest='command')
     parser_list = command_subparser.add_parser('list', help='List the databases')
     parser_list.add_argument('--volumes', action='store_true', help='List the volumes')
     parser_list.add_argument('--containers', action='store_true', help='List the containers')
     parser_list.add_argument('--all', action='store_true', help='List both volumes and containers')
+    parser_list.set_defaults(func=list_command)
     parser_cleanup = command_subparser.add_parser('cleanup', help='Cleanup the databases')
     parser_cleanup.add_argument('--timestamp', type=str, help='Timestamp to delete')
+    parser_cleanup.set_defaults(func=cleanup_command)
     parser_delete = command_subparser.add_parser('delete', help='Delete a specific database')
     parser_delete.add_argument('--config', type=str, help='Config file to use')
     parser_delete.add_argument('--timestamp', type=str, help='Timestamp to delete')
+    parser_delete.set_defaults(func=delete_command)
     parser_create = command_subparser.add_parser('create', help='Create a new database')
     parser_create.add_argument('--config', type=str, help='Config file to use')
     parser_create.add_argument('--overwrite', action='store_true', help='Delete the configuration file if it exists')
     parser_create.add_argument('--startup', action='store_true', help='Start the database after creating it')
+    parser_create.set_defaults(func=create_command)
     parser_reset = command_subparser.add_parser('reset', help='Reset a database to a clean state')
     parser_reset.add_argument('--config', type=str, help='Config file to use')
+    parser_reset.set_defaults(func=reset_command)
     parser_start = command_subparser.add_parser('start', help='Start a database')
     parser_start.add_argument('--config', type=str, help='Config file to use')
     parser_start.add_argument('--create', action='store_true', help='Create the database if it does not exist')
+    parser_start.set_defaults(func=start_command)
     parser_stop = command_subparser.add_parser('stop', help='Stop a database')
     parser_stop.add_argument('--config', type=str, help='Config file to use')
     parser_stop.add_argument('--timestamp', type=str, help='Timestamp to delete')
     parser_stop.add_argument('--delete', action='store_true', help='Delete the database after stopping it')
+    parser_stop.set_defaults(func=stop_command)
+    parser_setup = command_subparser.add_parser('setup', help='Set up a clean instance of the database')
+    parser_setup.set_defaults(func=setup_command)
+    parser.set_defaults(command='setup', func=setup_command)
     args = parser.parse_args()
+    args.func(args)
     # set up logging
     if args.log is None:
         args.log = Indaleko.generate_file_name(
@@ -418,7 +416,8 @@ def main():
         'create': create_command,
         'reset': reset_command,
         'start': start_command,
-        'stop': stop_command
+        'stop': stop_command,
+        'setup': setup_command,
     }
     if args.command not in dispatch:
         print(f'Unknown command: {args.command}')
