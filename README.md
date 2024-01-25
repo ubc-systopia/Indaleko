@@ -1,6 +1,6 @@
 # Project Indaleko
 
-Project Indaleko is about creating a _Unified Private Index_.  The key
+Project Indaleko is about creating a _Unified Personal Index_.  The key
 characteristics of the UPI model is:
 
 * Indexing storage in a uniform fashion, regardless of _where_ or _what_ is
@@ -82,7 +82,7 @@ Logically, the project is broken down into various components:
   Once the data has been removed from the local device, such as in the case of
   cloud storage, it becomes resource intensive to fetch the files and extract
   additional metadata.
-* The Indexer database.  This is the _Unified Private Index_ service.  While we
+* The Indexer database.  This is the _Unified Personal Index_ service.  While we
   have chosen to implement it using [ArangoDB](https://www.arangodb.com,) it
   could be implemented on other database technologies, whether in tandem or as a
   replacement.
@@ -235,17 +235,31 @@ Things you should have installed:
 
 ### Set up the database
 
-The `dbsetup.py` script will set up the database.  It generates a config file
-that is stored in the `config` directory.  **Note that this file is a sensitive
+The simplest way to set up the database is to use the `dbsetup.py` script.  It
+currently supports three commands:
+* check - this will verify that the database is up and running. If not, you will
+  need to try and figure out what is not working.
+* setup - this will set up a _new_ instance of the database. Note that if you
+  already have an instance set up, it will not overwrite it - it just runs a
+  check for you.
+* delete - this will delete your _existing_ instance of the database. You can
+  then run the script again to create a new instance.
+
+Note that if you run the script without arguments it will choose to either check
+your existing database (if it exists) or set one up (if it does not.)
+
+As part of configuration, the script generates a config file that is stored in
+the `config` directory.  **Note that this file is a sensitive
 file and will not be checked into git by default (it is in `.gitignore`).  If
-you lose this file, you will need to reset your database.
+you lose this file, you will need to change your container to use a new
+(correct) password. Your data is not encrypted at rest by the database.
 
 This script will pull the most recent version of the ArangoDB docker image,
 provision a shared volume for storing the database, create a random password for
 the root account, _which is stored in the config file_. It also creates an
 Indaleko account, with a separate password that only has access to the Indaleko
 database.  It will create the various collections used by Indaleko, including
-the various schema.
+the various schema. Most scripts only run using the Indaleko account.
 
 To look at the various options for this script, you can use the `--help`
 command.  By default this script tries to "do the right thing" when you first
@@ -257,6 +271,9 @@ You can confirm the database is set up and running by accessing your
 the password from the `indaleko-db-config.ini` file, which is located in the
 `config` directory by default.  **Do not** distribute this file.  It contains
 passwords for your database.
+
+Note: the scripts `IndalekoDocker.py` and `IndalekoDBConfig.py` have additional
+functionality for managing docker images and databases.
 
 ### Set up your machine configuration
 
