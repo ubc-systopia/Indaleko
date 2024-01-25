@@ -269,6 +269,7 @@ def check_command(args : argparse.Namespace) -> None:
     if not started:
         logging.critical('Could not start database connection')
         print('Could not start DB connection.  Confirm the docker image is running.')
+        return
     print('Database connection successful.')
 
 def setup_command(args : argparse.Namespace) -> None:
