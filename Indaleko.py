@@ -174,6 +174,16 @@ class Indaleko:
             return False
 
     @staticmethod
+    def create_secure_directories(directories : list = None) -> None:
+        if directories is None:
+            directories = [Indaleko.default_data_dir, Indaleko.default_config_dir, Indaleko.default_log_dir]
+        for directory in directories:
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+            os.chmod(directory, 0o700)
+
+
+    @staticmethod
     def validate_uuid_string(uuid_string : str) -> bool:
         """Given a string, verify that it is in fact a valid uuid."""
         if not isinstance(uuid_string, str):
@@ -346,6 +356,7 @@ class Indaleko:
 
 def main():
     """Test code for Indaleko.py"""
+    Indaleko.create_secure_directories()
     print('Test 1: generate a file name')
     name = Indaleko.generate_file_name(platform='test', service='test')
     print(name)
