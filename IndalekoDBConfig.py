@@ -36,9 +36,9 @@ class IndalekoDBConfig:
     needed) the database.
     """
 
-    IndalekoDBConfig_default_db_config_file = './config/indaleko-db-config.ini'
+    default_db_config_file = './config/indaleko-db-config.ini'
 
-    def __init__(self, config_file: str = IndalekoDBConfig_default_db_config_file, no_new_config : bool = False):
+    def __init__(self, config_file: str = default_db_config_file, no_new_config : bool = False):
         self.config_file = config_file
         self.config = None
         if os.path.exists(config_file):
@@ -309,7 +309,7 @@ def setup_command(args : argparse.Namespace) -> None:
 
 def reset_command(args : argparse.Namespace) -> None:
     """Reset the database."""
-    if not os.path.exists(IndalekoDBConfig.IndalekoDBConfig_default_db_config_file):
+    if not os.path.exists(IndalekoDBConfig.default_db_config_file):
         logging.critical('No config file found, cannot reset')
         print('No config file found, cannot reset')
         return
@@ -333,13 +333,13 @@ def reset_command(args : argparse.Namespace) -> None:
         logging.info('DB Reset: Rebuild requested')
         print('DB Reset: Rebuild requested')
         logging.warning('DB Reset: deleting old config file')
-        if os.path.exists(IndalekoDBConfig.IndalekoDBConfig_default_db_config_file + '.bak'):
-            os.remove(IndalekoDBConfig.IndalekoDBConfig_default_db_config_file + '.bak')
+        if os.path.exists(IndalekoDBConfig.default_db_config_file + '.bak'):
+            os.remove(IndalekoDBConfig.default_db_config_file + '.bak')
         logging.warning('DB Reset: backing up old config file')
         print('DB Reset: backing up old config file to ' +\
-              f'{IndalekoDBConfig.IndalekoDBConfig_default_db_config_file}.bak')
-        os.rename(IndalekoDBConfig.IndalekoDBConfig_default_db_config_file,
-                  IndalekoDBConfig.IndalekoDBConfig_default_db_config_file + '.bak')
+              f'{IndalekoDBConfig.default_db_config_file}.bak')
+        os.rename(IndalekoDBConfig.default_db_config_file,
+                  IndalekoDBConfig.default_db_config_file + '.bak')
         config = IndalekoDBConfig()
     setup_command(args)
 
@@ -348,11 +348,11 @@ def reset_command(args : argparse.Namespace) -> None:
 def show_command(args : argparse.Namespace) -> None:
     """Show the database configuration."""
     logging.info('Show command starts')
-    if not os.path.exists(IndalekoDBConfig.IndalekoDBConfig_default_db_config_file):
+    if not os.path.exists(IndalekoDBConfig.default_db_config_file):
         logging.critical('No config file found')
         print('No config file found: nothing to display')
         print('Config file should be at ' +\
-             f'{IndalekoDBConfig.IndalekoDBConfig_default_db_config_file}')
+             f'{IndalekoDBConfig.default_db_config_file}')
     print('Config file found: loading')
     config = IndalekoDBConfig()
     print(f'Created at {config.config['database']['timestamp']}')
@@ -376,7 +376,7 @@ def default_command_handler(args : argparse.Namespace) -> None:
     """Default command handler."""
     # Do we already have a config file?
     logging.debug('default_command_handler invoked')
-    if os.path.exists(IndalekoDBConfig.IndalekoDBConfig_default_db_config_file):
+    if os.path.exists(IndalekoDBConfig.default_db_config_file):
         check_command(args)
     else:
         setup_command(args)

@@ -34,7 +34,7 @@ def setup_command(args : argparse.Namespace) -> None:
     """
     logging.info('Setup new database configuration')
     print('Setup new database configuration')
-    if os.path.exists(IndalekoDBConfig.IndalekoDBConfig_default_db_config_file):
+    if os.path.exists(IndalekoDBConfig.default_db_config_file):
         logging.info('Default config file already exists')
         print('Default config file already exists: checking database')
         check_command(args)
@@ -121,7 +121,7 @@ def delete_command(args : argparse.Namespace) -> None:
 def default_command(args : argparse.Namespace) -> None:
     """Default command"""
     logging.debug('DBSetup: default command handler invoked')
-    if os.path.exists(IndalekoDBConfig.IndalekoDBConfig_default_db_config_file):
+    if os.path.exists(IndalekoDBConfig.default_db_config_file):
         check_command(args)
     else:
         setup_command(args)
