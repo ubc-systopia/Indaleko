@@ -1,9 +1,11 @@
 import argparse
+import configparser
 import datetime
 import platform
 import logging
 import os
 import json
+import arango
 import jsonlines
 import uuid
 import msgpack
@@ -36,8 +38,11 @@ class IndalekoMacLocalIngester(IndalekoIngester):
 
     mac_platform =IndalekoMacLocalIndexer.mac_platform
     mac_local_ingester = 'local_fs_ingester'
+    default_config_file= './config/indaleko-db-config.ini'
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self,reset_collection=False, **kwargs) -> None:
+        assert os.path.isfile(IndalekoMacLocalIngester.default_config_file), f'expected to have a config file at {IndalekoMacLocalIngester.default_config_file}; got none'
+
         if 'input_file' not in kwargs:
             raise ValueError('input_file must be specified')
         if 'machine_config' not in kwargs:
@@ -59,6 +64,7 @@ class IndalekoMacLocalIngester(IndalekoIngester):
             kwargs['ingester'] = IndalekoMacLocalIngester.mac_local_ingester
         if 'input_file' not in kwargs:
             kwargs['input_file'] = None
+       
         super().__init__(**kwargs)
         self.input_file = kwargs['input_file']
         if 'output_file' not in kwargs:
@@ -70,6 +76,7 @@ class IndalekoMacLocalIngester(IndalekoIngester):
             'Identifier': self.mac_local_ingester_uuid,
             'Version': '1.0'
         }
+        self.reset_collection = reset_collection
 
     def find_indexer_files(self) -> list:
         '''This function finds the files to ingest:
@@ -236,8 +243,52 @@ class IndalekoMacLocalIngester(IndalekoIngester):
             timestamp=self.timestamp,
             output_dir=self.data_dir,
         )
-        self.write_data_to_file(dir_edges, edge_file)
+        self.write_data_to_file(dir_edges,edge_file)
 
+        # bulk import to the arrango db
+        done = self.import_bulk(documents=dir_data+file_data,collection_name='Objects')
+        if not done:
+            print(f'skip ingesting relationshihps as the nodes failed to be ingested')
+            return 
+        self.import_bulk(documents=dir_edges,collection_name='Relationships')
+
+    def __db_connect(self) -> arango.database.StandardDatabase:
+        config_parser = configparser.ConfigParser()
+        config_parser.read(IndalekoMacLocalIngester.default_config_file)
+
+        assert 'database' in config_parser, f'expcted to have a database section in the config; got none'
+        db_config=config_parser['database']
+
+        url=f"http://{db_config['host']}:{db_config['port']}"
+        client = arango.ArangoClient(hosts=url)
+
+        db=None
+        try:
+            db=client.db(
+                db_config['database'],
+                username=db_config['user_name'],
+                password=db_config['user_password']
+            )
+        except Exception as e:
+            print(f"couldn't connect to the database {db_config['database']}, ErrType: {type(e)}, Exception: {e}")
+        return db
+
+    def import_bulk(self,documents, collection_name):
+        db = self.__db_connect()
+        if not db:
+            print(f"failed to ingest because couldn't connect to the db")
+            return 
+        collection = db.collection(collection_name)
+        try:
+            res=collection.import_bulk(
+                documents=map(lambda x: x.to_dict(), documents),
+                overwrite=self.reset_collection
+                )
+            print(f"ingested documents to {collection_name}, got: {res}")
+        except Exception as e:
+            print(f'failed to ingest documents to {collection_name} (try with --reset; it will drop the collection before ingestion); Exception: {e}')
+            return False
+        return True
 
 def main():
     '''
@@ -299,7 +350,7 @@ def main():
                         choices=indexer_files,
                         default=indexer_files[-1],
                         help='Mac Local Indexer file to ingest.')
-    parser.add_argument('--reset', action='store_true', help='Reset the service collection.')
+    parser.add_argument('--reset', action='store_true', help='Drop the collections before ingesting new data')
     parser.add_argument('--logdir',
                         help=f'Path to the log directory (default is {Indaleko.default_log_dir})',
                         default=Indaleko.default_log_dir)
@@ -336,6 +387,7 @@ def main():
         file_suffix = metadata['file_suffix']
     input_file = os.path.join(args.datadir, args.input)
     ingester = IndalekoMacLocalIngester(
+        reset_collection=args.reset,
         machine_config=machine_config,
         machine_id=machine_id,
         timestamp=timestamp,
