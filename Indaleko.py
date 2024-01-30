@@ -328,7 +328,6 @@ class Indaleko:
         if not isinstance(file_name, str):
             raise ValueError('file_name must be a string')
         fields = file_name.split('-')
-        print(fields)
         prefix = fields.pop(0)
         data['prefix'] = prefix
         platform = fields.pop(0)

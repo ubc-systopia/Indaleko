@@ -124,6 +124,7 @@ class IndalekoIndexer:
         self.dir_count = 0
         self.file_count = 0
         self.error_count = 0
+        self.encoding_count = 0
         self.not_found_count = 0
 
     def find_indexer_files(self,
@@ -151,42 +152,52 @@ class IndalekoIndexer:
             'dir_count' : self.dir_count,
             'file_count' : self.file_count,
             'error_count' : self.error_count,
+            'encoding_count' : self.encoding_count,
             'not_found_count' : self.not_found_count,
         }
 
-    def generate_indexer_file_name(self, target_dir : str = None, suffix : str = None) -> str:
+    @staticmethod
+    def generate_indexer_file_name(**kwargs) -> str:
         '''This will generate a file name for the indexer output file.'''
-        if hasattr(self, 'platform'):
-            platform = self.platform
-        else:
-            platform = 'unknown_platform'
+        # platform : str, target_dir : str = None, suffix : str = None) -> str:
+        platform = 'unknown_platform'
+        if 'platform' in kwargs:
+            platform = kwargs['platform']
+        if not isinstance(platform, str):
+            raise ValueError('platform must be a string')
         platform = platform.replace('-', '_')
-        if hasattr(self, 'indexer_name'):
-            indexer_name = self.indexer_name
-        else:
-            indexer_name = 'unknown_indexer'
+        indexer_name = 'unknown_indexer'
+        if 'indexer_name' in kwargs:
+            indexer_name = kwargs['indexer_name']
+        if not isinstance(indexer_name, str):
+            raise ValueError('indexer_name must be a string')
+        indexer_name = indexer_name.replace('-', '_')
         indexer_name = indexer_name.replace('-', '_')
         machine_id = str(uuid.UUID('00000000-0000-0000-0000-000000000000').hex)
-        if hasattr(self, 'machine_id'):
-            machine_id = str(uuid.UUID(self.machine_id).hex)
-        storage_description = str(uuid.UUID('00000000-0000-0000-0000-000000000000').hex)
-        if hasattr(self, 'storage_description'):
-            storage_description = str(uuid.UUID(self.storage_description).hex)
-        if hasattr(self, 'timestamp'):
-            timestamp = self.timestamp
-        else:
-            timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        if target_dir is None:
-            target_dir = self.data_dir
+        if 'machine_id' in kwargs:
+            machine_id = str(uuid.UUID(kwargs['machine_id']).hex)
+        storage_description = None
+        if 'storage_description' in kwargs:
+            storage_description = str(uuid.UUID(kwargs['storage_description']).hex)
+        timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        if 'timestamp' in kwargs:
+            timestamp = kwargs['timestamp']
+        target_dir = Indaleko.default_data_dir
+        if 'target_dir' in kwargs:
+            target_dir = kwargs['target_dir']
+        suffix = None
+        if 'suffix' in kwargs:
+            suffix = kwargs['suffix']
         kwargs = {
             'platform' : platform,
             'service' : indexer_name,
             'machine' : machine_id,
-            'storage' : storage_description,
             'timestamp' : timestamp,
         }
-        if suffix is not None:
-            kwargs['suffix'] = suffix
+        if storage_description is not None:
+            kwargs['storage'] = storage_description
+        if 'suffix' in kwargs:
+            kwargs['suffix'] = kwargs['suffix']
         name = Indaleko.generate_file_name(**kwargs)
         return os.path.join(target_dir,name)
 
@@ -218,8 +229,6 @@ class IndalekoIndexer:
                 logging.warning('File %s does not exist in directory %s', file_path, root)
             return None
 
-        if last_uri is None:
-            last_uri = file_path
         try:
             stat_data = os.stat(file_path)
             lstat_data = os.lstat(file_path)
@@ -265,8 +274,12 @@ class IndalekoIndexer:
         if jsonlines_output:
             with jsonlines.open(output_file, 'w') as output:
                 for entry in data:
-                    output.write(entry)
-            logging.info('Wrote jsonlines %s.', output_file)
+                    try:
+                        output.write(entry)
+                        logging.info('Wrote jsonlines %s.', output_file)
+                    except UnicodeEncodeError as e:
+                        logging.info('Writing entry %s to %s failed due to encoding issues', entry, output_file)
+                        self.encoding_count += 1
         else:
             json.dump(data, output_file, indent=4)
             logging.info('Wrote json %s.', output_file)

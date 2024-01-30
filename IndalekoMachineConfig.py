@@ -109,7 +109,6 @@ class IndalekoMachineConfig(IndalekoRecord):
             raise AssertionError(f'directory must be a string, not {type(directory)}')
         return [x for x in os.listdir(directory)
                 if x.startswith(prefix)
-
                 and x.endswith('.json')]
 
     @staticmethod
@@ -341,7 +340,6 @@ class IndalekoMachineConfig(IndalekoRecord):
         ), f"Found {len(entries)} entries for machine_id {machine_id} - multiple entries case not handled."
         entry = entries[0]
         machine_config = IndalekoMachineConfig()
-        print(entry)
         machine_config.set_platform(entry["Platform"])
         # temporary: I've changed the shape of the database, so I'll need to
         # work around it temporarily

@@ -293,8 +293,6 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
             print('Machine UUID in file name does not match UUID in config file')
             print(f"File name: {file_uuid}")
             print(f"Config file: {machine_uuid}")
-        print(json.dumps(file_metadata,indent=4))
-        print(json.dumps(config_data,indent=4))
         config = IndalekoLinuxMachineConfig.build_config(
             machine_config=IndalekoLinuxMachineConfig(),
             os=config_data['OSInfo']['operating_system'],
@@ -314,7 +312,6 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
         return config
 
     def write_config_to_db(self) -> None:
-        print(self.machine_id)
         assert self.machine_id is not None, 'Machine ID must be specified'
         super().write_config_to_db()
         # Should we add storage data here?
