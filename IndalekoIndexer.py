@@ -208,19 +208,38 @@ class IndalekoIndexer:
     def build_stat_dict(self, name: str, root : str) -> tuple:
         '''This function builds a stat dict for a given file.'''
         file_path = os.path.join(root, name)
-        last_uri = file_path
+        if not os.path.exists(file_path):
+            if name in os.listdir(root):
+                if os.path.lexists(file_path):
+                    logging.warning('File %s is a broken symlink', file_path)
+                else:
+                    logging.warning('File %s exists in directory %s but not accessible', file_path, root)
+            else:
+                logging.warning('File %s does not exist in directory %s', file_path, root)
+            return None
+
+        if last_uri is None:
+            last_uri = file_path
         try:
             stat_data = os.stat(file_path)
+            lstat_data = os.lstat(file_path)
         except Exception as e: # pylint: disable=broad-except
             # at least for now, we just skip errors
             logging.warning('Unable to stat %s : %s', file_path, e)
+            self.error_count += 1
             return None
-        stat_dict = {key : getattr(stat_data, key) for key in dir(stat_data) if key.startswith('st_')}
+
+        if stat_data.st_ino != lstat_data.st_ino:
+            logging.info('File %s is a symlink, indexing symlink data', file_path)
+        stat_data = lstat_data
+        stat_dict = {key : getattr(stat_data, key) \
+                    for key in dir(stat_data) if key.startswith('st_')}
         stat_dict['Name'] = name
         stat_dict['Path'] = root
-        stat_dict['URI'] = os.path.join(last_uri, name)
+        stat_dict['URI'] = os.path.join(root, name)
         stat_dict['Indexer'] = self.service_identifier
-        return (stat_dict, last_uri)
+
+        return stat_dict
 
     def index(self) -> dict:
         '''
@@ -231,6 +250,10 @@ class IndalekoIndexer:
         for root, dirs, files in os.walk(self.path):
             for name in dirs + files:
                 entry = self.build_stat_dict(name, root)
+                if name in dirs:
+                    self.dir_count += 1
+                else:
+                    self.file_count += 1
                 if entry is not None:
                     data.append(entry[0])
         return data

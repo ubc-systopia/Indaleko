@@ -118,17 +118,22 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
                 else:
                     logging.warning('File %s exists in directory %s but not accessible', name, root)
             else:
-                logging.warning('File %s does not exist', file_path)
+                logging.warning('File %s does not exist in directory %s', file_path, root)
             return None
         if last_uri is None:
             last_uri = file_path
         try:
             stat_data = os.stat(file_path)
+            lstat_data = os.lstat(file_path)
         except Exception as e: # pylint: disable=broad-except
             # at least for now, we log and skip errors
             logging.warning('Unable to stat %s : %s', file_path, e)
             self.error_count += 1
             return {}
+
+        if stat_data.st_ino != lstat_data.st_ino:
+            logging.info('File %s is a symlink, indexing symlink data', file_path)
+            stat_data = lstat_data
         stat_dict = {key : getattr(stat_data, key) \
                      for key in dir(stat_data) if key.startswith('st_')}
         stat_dict['Name'] = name
