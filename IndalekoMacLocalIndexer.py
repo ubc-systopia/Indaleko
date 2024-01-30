@@ -173,6 +173,7 @@ def main():
                         help='Logging level to use (lower number = more logging)')
 
     args = parser.parse_args()
+    args.path=os.path.abspath(args.path)
     indexer = IndalekoMacLocalIndexer(timestamp=timestamp,
                                           path=args.path,
                                           machine_config=machine_config)
