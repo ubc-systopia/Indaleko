@@ -60,19 +60,6 @@ class IndalekoLinuxLocalIndexer(IndalekoIndexer):
         )
 
 
-    def index(self) -> list:
-        data = []
-        for root, dirs, files in os.walk(self.path):
-            for name in dirs + files:
-                entry = self.build_stat_dict(name, root)
-                if name in dirs:
-                    self.dir_count += 1
-                else:
-                    self.file_count += 1
-                if entry is not None:
-                    data.append(entry)
-        return data
-
     @staticmethod
     def generate_indexer_file_name(**kwargs):
         '''Generate a file name for the Linux local indexer'''
@@ -156,11 +143,8 @@ def main():
     logging.info('Output file %s ' , output_file)
     data = indexer.index()
     indexer.write_data_to_file(data, output_file)
-    total=0
     for count_type, count_value in indexer.get_counts().items():
         logging.info('%s: %d', count_type, count_value)
-        total += count_value
-    logging.info('Total: %d', total)
     logging.info('Done')
 
 if __name__ == '__main__':

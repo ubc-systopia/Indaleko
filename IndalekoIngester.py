@@ -69,6 +69,16 @@ class IndalekoIngester():
         'This is the base (non-specialized) Indaleko Ingester. ' +\
         'You should not see it in the database.'
     indaleko_generic_ingester_service_version = '1.0'
+    counter_values = (
+        'input_count',
+        'output_count',
+        'dir_count',
+        'file_count',
+        'error_count',
+        'edge_count',
+    )
+
+
 
     def __init__(self : 'IndalekoIngester', **kwargs : dict) -> None:
         '''
@@ -142,19 +152,14 @@ class IndalekoIngester():
             service_identifier = self.service_identifier,
         )
         assert self.ingester_service is not None, 'Ingester service does not exist'
-        self.dir_count = 0
-        self.file_count = 0
-        self.error_count = 0
-        self.edge_count = 0
+        for count in IndalekoIngester.counter_values:
+            setattr(self, count, 0)
 
     def get_counts(self) -> dict:
-        '''Return a dictionary of the counts.'''
-        return {
-            'dir_count' : self.dir_count,
-            'file_count' : self.file_count,
-            'error_count' : self.error_count,
-            'edge_count' : self.edge_count,
-        }
+        '''
+        Retrieves counters about the ingester.
+        '''
+        return {x : getattr(self, x) for x in IndalekoIngester.counter_values}
 
     def generate_output_file_name(self, **kwargs) -> str:
         '''
@@ -217,6 +222,7 @@ class IndalekoIngester():
                 for entry in data:
                     try:
                         writer.write(entry.to_dict())
+                        self.output_count += 1
                     except TypeError as err:
                         logging.error('Error writing entry to JSONLines file: %s', err)
                         logging.error('Entry: %s', entry)

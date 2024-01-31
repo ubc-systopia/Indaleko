@@ -179,6 +179,7 @@ class IndalekoLinuxLocalIngester(IndalekoIngester):
         file_data = []
         # Step 1: build the normalized data
         for item in self.indexer_data:
+            self.input_count += 1
             try:
                 obj = self.normalize_index_data(item)
             except OSError as e:
@@ -189,6 +190,7 @@ class IndalekoLinuxLocalIngester(IndalekoIngester):
             if 'S_IFDIR' in obj.args['UnixFileAttributes']:
                 if 'Path' not in obj:
                     logging.warning('Directory object does not have a path: %s', obj.to_json())
+                    self.error_count += 1
                     continue # skip
                 dir_data.append(obj)
                 self.dir_count += 1
@@ -385,11 +387,8 @@ def main():
     ingester = IndalekoLinuxLocalIngester(**ingest_args)
     logging.info('Ingesting %s ' , args.input)
     ingester.ingest()
-    total=0
     for count_type, count_value in ingester.get_counts().items():
         logging.info('%s: %d', count_type, count_value)
-        total += count_value
-    logging.info('Total: %d', total)
     logging.info('Done')
 
 
