@@ -122,17 +122,21 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
             return None
         if last_uri is None:
             last_uri = file_path
+        lstat_data = None
         try:
-            stat_data = os.stat(file_path)
             lstat_data = os.lstat(file_path)
+            stat_data = os.stat(file_path)
         except Exception as e: # pylint: disable=broad-except
             # at least for now, we log and skip errors
             logging.warning('Unable to stat %s : %s', file_path, e)
             self.error_count += 1
-            return {}
+            if lstat_data is not None:
+                self.bad_symlink += 1
+            return None
 
         if stat_data.st_ino != lstat_data.st_ino:
             logging.info('File %s is a symlink, indexing symlink data', file_path)
+            self.good_symlink += 1
             stat_data = lstat_data
         stat_dict = {key : getattr(stat_data, key) \
                      for key in dir(stat_data) if key.startswith('st_')}

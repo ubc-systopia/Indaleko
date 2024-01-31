@@ -387,9 +387,11 @@ def main():
     logging.info('Ingesting %s ' , args.input)
     logging.info('Output file %s ' , output_file)
     ingester.ingest()
-    counts = ingester.get_counts()
-    for count_type, count_value in counts.items():
+    total=0
+    for count_type, count_value in ingester.get_counts.items():
         logging.info('%s: %d', count_type, count_value)
+        total += count_value
+    logging.info('Total: %d', total)
     logging.info('Done')
 
 

@@ -331,7 +331,6 @@ def main():
         target_dir=pre_args.logdir,
         timestamp=timestamp,
         suffix='log')
-    print(log_file_name)
     if os.path.exists(log_file_name):
         os.remove(log_file_name)
     logging.basicConfig(
@@ -387,7 +386,7 @@ def main():
     logging.info('Ingesting %s ' , args.input)
     ingester.ingest()
     total=0
-    for count_type, count_value in ingester.counts.items():
+    for count_type, count_value in ingester.get_counts.items():
         logging.info('%s: %d', count_type, count_value)
         total += count_value
     logging.info('Total: %d', total)
