@@ -127,10 +127,11 @@ class IndalekoIndexer:
         self.encoding_count = 0
         self.not_found_count = 0
 
-    def find_indexer_files(self,
-                   search_dir : str,
-                   prefix : str = default_file_prefix,
-                   suffix : str = default_file_suffix) -> list:
+    @staticmethod
+    def find_indexer_files(
+            search_dir : str,
+            prefix : str = default_file_prefix,
+            suffix : str = default_file_suffix) -> list:
         '''This function finds the files to ingest:
             search_dir: path to the search directory
             prefix: prefix of the file to ingest
@@ -276,10 +277,11 @@ class IndalekoIndexer:
                 for entry in data:
                     try:
                         output.write(entry)
-                        logging.info('Wrote jsonlines %s.', output_file)
+                        logging.debug('Wrote entry %s.', entry)
                     except UnicodeEncodeError as e:
-                        logging.info('Writing entry %s to %s failed due to encoding issues', entry, output_file)
+                        logging.error('Writing entry %s to %s failed due to encoding issues', entry, output_file)
                         self.encoding_count += 1
+            logging.info('Wrote jsonlines file %s.', output_file)
         else:
             json.dump(data, output_file, indent=4)
             logging.info('Wrote json %s.', output_file)

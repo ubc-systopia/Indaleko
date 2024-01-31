@@ -87,7 +87,7 @@ def main():
     '''This is the main handler for the Indaleko Linux Local Indexer
     service.'''
     logging_levels = Indaleko.get_logging_levels()
-
+    timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     # Step 1: find the machine configuration file & set up logging
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument('--configdir',
@@ -108,22 +108,19 @@ def main():
     config_platform = IndalekoLinuxLocalIndexer.linux_platform
     if 'platform' in config_file_metadata:
         config_platform = config_file_metadata['platform']
-
     log_file_name = IndalekoLinuxLocalIndexer.generate_indexer_file_name(
         platform=config_platform,
         indexer_name=IndalekoLinuxLocalIndexer.linux_local_indexer_name,
         machine_id = config_file_metadata['machine'],
         target_dir=pre_args.logdir,
+        timestamp=timestamp,
         suffix='log')
-    print(log_file_name)
     logging.basicConfig(
         filename=log_file_name,
         level=pre_args.loglevel,
         format='%(asctime)s - %(levelname)s - %(message)s',
         force=True
     )
-    config_files = IndalekoLinuxMachineConfig.find_config_files(pre_args.configdir)
-    default_config_file = IndalekoLinuxMachineConfig.get_most_recent_config_file(pre_args.configdir)
     # Step 2: figure out the default config file
     pre_parser = argparse.ArgumentParser(add_help=False, parents=[pre_parser])
     pre_parser.add_argument('--config', choices=config_files, default=default_config_file)
