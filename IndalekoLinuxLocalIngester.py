@@ -386,7 +386,7 @@ def main():
     logging.info('Ingesting %s ' , args.input)
     ingester.ingest()
     total=0
-    for count_type, count_value in ingester.get_counts.items():
+    for count_type, count_value in ingester.get_counts().items():
         logging.info('%s: %d', count_type, count_value)
         total += count_value
     logging.info('Total: %d', total)

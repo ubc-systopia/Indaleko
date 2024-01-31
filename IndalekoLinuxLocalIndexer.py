@@ -156,9 +156,8 @@ def main():
     logging.info('Output file %s ' , output_file)
     data = indexer.index()
     indexer.write_data_to_file(data, output_file)
-    counts = indexer.get_counts()
     total=0
-    for count_type, count_value in counts.items():
+    for count_type, count_value in indexer.get_counts().items():
         logging.info('%s: %d', count_type, count_value)
         total += count_value
     logging.info('Total: %d', total)
