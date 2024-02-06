@@ -5,10 +5,12 @@ import platform
 import logging
 import os
 import json
+import subprocess
 import arango
 import jsonlines
 import uuid
 import msgpack
+from concurrent.futures import ThreadPoolExecutor
 
 from IndalekoIngester import IndalekoIngester
 from Indaleko import Indaleko
@@ -20,6 +22,7 @@ from IndalekoObject import IndalekoObject
 from IndalekoUnix import UnixFileAttributes
 from IndalekoRelationshipContains import IndalekoRelationshipContains
 from IndalekoRelationshipContained import IndalekoRelationshipContainedBy
+
 
 class IndalekoMacLocalIngester(IndalekoIngester):
     '''
@@ -36,12 +39,13 @@ class IndalekoMacLocalIngester(IndalekoIngester):
         service_identifier=mac_local_ingester_uuid,
     )
 
-    mac_platform =IndalekoMacLocalIndexer.mac_platform
+    mac_platform = IndalekoMacLocalIndexer.mac_platform
     mac_local_ingester = 'local_fs_ingester'
-    default_config_file= './config/indaleko-db-config.ini'
+    default_config_file = './config/indaleko-db-config.ini'
 
-    def __init__(self,reset_collection=False, **kwargs) -> None:
-        assert os.path.isfile(IndalekoMacLocalIngester.default_config_file), f'expected to have a config file at {IndalekoMacLocalIngester.default_config_file}; got none'
+    def __init__(self, reset_collection=False, objects_file="", relations_file="", **kwargs) -> None:
+        assert os.path.isfile(IndalekoMacLocalIngester.default_config_file), f'expected to have a config file at {
+            IndalekoMacLocalIngester.default_config_file}; got none'
 
         if 'input_file' not in kwargs:
             raise ValueError('input_file must be specified')
@@ -54,17 +58,18 @@ class IndalekoMacLocalIngester(IndalekoIngester):
             kwargs['machine_id'] = self.machine_config.machine_id
             if kwargs['machine_id'] != self.machine_config.machine_id:
                 logging.warning('Warning: machine ID of indexer file ' +
-                      f'({kwargs["machine"]}) does not match machine ID of ingester ' +
-                        f'({self.machine_config.machine_id}.)')
+                                f'({kwargs["machine"]}) does not match machine ID of ingester ' +
+                                f'({self.machine_config.machine_id}.)')
         if 'timestamp' not in kwargs:
-            kwargs['timestamp'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            kwargs['timestamp'] = datetime.datetime.now(
+                datetime.timezone.utc).isoformat()
         if 'platform' not in kwargs:
             kwargs['platform'] = IndalekoMacLocalIngester.mac_platform
         if 'ingester' not in kwargs:
             kwargs['ingester'] = IndalekoMacLocalIngester.mac_local_ingester
         if 'input_file' not in kwargs:
             kwargs['input_file'] = None
-       
+
         super().__init__(**kwargs)
         self.input_file = kwargs['input_file']
         if 'output_file' not in kwargs:
@@ -77,6 +82,8 @@ class IndalekoMacLocalIngester(IndalekoIngester):
             'Version': '1.0'
         }
         self.reset_collection = reset_collection
+        self.objects_file = objects_file
+        self.relations_file = relations_file
 
     def find_indexer_files(self) -> list:
         '''This function finds the files to ingest:
@@ -102,7 +109,8 @@ class IndalekoMacLocalIngester(IndalekoIngester):
             with open(self.input_file, 'r', encoding='utf-8-sig') as file:
                 self.indexer_data = json.load(file)
         else:
-            raise ValueError(f'Input file {self.input_file} is of an unknown type')
+            raise ValueError(
+                f'Input file {self.input_file} is of an unknown type')
         if not isinstance(self.indexer_data, list):
             raise ValueError('indexer_data is not a list')
 
@@ -125,25 +133,25 @@ class IndalekoMacLocalIngester(IndalekoIngester):
                 {
                     'Label': IndalekoObject.CREATION_TIMESTAMP,
                     'Value': datetime.datetime.fromtimestamp(data['st_birthtime'],
-                                                              datetime.timezone.utc).isoformat(),
+                                                             datetime.timezone.utc).isoformat(),
                     'Description': 'Created',
                 },
                 {
                     'Label': IndalekoObject.MODIFICATION_TIMESTAMP,
                     'Value': datetime.datetime.fromtimestamp(data['st_mtime'],
-                                                              datetime.timezone.utc).isoformat(),
+                                                             datetime.timezone.utc).isoformat(),
                     'Description': 'Modified',
                 },
                 {
                     'Label': IndalekoObject.ACCESS_TIMESTAMP,
                     'Value': datetime.datetime.fromtimestamp(data['st_atime'],
-                                                              datetime.timezone.utc).isoformat(),
+                                                             datetime.timezone.utc).isoformat(),
                     'Description': 'Accessed',
                 },
                 {
                     'Label': IndalekoObject.CHANGE_TIMESTAMP,
                     'Value': datetime.datetime.fromtimestamp(data['st_ctime'],
-                                                              datetime.timezone.utc).isoformat(),
+                                                             datetime.timezone.utc).isoformat(),
                     'Description': 'Changed',
                 },
             ],
@@ -151,10 +159,11 @@ class IndalekoMacLocalIngester(IndalekoIngester):
             'Attributes': data,
             'Machine': self.machine_config.machine_id,
         }
-       
+
         if 'st_mode' in data:
-            kwargs['UnixFileAttributes'] = UnixFileAttributes.map_file_attributes(data['st_mode'])
-        
+            kwargs['UnixFileAttributes'] = UnixFileAttributes.map_file_attributes(
+                data['st_mode'])
+
         return IndalekoObject(**kwargs)
 
     def ingest(self) -> None:
@@ -162,6 +171,20 @@ class IndalekoMacLocalIngester(IndalekoIngester):
         This function ingests the indexer file and emits the data needed to
         upload to the database.
         '''
+
+        # if the Objects and Relationships are provided, use them
+        if len(self.objects_file) and len(self.relations_file):
+            print(f'provided two paths for objects and relationships')
+            assert os.path.isfile(self.objects_file), f'given objects file does not exist, got={
+                self.objects_file}'
+            assert os.path.isfile(self.relations_file), f'given objects file does not exits, got={
+                self.relations_file}'
+
+            print(f'importing objects and relations from:', f'Objects={
+                  self.objects_file}', f'Relationships={self.relations_file}', sep='\n')
+            self.arangoimport()
+            return
+
         self.load_indexer_data_from_file()
         dir_data_by_path = {}
         dir_data = []
@@ -175,9 +198,10 @@ class IndalekoMacLocalIngester(IndalekoIngester):
                 logging.error('Data: %s', item)
                 self.error_count += 1
                 continue
-            if 'S_IFDIR' in obj.args['UnixFileAttributes']: 
+            if 'S_IFDIR' in obj.args['UnixFileAttributes']:
                 if 'Path' not in obj:
-                    logging.warning('Directory object does not have a path: %s', obj.to_json())
+                    logging.warning(
+                        'Directory object does not have a path: %s', obj.to_json())
                     continue  # skip
                 dir_data_by_path[obj['Path']] = obj
                 dir_data.append(obj)
@@ -203,8 +227,7 @@ class IndalekoMacLocalIngester(IndalekoIngester):
                 continue
             parent_id = dirmap[parent]
             dir_edge = IndalekoRelationshipContains(
-                relationship=
-                IndalekoRelationshipContains.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR,
+                relationship=IndalekoRelationshipContains.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR,
                 object1={
                     'collection': 'Objects',
                     'object': item.args['ObjectIdentifier'],
@@ -218,8 +241,7 @@ class IndalekoMacLocalIngester(IndalekoIngester):
             dir_edges.append(dir_edge)
             self.edge_count += 1
             dir_edge = IndalekoRelationshipContainedBy(
-                relationship=
-                IndalekoRelationshipContainedBy.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR,
+                relationship=IndalekoRelationshipContainedBy.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR,
                 object1={
                     'collection': 'Objects',
                     'object': parent_id,
@@ -243,52 +265,50 @@ class IndalekoMacLocalIngester(IndalekoIngester):
             timestamp=self.timestamp,
             output_dir=self.data_dir,
         )
-        self.write_data_to_file(dir_edges,edge_file)
+        self.write_data_to_file(dir_edges, edge_file)
 
-        # bulk import to the arrango db
-        done = self.import_bulk(documents=dir_data+file_data,collection_name='Objects')
-        if not done:
-            print(f'skip ingesting relationshihps as the nodes failed to be ingested')
-            return 
-        self.import_bulk(documents=dir_edges,collection_name='Relationships')
+        # set the objects and relations file paths to these newly created ones
+        self.objects_file=self.output_file
+        self.relations_file=edge_file
 
-    def __db_connect(self) -> arango.database.StandardDatabase:
-        config_parser = configparser.ConfigParser()
-        config_parser.read(IndalekoMacLocalIngester.default_config_file)
+        # import these using arangoimport tool
+        self.arangoimport()
+        
 
-        assert 'database' in config_parser, f'expcted to have a database section in the config; got none'
-        db_config=config_parser['database']
+    def arangoimport(self):
+        print('{:-^20}'.format(""))
+        print('import objects')
 
-        url=f"http://{db_config['host']}:{db_config['port']}"
-        client = arango.ArangoClient(hosts=url)
+        # check if the docker is up
+        self.__run_docker_cmd('docker ps -a')
 
-        db=None
+        # read the config file
+        config = configparser.ConfigParser()
+        config.read(self.default_config_file)
+
+        dest = '/home'  # where in the container we copy the files; we use this for import to the database
+
+        container_name = config['database']['container']
+        server_username=config['database']['user_name']
+        server_password=config['database']['user_password']
+        server_database=config['database']['database']
+        overwrite=str(self.reset_collection).lower()
+
+        # copy the files first
+        for filename, dest_filename in [(self.objects_file, "objects.jsonl"), (self.relations_file, "relations.jsonl")]:
+            self.__run_docker_cmd(f'docker cp {filename} {
+                                  container_name}:{dest}/{dest_filename}')
+
+        # run arangoimport on both of these files
+        for filename, collection_name in [("objects.jsonl", "Objects"), ("relations.jsonl", "Relationships")]:
+            self.__run_docker_cmd(f'docker exec -t {container_name} arangoimport --file {dest}/{filename} --type "jsonl" --collection "{collection_name}" --server.username "{server_username}" --server.password "{server_password}" --server.database "{server_database}" --overwrite {overwrite}')
+
+    def __run_docker_cmd(self, cmd):
+        print('Running:', cmd)
         try:
-            db=client.db(
-                db_config['database'],
-                username=db_config['user_name'],
-                password=db_config['user_password']
-            )
-        except Exception as e:
-            print(f"couldn't connect to the database {db_config['database']}, ErrType: {type(e)}, Exception: {e}")
-        return db
-
-    def import_bulk(self,documents, collection_name):
-        db = self.__db_connect()
-        if not db:
-            print(f"failed to ingest because couldn't connect to the db")
-            return 
-        collection = db.collection(collection_name)
-        try:
-            res=collection.import_bulk(
-                documents=map(lambda x: x.to_dict(), documents),
-                overwrite=self.reset_collection
-                )
-            print(f"ingested documents to {collection_name}, got: {res}")
-        except Exception as e:
-            print(f'failed to ingest documents to {collection_name} (try with --reset; it will drop the collection before ingestion); Exception: {e}')
-            return False
-        return True
+            subprocess.run(cmd, check=True, shell=True)
+        except subprocess.CalledProcessError as e:
+            print(f'failed to run the command, got: {e}')
 
 def main():
     '''
@@ -313,31 +333,37 @@ def main():
         if hasattr(logging, 'FATAL'):
             logging_levels.append('FATAL')
     else:
-        logging_levels = sorted(set([level for level in logging.getLevelNamesMapping()]))
-    
+        logging_levels = sorted(
+            set([level for level in logging.getLevelNamesMapping()]))
+
     # step 1: find the machine configuration file
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument('--configdir', '-c',
-                            help=f'Path to the config directory (default is {Indaleko.default_config_dir})',
+                            help=f'Path to the config directory (default is {
+                                Indaleko.default_config_dir})',
                             default=Indaleko.default_config_dir)
     pre_args, _ = pre_parser.parse_known_args()
-    config_files = IndalekoMacOSMachineConfig.find_config_files(pre_args.configdir)
+    config_files = IndalekoMacOSMachineConfig.find_config_files(
+        pre_args.configdir)
     assert isinstance(config_files, list), 'config_files must be a list'
     if len(config_files) == 0:
         print(f'No config files found in {pre_args.configdir}, exiting.')
         return
-    default_config_file = IndalekoMacOSMachineConfig.get_most_recent_config_file(pre_args.configdir)
+    default_config_file = IndalekoMacOSMachineConfig.get_most_recent_config_file(
+        pre_args.configdir)
     pre_parser = argparse.ArgumentParser(add_help=False, parents=[pre_parser])
     pre_parser.add_argument('--config',
                             choices=config_files,
                             default=default_config_file,
                             help=f'Configuration file to use. (default: {default_config_file})')
     pre_parser.add_argument('--datadir',
-                            help=f'Path to the data directory (default is {Indaleko.default_data_dir})',
+                            help=f'Path to the data directory (default is {
+                                Indaleko.default_data_dir})',
                             type=str,
                             default=Indaleko.default_data_dir)
     pre_args, _ = pre_parser.parse_known_args()
-    machine_config = IndalekoMacOSMachineConfig.load_config_from_file(config_file=default_config_file)
+    machine_config = IndalekoMacOSMachineConfig.load_config_from_file(
+        config_file=default_config_file)
     indexer = IndalekoMacLocalIndexer(
         search_dir=pre_args.datadir,
         prefix=IndalekoMacLocalIndexer.mac_platform,
@@ -350,23 +376,36 @@ def main():
                         choices=indexer_files,
                         default=indexer_files[-1],
                         help='Mac Local Indexer file to ingest.')
-    parser.add_argument('--reset', action='store_true', help='Drop the collections before ingesting new data')
+    parser.add_argument('--objects-file',
+                        default="",
+                        dest='objects_file',
+                        help='path to the jsonl file that contains the documents for the Objects collection'
+                        )
+    parser.add_argument('--relations-file',
+                        default="",
+                        dest='relations_file',
+                        help='path to the jsonl file that contains the documents for the Relationships collection'
+                        )
+    parser.add_argument('--reset', action='store_true',
+                        help='Drop the collections before ingesting new data')
     parser.add_argument('--logdir',
-                        help=f'Path to the log directory (default is {Indaleko.default_log_dir})',
+                        help=f'Path to the log directory (default is {
+                            Indaleko.default_log_dir})',
                         default=Indaleko.default_log_dir)
     parser.add_argument('--loglevel',
                         choices=logging_levels,
                         default=logging.DEBUG,
                         help='Logging level to use.')
     args = parser.parse_args()
-    metadata = IndalekoMacLocalIndexer.extract_metadata_from_indexer_file_name(args.input)
+    metadata = IndalekoMacLocalIndexer.extract_metadata_from_indexer_file_name(
+        args.input)
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     machine_id = 'unknown'
     if 'machine' in metadata:
         if metadata['machine'] != machine_config.machine_id:
             print('Warning: machine ID of indexer file ' +
                   f'({metadata["machine"]}) does not match machine ID of ingester ' +
-                    f'({machine_config.machine_id})')
+                  f'({machine_config.machine_id})')
         machine_id = metadata['machine']
     if 'timestamp' in metadata:
         timestamp = metadata['timestamp']
@@ -375,7 +414,7 @@ def main():
         if indexer_platform != IndalekoMacLocalIngester.mac_platform:
             print('Warning: platform of indexer file ' +
                   f'({indexer_platform}) name does not match platform of ingester ' +
-                    f'({IndalekoMacLocalIngester.mac_platform}.)')
+                  f'({IndalekoMacLocalIngester.mac_platform}.)')
     storage = 'unknown'
     if 'storage' in metadata:
         storage = metadata['storage']
@@ -388,6 +427,8 @@ def main():
     input_file = os.path.join(args.datadir, args.input)
     ingester = IndalekoMacLocalIngester(
         reset_collection=args.reset,
+        objects_file=args.objects_file,
+        relations_file=args.relations_file,
         machine_config=machine_config,
         machine_id=machine_id,
         timestamp=timestamp,
@@ -404,9 +445,9 @@ def main():
     log_file_name = ingester.generate_file_name(
         target_dir=args.logdir, suffix='.log')
     logging.basicConfig(filename=os.path.join(log_file_name),
-                                level=logging.DEBUG,
-                                format='%(asctime)s - %(levelname)s - %(message)s',
-                                force=True)
+                        level=logging.DEBUG,
+                        format='%(asctime)s - %(levelname)s - %(message)s',
+                        force=True)
     logging.info('Ingesting %s ', args.input)
     logging.info('Output file %s ', output_file)
     ingester.ingest()
@@ -414,6 +455,7 @@ def main():
     for count_type, count_value in counts.items():
         logging.info('%s: %d', count_type, count_value)
     logging.info('Done')
+
 
 if __name__ == '__main__':
     main()
