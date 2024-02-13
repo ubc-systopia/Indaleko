@@ -277,14 +277,20 @@ class IndalekoMacLocalIngester(IndalekoIngester):
 
     def arangoimport(self):
         print('{:-^20}'.format(""))
-        print('import objects')
+        print('using arangoimport to import objects')
 
         # check if the docker is up
-        self.__run_docker_cmd('docker ps -a')
+        self.__run_docker_cmd('docker ps')
+
+        with open(self.default_config_file, 'r', encoding='utf-8-sig') as file:
+            content = file.read()
+
+        with open(self.default_config_file, 'w', encoding='utf-8') as file:
+            file.write(content)
 
         # read the config file
         config = configparser.ConfigParser()
-        config.read(self.default_config_file)
+        config.read(self.default_config_file, encoding='utf-8-sig')
 
         dest = '/home'  # where in the container we copy the files; we use this for import to the database
 
