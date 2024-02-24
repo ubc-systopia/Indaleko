@@ -69,10 +69,10 @@ def save_config_to_file(config_data, file_path):
 
 def main():
     parser = argparse.ArgumentParser('Generating Mac Hardware Info Generator', 'python MacHardwareInfoGenerator.py --dir save_at_path')
-    parser.add_argument('--save-to-dir', '-d', metavar='save_at_dir', help='path to the directory we want to save the directory')
+    parser.add_argument('--save-to-dir', '-d',  help='path to the directory we want to save the directory')
     args = parser.parse_args()
 
-    if not os.path.isdir(parser.save_to_dir): 
+    if not os.path.isdir(args.save_to_dir): 
         print(f'Given dir path is not valid, got: {parser.save_to_dir}')
         return
 

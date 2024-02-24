@@ -96,6 +96,13 @@ class IndalekoMacLocalIndexer(IndalekoIndexer):
     def index(self) -> list:
         data = []
         last_uri = None
+        
+        # indexing path itself has to have a root node
+        root_entry= self.build_stat_dict(os.path.basename(self.path), os.path.dirname(self.path), last_uri)
+        if root_entry:
+            data.append(root_entry[0])
+            last_uri=root_entry[1]
+
         for root, dirs, files in os.walk(self.path):
             for name in dirs + files:
                 entry = self.build_stat_dict(name, root, last_uri)
@@ -173,6 +180,7 @@ def main():
                         help='Logging level to use (lower number = more logging)')
 
     args = parser.parse_args()
+    args.path=os.path.abspath(args.path)
     indexer = IndalekoMacLocalIndexer(timestamp=timestamp,
                                           path=args.path,
                                           machine_config=machine_config)
