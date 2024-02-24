@@ -156,6 +156,10 @@ class IndalekoDBConfig:
     def __save_config__(self):
         """Save the config information in the object."""
         logging.debug('Saving config to %s', self.config_file)
+        parent_dir = os.path.dirname(self.config_file)
+        if not os.path.exists(parent_dir):
+            logging.debug("folder %s doesn't exist. creating one ...",parent_dir)
+            os.makedirs(parent_dir, exist_ok=True)
         with open(self.config_file, 'wt', encoding='utf-8-sig') as config_file:
             self.config.write(config_file)
 
@@ -164,6 +168,10 @@ class IndalekoDBConfig:
         self.config = configparser.ConfigParser()
         self.config.read(self.config_file, encoding='utf-8-sig')
         logging.debug('Loaded config from %s', self.config_file)
+        parent_dir=os.path.dirname(self.config_file)
+        if not os.path.exists(parent_dir):
+            logging.debug("folder %s doesn't exist, creating one ... ", parent_dir)
+            os.makedirs(parent_dir, exist_ok=True)
         if 'database' not in self.config:
             logging.error('No database section found in config file %s', self.config_file)
             raise ValueError('No database section found in config file')

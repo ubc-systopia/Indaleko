@@ -491,6 +491,42 @@ database.  Future versions may automate more of this pipeline.
 
 #### Linux
 
+# Ingestion Validator
+
+After ingesting the index data, it is necessary to ensure that what ended up in the database is what we want, especially in terms of the relationships we define. This is more important during development, while it can be ignored when using the tool.
+
+There is a [validators](validators/) package where it contains the code and scripts for validation. The main validator code is [IndalekoIngesterValidator.py](/validators/IndalekoIngesterValidator.py). The scripts in the package are used to extract _rules_ that should be checked against the ingested data. The current validator performs the following checks:
+
+* Validates the number of distinct file types, i.e., different `st_mode` values, to be exactly the same as what we have seen in the index file.
+
+* Validates the `Contains` and `Contained By` relationships for each folder. The current version only validates the number of children rather than an exact string match.
+
+Here's how we can use it:
+
+1. Install [jq](https://jqlang.github.io/jq/). It is a powerful tool for working with `json` and `jsonl` files.
+2. Run [extract_validation.sh](validators/extract_validations.sh) passing the path to the index file we ingested:
+
+```bash
+validators$ extract_validation.sh /path/to/the/index_file
+```
+
+The script creates a `validations.jsonl` file inside the `data` folder where each line is a rule to be checked. Here are three examples of these rules:
+
+```json
+{"type":"count","field":"st_mode","value":16859,"count":1} 
+{"type":"contains","parent_uri":"/Users/sinaee/.azuredatastudio","children_uri":["/Users/sinaee/.azuredatastudio/extensions","/Users/sinaee/.azuredatastudio/argv.json"]}
+{"type":"contains","parent_uri":"/Users/sinaee/.azuredatastudio","children_uri":["/Users/sinaee/.azuredatastudio/extensions","/Users/sinaee/.azuredatastudio/argv.json"]}
+{"type":"contained_by","child_uri":"/Users/sinaee/.azuredatastudio/extensions/microsoft.azuredatastudio-postgresql-0.2.7/node_modules/dashdash/package.json","parent_uris":["/Users/sinaee/.azuredatastudio/extensions/microsoft.azuredatastudio-postgresql-0.2.7/node_modules/dashdash"]}
+```
+
+3. Run [IndalekoIngesterValidator](validators/IndalekoIngesterValidator.py) passing the config file path and the validations path
+
+```bash
+validators$ python IndalekoIngesterValidator.py -c /Users/sinaee/Projects/Indaleko/config/indaleko-db-config.ini -f ./data/validations.jsonl
+```
+
+You should not see any errors; the skipping messages are fine.
+
 # License
 
 ```

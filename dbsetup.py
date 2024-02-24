@@ -153,6 +153,7 @@ def main():
                         timestamp=timestamp
                     )
     print(args)
+    os.makedirs(args.log_dir, exist_ok=True)
     indaleko_logging = IndalekoLogging(service_name='dbsetup',
                                        log_dir=args.log_dir,
                                        log_file=args.log,
