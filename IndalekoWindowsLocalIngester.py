@@ -128,7 +128,10 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
             raise ValueError('Data cannot be None')
         if not isinstance(data, dict):
             raise ValueError('Data must be a dictionary')
-        oid = str(uuid.uuid4())
+        if 'ObjectIdentifier' in data:
+            oid = data['ObjectIdentifier']
+        else:
+            oid = str(uuid.uuid4())
         kwargs = {
             'source' : self.source,
             'raw_data' : msgpack.packb(bytes(json.dumps(data).encode('utf-8'))),
