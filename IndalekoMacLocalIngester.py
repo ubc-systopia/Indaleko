@@ -6,7 +6,6 @@ import logging
 import os
 import json
 import subprocess
-import arango
 import jsonlines
 import uuid
 import msgpack
@@ -123,7 +122,10 @@ class IndalekoMacLocalIngester(IndalekoIngester):
             raise ValueError('Data cannot be None')
         if not isinstance(data, dict):
             raise ValueError('Data must be a dictionary')
-        oid = str(uuid.uuid4())
+        if 'ObjectIdentifier' in data:
+            oid = data['ObjectIdentifier']
+        else:
+            oid = str(uuid.uuid4())
         kwargs = {
             'source': self.source,
             'raw_data': msgpack.packb(bytes(json.dumps(data).encode('utf-8'))),
@@ -273,7 +275,7 @@ class IndalekoMacLocalIngester(IndalekoIngester):
 
         # import these using arangoimport tool
         self.arangoimport()
-        
+
 
     def arangoimport(self):
         print('{:-^20}'.format(""))
