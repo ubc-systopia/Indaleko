@@ -132,37 +132,41 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
             oid = data['ObjectIdentifier']
         else:
             oid = str(uuid.uuid4())
+        timestamps = []
+        if 'st_birthtime' in data:
+            timestamps.append({
+                'Label' : IndalekoObject.CREATION_TIMESTAMP,
+                'Value' : datetime.datetime.fromtimestamp(data['st_birthtime'],
+                                                          datetime.timezone.utc).isoformat(),
+                'Description' : 'Created',
+            })
+        if 'st_mtime' in data:
+            timestamps.append({
+                'Label' : IndalekoObject.MODIFICATION_TIMESTAMP,
+                'Value' : datetime.datetime.fromtimestamp(data['st_mtime'],
+                                                          datetime.timezone.utc).isoformat(),
+                'Description' : 'Modified',
+            })
+        if 'st_atime' in data:
+            timestamps.append({
+                'Label' : IndalekoObject.ACCESS_TIMESTAMP,
+                'Value' : datetime.datetime.fromtimestamp(data['st_atime'],
+                                                          datetime.timezone.utc).isoformat(),
+                'Description' : 'Accessed',
+            })
+        if 'st_ctime' in data:
+            timestamps.append({
+                'Label' : IndalekoObject.CHANGE_TIMESTAMP,
+                'Value' : datetime.datetime.fromtimestamp(data['st_ctime'],
+                                                          datetime.timezone.utc).isoformat(),
+                'Description' : 'Changed',
+            })
         kwargs = {
             'source' : self.source,
             'raw_data' : msgpack.packb(bytes(json.dumps(data).encode('utf-8'))),
             'URI' : data['URI'],
             'ObjectIdentifier' : oid,
-            'Timestamps' : [
-                {
-                    'Label' : IndalekoObject.CREATION_TIMESTAMP,
-                    'Value' : datetime.datetime.fromtimestamp(data['st_birthtime'],
-                                                              datetime.timezone.utc).isoformat(),
-                    'Description' : 'Created',
-                },
-                {
-                    'Label' : IndalekoObject.MODIFICATION_TIMESTAMP,
-                    'Value' : datetime.datetime.fromtimestamp(data['st_mtime'],
-                                                              datetime.timezone.utc).isoformat(),
-                    'Description' : 'Modified',
-                },
-                {
-                    'Label' : IndalekoObject.ACCESS_TIMESTAMP,
-                    'Value' : datetime.datetime.fromtimestamp(data['st_atime'],
-                                                              datetime.timezone.utc).isoformat(),
-                    'Description' : 'Accessed',
-                },
-                {
-                    'Label' : IndalekoObject.CHANGE_TIMESTAMP,
-                    'Value' : datetime.datetime.fromtimestamp(data['st_ctime'],
-                                                              datetime.timezone.utc).isoformat(),
-                    'Description' : 'Changed',
-                },
-            ],
+            'Timestamps' : timestamps,
             'Size' : data['st_size'],
             'Attributes' : data,
             'Machine' : self.machine_config.machine_id,
