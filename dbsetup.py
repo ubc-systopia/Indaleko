@@ -28,6 +28,16 @@ from IndalekoCollections import IndalekoCollections
 from IndalekoLogging import IndalekoLogging
 from IndalekoDocker import IndalekoDocker
 
+def run_container(db_config: IndalekoDBConfig):
+    # the configuration 
+    if 'container' not in db_config or 'volume' not in db_config:
+        logging.critical('run_container: there is no "container" or "volume" configuration in the config file')
+        exit(1)
+
+    indaleko_docker = IndalekoDocker(**{'container_name': db_config['container'], 'container_volume':db_config['volume']})
+
+    indaleko_docker.start_container(container_name=db_config['container'])
+
 def setup_command(args : argparse.Namespace) -> None:
     """
     This sets up a clean instance of the database.
@@ -73,14 +83,17 @@ def setup_command(args : argparse.Namespace) -> None:
 def check_command(args : argparse.Namespace) -> None:
     """Check the database:
     - if it finds a default config file, it loads the configuration from that; otherwise, it creates a new config file
-    - then, it runs the start command which tries to connect to the db container. Therefore, the container has to be running before that 
+    - then, it runs the start command which tries to connect to the db container. Therefore, the container has to be running before that. 
     """
     logging.info('Check the database')
     db_config = IndalekoDBConfig()
     if db_config is None:
         logging.critical('Could not create IndalekoDBConfig object')
         return
-    
+
+    # make sure the container is running 
+    run_container(db_config.config['database'])
+
     started = db_config.start(timeout=10)
     if not started:
         logging.critical('Could not start the database')
