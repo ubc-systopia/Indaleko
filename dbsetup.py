@@ -30,11 +30,20 @@ from IndalekoDocker import IndalekoDocker
 
 def run_container(db_config: IndalekoDBConfig):
     # the configuration 
-    if 'container' not in db_config or 'volume' not in db_config:
-        logging.critical('run_container: there is no "container" or "volume" configuration in the config file')
+    if 'container' not in db_config or 'volume' not in db_config or 'admin_passwd' not in db_config:
+        logging.critical('run_container: there is no "container", "volume" or "admin_password" configuration in the config file')
         exit(1)
 
     indaleko_docker = IndalekoDocker(**{'container_name': db_config['container'], 'container_volume':db_config['volume']})
+
+    if db_config['container'] not in indaleko_docker.list_containers():
+        logging.debug(f'run_container: there is no container with the name "{db_config['container']}"! Creating one ...')
+        # we don't have the container! create one
+        indaleko_docker.create_container(
+            container_name=db_config['container'],
+            volume_name=db_config['volume'],
+            password=db_config['admin_passwd']
+        )
 
     indaleko_docker.start_container(container_name=db_config['container'])
 
