@@ -185,7 +185,7 @@ def main():
                                           path=args.path,
                                           machine_config=machine_config)
     output_file = indexer.generate_indexer_file_name()
-    log_file_name = indexer.generate_indexer_file_name(target_dir=args.logdir)
+    log_file_name = indexer.generate_indexer_file_name(target_dir=args.logdir, suffix='.log')
     logging.basicConfig(filename=os.path.join(log_file_name),
                                 level=args.loglevel,
                                 format='%(asctime)s - %(levelname)s - %(message)s',
