@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import platform
 import sys
 import subprocess
 import argparse
@@ -84,6 +85,11 @@ def run_commands(commands: typing.List[Command]):
 def main():
     # Check Python version
     check_python_version()
+
+    if platform.system() != 'Darwin':
+        print('Only supports MacOS for now')
+        exit(1)
+
 
     # Set up arguments parser
     parser = argparse.ArgumentParser(description="Runs Indaleko on MacOS")
