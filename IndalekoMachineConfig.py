@@ -25,6 +25,7 @@ import socket
 import platform
 import os
 import logging
+import re
 
 from IndalekoCollections import IndalekoCollections
 from IndalekoDBConfig import IndalekoDBConfig
@@ -99,6 +100,64 @@ class IndalekoMachineConfig(IndalekoRecord):
                               service_type=service_type)
         assert self.machine_config_service is not None, "MachineConfig service does not exist."
 
+    @staticmethod
+    def find_config_files(directory : str, prefix : str) -> list:
+        '''This looks for configuration files in the given directory.'''
+        if not isinstance(prefix, str):
+            raise AssertionError(f'prefix must be a string, not {type(prefix)}')
+        if not isinstance(directory, str):
+            raise AssertionError(f'directory must be a string, not {type(directory)}')
+        return [x for x in os.listdir(directory)
+                if x.startswith(prefix)
+                and x.endswith('.json')]
+
+    @staticmethod
+    def get_guid_timestamp_from_file_name(file_name : str, prefix : str, suffix : str = 'json') -> tuple:
+        '''
+        Get the machine configuration captured by powershell.
+        Note that this PS script requires admin privileges so it might
+        be easier to do this in an application that elevates on Windows so it
+        can be done dynamically.  For now, we assume it has been captured.
+        '''
+        if not isinstance(file_name, str):
+            raise AssertionError(f'file_name must be a string, not {type(file_name)}')
+        if not isinstance(prefix, str):
+            raise AssertionError(f'prefix must be a string, not {type(prefix)}')
+        if suffix[0] == '.':
+            suffix = suffix[1:]
+        # Regular expression to match the GUID and timestamp
+        pattern = f"(?:.*[/])?{prefix}-(?P<guid>[a-fA-F0-9\\-]+)-(?P<timestamp>\\d{4}-\\d{2}-\\d{2}T\\d{2}-\\d{2}-\\d{2}\\.\\d+Z)\\.{suffix}"
+        match = re.match(pattern, file_name)
+        assert match, f'Filename format not recognized for {file_name} with re {pattern}.'
+        guid = uuid.UUID(match.group("guid"))
+        timestamp = match.group("timestamp").replace("-", ":")
+        assert timestamp[-1] == 'Z', 'Timestamp must end with Z'
+        # %f can only handle up to 6 digits and it seems Windows gives back
+        # more sometimes. Note this truncates, it doesn't round.  I doubt
+        # it matters.
+        timestamp_parts = timestamp.split('.')
+        fractional_part = timestamp_parts[1][:6] # truncate to 6 digits
+        ymd, hms = timestamp_parts[0].split('T')
+        timestamp = ymd.replace(':', '-') + 'T' + hms + '.' + fractional_part + '+00:00'
+        timestamp = datetime.datetime.fromisoformat(timestamp)
+        return (file_name, guid, timestamp)
+
+
+    @staticmethod
+    def get_most_recent_config_file(config_dir : str, prefix : str, suffix : str = '.json') -> str:
+        '''Get the most recent machine configuration file.'''
+        candidates = [x for x in os.listdir(config_dir) if
+                    x.startswith(prefix) and x.endswith(suffix)]
+        assert len(candidates) > 0, f'At least one {prefix} file should exist'
+        candidate_files = [(timestamp, filename)
+                        for filename, guid, timestamp in
+                        [IndalekoMachineConfig.get_guid_timestamp_from_file_name(x, prefix, suffix)
+                            for x in candidates]]
+        candidate_files.sort(key=lambda x: x[0])
+        candidate = candidate_files[0][1]
+        if config_dir is not None:
+            candidate = os.path.join(config_dir, candidate)
+        return candidate
 
 
     def set_platform(self, platform: dict) -> None:
@@ -281,7 +340,6 @@ class IndalekoMachineConfig(IndalekoRecord):
         ), f"Found {len(entries)} entries for machine_id {machine_id} - multiple entries case not handled."
         entry = entries[0]
         machine_config = IndalekoMachineConfig()
-        print(entry)
         machine_config.set_platform(entry["Platform"])
         # temporary: I've changed the shape of the database, so I'll need to
         # work around it temporarily

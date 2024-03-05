@@ -139,7 +139,8 @@ def main():
     command_subparser = parser.add_subparsers(dest='command')
     parser_check = command_subparser.add_parser('check', help='Check the database')
     parser_check.set_defaults(func=check_command)
-    parser_setup = command_subparser.add_parser('setup', help='Set up a clean instance of the database')
+    parser_setup = command_subparser.add_parser('setup',
+                                                help='Set up a clean instance of the database')
     parser_setup.set_defaults(func=setup_command)
     parser_delete = command_subparser.add_parser('delete', help='Delete the database')
     parser_delete.set_defaults(func=delete_command)
@@ -154,18 +155,14 @@ def main():
                     )
     print(args)
     IndalekoLogging(service_name='dbsetup',
-                                       log_dir=args.log_dir,
-                                       log_file=args.log,
-                                       log_level=args.loglevel)
+                    log_dir=args.log_dir,
+                    log_file=args.log,
+                    log_level=args.loglevel)
     logging.info('Starting Indaleko database setup')
     logging.debug(args)
     args.func(args)
     logging.info('Ending Indaleko database setup')
-<<<<<<< Updated upstream
     return
-=======
-
->>>>>>> Stashed changes
 
 if __name__ == '__main__':
     main()

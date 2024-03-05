@@ -19,6 +19,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import os
+import stat
 import datetime
 import logging
 import jsonlines
@@ -51,6 +52,19 @@ class IndalekoIndexer:
     # we use a common file naming mechanism.  These are overridable defaults.
     default_file_prefix = 'indaleko'
     default_file_suffix = '.jsonl'
+
+    counter_values = (
+        'output_count',
+        'dir_count',
+        'file_count',
+        'special_count',
+        'error_count',
+        'access_error_count',
+        'encoding_count',
+        'not_found_count',
+        'good_symlink_count',
+        'bad_symlink_count',
+    )
 
     def __init__(self, **kwargs):
         if 'file_prefix' in kwargs:
@@ -121,15 +135,14 @@ class IndalekoIndexer:
             service_type=self.service_type
         )
         assert self.indexer_service is not None, "Indexer service does not exist."
-        self.dir_count = 0
-        self.file_count = 0
-        self.error_count = 0
-        self.not_found_count = 0
+        for count in IndalekoIndexer.counter_values:
+            setattr(self, count, 0)
 
-    def find_indexer_files(self,
-                   search_dir : str,
-                   prefix : str = default_file_prefix,
-                   suffix : str = default_file_suffix) -> list:
+    @staticmethod
+    def find_indexer_files(
+            search_dir : str,
+            prefix : str = default_file_prefix,
+            suffix : str = default_file_suffix) -> list:
         '''This function finds the files to ingest:
             search_dir: path to the search directory
             prefix: prefix of the file to ingest
@@ -147,46 +160,50 @@ class IndalekoIndexer:
         '''
         Retrieves counters about the indexer.
         '''
-        return {
-            'dir_count' : self.dir_count,
-            'file_count' : self.file_count,
-            'error_count' : self.error_count,
-            'not_found_count' : self.not_found_count,
-        }
+        return {x : getattr(self, x) for x in IndalekoIndexer.counter_values}
 
-    def generate_indexer_file_name(self, target_dir : str = None, suffix : str = None) -> str:
+    @staticmethod
+    def generate_indexer_file_name(**kwargs) -> str:
         '''This will generate a file name for the indexer output file.'''
-        if hasattr(self, 'platform'):
-            platform = self.platform
-        else:
-            platform = 'unknown_platform'
+        # platform : str, target_dir : str = None, suffix : str = None) -> str:
+        platform = 'unknown_platform'
+        if 'platform' in kwargs:
+            platform = kwargs['platform']
+        if not isinstance(platform, str):
+            raise ValueError('platform must be a string')
         platform = platform.replace('-', '_')
-        if hasattr(self, 'indexer_name'):
-            indexer_name = self.indexer_name
-        else:
-            indexer_name = 'unknown_indexer'
+        indexer_name = 'unknown_indexer'
+        if 'indexer_name' in kwargs:
+            indexer_name = kwargs['indexer_name']
+        if not isinstance(indexer_name, str):
+            raise ValueError('indexer_name must be a string')
+        indexer_name = indexer_name.replace('-', '_')
         indexer_name = indexer_name.replace('-', '_')
         machine_id = str(uuid.UUID('00000000-0000-0000-0000-000000000000').hex)
-        if hasattr(self, 'machine_id'):
-            machine_id = str(uuid.UUID(self.machine_id).hex)
-        storage_description = str(uuid.UUID('00000000-0000-0000-0000-000000000000').hex)
-        if hasattr(self, 'storage_description'):
-            storage_description = str(uuid.UUID(self.storage_description).hex)
-        if hasattr(self, 'timestamp'):
-            timestamp = self.timestamp
-        else:
-            timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        if target_dir is None:
-            target_dir = self.data_dir
+        if 'machine_id' in kwargs:
+            machine_id = str(uuid.UUID(kwargs['machine_id']).hex)
+        storage_description = None
+        if 'storage_description' in kwargs:
+            storage_description = str(uuid.UUID(kwargs['storage_description']).hex)
+        timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        if 'timestamp' in kwargs:
+            timestamp = kwargs['timestamp']
+        target_dir = Indaleko.default_data_dir
+        if 'target_dir' in kwargs:
+            target_dir = kwargs['target_dir']
+        suffix = None
+        if 'suffix' in kwargs:
+            suffix = kwargs['suffix']
         kwargs = {
             'platform' : platform,
             'service' : indexer_name,
             'machine' : machine_id,
-            'storage' : storage_description,
             'timestamp' : timestamp,
         }
-        if suffix is not None:
-            kwargs['suffix'] = suffix
+        if storage_description is not None:
+            kwargs['storage'] = storage_description
+        if 'suffix' in kwargs:
+            kwargs['suffix'] = kwargs['suffix']
         name = Indaleko.generate_file_name(**kwargs)
         return os.path.join(target_dir,name)
 
@@ -208,21 +225,54 @@ class IndalekoIndexer:
     def build_stat_dict(self, name: str, root : str) -> tuple:
         '''This function builds a stat dict for a given file.'''
         file_path = os.path.join(root, name)
-        last_uri = file_path
+        if not os.path.exists(file_path):
+            if not name in os.listdir(root):
+                logging.warning('File %s does not exist in directory %s', file_path, root)
+                self.not_found_count += 1
+            elif os.path.lexists(file_path):
+                logging.warning('File %s is a broken symlink', file_path)
+                self.bad_symlink_count += 1
+            else:
+                logging.warning('File %s exists in directory %s but not accessible', file_path, root)
+                self.access_error_count += 1
+            return None
+
+        lstat_data = None
         try:
+            lstat_data = os.lstat(file_path)
             stat_data = os.stat(file_path)
         except Exception as e: # pylint: disable=broad-except
             # at least for now, we just skip errors
             logging.warning('Unable to stat %s : %s', file_path, e)
+            if lstat_data is not None:
+                self.bad_symlink_count += 1
+            else:
+                self.error_count += 1
             return None
-        stat_dict = {key : getattr(stat_data, key) for key in dir(stat_data) if key.startswith('st_')}
+        if stat_data.st_ino != lstat_data.st_ino:
+            logging.info('File %s is a symlink, indexing symlink data', file_path)
+            self.good_symlink_count += 1
+            stat_data = lstat_data
+        elif stat.S_ISDIR(stat_data.st_mode):
+            self.dir_count += 1
+        elif stat.S_ISREG(stat_data.st_mode):
+            self.file_count += 1
+        elif stat.S_ISLNK(stat_data.st_mode):
+            raise ValueError('Symlinks should have been handled above')
+        else:
+            self.special_count += 1
+            return None # don't index special files
+
+        stat_dict = {key : getattr(stat_data, key) \
+                    for key in dir(stat_data) if key.startswith('st_')}
         stat_dict['Name'] = name
         stat_dict['Path'] = root
-        stat_dict['URI'] = os.path.join(last_uri, name)
+        stat_dict['URI'] = os.path.join(root, name)
         stat_dict['Indexer'] = self.service_identifier
-        return (stat_dict, last_uri)
+        stat_dict['ObjectIdentifier'] = str(uuid.uuid4())
+        return stat_dict
 
-    def index(self) -> dict:
+    def index(self) -> list:
         '''
         This is the main indexing function for the indexer.  Can be overriden
         for platforms that require additional processing.
@@ -232,8 +282,9 @@ class IndalekoIndexer:
             for name in dirs + files:
                 entry = self.build_stat_dict(name, root)
                 if entry is not None:
-                    data.append(entry[0])
+                    data.append(entry)
         return data
+
 
     def write_data_to_file(self, data : list, output_file : str, jsonlines_output : bool = True) -> None:
         '''This function writes the data to the output file.'''
@@ -242,8 +293,14 @@ class IndalekoIndexer:
         if jsonlines_output:
             with jsonlines.open(output_file, 'w') as output:
                 for entry in data:
-                    output.write(entry)
-            logging.info('Wrote jsonlines %s.', output_file)
+                    try:
+                        output.write(entry)
+                        logging.debug('Wrote entry %s.', entry)
+                        self.output_count += 1
+                    except UnicodeEncodeError as e:
+                        logging.error('Writing entry %s to %s failed due to encoding issues', entry, output_file)
+                        self.encoding_count += 1
+            logging.info('Wrote jsonlines file %s.', output_file)
         else:
             json.dump(data, output_file, indent=4)
             logging.info('Wrote json %s.', output_file)

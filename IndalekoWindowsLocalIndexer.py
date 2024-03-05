@@ -22,7 +22,7 @@ import argparse
 import datetime
 import os
 import logging
-import platform
+import uuid
 
 from Indaleko import Indaleko
 from IndalekoIndexer import IndalekoIndexer
@@ -90,6 +90,15 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
                          **IndalekoWindowsLocalIndexer.indaleko_windows_local_indexer_service
         )
 
+    def generate_indexer_file_name(self, **kwargs) -> str:
+        if 'platform' not in kwargs:
+            kwargs['platform'] = IndalekoWindowsLocalIndexer.windows_platform
+        if 'indexer_name' not in kwargs:
+            kwargs['indexer_name'] = IndalekoWindowsLocalIndexer.windows_local_indexer_name
+        if 'machine_id' not in kwargs:
+            kwargs['machine_id'] = self.machine_config.machine_id
+        return IndalekoIndexer.generate_indexer_file_name(**kwargs)
+
     def convert_windows_path_to_guid_uri(self, path : str) -> str:
         '''This method handles converting a Windows path to a volume GUID based URI.'''
         drive = os.path.splitdrive(path)[0][0].upper()
@@ -118,17 +127,26 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
                 else:
                     logging.warning('File %s exists in directory %s but not accessible', name, root)
             else:
-                logging.warning('File %s does not exist', file_path)
+                logging.warning('File %s does not exist in directory %s', file_path, root)
             return None
         if last_uri is None:
             last_uri = file_path
+        lstat_data = None
         try:
+            lstat_data = os.lstat(file_path)
             stat_data = os.stat(file_path)
         except Exception as e: # pylint: disable=broad-except
             # at least for now, we log and skip errors
             logging.warning('Unable to stat %s : %s', file_path, e)
             self.error_count += 1
-            return {}
+            if lstat_data is not None:
+                self.bad_symlink_count += 1
+            return None
+
+        if stat_data.st_ino != lstat_data.st_ino:
+            logging.info('File %s is a symlink, indexing symlink data', file_path)
+            self.good_symlink_count += 1
+            stat_data = lstat_data
         stat_dict = {key : getattr(stat_data, key) \
                      for key in dir(stat_data) if key.startswith('st_')}
         stat_dict['Name'] = name
@@ -143,6 +161,7 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
         assert last_uri.startswith('\\\\?\\Volume{')
         if last_uri.startswith('\\\\?\\Volume{'):
             stat_dict['Volume GUID'] = last_uri[11:-2]
+        stat_dict['ObjectIdentifier'] = str(uuid.uuid4())
         return (stat_dict, last_uri, last_drive)
 
 
@@ -200,7 +219,7 @@ def main():
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     indexer = IndalekoWindowsLocalIndexer(machine_config=machine_config,
                                           timestamp=timestamp)
-    output_file = indexer.generate_indexer_file_name()
+    output_file = indexer.generate_indexer_file_name(storage_description=drive_guid)
     parser= argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--datadir', '-d',
                         help='Path to the data directory',
@@ -222,7 +241,7 @@ def main():
                                           path=args.path,
                                           machine_config=machine_config,
                                           storage_description=drive_guid)
-    output_file = indexer.generate_indexer_file_name()
+    output_file = args.output
     log_file_name = indexer.generate_indexer_file_name(target_dir=args.logdir, suffix='log')
     logging.basicConfig(filename=os.path.join(log_file_name),
                                 level=args.loglevel,
