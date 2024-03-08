@@ -22,6 +22,7 @@ import json
 from IndalekoRecordSchema import IndalekoRecordSchema
 
 class IndalekoActivityRegistrationSchema(IndalekoRecordSchema):
+    '''Define the schema for use with the ActivityRegistration collection.'''
 
     @staticmethod
     def get_schema():
@@ -31,7 +32,7 @@ class IndalekoActivityRegistrationSchema(IndalekoRecordSchema):
             which captures meta-data about the machine where the data was indexed.
             '''
             "$schema": "https://json-schema.org/draft/2020-12/schema#",
-            "$id": "https://activitycontext.work/schema/machineconfig.json",
+            "$id": "https://activitycontext.work/schema/activityregistration.json",
             "title": "Data source schema",
             "description": "This schema describes information about activity provider.",
             "type": "object",

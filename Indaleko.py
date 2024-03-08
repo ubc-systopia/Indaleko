@@ -67,6 +67,9 @@ from IndalekoObjectSchema import IndalekoObjectSchema
 from IndalekoServicesSchema import IndalekoServicesSchema
 from IndalekoRelationshipSchema import IndalekoRelationshipSchema
 from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
+from IndalekoActivityProviderSchema import IndalekoActivityProviderSchema
+from IndalekoActivityProviderRegistrationSchema import IndalekoActivityProviderRegistrationSchema
+from IndalekoActivityContextSchema import IndalekoActivityContextSchema
 
 class Indaleko:
     '''This class defines constants used by Indaleko.'''
@@ -78,6 +81,9 @@ class Indaleko:
     Indaleko_Relationships = 'Relationships'
     Indaleko_Services = 'Services'
     Indaleko_MachineConfig = 'MachineConfig'
+    Indaleko_ActivityProviders = 'ActivityProviders'
+    Indaelko_ActivityRegistrations = 'ActivityRegistrations'
+    Indaleko_ActivityContext = 'ActivityContext'
 
     Indaleko_Prefix = 'indaleko'
 
@@ -145,7 +151,40 @@ class Indaleko:
             'schema' : IndalekoMachineConfigSchema.get_schema(),
             'edge' : False,
             'indices' : { },
-        }
+        },
+        Indaleko_ActivityProviders : {
+            'schema' : IndalekoActivityProviderSchema.get_schema(),
+            'edge' : False,
+            'indices' : {
+                'identifier' : {
+                    'fields' : ['Name'],
+                    'unique' : True,
+                    'type' : 'persistent'
+                },
+            },
+        },
+        Indaelko_ActivityRegistrations : {
+            'schema' : IndalekoActivityRegistrationSchema.get_schema(),
+            'edge' : False,
+            'indices' : {
+                'identifier' : {
+                    'fields' : ['Name'],
+                    'unique' : True,
+                    'type' : 'persistent'
+                },
+            },
+        },
+        Indaleko_ActivityContext : {
+            'schema' : IndalekoActivityRegistrationSchema.get_schema(),
+            'edge' : False,
+            'indices' : {
+                'identifier' : {
+                    'fields' : ['Name'],
+                    'unique' : True,
+                    'type' : 'persistent'
+                },
+            },
+        },
     }
 
     @staticmethod

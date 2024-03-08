@@ -1,5 +1,5 @@
 '''
-This module defines the database schema for Activity Providers.
+This module defines the database schema for Activity Context Information.
 
 Project Indaleko
 Copyright (C) 2024 Tony Mason
@@ -21,8 +21,8 @@ import json
 
 from IndalekoRecordSchema import IndalekoRecordSchema
 
-class IndalekoActivityProviderSchema(IndalekoRecordSchema):
-    '''Define the schema for use with the ActivityProvider collection.'''
+class IndalekoActivityContextSchema(IndalekoRecordSchema):
+    '''Define the schema for use with the ActivityContext collection.'''
 
     @staticmethod
     def get_schema():
@@ -32,19 +32,14 @@ class IndalekoActivityProviderSchema(IndalekoRecordSchema):
             which captures meta-data about the machine where the data was indexed.
             '''
             "$schema": "https://json-schema.org/draft/2020-12/schema#",
-            "$id": "https://activitycontext.work/schema/activityprovider.json",
+            "$id": "https://activitycontext.work/schema/ActivityContext.json",
             "title": "Data source schema",
             "description": "This schema describes information about activity provider.",
             "type": "object",
             "rule" : {
-                "ActivityDataIdentifier" : {
+                "ActivityContextIdentifier" : {
                     "type" : "string",
                     "description" : "UUID of this activity data.",
-                    "format": "uuid",
-                },
-                "ActivityProviderIdentifier" : {
-                    "type" : "string",
-                    "description" : "UUID of the activity provider.",
                     "format": "uuid",
                 },
                 "Timestamps" : {
@@ -71,41 +66,11 @@ class IndalekoActivityProviderSchema(IndalekoRecordSchema):
                     ],
                     "description" : "List of timestamps with UUID-based semantic meanings associated with this object."
                 },
-                "ActivityType" : {
-                    "type" : "string",
-                    "description" : "UUID identifying the type of activity.",
-                    "format": "uuid",
-                },
                 "DataVersion" : {
                     "type" : "string",
                     "description" : "Version of the activity data.",
                 },
-                "Entities" : {
-                    "type" : "array",
-                    "properties" : {
-                        "Label" : {
-                            "type" : "string",
-                            "description" : "UUID representing the semantic meaning of this entity.",
-                            "format": "uuid",
-                        },
-                        "Value" : {
-                            "type" : "string",
-                            "description" : "UUID representing the entity.",
-                            "format" : "uuid",
-                        },
-                        "Description" : {
-                            "type" : "string",
-                            "description" : "Description of the entity.",
-                        },
-                    },
-                    "required" : [
-                        "Label",
-                        "Value"
-                    ],
-                    "description" : "List of users associated with this object."
-                },
-                "required" : ["ActivityDataIdentifier",
-                              "ActivityProviderIdentifier",
+                "required" : ["ActivityContextIdentifier",
                               "ActivityType"],
             }
         }
@@ -117,12 +82,12 @@ class IndalekoActivityProviderSchema(IndalekoRecordSchema):
 
 
 def main():
-    '''Test the IndalekoActivityProviderSchema class.'''
-    if IndalekoActivityProviderSchema.is_valid_schema(IndalekoActivityProviderSchema.get_schema()):
-        print('IndalekoActivityProviderSchema is a valid schema.')
+    '''Test the IndalekoActivityContextSchema class.'''
+    if IndalekoActivityContextSchema.is_valid_schema(IndalekoActivityContextSchema.get_schema()):
+        print('IndalekoActivityContextSchema is a valid schema.')
     else:
-        print('IndalekoActivityProviderSchema is not a valid schema.')
-    print(json.dumps(IndalekoActivityProviderSchema.get_schema(), indent=4))
+        print('IndalekoActivityContextSchema is not a valid schema.')
+    print(json.dumps(IndalekoActivityContextSchema.get_schema(), indent=4))
 
 if __name__ == '__main__':
     main()

@@ -43,11 +43,13 @@ def check_command(args : argparse.Namespace) -> None:
 
 def create_collection(args : argparse.Namespace) -> None:
     '''Create the collection in the database if it doesn't exist.'''
-    pass
+    assert args is not None
+    return
 
 def delete_collection(args : argparse.Namespace) -> None:
     '''Delete the collection from the database if it exists.'''
-    pass
+    assert args is not None
+    return
 
 
 
