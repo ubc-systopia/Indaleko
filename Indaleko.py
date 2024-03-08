@@ -161,6 +161,7 @@ class Indaleko:
             print('ip is not valid')
             return False
 
+    @staticmethod
     def validate_hostname(hostname : str) -> bool:
         """Given a string, verify that it is in fact a valid hostname."""
         if not isinstance(hostname, str):
