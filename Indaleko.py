@@ -69,6 +69,8 @@ from IndalekoRelationshipSchema import IndalekoRelationshipSchema
 from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
 from IndalekoActivityDataProviderRegistrationSchema import IndalekoActivityDataProviderRegistrationSchema
 from IndalekoActivityContextSchema import IndalekoActivityContextSchema
+from IndalekoUserSchema import IndalekoUserSchema
+from IndalekoUserRelationshipSchema import IndalekoUserRelationshipSchema
 
 class Indaleko:
     '''This class defines constants used by Indaleko.'''
@@ -84,6 +86,8 @@ class Indaleko:
     Indaleko_MachineConfig = 'MachineConfig'
     Indaleko_ActivityDataProviders = 'ActivityDataProviders'
     Indaleko_ActivityContext = 'ActivityContext'
+    Indaleko_Users = 'Users'
+    Indaleko_User_Relationships = 'UserRelationships'
 
     Indaleko_Prefix = 'indaleko'
 
@@ -173,6 +177,38 @@ class Indaleko:
                     'type' : 'persistent'
                 },
             },
+        },
+       Indaleko_Users : {
+            'schema' : IndalekoUserSchema.get_schema(),
+            'edge' : False,
+            'indices' : {
+                'identifier' : {
+                    'fields' : ['Identifier'],
+                    'unique' : True,
+                    'type' : 'persistent'
+                },
+            },
+        },
+        Indaleko_User_Relationships : {
+            'schema' : IndalekoUserRelationshipSchema.get_schema(),
+            'edge' : True,
+            'indices' : {
+                'Identity1' : {
+                    'fields' : ['Identity1'],
+                    'unique' : False,
+                    'type' : 'persistent'
+                },
+                'Identity2' : {
+                    'fields' : ['Identity2'],
+                    'unique' : False,
+                    'type' : 'persistent'
+                },
+                'edge' : {
+                    'fields' : ['Identity1', 'Identity2'],
+                    'unique' : True,
+                    'type' : 'persistent'
+                },
+            }
         },
     }
 
