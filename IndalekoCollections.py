@@ -29,11 +29,86 @@ from IndalekoDBConfig import IndalekoDBConfig
 class IndalekoCollectionIndex:
     '''Manages an index for an IndalekoCollection object.'''
 
+    index_args = {
+        'hash' : [
+            'fields',
+            'name',
+            'unique',
+            'sparse',
+            'deduplicate',
+            'in_background'
+            ],
+        'skip_list' : [
+            'fields',
+            'name',
+            'unique',
+            'sparse',
+            'deduplicate',
+            'in_background'
+            ],
+        'geo_index' : [
+            'fields',
+            'name',
+            'geo_json',
+            'in_background',
+            'legacyPolygons'
+            ],
+        'fulltext' : [
+            'fields',
+            'name',
+            'fields',
+            'name',
+            'min_length',
+            'in_background'
+            ],
+        'persistent' : [
+            'fields',
+            'name',
+            'unique',
+            'sparse',
+            'in_background',
+            'storedValues',
+            'cacheEnabled'
+            ],
+        'ttl' : [
+            'fields',
+            'name',
+            'expiry_time',
+            'in_background'
+            ],
+        'inverted' : [
+            'fields',
+            'name',
+            'inBackground',
+            'parallelism',
+            'primarySort',
+            'storedValues',
+            'analyzer',
+            'features',
+            'includeAllFields',
+            'trackListPositions',
+            'searchField',
+            'primaryKeyCache',
+            'cache'],
+        'zkd' : [
+            'fields',
+            'name',
+            'field_value_types',
+            'unique',
+            'in_background'
+            ],
+        'mdi' : [
+            'fields',
+            'name',
+            'field_value_types',
+            'unique',
+            'in_background'
+            ]
+    }
+
+
     def __init__(self,
-                 collection: 'IndalekoCollection',
-                 index_type: str,
-                 fields: list,
-                 unique=False):
+                 **kwargs):
         """Parameters:
             This class is used to create indices for IndalekoCollection objects.
 
@@ -46,11 +121,61 @@ class IndalekoCollectionIndex:
 
             unique: if True, the index is unique
         """
-        self.collection = collection
-        self.fields = fields
-        self.unique = unique
-        self.index_type = index_type
-        self.index = self.collection.add_persistent_index(fields=self.fields, unique=self.unique)
+        if 'collection' not in kwargs:
+            raise ValueError('collection is a required parameter')
+        self.collection = kwargs['collection']
+        if 'fields' not in kwargs:
+            raise ValueError('fields is a required parameter')
+        if not isinstance(kwargs['fields'], list):
+            raise ValueError('fields must be a list')
+        self.fields = kwargs['fields']
+        self.unique = None
+        if 'unique' in kwargs:
+            self.unique = kwargs['unique']
+        if 'index_type' not in kwargs:
+            self.index_type = 'persistent'
+        self.sparse = None
+        if 'sparse' in kwargs:
+            self.sparse = kwargs['sparse']
+        self.expiry_time = None
+        if 'expiry_time' in kwargs:
+            self.expiry_time = kwargs['expiry_time']
+        self.name = None
+        if 'name' in kwargs:
+            self.name = kwargs['name']
+        self.deduplicate = None
+        if 'deduplicate' in kwargs:
+            self.deduplicate = kwargs['deduplicate']
+        if 'in_background' in kwargs:
+            self.in_background = kwargs['in_background']
+        # There are two parameters that are common to all index types:
+        # fields (the fields being indexed) and name (the name of the index).
+        args = {'fields' : self.fields}
+        if self.name is not None:
+            args['name'] = self.name
+        if self.index_type == 'hash':
+            if self.unique is not None:
+                args['unique'] = self.unique
+            if self.sparse is not None:
+                args['sparse'] = self.sparse
+            if self.deduplicate is not None:
+                args['deduplicate'] = self.deduplicate
+            if self.in_background is not None:
+                args['in_background'] = self.in_background
+            self.index = self.collection.add_hash_index(**args) # pylint: disable=unexpected-keyword-arg
+        elif self.index_type == 'persistent':
+            self.index = self.collection.add_persistent_index(fields=self.fields, unique=self.unique)
+        elif self.index_type == 'geo':
+            self.index = self.collection.add_geo_index(fields=self.fields, unique=self.unique)
+        elif self.index_type == 'fulltext':
+            self.index = self.collection.add_fulltext_index(fields=self.fields, unique=self.unique)
+        elif self.index_type == 'skiplist':
+            self.index = self.collection.add_skiplist_index(fields=self.fields, unique=self.unique)
+        elif self.index_type == 'ttl':
+            self.index = self.collection.add_ttl_index(fields=self.fields, unique=self.unique)
+        else:
+            raise ValueError('Invalid index type')
+
 
     def find_entries(self, **kwargs):
         """
@@ -118,7 +243,11 @@ class IndalekoCollection:
                      fields: list,
                      unique: bool) -> 'IndalekoCollection':
         """Create an index for the given collection."""
-        self.indices[name] = IndalekoCollectionIndex(self.collection, index_type, fields, unique)
+        self.indices[name] = IndalekoCollectionIndex(
+            name=self.collection,
+            index_type=index_type,
+            fields=fields,
+            unique=unique)
         return self
 
     def find_entries(self, **kwargs):
@@ -164,7 +293,7 @@ class IndalekoCollections:
         return self.collections[name]
 
 
-def main():
+def new_main():
     """Test the IndalekoCollections class."""
     start_time = datetime.datetime.now(datetime.UTC).isoformat()
     parser = argparse.ArgumentParser()
@@ -194,6 +323,8 @@ def main():
     assert collections is not None, 'Collections object should not be None'
 
 
+def main():
+    print('Main called')
 
 if __name__ == "__main__":
     main()

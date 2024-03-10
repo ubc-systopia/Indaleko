@@ -21,7 +21,7 @@ import json
 
 from IndalekoRecordSchema import IndalekoRecordSchema
 
-class IndalekoActivityRegistrationSchema(IndalekoRecordSchema):
+class IndalekoActivityDataProviderRegistrationSchema(IndalekoRecordSchema):
     '''Define the schema for use with the ActivityRegistration collection.'''
 
     @staticmethod
