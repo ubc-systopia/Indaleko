@@ -67,8 +67,7 @@ from IndalekoObjectSchema import IndalekoObjectSchema
 from IndalekoServicesSchema import IndalekoServicesSchema
 from IndalekoRelationshipSchema import IndalekoRelationshipSchema
 from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
-from IndalekoActivityProviderSchema import IndalekoActivityProviderSchema
-from IndalekoActivityProviderRegistrationSchema import IndalekoActivityProviderRegistrationSchema
+from IndalekoActivityDataProviderRegistrationSchema import IndalekoActivityDataProviderRegistrationSchema
 from IndalekoActivityContextSchema import IndalekoActivityContextSchema
 
 class Indaleko:
@@ -77,12 +76,13 @@ class Indaleko:
     default_config_dir = './config'
     default_log_dir = './logs'
 
+    default_db_timeout=10
+
     Indaleko_Objects = 'Objects'
     Indaleko_Relationships = 'Relationships'
     Indaleko_Services = 'Services'
     Indaleko_MachineConfig = 'MachineConfig'
-    Indaleko_ActivityProviders = 'ActivityProviders'
-    Indaelko_ActivityRegistrations = 'ActivityRegistrations'
+    Indaleko_ActivityDataProviders = 'ActivityDataProviders'
     Indaleko_ActivityContext = 'ActivityContext'
 
     Indaleko_Prefix = 'indaleko'
@@ -152,34 +152,23 @@ class Indaleko:
             'edge' : False,
             'indices' : { },
         },
-        Indaleko_ActivityProviders : {
-            'schema' : IndalekoActivityProviderSchema.get_schema(),
+        Indaleko_ActivityDataProviders : {
+            'schema' : IndalekoActivityDataProviderRegistrationSchema.get_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {
-                    'fields' : ['Name'],
-                    'unique' : True,
-                    'type' : 'persistent'
-                },
-            },
-        },
-        Indaelko_ActivityRegistrations : {
-            'schema' : IndalekoActivityRegistrationSchema.get_schema(),
-            'edge' : False,
-            'indices' : {
-                'identifier' : {
-                    'fields' : ['Name'],
+                    'fields' : ['ActivityProvider'],
                     'unique' : True,
                     'type' : 'persistent'
                 },
             },
         },
         Indaleko_ActivityContext : {
-            'schema' : IndalekoActivityRegistrationSchema.get_schema(),
+            'schema' : IndalekoActivityContextSchema.get_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {
-                    'fields' : ['Name'],
+                    'fields' : ['ActivityContextIdentifier'],
                     'unique' : True,
                     'type' : 'persistent'
                 },
@@ -370,10 +359,10 @@ class Indaleko:
         fields = file_name.split('-')
         prefix = fields.pop(0)
         data['prefix'] = prefix
-        platform = fields.pop(0)
-        if not platform.startswith('plt='):
+        target_platform = fields.pop(0)
+        if not target_platform.startswith('plt='):
             raise ValueError('platform field must start with plt=')
-        data['platform'] = platform[4:]
+        data['platform'] = target_platform[4:]
         service = fields.pop(0)
         if not service.startswith('svc='):
             raise ValueError('service field must start with svc=')
