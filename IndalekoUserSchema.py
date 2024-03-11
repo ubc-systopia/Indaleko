@@ -19,7 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import json
 import jsonschema
-from jsonschema import validate, Draft202012Validator, exceptions
+from jsonschema import validate
 
 from IndalekoRecordSchema import IndalekoRecordSchema
 
@@ -44,7 +44,8 @@ class IndalekoUserSchema(IndalekoRecordSchema):
             "$schema": "https://json-schema.org/draft/2020-12/schema#",
             "$id": "https://activitycontext.work/schema/user.json",
             "title": "Service provider schema",
-            "description": "This schema describes information about user identity within the Indaleko system.",
+            "description":
+            "This schema describes information about user identity within the Indaleko system.",
             "type": "object",
             "rule" : {
                 "properties": {
@@ -62,8 +63,10 @@ class IndalekoUserSchema(IndalekoRecordSchema):
                 "required": ["Identifier", "Domain"],
             }
         }
-        assert 'Record' not in services_schema['rule']['properties'], 'Record must not be specified.'
-        services_schema['rule']['properties']['Record'] = IndalekoRecordSchema.get_schema()['rule']
+        assert 'Record' not in \
+            services_schema['rule']['properties'], 'Record must not be specified.'
+        services_schema['rule']['properties']['Record'] = \
+            IndalekoRecordSchema.get_schema()['rule']
         services_schema['rule']['required'].append('Record')
         return services_schema
 

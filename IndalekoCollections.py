@@ -133,7 +133,8 @@ class IndalekoCollectionIndex:
         if 'unique' in kwargs:
             self.unique = kwargs['unique']
         if 'index_type' not in kwargs:
-            self.index_type = 'persistent'
+            raise ValueError('index_type is a required parameter')
+        self.index_type = kwargs['index_type']
         self.sparse = None
         if 'sparse' in kwargs:
             self.sparse = kwargs['sparse']
@@ -164,15 +165,19 @@ class IndalekoCollectionIndex:
                 args['in_background'] = self.in_background
             self.index = self.collection.add_hash_index(**args) # pylint: disable=unexpected-keyword-arg
         elif self.index_type == 'persistent':
-            self.index = self.collection.add_persistent_index(fields=self.fields, unique=self.unique)
+            self.index = self.collection.add_persistent_index(fields=self.fields,
+                                                              unique=self.unique)
         elif self.index_type == 'geo':
             self.index = self.collection.add_geo_index(fields=self.fields, unique=self.unique)
         elif self.index_type == 'fulltext':
-            self.index = self.collection.add_fulltext_index(fields=self.fields, unique=self.unique)
+            self.index = self.collection.add_fulltext_index(fields=self.fields,
+                                                            unique=self.unique)
         elif self.index_type == 'skiplist':
-            self.index = self.collection.add_skiplist_index(fields=self.fields, unique=self.unique)
+            self.index = self.collection.add_skiplist_index(fields=self.fields,
+                                                            unique=self.unique)
         elif self.index_type == 'ttl':
-            self.index = self.collection.add_ttl_index(fields=self.fields, unique=self.unique)
+            self.index = self.collection.add_ttl_index(fields=self.fields,
+                                                       unique=self.unique)
         else:
             raise ValueError('Invalid index type')
 
@@ -244,7 +249,8 @@ class IndalekoCollection:
                      unique: bool) -> 'IndalekoCollection':
         """Create an index for the given collection."""
         self.indices[name] = IndalekoCollectionIndex(
-            name=self.collection,
+            collection=self.collection,
+            name=name,
             index_type=index_type,
             fields=fields,
             unique=unique)
@@ -293,7 +299,7 @@ class IndalekoCollections:
         return self.collections[name]
 
 
-def new_main():
+def main():
     """Test the IndalekoCollections class."""
     start_time = datetime.datetime.now(datetime.UTC).isoformat()
     parser = argparse.ArgumentParser()
@@ -321,10 +327,6 @@ def new_main():
     end_time = datetime.datetime.now(datetime.UTC).isoformat()
     logging.info('End Indaleko Collections test at %s', end_time)
     assert collections is not None, 'Collections object should not be None'
-
-
-def main():
-    print('Main called')
 
 if __name__ == "__main__":
     main()

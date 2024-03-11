@@ -67,7 +67,8 @@ from IndalekoObjectSchema import IndalekoObjectSchema
 from IndalekoServicesSchema import IndalekoServicesSchema
 from IndalekoRelationshipSchema import IndalekoRelationshipSchema
 from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
-from IndalekoActivityDataProviderRegistrationSchema import IndalekoActivityDataProviderRegistrationSchema
+from IndalekoActivityDataProviderRegistrationSchema \
+    import IndalekoActivityDataProviderRegistrationSchema
 from IndalekoActivityContextSchema import IndalekoActivityContextSchema
 from IndalekoUserSchema import IndalekoUserSchema
 from IndalekoUserRelationshipSchema import IndalekoUserRelationshipSchema
@@ -240,8 +241,11 @@ class Indaleko:
 
     @staticmethod
     def create_secure_directories(directories : list = None) -> None:
+        '''Create secure directories for Indaleko.'''
         if directories is None:
-            directories = [Indaleko.default_data_dir, Indaleko.default_config_dir, Indaleko.default_log_dir]
+            directories = [Indaleko.default_data_dir,
+                           Indaleko.default_config_dir,
+                           Indaleko.default_log_dir]
         for directory in directories:
             if not os.path.exists(directory):
                 os.makedirs(directory)
@@ -315,7 +319,39 @@ class Indaleko:
         if hasattr(logging, 'FATAL'):
             logging_levels.append('FATAL')
     else:
-        logging_levels = sorted(set([level for level in logging.getLevelNamesMapping()]))
+        logging_levels = sorted(set(logging.getLevelNamesMapping()))
+
+    @staticmethod
+    def generate_final_name(args : list, **kwargs) -> str:
+        '''
+        This is a helper function for generate_file_name, which throws
+        a pylint error as having "too many branches".  An explicit args list
+        threw a "too many arguments" error, so this is a compromise - send in a
+        list, and then unpack it manually. Why this is better is a mystery of
+        the faith.
+        '''
+        prefix = args[0]
+        target_platform = args[1]
+        service = args[2]
+        ts = args[3]
+        suffix = args[4]
+        max_len = args[5]
+        name = prefix
+        if '-' in prefix:
+            raise ValueError('prefix must not contain a hyphen')
+        if '-' in suffix:
+            raise ValueError('suffix must not contain a hyphen')
+        name += f'-plt={target_platform}'
+        name += f'-svc={service}'
+        for key, value in kwargs.items():
+            if '-' in key or '-' in value:
+                raise ValueError(f'key and value must not contain a hyphen: {key, value}')
+            name += f'-{key}={value}'
+        name += ts
+        name += f'.{suffix}'
+        if len(name) > max_len:
+            raise ValueError('file name is too long' + '\n' + name + '\n' + str(len(name)))
+        return name
 
     @staticmethod
     def generate_file_name(**kwargs) -> str:
@@ -359,28 +395,20 @@ class Indaleko:
         if 'suffix' in kwargs:
             suffix = kwargs['suffix']
             del kwargs['suffix']
-        if '-' in prefix:
-            raise ValueError('prefix must not contain a hyphen')
-        if '-' in suffix:
-            raise ValueError('suffix must not contain a hyphen')
         if suffix.startswith('.'):
             suffix = suffix[1:] # avoid ".." for suffix
         if '-' in target_platform:
             raise ValueError('platform must not contain a hyphen')
         if '-' in service:
             raise ValueError('service must not contain a hyphen')
-        name = prefix
-        name += f'-plt={target_platform}'
-        name += f'-svc={service}'
-        for key, value in kwargs.items():
-            if '-' in key or '-' in value:
-                raise ValueError(f'key and value must not contain a hyphen: {key, value}')
-            name += f'-{key}={value}'
-        name += ts
-        name += f'.{suffix}'
-        if len(name) > max_len:
-            raise ValueError('file name is too long' + '\n' + name + '\n' + str(len(name)))
-        return name
+        return Indaleko.generate_final_name(
+            [prefix,
+            target_platform,
+            service,
+            ts,
+            suffix,
+            max_len],
+            **kwargs)
 
     @staticmethod
     def extract_keys_from_file_name(file_name : str) -> dict:
