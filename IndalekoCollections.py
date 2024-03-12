@@ -29,6 +29,82 @@ from IndalekoDBConfig import IndalekoDBConfig
 class IndalekoCollectionIndex:
     '''Manages an index for an IndalekoCollection object.'''
 
+    index_args2 = {
+        'hash' : {
+            'fields' : str,
+            'name' : str,
+            'unique' : bool,
+            'sparse' : bool,
+            'deduplicate' : bool,
+            'in_background' : bool
+        },
+        'skip_list' : {
+            'fields' : str,
+            'name' : str,
+            'unique' : bool,
+            'sparse' : bool,
+            'deduplicate' : bool,
+            'in_background' : bool
+        },
+        'geo_index' : {
+            'fields' : str,
+            'name' : str,
+            'geo_json' : bool,
+            'in_background' : bool,
+            'legacyPolygons' : bool
+    },
+        'fulltext' : {
+            'fields' : str,
+            'name' : str,
+            'min_length' : int,
+            'in_background' : bool
+        },
+        'persistent' : {
+            'fields' : str,
+            'name' : str,
+            'unique' : bool,
+            'sparse' : bool,
+            'in_background' : bool,
+            'storedValues' : list,
+            'cacheEnabled' : bool
+        },
+        'ttl' : {
+            'fields' : str,
+            'name' : str,
+            'expiry_time' : int,
+            'in_background' : bool
+        },
+        'inverted' : {
+            'fields' : str,
+            'name' : str,
+            'inBackground' : bool,
+            'parallelism' : int,
+            'primarySort' : list,
+            'storedValues' : list,
+            'analyzer' : str,
+            'features' : list,
+            'includeAllFields' : bool,
+            'trackListPositions' : bool,
+            'searchField' : str,
+            'primaryKeyCache' : bool,
+            'cache' : bool
+        },
+        'zkd' : {
+            'fields' : str,
+            'name' : str,
+            'field_value_types' : list,
+            'unique' : bool,
+            'in_background' : bool
+        },
+        'mdi' : {
+            'fields' : str,
+            'name' : str,
+            'field_value_types' : list,
+            'unique' : bool,
+            'in_background' : bool
+        }
+    }
+
     index_args = {
         'hash' : [
             'fields',
@@ -299,7 +375,7 @@ class IndalekoCollections:
         return self.collections[name]
 
 
-def main():
+def real_main():
     """Test the IndalekoCollections class."""
     start_time = datetime.datetime.now(datetime.UTC).isoformat()
     parser = argparse.ArgumentParser()
@@ -327,6 +403,73 @@ def main():
     end_time = datetime.datetime.now(datetime.UTC).isoformat()
     logging.info('End Indaleko Collections test at %s', end_time)
     assert collections is not None, 'Collections object should not be None'
+
+def extract_params() -> tuple:
+    '''Extract the common parameters from the given keyword arguments.'''
+    common_params = set(IndalekoCollectionIndex.index_args2['hash'].keys())
+    for params in IndalekoCollectionIndex.index_args2.values():
+        common_params = common_params.intersection(params)
+        common_params.intersection_update(params)
+    unique_params_by_index = {index : list(set(params) - common_params) for index, params in IndalekoCollectionIndex.index_args2.items()}
+    return common_params, unique_params_by_index
+
+
+def main2():
+    '''Another test for this module.'''
+    common_params, unique_params_by_index = extract_params()
+    print(common_params)
+    print(unique_params_by_index)
+
+def main():
+    '''Test the IndalekoCollections class.'''
+    #start_time = datetime.datetime.now(datetime.UTC).isoformat()
+    common_params, unique_params_by_index = extract_params()
+    print(common_params)
+    print(unique_params_by_index)
+    pre_parser = argparse.ArgumentParser(add_help=False)
+    pre_parser.add_argument('--collection',
+                            type=str,
+                            help='Name of the collection to which the index will be added',
+                            required=True)
+    pre_parser.add_argument('--type',
+                            type=str,
+                            help='Type of index to create',
+                            choices=IndalekoCollectionIndex.index_args2.keys(),
+                            default='persistent')
+    for common_arg in common_params:
+        arg_type = IndalekoCollectionIndex.index_args2['hash'][common_arg]
+        print(f'Adding argument {common_arg} with type {arg_type}')
+        pre_parser.add_argument(f'--{common_arg}',
+                                type=IndalekoCollectionIndex.index_args2['hash'][common_arg],
+                                required=True,
+                                help=f'Value for {common_arg}')
+    pre_args, _ = pre_parser.parse_known_args()
+    parser = argparse.ArgumentParser(description='Create an index for an IndalekoCollection', parents=[pre_parser])
+    for index_args in unique_params_by_index[pre_args.type]:
+        arg_type = IndalekoCollectionIndex.index_args2[pre_args.type][index_args]
+        if arg_type is bool:
+            parser.add_argument(f'--{index_args}',
+                                action='store_true',
+                                default=None,
+                                help=f'Value for {index_args}')
+        else:
+            parser.add_argument(f'--{index_args}',
+                                type=IndalekoCollectionIndex.index_args2[pre_args.type][index_args],
+                                default=None,
+                                help=f'Value for {index_args}')
+    args = parser.parse_args()
+    if hasattr(args, 'fields'):
+        args.fields = [field.strip() for field in pre_args.fields.split(',')]
+    print(args)
+    index_args = {'collection' : args.collection}
+    for index_arg in common_params:
+        if getattr(args, index_arg) is not None:
+            index_args[index_arg] = getattr(args, index_arg)
+    for index_arg in unique_params_by_index[pre_args.type]:
+        if getattr(args, index_arg) is not None:
+            index_args[index_arg] = getattr(args, index_arg)
+    print(index_args)
+    print('TODO: add tests for the various type of indices')
 
 if __name__ == "__main__":
     main()
