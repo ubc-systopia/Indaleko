@@ -29,8 +29,9 @@ import argparse
 from Indaleko import Indaleko
 from IndalekoLogging import IndalekoLogging
 from IndalekoDocker import IndalekoDocker
+from IndalekoSingleton import IndalekoSingleton
 
-class IndalekoDBConfig:
+class IndalekoDBConfig(IndalekoSingleton):
     """
     Class used to read a configuration file, connect to, and set-up (if
     needed) the database.
@@ -39,6 +40,9 @@ class IndalekoDBConfig:
     default_db_config_file = './config/indaleko-db-config.ini'
 
     def __init__(self, config_file: str = default_db_config_file, no_new_config : bool = False):
+        if self._initialized:
+            return
+        self._initialized = True
         self.config_file = config_file
         self.config = None
         if os.path.exists(config_file):
@@ -48,7 +52,8 @@ class IndalekoDBConfig:
                 logging.error('Could not load config file %s: %s', config_file, e)
                 self.config ={}
             if 'database' not in self.config:
-                assert not no_new_config, 'No database section found in config file, but no new config set'
+                assert not no_new_config, \
+                    'No database section found in config file, but no new config set'
                 logging.warning('No database section found in config file %s', config_file)
                 logging.warning('Generating new config')
                 self.config = self.__generate_new_config__()
@@ -276,6 +281,7 @@ class IndalekoDBConfig:
 
 def check_command(args : argparse.Namespace) -> None:
     """Check the database connection."""
+    assert args is not None, 'No args found'
     logging.debug('check_command invoked')
     print('Checking database connection')
     db_config = IndalekoDBConfig()
@@ -291,13 +297,14 @@ def check_command(args : argparse.Namespace) -> None:
 
 def setup_command(args : argparse.Namespace) -> None:
     """Set up the database."""
+    assert args is not None, 'No args found'
     logging.info('Setting up new database configuration')
     print('Setting up new database configuration')
     db_config = IndalekoDBConfig()
     if db_config is None:
         logging.critical('Could not create IndalekoDBConfig object')
         exit(1)
-    logging.info('Intialize Docker ArangoDB')
+    logging.info('Initialize Docker ArangoDB')
     print('Initialize Docker ArangoDB')
     indaleko_docker = IndalekoDocker()
     logging.info('Create container %s with volume %s',
@@ -364,6 +371,7 @@ def reset_command(args : argparse.Namespace) -> None:
 
 def show_command(args : argparse.Namespace) -> None:
     """Show the database configuration."""
+    assert args is not None, 'No args found'
     logging.info('Show command starts')
     if not os.path.exists(IndalekoDBConfig.default_db_config_file):
         logging.critical('No config file found')
@@ -387,11 +395,13 @@ def show_command(args : argparse.Namespace) -> None:
 def update_command(args : argparse.Namespace) -> None:
     """Update to most recent version of ArangoDB"""
     # Note: this is just a wrapper around the docker support for this.
+    assert args is not None, 'No args found'
     raise NotImplementedError('Not implemented yet')
 
 def default_command_handler(args : argparse.Namespace) -> None:
     """Default command handler."""
     # Do we already have a config file?
+    assert args is not None, 'No args found'
     logging.debug('default_command_handler invoked')
     if os.path.exists(IndalekoDBConfig.default_db_config_file):
         check_command(args)
