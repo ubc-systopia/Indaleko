@@ -91,10 +91,11 @@ class IndalekoServices(IndalekoSingleton):
     def __init__(self, reset: bool = False) -> None:
         self.db_config = IndalekoDBConfig()
         self.db_config.start()
-        self.service_collection = IndalekoCollection('Services',
-                                                     self.CollectionDefinition,
-                                                     self.db_config,
-                                                     reset=reset)
+        self.service_collection = IndalekoCollection(
+            'Services',
+            self.CollectionDefinition,
+            self.db_config,
+            reset=reset)
 
 
     def create_indaleko_services_collection(self) -> IndalekoCollection:

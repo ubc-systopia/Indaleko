@@ -8,5 +8,6 @@ wmiobject-list.txt
 *.log
 *.json
 scratch.py
+scratch2.py
 *.jsonl
 wam/

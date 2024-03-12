@@ -54,7 +54,6 @@ class IndalekoCollections(IndalekoSingleton):
     def get_collection(name: str) -> IndalekoCollection:
         """Return the collection with the given name."""
         collections = IndalekoCollections()
-        print('get_collection: name is {}'.format(name))
         assert name in collections.collections, f'Collection {name} does not exist.'
         return collections.collections[name]
 

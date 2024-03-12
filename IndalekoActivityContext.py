@@ -1,7 +1,7 @@
 '''This is the Indaleko module for managing Activity Context.'''
 
 from IndalekoActivityContextSchema import IndalekoActivityContextSchema
-from IndalekoActivityDataProviderRegistration import IndalekoActivityDataProviderRegistration
+from IndalekoActivityDataProviderRegistration import IndalekoActivityDataProviderRegistrationService
 from IndalekoSingleton import IndalekoSingleton
 from IndalekoDBConfig import IndalekoDBConfig
 
@@ -29,7 +29,7 @@ class IndalekoActivityContext(IndalekoSingleton):
             self.activity_provider_registration = kwargs['activity_provider_registration']
         else:
             self.activity_provider_registration = \
-                IndalekoActivityDataProviderRegistration(
+                IndalekoActivityDataProviderRegistrationService(
                     DBConfig=self.db_config
                 )
             raise NotImplementedError('activity_provider_registration is required') # REPLACE
