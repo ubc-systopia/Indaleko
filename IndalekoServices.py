@@ -92,9 +92,9 @@ class IndalekoServices(IndalekoSingleton):
         self.db_config = IndalekoDBConfig()
         self.db_config.start()
         self.service_collection = IndalekoCollection(
-            'Services',
-            self.CollectionDefinition,
-            self.db_config,
+            name=self.indaleko_services,
+            definition=self.CollectionDefinition,
+            db=self.db_config,
             reset=reset)
 
 
@@ -104,7 +104,11 @@ class IndalekoServices(IndalekoSingleton):
         """
         assert not self.db_config.db.has_collection(self.indaleko_services), \
          f'{self.indaleko_services} collection already exists, cannot create it.'
-        self.service_collection = IndalekoCollection(self.db_config.db, self.indaleko_services)
+        self.service_collection = IndalekoCollection(
+            name=self.indaleko_services,
+            definition=self.CollectionDefinition,
+            db=self.db_config.db
+        )
         self.service_collection.add_schema(IndalekoServices.Schema)
         self.service_collection.create_index('name', 'persistent', ['name'], unique=True)
         return self.service_collection

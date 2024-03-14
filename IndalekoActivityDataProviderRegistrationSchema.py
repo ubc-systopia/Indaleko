@@ -28,7 +28,7 @@ class IndalekoActivityDataProviderRegistrationSchema(IndalekoRecordSchema):
     def get_schema():
         activity_registration_schema = {
             '''
-            This schema relates to the machine configuration collection,
+            This schema relates to the activity data provider's registration collection,
             which captures meta-data about the machine where the data was indexed.
             '''
             "$schema": "https://json-schema.org/draft/2020-12/schema#",

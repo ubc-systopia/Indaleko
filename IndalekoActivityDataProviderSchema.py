@@ -52,7 +52,8 @@ class IndalekoActivityProviderSchema(IndalekoRecordSchema):
                     "properties" : {
                         "Label" : {
                             "type" : "string",
-                            "description" : "UUID representing the semantic meaning of this timestamp.",
+                            "description" :
+                            "UUID representing the semantic meaning of this timestamp.",
                             "format": "uuid",
                         },
                         "Value" : {
@@ -104,9 +105,11 @@ class IndalekoActivityProviderSchema(IndalekoRecordSchema):
                     ],
                     "description" : "List of users associated with this object."
                 },
+                "Active" : bool,
                 "required" : ["ActivityDataIdentifier",
                               "ActivityProviderIdentifier",
-                              "ActivityType"],
+                              "ActivityType",
+                              "Active"],
             }
         }
         assert 'Record' not in activity_data_provider_schema['rule'], \

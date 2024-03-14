@@ -19,13 +19,102 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import uuid
+import msgpack
 
 from Indaleko import Indaleko
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoServices import IndalekoService, IndalekoServices
 from IndalekoSingleton import IndalekoSingleton
-from Indaleko import Indaleko
 from IndalekoCollections import IndalekoCollections
+from IndalekoCollection import IndalekoCollection
+from IndalekoRecord import IndalekoRecord
+from IndalekoActivityDataProviderRegistrationSchema \
+    import IndalekoActivityDataProviderRegistrationSchema
+
+class IndalekoActivityDataProviderRegistration(IndalekoRecord):
+    '''This class defines the activity data provider registration for the
+    Indaleko system.'''
+    Schema = IndalekoActivityDataProviderRegistrationSchema.get_schema()
+
+    UUID = '6c65350c-1dd5-4675-b17a-4dd409349a40'
+    Version = '1.0'
+    Description = 'Activity Data Provider Registration'
+    Name = 'IndalekoActivityDataProviderRegistration'
+
+    def __init__(self, **kwargs):
+        '''Create an instance of the IndalekoActivityRegistration class.'''
+        assert isinstance(kwargs, dict), 'kwargs must be a dict'
+        self.set_identifier(**{
+            'Identifier' : kwargs.get('Identifier', str(uuid.UUID('00000000-0000-0000-0000-000000000000'))),
+            'Version' : kwargs.get('Version', '1.0'),
+            'Description' : kwargs.get('Description', 'Activity Provider'),
+            'Name' : kwargs.get('Name', 'Activity Provider')
+        })
+        self.activity_collection_uuid = str(uuid.uuid4())
+        self.db_config = kwargs.get('DBConfig', IndalekoDBConfig())
+        self.collections = kwargs.get('Collections', IndalekoCollections(db_config=self.db_config))
+        super().__init__(raw_data = msgpack.packb(b''),
+                         attributes = {},
+                         source = {
+                             'Identifier' : self.UUID,
+                              'Version' : self.Version,
+                              'Description' : self.Description,
+                              'Name' : self.Name
+                         })
+
+    def get_identifier(self, **kwargs):
+        '''Return the identifier for the activity provider.'''
+        if hasattr(self, 'identifier'):
+            return self.identifier
+        else:
+            return self.set_identifier(**kwargs)
+
+    def set_identifier(self, **kwargs) -> 'IndalekoActivityDataProviderRegistration':
+        '''Set the identifier for the activity provider.'''
+        assert 'Identifier' in kwargs, 'Identifier must be in kwargs'
+        identifier = kwargs['Identifier']
+        version = kwargs.get('Version', '1.0')
+        self.identifier = {
+            'Identifier' : identifier,
+            'Version' : version,
+            'Description' : kwargs.get('Description',
+                                       f'Activity Provider {identifier} version {version}'),
+            'Name' : kwargs.get('Name', f'Activity Provider {identifier}')
+        }
+        return self
+
+    def get_activity_collection_uuid(self) -> str:
+        '''Return the UUID for the activity collection.'''
+        return self.activity_collection_uuid
+
+    def set_activity_collection_uuid(self, uuid : str) -> 'IndalekoActivityDataProviderRegistration':
+        '''Set the UUID for the activity collection.'''
+        self.activity_collection_uuid = uuid
+        return self
+
+    def to_dict(self) -> dict:
+        '''Return the object as a dictionary.'''
+        registration = {
+            '_key' : self.identifier['Identifier'],
+            'Record' : super().to_dict(),
+            'ActivityProvider'  : self.identifier,
+            'ActivityCollection' : self.activity_collection_uuid
+        }
+        return registration
+
+
+    @staticmethod
+    def create_from_db_entry(entry : dict) -> 'IndalekoActivityDataProviderRegistration':
+        '''Return the object as a dictionary.'''
+        new_record = IndalekoActivityDataProviderRegistration()
+        new_record.set_identifier(**entry['ActivityProvider'])\
+                  .set_activity_collection_uuid(entry['ActivityCollection'])
+        if 'Record' in entry:
+            new_record.set_base64_data(entry['Record']['Data'])\
+                      .set_attributes(entry['Record']['Attributes'])\
+                      .set_timestamp(entry['Record']['Timestamp'])
+        return new_record
+
 
 class IndalekoActivityDataProviderRegistrationService(IndalekoSingleton):
 
@@ -64,31 +153,41 @@ class IndalekoActivityDataProviderRegistrationService(IndalekoSingleton):
         self.activity_providers = IndalekoCollections.get_collection(
             Indaleko.Indaleko_ActivityDataProviders
         )
+        assert self.activity_providers is not None, 'Activity Provider collection must exist'
         self._initialized = True
 
     def to_json(self) -> dict:
         '''Return the service as a JSON object.'''
         return self.service.to_json()
 
-    def lookup_provider_by_identifier(self, identifier : str) -> dict:
+    @staticmethod
+    def lookup_provider_by_identifier(identifier : str) -> IndalekoActivityDataProviderRegistration:
         '''Return the provider with the given identifier.'''
-        providers = self.activity_providers.find_entries(_key=identifier)
-        print(providers)
-        return {}
+        providers = IndalekoActivityDataProviderRegistrationService().\
+            activity_providers.find_entries(_key=identifier)
+        if len(providers) == 0:
+            return None
+        if len(providers) > 1:
+            raise NotImplementedError('Duplicate providers, not supported (versioning?)')
+        return IndalekoActivityDataProviderRegistration.create_from_db_entry(providers[0])
 
-    def lookup_provider_by_name(self, name : str) -> dict:
+
+    @staticmethod
+    def lookup_provider_by_name(name : str) -> dict:
         '''Return the provider with the given name.'''
-        providers = self.activity_providers.find_entries(name=name)
+        providers = IndalekoActivityDataProviderRegistrationService().\
+            activity_providers.find_entries(name=name)
         print(providers)
         return {}
 
-    def get_provider_list(self) -> list:
+    @staticmethod
+    def get_provider_list() -> list:
         '''Return a list of providers.'''
         aql_query = f'''
             FOR provider IN {Indaleko.Indaleko_ActivityDataProviders}
             RETURN provider
         '''
-        cursor = self.db_config.db.aql.execute(aql_query)
+        cursor = IndalekoActivityDataProviderRegistrationService().db_config.db.aql.execute(aql_query)
         return [document for document in cursor]
 
 
@@ -107,21 +206,37 @@ class IndalekoActivityDataProviderRegistrationService(IndalekoSingleton):
             print('registered provider')
         return provider
 
+    @staticmethod
+    def create_activity_provider_collection(self, identifier : str) -> IndalekoCollection:
+        '''Create an activity provider collection.'''
+        assert Indaleko.validate_uuid_string(identifier), 'Identifier must be a valid UUID'
+        activity_provider_collection_name = f'ActivityProviderData_{identifier}'
+        existing_collection = IndalekoCollections.get_collection(activity_provider_collection_name)
+        if existing_collection is not None:
+            return existing_collection
+        return IndalekoCollections.create_collection(
+            name = activity_provider_collection_name,
+            definition = {
+                'schema' : None,
+                'edge' : False,
+                'indices' : {
+                }
+            }
+        )
+
+        collection_name = f'ActivityProvider_{identifier}'
+
     def register_provider(self, **kwargs) -> None:
         '''Register an activity data provider.'''
-        activity_registration = {'ActivityProvider' : {}}
         assert 'Identifier' in kwargs, 'Identifier must be in kwargs'
-        activity_registration['ActivityProvider']['Identifier'] = kwargs['Identifier']
-        activity_registration['ActivityProvider']['Version'] = kwargs.get('Version', '1.0')
-        if 'Description' in kwargs:
-            activity_registration['ActivityProvider']['Description'] = kwargs['Description']
-        if 'Name' in kwargs:
-            activity_registration['ActivityProvider']['Name'] = kwargs['Name']
-        activity_registration['ActivityCollection'] = kwargs.get('ActivityCollection', str(uuid.uuid4()))
-        # TODO: need to create the the activity collection if it does not exist
-        # self.activity_providers.insert() # now to create the activity provider registration
-
-        return {}
+        existing_provider = self.lookup_provider_by_identifier(kwargs['Identifier'])
+        if existing_provider is not None and len(existing_provider) > 0:
+            raise NotImplementedError('Provider already exists, not updating.')
+        activity_registration = IndalekoActivityDataProviderRegistration(**kwargs)
+        print(f'Attempting to insert {activity_registration.to_json(indent=4)}')
+        provider = self.activity_providers.insert(activity_registration.to_dict())
+        # need to create the collection
+        return provider
 
 def main():
     '''Test the IndalekoActivityRegistration class.'''
