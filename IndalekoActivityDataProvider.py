@@ -32,14 +32,28 @@ class IndalekoActivityDataProvider():
     '''This class is used to provide the data for the
     mechanisms for the activity data provider class.'''
 
+    start_time_uuid_str = 'e9af27c3-a04f-4361-9eb1-3d5be86232ab'
+    end_time_uuid_str = '539a7224-1447-475e-803c-62b33fbd7a6c'
+    collection_time_uuid_str = '32338096-958c-4799-9c2c-d8eaab1c8e75'
+
+    known_activity_data_provider_timestamps = (
+        start_time_uuid_str,
+        end_time_uuid_str,
+        collection_time_uuid_str
+    )
+
     class ActivityTimestamp():
+        '''This class is used to create an activity timestamp.'''
 
         def __init__(self, **kwargs):
             '''Create an instance of the ActivityTimestamp class.'''
             self.label = kwargs.get('Label', None)
             self.value = kwargs.get('Value', None)
             self.description = kwargs.get('Description', None)
-
+            if self.label not in IndalekoActivityDataProvider.known_activity_data_provider_timestamps:
+                raise ValueError(f'Unknown activity data provider timestamp {self.label}')
+            if Indaleko.validate_iso_timestamp(self.value) is False:
+                raise ValueError(f'Invalid ISO timestamp {self.value}')
 
         def to_dict(self) -> dict:
             '''Return the object as a dictionary.'''
@@ -51,14 +65,19 @@ class IndalekoActivityDataProvider():
 
     def __init__(self, **kwargs):
         '''Create an instance of the IndalekoActivityDataProvider class.'''
-        self.last_activity_data_identifier = None # this is the UUID of the last activity data.
-        self.activity_provider_identifier = None # this is the UUID of THIS activity provider.
-        self.activity_timestamps = [] # This is a list of timestamps with UUID-based semantic meanings associated with this object.
-        self.activity_type = [] # This is the UUID identifying the type of activity.
-        self.activity_data_version = None # This is the version of the activity data.
-        self.entities = [] # This is a list of users associated with this object.
-        self.active = True # This is a boolean indicating if the activity data provider is active.
-        self.last_activity_data_generated = None # This is the last activity data generated.
+        self.last_activity_data_identifier = kwargs.get('last activity data identifier', None)
+        self.activity_provider_identifier = kwargs.get('activity provider identifier', None)
+        self.activity_timestamps = kwargs.get('timestamps', [
+            IndalekoActivityDataProvider.ActivityTimestamp(
+                Label = IndalekoActivityDataProvider.collection_time_uuid_str,
+                Value = datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                Description = 'Time of activity data creation'
+            )
+        ])
+        self.activity_type = kwargs.get('activity type', [])
+        self.activity_data_version = kwargs.get('activity data version', None)
+        self.entities = kwargs.get('entities', [])
+        self.last_activity_data_generated = kwargs.get('last activity data generated', None)
 
     @staticmethod
     def create_activity_data(**kwargs):
@@ -72,8 +91,7 @@ class IndalekoActivityDataProvider():
         data = {
             'ActivityDataIdentifier' : kwargs.get('ActivityDataIdentifier', str(uuid.uuid4())),
             'ActivityProviderIdentifier' : kwargs['ActivityProviderIdentifier'],
-            'ActivityType' : kwargs['ActivityType'],
-            'Active' : kwargs.get('Active', True)
+            'ActivityType' : kwargs['ActivityType']
         }
         if 'DataVersion' in kwargs:
             data['DataVersion'] = kwargs['DataVersion']
@@ -101,6 +119,21 @@ class IndalekoActivityDataProvider():
             self.last_activity_data_generated = new_data
         return self.last_activity_data_generated
 
+    def add_timestamp(self, **kwargs) -> 'IndalekoActivityDataProvider':
+        '''Add a timestamp to the activity data element.'''
+        if 'Label' not in kwargs:
+            kwargs['Label'] = IndalekoActivityDataProvider.collection_time_uuid_str
+        if 'Label' not in self.activity_timestamps:
+            self.activity_timestamps.append(IndalekoActivityDataProvider.ActivityTimestamp(**kwargs))
+        else:
+            for ts in self.activity_timestamps:
+                if ts.label == kwargs['Label']:
+                    if 'Value' in kwargs:
+                        ts.value = kwargs['Value']
+                    if 'Description' in kwargs:
+                        ts.description = kwargs.get('Description', None)
+        return self
+
     def to_dict(self) -> dict:
         '''Return activity provider information as a dictionary.'''
         return {
@@ -110,7 +143,6 @@ class IndalekoActivityDataProvider():
             'ActivityType' : self.activity_type,
             'DataVersion' : self.activity_data_version,
             'Entities' : self.entities,
-            'Active' : self.active
         }
 
 class IndalekoActivityDataProviderTest(IndalekoActivityDataProvider):
@@ -149,34 +181,22 @@ class IndalekoActivityDataProviderTest(IndalekoActivityDataProvider):
 
 def old_main():
     """Main function for the IndalekoActivityDataProvider class."""
-    test_provider_uuid = '29872b82-af11-4b3a-bcb1-1ff2b6090d05'
+    #test_provider_uuid = '29872b82-af11-4b3a-bcb1-1ff2b6090d05'
     # backup_uuid = 'ddecdf14-ef7d-4537-abdb-da777dbe32fb'
-    print("Welcome to Indaleko Activity Data Provider")
-    registration = IndalekoActivityDataProviderRegistrationService()
-    print(f'registration = {registration}')
-    provider = registration.lookup_provider_by_identifier(test_provider_uuid)
-    if len(provider) == 0:
-        print(f'provider {test_provider_uuid} not found, creating')
-        provider = registration.register_provider(
-            Identifier = test_provider_uuid,
-            Version = '1.0',
-            Description = 'Test Activity Data Provider',
-            Name = "Test Activity Data"
-        )
-    print(f'provider {provider}')
-    print("Goodbye from Indaleko Activity Data Provider")
 
 def show_command(args: argparse.Namespace) -> None:
     '''Show the command line arguments.'''
     print('Show Command')
     print(f'args = {args}')
     provider_list = IndalekoActivityDataProviderRegistrationService().get_provider_list()
+    skipped = 0
     for provider in provider_list:
         registration = IndalekoActivityDataProviderRegistration.create_from_db_entry(provider)
-        print (f'provider = {json.dumps(provider, indent=4)}')
-        print (f'registration = {registration.to_json()}')
         registration_dict = registration.to_dict()
-        assert provider['_key'] == registration_dict['Identifier'], \
+        if registration_dict.get('Active', False) is False and args.inactive is False:
+            skipped += 1
+            continue
+        assert provider['_key'] == registration_dict['_key'], \
             'provider and registration do not match'
         assert provider['Record'] == registration_dict['Record'], \
             'provider and registration do not match'
@@ -184,6 +204,9 @@ def show_command(args: argparse.Namespace) -> None:
             'provider and registration do not match'
         assert provider['ActivityCollection'] == registration_dict['ActivityCollection'], \
             'provider and registration do not match'
+        print (f'provider = {json.dumps(provider, indent=4)}')
+    if (skipped > 0):
+        print(f'Skipped {skipped} inactive providers')
 
 def check_command(args: argparse.Namespace) -> None:
     '''Check the activity data provider setup.'''
@@ -199,6 +222,27 @@ def delete_command(args: argparse.Namespace) -> None:
     '''Delete the test activity data provider.'''
     print('Delete Command')
     print(f'args = {args}')
+    existing_provider = \
+        IndalekoActivityDataProviderRegistrationService.\
+            lookup_provider_by_identifier(IndalekoActivityDataProviderTest.UUID_str)
+    if existing_provider is None or len(existing_provider) == 0:
+        print('Test provider does not exist')
+        return
+    print(f'Deleting provider {IndalekoActivityDataProviderTest.UUID_str}')
+    # IndalekoActivityDataProviderRegistrationService().delete_provider(IndalekoActivityDataProviderTest.UUID_str)
+
+def activate_command(args: argparse.Namespace) -> None:
+    '''Activate the test activity data provider.'''
+    print('Activate Command')
+    print(f'args = {args}')
+    print('To implement: mark the test provider as active.')
+
+
+def deactivate_command(args: argparse.Namespace) -> None:
+    '''Deactivate the test activity data provider.'''
+    print('Deactivate Command')
+    print(f'args = {args}')
+    print('To implement: mark the test provider as inactive.')
 
 def create_command(args: argparse.Namespace) -> None:
     '''Create the test activity data provider.'''
@@ -214,6 +258,7 @@ def create_command(args: argparse.Namespace) -> None:
     provider = IndalekoActivityDataProviderTest()
     print(f'provider = {provider}')
 
+
 def main():
     '''Test the IndalekoActivityDataProvider class.'''
     now = datetime.datetime.now(datetime.timezone.utc)
@@ -221,20 +266,40 @@ def main():
 
     print('Starting Indaleko Activity Data Provider Test')
     parser = argparse.ArgumentParser(description='Indaleko Activity Data Provider Management.')
-    parser.add_argument('--logdir' , type=str, default=Indaleko.default_log_dir, help='Log directory')
-    parser.add_argument('--log', type=str, default=None, help='Log file name')
-    parser.add_argument('--loglevel', type=int, default=logging.DEBUG, choices=IndalekoLogging.get_logging_levels(), help='Log level')
+    parser.add_argument('--logdir' ,
+                        type=str,
+                        default=Indaleko.default_log_dir,
+                        help='Log directory')
+    parser.add_argument('--log',
+                        type=str,
+                        default=None,
+                        help='Log file name')
+    parser.add_argument('--loglevel',
+                        type=int,
+                        default=logging.DEBUG,
+                        choices=IndalekoLogging.get_logging_levels(),
+                        help='Log level')
     command_subparser = parser.add_subparsers(dest='command')
-    parser_check = command_subparser.add_parser('check', help='Check the activity data provider setup')
+    parser_check = command_subparser.add_parser('check',
+                                                help='Check the activity data provider setup')
     parser_check.set_defaults(func=check_command)
     parser_show = command_subparser.add_parser('show', help='Show the activity data provider setup')
+    parser_show.add_argument('--inactive', action='store_true', help='Show inactive providers')
     parser_show.set_defaults(func=show_command)
     parser_test = command_subparser.add_parser('test', help='Test the activity data provider')
     parser_test.set_defaults(func=test_command)
-    parser_delete = command_subparser.add_parser('delete', help='Delete the test activity data provider')
+    parser_delete = command_subparser.add_parser('delete',
+                                                 help='Delete the test activity data provider')
     parser_delete.set_defaults(func=delete_command)
-    parser_create = command_subparser.add_parser('create', help='Create the test activity data provider')
+    parser_create = command_subparser.add_parser('create',
+                                                 help='Create the test activity data provider')
     parser_create.set_defaults(func=create_command)
+    parser_activate = command_subparser.add_parser('activate',
+                                                   help='Activate the test activity data provider')
+    parser_activate.set_defaults(func=activate_command)
+    parser_deactivate = command_subparser.add_parser('deactivate',
+                                                     help='Deactivate the test activity data provider')
+    parser_deactivate.set_defaults(func=deactivate_command)
     parser.set_defaults(func=show_command)
     args = parser.parse_args()
     if args.log is None:

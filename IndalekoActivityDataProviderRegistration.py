@@ -57,6 +57,7 @@ class IndalekoActivityDataProviderRegistration(IndalekoRecord):
         self.set_activity_collection_uuid(kwargs.get('ActivityCollection', str(uuid.uuid4())))
         self.db_config = kwargs.get('DBConfig', IndalekoDBConfig())
         self.collections = kwargs.get('Collections', IndalekoCollections(db_config=self.db_config))
+        self.active = kwargs.get('Active', True)
         super().__init__(raw_data = msgpack.packb(b''),
                          attributes = {},
                          source = {
@@ -129,7 +130,8 @@ class IndalekoActivityDataProviderRegistration(IndalekoRecord):
             '_key' : self.identifier['Identifier'],
             'Record' : super().to_dict(),
             'ActivityProvider'  : self.identifier,
-            'ActivityCollection' : self.activity_data_collection_name
+            'ActivityCollection' : self.activity_data_collection_name,
+            'Active' : self.active
         }
         return registration
 
@@ -144,6 +146,7 @@ class IndalekoActivityDataProviderRegistration(IndalekoRecord):
             new_record.set_base64_data(entry['Record']['Data'])\
                       .set_attributes(entry['Record']['Attributes'])\
                       .set_timestamp(entry['Record']['Timestamp'])
+        new_record.active = entry.get('Active', True)
         return new_record
 
 
@@ -200,7 +203,7 @@ class IndalekoActivityDataProviderRegistrationService(IndalekoSingleton):
             return None
         if len(providers) > 1:
             raise NotImplementedError('Duplicate providers, not supported (versioning?)')
-        return IndalekoActivityDataProviderRegistration.create_from_db_entry(providers[0])
+        return [IndalekoActivityDataProviderRegistration.create_from_db_entry(providers[0])]
 
 
     @staticmethod
@@ -285,6 +288,14 @@ class IndalekoActivityDataProviderRegistrationService(IndalekoSingleton):
                 activity_registration.get_activity_collection_uuid()
             )
         return activity_registration, activity_provider_collection
+
+    def deactivate_provider(self, identifier : str) -> bool:
+        '''Deactivate an activity data provider.'''
+        existing_provider = self.lookup_provider_by_identifier(identifier)
+        if existing_provider is None:
+            return False
+        print('TODO: mark as inactive')
+        return False
 
 def main():
     '''Test the IndalekoActivityRegistration class.'''
