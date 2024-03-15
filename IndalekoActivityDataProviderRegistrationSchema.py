@@ -58,7 +58,8 @@ class IndalekoActivityDataProviderRegistrationSchema(IndalekoRecordSchema):
                 },
                 "ActivityCollection" : {
                     "type" : "string",
-                    "description" : "Unique name of the collection where the activity data is stored.",
+                    "description" : \
+                        "Unique name of the collection where the activity data is stored.",
                 },
                 "required" : ["ActivityProvider", "ActivityCollection"],
             }
@@ -72,7 +73,8 @@ class IndalekoActivityDataProviderRegistrationSchema(IndalekoRecordSchema):
 
 def main():
     '''Test the IndalekoActivityRegistrationSchema class.'''
-    if IndalekoActivityDataProviderRegistrationSchema.is_valid_schema(IndalekoActivityDataProviderRegistrationSchema.get_schema()):
+    if IndalekoActivityDataProviderRegistrationSchema.\
+        is_valid_schema(IndalekoActivityDataProviderRegistrationSchema.get_schema()):
         print('IndalekoActivityRegistrationSchema is a valid schema.')
     print(json.dumps(IndalekoActivityDataProviderRegistrationSchema.get_schema(), indent=4))
 
