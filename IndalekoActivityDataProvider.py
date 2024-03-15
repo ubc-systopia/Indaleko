@@ -36,17 +36,17 @@ class IndalekoActivityDataProvider():
 
         def __init__(self, **kwargs):
             '''Create an instance of the ActivityTimestamp class.'''
-            self.Label = kwargs.get('Label', None)
-            self.Value = kwargs.get('Value', None)
-            self.Description = kwargs.get('Description', None)
+            self.label = kwargs.get('Label', None)
+            self.value = kwargs.get('Value', None)
+            self.description = kwargs.get('Description', None)
 
 
         def to_dict(self) -> dict:
             '''Return the object as a dictionary.'''
             return {
-                'Label' : self.Label,
-                'Value' : self.Value,
-                'Description' : self.Description
+                'Label' : self.label,
+                'Value' : self.value,
+                'Description' : self.description
             }
 
     def __init__(self, **kwargs):
@@ -124,11 +124,12 @@ class IndalekoActivityDataProviderTest(IndalekoActivityDataProvider):
     def __init__(self, **kwargs):
         '''Create an instance of the IndalekoActivityDataProviderTest class.'''
         # Remove the following line
-        # super().__init__(**kwargs)
+        super().__init__(**kwargs)
         self.provider_registration = \
             IndalekoActivityDataProviderRegistrationService().\
                 lookup_provider_by_identifier(self.UUID_str)
         if self.provider_registration is None or len(self.provider_registration) == 0:
+            print('** Start registration **')
             self.provider_registration = \
                 IndalekoActivityDataProviderRegistrationService().\
                     register_provider(

@@ -54,9 +54,14 @@ class IndalekoCollections(IndalekoSingleton):
     def get_collection(name: str) -> IndalekoCollection:
         """Return the collection with the given name."""
         collections = IndalekoCollections()
-        assert name in collections.collections, f'Collection {name} does not exist.'
-        return collections.collections[name]
-
+        collection = None
+        if name not in collections.collections:
+            # Look for it by the specific name (activity data providers do this)
+            if not collections.db_config.db.has_collection(name):
+                collection = IndalekoCollection(name=name, db=collections.db_config)
+        else:
+            collection = collections.collections[name]
+        return collection
 
 def real_main():
     """Test the IndalekoCollections class."""

@@ -30,23 +30,22 @@ class IndalekoCollection():
     def __init__(self, **kwargs):
         if 'name' not in kwargs:
             raise ValueError('name is a required parameter')
-        if 'definition' not in kwargs:
-            raise ValueError('definition is a required parameter')
         self.name = kwargs['name']
-        self.definition = kwargs['definition']
+        self.definition = kwargs.get('definition', None)
         self.db_config = kwargs.get('db', None)
+        self.db_config.start()
         self.reset = kwargs.get('reset', False)
+        self.collection_name = self.name
+        self.indices = {}
+        if self.definition is None:
+            raise ValueError('Dynamic collection does not exist')
         assert isinstance(self.definition, dict), 'Collection definition must be a dictionary'
         assert 'schema' in self.definition, 'Collection must have a schema'
         assert 'edge' in self.definition, 'Collection must have an edge flag'
         assert 'indices' in self.definition, 'Collection must have indices'
         assert isinstance(self.db_config, IndalekoDBConfig), \
             'db must be None or an IndalekoDBConfig object'
-        self.db_config.start()
-        self.collection_name = self.name
-        self.indices = {}
         self.create_collection(self.collection_name, self.definition, reset=self.reset)
-        self._initialized = True
 
     def create_collection(self,
                           name : str,
