@@ -28,6 +28,14 @@ class IndalekoCollection():
     """
 
     def __init__(self, **kwargs):
+        if 'ExistingCollection' in kwargs:
+            self.collection = kwargs['ExistingCollection']
+            self.name = self.collection.name
+            self.definition = self.collection.properties()
+            self.db_config = kwargs.get('db', IndalekoDBConfig())
+            self.collection_name = self.name
+            self.indices = {}
+            return
         if 'name' not in kwargs:
             raise ValueError('name is a required parameter')
         self.name = kwargs['name']
@@ -69,6 +77,15 @@ class IndalekoCollection():
                                       config['indices'][index]['fields'],
                                       config['indices'][index]['unique'])
         return self.collection
+
+    def delete_collection(self, name: str) -> bool:
+        '''Delete the collection with the given name.'''
+        if not self.db_config.db.has_collection(name):
+            print(f'Collection {name} does not exist **')
+            return False
+        self.db_config.db.delete_collection(name)
+        print(f'Collection {name} does exists, requesting deletion **')
+        return True
 
     def create_index(self,
                      name: str,

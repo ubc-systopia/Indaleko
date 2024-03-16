@@ -268,6 +268,37 @@ class IndalekoActivityDataProviderRegistrationService(IndalekoSingleton):
             )
         return activity_data_collection
 
+    @staticmethod
+    def delete_activity_provider_collection(identifier : str) -> bool:
+        '''Delete an activity provider collection.'''
+        if identifier.startswith(IndalekoActivityDataProviderRegistration.ActivityProviderDataCollectionPrefix):
+            identifier = identifier[len(IndalekoActivityDataProviderRegistration.ActivityProviderDataCollectionPrefix):]
+        assert Indaleko.validate_uuid_string(identifier), 'Identifier must be a valid UUID'
+        activity_provider_collection_name = \
+            IndalekoActivityDataProviderRegistration.\
+                generate_activity_data_provider_collection_name(identifier)
+        existing_collection = None
+        try:
+            existing_collection = IndalekoCollections.\
+                get_collection(activity_provider_collection_name)
+            if existing_collection is not None:
+                print(f'Collection {activity_provider_collection_name} exists, deleting')
+                existing_collection.delete_collection(activity_provider_collection_name)
+            else:
+                print(f'Collection {activity_provider_collection_name} does not exist')
+                return False
+        except ValueError:
+            pass
+        return True
+
+    def delete_provider(self, identifier : str) -> bool:
+        '''Delete an activity data provider.'''
+        existing_provider = self.lookup_provider_by_identifier(identifier)
+        if existing_provider is None:
+            return False
+        print(f'Deleting provider {existing_provider}')
+        self.activity_providers.delete(identifier)
+        return False
 
     def register_provider(self, **kwargs) -> tuple:
         '''Register an activity data provider.'''

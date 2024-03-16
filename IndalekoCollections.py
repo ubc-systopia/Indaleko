@@ -59,6 +59,8 @@ class IndalekoCollections(IndalekoSingleton):
             # Look for it by the specific name (activity data providers do this)
             if not collections.db_config.db.has_collection(name):
                 collection = IndalekoCollection(name=name, db=collections.db_config)
+            else:
+                collection = IndalekoCollection(ExistingCollection=collections.db_config.db.collection(name))
         else:
             collection = collections.collections[name]
         return collection

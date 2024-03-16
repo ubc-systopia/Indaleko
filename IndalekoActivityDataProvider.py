@@ -228,8 +228,14 @@ def delete_command(args: argparse.Namespace) -> None:
     if existing_provider is None or len(existing_provider) == 0:
         print('Test provider does not exist')
         return
+    assert len (existing_provider) == 1, 'More than one provider with the same UUID'
+    existing_provider = existing_provider[0]
     print(f'Deleting provider {IndalekoActivityDataProviderTest.UUID_str}')
-    # IndalekoActivityDataProviderRegistrationService().delete_provider(IndalekoActivityDataProviderTest.UUID_str)
+    print(f'provider = {existing_provider.to_json()}')
+    IndalekoActivityDataProviderRegistrationService\
+        .delete_activity_provider_collection(existing_provider.get_activity_collection_name())
+    IndalekoActivityDataProviderRegistrationService()\
+        .delete_provider(IndalekoActivityDataProviderTest.UUID_str)
 
 def activate_command(args: argparse.Namespace) -> None:
     '''Activate the test activity data provider.'''
