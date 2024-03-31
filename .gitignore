@@ -7,7 +7,6 @@ __pycache__/*
 wmiobject-list.txt
 *.log
 *.json
-scratch.py
-scratch2.py
+scratch*.py
 *.jsonl
 wam/
