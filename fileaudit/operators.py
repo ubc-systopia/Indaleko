@@ -1,3 +1,4 @@
+import re
 import subprocess
 import typing
 from abstract import IOperator, IReader
@@ -240,6 +241,62 @@ class FilterFields(IOperator):
             return (1, input_list)
         else:
             return (1, input_list)
+
+
+class Canonize:
+    def __init__(self):
+        pass
+
+    def clean(self, word: str):
+        return word.strip('[').strip(']')
+
+    def extract_fid(self, word: str):
+        return word.strip().split('=')[1].split('[')[0]
+
+    def extract_path_pid_procname(self, arr: typing.List[str]):
+        # open:
+        #   ['/Users/sinaee/Library/Application', 'Support/Code/logs/20240329T155455/window1/exthost/GitHub.vscode-pull-request-github/GitHub', 'Pull', 'Request.log', '0.000115', 'ampdaemon.8244']
+        # close:
+        # ['Finder.464225']
+        # ['Code', 'Helper.21316']
+        pattern = r"\d+\.\d+"
+        found, res = -1, []
+        for i in range(len(arr)-1, -1, -1):
+            if re.fullmatch(pattern, arr[i]):
+                found = i
+                break
+
+        if found != -1:
+            *procname, pid = ' '.join(arr[found+1:]).rsplit('.', 1)
+            return (' '.join(arr[:found]) if len(arr[:found]) else None, ' '.join(procname), pid)
+
+        return None
+
+    def execute(self, input_arr) -> tuple[int, typing.List]:
+        ret = []
+        status, arr = input_arr
+        if status == 0:
+            time, action, *details = arr
+            ret.extend([self.clean(s) for s in [time, action]])
+
+            match action:
+                case 'open':
+                    ret.append(self.extract_fid(details[0]))
+                    if (res := self.extract_path_pid_procname(details[2:])) and res:
+                        path, procname, pid = res
+                        ret.extend([path, procname, pid])
+                    else:
+                        print(f'warn: no pid, procname in  given_input={input_arr}')
+                case 'close':
+                    ret.append(self.extract_fid(details[0]))
+                    if (res := self.extract_path_pid_procname(details[1:])) and res:
+                        path, procname, pid = res
+                        ret.extend([procname, pid])
+                    else:
+                        print(f'warn: no pid, procname in  given_input={input_arr}')
+            return (0, ret)
+
+        return (1, [])
 
 
 class Show(IOperator):
