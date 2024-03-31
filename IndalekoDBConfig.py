@@ -259,14 +259,21 @@ class IndalekoDBConfig(IndalekoSingleton):
             raise ValueError('Database {} not found - creation failed'.format(dbname))
         return True
 
-    def get_ipaddr(self) -> str:
+    def get_hostname(self) -> str:
         """Get the IP address of the database."""
         assert self.config is not None, 'No config found'
         assert self.config['database'] is not None, 'No database config found'
         assert self.config['database']['host'] is not None, 'No database host found'
         return self.config['database']['host']
 
-    def update_ipaddr(self, ipaddr : str) -> None:
+    def get_port(self) -> str:
+        """Get the port of the database."""
+        assert self.config is not None, 'No config found'
+        assert self.config['database'] is not None, 'No database config found'
+        assert self.config['database']['port'] is not None, 'No database port found'
+        return self.config['database']['port']
+
+    def update_hostname(self, ipaddr : str) -> None:
         """
         Update the IP address in the config file.
         This is useful when moving the config to an additional machine.
@@ -278,6 +285,35 @@ class IndalekoDBConfig(IndalekoSingleton):
             f'Invalid IP address or host name: {ipaddr}'
         self.config['database']['host'] = ipaddr
         self.__save_config__()
+
+    def get_user_name(self) -> str:
+        """Get the user name for the database."""
+        assert self.config is not None, 'No config found'
+        assert self.config['database'] is not None, 'No database config found'
+        assert self.config['database']['user_name'] is not None, 'No user name found'
+        return self.config['database']['user_name']
+
+    def get_user_password(self) -> str:
+        """Get the user password for the database."""
+        assert self.config is not None, 'No config found'
+        assert self.config['database'] is not None, 'No database config found'
+        assert self.config['database']['user_password'] is not None, 'No user password found'
+        return self.config['database']['user_password']
+
+    def get_database_name(self) -> str:
+        """Get the database name."""
+        assert self.config is not None, 'No config found'
+        assert self.config['database'] is not None, 'No database config found'
+        assert self.config['database']['database'] is not None, 'No database name found'
+        return self.config['database']['database']
+
+    def get_ssl_state(self) -> str:
+        """Get the SSL state."""
+        assert self.config is not None, 'No config found'
+        assert self.config['database'] is not None, 'No database config found'
+        if 'ssl' in self.config['database']:
+            return self.config['database']['ssl']
+        return False
 
 def check_command(args : argparse.Namespace) -> None:
     """Check the database connection."""
