@@ -69,6 +69,16 @@ class IndalekoIngester():
         'This is the base (non-specialized) Indaleko Ingester. ' +\
         'You should not see it in the database.'
     indaleko_generic_ingester_service_version = '1.0'
+    counter_values = (
+        'input_count',
+        'output_count',
+        'dir_count',
+        'file_count',
+        'error_count',
+        'edge_count',
+    )
+
+
 
     def __init__(self : 'IndalekoIngester', **kwargs : dict) -> None:
         '''
@@ -96,9 +106,13 @@ class IndalekoIngester():
         self.ingester = 'unknown'
         if 'ingester' in kwargs:
             self.ingester = kwargs['ingester']
-        self.storage_description = str(uuid.UUID('00000000-0000-0000-0000-000000000000').hex)
+        self.storage_description = None
         if 'storage_description' in kwargs:
-            self.storage_description = str(uuid.UUID(kwargs['storage_description']).hex)
+            if kwargs['storage_description'] is None or \
+               kwargs['storage_description'] == 'unknown':
+                    del kwargs['storage_description']
+            else:
+                self.storage_description = str(uuid.UUID(kwargs['storage_description']).hex)
         self.data_dir = Indaleko.default_data_dir
         if 'data_dir' in kwargs:
             self.data_dir = kwargs['data_dir']
@@ -138,19 +152,14 @@ class IndalekoIngester():
             service_identifier = self.service_identifier,
         )
         assert self.ingester_service is not None, 'Ingester service does not exist'
-        self.dir_count = 0
-        self.file_count = 0
-        self.error_count = 0
-        self.edge_count = 0
+        for count in IndalekoIngester.counter_values:
+            setattr(self, count, 0)
 
     def get_counts(self) -> dict:
-        '''Return a dictionary of the counts.'''
-        return {
-            'dir_count' : self.dir_count,
-            'file_count' : self.file_count,
-            'error_count' : self.error_count,
-            'edge_count' : self.edge_count,
-        }
+        '''
+        Retrieves counters about the ingester.
+        '''
+        return {x : getattr(self, x) for x in IndalekoIngester.counter_values}
 
     def generate_output_file_name(self, **kwargs) -> str:
         '''
@@ -165,7 +174,9 @@ class IndalekoIngester():
             output_dir = self.data_dir
         kwargs['ingester'] = self.ingester
         kwargs['machine'] = str(uuid.UUID(self.machine_id).hex)
-        kwargs['storage'] = str(uuid.UUID(self.storage_description).hex)
+        if self.storage_description is not None and \
+            kwargs['storage'] != 'unknown':
+            kwargs['storage'] = str(uuid.UUID(self.storage_description).hex)
         name = Indaleko.generate_file_name(**kwargs)
         return os.path.join(output_dir, name)
 
@@ -173,18 +184,20 @@ class IndalekoIngester():
         '''This will generate a file name for the ingester output file.'''
         if suffix is None:
             suffix = self.file_suffix
-        return self.generate_output_file_name(
-            prefix = self.file_prefix,
-            suffix = suffix,
-            platform = self.platform,
-            service= 'ingest',
-            ingester = self.ingester,
-            machine = str(uuid.UUID(self.machine_id).hex),
-            storage = str(uuid.UUID(self.storage_description).hex),
-            collection = 'Objects',
-            timestamp = self.timestamp,
-            output_dir = target_dir,
-        )
+        kwargs = {
+        'prefix' : self.file_prefix,
+        'suffix' : suffix,
+        'platform' : self.platform,
+        'service' : 'ingest',
+        'ingester' : self.ingester,
+        'machine' : str(uuid.UUID(self.machine_id).hex),
+        'collection' : 'Objects',
+        'timestamp' : self.timestamp,
+        'output_dir' : target_dir,
+        }
+        if self.storage_description is not None:
+            kwargs['storage'] = str(uuid.UUID(self.storage_description).hex)
+        return self.generate_output_file_name(**kwargs)
 
     @staticmethod
     def extract_metadata_from_ingester_file_name(file_name : str) -> dict:
@@ -209,6 +222,7 @@ class IndalekoIngester():
                 for entry in data:
                     try:
                         writer.write(entry.to_dict())
+                        self.output_count += 1
                     except TypeError as err:
                         logging.error('Error writing entry to JSONLines file: %s', err)
                         logging.error('Entry: %s', entry)

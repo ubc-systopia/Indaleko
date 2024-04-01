@@ -19,7 +19,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import argparse
-import subprocess
 import datetime
 import logging
 from Indaleko import Indaleko
@@ -95,6 +94,7 @@ def check_command(args : argparse.Namespace) -> None:
     - then, it runs the start command which tries to connect to the db container. Therefore, the container has to be running before that. 
     """
     logging.info('Check the database')
+    
     db_config = IndalekoDBConfig()
     if db_config is None:
         logging.critical('Could not create IndalekoDBConfig object')
@@ -118,7 +118,7 @@ def check_command(args : argparse.Namespace) -> None:
 def delete_command(args : argparse.Namespace) -> None:
     """Delete the database"""
     print('Delete the database')
-    logging.info('Delete the database and volumes')
+    logging.info('Delete the database and volumes, args is %s', args)
     db_config = IndalekoDBConfig()
     if db_config is None:
         logging.critical('Could not create IndalekoDBConfig object')
@@ -133,9 +133,9 @@ def delete_command(args : argparse.Namespace) -> None:
         stop=True
     try:
         indaleko_docker.delete_container(container_name, stop=stop)
-    except:
-        logging.error('Could not delete container %s', container_name)
-        print(f"Could not delete running container {container_name}")
+    except Exception as e:
+        logging.error('Could not delete container %s, Exception %s', container_name, e)
+        print(f"Could not delete running container {container_name}, Exception {e}")
         return
     logging.info('Delete volume %s', volume_name)
     indaleko_docker.delete_volume(volume_name)
@@ -172,12 +172,12 @@ def main():
 
     parser_check = command_subparser.add_parser('check', help='Check the database')
     parser_check.set_defaults(func=check_command)
-    parser_setup = command_subparser.add_parser('setup', help='Set up a clean instance of the database')
+    parser_setup = command_subparser.add_parser('setup',
+                                                help='Set up a clean instance of the database')
     parser_setup.set_defaults(func=setup_command)
 
     parser_delete = command_subparser.add_parser('delete', help='Delete the database')
     parser_delete.set_defaults(func=delete_command)
-
     parser.set_defaults(func=default_command)
 
     args = parser.parse_args()
@@ -188,11 +188,10 @@ def main():
                         timestamp=timestamp
                     )
     print(args)
-    os.makedirs(args.log_dir, exist_ok=True)
-    indaleko_logging = IndalekoLogging(service_name='dbsetup',
-                                       log_dir=args.log_dir,
-                                       log_file=args.log,
-                                       log_level=args.loglevel)
+    IndalekoLogging(service_name='dbsetup',
+                    log_dir=args.log_dir,
+                    log_file=args.log,
+                    log_level=args.loglevel)
     logging.info('Starting Indaleko database setup')
     logging.debug(args)
     args.func(args)

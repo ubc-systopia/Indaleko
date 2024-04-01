@@ -65,10 +65,16 @@ class IndalekoDBConfig:
         the database and configure it if needed'''
         if self.started:
             return True
-        url = f"http://{self.config['database']['host']}:{self.config['database']['port']}"
+        web_service_name = 'http'
+        if 'ssl' in self.config['database'] and \
+            self.config['database']['ssl'] == 'true':
+            web_service_name = 'https'
+        url = f"{web_service_name}://{self.config['database']['host']}:"
+        url += f"{self.config['database']['port']}"
         logging.debug('Connecting to %s', url)
         start_time=time.time()
         connected = False
+        timedout = False
         while True:
             try:
                 response = requests.get(url + '/_api/agency/readiness', timeout=5)
@@ -86,7 +92,10 @@ class IndalekoDBConfig:
                 timedout = True
                 break
             time.sleep(1)
-        connect_arg = f"http://{self.config['database']['host']}"
+        if timedout:
+            logging.warning('Timed out waiting for database to start')
+            return False
+        connect_arg = f"{web_service_name}://{self.config['database']['host']}"
         connect_arg += ':'
         connect_arg += f"{self.config['database']['port']}"
         logging.debug('Connecting to %s', connect_arg)
@@ -101,16 +110,16 @@ class IndalekoDBConfig:
                                      auth_method='basic')
         logging.debug('Ensuring Indaleko database is in ArangoDB')
         self.setup_database(self.config['database']['database'])
-        logging.debug(f'Ensuring Indaleko user {self.config['database']['user_name']} is in ArangoDB')
+        logging.debug('Ensuring Indaleko user %s is in ArangoDB', self.config['database']['user_name'])
         self.setup_user(self.config['database']['user_name'],
-                        self.config['database']['user_password'],
-                        [{'database': 'Indaleko', 'permission': 'rw'}])
+            self.config['database']['user_password'],
+            [{'database': 'Indaleko', 'permission': 'rw'}])
         # let's create the user's database access object
         self.db = self.client.db(self.config['database']['database'],
-                                 username=self.config['database']['user_name'],
-                                 password=self.config['database']['user_password'],
-                                 auth_method='basic',
-                                 verify=True)
+                 username=self.config['database']['user_name'],
+                 password=self.config['database']['user_password'],
+                 auth_method='basic',
+                 verify=True)
         assert self.db is not None, 'Could not connect to database'
         logging.info('Connected to database %s', self.config['database']['database'])
         return connected
@@ -327,15 +336,15 @@ def reset_command(args : argparse.Namespace) -> None:
     # In either case we will delete the container and volume
     logging.warning('DB Reset: stopping container %s', config.config['database']['container'])
     print('DB Reset: stopping container ' +\
-            f'{config.config['database']['container']}')
+            f"{config.config['database']['container']}")
     indaleko_docker.stop_container(config.config['database']['container'])
     logging.warning('DB Reset: deleting container %s', config.config['database']['container'])
     print('DB Reset: deleting container ' +\
-            f'{config.config['database']['container']}')
+            f"{config.config['database']['container']}")
     indaleko_docker.delete_container(config.config['database']['container'])
     logging.warning('DB Reset: deleting volume %s', config.config['database']['volume'])
     print('DB Reset: deleting volume ' +\
-            f'{config.config['database']['volume']}')
+            f"{config.config['database']['volume']}")
     indaleko_docker.delete_volume(config.config['database']['volume'])
     if args.rebuild:
         logging.info('DB Reset: Rebuild requested')
@@ -363,16 +372,16 @@ def show_command(args : argparse.Namespace) -> None:
              f'{IndalekoDBConfig.default_db_config_file}')
     print('Config file found: loading')
     config = IndalekoDBConfig()
-    print(f'Created at {config.config['database']['timestamp']}')
-    print(f'Container name: {config.config['database']['container']}')
-    print(f'Volume name: {config.config['database']['volume']}')
-    print(f'Host: {config.config['database']['host']}')
-    print(f'Port: {config.config['database']['port']}')
-    print(f'Admin user: {config.config['database']['admin_user']}')
-    print(f'Admin password: {config.config['database']['admin_passwd']}')
-    print(f'Database name: {config.config['database']['database']}')
-    print(f'User name: {config.config['database']['user_name']}')
-    print(f'User password: {config.config['database']['user_password']}')
+    print(f"Created at {config.config['database']['timestamp']}")
+    print(f"Container name: {config.config['database']['container']}")
+    print(f"Volume name: {config.config['database']['volume']}")
+    print(f"Host: {config.config['database']['host']}")
+    print(f"Port: {config.config['database']['port']}")
+    print(f"Admin user: {config.config['database']['admin_user']}")
+    print(f"Admin password: {config.config['database']['admin_passwd']}")
+    print(f"Database name: {config.config['database']['database']}")
+    print(f"User name: {config.config['database']['user_name']}")
+    print(f"User password: {config.config['database']['user_password']}")
     logging.info('Show command complete')
 
 def update_command(args : argparse.Namespace) -> None:

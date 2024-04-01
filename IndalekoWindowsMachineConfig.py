@@ -66,9 +66,10 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
     @staticmethod
     def find_config_files(directory : str) -> list:
         '''This looks for configuration files in the given directory.'''
-        return [x for x in os.listdir(directory)
-                if x.startswith(IndalekoWindowsMachineConfig.windows_machine_config_file_prefix)
-                and x.endswith('.json')]
+        return IndalekoMachineConfig.find_config_files(
+            directory,
+            IndalekoWindowsMachineConfig.windows_machine_config_file_prefix
+        )
 
     @staticmethod
     def find_configs_in_db(source_id : str = windows_machine_config_uuid_str) -> list:

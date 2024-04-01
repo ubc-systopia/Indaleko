@@ -72,7 +72,7 @@ class IndalekoRecord:
         if 'source' not in kwargs:
             raise ValueError('source must be specified')
         self.__source__ = kwargs['source']
-        assert self.validate_source(self.__source__), 'source is not valid'
+        assert self.validate_source(self.__source__), f'source is not valid: {self.__source__}'
         if 'identifier' in kwargs:
             self.__identifier__ = kwargs['identifier']
             assert self.validate_uuid_string(self.__identifier__), 'identifier is not valid'
@@ -125,7 +125,7 @@ class IndalekoRecord:
 
     def set_source(self, source : dict):
         """Set the source for this record."""
-        assert self.validate_source(source), 'source is not valid'
+        assert self.validate_source(source), f'source is not valid: {source}'
         self.__source__ = {
             'Identifier' : source['Identifier'],
             'Version' : source['Version'],
