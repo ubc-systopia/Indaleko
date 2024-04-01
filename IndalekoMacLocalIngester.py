@@ -270,13 +270,12 @@ class IndalekoMacLocalIngester(IndalekoIngester):
         self.write_data_to_file(dir_edges, edge_file)
 
         # set the objects and relations file paths to these newly created ones
-        self.objects_file=self.output_file
-        self.relations_file=edge_file
+        self.objects_file = self.output_file
+        self.relations_file = edge_file
 
         # import these using arangoimport tool
         self.arangoimport()
-
-
+        
     def arangoimport(self):
         print('{:-^20}'.format(""))
         print('using arangoimport to import objects')
@@ -297,10 +296,10 @@ class IndalekoMacLocalIngester(IndalekoIngester):
         dest = '/home'  # where in the container we copy the files; we use this for import to the database
 
         container_name = config['database']['container']
-        server_username=config['database']['user_name']
-        server_password=config['database']['user_password']
-        server_database=config['database']['database']
-        overwrite=str(self.reset_collection).lower()
+        server_username = config['database']['user_name']
+        server_password = config['database']['user_password']
+        server_database = config['database']['database']
+        overwrite = str(self.reset_collection).lower()
 
         # copy the files first
         for filename, dest_filename in [(self.objects_file, "objects.jsonl"), (self.relations_file, "relations.jsonl")]:
@@ -309,7 +308,8 @@ class IndalekoMacLocalIngester(IndalekoIngester):
 
         # run arangoimport on both of these files
         for filename, collection_name in [("objects.jsonl", "Objects"), ("relations.jsonl", "Relationships")]:
-            self.__run_docker_cmd(f'docker exec -t {container_name} arangoimport --file {dest}/{filename} --type "jsonl" --collection "{collection_name}" --server.username "{server_username}" --server.password "{server_password}" --server.database "{server_database}" --overwrite {overwrite}')
+            self.__run_docker_cmd(f'docker exec -t {container_name} arangoimport --file {dest}/{filename} --type "jsonl" --collection "{collection_name}" --server.username "{
+                                  server_username}" --server.password "{server_password}" --server.database "{server_database}" --overwrite {overwrite}')
 
     def __run_docker_cmd(self, cmd):
         print('Running:', cmd)
@@ -317,6 +317,7 @@ class IndalekoMacLocalIngester(IndalekoIngester):
             subprocess.run(cmd, check=True, shell=True)
         except subprocess.CalledProcessError as e:
             print(f'failed to run the command, got: {e}')
+
 
 def main():
     '''
@@ -382,7 +383,7 @@ def main():
     parser = argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--input',
                         choices=indexer_files,
-                        default=indexer_files[-1],
+                        default=indexer_files[0],
                         help='Mac Local Indexer file to ingest.')
     parser.add_argument('--objects-file',
                         default="",
@@ -452,11 +453,13 @@ def main():
     output_file = ingester.generate_file_name()
     log_file_name = ingester.generate_file_name(
         target_dir=args.logdir, suffix='.log')
+    print(f"logging into {log_file_name}")
     logging.basicConfig(filename=os.path.join(log_file_name),
                         level=logging.DEBUG,
                         format='%(asctime)s - %(levelname)s - %(message)s',
                         force=True)
-    logging.info('Ingesting %s ', args.input)
+    logging.info('Found these indexes: %s', indexer_files)
+    logging.info('Ingesting %s ', input_file)
     logging.info('Output file %s ', output_file)
     ingester.ingest()
     counts = ingester.get_counts()
