@@ -16,11 +16,14 @@ class IndalekoLocationDataProvider(IndalekoRecord):
             raise ValueError('provider must be specified')
         self.provider_registration = self.get_provider_registration(kwargs['provider'])
 
-    def get_provider_registration(self, provider_name : str) -> IndalekoActivityDataProviderRegistration:
+    def get_provider_registration(
+            self,
+            provider_name : str
+        ) -> IndalekoActivityDataProviderRegistration:
         '''Return the provider for this location data.'''
         if hasattr(self, 'provider_registration') and self.provider_registration is not None:
             return self.provider_registration
-        self.provider_registration = IndalekoActivityDataProviderRegistration(provider_name)
+        self.provider_registration = IndalekoActivityDataProviderRegistration(provider=provider_name)
 def main():
     '''Main entry point for IndalekoLocationDataProvider.'''
     print('Main called')

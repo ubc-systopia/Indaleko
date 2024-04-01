@@ -323,10 +323,10 @@ def main():
     if indaleko_logging is None:
         print('Could not create logging object')
         exit(1)
-    logging.info('Starting IndalekoDBConfig')
+    logging.info('Starting IndalekoActivityDataProvider')
     logging.debug(args)
     args.func(args)
-    logging.info('IndalekoDBConfig: done processing.')
+    logging.info('IndalekoActivityDataProvider: done processing.')
 
 
 
