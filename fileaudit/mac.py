@@ -1,4 +1,3 @@
-import subprocess
 import operators
 import pipeline
 import argparse
@@ -8,6 +7,13 @@ from typing import List
 def print_result(t):
     if t != None and t[0] == 0:
         print(t[1])
+
+
+def to_csv(t, header: bool = False):
+    if header:
+        print("ts,syscall,fid,path,procname,pid")
+    if t != None and t[0] == 0:
+        print(','.join(t[1]))
 
 
 def main():
@@ -21,20 +27,7 @@ def main():
     )
     p = pipeline.Pipeline(operators.InputReader([command]))
 
-    # p.add(
-    #     operators.ToList(remove_empty_fields=True)
-    # ).add(
-    #     operators.FilterFields(
-    #         1, ["open", "close", "mmap", "read", "write", "mkdir", "rename"], exact_match=True)
-    # ).add(
-    #     operators.Show(print_result)
-    # )
-
-    # p.add(
-    #     operators.ToList(remove_empty_fields=True)
-    # ).add(
-    #     operators.Show(print_result)
-    # )
+    to_csv(None, header=True)
 
     p.add(
         operators.TrSpaces()
@@ -44,7 +37,9 @@ def main():
         operators.FilterFields(
             1, ["open", "close", "mmap", "read", "write", "mkdir", "rename"], exact_match=True)
     ).add(
-        operators.Show(print_result)
+        operators.Canonize()
+    ).add(
+        operators.Show(to_csv)
     )
     list(p.run())
 
