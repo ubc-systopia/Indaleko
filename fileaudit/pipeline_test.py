@@ -27,7 +27,7 @@ class PipeLineTest(unittest.TestCase):
             return input_tuple
         return None
 
-    def test_1(self):
+    def test_mock_data(self):
         test_cases = {
             "only_nil": {
                 "pos": 1,

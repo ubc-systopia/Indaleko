@@ -266,7 +266,8 @@ class FilterFields(IOperator):
 class Canonize:
     fid_pattern = r'F=(-?\d+).*'
     time_spent_pattern = r"\d+\.\d+"
-    no_path_syscalls = ('read', 'close')
+    no_path_syscalls = ('write', 'read', 'close')
+    no_fid_syscalls = ('mkdir', 'rename')
 
     def __init__(self):
         pass
@@ -309,7 +310,7 @@ class Canonize:
         else:
             # path exists for this syscall; e.g. open
             search_idx = tspent_index - has_w
-            beg_idx = -1
+            beg_idx = None
             for i in range(search_idx, -1, -1):
                 token = arr[i]
 
@@ -319,8 +320,10 @@ class Canonize:
                         (token.startswith('B=') or token.startswith("F=")):
                     beg_idx = i
                     break
-            assert beg_idx != - \
-                1, f'cannot find the beg index in {arr[:search_idx+1]}'
+            if beg_idx == None and syscall in Canonize.no_fid_syscalls:
+                beg_idx = -1
+            assert beg_idx != None, f'cannot find the beg index in {
+                arr[:search_idx+1]}'
             path = ' '.join(arr[beg_idx+1:search_idx])
 
         # 3. find procname
@@ -342,7 +345,7 @@ class Canonize:
             ret.append(fid)
 
             path, pid, procname = self.extract_path_pid_procname(
-                details[1:], action.lower())
+                details, action.lower())
             if path:
                 ret.append(path)
             if procname:

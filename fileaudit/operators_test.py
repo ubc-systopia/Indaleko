@@ -246,20 +246,30 @@ class TestFilterFieldsWithPos(unittest.TestCase):
 
 
 class TestCanonize(unittest.TestCase):
-    def generate_mock_input(self):
-        return [
+    def generate_mock_input(self, syscall: str):
+        all_samples = [
+            # write
+            (0, ['19:52:17.818965', 'write', 'F=17',
+             'B=0x1', '0.000004', 'Code', 'Helper.21271']),
+            (0, ['19:52:17.953316', 'write', 'F=78',
+             'B=0x3dc', '0.000151', 'acumbrellaagent.6946']),
+            # read
             (0, ['19:52:17.818972', 'read', 'F=16',
              'B=0x1', '0.000001', 'Code', 'Helper.21271']),
             (0, ['19:52:17.824597', 'read', 'F=35',
              '[', '35]', '0.000004', 'ampdaemon.8720']),
             (0, ['19:52:17.882232', 'read', 'F=33',
              'B=0x92c', '0.000008', 'ampdaemon.8244']),
+            # open
             (0, ['19:53:11.248385', 'open', 'F=35', '(R_______F_V_)', 'Library/Mail/V8/E7E363C2-BB21-4A69-A1E5-CB22FB478997/[Gmail].mbox/All',
              'Mail.mbox/D22A1D5B-AA8F-41A3-892E-930CF85504E8/Data/8/9/3/Messages/398336.partial.emlx', '0.000218', 'ampdaemon.250630']),
             (0, ['19:52:34.635146', 'open', 'F=33', '(R_______F_V_)', '/Users/sinaee/Library/Application',
              'Support/Google/Chrome/Profile', '1/Shortcuts', '0.000185', 'ampdaemon.250630']),
             (0, ['19:52:34.651249', 'open', 'F=38', '(R_______F___)', '/Applications/Google',
              'Chrome.app/Contents/MacOS/Google', 'Chrome', '0.000035', 'ampdaemon.8640']),
+            (0,
+             ["18:46:30.430549", "open", "[2]", "(R_____N____X)", "/Users/sinaee/Library/Application", "Support/Google/Chrome/Profile",  "0.000011", "Google", "Chrome.7874"]),
+            # close
             (0, ['19:53:19.842752', 'close', 'F=64',
              '0.000004', 'Code', 'Helper.21316']),
             (0, ['19:52:57.953020', 'close', 'F=3',
@@ -268,26 +278,124 @@ class TestCanonize(unittest.TestCase):
              'F=8088[', '9]', '0.000001', 'lsof.465025']),
             (0, ['19:52:19.416572', 'close',
              'F=1045[', '9]', '0.000001', 'lsof.465025']),
-            (0,
-             ["18:46:30.430549", "open", "[", "2]", "(R_____N____X)", "/Users/sinaee/Library/Application", "Support/Google/Chrome/Profile",  "0.000011", "Google", "Chrome.7874"])
+            # mkdir
+            (0, ['19:52:17.969603', 'mkdir', '/Library/Application', 'Support/Cisco/AMP', 'for', 'Endpoints',
+             'Connector/scannertmp/20240329_195217-scantemp.524e726695', '0.000198', 'ampscansvc.8242']),
+            (0, ['19:52:18.516542', 'mkdir', '[17]',
+             'private/var/folders/qk/4xtqd_nn3kx8q5m4df7prpzh0000gp/T', '0.000004', 'git.464994']),
+            (0, ['19:52:18.523903', 'mkdir', '[17]',
+             'private/var/folders/qk/4xtqd_nn3kx8q5m4df7prpzh0000gp/T', '0.000006', 'git.464995']),
+            # rename
+            (0, ['19:52:34.722431', 'rename', '/Users/sinaee/Library/Application', 'Support/Google/Chrome/Profile',
+                 '1/IndexedDB/https_docs.google.com_0.indexeddb.leveldb/LOG', '0.000855', 'Google', 'Chrome.8803']),
+            (0, ['19:52:34.782196', 'rename', '/Users/sinaee/Library/Caches/Google/Chrome/Profile',
+             '1/Cache/Cache_Data/dcceb247e0b3a75d_0', '0.000402', 'Google', 'Chrome', 'Helper.8882']),
+            (0, ['19:52:36.107106', 'rename', '/Users/sinaee/Library/Application',
+             'Support/Google/Chrome/Profile', '1/.com.google.Chrome.HL1NBs', '0.001140', 'Google', 'Chrome.8803']),
+            # mmap
+            (0, ['19:52:18.420544', 'mmap', 'F=0', 'A=0x400000000001',
+                 'O=0x00000000', 'B=0x4000100000000', '<>', '0.000002', 'ps.464993']),
+            (0, ['19:52:18.512452', 'mmap', 'F=0', 'A=0x400000000001',
+             'O=0x00000000', 'B=0x4000100000000', '<>', '0.000003', 'git.464994']),
+            (0, ['19:52:18.513592', 'mmap', 'F=0', 'A=0x052cc000000001',
+             'O=0x00000000', 'B=0x4200200000000', '<>', '0.000020', 'git.464994']),
+            (0, ['19:52:18.514199', 'mmap', 'F=7077888', 'A=0xc00000000005',
+             'O=0x00000000', 'B=0x4001200000000', '<>', '0.000024', 'git.464994']),
 
         ]
 
-    def test_pass(self):
+        return [syscall_sample for syscall_sample in all_samples if syscall_sample[1][1].strip() == syscall.strip()]
+
+    def test_mmap(self):
+        test_cases = {
+            "expect": [
+                (0, ['19:52:18.420544', 'mmap', '0', '<>', 'ps', '464993']),
+                (0, ['19:52:18.512452', 'mmap', '0', '<>', 'git', '464994']),
+                (0, ['19:52:18.513592', 'mmap', '0', '<>', 'git', '464994']),
+                (0, ['19:52:18.514199', 'mmap', '7077888', '<>', 'git', '464994']),
+            ]
+        }
+
+        for i, arr in enumerate(self.generate_mock_input('mmap')):
+            res = Canonize().execute(arr)
+            # fmt: off
+            self.assertEqual(res, test_cases['expect'][i], f'expected: {test_cases['expect'][i]}, got: {res} for input={arr}')
+            # fmt: on
+
+    def test_rename(self):
+        test_cases = {
+            "expect": [
+                (0, ['19:52:34.722431', 'rename', '-1',
+                 '/Users/sinaee/Library/Application Support/Google/Chrome/Profile 1/IndexedDB/https_docs.google.com_0.indexeddb.leveldb/LOG', 'Google Chrome', '8803']),
+                (0, ['19:52:34.782196', 'rename', '-1', '/Users/sinaee/Library/Caches/Google/Chrome/Profile 1/Cache/Cache_Data/dcceb247e0b3a75d_0',
+                 'Google Chrome Helper', '8882']),
+                (0, ['19:52:36.107106', 'rename', '-1',
+                 '/Users/sinaee/Library/Application Support/Google/Chrome/Profile 1/.com.google.Chrome.HL1NBs', 'Google Chrome', '8803']),
+            ]
+        }
+
+        for i, arr in enumerate(self.generate_mock_input('rename')):
+            res = Canonize().execute(arr)
+            # fmt: off
+            self.assertEqual(res, test_cases['expect'][i], f'expected: {test_cases['expect'][i]}, got: {res} for input={arr}')
+            # fmt: on
+
+    def test_mkdir(self):
+        test_cases = {
+            "expect": [
+                (0, ['19:52:17.969603', 'mkdir', '-1',
+                 '/Library/Application Support/Cisco/AMP for Endpoints Connector/scannertmp/20240329_195217-scantemp.524e726695', 'ampscansvc', '8242']),
+                (0, ['19:52:18.516542', 'mkdir', '-1',
+                 'private/var/folders/qk/4xtqd_nn3kx8q5m4df7prpzh0000gp/T', 'git', '464994']),
+                (0, ['19:52:18.523903', 'mkdir', '-1',
+                 'private/var/folders/qk/4xtqd_nn3kx8q5m4df7prpzh0000gp/T', 'git', '464995'])
+            ]
+        }
+
+        for i, arr in enumerate(self.generate_mock_input('mkdir')):
+            res = Canonize().execute(arr)
+            # fmt: off
+            self.assertEqual(res, test_cases['expect'][i], f'expected: {test_cases['expect'][i]}, got: {res} for input={arr}')
+            # fmt: on
+
+    def test_write(self):
+        test_cases = {
+            "expect": [
+                (0, ['19:52:17.818965', 'write', '17', 'Code Helper', '21271']),
+                (0, ['19:52:17.953316', 'write', '78', 'acumbrellaagent', '6946']),
+            ]
+        }
+
+        for i, arr in enumerate(self.generate_mock_input('write')):
+            res = Canonize().execute(arr)
+            # fmt: off
+            self.assertEqual(res, test_cases['expect'][i], f'expected: {test_cases['expect'][i]}, got: {res} for input={arr}')
+            # fmt: on
+
+    def test_read(self):
         test_cases = {
             "expect": [
                 (0, ['19:52:17.818972', 'read', '16', 'Code Helper', '21271']),
                 (0, ['19:52:17.824597', 'read', '35', 'ampdaemon', '8720']),
-                (0, ['19:52:17.882232', 'read', '33', 'ampdaemon', '8244']),
+                (0, ['19:52:17.882232', 'read', '33', 'ampdaemon', '8244'])
+            ]
+        }
+
+        # fmt: on
+        for i, arr in enumerate(self.generate_mock_input('read')):
+            res = Canonize().execute(arr)
+            # fmt: off
+            self.assertEqual(res, test_cases['expect'][i], f'expected: {test_cases['expect'][i]}, got: {res} for input={arr}')
+            # fmt: on
+
+    def test_open(self):
+        test_cases = {
+            "expect": [
                 (0, ['19:53:11.248385', 'open', '35', 'Library/Mail/V8/E7E363C2-BB21-4A69-A1E5-CB22FB478997/[Gmail].mbox/All Mail.mbox/D22A1D5B-AA8F-41A3-892E-930CF85504E8/Data/8/9/3/Messages/398336.partial.emlx', 'ampdaemon', '250630']),
                 (0, ['19:52:34.635146', 'open', '33',
                  '/Users/sinaee/Library/Application Support/Google/Chrome/Profile 1/Shortcuts', 'ampdaemon', '250630']),
                 (0, ['19:52:34.651249', 'open', '38',
                  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', 'ampdaemon', '8640']),
-                (0, ['19:53:19.842752', 'close', '64', 'Code Helper', '21316']),
-                (0, ['19:52:57.953020', 'close', '3', 'com.docker.cli', '466051']),
-                (0, ['19:52:19.418225', 'close', '8088', 'lsof', '465025']),
-                (0, ['19:52:19.416572', 'close', '1045', 'lsof', '465025']),
                 (0,
                  ["18:46:30.430549", "open", "-1", "/Users/sinaee/Library/Application Support/Google/Chrome/Profile", "Google Chrome", "7874"])
 
@@ -295,7 +403,24 @@ class TestCanonize(unittest.TestCase):
         }
 
         # fmt: on
-        for i, arr in enumerate(self.generate_mock_input()):
+        for i, arr in enumerate(self.generate_mock_input(syscall='open')):
+            res = Canonize().execute(arr)
+            # fmt: off
+            self.assertEqual(res, test_cases['expect'][i], f'expected: {test_cases['expect'][i]}, got: {res} for input={arr}')
+            # fmt: on
+
+    def test_close(self):
+        test_cases = {
+            "expect": [
+                (0, ['19:53:19.842752', 'close', '64', 'Code Helper', '21316']),
+                (0, ['19:52:57.953020', 'close', '3', 'com.docker.cli', '466051']),
+                (0, ['19:52:19.418225', 'close', '8088', 'lsof', '465025']),
+                (0, ['19:52:19.416572', 'close', '1045', 'lsof', '465025'])
+            ]
+        }
+
+        # fmt: on
+        for i, arr in enumerate(self.generate_mock_input(syscall='close')):
             res = Canonize().execute(arr)
             # fmt: off
             self.assertEqual(res, test_cases['expect'][i], f'expected: {test_cases['expect'][i]}, got: {res} for input={arr}')
