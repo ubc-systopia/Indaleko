@@ -95,7 +95,7 @@ class TestFilterWithPos(unittest.TestCase):
         }
 
         for title, input in test_cases.items():
-            print(f'... running test "{title}"')
+            # print(f'... running test "{title}"')
 
             for pos in range(3):
                 # FilterField(input, (position, contains_value))
@@ -119,7 +119,7 @@ class TestFilterWithPos(unittest.TestCase):
         }
 
         for title, test_case in test_cases.items():
-            print(f'running "{title}"; test_args={test_case}')
+            # print(f'running "{title}"; test_args={test_case}')
             query, pos, input = test_case["query"], test_case["pos"], test_case["input"]
             status, result = FilterField((pos, query)).execute(input)
 
@@ -157,7 +157,7 @@ class TestFilterFieldsWithPos(unittest.TestCase):
         }
 
         for title, tc in test_cases.items():
-            print(title)
+            # print(title)
             pos, queries, input_arrs = tc["pos"], tc["queries"], tc["input_arrs"]
             for i, ia in enumerate(input_arrs):
                 status, res_arr = FilterFields(
@@ -181,7 +181,7 @@ class TestFilterFieldsWithPos(unittest.TestCase):
         }
 
         for title, tc in test_cases.items():
-            print(title)
+            # print(title)
             pos, queries, input_arrs = tc["pos"], tc["queries"], tc["input_arrs"]
             for ia in input_arrs:
                 status, res_arr = FilterFields(pos, queries).execute(ia)
@@ -205,7 +205,7 @@ class TestFilterFieldsWithPos(unittest.TestCase):
         }
 
         for title, tc in test_cases.items():
-            print(title)
+            # print(title)
             pos, queries, input_arrs = tc["pos"], tc["queries"], tc["input_arrs"]
             for i, ia in enumerate(input_arrs):
                 status, res_arr = FilterFields(pos, queries).execute(ia)
@@ -236,7 +236,7 @@ class TestFilterFieldsWithPos(unittest.TestCase):
         }
 
         for title, tc in test_cases.items():
-            print(title)
+            # print(title)
             pos, queries, input_arrs = tc["pos"], tc["queries"], tc["input_arrs"]
             for i, ia in enumerate(input_arrs):
                 status, res_arr = FilterFields(pos, queries).execute(ia)
