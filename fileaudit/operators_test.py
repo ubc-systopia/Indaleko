@@ -75,6 +75,13 @@ class TestToList(unittest.TestCase):
         self.assertEqual(status, 0)
         self.assertEqual(list(to_list_empty), [''])
 
+    def test_having_brackets(self):
+        input_tuple = (0, 'a b [ a d   d] a d')
+        status, to_list = ToList(sep=' ',
+                                 remove_empty_fields=True).execute(input_tuple)
+        self.assertEqual(status, 0)
+        self.assertEqual(list(to_list), ['a', 'b', '[a d d]', 'a', 'd'])
+
 
 class TestFilterWithPos(unittest.TestCase):
     def test_filter_notexist(self):
@@ -237,36 +244,62 @@ class TestFilterFieldsWithPos(unittest.TestCase):
                                  tc['expect'][i]} got=({status}, {res_arr})")
                 self.assertEqual(len(res_arr), tc["expect"][i][1])
 
+
 class TestCanonize(unittest.TestCase):
     def generate_mock_input(self):
         return [
-            (0, ['19:53:11.248385', 'open', 'F=35', '(R_______F_V_)', 'Library/Mail/V8/E7E363C2-BB21-4A69-A1E5-CB22FB478997/[Gmail].mbox/All', 'Mail.mbox/D22A1D5B-AA8F-41A3-892E-930CF85504E8/Data/8/9/3/Messages/398336.partial.emlx', '0.000218', 'ampdaemon.250630']),
-            (0, ['19:52:34.635146', 'open', 'F=33', '(R_______F_V_)', '/Users/sinaee/Library/Application', 'Support/Google/Chrome/Profile', '1/Shortcuts', '0.000185', 'ampdaemon.250630']),
-            (0, ['19:52:34.651249', 'open', 'F=38', '(R_______F___)', '/Applications/Google', 'Chrome.app/Contents/MacOS/Google', 'Chrome', '0.000035', 'ampdaemon.8640']),
-            (0, ['19:53:19.842752', 'close', 'F=64', '0.000004', 'Code', 'Helper.21316']),
-            (0, ['19:52:57.953020', 'close', 'F=3', '0.000005', 'com.docker.cli.466051']),
-            (0, ['19:52:19.418225', 'close', 'F=8088[', '9]', '0.000001', 'lsof.465025']),
-            (0, ['19:52:19.416572', 'close', 'F=1045[', '9]', '0.000001', 'lsof.465025'])
+            (0, ['19:52:17.818972', 'read', 'F=16',
+             'B=0x1', '0.000001', 'Code', 'Helper.21271']),
+            (0, ['19:52:17.824597', 'read', 'F=35',
+             '[', '35]', '0.000004', 'ampdaemon.8720']),
+            (0, ['19:52:17.882232', 'read', 'F=33',
+             'B=0x92c', '0.000008', 'ampdaemon.8244']),
+            (0, ['19:53:11.248385', 'open', 'F=35', '(R_______F_V_)', 'Library/Mail/V8/E7E363C2-BB21-4A69-A1E5-CB22FB478997/[Gmail].mbox/All',
+             'Mail.mbox/D22A1D5B-AA8F-41A3-892E-930CF85504E8/Data/8/9/3/Messages/398336.partial.emlx', '0.000218', 'ampdaemon.250630']),
+            (0, ['19:52:34.635146', 'open', 'F=33', '(R_______F_V_)', '/Users/sinaee/Library/Application',
+             'Support/Google/Chrome/Profile', '1/Shortcuts', '0.000185', 'ampdaemon.250630']),
+            (0, ['19:52:34.651249', 'open', 'F=38', '(R_______F___)', '/Applications/Google',
+             'Chrome.app/Contents/MacOS/Google', 'Chrome', '0.000035', 'ampdaemon.8640']),
+            (0, ['19:53:19.842752', 'close', 'F=64',
+             '0.000004', 'Code', 'Helper.21316']),
+            (0, ['19:52:57.953020', 'close', 'F=3',
+             '0.000005', 'com.docker.cli.466051']),
+            (0, ['19:52:19.418225', 'close',
+             'F=8088[', '9]', '0.000001', 'lsof.465025']),
+            (0, ['19:52:19.416572', 'close',
+             'F=1045[', '9]', '0.000001', 'lsof.465025']),
+            (0,
+             ["18:46:30.430549", "open", "[", "2]", "(R_____N____X)", "/Users/sinaee/Library/Application", "Support/Google/Chrome/Profile",  "0.000011", "Google", "Chrome.7874"])
 
         ]
 
     def test_pass(self):
         test_cases = {
-            "expect":[
+            "expect": [
+                (0, ['19:52:17.818972', 'read', '16', 'Code Helper', '21271']),
+                (0, ['19:52:17.824597', 'read', '35', 'ampdaemon', '8720']),
+                (0, ['19:52:17.882232', 'read', '33', 'ampdaemon', '8244']),
                 (0, ['19:53:11.248385', 'open', '35', 'Library/Mail/V8/E7E363C2-BB21-4A69-A1E5-CB22FB478997/[Gmail].mbox/All Mail.mbox/D22A1D5B-AA8F-41A3-892E-930CF85504E8/Data/8/9/3/Messages/398336.partial.emlx', 'ampdaemon', '250630']),
-                (0, ['19:52:34.635146', 'open', '33', '/Users/sinaee/Library/Application Support/Google/Chrome/Profile 1/Shortcuts', 'ampdaemon', '250630']),
-                (0, ['19:52:34.651249', 'open', '38', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', 'ampdaemon', '8640']),
+                (0, ['19:52:34.635146', 'open', '33',
+                 '/Users/sinaee/Library/Application Support/Google/Chrome/Profile 1/Shortcuts', 'ampdaemon', '250630']),
+                (0, ['19:52:34.651249', 'open', '38',
+                 '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', 'ampdaemon', '8640']),
                 (0, ['19:53:19.842752', 'close', '64', 'Code Helper', '21316']),
                 (0, ['19:52:57.953020', 'close', '3', 'com.docker.cli', '466051']),
                 (0, ['19:52:19.418225', 'close', '8088', 'lsof', '465025']),
-                (0, ['19:52:19.416572', 'close', '1045','lsof', '465025'])
-        ] 
+                (0, ['19:52:19.416572', 'close', '1045', 'lsof', '465025']),
+                (0,
+                 ["18:46:30.430549", "open", "-1", "/Users/sinaee/Library/Application Support/Google/Chrome/Profile", "Google Chrome", "7874"])
+
+            ]
         }
 
+        # fmt: on
         for i, arr in enumerate(self.generate_mock_input()):
             res = Canonize().execute(arr)
+            # fmt: off
             self.assertEqual(res, test_cases['expect'][i], f'expected: {test_cases['expect'][i]}, got: {res} for input={arr}')
-
+            # fmt: on
 
 
 if __name__ == "__main__":
