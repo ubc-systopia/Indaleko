@@ -264,85 +264,139 @@ class FilterFields(IOperator):
 
 
 class Canonize:
+    """
+    Canonize class is responsible for cleaning and extracting structured information
+    from system call data.
+    """
+
     fid_pattern = r'F=(-?\d+).*'
     time_spent_pattern = r"\d+\.\d+"
     no_path_syscalls = ('write', 'read', 'close')
     no_fid_syscalls = ('mkdir', 'rename')
 
     def __init__(self):
+        """
+        Initializes Canonize object.
+        """
         pass
 
-    def clean(self, word: str):
+    def clean(self, word: str) -> str:
+        """
+        Cleans the input word by removing leading and trailing square brackets.
+
+        Args:
+            word (str): Input string to be cleaned.
+
+        Returns:
+            str: Cleaned string.
+        """
         return word.strip('[').strip(']')
 
-    def extract_fid(self, word: str):
+    def extract_fd(self, word: str) -> str:
+        """
+        Extracts file ID from the given string. It has to have the F=XXX pattern
+
+        Args:
+            word (str): Input string.
+
+        Returns:
+            str: Extracted file descriptor or None if not found.
+        """
         if (fid_match := re.search(Canonize.fid_pattern, word)):
             return fid_match.group(1)
         return None
 
-    def find_tspent_index(self, arr):
+    def find_tspent_index(self, arr: typing.List[str]) -> int:
+        """
+        Finds the index of the time spent pattern in the given array.
+
+        Args:
+            arr (List[str]): List of strings.
+
+        Returns:
+            int: Index of the time spent pattern, or -1 if not found.
+        """
         for i in range(len(arr)-1, -1, -1):
             if re.fullmatch(Canonize.time_spent_pattern, arr[i]):
                 return i
         return -1
 
-    def extract_path_pid_procname(self, arr: typing.List[str], syscall: str):
+    def extract_path_pid_procname(self, arr: typing.List[str], syscall: str) -> typing.Tuple[str, str, str]:
+        """
+        Extracts path, PID, and process name from the given array based on the syscall.
+
+        Args:
+            arr (List[str]): List of strings.
+            syscall (str): System call name.
+
+        Returns:
+            Tuple[str, str, str]: Tuple containing path, PID, and process name.
+        """
         path, pid, procname = None, None, None
 
-        # 0. find pid; the last element has a pid attached to it
+        # Find pid; the last element has a pid attached to it
         _, pid = arr[-1].rsplit('.', 1)
 
-        # find time spent index
+        # Find time spent index
         tspent_index = self.find_tspent_index(arr)
         assert tspent_index != - \
             1, f'cannot find a timespent index for input {arr[1]}'
 
-        # check if it has a W; see man fs_usage
+        # Check if it has a W; see man fs_usage
         has_w = False
         if arr[tspent_index+1].lower().strip() == 'w':
             tspent_index += 1
             has_w = True
 
-        # 1. find path
+        # Find path
         if syscall in Canonize.no_path_syscalls:
-            # there is no path to find; e.g. read or close
+            # There is no path to find; e.g., read or close
             pass
         else:
-            # path exists for this syscall; e.g. open
+            # Path exists for this syscall; e.g., open
             search_idx = tspent_index - has_w
             beg_idx = None
             for i in range(search_idx, -1, -1):
                 token = arr[i]
 
-                # skip (----) and [---] fields which related to the open and error numbers
+                # Skip (----) and [---] fields which are related to the open and error numbers
                 if (token.startswith('(') and token.endswith(')')) or \
                         (token.startswith('[') and token.endswith(']')) or \
                         (token.startswith('B=') or token.startswith("F=")):
                     beg_idx = i
                     break
-            if beg_idx == None and syscall in Canonize.no_fid_syscalls:
+            if beg_idx is None and syscall in Canonize.no_fid_syscalls:
                 beg_idx = -1
-            assert beg_idx != None, f'cannot find the beg index in {
+            assert beg_idx is not None, f'cannot find the beg index in {
                 arr[:search_idx+1]}'
             path = ' '.join(arr[beg_idx+1:search_idx])
 
-        # 3. find procname
-        # any thing after tspent_index to the end contains the procname; we should remove the '.pid' from the end of it
+        # Find procname
+        # Anything after tspent_index to the end contains the procname; we should remove the '.pid' from the end of it
         procname = ' '.join(arr[tspent_index+1:])[:-(len(pid)+1)]
 
         return (path, pid, procname)
 
-    def execute(self, input_arr) -> tuple[int, typing.List]:
+    def execute(self, input_arr) -> typing.Tuple[int, typing.List]:
+        """
+        Executes the processing of the input array.
+
+        Args:
+            input_arr: Input array.
+
+        Returns:
+            Tuple[int, List]: A tuple containing status and list of processed elements.
+        """
         ret = []
         status, arr = input_arr
         if status == 0:
             time, action, *details = arr
             ret.extend([self.clean(s) for s in [time, action]])
 
-            fid = self.extract_fid(details[0])
-            if fid == None:
-                fid = "-1"
-            ret.append(fid)
+            fd = self.extract_fd(details[0])
+            if fd is None:
+                fd = "-1"
+            ret.append(fd)
 
             path, pid, procname = self.extract_path_pid_procname(
                 details, action.lower())
