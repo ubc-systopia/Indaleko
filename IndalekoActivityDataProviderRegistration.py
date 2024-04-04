@@ -18,8 +18,9 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
-import uuid
+import logging
 import msgpack
+import uuid
 
 from Indaleko import Indaleko
 from IndalekoDBConfig import IndalekoDBConfig
@@ -45,6 +46,7 @@ class IndalekoActivityDataProviderRegistration(IndalekoRecord):
     def __init__(self, **kwargs):
         '''Create an instance of the IndalekoActivityRegistration class.'''
         assert isinstance(kwargs, dict), 'kwargs must be a dict'
+        print('IndalekoActivityDataProviderRegistration: ', kwargs)
         self.set_identifier(**{
             'Identifier' : kwargs.get('Identifier', str(uuid.UUID('00000000-0000-0000-0000-000000000000'))),
             'Version' : kwargs.get('Version', '1.0'),
@@ -211,8 +213,7 @@ class IndalekoActivityDataProviderRegistrationService(IndalekoSingleton):
         '''Return the provider with the given name.'''
         providers = IndalekoActivityDataProviderRegistrationService().\
             activity_providers.find_entries(name=name)
-        print(providers)
-        return {}
+        return providers
 
     @staticmethod
     def get_provider_list() -> list:
@@ -229,15 +230,12 @@ class IndalekoActivityDataProviderRegistrationService(IndalekoSingleton):
         '''Return a provider.'''
         if 'identifier' in kwargs:
             provider = self.lookup_provider_by_identifier(kwargs['identifier'])
-            print('found provider by identifier')
         elif 'name' in kwargs:
             provider = self.lookup_provider_by_name(kwargs['name'])
-            print('found provider by name')
         else:
             raise ValueError('Must specify either identifier or name.')
         if provider is None:
             provider = self.register_provider(**kwargs)
-            print('registered provider')
         return provider
 
     @staticmethod
@@ -282,10 +280,10 @@ class IndalekoActivityDataProviderRegistrationService(IndalekoSingleton):
             existing_collection = IndalekoCollections.\
                 get_collection(activity_provider_collection_name)
             if existing_collection is not None:
-                print(f'Collection {activity_provider_collection_name} exists, deleting')
+                logging.info('Collection %s exists, deleting', activity_provider_collection_name)
                 existing_collection.delete_collection(activity_provider_collection_name)
             else:
-                print(f'Collection {activity_provider_collection_name} does not exist')
+                logging.info('Collection %s does not exist', activity_provider_collection_name)
                 return False
         except ValueError:
             pass
@@ -296,22 +294,22 @@ class IndalekoActivityDataProviderRegistrationService(IndalekoSingleton):
         existing_provider = self.lookup_provider_by_identifier(identifier)
         if existing_provider is None:
             return False
-        print(f'Deleting provider {existing_provider}')
+        logging.info('Deleting provider %s', identifier)
         self.activity_providers.delete(identifier)
         return False
 
     def register_provider(self, **kwargs) -> tuple:
         '''Register an activity data provider.'''
         assert 'Identifier' in kwargs, 'Identifier must be in kwargs'
+        print('Registering provider: ', kwargs)
         existing_provider = self.lookup_provider_by_identifier(kwargs['Identifier'])
-        print(existing_provider)
         if existing_provider is not None and len(existing_provider) > 0:
             raise NotImplementedError('Provider already exists, not updating.')
         activity_registration = IndalekoActivityDataProviderRegistration(**kwargs)
         self.activity_providers.insert(activity_registration.to_dict())
         existing_provider = self.lookup_provider_by_identifier(kwargs['Identifier'])
         assert existing_provider is not None, 'Provider creation failed'
-        print(f'Registered Provider {kwargs['Identifier']}')
+        print(f"Registered Provider {kwargs['Identifier']}")
         activity_provider_collection = None
         create_collection = kwargs.get('CreateCollection', True)
         if create_collection:
