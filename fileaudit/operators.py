@@ -73,6 +73,19 @@ class InputReader(IReader):
             yield (1, f"Error: {str(e)}")
 
 
+class FileInputReader(IReader):
+    def __init__(self, input_file_path: str):
+        from os import path
+
+        self.input_filepath = input_file_path
+        assert path.exists(self.input_filepath), f'the input file does not exists at {self.input_filepath}'
+
+    def run(self):
+        with open(self.input_filepath) as input_file:
+            for line in input_file:
+                yield (0, line)
+
+
 class TrSpaces(IOperator):
     def execute(self, input_tuple: tuple[int, str]):
         return (0, re.sub(r'\s+', ' ', input_tuple[1]))
