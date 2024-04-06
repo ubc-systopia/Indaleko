@@ -17,18 +17,37 @@ def to_csv(t, header: bool = False):
 
 
 def main():
+    from os import path
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('--time', '-t', dest='time', type=int,
-                        help='total time in secs to run fs_usage', default=1)
+
+    subparsers = parser.add_subparsers(title='subcommands', dest='subcommands')
+
+    fs_usage_parser = subparsers.add_parser(
+        'fs_usage', help="fs_usage subcommand (mac)")
+    fs_usage_parser.add_argument('--time', '-t', dest='time', type=int,
+                                 help='total time in secs to run fs_usage', default=1)
+
+    file_input_parser = subparsers.add_parser(
+        'file_input', help='reads from the input file')
+    file_input_parser.add_argument('--input-file', '-i', dest='input_file',
+                                   type=str, help='the input file')
 
     args = parser.parse_args()
-    command = (
-        'sudo fs_usage -e -w -f filesys -t ' + str(args.time)
-    )
-    p = pipeline.Pipeline(operators.InputReader([command]))
 
-    to_csv(None, header=True)
+    input_reader = None
+    match args.subcommands:
+        case 'fs_usage':
+            command = (
+                'sudo fs_usage -e -w -f filesys -t ' + str(args.time)
+            )
+            input_reader = operators.InputReader([command])
+        case 'file_input':
+            assert path.exists(args.input_file), f'the input file does not exist at {args.input_file}'
 
+            input_reader = operators.FileInputReader(args.input_file)
+
+    p = pipeline.Pipeline(input_reader)
     p.add(
         operators.TrSpaces()
     ).add(
@@ -39,8 +58,9 @@ def main():
     ).add(
         operators.Canonize()
     ).add(
-        operators.Show(to_csv)
+        operators.Show(show_func=print_result)
     )
+
     list(p.run())
 
 
