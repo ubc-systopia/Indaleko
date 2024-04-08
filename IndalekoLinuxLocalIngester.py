@@ -125,7 +125,10 @@ class IndalekoLinuxLocalIngester(IndalekoIngester):
             raise ValueError('Data cannot be None')
         if not isinstance(data, dict):
             raise ValueError('Data must be a dictionary')
-        oid = str(uuid.uuid4())
+        if 'ObjectIdentifier' in data:
+            oid = data['ObjectIdentifier']
+        else:
+            oid = str(uuid.uuid4())
         timestamps = []
         if 'st_birthtime' in data:
             timestamps.append({

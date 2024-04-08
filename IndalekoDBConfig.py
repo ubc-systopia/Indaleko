@@ -29,8 +29,9 @@ import argparse
 from Indaleko import Indaleko
 from IndalekoLogging import IndalekoLogging
 from IndalekoDocker import IndalekoDocker
+from IndalekoSingleton import IndalekoSingleton
 
-class IndalekoDBConfig:
+class IndalekoDBConfig(IndalekoSingleton):
     """
     Class used to read a configuration file, connect to, and set-up (if
     needed) the database.
@@ -39,6 +40,9 @@ class IndalekoDBConfig:
     default_db_config_file = './config/indaleko-db-config.ini'
 
     def __init__(self, config_file: str = default_db_config_file, no_new_config : bool = False):
+        if self._initialized:
+            return
+        self._initialized = True
         self.config_file = config_file
         self.config = None
         if os.path.exists(config_file):
@@ -48,7 +52,8 @@ class IndalekoDBConfig:
                 logging.error('Could not load config file %s: %s', config_file, e)
                 self.config ={}
             if 'database' not in self.config:
-                assert not no_new_config, 'No database section found in config file, but no new config set'
+                assert not no_new_config, \
+                    'No database section found in config file, but no new config set'
                 logging.warning('No database section found in config file %s', config_file)
                 logging.warning('Generating new config')
                 self.config = self.__generate_new_config__()
@@ -65,10 +70,16 @@ class IndalekoDBConfig:
         the database and configure it if needed'''
         if self.started:
             return True
-        url = f"http://{self.config['database']['host']}:{self.config['database']['port']}"
+        web_service_name = 'http'
+        if 'ssl' in self.config['database'] and \
+            self.config['database']['ssl'] == 'true':
+            web_service_name = 'https'
+        url = f"{web_service_name}://{self.config['database']['host']}:"
+        url += f"{self.config['database']['port']}"
         logging.debug('Connecting to %s', url)
         start_time=time.time()
         connected = False
+        timedout = False
         while True:
             try:
                 response = requests.get(url + '/_api/agency/readiness', timeout=5)
@@ -86,7 +97,10 @@ class IndalekoDBConfig:
                 timedout = True
                 break
             time.sleep(1)
-        connect_arg = f"http://{self.config['database']['host']}"
+        if timedout:
+            logging.warning('Timed out waiting for database to start')
+            return False
+        connect_arg = f"{web_service_name}://{self.config['database']['host']}"
         connect_arg += ':'
         connect_arg += f"{self.config['database']['port']}"
         logging.debug('Connecting to %s', connect_arg)
@@ -101,16 +115,16 @@ class IndalekoDBConfig:
                                      auth_method='basic')
         logging.debug('Ensuring Indaleko database is in ArangoDB')
         self.setup_database(self.config['database']['database'])
-        logging.debug(f'Ensuring Indaleko user {self.config['database']['user_name']} is in ArangoDB')
+        logging.debug('Ensuring Indaleko user %s is in ArangoDB', self.config['database']['user_name'])
         self.setup_user(self.config['database']['user_name'],
-                        self.config['database']['user_password'],
-                        [{'database': 'Indaleko', 'permission': 'rw'}])
+            self.config['database']['user_password'],
+            [{'database': 'Indaleko', 'permission': 'rw'}])
         # let's create the user's database access object
         self.db = self.client.db(self.config['database']['database'],
-                                 username=self.config['database']['user_name'],
-                                 password=self.config['database']['user_password'],
-                                 auth_method='basic',
-                                 verify=True)
+                 username=self.config['database']['user_name'],
+                 password=self.config['database']['user_password'],
+                 auth_method='basic',
+                 verify=True)
         assert self.db is not None, 'Could not connect to database'
         logging.info('Connected to database %s', self.config['database']['database'])
         return connected
@@ -156,6 +170,10 @@ class IndalekoDBConfig:
     def __save_config__(self):
         """Save the config information in the object."""
         logging.debug('Saving config to %s', self.config_file)
+        parent_dir = os.path.dirname(self.config_file)
+        if not os.path.exists(parent_dir):
+            logging.debug("folder %s doesn't exist. creating one ...",parent_dir)
+            os.makedirs(parent_dir, exist_ok=True)
         with open(self.config_file, 'wt', encoding='utf-8-sig') as config_file:
             self.config.write(config_file)
 
@@ -164,6 +182,10 @@ class IndalekoDBConfig:
         self.config = configparser.ConfigParser()
         self.config.read(self.config_file, encoding='utf-8-sig')
         logging.debug('Loaded config from %s', self.config_file)
+        parent_dir=os.path.dirname(self.config_file)
+        if not os.path.exists(parent_dir):
+            logging.debug("folder %s doesn't exist, creating one ... ", parent_dir)
+            os.makedirs(parent_dir, exist_ok=True)
         if 'database' not in self.config:
             logging.error('No database section found in config file %s', self.config_file)
             raise ValueError('No database section found in config file')
@@ -259,6 +281,7 @@ class IndalekoDBConfig:
 
 def check_command(args : argparse.Namespace) -> None:
     """Check the database connection."""
+    assert args is not None, 'No args found'
     logging.debug('check_command invoked')
     print('Checking database connection')
     db_config = IndalekoDBConfig()
@@ -274,13 +297,14 @@ def check_command(args : argparse.Namespace) -> None:
 
 def setup_command(args : argparse.Namespace) -> None:
     """Set up the database."""
+    assert args is not None, 'No args found'
     logging.info('Setting up new database configuration')
     print('Setting up new database configuration')
     db_config = IndalekoDBConfig()
     if db_config is None:
         logging.critical('Could not create IndalekoDBConfig object')
         exit(1)
-    logging.info('Intialize Docker ArangoDB')
+    logging.info('Initialize Docker ArangoDB')
     print('Initialize Docker ArangoDB')
     indaleko_docker = IndalekoDocker()
     logging.info('Create container %s with volume %s',
@@ -319,15 +343,15 @@ def reset_command(args : argparse.Namespace) -> None:
     # In either case we will delete the container and volume
     logging.warning('DB Reset: stopping container %s', config.config['database']['container'])
     print('DB Reset: stopping container ' +\
-            f'{config.config['database']['container']}')
+            f"{config.config['database']['container']}")
     indaleko_docker.stop_container(config.config['database']['container'])
     logging.warning('DB Reset: deleting container %s', config.config['database']['container'])
     print('DB Reset: deleting container ' +\
-            f'{config.config['database']['container']}')
+            f"{config.config['database']['container']}")
     indaleko_docker.delete_container(config.config['database']['container'])
     logging.warning('DB Reset: deleting volume %s', config.config['database']['volume'])
     print('DB Reset: deleting volume ' +\
-            f'{config.config['database']['volume']}')
+            f"{config.config['database']['volume']}")
     indaleko_docker.delete_volume(config.config['database']['volume'])
     if args.rebuild:
         logging.info('DB Reset: Rebuild requested')
@@ -347,6 +371,7 @@ def reset_command(args : argparse.Namespace) -> None:
 
 def show_command(args : argparse.Namespace) -> None:
     """Show the database configuration."""
+    assert args is not None, 'No args found'
     logging.info('Show command starts')
     if not os.path.exists(IndalekoDBConfig.default_db_config_file):
         logging.critical('No config file found')
@@ -355,26 +380,28 @@ def show_command(args : argparse.Namespace) -> None:
              f'{IndalekoDBConfig.default_db_config_file}')
     print('Config file found: loading')
     config = IndalekoDBConfig()
-    print(f'Created at {config.config['database']['timestamp']}')
-    print(f'Container name: {config.config['database']['container']}')
-    print(f'Volume name: {config.config['database']['volume']}')
-    print(f'Host: {config.config['database']['host']}')
-    print(f'Port: {config.config['database']['port']}')
-    print(f'Admin user: {config.config['database']['admin_user']}')
-    print(f'Admin password: {config.config['database']['admin_passwd']}')
-    print(f'Database name: {config.config['database']['database']}')
-    print(f'User name: {config.config['database']['user_name']}')
-    print(f'User password: {config.config['database']['user_password']}')
+    print(f"Created at {config.config['database']['timestamp']}")
+    print(f"Container name: {config.config['database']['container']}")
+    print(f"Volume name: {config.config['database']['volume']}")
+    print(f"Host: {config.config['database']['host']}")
+    print(f"Port: {config.config['database']['port']}")
+    print(f"Admin user: {config.config['database']['admin_user']}")
+    print(f"Admin password: {config.config['database']['admin_passwd']}")
+    print(f"Database name: {config.config['database']['database']}")
+    print(f"User name: {config.config['database']['user_name']}")
+    print(f"User password: {config.config['database']['user_password']}")
     logging.info('Show command complete')
 
 def update_command(args : argparse.Namespace) -> None:
     """Update to most recent version of ArangoDB"""
     # Note: this is just a wrapper around the docker support for this.
+    assert args is not None, 'No args found'
     raise NotImplementedError('Not implemented yet')
 
 def default_command_handler(args : argparse.Namespace) -> None:
     """Default command handler."""
     # Do we already have a config file?
+    assert args is not None, 'No args found'
     logging.debug('default_command_handler invoked')
     if os.path.exists(IndalekoDBConfig.default_db_config_file):
         check_command(args)

@@ -67,6 +67,11 @@ from IndalekoObjectSchema import IndalekoObjectSchema
 from IndalekoServicesSchema import IndalekoServicesSchema
 from IndalekoRelationshipSchema import IndalekoRelationshipSchema
 from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
+from IndalekoActivityDataProviderRegistrationSchema \
+    import IndalekoActivityDataProviderRegistrationSchema
+from IndalekoActivityContextSchema import IndalekoActivityContextSchema
+from IndalekoUserSchema import IndalekoUserSchema
+from IndalekoUserRelationshipSchema import IndalekoUserRelationshipSchema
 
 class Indaleko:
     '''This class defines constants used by Indaleko.'''
@@ -74,10 +79,16 @@ class Indaleko:
     default_config_dir = './config'
     default_log_dir = './logs'
 
+    default_db_timeout=10
+
     Indaleko_Objects = 'Objects'
     Indaleko_Relationships = 'Relationships'
     Indaleko_Services = 'Services'
     Indaleko_MachineConfig = 'MachineConfig'
+    Indaleko_ActivityDataProviders = 'ActivityDataProviders'
+    Indaleko_ActivityContext = 'ActivityContext'
+    Indaleko_Users = 'Users'
+    Indaleko_User_Relationships = 'UserRelationships'
 
     Indaleko_Prefix = 'indaleko'
 
@@ -145,7 +156,61 @@ class Indaleko:
             'schema' : IndalekoMachineConfigSchema.get_schema(),
             'edge' : False,
             'indices' : { },
-        }
+        },
+        Indaleko_ActivityDataProviders : {
+            'schema' : IndalekoActivityDataProviderRegistrationSchema.get_schema(),
+            'edge' : False,
+            'indices' : {
+                'identifier' : {
+                    'fields' : ['ActivityProvider'],
+                    'unique' : True,
+                    'type' : 'persistent'
+                },
+            },
+        },
+        Indaleko_ActivityContext : {
+            'schema' : IndalekoActivityContextSchema.get_schema(),
+            'edge' : False,
+            'indices' : {
+                'identifier' : {
+                    'fields' : ['ActivityContextIdentifier'],
+                    'unique' : True,
+                    'type' : 'persistent'
+                },
+            },
+        },
+       Indaleko_Users : {
+            'schema' : IndalekoUserSchema.get_schema(),
+            'edge' : False,
+            'indices' : {
+                'identifier' : {
+                    'fields' : ['Identifier'],
+                    'unique' : True,
+                    'type' : 'persistent'
+                },
+            },
+        },
+        Indaleko_User_Relationships : {
+            'schema' : IndalekoUserRelationshipSchema.get_schema(),
+            'edge' : True,
+            'indices' : {
+                'Identity1' : {
+                    'fields' : ['Identity1'],
+                    'unique' : False,
+                    'type' : 'persistent'
+                },
+                'Identity2' : {
+                    'fields' : ['Identity2'],
+                    'unique' : False,
+                    'type' : 'persistent'
+                },
+                'edge' : {
+                    'fields' : ['Identity1', 'Identity2'],
+                    'unique' : True,
+                    'type' : 'persistent'
+                },
+            }
+        },
     }
 
     @staticmethod
@@ -161,6 +226,7 @@ class Indaleko:
             print('ip is not valid')
             return False
 
+    @staticmethod
     def validate_hostname(hostname : str) -> bool:
         """Given a string, verify that it is in fact a valid hostname."""
         if not isinstance(hostname, str):
@@ -175,8 +241,11 @@ class Indaleko:
 
     @staticmethod
     def create_secure_directories(directories : list = None) -> None:
+        '''Create secure directories for Indaleko.'''
         if directories is None:
-            directories = [Indaleko.default_data_dir, Indaleko.default_config_dir, Indaleko.default_log_dir]
+            directories = [Indaleko.default_data_dir,
+                           Indaleko.default_config_dir,
+                           Indaleko.default_log_dir]
         for directory in directories:
             if not os.path.exists(directory):
                 os.makedirs(directory)
@@ -250,7 +319,39 @@ class Indaleko:
         if hasattr(logging, 'FATAL'):
             logging_levels.append('FATAL')
     else:
-        logging_levels = sorted(set([level for level in logging.getLevelNamesMapping()]))
+        logging_levels = sorted(set(logging.getLevelNamesMapping()))
+
+    @staticmethod
+    def generate_final_name(args : list, **kwargs) -> str:
+        '''
+        This is a helper function for generate_file_name, which throws
+        a pylint error as having "too many branches".  An explicit args list
+        threw a "too many arguments" error, so this is a compromise - send in a
+        list, and then unpack it manually. Why this is better is a mystery of
+        the faith.
+        '''
+        prefix = args[0]
+        target_platform = args[1]
+        service = args[2]
+        ts = args[3]
+        suffix = args[4]
+        max_len = args[5]
+        name = prefix
+        if '-' in prefix:
+            raise ValueError('prefix must not contain a hyphen')
+        if '-' in suffix:
+            raise ValueError('suffix must not contain a hyphen')
+        name += f'-plt={target_platform}'
+        name += f'-svc={service}'
+        for key, value in kwargs.items():
+            if '-' in key or '-' in value:
+                raise ValueError(f'key and value must not contain a hyphen: {key, value}')
+            name += f'-{key}={value}'
+        name += ts
+        name += f'.{suffix}'
+        if len(name) > max_len:
+            raise ValueError('file name is too long' + '\n' + name + '\n' + str(len(name)))
+        return name
 
     @staticmethod
     def generate_file_name(**kwargs) -> str:
@@ -294,28 +395,20 @@ class Indaleko:
         if 'suffix' in kwargs:
             suffix = kwargs['suffix']
             del kwargs['suffix']
-        if '-' in prefix:
-            raise ValueError('prefix must not contain a hyphen')
-        if '-' in suffix:
-            raise ValueError('suffix must not contain a hyphen')
         if suffix.startswith('.'):
             suffix = suffix[1:] # avoid ".." for suffix
         if '-' in target_platform:
             raise ValueError('platform must not contain a hyphen')
         if '-' in service:
             raise ValueError('service must not contain a hyphen')
-        name = prefix
-        name += f'-plt={target_platform}'
-        name += f'-svc={service}'
-        for key, value in kwargs.items():
-            if '-' in key or '-' in value:
-                raise ValueError(f'key and value must not contain a hyphen: {key, value}')
-            name += f'-{key}={value}'
-        name += ts
-        name += f'.{suffix}'
-        if len(name) > max_len:
-            raise ValueError('file name is too long' + '\n' + name + '\n' + str(len(name)))
-        return name
+        return Indaleko.generate_final_name(
+            [prefix,
+            target_platform,
+            service,
+            ts,
+            suffix,
+            max_len],
+            **kwargs)
 
     @staticmethod
     def extract_keys_from_file_name(file_name : str) -> dict:
@@ -330,10 +423,10 @@ class Indaleko:
         fields = file_name.split('-')
         prefix = fields.pop(0)
         data['prefix'] = prefix
-        platform = fields.pop(0)
-        if not platform.startswith('plt='):
+        target_platform = fields.pop(0)
+        if not target_platform.startswith('plt='):
             raise ValueError('platform field must start with plt=')
-        data['platform'] = platform[4:]
+        data['platform'] = target_platform[4:]
         service = fields.pop(0)
         if not service.startswith('svc='):
             raise ValueError('service field must start with svc=')
