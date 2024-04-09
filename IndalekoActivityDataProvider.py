@@ -50,7 +50,8 @@ class IndalekoActivityDataProvider():
             self.label = kwargs.get('Label', None)
             self.value = kwargs.get('Value', None)
             self.description = kwargs.get('Description', None)
-            if self.label not in IndalekoActivityDataProvider.known_activity_data_provider_timestamps:
+            if self.label not in \
+                IndalekoActivityDataProvider.known_activity_data_provider_timestamps:
                 raise ValueError(f'Unknown activity data provider timestamp {self.label}')
             if Indaleko.validate_iso_timestamp(self.value) is False:
                 raise ValueError(f'Invalid ISO timestamp {self.value}')

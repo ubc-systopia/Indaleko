@@ -96,6 +96,10 @@ class IndalekoActivityDataProviderRegistration(IndalekoRecord):
         }
         return self
 
+    def get_activity_data_collection(self) -> IndalekoCollection:
+        '''Return the collection for the activity provider.'''
+        return IndalekoCollections.get_collection(self.activity_data_collection_name)
+
     def get_activity_collection_uuid(self) -> str:
         '''Return the UUID for the activity collection.'''
         return self.activity_collection_uuid
