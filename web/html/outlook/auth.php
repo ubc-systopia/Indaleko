@@ -12,10 +12,12 @@ use GuzzleHttp\Client;
 
 if(isset($_GET['token'])) {
   try {
-    $filename = 'OD_login.json';
-    file_put_contents($filename, json_encode([
-      'od_token' => $_GET['token']
-    ]));
+    if(isset($_GET['code'])) {
+      $filename = 'OD_login_('.$_GET['code'].')_.json';
+      file_put_contents($filename, json_encode([
+        'od_token' => $_GET['token']
+      ]));
+    }
   } catch(Exception $e) {
     echo $e->getMessage();
   }
@@ -56,7 +58,7 @@ $response_data = json_decode($response->getBody(), true);
 // Extract access token from response
 $access_token = $response_data['access_token'];
 
-header("location:https://activitycontext.work/outlook/auth.php?token=".$access_token."&view=".$_GET['view']);
+header("location:https://activitycontext.work/outlook/auth.php?token=".$access_token."&code=".$code_verifier);
 } catch(Exception $e) {
   die($e);
 }

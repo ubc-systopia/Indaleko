@@ -1,15 +1,8 @@
 const LOGIN_URL = 'https://activitycontext.work/outlook/login.php';
-console.log(`LOGIN_URL === ${LOGIN_URL}`);
 
-const sessionStorageForOutlook = {
-    accessToken: null,
-    setItem: function(token) {
-        this.accessToken = token;
-    },
-    getItem: function() {
-        return this.accessToken;
-    }
-};
+let ACCESS_TOKEN = null;
+
+
 // Generate a random code verifier
 function generateCodeVerifier(length) {
     var charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
@@ -54,108 +47,111 @@ function objectToUrlEncoded(object) {
 
 function onSendHandler(event) {
     Office.onReady(function () {
-        console.log('On send handler called...');
-        // Retrieve attachments
-        const finalData = {
-            emailId: null,
-            subject: null,
-            senderEmailAddress: null,
-            recipientEmailAddresses: null,
-            attachments: null
-        };
-        Office.context.mailbox.item.getAttachmentsAsync(function (result) {
-            
-            if (result.status === Office.AsyncResultStatus.Succeeded) {
-                var attachments = result.value;
-                var dataToSend = []; // Array to hold attachment and OneDrive link data
-                // Process regular attachments
-                attachments.forEach(function (attachment) {
-                    var attachmentData = {
-                        fileName: attachment.name,
-                        attachmentClass: 'regular',
-                        metas: attachment
-                    };
-                    dataToSend.push(attachmentData);
-                });
-
-                // Retrieve HTML body of the email
-                Office.context.mailbox.item.body.getAsync("html", async function (result) {
-                    if (result.status === Office.AsyncResultStatus.Succeeded) {
-                        var emailBody = result.value;
-                        // Check for OneDrive links in the HTML body
-                        var oneDriveLinks = extractOneDriveLinks(emailBody);
-                        for(let i=0; i < oneDriveLinks.length; i++) {
-                            let link = oneDriveLinks[i];
-                            console.log(`getting fullLink....`);
-                            let oneDriveData = await expandOneDriveUrlAsync(link);
-                            dataToSend.push(oneDriveData);
-                        }
-                        finalData.attachments = dataToSend;
-                    } else {
-                        console.error("Failed to retrieve email body: " + result.error.message);
-                    }
-
-                    const item = Office.context.mailbox.item;
-
-                    item.getItemIdAsync(function(result) {
-                        if (result.status === Office.AsyncResultStatus.Succeeded) {
-                            finalData.emailId = result.value;
-                            console.log("Email ID: " + result.value);
-                        } else {
-                            console.error("Error getting email ID: " + result.error.message);
-                        }
-                    });
-                
-                    // Get sender's email address
-                    item.from.getAsync(function(result) {
-                        if (result.status === Office.AsyncResultStatus.Succeeded) {
-                            var senderEmailAddress = result.value.emailAddress;
-                            finalData.senderEmailAddress = senderEmailAddress;
-                            console.log("Sender's Email Address: " + senderEmailAddress);
-                        } else {
-                            console.error("Error getting sender's email address: " + result.error.message);
-                        }
-                    });
-
-                    item.subject.getAsync(function(result) {
-                        if (result.status === Office.AsyncResultStatus.Succeeded) {
-                            var subject = result.value;
-                            finalData.subject = subject;
-                            console.log("Subject: " + subject);
-                        } else {
-                            console.error("Error getting sender's subject: " + result.error.message);
-                        }
-                    });
-                
-                    // Get recipient's email addresses
-                    item.to.getAsync(function(result) {
-                        if (result.status === Office.AsyncResultStatus.Succeeded) {
-                            var recipientEmailAddresses = result.value.map(function(recipient) {
-                                return recipient.emailAddress;
-                            });
-                            finalData.recipientEmailAddresses = recipientEmailAddresses;
-                            console.log(finalData); 
-                            sendDataToServer(finalData);
-                            event.completed({ allowEvent: true });
-                            console.log("Recipient(s) Email Address(es): " + recipientEmailAddresses.join(", "));
-                        } else {
-                            console.error("Error getting recipient's email addresses: " + result.error.message);
-                        }
-                    });
-                });
-            } else {
-                console.log("Failed to retrieve attachments: " + result.error.message);
-                event.completed({ allowEvent: true });
+        const tokenKey = getAccessToken();
+        if(tokenKey === null || !tokenKey) {
+            try {
+                Office.context.mailbox.item.notificationMessages.addAsync('NoSend', { type: 'errorMessage', message: 'Please login with Graph API in order to send mail' });
+            } catch(error) {
+                //Error in case of outlook desktop
             }
-        });
+            event.completed({ allowEvent: false, errorMessage: 'Validation failed: Your error message here' });
+        } else {
+            // Retrieve attachments
+            const finalData = {
+                emailId: null,
+                subject: null,
+                senderEmailAddress: null,
+                recipientEmailAddresses: null,
+                attachments: null
+            };
+            Office.context.mailbox.item.getAttachmentsAsync(function (result) {
+                
+                if (result.status === Office.AsyncResultStatus.Succeeded) {
+                    var attachments = result.value;
+                    var dataToSend = []; // Array to hold attachment and OneDrive link data
+                    // Process regular attachments
+                    attachments.forEach(function (attachment) {
+                        var attachmentData = {
+                            fileName: attachment.name,
+                            attachmentClass: 'regular',
+                            metas: attachment
+                        };
+                        dataToSend.push(attachmentData);
+                    });
+
+                    // Retrieve HTML body of the email
+                    Office.context.mailbox.item.body.getAsync("html", async function (result) {
+                        if (result.status === Office.AsyncResultStatus.Succeeded) {
+                            var emailBody = result.value;
+                            // Check for OneDrive links in the HTML body
+                            var oneDriveLinks = extractOneDriveLinks(emailBody);
+                            for(let i=0; i < oneDriveLinks.length; i++) {
+                                let link = oneDriveLinks[i];
+                                let oneDriveData = await expandOneDriveUrlAsync(link, tokenKey);
+                                dataToSend.push(oneDriveData);
+                            }
+                            finalData.attachments = dataToSend;
+                        } else {
+                            console.error("Failed to retrieve email body: " + result.error.message);
+                        }
+
+                        const item = Office.context.mailbox.item;
+                        
+                        item.getItemIdAsync(function(result) {
+                            if (result.status === Office.AsyncResultStatus.Succeeded) {
+                                finalData.emailId = result.value;
+                                // Get sender's email address
+                                item.from.getAsync(function(result) {
+                                    if (result.status === Office.AsyncResultStatus.Succeeded) {
+                                        var senderEmailAddress = result.value.emailAddress;
+                                        finalData.senderEmailAddress = senderEmailAddress;
+                                    } else {
+                                    }
+                                });
+
+                                item.subject.getAsync(function(result) {
+                                    if (result.status === Office.AsyncResultStatus.Succeeded) {
+                                        var subject = result.value;
+                                        finalData.subject = subject;
+                                    } else {
+                                    }
+                                });
+                            
+                                // Get recipient's email addresses
+                                item.to.getAsync(async function(result) {
+                                    if (result.status === Office.AsyncResultStatus.Succeeded) {
+                                        var recipientEmailAddresses = result.value.map(function(recipient) {
+                                            return recipient.emailAddress;
+                                        });
+                                        finalData.recipientEmailAddresses = recipientEmailAddresses;
+                                        sendDataToServer(finalData);
+                                        event.completed({ allowEvent: true });
+                                    } else {
+                                    }
+                                });
+                            }
+                        });
+                    });
+                } else {
+                    event.completed({ allowEvent: true });
+                }
+            });
+        }
     });
 }
 
+function saveAccessToken(token) {
+    localStorage.setItem('tokenKey', token);
+}
 
-function expandOneDriveUrl(shortenedUrl) {
+function getAccessToken() {
+    return localStorage.getItem('tokenKey');
+}
+
+
+async function expandOneDriveUrl(shortenedUrl, token) {
     return new Promise((resolve, reject) => {
-        document.getElementById("authResult").innerHTML = JSON.stringify(sessionStorageForOutlook);
-        const proxyUrl = `https://activitycontext.work/outlook/onedrive.php?link=${shortenedUrl}&token=${sessionStorageForOutlook.getItem("accessToken")}`;
+        const proxyUrl = `https://activitycontext.work/outlook/onedrive.php?link=${shortenedUrl}&token=${token}`;
         const xhr = new XMLHttpRequest();
         xhr.open('GET', proxyUrl);
         xhr.onreadystatechange = function() {
@@ -179,13 +175,9 @@ function expandOneDriveUrl(shortenedUrl) {
     });
 }
 
-
-
-
-
-async function expandOneDriveUrlAsync(shortenedUrl) {
+async function expandOneDriveUrlAsync(shortenedUrl, tokenKey) {
     try {
-        const expandedUrl = await expandOneDriveUrl(shortenedUrl);
+        const expandedUrl = await expandOneDriveUrl(shortenedUrl, tokenKey);
         return expandedUrl;
     } catch (error) {
         console.error('Error expanding OneDrive URL:', error);
@@ -225,58 +217,16 @@ function sendDataToServer(data) {
 Office.onReady(function () {
     // Function to check if the user is authenticated
     function isAuthenticated() {
-        console.log(`Access Token ===== ${sessionStorageForOutlook.getItem("accessToken")}`);
-        //return sessionStorageForOutlook.getItem("accessToken") !== null;
         return false;
     }
 
     // Function to handle authentication
     function authenticate() {
-        if (isOutlookDesktopClient()) {
-            authenticateDesktop();
-        } else {
-            authenticateWeb();
-        }
+        saveAccessToken(null);
+        authenticateGraph();
     }
     
-    function authenticateWeb() {
-        const CODE_VERIFIER = generateCodeVerifier(128);
-        // Construct the authorization URL with necessary parameters
-        generateCodeChallenge(CODE_VERIFIER)
-            .then((codeChallenge) => {
-                var authorizationUrl = `${LOGIN_URL}?code_challenge=${codeChallenge}&code_verifier=${CODE_VERIFIER}&view=OW`;
-    
-                // Open a new window with the authorization URL
-                var authWindow = window.open(authorizationUrl, "_blank");
-    
-                // Listen for changes in the new window's URL
-                var interval = setInterval(function () {
-                    try {
-                        // Check if the new window's URL contains the authorization code
-                        if (authWindow.location.href.indexOf("?token=") !== -1) {
-                            clearInterval(interval);
-                            authWindow.close();
-    
-                            // Extract the authorization code from the URL
-                            var accessToken = authWindow.location.href.split("?token=")[1];
-                            
-                            // Store the access token in session storage
-                            sessionStorageForOutlook.setItem(accessToken);
-    
-                            // Update UI to indicate successful authentication
-                            updateUIAfterAuthentication(accessToken);
-                        }
-                    } catch (error) {
-                        // Suppress any errors due to cross-origin security restrictions
-                    }
-                }, 500);
-            })
-            .catch((error) => {
-                console.error("Error during authentication:", error);
-            });
-    }
-    
-    function authenticateDesktop() {
+    function authenticateGraph() {
         // Construct the authorization URL with necessary parameters
         const CODE_VERIFIER = generateCodeVerifier(128);
         // Construct the authorization URL with necessary parameters
@@ -292,15 +242,13 @@ Office.onReady(function () {
                         if(Object.keys(dialog).length > 0) {
                             var interval = setInterval(function () {
                                 var xhr = new XMLHttpRequest();
-                                xhr.open("GET", "https://activitycontext.work/outlook/retrieve.php", true);
+                                xhr.open("GET", `https://activitycontext.work/outlook/retrieve.php?code=${CODE_VERIFIER}`, true);
                                 xhr.onreadystatechange = function () {
                                     if (xhr.readyState == 4 && xhr.status == 200) {
                                         var response = JSON.parse(xhr.responseText);
                                         if(response.od_token) {
-                                            document.getElementById("authResult").insertAdjacentHTML('beforeend', response.od_token);
                                             clearInterval(interval);
-                                            sessionStorageForOutlook.setItem(response.od_token);
-
+                                            saveAccessToken(response.od_token); 
                                             // Update UI to indicate successful authentication
                                             updateUIAfterAuthentication(response.od_token);
                                             dialog.close();
@@ -326,28 +274,14 @@ Office.onReady(function () {
             });
     }
     
-    
-    
-    
     // Function to update UI after successful authentication
     function updateUIAfterAuthentication(accessToken) {
         document.getElementById("authenticateButton").innerHTML = "Re-Login";
         document.getElementById("authResult").innerHTML = 'You are connected with Graph API!';
-        //document.getElementById("token").innerHTML = `Token found ${accessToken}`;
     }
-    
-    // Function to check if the add-in is running in the Outlook desktop client
-    function isOutlookDesktopClient() {
-        // Check if the Office.context.mailbox.diagnostics object is available
-        // This object is only available in the desktop client
-        return Office.context.mailbox.diagnostics !== undefined;
-    }
-    
-
     if (isAuthenticated()) {
         document.getElementById("authenticateButton").innerHTML = "Re-Login";
         document.getElementById("authResult").innerHTML = 'You are connected with Graph API!';
-    } 
-    console.log('we are here...');
+    }
     document.getElementById("authenticateButton").addEventListener("click", authenticate);
 });

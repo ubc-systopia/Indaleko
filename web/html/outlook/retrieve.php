@@ -1,6 +1,9 @@
 <?php
 // Check if the cookie is set
-$filename = 'OD_login.json';
+if(!isset($_GET['code'])) {
+    http_response_code(422);
+}
+$filename = 'OD_login_('.$_GET['code'].')_.json';
 if(file_exists($filename)) {
     // Retrieve and echo the value of the cookie
     $jsonData = file_get_contents($filename);
