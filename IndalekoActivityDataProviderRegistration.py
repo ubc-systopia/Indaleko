@@ -47,7 +47,6 @@ class IndalekoActivityDataProviderRegistration(IndalekoRecord):
     def __init__(self, **kwargs):
         '''Create an instance of the IndalekoActivityRegistration class.'''
         assert isinstance(kwargs, dict), 'kwargs must be a dict'
-        print('IndalekoActivityDataProviderRegistration: ', kwargs)
         self.set_identifier(**{
             'Identifier' : kwargs.get('Identifier',
                                       str(uuid.UUID('00000000-0000-0000-0000-000000000000'))),
@@ -76,8 +75,8 @@ class IndalekoActivityDataProviderRegistration(IndalekoRecord):
         '''Return the name of the collection for the activity provider.'''
         assert Indaleko.validate_uuid_string(identifier), \
             f'Identifier {identifier} must be a valid UUID'
-        return f'{IndalekoActivityDataProviderRegistration\
-                  .ActivityProviderDataCollectionPrefix}{identifier}'
+        prefix = IndalekoActivityDataProviderRegistration.ActivityProviderDataCollectionPrefix
+        return f'{prefix}{identifier}'
 
     def get_identifier(self, **kwargs):
         '''Return the identifier for the activity provider.'''
@@ -120,14 +119,13 @@ class IndalekoActivityDataProviderRegistration(IndalekoRecord):
                                         -> 'IndalekoActivityDataProviderRegistration':
         '''Set the name for the activity collection.'''
         self.activity_data_collection_name = collection_name
+        prefix = IndalekoActivityDataProviderRegistration.ActivityProviderDataCollectionPrefix
         assert self.activity_data_collection_name.\
-            startswith(IndalekoActivityDataProviderRegistration\
-                       .ActivityProviderDataCollectionPrefix), \
+            startswith(prefix), \
             f'Collection name {self.activity_data_collection_name} must start with \
-                {IndalekoActivityDataProviderRegistration\
-                 .ActivityProviderDataCollectionPrefix}'
+                {prefix}'
         collection_uuid = self.activity_data_collection_name[
-            len(IndalekoActivityDataProviderRegistration.ActivityProviderDataCollectionPrefix):
+            len(prefix):
             ]
         assert Indaleko.validate_uuid_string(collection_uuid), \
             f'Collection UUID {collection_uuid} must be a valid UUID'
