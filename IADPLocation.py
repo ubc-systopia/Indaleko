@@ -3,14 +3,15 @@
 import argparse
 import base64
 import datetime
-import geopy
+from icecream import ic
+from itertools import cycle
 import json
 import logging
+import math
 import msgpack
 import os
 import platform
 import requests
-import uuid
 
 if platform.system() == 'Windows':
     import asyncio
@@ -19,11 +20,10 @@ if platform.system() == 'Windows':
 from IndalekoActivityDataProvider import IndalekoActivityDataProvider
 from Indaleko import Indaleko
 from IndalekoLogging import IndalekoLogging
-from IndalekoActivityData import IndalekoActivityData
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoActivityDataProviderRegistration import IndalekoActivityDataProviderRegistrationService
-
-
+from IADPLocationData import IADPLocationData
+from IndalekoRecord import IndalekoRecord
 class IADPLocation(IndalekoActivityDataProvider):
     '''Indaleko Acivity Data Provider for location information'''
 
@@ -37,64 +37,18 @@ class IADPLocation(IndalekoActivityDataProvider):
     }
     indaleko_location_cache_time = 60 * 60 # 1 hour in seconds
     indaleko_location_distance_change_required_in_meters = 1000
-
-    class IndalekoLocationData(IndalekoActivityData):
-        '''
-        This defines the format of the Indaleko Location Data.
-        Note: at the present time it is just returning latitude and longitude,
-        even though we are gathering more metadata than that.  We can look at
-        using more in the future.
-        '''
-
-        def __init__(self, longitude : float = None, latitude : float = None, **kwargs):
-            '''Initialize the object'''
-            assert isinstance(longitude, float), 'longitude must be a float'
-            assert isinstance(latitude, float), 'latitude must be a float'
-            self.longitude = longitude
-            self.latitude = latitude
-            if 'ActivityDataIdentifier' not in kwargs:
-                kwargs['ActivityDataIdentifier'] = str(uuid.uuid4())
-            if 'ActivityDataType' not in kwargs:
-                kwargs['ActivityDataType'] = 'Location'
-            super().__init__(**kwargs)
-
-        comment = '''
-        def old_init(self, **kwargs):
-            args = {key : value for key, value in kwargs.items()}
-            self.provider = args.get('provider',
-                                     IADPLocation.indaleko_activity_provider_location_source_uuid)
-            self._key = args.get('key', str(uuid.uuid4()))
-            self.raw_data = args.get('raw_data', b'')
-            self.attributes = args.get('attributes', {})
-            print('\nattributes:', self.attributes)
-            if 'longitude' not in self.attributes:
-                self.attributes['longitude'] = None
-            if 'latitude' not in self.attributes:
-                self.attributes['latitude'] = None
-            super().__init__(
-                raw_data=self.raw_data,
-                provider=self.provider,
-                source=IADPLocation.indaleko_activity_provider_location_source,
-                attributes=self.attributes,
-                _key=self._key,
-            )
-        '''
-
-        def get_latitude(self):
-            '''Get the latitude of the device'''
-            return self.attributes['latitude']
-
-        def get_longitude(self):
-            '''Get the longitude of the device'''
-            return self.attributes['longitude']
-
-        def to_dict(self):
-            location_data = {}
-            location_data['Record'] = super().to_dict()
-            location_data['_key'] = str(uuid.uuid4())
-            location_data['longitude'] = self.longitude
-            location_data['latitude'] = self.latitude
-            return location_data
+    location_services = {
+        'ipstack' : [lambda ip, api_key, timeout=2:
+                     requests.get(f'http://api.ipstack.com/{ip}?access_key={api_key}',
+                                  timeout=timeout).json()],
+        'abstract' : [lambda ip, api_key, timeout=2:
+                           requests.get(f'https://ipgeolocation.abstractapi.com/v1/?api_key={api_key}&ip_address={ip}',
+                                        timeout=timeout).json()],
+        'ipapi' : [lambda ip, api_key, timeout=2:
+                    requests.get(f'http://ip-api.com/json/{ip}',
+                                 timeout=timeout).json()],
+    }
+    indaleko_location_activity_type = ['Location']
 
     def __init__(self, **kwargs):
         '''
@@ -120,11 +74,18 @@ class IADPLocation(IndalekoActivityDataProvider):
                     Identifier=self.source['Identifier'],
                     Version=self.source['Version'],
                     Description = self.source.get('Description', None),
-                    Name = self.source.get('Name', None)
+                    Name = self.source.get('Name', None),
+                    CreateCollection=True,
             )
-        assert len(registration_data) == 1, 'Single provider registration required'
-        self.provider_registration = registration_data[0]
-        self.activity_data_collection = self.provider_registration.get_activity_data_collection()
+        if len(registration_data) == 0:
+            raise ValueError('Provider registration failed')
+        elif len(registration_data) == 2:
+            self.provider_registration = registration_data[0]
+            self.activity_data_collection = registration_data[1]
+        else:
+            ic('Invalid data returned')
+            ic(len(registration_data))
+            assert False
         self.cache_time = kwargs.get('cache_time', IADPLocation.indaleko_location_cache_time)
         self.distance_change_required = kwargs.get(
             'distance_change_required', \
@@ -132,8 +93,42 @@ class IADPLocation(IndalekoActivityDataProvider):
         self.public_ip_address = IADPLocation.capture_public_ip_address()
         self.last_ip_address_update = None
         self.last_location_update = None
+        self.location_services = IADPLocation.load_location_services()
         self.location = self.get_location()
-        super().__init__()
+        if 'activity type' not in kwargs:
+            kwargs['activity type'] = IADPLocation.indaleko_location_activity_type
+        super().__init__(**kwargs)
+
+    def get_activity_collection_name(self) -> str:
+        '''Get the activity collection name'''
+        return self.activity_data_collection.collection_name
+
+    @staticmethod
+    def load_location_services(config_dir : str = './config', location_services : dict = None):
+        '''Load the location services'''
+        if location_services is None:
+            location_services = IADPLocation.location_services
+        ic(location_services)
+        assert os.path.exists(config_dir), f'Config directory {config_dir} does not exist'
+        location_services_file = os.path.join(config_dir, 'location_services.json')
+        if not os.path.exists(location_services_file):
+            raise FileNotFoundError(f'Location services file {location_services_file} not found')
+        location_service_data = {}
+        data = {}
+        with open(location_services_file, 'r', encoding='utf-8') as fd:
+            data = json.load(fd)
+        ic(data)
+        for service, api_key in data.items():
+            ic(service)
+            ic(api_key)
+            if service in location_services:
+                ic(location_services[service])
+                location_service_data[service] = [location_services[service],api_key]
+                ic(location_service_data[service])
+                assert len(location_service_data[service]) <= 2, \
+                    ic(f'Too many entries {location_service_data[service]}')
+        return ic(location_service_data)
+
 
     @staticmethod
     def is_provider_registered() -> bool:
@@ -175,14 +170,14 @@ class IADPLocation(IndalekoActivityDataProvider):
                     datetime.timedelta(seconds=self.indaleko_location_cache_time):
                     return self.public_ip_address
         # otherwise we need to update the IP address
-        public_ip = IADPLocation.IndalekoLocationData.capture_public_ip_address()
+        public_ip = IADPLocation.capture_public_ip_address()
         if public_ip is not None:
             logging.info('Updated public IP address to %s', public_ip)
             self.public_ip_address = public_ip
             self.last_ip_address_update = datetime.datetime.now()
         return self.public_ip_address
 
-    def get_location(self):
+    def get_location(self) -> dict:
         '''Get the location of the device.'''
         if self.last_location_update is not None and \
            self.location is not None and \
@@ -191,13 +186,38 @@ class IADPLocation(IndalekoActivityDataProvider):
             return self.location
         data = IADPLocation.capture_location()
         raw_data = base64.b64encode(msgpack.packb(bytes(json.dumps(data).encode('utf-8'))))
-        self.location = self.IndalekoLocationData(
+        self.location_data = IADPLocationData(
+            location=data,
             raw_data=raw_data,
-            Attributes=data,
+            attributes=data,
             source=self.source,
         )
         self.last_location_update = datetime.datetime.now()
+        self.location = self.location_data
+        self.update_location()
         return self.location
+
+    @staticmethod
+    def compute_distance(location1 : tuple, location2 : tuple) -> float:
+        '''
+        Compute the distance (in meters) between two locations
+        specified by longitude and latitude.
+        '''
+        radius_of_the_earth = 6371000.0 # meters
+        ic(f'compute_distance({location1}, {location2})')
+        assert isinstance(location1, tuple) and len(location1) == 2, \
+            'location1 must be a tuple (latitude, longitude)'
+        assert isinstance(location2, tuple) and len(location2) == 2, \
+            'location2 must be a tuple (latitude, longitude)'
+        lat1 = math.radians(location1[0])
+        lon1 = math.radians(location1[1])
+        lat2 = math.radians(location2[0])
+        lon2 = math.radians(location2[1])
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+        a = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return ic(radius_of_the_earth * c)
 
     def update_location(self) -> bool:
         '''
@@ -208,28 +228,54 @@ class IADPLocation(IndalekoActivityDataProvider):
         current_location = IADPLocation.capture_location()
         current = (current_location['latitude'], current_location['longitude'])
         previous = (self.location['latitude'], self.location['longitude'])
-        if geopy.distance.distance(current, previous).meters <= \
+        if IADPLocation.compute_distance(current, previous) <= \
             self.distance_change_required:
-            self.location = self.IndalekoLocationData(
+            self.location = IADPLocationData(
                 raw_data=base64.b64encode(
                     msgpack.packb(
                         bytes(json.dumps(current_location).encode('utf-8'))
                     )
                 ),
-                Attributes=current_location,
+                attributes=current_location,
                 source=self.source,
             )
             self.last_location_update = datetime.datetime.now()
-            return True
-        return False
+            return ic(True)
+        return ic(False)
 
     def update_location_database(self) -> bool:
         '''Update the location in the database'''
         raise NotImplementedError('update_location_database not implemented')
 
-    def load_location_from_database(self) -> dict:
+    @staticmethod
+    def load_location_from_database() -> dict:
         '''Load the location from the database'''
-        raise NotImplementedError('load_location_from_database not implemented')
+        provider = IADPLocation()
+        collection_name = provider.get_activity_collection_name()
+        ic(f'Collection Name: {collection_name}')
+        query = f'''
+            FOR doc in `{collection_name}`
+            SORT doc.Timestamp.Value DESC
+            LIMIT 1
+            RETURN doc
+        '''
+        result = IndalekoDBConfig().db.aql.execute(query)
+        data = {}
+        if result.empty():
+            ic('No data found')
+        else:
+            for doc in result:
+                ic(doc)
+                data = doc
+                break
+        return data
+
+    def save_location_to_database(self) -> bool:
+        '''Save the location to the database'''
+        assert self.activity_data_collection is not None, 'Activity data collection is required'
+        assert self.location is not None, 'Location is required'
+        ic(self.location.to_dict())
+        return True
 
     @staticmethod
     def capture_public_ip_address(timeout : int = 10) -> str:
@@ -257,11 +303,11 @@ class IADPLocation(IndalekoActivityDataProvider):
                 data[field] = value.isoformat()
             else:
                 skipped[field] = getattr(pos.coordinate, field)
-        if ip_addr is not None:
+        if len(data) == 0:
             for field in IADPLocation.get_loc_from_ip(ip_addr):
                 if field not in data:
                     data[field] = IADPLocation.get_loc_from_ip(ip_addr)[field]
-        return data
+        return ic(data)
 
     @staticmethod
     def capture_windows_location(ip_addr : str = None) -> dict:
@@ -271,15 +317,33 @@ class IADPLocation(IndalekoActivityDataProvider):
         return asyncio.run(IADPLocation.retrieve_windows_location(ip_addr))
 
     @staticmethod
-    def get_loc_from_ip(ip_addr : str) -> dict:
+    def get_loc_from_ip(ip_addr : str, location_services : dict = None) -> dict:
         '''Get the location from the IP address'''
         assert ip_addr is not None, 'IP address is required'
-        url = f'http://ip-api.com/json/{ip_addr}'
-        response = requests.get(url, timeout=10)
-        data = response.json()
-        if data['status'] == 'success':
-            return data
-        return {}
+        if location_services is None:
+            location_services = IADPLocation.load_location_services()
+        iterator = cycle(location_services)
+        retries = 3 * len(location_services)
+        count = 0
+        data = {}
+        while True:
+            if count > retries: break
+            try:
+                count += 1
+                service = next(iterator)
+                data = location_services[service][0](ip_addr,
+                                                     location_services[service][1], timeout=2)
+                if 'latitude' not in data and 'lat' in data:
+                    data['latitude'] = data['lat']
+                if 'longitude' not in data and 'lon' in data:
+                    data['longitude'] = data['lon']
+                assert 'latitude' in data, 'Latitude not found'
+                assert 'longitude' in data, 'Longitude not found'
+                break
+            except (requests.exceptions.RequestException, KeyError) as e:
+                ic(f'Error occurred: {e}')
+        return ic(data)
+
 
     @staticmethod
     def capture_location(ip_addr : str = None) -> dict:
@@ -293,7 +357,7 @@ class IADPLocation(IndalekoActivityDataProvider):
             location['latitude'] = location['lat']
         if 'longitude' not in location:
             location['longitude'] = location['lon']
-        print('Location:', location)
+        ic('Location:', location)
         return location
 
 def check_command(args: argparse.Namespace) -> None:
@@ -303,75 +367,71 @@ def check_command(args: argparse.Namespace) -> None:
 def show_command(args: argparse.Namespace) -> None:
     '''Show the activity data provider setup'''
     logging.info('Showing the activity data provider setup')
+    IndalekoDBConfig().start()
+    ic(IADPLocation.load_location_from_database())
 
 def test_command(args: argparse.Namespace) -> None:
     '''Test the activity data provider'''
-    logging.info('Testing the activity data provider')
-    captured_location = IADPLocation.capture_location()
+    logging.info('Start: Testing the activity data provider')
+    db_location = IADPLocation.load_location_from_database()
+    if len(db_location) == 0:
+        ic('No location data found')
+        current_location = IADPLocation()
+        ic(current_location.get_location().to_dict())
+        current_location.save_location_to_database()
+    return
     timestamp = datetime.datetime.now(datetime.timezone.utc)
-    location = IADPLocation.IndalekoLocationData(
-        longitude=captured_location['longitude'],
-        latitude=captured_location['latitude'],
+    location = IADPLocationData(
         source=IADPLocation.indaleko_activity_provider_location_source,
         ActivityData=captured_location,
-        Timestamps = {
-            IndalekoActivityDataProvider.start_time_uuid_str : timestamp,
-            IndalekoActivityDataProvider.collection_time_uuid_str : timestamp,
-            IndalekoActivityDataProvider.end_time_uuid_str : timestamp,
-        }
+        Timestamps = [
+            {   'Label' : IndalekoActivityDataProvider.start_time_uuid_str,
+                'Value' : timestamp.isoformat(),
+                'Description' : 'Start Time',
+            },
+            {
+                'Label' : IndalekoActivityDataProvider.collection_time_uuid_str,
+                'Value' : timestamp.isoformat(),
+                'Description' : 'Collection Time',
+            },
+            {
+                'Label' : IndalekoActivityDataProvider.end_time_uuid_str,
+                'Value' : timestamp.isoformat(),
+                'Description' : 'End Time',
+            }
+        ]
     )
-    print(json.dumps(location.to_dict(),indent=2))
-
-def old_test_command(args: argparse.Namespace) -> None:
-    '''This is some old test code'''
-    print('Testing the activity data provider')
-    location_provider = IADPLocation()
-    print(location_provider.activity_data_collection)
-    #print(location_provider.get_last_location())
-    location_data = IADPLocation.capture_location()
-    location_data['ActivityProviderIdentifier'] = \
-        location_provider.source['Identifier']
-    location_data['ActivityType'] = ['Location']
-    print(location_data)
-    location_record = IndalekoActivityDataProvider.create_activity_data(
-        ActivityProviderIdentifier = location_provider.source['Identifier'],
-        ActivityDataIdentifier = location_data['_key'],
-        ActivityType = ['Location'],
-        DataVersion = '1.0',
-
-
-        **location_data
-    )
-    print(json.dumps(location_record, indent=2))
-
+    ic(location.to_dict())
+    logging.debug(json.dumps(location.to_dict()))
+    logging.info('End: Testing the activity data provider')
 
 def delete_command(args: argparse.Namespace) -> None:
     '''Delete the test activity data provider'''
     logging.info('Deleting the test activity data provider')
     if not IADPLocation.is_provider_registered():
-        print('Location provider does not exist.')
+        ic('Location provider does not exist.')
         return
     IADPLocation.remove_provider_registration()
-    print('Location provider was deleted.')
+    ic('Location provider was deleted.')
 
 
 def create_command(args: argparse.Namespace) -> None:
     '''Create the test activity data provider'''
     logging.info('Creating the test activity data provider')
     if IADPLocation.is_provider_registered():
-        print('Location provider already exists.')
+        ic('Location provider already exists.')
         return
     location_provider = IADPLocation()
     assert location_provider.is_provider_registered(), \
         'Location provider registration failed.'
-    print('Location provider was created.')
+    ic('Location provider was created.')
 
 def main() -> None:
     '''Main function'''
     now = datetime.datetime.now(datetime.timezone.utc)
     timestamp = now.isoformat()
 
-    print('Starting Indaleko Activity Data Provider for Location')
+    ic('Starting Indaleko Activity Data Provider for Location')
     parser = argparse.ArgumentParser()
     parser.add_argument('--logdir' ,
                         type=str,
@@ -416,7 +476,7 @@ def main() -> None:
         log_dir=args.logdir
     )
     if indaleko_logging is None:
-        print('Could not create logging object')
+        ic('Could not create logging object')
         exit(1)
     logging.info('Starting IADPLocation: Location activity data provider.')
     logging.debug(args)

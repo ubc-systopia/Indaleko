@@ -31,6 +31,7 @@ from IndalekoCollection import IndalekoCollection
 from IndalekoRecord import IndalekoRecord
 from IndalekoActivityDataProviderRegistrationSchema \
     import IndalekoActivityDataProviderRegistrationSchema
+from IndalekoActivityDataSchema import IndalekoActivityDataSchema
 
 class IndalekoActivityDataProviderRegistration(IndalekoRecord):
     '''This class defines the activity data provider registration for the
@@ -48,7 +49,8 @@ class IndalekoActivityDataProviderRegistration(IndalekoRecord):
         assert isinstance(kwargs, dict), 'kwargs must be a dict'
         print('IndalekoActivityDataProviderRegistration: ', kwargs)
         self.set_identifier(**{
-            'Identifier' : kwargs.get('Identifier', str(uuid.UUID('00000000-0000-0000-0000-000000000000'))),
+            'Identifier' : kwargs.get('Identifier',
+                                      str(uuid.UUID('00000000-0000-0000-0000-000000000000'))),
             'Version' : kwargs.get('Version', '1.0'),
             'Description' : kwargs.get('Description', 'Activity Provider'),
             'Name' : kwargs.get('Name', 'Activity Provider')
@@ -72,8 +74,10 @@ class IndalekoActivityDataProviderRegistration(IndalekoRecord):
     @staticmethod
     def generate_activity_data_provider_collection_name(identifier : str) -> str:
         '''Return the name of the collection for the activity provider.'''
-        assert Indaleko.validate_uuid_string(identifier), f'Identifier {identifier} must be a valid UUID'
-        return f'{IndalekoActivityDataProviderRegistration.ActivityProviderDataCollectionPrefix}{identifier}'
+        assert Indaleko.validate_uuid_string(identifier), \
+            f'Identifier {identifier} must be a valid UUID'
+        return f'{IndalekoActivityDataProviderRegistration\
+                  .ActivityProviderDataCollectionPrefix}{identifier}'
 
     def get_identifier(self, **kwargs):
         '''Return the identifier for the activity provider.'''
@@ -117,10 +121,14 @@ class IndalekoActivityDataProviderRegistration(IndalekoRecord):
         '''Set the name for the activity collection.'''
         self.activity_data_collection_name = collection_name
         assert self.activity_data_collection_name.\
-            startswith(IndalekoActivityDataProviderRegistration.ActivityProviderDataCollectionPrefix), \
+            startswith(IndalekoActivityDataProviderRegistration\
+                       .ActivityProviderDataCollectionPrefix), \
             f'Collection name {self.activity_data_collection_name} must start with \
-                {IndalekoActivityDataProviderRegistration.ActivityProviderDataCollectionPrefix}'
-        collection_uuid = self.activity_data_collection_name[len(IndalekoActivityDataProviderRegistration.ActivityProviderDataCollectionPrefix):]
+                {IndalekoActivityDataProviderRegistration\
+                 .ActivityProviderDataCollectionPrefix}'
+        collection_uuid = self.activity_data_collection_name[
+            len(IndalekoActivityDataProviderRegistration.ActivityProviderDataCollectionPrefix):
+            ]
         assert Indaleko.validate_uuid_string(collection_uuid), \
             f'Collection UUID {collection_uuid} must be a valid UUID'
         self.activity_collection_uuid = collection_uuid
@@ -153,7 +161,7 @@ class IndalekoActivityDataProviderRegistration(IndalekoRecord):
                       .set_attributes(entry['Record']['Attributes'])\
                       .set_timestamp(entry['Record']['Timestamp'])
         new_record.active = entry.get('Active', True)
-        return new_record
+        return new_record, new_record.get_activity_data_collection()
 
 
 class IndalekoActivityDataProviderRegistrationService(IndalekoSingleton):
@@ -201,7 +209,7 @@ class IndalekoActivityDataProviderRegistrationService(IndalekoSingleton):
         return self.service.to_json()
 
     @staticmethod
-    def lookup_provider_by_identifier(identifier : str) -> IndalekoActivityDataProviderRegistration:
+    def lookup_provider_by_identifier(identifier : str) -> tuple:
         '''Return the provider with the given identifier.'''
         providers = IndalekoActivityDataProviderRegistrationService().\
             activity_providers.find_entries(_key=identifier)
@@ -209,7 +217,8 @@ class IndalekoActivityDataProviderRegistrationService(IndalekoSingleton):
             return None
         if len(providers) > 1:
             raise NotImplementedError('Duplicate providers, not supported (versioning?)')
-        return [IndalekoActivityDataProviderRegistration.create_from_db_entry(providers[0])]
+        provider, activity_data_collection = IndalekoActivityDataProviderRegistration.create_from_db_entry(providers[0])
+        return (provider, activity_data_collection)
 
 
     @staticmethod
@@ -261,7 +270,7 @@ class IndalekoActivityDataProviderRegistrationService(IndalekoSingleton):
             .create_collection(
                 name = activity_provider_collection_name,
                 config = {
-                    'schema' : IndalekoActivityDataProviderRegistration.Schema,
+                    'schema' : IndalekoActivityDataSchema.get_schema(),
                     'edge' : False,
                     'indices' : {
                     },

@@ -42,6 +42,15 @@ class IndalekoActivityDataProvider():
         collection_time_uuid_str
     )
 
+    # template for AQL query - get the most recent entry.
+    query_template = '''
+        FOR doc IN yourCollectionName
+        SORT doc.yourDateFieldName DESC
+        LIMIT 1
+        RETURN doc
+        '''
+
+
     class ActivityTimestamp():
         '''This class is used to create an activity timestamp.'''
 
@@ -58,6 +67,7 @@ class IndalekoActivityDataProvider():
 
         def to_dict(self) -> dict:
             '''Return the object as a dictionary.'''
+            assert isinstance(self.value, str), 'Value must be a string'
             return {
                 'Label' : self.label,
                 'Value' : self.value,
