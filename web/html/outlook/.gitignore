@@ -1,0 +1,9 @@
+# Ignore the jsons folder
+jsons/
+
+# Ignore the vendor folder
+vendor/
+
+node_modules/
+.env
+composer.lock
