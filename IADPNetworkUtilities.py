@@ -3,8 +3,10 @@
 import argparse
 import asyncio
 import datetime
+import enum
 import json
 import logging
+import math
 import os
 import platform
 import random
@@ -82,34 +84,33 @@ class IADPNetworkUtilities(IndalekoSingleton):
         }
 
     @staticmethod
-    def get_network_geolocation(ip_address : str) -> dict:
-        '''Get the network geolocation.'''
-        try:
-            response = requests.get(f'https://ipapi.co/{ip_address}/json/')
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as exception:
-            ic(exception)
-            return None
-
-    @staticmethod
     async def retrieve_windows_location() -> dict:
-        '''Capture the location of the device on Windows'''
+        '''Retrieve the location of the device on Windows'''
         locator = wdg.Geolocator()
         pos = await locator.get_geoposition_async()
-        data = {}
+        data = {'service' : 'Windows GeoLocator'}
         skipped = {}
         for field in dir(pos.coordinate):
             if field.startswith('_'):
                 continue
             value = getattr(pos.coordinate, field)
-            if isinstance(value, (int, float, str, bool)) or value is None:
-                data[field] = getattr(pos.coordinate, field)
+            if isinstance(value, enum.Enum):
+                data[field] = int(value)
             elif isinstance(value, datetime.datetime):
                 data[field] = value.isoformat()
+            elif isinstance(value, float) and math.isnan(value):
+                data[field] = None
+            elif isinstance(value, (int, float, str, bool)) or value is None:
+                data[field] = value
             else:
                 skipped[field] = getattr(pos.coordinate, field)
         return data
+
+    @staticmethod
+    def capture_windows_location() -> dict:
+        '''Capture the location of the device on Windows'''
+        return asyncio.run(IADPNetworkUtilities.retrieve_windows_location())
+
 
     @staticmethod
     def load_location_services(config_dir : str = './config', location_services = None) -> dict:
@@ -157,9 +158,15 @@ class IADPNetworkUtilities(IndalekoSingleton):
                                                      timeout=2)
                 ic(data)
                 if data is not None:
+                    data['service'] = service # track the service that we used
                     break
             except (requests.exceptions.RequestException, KeyError) as exception:
                 ic(f'Error: {exception}')
+        # data normalization
+        if 'latitude' not in data and 'lat' in data:
+            data['latitude'] = data['lat']
+        if 'longitude' not in data and 'lon' in data:
+            data['longitude'] = data['lon']
         return data
 
 class IADPNetworkUtilitiesTest():
@@ -185,7 +192,7 @@ class IADPNetworkUtilitiesTest():
                 ic(network_utilities.get_ipv6_address())
         if args.service == 'all' or args.service == 'geo':
             if platform.system() == 'Windows':
-                ic(asyncio.run(IADPNetworkUtilities.retrieve_windows_location()))
+                ic(IADPNetworkUtilities.capture_windows_location())
             ic(IADPNetworkUtilities.retrieve_ip_location(network_utilities.get_ipv4_address()))
 
 def main():

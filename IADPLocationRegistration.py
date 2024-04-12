@@ -26,8 +26,9 @@ class IADPLocationRegistration(IndalekoSingleton):
         '''Initialize the location data registration.'''
         if self._initialized:
             return
-        registration = IndalekoActivityDataProviderRegistrationService().\
-            lookup_provider_by_identifier(self.indaleko_activity_provider_location_source_uuid)
+        registration = IADPLocationRegistration.lookup_service_registration()
+        #registration = IndalekoActivityDataProviderRegistrationService().\
+        #    lookup_provider_by_identifier(self.indaleko_activity_provider_location_source_uuid)
         if registration is None:
             registration = self.register_service()
         else:
@@ -77,7 +78,10 @@ class IADPLocationRegistration(IndalekoSingleton):
     @staticmethod
     def lookup_service_registration() -> IndalekoActivityDataProviderRegistrationService:
         '''Lookup the location service registration.'''
-        return None
+        registration = IndalekoActivityDataProviderRegistrationService().\
+            lookup_provider_by_identifier(IADPLocationRegistration\
+                                          .indaleko_activity_provider_location_source_uuid)
+        return registration
 
 class IADPLocationRegistrationTest:
     '''Test the IADPLocationRegistration class.'''

@@ -75,6 +75,39 @@ class IndalekoActivityData(IndalekoRecord):
 
         return obj
 
+    @staticmethod
+    def create_collection_timestamp(timestamp : datetime.datetime = None) -> dict:
+        '''Create a collection timestamp.'''
+        if timestamp is None:
+            timestamp = datetime.datetime.now(datetime.timezone.utc)
+        return {
+            'Label' : IndalekoActivityDataProvider.collection_time_uuid_str,
+            'Value' : timestamp.isoformat(),
+            'Description' : 'Collection Time',
+        }
+
+    @staticmethod
+    def create_start_timestamp(timestamp : datetime.datetime = None) -> dict:
+        '''Create a start timestamp.'''
+        if timestamp is None:
+            timestamp = datetime.datetime.now(datetime.timezone.utc)
+        return {
+            'Label' : IndalekoActivityDataProvider.start_time_uuid_str,
+            'Value' : timestamp.isoformat(),
+            'Description' : 'Start Time',
+        }
+
+    @staticmethod
+    def create_end_timestamp(timestamp : datetime.datetime = None) -> dict:
+        '''Create an end timestamp.'''
+        if timestamp is None:
+            timestamp = datetime.datetime.now(datetime.timezone.utc)
+        return {
+            'Label' : IndalekoActivityDataProvider.end_time_uuid_str,
+            'Value' : timestamp.isoformat(),
+            'Description' : 'End Time',
+        }
+
 def main():
     '''Test the IndalekoActivityData class.'''
     print('Testing IndalekoActivityData')

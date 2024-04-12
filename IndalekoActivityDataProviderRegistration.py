@@ -317,7 +317,7 @@ class IndalekoActivityDataProviderRegistrationService(IndalekoSingleton):
     def register_provider(self, **kwargs) -> tuple:
         '''Register an activity data provider.'''
         assert 'Identifier' in kwargs, 'Identifier must be in kwargs'
-        print('Registering provider: ', kwargs)
+        # print('Registering provider: ', kwargs)
         existing_provider = self.lookup_provider_by_identifier(kwargs['Identifier'])
         if existing_provider is not None and len(existing_provider) > 0:
             raise NotImplementedError('Provider already exists, not updating.')

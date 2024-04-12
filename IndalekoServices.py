@@ -296,7 +296,7 @@ class IndalekoService(IndalekoRecord):
             self.creation_date = datetime.datetime.now(datetime.timezone.utc).isoformat()
         assert self.service_type in IndalekoServices.service_types, \
             f'Invalid service type {self.service_type} specified.'
-        print(f'Registering service {self.service_name} with id {self.service_identifier} : {self.to_dict()}.')
+        # print(f'Registering service {self.service_name} with id {self.service_identifier} : {self.to_dict()}.')
         try:
             self.collection.insert(self.to_dict())
         except arango.exceptions.DocumentInsertError as error:
