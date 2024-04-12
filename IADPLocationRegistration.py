@@ -8,6 +8,7 @@ from icecream import ic
 from IndalekoActivityDataProviderRegistration import IndalekoActivityDataProviderRegistrationService
 from IndalekoSingleton import IndalekoSingleton
 from Indaleko import Indaleko
+from IndalekoDBConfig import IndalekoDBConfig
 
 class IADPLocationRegistration(IndalekoSingleton):
     '''This defines the class for location registration data.'''
@@ -59,14 +60,19 @@ class IADPLocationRegistration(IndalekoSingleton):
     def unregister_service(self) -> bool:
         '''Unregister the location service.'''
         assert self.activity_provider is not None, 'No location service to unregister'
-        assert self.activity_provider_collection is not None, \
-            'No location service collection to unregister'
         IndalekoActivityDataProviderRegistrationService()\
-            .delete_activity_provider_collection(
-                self.activity_provider_collection.get_activity_collection_name())
-        IndalekoActivityDataProviderRegistrationService()\
-            .delete_activity_provider(self.activity_provider.get_activity_provider_name())
+            .delete_provider(IADPLocationRegistration.indaleko_activity_provider_location_source_uuid)
+        if self.activity_provider_collection is not None:
+            IndalekoActivityDataProviderRegistrationService()\
+                .delete_activity_provider_collection(
+                    self.activity_provider.get_activity_collection_name())
         return True
+
+    def get_activity_collection_name(self) -> str:
+        '''Return the activity collection name.'''
+        if self.activity_provider_collection is None:
+            return None
+        return self.activity_provider_collection.collection_name
 
     @staticmethod
     def lookup_service_registration() -> IndalekoActivityDataProviderRegistrationService:
@@ -92,6 +98,30 @@ class IADPLocationRegistrationTest:
         ic(args)
         ic('Testing IADPLocationRegistration complete')
 
+    @staticmethod
+    def show_command(args: argparse.Namespace) -> None:
+        '''Show the registration information'''
+        ic('Showing IADPLocationRegistration')
+        ic(args)
+        IndalekoDBConfig().start()
+        registration = IADPLocationRegistration()
+        ic(registration)
+        ic(registration.activity_provider)
+        ic(registration.activity_provider_collection)
+        ic('Showing IADPLocationRegistration complete')
+
+    @staticmethod
+    def remove_command(args: argparse.Namespace) -> None:
+        '''Remove the registration information'''
+        ic('Removing IADPLocationRegistration')
+        ic(args)
+        IndalekoDBConfig().start()
+        registration = IADPLocationRegistration()
+        ic(registration.activity_provider.to_dict())
+        ic(registration.get_activity_collection_name())
+        registration.unregister_service()
+        ic('Removing IADPLocationRegistration complete')
+
 def main():
     '''Test the IADPLocationRegistration class.'''
     ic('Testing IADPLocationRegistration')
@@ -114,7 +144,11 @@ def main():
     parser_check.set_defaults(func=IADPLocationRegistrationTest.check_command)
     parser_test = command_subparsers.add_parser('test', help='Test the base functionality')
     parser_test.set_defaults(func=IADPLocationRegistrationTest.test_command)
-    parser.set_defaults(func=IADPLocationRegistrationTest.test_command)
+    parser_show = command_subparsers.add_parser('show', help='Show the registration information')
+    parser_show.set_defaults(func=IADPLocationRegistrationTest.show_command)
+    parser_remove = command_subparsers.add_parser('remove', help='Remove the registration information')
+    parser_remove.set_defaults(func=IADPLocationRegistrationTest.remove_command)
+    parser.set_defaults(func=IADPLocationRegistrationTest.show_command)
     args = parser.parse_args()
     if args.log is None:
         args.log = Indaleko.generate_file_name(
