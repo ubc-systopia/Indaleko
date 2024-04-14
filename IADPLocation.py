@@ -35,16 +35,22 @@ class IADPLocation:
         return
 
     def load_location_from_database(self : 'IADPLocation') -> dict:
+        '''Load the most recent location from the database'''
+        return self.load_locations_from_database(count=1)
+
+    def load_locations_from_database(self : 'IADPLocation', count : int) -> dict:
         '''Load the location data from the database.'''
         collection_name = self.service_registration.activity_provider_collection.name
         if self.debug:
             ic(f'Collection Name: {collection_name}')
         query = f'''
             FOR doc in `{collection_name}`
-            SORT doc.Timestamp.Value DESC
-            LIMIT 1
+            SORT doc.CollectionTimestamp DESC
+            LIMIT {count}
             RETURN doc
         '''
+        if self.debug:
+            ic(query)
         result = IndalekoDBConfig().db.aql.execute(query)
         data = {}
         if result.empty():
@@ -163,6 +169,12 @@ class IADPLocationTest:
         location = IADPLocation(self.debug)
         ic(location.add_location_to_database())
 
+    def show_command(self) -> None:
+        '''Show the entrie(s) in the database.'''
+        if self.debug:
+            ic(f'Showing location data for {self.args.count} locations')
+        location = IADPLocation(self.debug)
+        ic(location.load_locations_from_database(self.args.count))
 
 
 def main():
@@ -198,6 +210,12 @@ def main():
     parser_test.set_defaults(func=IADPLocationTest.test_command)
     parser_add = command_subparsers.add_parser('add', help='Add the current location to the database')
     parser_add.set_defaults(func=IADPLocationTest.add_command)
+    parser_show = command_subparsers.add_parser('show', help='Show the location data in the database')
+    parser_show.set_defaults(func=IADPLocationTest.show_command)
+    parser_show.add_argument('--count',
+                             type=int,
+                             default=1,
+                             help='Number of entries to show')
     parser.set_defaults(func=IADPLocationTest.test_command)
     args = parser.parse_args()
     if args.debug:
