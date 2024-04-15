@@ -210,7 +210,8 @@ class IndalekoService(IndalekoRecord):
             self.service_version = kwargs['service_version']
         if 'service_type' in kwargs:
             self.service_type = kwargs['service_type']
-        self.creation_date = kwargs.get('creation_date', datetime.datetime.now(datetime.timezone.utc).isoformat())
+        self.creation_date = kwargs.get('creation_date',
+                                        datetime.datetime.now(datetime.timezone.utc).isoformat())
         if self.collection is None:
             self.collection = IndalekoCollections().get_collection(Indaleko.Indaleko_Services)
         assert self.collection.name == Indaleko.Indaleko_Services, \
