@@ -42,6 +42,15 @@ class IndalekoActivityDataProvider():
         collection_time_uuid_str
     )
 
+    # template for AQL query - get the most recent entry.
+    query_template = '''
+        FOR doc IN yourCollectionName
+        SORT doc.yourDateFieldName DESC
+        LIMIT 1
+        RETURN doc
+        '''
+
+
     class ActivityTimestamp():
         '''This class is used to create an activity timestamp.'''
 
@@ -50,13 +59,15 @@ class IndalekoActivityDataProvider():
             self.label = kwargs.get('Label', None)
             self.value = kwargs.get('Value', None)
             self.description = kwargs.get('Description', None)
-            if self.label not in IndalekoActivityDataProvider.known_activity_data_provider_timestamps:
+            if self.label not in \
+                IndalekoActivityDataProvider.known_activity_data_provider_timestamps:
                 raise ValueError(f'Unknown activity data provider timestamp {self.label}')
             if Indaleko.validate_iso_timestamp(self.value) is False:
                 raise ValueError(f'Invalid ISO timestamp {self.value}')
 
         def to_dict(self) -> dict:
             '''Return the object as a dictionary.'''
+            assert isinstance(self.value, str), 'Value must be a string'
             return {
                 'Label' : self.label,
                 'Value' : self.value,
@@ -323,10 +334,10 @@ def main():
     if indaleko_logging is None:
         print('Could not create logging object')
         exit(1)
-    logging.info('Starting IndalekoDBConfig')
+    logging.info('Starting IndalekoActivityDataProvider')
     logging.debug(args)
     args.func(args)
-    logging.info('IndalekoDBConfig: done processing.')
+    logging.info('IndalekoActivityDataProvider: done processing.')
 
 
 

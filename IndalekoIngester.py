@@ -51,6 +51,7 @@ import os
 import uuid
 from IndalekoServices import IndalekoService
 from Indaleko import Indaleko
+from IndalekoDBConfig import IndalekoDBConfig
 
 class IndalekoIngester():
     '''
@@ -113,37 +114,18 @@ class IndalekoIngester():
                     del kwargs['storage_description']
             else:
                 self.storage_description = str(uuid.UUID(kwargs['storage_description']).hex)
-        self.data_dir = Indaleko.default_data_dir
-        if 'data_dir' in kwargs:
-            self.data_dir = kwargs['data_dir']
-        self.output_dir = self.data_dir
-        if 'output_dir' in kwargs:
-            self.output_dir = kwargs['output_dir']
-        self.input_dir = self.data_dir
-        if 'input_dir' in kwargs:
-            self.input_dir = kwargs['input_dir']
-        assert self.data_dir is not None, 'data_dir must be specified'
-        self.config_dir = Indaleko.default_config_dir
-        if 'config_dir' in kwargs:
-            self.config_dir = kwargs['config_dir']
-        self.log_dir = Indaleko.default_log_dir
-        if 'log_dir' in kwargs:
-            self.log_dir = kwargs['log_dir']
-        self.service_name = IndalekoIngester.indaleko_generic_ingester_service_name
-        if 'service_name' in kwargs:
-            self.service_name = kwargs['service_name']
-        self.service_description = IndalekoIngester.indaleko_generic_ingester_service_description
-        if 'service_description' in kwargs:
-            self.service_description = kwargs['service_description']
-        self.service_version = IndalekoIngester.indaleko_generic_ingester_service_version
-        if 'service_version' in kwargs:
-            self.service_version = kwargs['service_version']
-        self.service_type = 'Ingester'
-        if 'service_type' in kwargs:
-            self.service_type = kwargs['service_type']
-        self.service_identifier = IndalekoIngester.indaleko_generic_ingester_uuid_str
-        if 'service_identifier' in kwargs:
-            self.service_identifier = kwargs['service_identifier']
+        self.data_dir = kwargs.get('data_dir', Indaleko.default_data_dir)
+        self.output_dir = kwargs.get('output_dir', self.data_dir)
+        self.input_dir = kwargs.get('input_dir', self.data_dir)
+        self.config_dir = kwargs.get('config_dir', Indaleko.default_config_dir)
+        self.log_dir = kwargs.get('log_dir', Indaleko.default_log_dir)
+        self.service_name = kwargs.get('Name', IndalekoIngester.indaleko_generic_ingester_service_name)
+        self.service_description = kwargs.get('Description', IndalekoIngester.indaleko_generic_ingester_service_description)
+        self.service_version = kwargs.get('Version', IndalekoIngester.indaleko_generic_ingester_service_version)
+        self.service_type = kwargs.get('Type', 'Ingester')
+        self.service_identifier = kwargs.get('Identifier', IndalekoIngester.indaleko_generic_ingester_uuid_str)
+        assert self.service_identifier != self.indaleko_generic_ingester_uuid_str, \
+            'Service identifier must be specified'
         self.ingester_service = IndalekoService(
             service_name = self.service_name,
             service_description = self.service_description,
@@ -231,6 +213,33 @@ class IndalekoIngester():
         else:
             json.dump(data, file_name, indent=4)
             logging.info('Wrote JSON data to %s', file_name)
+
+    @staticmethod
+    def build_load_string(**kwargs) -> str:
+        '''
+        This will build the load string for the arangoimport command.
+        '''
+        db_config = IndalekoDBConfig()
+        load_string = 'arangoimport'
+        if 'collection' in kwargs:
+            load_string += ' -collection ' + kwargs['collection']
+        load_string += ' --server.username ' + db_config.get_user_name()
+        load_string += ' --server.password ' + db_config.get_user_password()
+        if db_config.get_ssl_state():
+            load_string += ' --ssl.protocol 5'
+            endpoint = 'http+ssl://'
+        else:
+            endpoint = 'http+tcp://'
+        endpoint += db_config.get_hostname() + ':' + db_config.get_port()
+        load_string += ' --server.endpoint ' + endpoint
+        load_string += ' --server.database ' + kwargs.get('database', db_config.get_database_name())
+        if 'file' in kwargs:
+            load_string += ' ' + kwargs['file']
+        return load_string
+    ## arangoimport -collection Objects --server.username uiRXxRxF --server.password jDrcwy9VcAhhSmt --ssl.protocol 5
+    ## .\indaleko-plt=Windows-svc=ingest-ingester=local_fs_ingester-machine=2e169bb700244dc193dc18b7d2d28190-storage=3397d97b2ca511edb2fcb40ede9a5a3c-collection=Objects-ts=2024_01_19T01#12#01.057294+00#00.jsonl
+    ## --server.endpoint http+ssl://activitycontext.work:8529 --server.database Indaleko
+
 
 def main():
     """Test code for IndalekoIngest.py"""

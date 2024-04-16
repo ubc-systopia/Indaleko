@@ -44,7 +44,12 @@ class IndalekoActivityDataSchema(IndalekoRecordSchema):
                     "description" : "UUID of this activity data.",
                     "format": "uuid",
                 },
-                "Timestamps" : {
+                "CollectionTimestamp" : {
+                    "type" : "string",
+                    "description" : "Timestamp when the data was collected.",
+                    "format": "date-time",
+                },
+                "ActivityTimestamps" : {
                     "type" : "array",
                     "properties" : {
                         "Label" : {
@@ -61,7 +66,7 @@ class IndalekoActivityDataSchema(IndalekoRecordSchema):
                     },
                     "required" : ["Label", "Value"],
                 },
-                "required" : ["ActivityDataIdentifier"],
+                "required" : ["ActivityDataIdentifier","CollectionTimestamp"],
             },
         }
         assert 'Record' not in activity_data_schema['rule'], \

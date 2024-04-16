@@ -38,6 +38,8 @@ class IndalekoCollections(IndalekoSingleton):
     def __init__(self, **kwargs) -> None:
         # db_config: IndalekoDBConfig = None, reset: bool = False) -> None:
         self.db_config = kwargs.get('db_config', IndalekoDBConfig())
+        if self.db_config is None:
+            self.db_config = IndalekoDBConfig()
         self.reset = kwargs.get('reset', False)
         logging.debug('Starting database')
         self.db_config.start()
@@ -60,7 +62,8 @@ class IndalekoCollections(IndalekoSingleton):
             if not collections.db_config.db.has_collection(name):
                 collection = IndalekoCollection(name=name, db=collections.db_config)
             else:
-                collection = IndalekoCollection(ExistingCollection=collections.db_config.db.collection(name))
+                collection = \
+                    IndalekoCollection(ExistingCollection=collections.db_config.db.collection(name))
         else:
             collection = collections.collections[name]
         return collection

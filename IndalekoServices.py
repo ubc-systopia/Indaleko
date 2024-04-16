@@ -210,7 +210,8 @@ class IndalekoService(IndalekoRecord):
             self.service_version = kwargs['service_version']
         if 'service_type' in kwargs:
             self.service_type = kwargs['service_type']
-        self.creation_date = kwargs.get('creation_date', datetime.datetime.now(datetime.timezone.utc).isoformat())
+        self.creation_date = kwargs.get('creation_date',
+                                        datetime.datetime.now(datetime.timezone.utc).isoformat())
         if self.collection is None:
             self.collection = IndalekoCollections().get_collection(Indaleko.Indaleko_Services)
         assert self.collection.name == Indaleko.Indaleko_Services, \
@@ -296,7 +297,7 @@ class IndalekoService(IndalekoRecord):
             self.creation_date = datetime.datetime.now(datetime.timezone.utc).isoformat()
         assert self.service_type in IndalekoServices.service_types, \
             f'Invalid service type {self.service_type} specified.'
-        print(f'Registering service {self.service_name} with id {self.service_identifier} : {self.to_dict()}.')
+        # print(f'Registering service {self.service_name} with id {self.service_identifier} : {self.to_dict()}.')
         try:
             self.collection.insert(self.to_dict())
         except arango.exceptions.DocumentInsertError as error:

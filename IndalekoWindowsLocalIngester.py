@@ -78,6 +78,9 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
             kwargs['ingester'] = IndalekoWindowsLocalIngester.windows_local_ingester
         if 'input_file' not in kwargs:
             kwargs['input_file'] = None
+        for key, value in self.windows_local_ingester_service.items():
+            if key not in kwargs:
+                kwargs[key] = value
         super().__init__(**kwargs)
         self.input_file = kwargs['input_file']
         if 'output_file' not in kwargs:
@@ -261,17 +264,28 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
             self.edge_count += 1
         # Save the data to the ingester output file
         self.write_data_to_file(dir_data + file_data, self.output_file)
+        load_string = self.build_load_string(
+            collection='Objects',
+            file=self.output_file
+        )
+        logging.info('Load string: %s', load_string)
+        print('Load string: ', load_string)
         edge_file = self.generate_output_file_name(
             machine=self.machine_id,
             platform=self.platform,
-            service='local_ingest',
+            service='ingest',
             storage=self.storage_description,
             collection='Relationships',
             timestamp=self.timestamp,
             output_dir=self.data_dir,
         )
-        self.write_data_to_file(dir_edges, edge_file)
+        load_string = self.build_load_string(
+            collection='Relationships',
 
+        )
+        self.write_data_to_file(dir_edges, edge_file)
+        logging.info('Load string: %s', load_string)
+        print('Load string: ', load_string)
 
 
 def main():
