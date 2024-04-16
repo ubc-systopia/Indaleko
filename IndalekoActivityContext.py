@@ -40,9 +40,9 @@ class IndalekoActivityContext(IndalekoSingleton):
             self.attributes = {}
             self.timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
             self.attributes['ContextHandle'] = kwargs.get('ContextHandle', uuid.uuid4().hex)
-            self.attributes['ContextTimestamp'] = kwargs.get('ContextTimestamp',
-                                                             self.timestamp
-                                                             )
+            self.attributes['SemanticCursors'] = {}
+            self.attributes['SemanticCursors']['ContextTimestamp'] = \
+                kwargs.get('ContextTimestamp', self.timestamp)
             if 'raw_data' not in kwargs:
                 kwargs['raw_data'] = b''
             if 'source' not in kwargs:
