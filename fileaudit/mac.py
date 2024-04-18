@@ -1,3 +1,4 @@
+import logcompator
 import operators
 import pipeline
 import argparse
@@ -15,11 +16,15 @@ def to_csv(t, header: bool = False):
     if t != None and t[0] == 0:
         print(','.join(t[1]))
 
+class CompressorWriter():
+    def write(self, arr):
+        print(arr)
 
 def main():
     from os import path
 
     parser = argparse.ArgumentParser()
+    parser.add_argument('--compress', '-c', dest='compress', action='store_true', default=False, help='compress the log records into one one')
 
     subparsers = parser.add_subparsers(title='subcommands', dest='subcommands')
 
@@ -47,7 +52,11 @@ def main():
 
             input_reader = operators.FileInputReader(args.input_file)
 
+
+    compactorOp = logcompator.LogCompactor(CompressorWriter())
+
     p = pipeline.Pipeline(input_reader)
+
     p.add(
         operators.TrSpaces()
     ).add(
@@ -57,9 +66,13 @@ def main():
             1, ["open", "close", "mmap", "read", "write", "mkdir", "rename"], exact_match=True)
     ).add(
         operators.Canonize()
-    ).add(
-        operators.Show(show_func=print_result)
     )
+
+    if args.compress:
+        p.add(compactorOp)
+    else:
+        p.add(operators.Show(show_func=print_result))
+
 
     list(p.run())
 
