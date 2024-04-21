@@ -275,7 +275,12 @@ class IndalekoMacLocalIngester(IndalekoIngester):
 
         # import these using arangoimport tool
         self.arangoimport()
+<<<<<<< HEAD
         
+=======
+
+
+>>>>>>> main
     def arangoimport(self):
         print('{:-^20}'.format(""))
         print('using arangoimport to import objects')

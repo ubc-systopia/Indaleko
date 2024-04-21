@@ -89,12 +89,17 @@ def setup_command(args : argparse.Namespace) -> None:
     logging.info('Database connection successful')
 
 def check_command(args : argparse.Namespace) -> None:
+<<<<<<< HEAD
     """Check the database:
     - if it finds a default config file, it loads the configuration from that; otherwise, it creates a new config file
     - then, it runs the start command which tries to connect to the db container. Therefore, the container has to be running before that. 
     """
     logging.info('Check the database')
     
+=======
+    """Check the database"""
+    logging.info('Check the database, args is %s', args)
+>>>>>>> main
     db_config = IndalekoDBConfig()
     if db_config is None:
         logging.critical('Could not create IndalekoDBConfig object')
@@ -178,6 +183,10 @@ def main():
 
     parser_delete = command_subparser.add_parser('delete', help='Delete the database')
     parser_delete.set_defaults(func=delete_command)
+<<<<<<< HEAD
+=======
+    parser_setup.set_defaults(func=delete_command)
+>>>>>>> main
     parser.set_defaults(func=default_command)
 
     args = parser.parse_args()
