@@ -28,7 +28,7 @@ from IndalekoLogging import IndalekoLogging
 from IndalekoDocker import IndalekoDocker
 
 def run_container(db_config: IndalekoDBConfig):
-    # the configuration 
+    # the configuration
     if 'container' not in db_config or 'volume' not in db_config or 'admin_passwd' not in db_config:
         logging.critical('run_container: there is no "container", "volume" or "admin_password" configuration in the config file')
         exit(1)
@@ -89,23 +89,18 @@ def setup_command(args : argparse.Namespace) -> None:
     logging.info('Database connection successful')
 
 def check_command(args : argparse.Namespace) -> None:
-<<<<<<< HEAD
     """Check the database:
     - if it finds a default config file, it loads the configuration from that; otherwise, it creates a new config file
-    - then, it runs the start command which tries to connect to the db container. Therefore, the container has to be running before that. 
+    - then, it runs the start command which tries to connect to the db container. Therefore, the container has to be running before that.
     """
     logging.info('Check the database')
-    
-=======
-    """Check the database"""
-    logging.info('Check the database, args is %s', args)
->>>>>>> main
+
     db_config = IndalekoDBConfig()
     if db_config is None:
         logging.critical('Could not create IndalekoDBConfig object')
         return
 
-    # make sure the container is running 
+    # make sure the container is running
     run_container(db_config.config['database'])
 
     started = db_config.start(timeout=10)
@@ -183,10 +178,6 @@ def main():
 
     parser_delete = command_subparser.add_parser('delete', help='Delete the database')
     parser_delete.set_defaults(func=delete_command)
-<<<<<<< HEAD
-=======
-    parser_setup.set_defaults(func=delete_command)
->>>>>>> main
     parser.set_defaults(func=default_command)
 
     args = parser.parse_args()
