@@ -1,8 +1,7 @@
 import unittest
-import functools
 import string
-from fileaudit.abstract import IWriter
-from fileaudit.logcompator import CompactRecord, LogCompactor
+from abstract import IWriter
+from logcompator import CompactRecord, LogCompactor
 import hashlib
 import typing
 import random
@@ -69,7 +68,7 @@ class MockData:
         return [
             (0, ['18:36:21.633370', 'close', '32', 'ampdaemon', '8310']),
             (0, ['18:36:21.633370', 'close', '10', 'ampdaemon', '8310']),
-            ]
+        ]
 
 
 class MockWriter(IWriter):
@@ -232,7 +231,7 @@ class TestLogCompactor(unittest.TestCase):
                 data = MockData.mkdir_rename_mmap()
             case 7:
                 # (0, ['18:36:21.633351', 'close', '30', 'ampdaemon', '8310']),
-                expects= [[
+                expects = [[
                     '8310', 'ampdaemon', '', ['close|today_18:36:21.633351']
                 ]]
 
@@ -243,7 +242,7 @@ class TestLogCompactor(unittest.TestCase):
                 expects = [
                     ['8310', 'ampdaemon', '', ['close|today_18:36:21.633370']],
                     ['8310', 'ampdaemon', '', ['close|today_18:36:21.633370']]
-                    ]
+                ]
 
                 data = MockData.multiple_close()
             case _:
