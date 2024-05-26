@@ -7,6 +7,7 @@ import datetime
 import argparse
 import platform
 from IndalekoSingleton import IndalekoSingleton
+
 class IndalekoLogging(IndalekoSingleton):
     """Class for managing Indaleko logging."""
 
@@ -51,14 +52,18 @@ class IndalekoLogging(IndalekoSingleton):
     def generate_log_file_name(**kwargs) -> str:
         now = datetime.datetime.now(datetime.timezone.utc)
         timestamp=now.isoformat()
-        service_name = 'unknown_service'
-        if 'service_name' in kwargs:
-            service_name = kwargs['service_name']
-        return Indaleko.generate_file_name(
-            service=service_name,
-            timestamp=timestamp,
-            suffix='log'
+        service_name = kwargs.get('service_name', 'unknown_service')
+        fnargs = {
+            'service': service_name,
+            'timestamp': timestamp,
+            'suffix': 'log'
+        }
+        if 'platform' in kwargs:
+            fnargs['platform'] = kwargs['platform']
+        fname = Indaleko.generate_file_name(
+            **fnargs
         )
+        return fname
 
     @staticmethod
     def list_service_logs(service_name : str, logs_dir : str = Indaleko.default_log_dir) -> list:

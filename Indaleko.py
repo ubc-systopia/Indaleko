@@ -344,6 +344,7 @@ class Indaleko:
         name += f'-plt={target_platform}'
         name += f'-svc={service}'
         for key, value in kwargs.items():
+            assert isinstance(value, str), f'value must be a string: {key, value}'
             if '-' in key or '-' in value:
                 raise ValueError(f'key and value must not contain a hyphen: {key, value}')
             name += f'-{key}={value}'
