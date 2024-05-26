@@ -1,9 +1,3 @@
-import typing
-
-from click import File
-
-from abstract import IOperator
-
 # V2:
 # [  ‘pid',
 #    'procname’,
@@ -12,6 +6,11 @@ from abstract import IOperator
 #    ['file2', open='ts3', close='ts4', mode=RW],
 #    ['file3', open='ts5', close='ts6', mode=W],
 # ]
+
+
+import collections
+from typing import Dict, List
+from uu import Error
 
 
 class FileEvent:
@@ -74,3 +73,120 @@ class FileEvent:
         }
 
 
+class LogRecordV2:
+    @staticmethod
+    def Validate(value, exp_type):
+        """
+        Validates that the given value is of the expected type.
+
+        Args:
+            value: The value to be validated.
+            exp_type: The expected type of the value.
+
+        Returns:
+            bool: True if the value is of the expected type, otherwise raises an assertion error.
+        """
+
+        # Validate that the given value is of the expected type.
+        assert isinstance(value, exp_type), f'value {value} is of type {
+            type(value)}, expected {str(exp_type)}'
+        return True
+
+    def __init__(self, pid: str, proc: str, exec_path: str):
+        """
+        Initializes the LogRecordV2 instance with process details and initializes
+        the file event tracking structures.
+
+        Args:
+            pid (str): Process ID.
+            proc (str): Process name.
+            exec_path (str): Execution path.
+        """
+
+        # Validate that all input parameters are strings
+        all([LogRecordV2.Validate(val, str) for val in [pid, proc, exec_path]])
+
+        # Initialize instance variables
+        self.pid = pid  # Process ID
+        self.proc = proc  # Process name
+        self.exec_path = exec_path  # Execution path
+        # Dictionary to hold current file events
+        self.file_events: Dict[str, FileEvent] = collections.OrderedDict()
+        # List to hold completed file events
+        self.completed_file_events: List[FileEvent] = []
+
+    def add_file_event(self, file_name: str, ts: str, op: str):
+        """
+        Adds a file event to the log record, updating or creating a FileEvent
+        instance as necessary and marking events as completed when applicable.
+
+        Args:
+            file_name (str): The name of the file involved in the event.
+            ts (str): The timestamp of the event.
+            op (str): The type of file operation (e.g., 'open', 'close', 'write').
+
+        Returns:
+            self: The updated LogRecordV2 instance.
+        """
+
+        # Validate that all input parameters are strings
+        all([LogRecordV2.Validate(val, str) for val in [file_name, ts, op]])
+
+        # If the file event for the given file_name does not exist, create a new FileEvent
+        if file_name not in self.file_events:
+            self.file_events[file_name] = FileEvent().add_filename(file_name)
+
+        # Handle the file operation based on the op parameter
+        match op:
+            case 'open':
+                # Add open timestamp to the file event
+                self.file_events[file_name].add_open_ts(ts)
+            case 'close':
+                # Add close timestamp to the file event and mark it as completed
+                self.file_events[file_name].add_close_ts(ts)
+                # Move the completed file event to the completed_file_events list
+                self.completed_file_events.append(
+                    self.file_events[file_name].to_list())
+                # Remove the file event from the current file events
+                del self.file_events[file_name]
+            case 'write':
+                self.file_events[file_name].add_mode(FileEvent.MODE_WRITE)
+            case 'read':
+                self.file_events[file_name].add_mode(FileEvent.MODE_READ)
+            case 'mmap':
+                self.file_events[file_name].add_mode(FileEvent.MODE_MMAP)
+            case 'mkdir':
+                self.file_events[file_name].add_mode(FileEvent.MODE_MKDIR)
+            case 'rename':
+                self.file_events[file_name].add_mode(FileEvent.MODE_RENAME)
+            case _:
+                raise Error("Unsupported file operation")
+
+        return self
+
+    def to_list(self):
+        """
+        Converts the LogRecordV2 instance to a list, including process details
+        and both completed and current file events.
+        """
+        # Convert current file events to a list of lists
+        curr_events = [] if len(self.file_events) == 0 else [
+            fe.to_list() for _, fe in self.file_events.items()
+        ]
+
+        # Return a list combining pid, proc, exec_path, and all completed and current file events
+        return [
+            self.pid, self.proc, self.exec_path, self.completed_file_events + curr_events
+        ]
+
+    def free_mem(self):
+        """
+        Frees memory by clearing and deleting file event attributes,
+        then forcing garbage collection.
+        """
+        import gc
+        self.file_events.clear()
+        self.completed_file_events.clear()
+        del self.file_events
+        del self.completed_file_events
+        gc.collect()
