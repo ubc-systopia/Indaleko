@@ -301,11 +301,11 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
             metadata_list = []
             cursor = None
             while True:
-                result = self.dbx.files_list_folder('', recursive=False)
+                result = self.dbx.files_list_folder('', recursive=True)
                 while True:
                     try:
                         result = self.dbx.files_list_folder_continue(
-                            cursor) if cursor else self.dbx.files_list_folder('', recursive=False)
+                            cursor) if cursor else self.dbx.files_list_folder('', recursive=True)
                     except dropbox.exceptions.ApiError as e:
                         if 'expired_access_token' in str(e):
                             ic('Refreshing access token')
@@ -330,7 +330,6 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
 def main():
     logging_levels = Indaleko.get_logging_levels()
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument('--configdir',
                             help='Path to the config directory',
