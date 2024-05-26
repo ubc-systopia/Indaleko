@@ -276,7 +276,7 @@ class FilterFields(IOperator):
             return (1, input_list)
 
 
-class Canonize:
+class Canonize(IOperator):
     """
     Canonize class is responsible for cleaning and extracting structured information
     from system call data.
