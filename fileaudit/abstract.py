@@ -10,7 +10,7 @@ class IReader(ABC):
 
 class IWriter(ABC):
     @abstractmethod
-    def write(self, data):
+    def write(self, data, **args):
         raise NotImplementedError("Needs to be implemebted")
 
 
