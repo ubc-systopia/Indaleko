@@ -207,6 +207,35 @@ class LogRecordV2:
 
 
 class LogCompactorV2(IOperator):
+    """
+    LogCompactorV2 handles the compaction of log records by tracking file operation events
+    and managing stateful information about each log record. It processes various file
+    operations like 'open', 'close', 'read', 'write', 'mmap', 'rename', and 'mkdir', and
+    compacts the information for efficient storage and retrieval.
+
+    Attributes:
+        writer (IWriter): An instance of IWriter used for writing compacted log records.
+        state (Dict[str, LogRecordV2]): An ordered dictionary to maintain the state of log records.
+        file_names (Dict[tuple[str, str], str]): A defaultdict to map file operation keys to filenames.
+        get_exec_path (Callable, optional): A function to extract the executable path from the log record.
+
+    Methods:
+        create_key(record) -> tuple[str, str]:
+            Creates a unique key for the log record based on its process ID and another identifier.
+
+        add_file_name(key: tuple[str, str], file_name: str) -> None:
+            Associates a filename with a given key in the file_names dictionary.
+
+        get_file_name(key) -> str:
+            Retrieves the filename associated with a given key.
+
+        execute(input_record, **args):
+            Processes an input log record, handling different file operations and updating the state accordingly.
+
+        to_list() -> list:
+            Converts the current state of log records to a list of dictionaries for serialization.
+    """
+
     UNKOWN_FILE_NAME_VALUE = '[[UNKNOWN]]'
 
     def __init__(self, writer: IWriter, extract_exec_path_func=None):
