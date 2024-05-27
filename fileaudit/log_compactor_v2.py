@@ -204,3 +204,85 @@ class LogRecordV2:
         del self.file_events
         del self.completed_file_events
         gc.collect()
+
+
+class LogCompactorV2(IOperator):
+    UNKOWN_FILE_NAME_VALUE = '[[UNKNOWN]]'
+
+    def __init__(self, writer: IWriter, extract_exec_path_func=None):
+        self.writer = writer
+
+        self.state: Dict[str, LogRecordV2] = collections.OrderedDict()
+
+        self.file_names: Dict[tuple[str, str], str] = collections.defaultdict(
+            lambda: LogCompactorV2.UNKOWN_FILE_NAME_VALUE)
+
+        self.get_exec_path = extract_exec_path_func
+
+    def create_key(self, record) -> tuple[str, str]:
+        return ('-'.join(record[-2:]), record[2])
+
+    def add_file_name(self, key: tuple[str, str], file_name: str) -> None:
+        self.file_names[key] = file_name
+
+    def get_file_name(self, key) -> str:
+        return self.file_names[key]
+
+    def execute(self, input_record, **args):
+        status, record = input_record
+        if status == 1 or record[2].strip() == '-1':
+            return (1, record)
+
+        key = self.create_key(record)
+        if key not in self.state:
+            self.state[key] = LogRecordV2(
+                pid=record[-1],
+                proc=record[-2],
+                exec_path=self.get_exec_path(*record[-2:]))
+
+        match record[1]:
+            case 'open':
+                self.state[key].add_file_event(file_name=record[3],
+                                               ts=record[0],
+                                               op=record[1]
+                                               )
+
+                self.add_file_name(key=key, file_name=record[3])
+
+            case 'close':
+                self.state[key].add_file_event(
+                    file_name=self.get_file_name(key),
+                    ts=record[0],
+                    op=record[1]
+                )
+
+                self.writer.write(self.state[key].to_dict())
+
+                self.state[key].free_mem()
+
+                del self.state[key]
+                del self.file_names[key]
+            case 'read' | 'write' as op:
+                self.state[key].add_file_event(
+                    file_name=self.get_file_name(key),
+                    ts=record[0],
+                    op=op
+                )
+            case 'mmap' | 'rename' | 'mkdir' as op:
+                self.state[key].add_file_event(
+                    file_name=record[3],
+                    ts=record[0],
+                    op=op
+                )
+
+                self.writer.write(self.state[key].to_dict())
+
+                self.state[key].free_mem()
+                del self.state[key]
+
+        return (1, record)
+
+    def to_list(self):
+        return [
+            fe.to_dict() for _, fe in self.state.items()
+        ]
