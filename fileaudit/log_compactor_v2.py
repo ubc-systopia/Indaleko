@@ -250,6 +250,7 @@ class LogCompactorV2(IOperator):
 
     def create_key(self, record) -> tuple[str, str]:
         return ('-'.join(record[-2:]), record[2])
+        # return '-'.join(record[-2:])
 
     def add_file_name(self, key: tuple[str, str], file_name: str) -> None:
         self.file_names[key] = file_name
@@ -263,15 +264,17 @@ class LogCompactorV2(IOperator):
             return (1, record)
 
         key = self.create_key(record)
-        if key not in self.state:
-            self.state[key] = LogRecordV2(
+        process_hash=key[0]
+
+        if process_hash not in self.state:
+            self.state[process_hash] = LogRecordV2(
                 pid=record[-1],
                 proc=record[-2],
                 exec_path=self.get_exec_path(*record[-2:]))
 
         match record[1]:
             case 'open':
-                self.state[key].add_file_event(file_name=record[3],
+                self.state[process_hash].add_file_event(file_name=record[3],
                                                ts=record[0],
                                                op=record[1]
                                                )
@@ -279,39 +282,35 @@ class LogCompactorV2(IOperator):
                 self.add_file_name(key=key, file_name=record[3])
 
             case 'close':
-                self.state[key].add_file_event(
+                self.state[process_hash].add_file_event(
                     file_name=self.get_file_name(key),
                     ts=record[0],
                     op=record[1]
                 )
 
-                self.writer.write(self.state[key].to_dict())
-
-                self.state[key].free_mem()
-
-                del self.state[key]
                 del self.file_names[key]
             case 'read' | 'write' as op:
-                self.state[key].add_file_event(
+                self.state[process_hash].add_file_event(
                     file_name=self.get_file_name(key),
                     ts=record[0],
                     op=op
                 )
             case 'mmap' | 'rename' | 'mkdir' as op:
-                self.state[key].add_file_event(
+                self.state[process_hash].add_file_event(
                     file_name=record[3],
                     ts=record[0],
                     op=op
                 )
 
-                self.writer.write(self.state[key].to_dict())
-
-                self.state[key].free_mem()
-                del self.state[key]
-
-        return (1, record)
+        return (0, record)
 
     def to_list(self):
         return [
             fe.to_dict() for _, fe in self.state.items()
         ]
+
+    def dump(self):
+        for _, fe in self.state.items():
+            self.writer.write(fe.to_dict())
+            fe.free_mem()
+        self.state.clear()
