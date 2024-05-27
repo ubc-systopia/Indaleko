@@ -79,7 +79,6 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
             self.refresh_access_token()
         self.dbx = dropbox.Dropbox(self.dropbox_credentials['token'])
         self.user_info = self.dbx.users_get_current_account()
-        ic(self.user_info)
         super().__init__(**kwargs,
                          platform=IndalekoDropboxIndexer.dropbox_platform,
                          indexer_name=IndalekoDropboxIndexer.dropbox_indexer_name,
@@ -294,18 +293,17 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
             metadata[field] = value
         return metadata
 
-    def index(self):
+    def index(self, recursive=True):
         '''This is the indexer for Dropbox'''
-        ic('Indexing Dropbox')
         try:
             metadata_list = []
             cursor = None
             while True:
-                result = self.dbx.files_list_folder('', recursive=True)
+                result = self.dbx.files_list_folder('', recursive=recursive)
                 while True:
                     try:
                         result = self.dbx.files_list_folder_continue(
-                            cursor) if cursor else self.dbx.files_list_folder('', recursive=True)
+                            cursor) if cursor else self.dbx.files_list_folder('', recursive=recursive)
                     except dropbox.exceptions.ApiError as e:
                         if 'expired_access_token' in str(e):
                             ic('Refreshing access token')
@@ -314,8 +312,19 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
                             continue
                     for entry in result.entries:
                         metadata = self.build_stat_dict(entry)
-                        ic(metadata)
                         metadata_list.append(metadata)
+                        if 'FileMetadata' in metadata:
+                            self.file_count += 1
+                            if self.file_count % 1000 == 0:
+                                ic(self.file_count)
+                        elif 'FolderMetadata' in metadata:
+                            self.dir_count += 1
+                            if self.dir_count % 1000 == 0:
+                                ic(self.dir_count)
+                        elif 'MinimalFileLinkMetadata' in metadata:
+                            self.good_symlink_count += 1
+                        else:
+                            self.special_counts += 1
                     if not result.has_more:
                         break
                     cursor = result.cursor
@@ -325,6 +334,19 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
             logging.error(f"Error enumerating folder, exception {e}")
             print(f"Error enumerating folder, exception {e}")
         return metadata_list
+
+    @staticmethod
+    def find_indexer_files(
+            search_dir : str,
+            prefix : str = IndalekoIndexer.default_file_prefix,
+            suffix : str = IndalekoIndexer.default_file_suffix) -> list:
+        '''This function finds the files to ingest:
+            search_dir: path to the search directory
+            prefix: prefix of the file to ingest
+            suffix: suffix of the file to ingest (default is .json)
+        '''
+        prospects = IndalekoIndexer.find_indexer_files(search_dir, prefix, suffix)
+        return [f for f in prospects if IndalekoDropboxIndexer.dropbox_platform in f]
 
 
 def main():
@@ -371,13 +393,17 @@ def main():
                         help='Path to the directory to index',
                         type=str,
                         default='')
+    parser.add_argument('--norecurse',
+                        help='Disable recursive directory indexing (for testing).',
+                        default=False,
+                        action='store_true')
     args = parser.parse_args()
     output_file = os.path.join(args.datadir, args.output)
     logging.info('Indaleko Dropbox Indexer started.')
     logging.info('Output file: %s', output_file)
     logging.info('Indexing: %s', args.path)
     logging.info(args)
-    data = indexer.index()
+    data = indexer.index(recursive= (not args.norecurse))
     indexer.write_data_to_file(data, output_file)
     for count_type, count_value in indexer.get_counts().items():
         logging.info('Count %s: %s', count_type, count_value)

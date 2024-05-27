@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import argparse
 import datetime
+from icecream import ic
 import logging
 import os
 import json
@@ -43,7 +44,7 @@ class IndalekoDropboxIngester(IndalekoIngester):
     dropbox_ingester_service = IndalekoService.create_service_data(
         service_name = 'Dropbox Ingester',
         service_description = 'This service ingests captured index info from Dropbox.',
-        service_version = '1.0'
+        service_version = '1.0',
         service_type = 'Ingester',
         service_identifier = dropbox_ingester_uuid,
     )
@@ -56,7 +57,36 @@ class IndalekoDropboxIngester(IndalekoIngester):
 
 def main():
     '''This is the main handler for the Dropbox ingester.'''
-    pass
+    logging_levels = Indaleko.get_logging_levels()
+    timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    pre_parser = argparse.ArgumentParser(add_help=False)
+    pre_parser.add_argument('--configdir',
+                            help='Path to the config directory',
+                            default=Indaleko.default_config_dir)
+    pre_parser.add_argument('--logdir', '-l',
+                            help='Path to the log directory',
+                            default=Indaleko.default_log_dir)
+    pre_parser.add_argument('--loglevel',
+                            type=int,
+                            default=logging.DEBUG,
+                            choices=logging_levels,
+                            help='Logging level to use (lower number = more logging)')
+    pre_parser.add_argument('--datadir',
+                            help='Path to the data directory',
+                            default=Indaleko.default_data_dir,
+                            type=str)
+    pre_args , _ = pre_parser.parse_known_args()
+    indexer = IndalekoDropboxIndexer()
+    indexer_files = indexer.find_indexer_files(pre_args.datadir)
+    ic(indexer_files)
+    parser = argparse.ArgumentParser(parents=[pre_parser])
+    parser.add_argument('--input',
+                        choices=indexer_files,
+                        default=indexer_files[-1],
+                        help='Dropbox index data file to ingest')
+    args=parser.parse_args()
+    ic(args)
+
 
 if __name__ == '__main__':
     main()
