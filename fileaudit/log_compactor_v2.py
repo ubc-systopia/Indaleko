@@ -12,6 +12,8 @@ import collections
 from typing import Dict, List
 from uu import Error
 
+from abstract import IOperator, IWriter
+
 
 class FileEvent:
     # Constants representing different file operation modes
@@ -145,8 +147,7 @@ class LogRecordV2:
                 # Add close timestamp to the file event and mark it as completed
                 self.file_events[file_name].add_close_ts(ts)
                 # Move the completed file event to the completed_file_events list
-                self.completed_file_events.append(
-                    self.file_events[file_name].to_list())
+                self.completed_file_events.append(self.file_events[file_name])
                 # Remove the file event from the current file events
                 del self.file_events[file_name]
             case 'write':
@@ -176,8 +177,21 @@ class LogRecordV2:
 
         # Return a list combining pid, proc, exec_path, and all completed and current file events
         return [
-            self.pid, self.proc, self.exec_path, self.completed_file_events + curr_events
+            self.pid, self.proc, self.exec_path, [
+                fe.to_list() for fe in self.completed_file_events] + curr_events
         ]
+
+    def to_dict(self) -> Dict:
+        curr_events = [] if len(self.file_events) == 0 else [
+            fe.to_dict() for _, fe in self.file_events.items()
+        ]
+
+        return {
+            'pid': self.pid,
+            'proc': self.proc,
+            'exec_path': self.exec_path,
+            'events': [fe.to_dict() for fe in self.completed_file_events] + curr_events
+        }
 
     def free_mem(self):
         """
