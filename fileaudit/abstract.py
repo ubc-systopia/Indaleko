@@ -7,9 +7,10 @@ class IReader(ABC):
     def run(self):
         raise NotImplementedError("Needs to be implemebted")
 
+
 class IWriter(ABC):
     @abstractmethod
-    def write(self, arr: typing.List):
+    def write(self, data):
         raise NotImplementedError("Needs to be implemebted")
 
 
