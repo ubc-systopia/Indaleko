@@ -7,8 +7,15 @@
 #    ['file3', open='ts5', close='ts6', mode=W],
 # ]
 
+# TODO: add a user argument for interval in seconds
+# TODO: add a function to return the exec path of the process
+# TODO: add a logger
+# TODO: rewriter the docstrings
 
 import collections
+import datetime
+import threading
+import time
 from typing import Dict, List
 from uu import Error
 
@@ -238,7 +245,8 @@ class LogCompactorV2(IOperator):
 
     UNKOWN_FILE_NAME_VALUE = '[[UNKNOWN]]'
 
-    def __init__(self, writer: IWriter, extract_exec_path_func=None):
+    def __init__(self, writer: IWriter, extract_exec_path_func=None, with_timer=False, interval_seconds=5):
+
         self.writer = writer
 
         self.state: Dict[str, LogRecordV2] = collections.OrderedDict()
@@ -247,10 +255,28 @@ class LogCompactorV2(IOperator):
             lambda: LogCompactorV2.UNKOWN_FILE_NAME_VALUE)
 
         self.get_exec_path = extract_exec_path_func
+        self.with_timer = with_timer
+
+        if self.with_timer:
+            self.prefix_format = 'fsaudit_{0}.jsonl'
+
+            self.__lock = threading.Lock()  # for synchronization
+            self.interval = max(5, interval_seconds)
+            self.__start_timer()
+
+    def __timer(self):
+        while True:
+            time.sleep(self.interval)
+            with self.__lock:
+                self.dump(to_file=True)
+
+    def __start_timer(self):
+        timer_thread = threading.Thread(target=self.__timer)
+        timer_thread.daemon = True  # exits when the program finishes
+        timer_thread.start()
 
     def create_key(self, record) -> tuple[str, str]:
         return ('-'.join(record[-2:]), record[2])
-        # return '-'.join(record[-2:])
 
     def add_file_name(self, key: tuple[str, str], file_name: str) -> None:
         self.file_names[key] = file_name
@@ -258,13 +284,20 @@ class LogCompactorV2(IOperator):
     def get_file_name(self, key) -> str:
         return self.file_names[key]
 
-    def execute(self, input_record, **args):
+    def execute(self, input, **args):
+        if self.with_timer:
+            with self.__lock:
+                return self._execute(input, **args)
+        else:
+            return self._execute(input, **args)
+
+    def _execute(self, input_record, **args):
         status, record = input_record
         if status == 1 or record[2].strip() == '-1':
             return (1, record)
 
         key = self.create_key(record)
-        process_hash=key[0]
+        process_hash = key[0]
 
         if process_hash not in self.state:
             self.state[process_hash] = LogRecordV2(
@@ -275,9 +308,9 @@ class LogCompactorV2(IOperator):
         match record[1]:
             case 'open':
                 self.state[process_hash].add_file_event(file_name=record[3],
-                                               ts=record[0],
-                                               op=record[1]
-                                               )
+                                                        ts=record[0],
+                                                        op=record[1]
+                                                        )
 
                 self.add_file_name(key=key, file_name=record[3])
 
@@ -309,8 +342,15 @@ class LogCompactorV2(IOperator):
             fe.to_dict() for _, fe in self.state.items()
         ]
 
-    def dump(self):
-        for _, fe in self.state.items():
-            self.writer.write(fe.to_dict())
-            fe.free_mem()
+    def dump(self, to_file=False):
+        if not to_file:
+            for _, fe in self.state.items():
+                self.writer.write(fe.to_dict())
+                fe.free_mem()
+        else:
+            output_file_name = self.prefix_format.format(
+                datetime.datetime.now())
+            with open(output_file_name, mode='w') as audit_file:
+                for _, fe in self.state.items():
+                    self.writer.write(fe.to_dict(), **{'file': audit_file})
         self.state.clear()

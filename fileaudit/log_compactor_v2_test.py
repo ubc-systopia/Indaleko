@@ -373,7 +373,7 @@ class TestLogCompactorV2(unittest.TestCase):
         )
 
         for record in TestLogCompactorV2.MockData.only_open_close():
-            lc.execute(record)
+            lc._execute(record)
 
         # [
         #  (0, ['13:38:34.127529', 'open', '1','/path/foo/text1', 'app1', '381720']),
@@ -428,7 +428,7 @@ class TestLogCompactorV2(unittest.TestCase):
         )
 
         for record in TestLogCompactorV2.MockData.open_close_rw():
-            lc.execute(record)
+            lc._execute(record)
 
         # (0, ['13:38:34.127529', 'open', '3',
         #      '/path/foo/text2', 'app1', '381721']),
@@ -480,7 +480,7 @@ class TestLogCompactorV2(unittest.TestCase):
         )
 
         for record in TestLogCompactorV2.MockData.only_rw():
-            lc.execute(record)
+            lc._execute(record)
 
         # (0, ['13:38:34.127532', 'read', '2', 'app1', '381722']),
         # (0, ['13:38:34.127533', 'write', '2', 'app1', '381722']),
@@ -529,7 +529,7 @@ class TestLogCompactorV2(unittest.TestCase):
         )
 
         for record in TestLogCompactorV2.MockData.neg_fd():
-            lc.execute(record)
+            lc._execute(record)
 
         #         (0, ['13:38:23.403654', 'open', '-1',
         #              '/path/foo/nosuccess', 'com.docker.cli', '381337'])
@@ -550,7 +550,7 @@ class TestLogCompactorV2(unittest.TestCase):
         )
 
         for record in TestLogCompactorV2.MockData.only_open():
-            lc.execute(record)
+            lc._execute(record)
 
         # (0, ['13:38:23.403654', 'open', '1',
         #      '/path/foo/nosuccess', 'com.docker.cli', '381337'])
@@ -584,7 +584,7 @@ class TestLogCompactorV2(unittest.TestCase):
         )
 
         for record in TestLogCompactorV2.MockData.close_without_open():
-            lc.execute(record)
+            lc._execute(record)
 
         #         (0, ['18:36:21.633351', 'close', '30', 'ampdaemon', '8310']),
 
@@ -618,7 +618,7 @@ class TestLogCompactorV2(unittest.TestCase):
         )
 
         for record in TestLogCompactorV2.MockData.multiple_close():
-            lc.execute(record)
+            lc._execute(record)
 
         #         (0, ['18:36:21.633370', 'close', '32', 'ampdaemon', '8310']),
         #         (0, ['18:36:21.633370', 'close', '10', 'ampdaemon', '8310']),
@@ -659,7 +659,7 @@ class TestLogCompactorV2(unittest.TestCase):
         )
 
         for record in TestLogCompactorV2.MockData.mkdir_rename_mmap():
-            lc.execute(record)
+            lc._execute(record)
 
         lc.dump()
         self.assertEqual(
@@ -719,7 +719,7 @@ class TestLogCompactorV2(unittest.TestCase):
         )
 
         for record in TestLogCompactorV2.MockData.one_proce_multi_files():
-            lc.execute(record)
+            lc._execute(record)
 
 # (0, ['13:38:34.127529', 'open', '1', '/path/foo/text1', 'app1', '381720']),
 # (0, ['13:38:34.127535', 'close', '1', 'app1', '381720']),
