@@ -20,13 +20,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import argparse
 import datetime
-import platform
-import logging
-import os
 import json
 import jsonlines
-import uuid
+import logging
 import msgpack
+import os
+import platform
+import uuid
 
 from IndalekoIngester import IndalekoIngester
 from IndalekoWindowsMachineConfig import IndalekoWindowsMachineConfig

@@ -79,8 +79,9 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
             self.refresh_access_token()
         self.dbx = dropbox.Dropbox(self.dropbox_credentials['token'])
         self.user_info = self.dbx.users_get_current_account()
+        if 'platform' not in kwargs:
+            kwargs['platform'] = IndalekoDropboxIndexer.dropbox_platform
         super().__init__(**kwargs,
-                         platform=IndalekoDropboxIndexer.dropbox_platform,
                          indexer_name=IndalekoDropboxIndexer.dropbox_indexer_name,
                          **IndalekoDropboxIndexer.indaleko_dropbox_local_indexer_service
         )
