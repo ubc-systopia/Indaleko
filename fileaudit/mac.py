@@ -3,7 +3,7 @@ import log_compactor_v2
 import operators
 import pipeline
 import argparse
-from typing import List
+import subprocess
 
 
 def print_result(t):
@@ -30,9 +30,13 @@ class CompressorWriterV2:
             args['file'].write(json.dumps(arr) + '\n')
 
 
+def get_exec_path(_, pid):
+    return ''
+    
 # TODO: add a function to return the exec path of the process
 # TODO: add a logger
 # TODO: rewriter the docstrings
+
 
 def main():
     from os import path
@@ -72,7 +76,7 @@ def main():
 
     compactorOp = log_compactor_v2.LogCompactorV2(
         writer=CompressorWriterV2(),
-        extract_exec_path_func=lambda x, y: '-'.join([x, y]),
+        extract_exec_path_func=get_exec_path,
         with_timer=args.compress,
         interval_seconds=max(args.interval, 5)
     )
