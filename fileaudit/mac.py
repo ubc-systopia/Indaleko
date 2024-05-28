@@ -1,10 +1,10 @@
+import datetime
 import json
+import logging
 import log_compactor_v2
 import operators
 import pipeline
 import argparse
-import subprocess
-
 
 def print_result(t):
     if t != None and t[0] == 0:
@@ -33,13 +33,28 @@ class CompressorWriterV2:
 def get_exec_path(_, pid):
     return ''
     
-# TODO: add a function to return the exec path of the process
-# TODO: add a logger
 # TODO: rewriter the docstrings
 
 
 def main():
     from os import path
+
+    # Create a logger
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+
+    # Create a file handler
+    log_file_name=f'{__file__}.{datetime.datetime.now()}.log'
+    print(f'log_file={log_file_name}')
+    handler = logging.FileHandler(log_file_name)
+    handler.setLevel(logging.INFO)
+
+    # Create a logging format
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s : %(message)s')
+    handler.setFormatter(formatter)
+
+    # Add the handlers to the logger
+    logger.addHandler(handler)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--compress', '-c', dest='compress', action='store_true',
@@ -60,6 +75,8 @@ def main():
                                    type=str, help='the input file')
 
     args = parser.parse_args()
+
+    logger.info(f'args={args}')
 
     input_reader = None
     match args.subcommands:

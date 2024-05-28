@@ -19,6 +19,32 @@ from abstract import IOperator, IWriter
 
 
 class FileEvent:
+    """
+    A class to represent a file event with operations and timestamps.
+
+    Constants:
+    MODE_READ (int): Represents the read operation mode.
+    MODE_WRITE (int): Represents the write operation mode.
+    MODE_MMAP (int): Represents the memory map operation mode.
+    MODE_MKDIR (int): Represents the directory creation operation mode.
+    MODE_RENAME (int): Represents the file rename operation mode.
+
+    Attributes:
+    filename (str): The name of the file associated with the event.
+    open_ts (str): The timestamp when the file was opened.
+    close_ts (str): The timestamp when the file was closed.
+    mode (int): A bitmask to store the modes of operation on the file.
+
+    Methods:
+    validate_input(value, exp_type): Validates that the given value is of the expected type.
+    add_open_ts(ts): Adds the open timestamp to the file event.
+    add_close_ts(ts): Adds the close timestamp to the file event.
+    add_filename(filename): Adds the filename to the file event.
+    add_mode(mode): Adds the operation mode to the file event using bitwise OR to set the appropriate bit.
+    to_list(): Converts the file event attributes to a list.
+    to_dict(): Converts the file event attributes to a dictionary.
+    """
+
     # Constants representing different file operation modes
     MODE_READ = 0
     MODE_WRITE = 1
@@ -79,6 +105,18 @@ class FileEvent:
 
 
 class LogRecordV2:
+    """
+    A class to represent and manage log records of file events associated with a process.
+
+    Methods:
+    Validate(value, exp_type): Validates that the given value is of the expected type.
+    __init__(pid, proc, exec_path): Initializes the LogRecordV2 instance with process details and initializes file event tracking structures.
+    add_file_event(file_name, ts, op): Adds a file event to the log record, updating or creating a FileEvent instance as necessary and marking events as completed when applicable.
+    to_list(): Converts the LogRecordV2 instance to a list, including process details and both completed and current file events.
+    to_dict(): Converts the LogRecordV2 instance to a dictionary, including process details and both completed and current file events.
+    free_mem(): Frees memory by clearing and deleting file event attributes, then forcing garbage collection.
+    """
+
     @staticmethod
     def Validate(value, exp_type):
         """
@@ -221,6 +259,8 @@ class LogCompactorV2(IOperator):
         state (Dict[str, LogRecordV2]): An ordered dictionary to maintain the state of log records.
         file_names (Dict[tuple[str, str], str]): A defaultdict to map file operation keys to filenames.
         get_exec_path (Callable, optional): A function to extract the executable path from the log record.
+        with_timer (bool, optional): A flag indicating whether to use a timer for periodic execution.
+        interval_seconds (int, optional): The interval time in seconds for timer-based execution. Defaults to 5 seconds.
 
     Methods:
         create_key(record) -> tuple[str, str]:
@@ -232,11 +272,14 @@ class LogCompactorV2(IOperator):
         get_file_name(key) -> str:
             Retrieves the filename associated with a given key.
 
-        execute(input_record, **args):
+        execute(input, **args) -> Tuple[int, Any]:
             Processes an input log record, handling different file operations and updating the state accordingly.
 
         to_list() -> list:
             Converts the current state of log records to a list of dictionaries for serialization.
+
+        dump(to_file: bool) -> None:
+            Writes the log records to the output destination, either a file or another storage medium.
     """
 
     UNKOWN_FILE_NAME_VALUE = '[[UNKNOWN]]'
@@ -284,7 +327,7 @@ class LogCompactorV2(IOperator):
         if self.with_timer:
             if not self.is_timer_started:
                 self.__start_timer()
-                self.is_timer_started=True
+                self.is_timer_started = True
 
             with self.__lock:
                 return self._execute(input, **args)
