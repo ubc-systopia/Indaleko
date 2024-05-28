@@ -1,4 +1,5 @@
-import logcompator
+import json
+import log_compactor_v2
 import operators
 import pipeline
 import argparse
@@ -16,15 +17,31 @@ def to_csv(t, header: bool = False):
     if t != None and t[0] == 0:
         print(','.join(t[1]))
 
-class CompressorWriter():
+
+class CompressorWriter:
     def write(self, arr):
         print(arr)
+
+
+class CompressorWriterV2:
+    def write(self, arr, **args):
+        # print(arr)
+        if 'file' in args:
+            args['file'].write(json.dumps(arr) + '\n')
+
+
+# TODO: add a function to return the exec path of the process
+# TODO: add a logger
+# TODO: rewriter the docstrings
 
 def main():
     from os import path
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--compress', '-c', dest='compress', action='store_true', default=False, help='compress the log records into one one')
+    parser.add_argument('--compress', '-c', dest='compress', action='store_true',
+                        default=False, help='compress the log records into one one')
+    parser.add_argument('--interval', dest='interval', type=int,
+                        help='interval time (in minutes) for compression (has to be used with -c or --compress). Has to be more than 5 otherwise it will be set to 5', default=5)
 
     subparsers = parser.add_subparsers(title='subcommands', dest='subcommands')
 
@@ -44,16 +61,21 @@ def main():
     match args.subcommands:
         case 'fs_usage':
             command = (
-                'sudo fs_usage -e -w -f filesys -t ' + str(args.time)
+                'sudo fs_usage -w -f filesys -t ' + str(args.time)
             )
             input_reader = operators.InputReader([command])
         case 'file_input':
-            assert path.exists(args.input_file), f'the input file does not exist at {args.input_file}'
+            assert path.exists(args.input_file), f'the input file does not exist at {
+                args.input_file}'
 
             input_reader = operators.FileInputReader(args.input_file)
 
-
-    compactorOp = logcompator.LogCompactor(CompressorWriter())
+    compactorOp = log_compactor_v2.LogCompactorV2(
+        writer=CompressorWriterV2(),
+        extract_exec_path_func=lambda x, y: '-'.join([x, y]),
+        with_timer=args.compress,
+        interval_seconds=max(args.interval, 5)
+    )
 
     p = pipeline.Pipeline(input_reader)
 
@@ -72,7 +94,6 @@ def main():
         p.add(compactorOp)
     else:
         p.add(operators.Show(show_func=print_result))
-
 
     list(p.run())
 

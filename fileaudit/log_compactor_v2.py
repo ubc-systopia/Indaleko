@@ -7,10 +7,6 @@
 #    ['file3', open='ts5', close='ts6', mode=W],
 # ]
 
-# TODO: add a user argument for interval in seconds
-# TODO: add a function to return the exec path of the process
-# TODO: add a logger
-# TODO: rewriter the docstrings
 
 import collections
 import datetime
@@ -256,13 +252,13 @@ class LogCompactorV2(IOperator):
 
         self.get_exec_path = extract_exec_path_func
         self.with_timer = with_timer
+        self.is_timer_started = False
 
         if self.with_timer:
             self.prefix_format = 'fsaudit_{0}.jsonl'
 
             self.__lock = threading.Lock()  # for synchronization
             self.interval = max(5, interval_seconds)
-            self.__start_timer()
 
     def __timer(self):
         while True:
@@ -286,6 +282,10 @@ class LogCompactorV2(IOperator):
 
     def execute(self, input, **args):
         if self.with_timer:
+            if not self.is_timer_started:
+                self.__start_timer()
+                self.is_timer_started=True
+
             with self.__lock:
                 return self._execute(input, **args)
         else:
@@ -347,10 +347,11 @@ class LogCompactorV2(IOperator):
             for _, fe in self.state.items():
                 self.writer.write(fe.to_dict())
                 fe.free_mem()
-        else:
+        elif len(self.state) > 0:  # skip empty state
             output_file_name = self.prefix_format.format(
                 datetime.datetime.now())
             with open(output_file_name, mode='w') as audit_file:
                 for _, fe in self.state.items():
                     self.writer.write(fe.to_dict(), **{'file': audit_file})
+                    fe.free_mem()
         self.state.clear()
