@@ -11,3 +11,4 @@ scratch.py
 *.jsonl
 wam/
 .DS_Store
+creds.py
