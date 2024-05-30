@@ -84,11 +84,14 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
         self.machine_config = kwargs['machine_config']
         if 'machine_id' not in kwargs:
             kwargs['machine_id'] = self.machine_config.machine_id
-        super().__init__(**kwargs,
-                         platform=IndalekoWindowsLocalIndexer.windows_platform,
-                         indexer_name=IndalekoWindowsLocalIndexer.windows_local_indexer_name,
-                         **IndalekoWindowsLocalIndexer.indaleko_windows_local_indexer_service
-        )
+        for key, value in self.indaleko_windows_local_indexer_service.items():
+            if key not in kwargs:
+                kwargs[key] = value
+        if 'platform' not in kwargs:
+            kwargs['platform'] = IndalekoWindowsLocalIndexer.windows_platform
+        if 'indexer_name' not in kwargs:
+            kwargs['indexer_name'] = IndalekoWindowsLocalIndexer.windows_local_indexer_name
+        super().__init__(**kwargs)
 
     def generate_indexer_file_name(self, **kwargs) -> str:
         if 'platform' not in kwargs:

@@ -115,36 +115,44 @@ class IndalekoRecord:
         """Return a JSON representation of the record."""
         return json.dumps(self.to_dict(), indent=indent)
 
-    def set_attributes(self, attributes : dict) -> None:
+    def set_attributes(self, attributes : dict) -> 'IndalekoRecord':
         """Set the attributes for this record."""
         self.__attributes__ = attributes
+        return self
 
     def get_attributes(self) -> dict:
         """Return the attributes for this record."""
         return self.__attributes__
 
-    def set_source(self, source : dict):
+    def set_source(self, source : dict) -> 'IndalekoRecord':
         """Set the source for this record."""
         assert self.validate_source(source), f'source is not valid: {source}'
         self.__source__ = {
             'Identifier' : source['Identifier'],
             'Version' : source['Version'],
         }
+        if 'Description' in source:
+            self.__source__['Description'] = source['Description']
+        if 'Name' in source:
+            self.__source__['Name'] = source['Name']
+        return self
 
     def get_source(self) -> dict:
         """Return the source for this record."""
         return self.__source__
 
-    def set_data(self, raw_data : bytes) -> None:
+    def set_data(self, raw_data : bytes) -> 'IndalekoRecord':
         """Set the raw data for this record. Note input is bytes and the data is
         stored as base64."""
         assert isinstance(raw_data, bytes), 'raw_data must be bytes'
         self.__raw_data__ = base64.b64encode(raw_data).decode('ascii')
+        return self
 
-    def set_base64_data(self, base64_data : str) -> None:
+    def set_base64_data(self, base64_data : str) -> 'IndalekoRecord':
         """Set the raw data for this record. Note input is base64 encoded."""
         assert isinstance(base64_data, str), 'base64_data must be a string'
         self.__raw_data__ = base64_data
+        return self
 
     def get_data(self) -> str:
         """Return the raw data for this record. Note output is base64 encoded."""
@@ -153,6 +161,12 @@ class IndalekoRecord:
     def get_raw_data(self) -> bytes:
         """Return the raw data for this record. Note output is bytes."""
         return base64.b64decode(self.__raw_data__)
+
+    def set_timestamp(self, timestamp : str) -> 'IndalekoRecord':
+        """Set the timestamp for this record."""
+        assert self.validate_iso_timestamp(timestamp), 'timestamp is not valid'
+        self.__timestamp__ = timestamp
+        return self
 
     @staticmethod
     def validate_source(source : dict) -> bool:

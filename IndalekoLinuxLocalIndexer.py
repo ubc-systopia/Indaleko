@@ -29,7 +29,7 @@ from IndalekoLinuxMachineConfig import IndalekoLinuxMachineConfig
 
 class IndalekoLinuxLocalIndexer(IndalekoIndexer):
     '''
-    This is the class that indexes Mac local file systems.
+    This is the class that indexes Linux local file systems.
     '''
     linux_platform = 'Linux'
     linux_local_indexer_name = 'fs_indexer'
@@ -135,7 +135,7 @@ def main():
         suffix='log')
     parser= argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--output', '-o',
-                        help='name to assign to output directory',
+                        help='name to assign to output file',
                         default=output_file)
     args = parser.parse_args()
     output_file = args.output

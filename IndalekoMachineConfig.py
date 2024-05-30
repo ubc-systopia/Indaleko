@@ -160,40 +160,40 @@ class IndalekoMachineConfig(IndalekoRecord):
         return candidate
 
 
-    def set_platform(self, platform: dict) -> None:
+    def set_platform(self, platform_data: dict) -> None:
         """
         This method sets the platform information for the machine.
         """
         assert isinstance(
-            platform, dict
-        ), f"platform must be a dict (not {type(platform)})"
-        assert "software" in platform, "platform must contain a software field"
+            platform_data, dict
+        ), f"platform must be a dict (not {type(platform_data)})"
+        assert "software" in platform_data, "platform must contain a software field"
         assert isinstance(
-            platform["software"], dict
-        ), f'platform["software"] must be a dictionary, not {type(platform["software"])}'
+            platform_data["software"], dict
+        ), f'platform["software"] must be a dictionary, not {type(platform_data["software"])}'
         assert isinstance(
-            platform["software"]["OS"], str
-        ), f'platform must contain a string OS field, not {type(platform["software"]["OS"])}'
+            platform_data["software"]["OS"], str
+        ), f'platform must contain a string OS field, not {type(platform_data["software"]["OS"])}'
         assert isinstance(
-            platform["software"]["Version"], str
+            platform_data["software"]["Version"], str
         ), "platform must contain a string version field"
         assert isinstance(
-            platform["software"]["Architecture"], str
+            platform_data["software"]["Architecture"], str
         ), "platform must contain a string architecture field"
-        assert "hardware" in platform, "platform must contain a hardware field"
+        assert "hardware" in platform_data, "platform must contain a hardware field"
         assert isinstance(
-            platform["hardware"], dict
+            platform_data["hardware"], dict
         ), 'platform["hardware"] must be a dictionary'
         assert isinstance(
-            platform["hardware"]["CPU"], str
+            platform_data["hardware"]["CPU"], str
         ), "platform must contain a string CPU field"
         assert isinstance(
-            platform["hardware"]["Version"], str
+            platform_data["hardware"]["Version"], str
         ), "platform must contain a string version field"
         assert isinstance(
-            platform["hardware"]["Cores"], int
+            platform_data["hardware"]["Cores"], int
         ), "platform must contain an integer cores field"
-        self.platform = platform
+        self.platform = platform_data
         return self
 
     def get_platform(self) -> dict:
@@ -479,14 +479,14 @@ def check_windows_prerequisites(config_dir : str = Indaleko.default_config_dir) 
 
 def add_command(args: argparse.Namespace) -> None:
     '''This routine adds a machine config to the database.'''
-    logging.info(f'Adding machine config for {args.platform}')
+    logging.info('Adding machine config for %s', args.platform)
     if args.platform == 'Linux':
         check_linux_prerequisites()
         logging.info('Linux prerequisites met')
         cmd_string = f'python3 {get_script_name(args.platform)}'
         cmd_string += f' --configdir {args.configdir}'
         cmd_string += f' --timestamp {args.timestamp}'
-        logging.info(f'Recommending: <{cmd_string}> for Linux machine config')
+        logging.info('Recommending: <%s> for Linux machine config', cmd_string)
         print(f'Please run:\n\t{cmd_string}')
     elif args.platform == 'Darwin':
         check_macos_prerequisites()
@@ -496,10 +496,12 @@ def add_command(args: argparse.Namespace) -> None:
 
 def list_command(args: argparse.Namespace) -> None:
     '''This routine lists the machine configs in the database.'''
+    print(args)
     return
 
 def delete_command(args: argparse.Namespace) -> None:
     '''This routine deletes a machine config from the database.'''
+    print(args)
     return
 
 def main():
@@ -516,12 +518,24 @@ def main():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='command', required=True)
     parser_add = subparsers.add_parser('add', help='Add a machine config')
-    parser_add.add_argument('--platform', type=str, default=platform.system(), help='Platform to use')
+    parser_add.add_argument('--platform',
+                            type=str,
+                            default=platform.system(),
+                            help='Platform to use')
     parser_list = subparsers.add_parser('list', help='List machine configs')
-    parser_list.add_argument('--files', default=False, action='store_true', help='Source ID')
-    parser_list.add_argument('--db', type=str, default=True, help='Source ID')
+    parser_list.add_argument('--files',
+                             default=False,
+                             action='store_true',
+                             help='Source ID')
+    parser_list.add_argument('--db',
+                             type=str,
+                             default=True,
+                             help='Source ID')
     parser_delete = subparsers.add_parser('delete', help='Delete a machine config')
-    parser_delete.add_argument('--platform', type=str, default=platform.system(), help='Platform to use')
+    parser_delete.add_argument('--platform',
+                               type=str,
+                               default=platform.system(),
+                               help='Platform to use')
     parser.add_argument(
         '--log',
         type=str,
@@ -538,7 +552,7 @@ def main():
     if args.log is not None:
         logging.basicConfig(filename=args.log, level=logging.DEBUG)
         logging.info('Starting Indaleko Machine Config')
-        logging.info(f'Logging to {args.log}')
+        logging.info('Logging to %s', args.log)  # Fix: Use lazy % formatting
     if args.command == 'add':
         add_command(args)
     elif args.command == 'list':

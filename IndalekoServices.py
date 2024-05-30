@@ -43,8 +43,9 @@ from IndalekoCollections import IndalekoCollection, IndalekoCollections
 from IndalekoServicesSchema import IndalekoServicesSchema
 from Indaleko import Indaleko
 from IndalekoRecord import IndalekoRecord
+from IndalekoSingleton import IndalekoSingleton
 
-class IndalekoServices:
+class IndalekoServices(IndalekoSingleton):
     '''
     This class defines the service model for Indaleko.
     '''
@@ -55,14 +56,24 @@ class IndalekoServices:
     assert indaleko_services in Indaleko.Collections, \
         f'{indaleko_services} must be in Indaleko_Collections'
 
+    service_type_test = 'Test'
+    service_type_machine_configuration = "Machine Configuration"
+    service_type_indexer = 'Indexer'
+    service_type_ingester = 'Ingester'
+    service_type_semantic_transducer = 'Semantic Transducer'
+    service_type_activity_context_generator = 'Activity Context Generator'
+    service_type_activity_data_collector = 'Activity Data Collector'
+    service_type_activity_data_registrar = 'Activity Data Registrar'
+
     service_types = (
-        'Test',
-        "Machine Configuration",
-        'Indexer',
-        'Ingester',
-        'Semantic Transducer',
-        'Activity Context Generator',
-        'Activity Data Collector',
+        service_type_test,
+        service_type_machine_configuration,
+        service_type_indexer,
+        service_type_ingester,
+        service_type_semantic_transducer,
+        service_type_activity_context_generator,
+        service_type_activity_data_collector,
+        service_type_activity_data_registrar
     )
 
     CollectionDefinition = {
@@ -80,10 +91,11 @@ class IndalekoServices:
     def __init__(self, reset: bool = False) -> None:
         self.db_config = IndalekoDBConfig()
         self.db_config.start()
-        self.service_collection = IndalekoCollection('Services',
-                                                     self.CollectionDefinition,
-                                                     self.db_config,
-                                                     reset=reset)
+        self.service_collection = IndalekoCollection(
+            name=self.indaleko_services,
+            definition=self.CollectionDefinition,
+            db=self.db_config,
+            reset=reset)
 
 
     def create_indaleko_services_collection(self) -> IndalekoCollection:
@@ -92,7 +104,11 @@ class IndalekoServices:
         """
         assert not self.db_config.db.has_collection(self.indaleko_services), \
          f'{self.indaleko_services} collection already exists, cannot create it.'
-        self.service_collection = IndalekoCollection(self.db_config.db, self.indaleko_services)
+        self.service_collection = IndalekoCollection(
+            name=self.indaleko_services,
+            definition=self.CollectionDefinition,
+            db=self.db_config.db
+        )
         self.service_collection.add_schema(IndalekoServices.Schema)
         self.service_collection.create_index('name', 'persistent', ['name'], unique=True)
         return self.service_collection
@@ -194,10 +210,12 @@ class IndalekoService(IndalekoRecord):
             self.service_version = kwargs['service_version']
         if 'service_type' in kwargs:
             self.service_type = kwargs['service_type']
-        if 'creation_date' in kwargs:
-            self.creation_date = kwargs['creation_date']
+        self.creation_date = kwargs.get('creation_date',
+                                        datetime.datetime.now(datetime.timezone.utc).isoformat())
         if self.collection is None:
             self.collection = IndalekoCollections().get_collection(Indaleko.Indaleko_Services)
+        assert self.collection.name == Indaleko.Indaleko_Services, \
+            f'Invalid collection {self.collection.name} for service registration.'
         assert isinstance(self.collection, IndalekoCollection), \
             'service_collection must be an IndalekoCollection'
         found = False
@@ -271,17 +289,22 @@ class IndalekoService(IndalekoRecord):
         version, identifier (if specified,) type, and creation date (if
         specified.)
         '''
+        assert self.collection.name == Indaleko.Indaleko_Services, \
+            f'Invalid collection {self.collection.name} for service registration.'
         if self.service_identifier is None:
             self.service_identifier = str(uuid.uuid4())
         if self.creation_date is None:
             self.creation_date = datetime.datetime.now(datetime.timezone.utc).isoformat()
         assert self.service_type in IndalekoServices.service_types, \
             f'Invalid service type {self.service_type} specified.'
+        # print(f'Registering service {self.service_name} with id {self.service_identifier} : {self.to_dict()}.')
         try:
             self.collection.insert(self.to_dict())
         except arango.exceptions.DocumentInsertError as error:
             print(f'Error inserting service {self.service_name}: {error}')
+            print(f'Collection Name: {self.collection.name}')
             print(self.to_json())
+            logging.debug('Error inserting service %s: %s', self.service_name, error)
             raise error
         return self.get_service_data()
 

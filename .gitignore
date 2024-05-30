@@ -7,8 +7,11 @@ __pycache__/*
 wmiobject-list.txt
 *.log
 *.json
-scratch.py
+scratch*.py
+scratch*.ipynb
 *.jsonl
 wam/
 .DS_Store
 creds.py
+wam*
+

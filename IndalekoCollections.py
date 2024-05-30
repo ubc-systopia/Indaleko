@@ -26,145 +26,49 @@ import datetime
 import os
 from Indaleko import Indaleko
 from IndalekoDBConfig import IndalekoDBConfig
-class IndalekoCollectionIndex:
-    '''Manages an index for an IndalekoCollection object.'''
+from IndalekoSingleton import IndalekoSingleton
+from IndalekoCollectionIndex import IndalekoCollectionIndex
+from IndalekoCollection import IndalekoCollection
 
-    def __init__(self,
-                 collection: 'IndalekoCollection',
-                 index_type: str,
-                 fields: list,
-                 unique=False):
-        """Parameters:
-            This class is used to create indices for IndalekoCollection objects.
-
-            collection: this points to the ArangoDB collection object to use for
-                        this index.
-
-            index_type: 'persistent' or 'hash'
-
-            fields: list of fields to be indexed
-
-            unique: if True, the index is unique
-        """
-        self.collection = collection
-        self.fields = fields
-        self.unique = unique
-        self.index_type = index_type
-        self.index = self.collection.add_persistent_index(fields=self.fields, unique=self.unique)
-
-    def find_entries(self, **kwargs):
-        """
-        Given a list of keyword arguments, return a list of documents that
-        match the criteria.
-        """
-        return [document for document in self.collection.find(kwargs)]
-
-
-class IndalekoCollection:
-    """
-    An IndalekoCollection object is used to manage a collection of documents in the
-    Indaleko database.
-    """
-
-    def __init__(self,
-                 name : str,
-                 definition : dict,
-                 db : IndalekoDBConfig = None,
-                 reset : bool = False) -> None:
-        self.name = name
-        self.definition = definition
-        assert isinstance(definition, dict), 'Collection definition must be a dictionary'
-        assert 'schema' in definition, 'Collection must have a schema'
-        assert 'edge' in definition, 'Collection must have an edge flag'
-        assert 'indices' in definition, 'Collection must have indices'
-        assert db is None or isinstance(db, IndalekoDBConfig), \
-            'db must be None or an IndalekoDBConfig object'
-        if db is None:
-            self.db_config = IndalekoDBConfig()
-            self.db_config.start()
-        else:
-            self.db_config = db
-        assert db is not None, 'db must be a valid IndalekoDBConfig object'
-        self.collection_name = self.name
-        self.indices = {}
-        self.create_collection(self.collection_name, definition, reset=reset)
-
-    def create_collection(self,
-                          name : str,
-                          config : dict,
-                          reset : bool = False) -> 'IndalekoCollection':
-        """
-        Create a collection in the database. If the collection already exists,
-        return the existing collection. If reset is True, delete the existing
-        collection and create a new one.
-        """
-        if self.db_config.db.has_collection(name) and not reset:
-            self.collection = self.db_config.db.collection(name)
-        else:
-            self.collection = self.db_config.db.create_collection(name, edge=config['edge'])
-            if 'schema' in config:
-                self.collection.configure(schema=config['schema'])
-            if 'indices' in config:
-                for index in config['indices']:
-                    self.create_index(index,
-                                      config['indices'][index]['type'],
-                                      config['indices'][index]['fields'],
-                                      config['indices'][index]['unique'])
-        return self.collection
-
-    def create_index(self,
-                     name: str,
-                     index_type: str,
-                     fields: list,
-                     unique: bool) -> 'IndalekoCollection':
-        """Create an index for the given collection."""
-        self.indices[name] = IndalekoCollectionIndex(self.collection, index_type, fields, unique)
-        return self
-
-    def find_entries(self, **kwargs):
-        """Given a list of keyword arguments, return a list of documents that match the criteria."""
-        return [document for document in self.collection.find(kwargs)]
-
-    def insert(self, document: dict, overwrite : bool = False) -> 'IndalekoCollection':
-        """Insert a document into the collection."""
-        return self.collection.insert(document, overwrite=overwrite)
-
-    def add_schema(self, schema: dict) -> 'IndalekoCollection':
-        """Add a schema to the collection."""
-        self.collection.configure(schema=schema)
-        return self
-
-    def delete(self, key: str) -> 'IndalekoCollection':
-        """Delete the document with the given key."""
-        return self.collection.delete(key)
-
-
-class IndalekoCollections:
+class IndalekoCollections(IndalekoSingleton):
     """
     This class is used to manage the collections in the Indaleko database.
     """
-    def __init__(self, db_config: IndalekoDBConfig = None, reset: bool = False) -> None:
-        if db_config is None:
+
+    def __init__(self, **kwargs) -> None:
+        # db_config: IndalekoDBConfig = None, reset: bool = False) -> None:
+        self.db_config = kwargs.get('db_config', IndalekoDBConfig())
+        if self.db_config is None:
             self.db_config = IndalekoDBConfig()
-        else:
-            self.db_config = db_config
+        self.reset = kwargs.get('reset', False)
         logging.debug('Starting database')
         self.db_config.start()
         self.collections = {}
         for name in Indaleko.Collections.items():
             name = name[0]
             logging.debug('Processing collection %s', name)
-            self.collections[name] = IndalekoCollection(name,
-                                                        Indaleko.Collections[name],
-                                                        self.db_config, reset)
+            self.collections[name] = IndalekoCollection(name=name,
+                                                        definition=Indaleko.Collections[name],
+                                                        db=self.db_config,
+                                                        reset=self.reset)
 
-    def get_collection(self, name: str) -> IndalekoCollection:
+    @staticmethod
+    def get_collection(name: str) -> IndalekoCollection:
         """Return the collection with the given name."""
-        assert name in self.collections, f'Collection {name} does not exist.'
-        return self.collections[name]
+        collections = IndalekoCollections()
+        collection = None
+        if name not in collections.collections:
+            # Look for it by the specific name (activity data providers do this)
+            if not collections.db_config.db.has_collection(name):
+                collection = IndalekoCollection(name=name, db=collections.db_config)
+            else:
+                collection = \
+                    IndalekoCollection(ExistingCollection=collections.db_config.db.collection(name))
+        else:
+            collection = collections.collections[name]
+        return collection
 
-
-def main():
+def real_main():
     """Test the IndalekoCollections class."""
     start_time = datetime.datetime.now(datetime.UTC).isoformat()
     parser = argparse.ArgumentParser()
@@ -193,7 +97,72 @@ def main():
     logging.info('End Indaleko Collections test at %s', end_time)
     assert collections is not None, 'Collections object should not be None'
 
+def extract_params() -> tuple:
+    '''Extract the common parameters from the given keyword arguments.'''
+    common_params = set(IndalekoCollectionIndex.index_args['hash'].keys())
+    for params in IndalekoCollectionIndex.index_args.values():
+        common_params = common_params.intersection(params)
+        common_params.intersection_update(params)
+    unique_params_by_index = {index : list(set(params) - common_params) for index, params in IndalekoCollectionIndex.index_args.items()}
+    return common_params, unique_params_by_index
 
+
+def main2():
+    '''Another test for this module.'''
+    common_params, unique_params_by_index = extract_params()
+    print(common_params)
+    print(unique_params_by_index)
+
+def main():
+    '''Test the IndalekoCollections class.'''
+    #start_time = datetime.datetime.now(datetime.UTC).isoformat()
+    common_params, unique_params_by_index = extract_params()
+    print(common_params)
+    print(unique_params_by_index)
+    pre_parser = argparse.ArgumentParser(add_help=False)
+    pre_parser.add_argument('--collection',
+                            type=str,
+                            help='Name of the collection to which the index will be added',
+                            required=True)
+    pre_parser.add_argument('--type',
+                            type=str,
+                            help='Type of index to create',
+                            choices=IndalekoCollectionIndex.index_args.keys(),
+                            default='persistent')
+    for common_arg in common_params:
+        arg_type = IndalekoCollectionIndex.index_args['hash'][common_arg]
+        print(f'Adding argument {common_arg} with type {arg_type}')
+        pre_parser.add_argument(f'--{common_arg}',
+                                type=IndalekoCollectionIndex.index_args['hash'][common_arg],
+                                required=True,
+                                help=f'Value for {common_arg}')
+    pre_args, _ = pre_parser.parse_known_args()
+    parser = argparse.ArgumentParser(description='Create an index for an IndalekoCollection', parents=[pre_parser])
+    for index_args in unique_params_by_index[pre_args.type]:
+        arg_type = IndalekoCollectionIndex.index_args[pre_args.type][index_args]
+        if arg_type is bool:
+            parser.add_argument(f'--{index_args}',
+                                action='store_true',
+                                default=None,
+                                help=f'Value for {index_args}')
+        else:
+            parser.add_argument(f'--{index_args}',
+                                type=IndalekoCollectionIndex.index_args[pre_args.type][index_args],
+                                default=None,
+                                help=f'Value for {index_args}')
+    args = parser.parse_args()
+    if hasattr(args, 'fields'):
+        args.fields = [field.strip() for field in pre_args.fields.split(',')]
+    print(args)
+    index_args = {'collection' : args.collection}
+    for index_arg in common_params:
+        if getattr(args, index_arg) is not None:
+            index_args[index_arg] = getattr(args, index_arg)
+    for index_arg in unique_params_by_index[pre_args.type]:
+        if getattr(args, index_arg) is not None:
+            index_args[index_arg] = getattr(args, index_arg)
+    print(index_args)
+    print('TODO: add tests for the various type of indices')
 
 if __name__ == "__main__":
     main()

@@ -6,12 +6,15 @@ from Indaleko import Indaleko
 import datetime
 import argparse
 import platform
+from IndalekoSingleton import IndalekoSingleton
 
-class IndalekoLogging:
+class IndalekoLogging(IndalekoSingleton):
     """Class for managing Indaleko logging."""
 
     def __init__(self, **kwargs):
         """Initialize a new instance of the IndalekoLogging class object."""
+        if self._initialized:
+            return
         if 'log_level' in kwargs:
             self.log_level = kwargs['log_level']
         else:
@@ -29,6 +32,8 @@ class IndalekoLogging:
                             level=self.log_level,
                             format='%(asctime)s %(levelname)s %(message)s')
         logging.info('IndalekoLogging initialized, logging level set to %s', self.log_level)
+        self._initialized = True
+
 
     def __del__(self):
         """Delete an instance of the IndalekoLogging class object."""
@@ -47,14 +52,18 @@ class IndalekoLogging:
     def generate_log_file_name(**kwargs) -> str:
         now = datetime.datetime.now(datetime.timezone.utc)
         timestamp=now.isoformat()
-        service_name = 'unknown_service'
-        if 'service_name' in kwargs:
-            service_name = kwargs['service_name']
-        return Indaleko.generate_file_name(
-            service=service_name,
-            timestamp=timestamp,
-            suffix='log'
+        service_name = kwargs.get('service_name', 'unknown_service')
+        fnargs = {
+            'service': service_name,
+            'timestamp': timestamp,
+            'suffix': 'log'
+        }
+        if 'platform' in kwargs:
+            fnargs['platform'] = kwargs['platform']
+        fname = Indaleko.generate_file_name(
+            **fnargs
         )
+        return fname
 
     @staticmethod
     def list_service_logs(service_name : str, logs_dir : str = Indaleko.default_log_dir) -> list:
@@ -138,23 +147,21 @@ def main():
     assert indaleko_logging is not None, "IndalekoLogging is None"
     parser = argparse.ArgumentParser(description="Indaleko logging management")
     parser.add_argument('--log-dir', default=Indaleko.default_log_dir, type=str, help='Directory where logs are stored.')
+    parser.add_argument('--service', default=None, type=str, help='Service name to filter logs against.')
+    parser.add_argument('--platform', default=platform.system(), type=str, help='Platform to filter logs against.')
     subparsers = parser.add_subparsers(dest='command')
     list_parser = subparsers.add_parser('list')
     list_parser.add_argument('--all', action='store_true', help='List all logs.')
-    list_parser.add_argument('--service', default=None, type=str, help='Service name to filter logs against.')
-    list_parser.add_argument('--platform', default=platform.system(), type=str, help='Platform to filter logs against.')
     list_parser.set_defaults(func=list_logs)
     cleanup_parser = subparsers.add_parser('cleanup')
     cleanup_parser.add_argument('--all', action='store_true', help='Cleanup all logs.')
     cleanup_parser.set_defaults(func=cleanup_logs)
-    cleanup_parser.add_argument('--service', default=None, type=str, help='Service name to filter logs against.')
-    cleanup_parser.add_argument('--platform', default=platform.system(), type=str, help='Platform to filter logs against.')
     prune_parser = subparsers.add_parser('prune')
     prune_parser.set_defaults(func=prune_logs)
     parser.set_defaults(func=list_logs)
     args = parser.parse_args()
     args.log_file = indaleko_logging.get_log_file_name()
-    results = args.func(args)
+    args.func(args)
 
 if __name__ == '__main__':
     main()

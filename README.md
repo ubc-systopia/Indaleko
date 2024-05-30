@@ -237,6 +237,7 @@ Things you should have installed:
 
 The simplest way to set up the database is to use the `dbsetup.py` script.  It
 currently supports three commands:
+
 * check - this will verify that the database is up and running. If not, you will
   need to try and figure out what is not working.
 * setup - this will set up a _new_ instance of the database. Note that if you
@@ -488,7 +489,6 @@ This is the process we call _ingestion_, which takes the raw indexing data,
 normalizes it, and captures it into files that can be bulk uploaded into the
 database.  Future versions may automate more of this pipeline.
 
-
 #### Linux
 
 # Ingestion Validator
@@ -526,6 +526,26 @@ validators$ python IndalekoIngesterValidator.py -c /Users/sinaee/Projects/Indale
 ```
 
 You should not see any errors; the skipping messages are fine.
+
+# How to use Indaleko?
+
+
+## MacOS
+
+To execute the full pipeline, make sure you have installed the necessary prerequisites for this project: `docker` and `python 3.12`.
+
+To execute the pipeline, run `run.py` with the directory you want to index, for instance:
+```bash
+$python run.py --path /path/to/dir
+```
+
+Here are some important points to consider when executing the script:
+
+* Use `--help` to view available options.
+* Newly created index files are always appended to the database by `run.py`. Consequently, re-indexing the same folder generates warnings. Existing records are not updated at present.
+* `--reset` is an argument for `run.py` that removes all available collections before ingesting new data. Consequently, using it results in the loss of previously indexed data.
+
+To view your data, navigate to `http://localhost:8529/` and log in using your username and password. You can find these credentials in `config/indaleko-db-config.ini` under `user_name` and `user_password`.
 
 # License
 
