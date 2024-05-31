@@ -11,4 +11,7 @@ scratch*.py
 scratch*.ipynb
 *.jsonl
 wam/
+.DS_Store
+creds.py
 wam*
+
