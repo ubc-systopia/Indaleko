@@ -1,6 +1,7 @@
 import os
 import keyring
 from pyicloud import PyiCloudService
+<<<<<<< HEAD
 import logging
 from datetime import datetime
 from getpass import getpass
@@ -70,6 +71,14 @@ def get_icloud_credentials():
         update_stored_usernames(username)
         auth_logger.debug(f"Stored usernames after updating: {get_stored_usernames()}")
 
+=======
+
+def get_icloud_credentials():
+    username = os.getenv('ICLOUD_USERNAME')
+    password = keyring.get_password('iCloud', username)
+    if not password:
+        raise ValueError("Password not found in keyring for the given username.")
+>>>>>>> 2a4faec (iCloud indexer. Basic working prototype. One script uses keyring to store and access login information - SecureCreds. The other file handles indexing the top level within the iCloud directory.)
     return username, password
 
 def authenticate():
@@ -83,6 +92,10 @@ def authenticate():
             raise ValueError("Failed to verify security code")
         if not api.is_trusted_session:
             api.trust_session()
+<<<<<<< HEAD
     return api
 
 # This module should not run any main code
+=======
+    return api
+>>>>>>> 2a4faec (iCloud indexer. Basic working prototype. One script uses keyring to store and access login information - SecureCreds. The other file handles indexing the top level within the iCloud directory.)
