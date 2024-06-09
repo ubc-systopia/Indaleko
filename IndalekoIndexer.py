@@ -272,6 +272,22 @@ class IndalekoIndexer:
         stat_dict['ObjectIdentifier'] = str(uuid.uuid4())
         return stat_dict
 
+    @staticmethod
+    def convert_to_serializable(data):
+        if isinstance(data, (int, float, str, bool, type(None))):
+            return data
+        elif isinstance(data, list):
+            return [IndalekoIndexer.convert_to_serializable(item) for item in data]
+        elif isinstance(data, dict):
+            return {key: IndalekoIndexer.convert_to_serializable(value) for key, value in data.items()}
+        else:
+            if hasattr(data, '__dict__'):
+                return IndalekoIndexer.convert_to_serializable(data.__dict__)
+            return None
+
+
+
+
     def index(self) -> list:
         '''
         This is the main indexing function for the indexer.  Can be overriden
