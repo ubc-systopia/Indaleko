@@ -25,7 +25,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import argparse
 import datetime
-import dropbox
 from googleapiclient.discovery import build, HttpError
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
@@ -34,11 +33,7 @@ from icecream import ic
 import json
 import logging
 import os
-import pickle
-import requests
-import time
 from urllib.parse import urlencode, parse_qs, urlparse
-import uuid
 
 from Indaleko import Indaleko
 from IndalekoIndexer import IndalekoIndexer
@@ -49,7 +44,7 @@ class IndalekoGDriveIndexer(IndalekoIndexer):
     gdrive_platform = "GoogleDrive"
     gdrive_indexer_name = "gdrive_indexer"
 
-    indaleko_grdive_indexer_uuid = '74c82969-6bbb-4450-97f5-44d65c65e133'
+    indaleko_gdrive_indexer_uuid = '74c82969-6bbb-4450-97f5-44d65c65e133'
     indaleko_gdrive_indexer_service_name = 'Google Drive Indexer'
     indaleko_gdrive_indexer_service_description = 'Indexes the Google Drive folder for Indaleko.'
     indaleko_gdrive_indexer_service_version = '1.0'
@@ -115,7 +110,7 @@ class IndalekoGDriveIndexer(IndalekoIndexer):
 
 
     indaleko_gdrive_indexer_service = {
-        'uuid': indaleko_grdive_indexer_uuid,
+        'uuid': indaleko_gdrive_indexer_uuid,
         'name': indaleko_gdrive_indexer_service_name,
         'description': indaleko_gdrive_indexer_service_description,
         'version': indaleko_gdrive_indexer_service_version,
