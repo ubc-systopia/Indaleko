@@ -24,18 +24,19 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import argparse
+import concurrent.futures
 import datetime
 from icecream import ic
 import json
 import logging
 import msal
 import os
-import pickle
+from queue import Queue
 import requests
 import sys
+import threading
 import time
 from urllib.parse import urlencode, parse_qs, urlparse
-import uuid
 
 from Indaleko import Indaleko
 from IndalekoIndexer import IndalekoIndexer
@@ -193,10 +194,14 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
         )
         super().__init__(
             **kwargs,
-            indexer_name = IndalekoOneDriveIndexer.onedrive_indexer_name,
+            indexer_name=IndalekoOneDriveIndexer.onedrive_indexer_name,
             **IndalekoOneDriveIndexer.indaleko_onedrive_indexer_service
         )
-
+        self.queue = Queue()
+        self.results = Queue()
+        self.max_workers = kwargs.get('max_workers', 1)
+        self.recurse = kwargs.get('recurse', True)
+        self.root_processed = False
 
     @staticmethod
     def generate_indexer_file_name(**kwargs):
@@ -212,54 +217,112 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
         return entry
 
 
-    def index(self, recursive=True) -> list:
+    def index(self) -> list:
         '''
         This method indexes OneDrive Drive.
         '''
         ic('Indexing OneDrive Drive')
-        return self.get_onedrive_metadata_recursive(
-            folder_id=None,
-            recurse=recursive
-        )
+        ic('Recurse: ', self.recurse)
+        return self.get_onedrive_metadata()
+
 
     def get_email(self) -> str:
         '''This method returns the email address of the user'''
         return self.graphcreds.get_account_name()
 
-    def get_onedrive_metadata_recursive(self, folder_id=None, recurse=True):
-        '''This method retrieves the metadata for the OneDrive recursively.'''
-        def get_headers():
-            return {'Authorization':
-                    f'Bearer {self.graphcreds.get_token()}'
-            }
-        headers = get_headers()
-        metadata_list = []
+    def get_headers(self) -> dict:
+        '''This method returns the headers for the request with the current
+        token.'''
+        return {'Authorization': 'Bearer ' + self.graphcreds.get_token()}
 
-        if folder_id is None:
-            endpoint = 'https://graph.microsoft.com/v1.0/me/drive/root/children'
-        else:
-            endpoint = f'https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}/children'
+    def fetch_directory(self, url):
+        ic('fetch_directory called')
+        headers = self.get_headers()
+        params = {'$top': '999'}  # Fetch up to 999 items in a single request
+        assert url is not None, 'URL is required to be non-empty'
+        ic('fetching directory: ', url)
 
-        while endpoint:
-            response = requests.get(endpoint, headers=headers)
-            if response.status_code == 200:
-                data = response.json()
-                for item in data['value']:
-                    metadata_list.append(item)
-                    if item.get('folder'):
-                        # Recursively fetch metadata for subfolder
-                        subfolder_id = item['id']
-                        if recurse:
-                            metadata_list.extend(
-                                self.get_onedrive_metadata_recursive(subfolder_id))
-                endpoint = data.get('@odata.nextLink')
-            else:
-                logging.error(f"Error: {response.status_code} - {response.text}")
+        retries = 5
+        while retries > 0:
+            try:
+                logging.info(f"Fetching directory: {url}")
+                response = requests.get(url, headers=headers, params=params)
+                response.raise_for_status()
+
+                items = response.json().get('value', [])
+                logging.info('Fetched %d items', len(items))
+                directories = []
+                for item in items:
+                    # Process the item
+                    if 'folder' in item:
+                        directories.append(item['id'])
+                    self.results.put(self.build_stat_dict(item))
+                return ic(directories)
+
+            except requests.exceptions.RequestException as e:
+                retries -= 1
                 if 401 == response.status_code: # seems to indicate a stale token
+                    logging.info(f"Request failed (401).  Refresh token.")
                     self.graphcreds.clear_token()
-                    headers = get_headers()
-                # try again
-        return metadata_list
+                    headers = self.get_headers()
+                else:
+                    logging.error(f"Request failed: {e}. Retrying {retries} more times.")
+                    ic(f"Request failed: {e}. Retrying {retries} more times.")
+                    time.sleep(5)  # Wait for 5 seconds before retrying
+
+        logging.error(f"Request failed after multiple attempts: {url}")
+        return None
+
+    def queue_directory(self, folder_id):
+        '''This method queues the directory for processing.'''
+        if folder_id is None:
+            url = 'https://graph.microsoft.com/v1.0/me/drive/root/children'
+        else:
+            url = f"https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}/children"
+        self.queue.put(url)
+
+
+    def worker(self):
+        '''Worker threads for retrieving the metadata of the OneDrive recursively.'''
+        tid = threading.get_ident()
+        ic(f'worker {tid} started')
+        while True:
+            ic(f'worker {tid} waiting')
+            url = self.queue.get()
+            ic(f'worker {tid} processing {url}: ')
+            if url is None:
+                ic(f'worker {tid} url is None, terminating')
+                break
+            directories = self.fetch_directory(url)
+            ic(f'worker {tid} retrieved directories: ', directories)
+            if directories is None: # the fetch failed
+                self.queue.put(url)
+            elif self.recurse:
+                for directory in directories:
+                    self.queue_directory(directory)
+                logging.info(f"worker {tid} Processed {url}")
+                ic(f'worker {tid} processed: ', url)
+            ic(self.queue.qsize())
+            self.queue.task_done()
+        ic(f'worker {tid} finished')
+
+    def get_onedrive_metadata(self, folder_id=None):
+        '''This method retrieves the metadata of the OneDrive.'''
+        self.results = Queue()
+        self.queue_directory(folder_id)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            futures = [executor.submit(self.worker) for _ in range(self.max_workers)]
+            ic('waiting for queue to finish')
+            self.queue.join()
+            ic('queue finished')
+            ic('adding poison pills', self.max_workers)
+            for _ in (range(self.max_workers)):
+                ic('putting None')
+                self.queue.put(None)
+            ic(f'waiting for futures to finish: {futures}')
+            concurrent.futures.wait(futures)
+            ic('futures finished')
+        return [self.results.get() for _ in range(self.results.qsize())]
 
 
     @staticmethod
@@ -291,6 +354,14 @@ def main():
                             default=logging.DEBUG,
                             choices=logging_levels,
                             help='Logging level to use (lower number = more logging)')
+    pre_parser.add_argument('--norecurse',
+                        help='Disable recursive directory indexing (for testing).',
+                        default=False,
+                        action='store_true')
+    pre_parser.add_argument('--threads', '-t',
+                            help='Number of threads to use for indexing',
+                            default=1,
+                            type=int)
     pre_args, _ = pre_parser.parse_known_args()
     indaleko_logging = IndalekoLogging.IndalekoLogging(platform=IndalekoOneDriveIndexer.onedrive_indexer_name,
                                                        service_name='indexer',
@@ -300,7 +371,7 @@ def main():
                                                        suffix='log')
     log_file_name = indaleko_logging.get_log_file_name()
     ic(log_file_name)
-    indexer = IndalekoOneDriveIndexer(timestamp=timestamp)
+    indexer = IndalekoOneDriveIndexer(timestamp=timestamp, recurse=(not pre_args.norecurse), max_workers=pre_args.threads)
     output_file_name = IndalekoOneDriveIndexer.generate_indexer_file_name(
             platform=IndalekoOneDriveIndexer.onedrive_platform,
             user_id=indexer.get_email(),
@@ -319,18 +390,18 @@ def main():
                         help='Path to the directory to index',
                         type=str,
                         default='')
-    parser.add_argument('--norecurse',
-                        help='Disable recursive directory indexing (for testing).',
-                        default=False,
-                        action='store_true')
     args = parser.parse_args()
     output_file = os.path.join(args.datadir, args.output)
     logging.info('Indaleko OneDrive Indexer started.')
     logging.info('Output file: %s', output_file)
     logging.info('Indexing: %s', args.path)
     logging.info(args)
-    data = indexer.index(recursive= (not args.norecurse))
-    indexer.write_data_to_file(data, output_file)
+    data = indexer.index()
+    if len(data) > 0:
+        indexer.write_data_to_file(data, output_file)
+    else:
+        logging.error('No data found. File not written.')
+        ic('No data found. File not written.')
     for count_type, count_value in indexer.get_counts().items():
         logging.info('Count %s: %s', count_type, count_value)
     logging.info('Indaleko OneDrive Indexer finished.')
