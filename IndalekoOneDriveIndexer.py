@@ -236,41 +236,53 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
         return {'Authorization': 'Bearer ' + self.graphcreds.get_token()}
 
     def fetch_directory(self, url):
-        ic('fetch_directory called')
+        tid = threading.get_ident()
+
+        ic(f'{tid}: fetch_directory called')
         headers = self.get_headers()
         params = {'$top': '999'}  # Fetch up to 999 items in a single request
         assert url is not None, 'URL is required to be non-empty'
-        ic('fetching directory: ', url)
 
         retries = 5
         while retries > 0:
             try:
-                logging.info(f"Fetching directory: {url}")
-                response = requests.get(url, headers=headers, params=params)
+                ic(f'{tid} Fetching directory: {url}, retries left: {retries}')
+                logging.info(f"{tid} Fetching directory: {url}")
+                response = requests.get(url, headers=headers, params=params, timeout=(10,30))
+                ic(f"Response: {response.status_code}")
+                logging.info(f"{tid} Response: {response.status_code}")
                 response.raise_for_status()
 
                 items = response.json().get('value', [])
-                logging.info('Fetched %d items', len(items))
+                logging.info(f'{tid}: Fetched {len(items)} items')
+                ic(f'{tid}: Fetched {len(items)} items')
                 directories = []
                 for item in items:
                     # Process the item
                     if 'folder' in item:
                         directories.append(item['id'])
-                    self.results.put(self.build_stat_dict(item))
+                    self.results.put(self.build_stat_dict(item),timeout=30)
                 return ic(directories)
+
+            except requests.exceptions.Timeout as e:
+                retries -= 1
+                logging.error(f"{tid} Request timed out: {e}. Retrying {retries} more times.")
+                ic(f"{tid}: Request timed out: {e}. Retrying {retries} more times.")
+                time.sleep(5)
 
             except requests.exceptions.RequestException as e:
                 retries -= 1
-                if 401 == response.status_code: # seems to indicate a stale token
-                    logging.info(f"Request failed (401).  Refresh token.")
+                if response is not None and 401 == response.status_code: # seems to indicate a stale token
+                    logging.info(f"{tid} : Request failed (401).  Refresh token.")
                     self.graphcreds.clear_token()
                     headers = self.get_headers()
                 else:
-                    logging.error(f"Request failed: {e}. Retrying {retries} more times.")
-                    ic(f"Request failed: {e}. Retrying {retries} more times.")
+                    logging.error(f"{tid} Request failed: {e}. Retrying {retries} more times.")
+                    ic(f"{tid}: Request failed: {e}. Retrying {retries} more times.")
                     time.sleep(5)  # Wait for 5 seconds before retrying
 
-        logging.error(f"Request failed after multiple attempts: {url}")
+        logging.error(f"{tid}: Request failed after multiple attempts: {url}")
+        ic(f"Request failed after multiple attempts: {url}")
         return None
 
     def queue_directory(self, folder_id):
@@ -279,7 +291,7 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
             url = 'https://graph.microsoft.com/v1.0/me/drive/root/children'
         else:
             url = f"https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}/children"
-        self.queue.put(url)
+        self.queue.put(url, timeout=30)
 
 
     def worker(self):
@@ -292,11 +304,12 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
             ic(f'worker {tid} processing {url}: ')
             if url is None:
                 ic(f'worker {tid} url is None, terminating')
+                self.queue.task_done()
                 break
             directories = self.fetch_directory(url)
             ic(f'worker {tid} retrieved directories: ', directories)
             if directories is None: # the fetch failed
-                self.queue.put(url)
+                self.queue.put(url, timeout=30)
             elif self.recurse:
                 for directory in directories:
                     self.queue_directory(directory)
@@ -318,7 +331,7 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
             ic('adding poison pills', self.max_workers)
             for _ in (range(self.max_workers)):
                 ic('putting None')
-                self.queue.put(None)
+                self.queue.put(None, timeout=30)
             ic(f'waiting for futures to finish: {futures}')
             concurrent.futures.wait(futures)
             ic('futures finished')
