@@ -33,18 +33,28 @@ def store_credentials(username, password):
     keyring.set_password('iCloud', username, password)
     auth_logger.debug(f"Stored credentials for {username}")
 =======
-# Create logs directory if it doesn't exist
-if not os.path.exists('logs'):
-    os.makedirs('logs')
+def setup_logging():
+    logger = logging.getLogger('iCloudAuthLogger')
+    logger.setLevel(logging.DEBUG)
+    if not os.path.exists('logs'):
+        os.makedirs('logs')
+    log_filename = datetime.now().strftime('logs/%Y%m%d-%H%M%S-iCloudLoginLog.log')
+    file_handler = logging.FileHandler(log_filename)
+    file_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
+    logger.addHandler(file_handler)
+    
+    # Enable DEBUG logging for third-party libraries
+    logging.getLogger('pyicloud').setLevel(logging.DEBUG)
+    logging.getLogger('requests').setLevel(logging.DEBUG)
+    logging.getLogger('urllib3').setLevel(logging.DEBUG)
+    
+    return logger
 
-# Configure logging
-log_filename = datetime.now().strftime('logs/%Y%m%d-%H%M%S-iCloudLoginLog.log')
-logging.basicConfig(filename=log_filename, level=logging.DEBUG, 
-                    format='%(asctime)s %(levelname)s %(message)s')
+auth_logger = setup_logging()
 
 def store_credentials(username, password):
     keyring.set_password('iCloud', username, password)
-    logging.debug(f"Stored credentials for {username}")
+    auth_logger.debug(f"Stored credentials for {username}")
 >>>>>>> 1d5bf5c (Replace Indaleko_iCloudSecureCreds.py with Indaleko_iCloudSecureCreds14.py, then renamed the 14th version to the original name, so there is no confusion in the naming convention. This script now enables the user to simply input their username and password into keyring if they haven't already done so. If they have then the user can simply select their username and login. This script then allows a user not to worry about storing their iCloud username in an environmental variable; as well as, letting the user store multiple usernames and passwords (in case, in the future Indaleko wants to be user specific))
 
 def get_stored_usernames():
@@ -102,7 +112,7 @@ def get_icloud_credentials():
 def get_icloud_credentials():
     list_all_entries('iCloud')
     stored_usernames = get_stored_usernames()
-    logging.debug(f"Retrieved stored usernames: {stored_usernames}")
+    auth_logger.debug(f"Retrieved stored usernames: {stored_usernames}")
 
     if stored_usernames:
         print("Stored usernames:")
@@ -124,9 +134,9 @@ def get_icloud_credentials():
 =======
         password = getpass("Enter your iCloud password: ")
         store_credentials(username, password)
-        logging.debug(f"Existing stored usernames before update: {stored_usernames}")
+        auth_logger.debug(f"Existing stored usernames before update: {stored_usernames}")
         update_stored_usernames(username)
-        logging.debug(f"Stored usernames after updating: {get_stored_usernames()}")
+        auth_logger.debug(f"Stored usernames after updating: {get_stored_usernames()}")
 
 >>>>>>> 1d5bf5c (Replace Indaleko_iCloudSecureCreds.py with Indaleko_iCloudSecureCreds14.py, then renamed the 14th version to the original name, so there is no confusion in the naming convention. This script now enables the user to simply input their username and password into keyring if they haven't already done so. If they have then the user can simply select their username and login. This script then allows a user not to worry about storing their iCloud username in an environmental variable; as well as, letting the user store multiple usernames and passwords (in case, in the future Indaleko wants to be user specific))
     return username, password
