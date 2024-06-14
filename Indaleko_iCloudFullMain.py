@@ -1,11 +1,10 @@
 '''
-This script will index files in the opening directory of iCloud drive.
-It will not go into the sub-directories (folders) of iCloud.
+This script will index files of iCloud drive.
 Mainly a proof of concept that one is able to login and access file information. 
-Furthermore, make sure logging is done for all the steps.
+Furthermore, made sure logging is done for all the steps.
 '''
 from Indaleko_iCloudSecureCreds import authenticate
-from Indaleko_iCloudFull import index_to_jsonl
+from Indaleko_iCloudFullLevel import index_to_jsonl
 
 def main():
     try:
