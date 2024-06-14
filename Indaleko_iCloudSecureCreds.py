@@ -5,18 +5,28 @@ import logging
 from datetime import datetime
 from getpass import getpass
 
-# Create logs directory if it doesn't exist
-if not os.path.exists('logs'):
-    os.makedirs('logs')
+def setup_logging():
+    logger = logging.getLogger('iCloudAuthLogger')
+    logger.setLevel(logging.DEBUG)
+    if not os.path.exists('logs'):
+        os.makedirs('logs')
+    log_filename = datetime.now().strftime('logs/%Y%m%d-%H%M%S-iCloudLoginLog.log')
+    file_handler = logging.FileHandler(log_filename)
+    file_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
+    logger.addHandler(file_handler)
+    
+    # Enable DEBUG logging for third-party libraries
+    logging.getLogger('pyicloud').setLevel(logging.DEBUG)
+    logging.getLogger('requests').setLevel(logging.DEBUG)
+    logging.getLogger('urllib3').setLevel(logging.DEBUG)
+    
+    return logger
 
-# Configure logging
-log_filename = datetime.now().strftime('logs/%Y%m%d-%H%M%S-iCloudLoginLog.log')
-logging.basicConfig(filename=log_filename, level=logging.DEBUG, 
-                    format='%(asctime)s %(levelname)s %(message)s')
+auth_logger = setup_logging()
 
 def store_credentials(username, password):
     keyring.set_password('iCloud', username, password)
-    logging.debug(f"Stored credentials for {username}")
+    auth_logger.debug(f"Stored credentials for {username}")
 
 def get_stored_usernames():
     usernames = keyring.get_password('iCloud', 'usernames')
@@ -30,16 +40,15 @@ def update_stored_usernames(username):
     return usernames
 
 def list_all_entries(service_name):
-    logging.debug(f"Listing all entries for service '{service_name}':")
+    auth_logger.debug(f"Listing all entries for service '{service_name}':")
     stored_usernames = get_stored_usernames()
     for stored_username in stored_usernames:
-        password = keyring.get_password(service_name, stored_username)
-        logging.debug(f"Username: {stored_username}")
+        auth_logger.debug(f"Username: {stored_username}")
 
 def get_icloud_credentials():
     list_all_entries('iCloud')
     stored_usernames = get_stored_usernames()
-    logging.debug(f"Retrieved stored usernames: {stored_usernames}")
+    auth_logger.debug(f"Retrieved stored usernames: {stored_usernames}")
 
     if stored_usernames:
         print("Stored usernames:")
@@ -57,9 +66,9 @@ def get_icloud_credentials():
     if not password:
         password = getpass("Enter your iCloud password: ")
         store_credentials(username, password)
-        logging.debug(f"Existing stored usernames before update: {stored_usernames}")
+        auth_logger.debug(f"Existing stored usernames before update: {stored_usernames}")
         update_stored_usernames(username)
-        logging.debug(f"Stored usernames after updating: {get_stored_usernames()}")
+        auth_logger.debug(f"Stored usernames after updating: {get_stored_usernames()}")
 
     return username, password
 
@@ -76,7 +85,4 @@ def authenticate():
             api.trust_session()
     return api
 
-# Now you can call the authenticate function in your main script
-if __name__ == "__main__":
-    api = authenticate()
-    print("Authentication successful.")
+# This module should not run any main code
