@@ -5,7 +5,7 @@ Mainly a proof of concept that one is able to login and access file information.
 Furthermore, make sure logging is done for all the steps.
 '''
 from Indaleko_iCloudSecureCreds import authenticate
-from Indaleko_iCloudTopLevel import index_to_jsonl
+from Indaleko_iCloudFull import index_to_jsonl
 
 def main():
     try:
