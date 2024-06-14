@@ -39,7 +39,14 @@ def list_top_level_contents(drive):
     return files_metadata
 
 def index_to_json(api):
-    json_output = 'icl_top_level_meta.json'  # Define the output JSON file path
+    # Create data directory if it doesn't exist
+    if not os.path.exists('data'):
+        os.makedirs('data')
+
+    # Use the same datetime stamp as the log files
+    datetime_stamp = datetime.now().strftime('%Y%m%d-%H%M%S')
+    jsonl_output = os.path.join('data', f'{datetime_stamp}-topLevelSimpleMetadata.jsonl')
+    
     try:
         # Get the root of the iCloud Drive
         drive = api.drive
@@ -48,12 +55,13 @@ def index_to_json(api):
         # Get top-level files metadata
         files_metadata = list_top_level_contents(root_folder)
 
-        # Write the file names and metadata to a JSON file
-        with open(json_output, 'w', encoding='utf-8') as jsonfile:
-            json.dump(files_metadata, jsonfile, ensure_ascii=False, indent=4)
+        # Write the file names and metadata to a JSONL file
+        with open(jsonl_output, 'w', encoding='utf-8') as jsonlfile:
+            for metadata in files_metadata:
+                jsonlfile.write(json.dumps(metadata) + '\n')
 
-        index_logger.info(f"Index of files and their metadata has been saved to {json_output}")
+        index_logger.info(f"Index of files and their metadata has been saved to {jsonl_output}")
     except Exception as e:
-        index_logger.error(f"An error occurred during indexing to JSON: {e}")
+        index_logger.error(f"An error occurred during indexing to JSONL: {e}")
 
 # This module should not run any main code
