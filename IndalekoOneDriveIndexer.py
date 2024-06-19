@@ -30,9 +30,11 @@ from icecream import ic
 import json
 import logging
 import msal
+from pyngrok import ngrok
 import os
 from queue import Queue
 import requests
+import socket
 import sys
 import threading
 import time
@@ -75,12 +77,23 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
             self.cache_file = cache_file
             self.__load_cache__()
             self.__output_file_name__ = None
+            self.port = self.find_unused_tcp_port()
+            self.public_url = ngrok.connect(self.port)
+            ic(f'Public URL: {self.public_url}')
+            self.redirect_uri = f'{self.public_url}/auth'
             # Note: this will prompt for credentials, if needed
             self.app = msal.PublicClientApplication(self.config['client_id'],
                                                     authority=self.config['authority'],
                                                     token_cache=self.cache
                                                     )
             self.__get_token__()
+
+        @staticmethod
+        def find_unused_tcp_port():
+            '''This method finds an unused TCP port.'''
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind(('localhost', 0))
+                return s.getsockname()[1]
 
         def __get_chosen_account__(self) -> int:
             if self.__chosen_account__ < 0:
@@ -235,7 +248,7 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
         token.'''
         return {'Authorization': 'Bearer ' + self.graphcreds.get_token()}
 
-    def fetch_directory(self, url):
+    def fetch_directory(self, url, timeout=10):
         tid = threading.get_ident()
 
         ic(f'{tid}: fetch_directory called')
@@ -245,10 +258,26 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
 
         retries = 5
         while retries > 0:
+
+            def FetchTimeoutException(Exception):
+                pass
+
             try:
                 ic(f'{tid} Fetching directory: {url}, retries left: {retries}')
                 logging.info(f"{tid} Fetching directory: {url}")
+                start = time.time()
+
+                def trace_function(frame, event, arg):
+                    if time.time() - start > timeout:
+                        raise FetchTimeoutException(f'{tid} Timeout')
+                    else:
+                        logging.debug(ic(f'{tid} trace_function: {frame} {event} {arg}'))
+                    return trace_function
+
+                sys.settrace(trace_function)
                 response = requests.get(url, headers=headers, params=params, timeout=(10,30))
+                sys.settrace(None)
+
                 ic(f"Response: {response.status_code}")
                 logging.info(f"{tid} Response: {response.status_code}")
                 response.raise_for_status()
@@ -280,6 +309,13 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
                     logging.error(f"{tid} Request failed: {e}. Retrying {retries} more times.")
                     ic(f"{tid}: Request failed: {e}. Retrying {retries} more times.")
                     time.sleep(5)  # Wait for 5 seconds before retrying
+            except FetchTimeoutException as e:
+                retries -= 1
+                logging.error(f"{tid} Request hard timeout): {e}. Retrying {retries} more times.")
+                ic(f"{tid}: Request hard timeout: {e}. Retrying {retries} more times.")
+                time.sleep(5)
+            finally:
+                sys.settrace(None)
 
         logging.error(f"{tid}: Request failed after multiple attempts: {url}")
         ic(f"Request failed after multiple attempts: {url}")
@@ -319,7 +355,7 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
             self.queue.task_done()
         ic(f'worker {tid} finished')
 
-    def get_onedrive_metadata(self, folder_id=None):
+    def get_onedrive_metadata_mt(self, folder_id=None):
         '''This method retrieves the metadata of the OneDrive.'''
         self.results = Queue()
         self.queue_directory(folder_id)
@@ -336,6 +372,65 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
             concurrent.futures.wait(futures)
             ic('futures finished')
         return [self.results.get() for _ in range(self.results.qsize())]
+
+    @staticmethod
+    def get_url_for_folder(folder_id=None):
+        '''This method returns the URL for the folder.'''
+        if folder_id is None:
+            return 'https://graph.microsoft.com/v1.0/me/drive/root/children'
+        else:
+            return f"https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}/children"
+
+
+    def get_onedrive_metadata(self, folder_id=None):
+        '''This method retrieves the metadata of the OneDrive.'''
+        queue = []
+        refresh_count = 0
+        error_count = 0
+        success_error_count = 0
+        url = self.get_url_for_folder(folder_id)
+        queue.append(url)
+        results = []
+        passes = 0
+        while len(queue) > 0:
+            passes = passes + 1
+            if 0 == passes % 100:
+                ic(f'Pending queue size is {len(queue)} at pass {passes}')
+            url = queue.pop()
+            # ic(f'Processing URL: {url}')
+            headers = self.get_headers()
+            params = {'$top': '999'}
+            try:
+                response = requests.get(url, headers=headers, params=params)
+                response.raise_for_status()
+            except requests.exceptions.Timeout as e:
+                logging.error(ic(f"Request timed out: {e}. Retrying {url}"))
+                queue.insert(0, url)
+                continue
+            except requests.exceptions.RequestException as e:
+                logging.error(f"Error: {response.status_code} - {response.text}")
+                if 401 == response.status_code: # seems to indicate a stale token
+                    self.graphcreds.clear_token()
+                    # try again
+                    ic(f'Refreshing token, url {url}')
+                    queue.insert(0, url)
+                    refresh_count = refresh_count + 1
+                    continue
+                elif 200 == response.status_code:
+                    # success code, but error status raise?
+                    logging.error(f"Error (for 200): for URL {url} - {response.status_code} - {response.text}")
+                    success_error_count = error_count + 1
+                    # note we want to fall through and process this.
+                else:
+                    logging.warning(ic(f"Error: for URL {url} - {response.status_code} - {response.text}"))
+                    error_count = error_count + 1
+                    continue
+            for item in response.json().get('value', []):
+                if 'folder' in item:
+                    queue.append(self.get_url_for_folder(item['id']))
+                results.append(self.build_stat_dict(item))
+        ic(f'Processed {len(results)} items, refresh_count {refresh_count}, error_count {error_count}, success_error_count {success_error_count}')
+        return results
 
 
     @staticmethod
