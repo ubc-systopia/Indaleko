@@ -9,7 +9,7 @@ import datetime
 
 class MicrosoftGraphCredentials:
 
-    def __init__(self, config: str = 'data/msgraph-parameters.json', cache_file: str = 'data/msgraph-cache.bin'):
+    def __init__(self, config: str = 'config/msgraph-parameters.json', cache_file: str = 'data/msgraph-cache.bin'):
         self.__chosen_account__ = -1
         self.config = json.load(open(config, 'rt'))
         self.cache_file = cache_file

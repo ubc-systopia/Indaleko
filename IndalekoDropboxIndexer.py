@@ -55,7 +55,7 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
     dropbox_auth_url = 'https://www.dropbox.com/oauth2/authorize'
     dropbox_token_url = 'https://api.dropboxapi.com/oauth2/token'
 
-    indaleko_dropbox_local_indexer_service = {
+    indaleko_dropbox_indexer_service = {
         'service_name': indaleko_dropbox_indexer_service_name,
         'service_description': indaleko_dropbox_indexer_service_description,
         'service_version': indaleko_dropbox_indexer_service_version,
@@ -83,7 +83,7 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
             kwargs['platform'] = IndalekoDropboxIndexer.dropbox_platform
         super().__init__(**kwargs,
                          indexer_name=IndalekoDropboxIndexer.dropbox_indexer_name,
-                         **IndalekoDropboxIndexer.indaleko_dropbox_local_indexer_service
+                         **IndalekoDropboxIndexer.indaleko_dropbox_indexer_service
         )
         pass
 
@@ -235,20 +235,6 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
         '''
         assert 'user_id' in kwargs, 'No user_id found in kwargs'
         return Indaleko.generate_file_name(**kwargs)
-
-    @staticmethod
-    def convert_to_serializable(data):
-        if isinstance(data, (int, float, str, bool, type(None))):
-            return data
-        elif isinstance(data, list):
-            return [IndalekoDropboxIndexer.convert_to_serializable(item) for item in data]
-        elif isinstance(data, dict):
-            return {key: IndalekoDropboxIndexer.convert_to_serializable(value) for key, value in data.items()}
-        else:
-            if hasattr(data, '__dict__'):
-                return IndalekoDropboxIndexer.convert_to_serializable(data.__dict__)
-            return None
-
 
     def build_stat_dict(self,  obj : dropbox.files) -> dict:
         '''
