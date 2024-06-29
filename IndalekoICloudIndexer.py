@@ -23,8 +23,6 @@ class IndalekoICloudIndexer(IndalekoIndexer):
     indaleko_icloud_indexer_service_version = '1.0'
     indaleko_icloud_indexer_service_type = 'Indexer'
 
-    # icloud_config_file = 'icloud_config.json'
-
     indaleko_icloud_local_indexer_service = {
         'service_name': indaleko_icloud_indexer_service_name,
         'service_description': indaleko_icloud_indexer_service_description,
@@ -35,28 +33,28 @@ class IndalekoICloudIndexer(IndalekoIndexer):
 
     def __init__(self, **kwargs):
         self.auth_logger = self.setup_logging()
-        # self.config_dir = kwargs.get('config_dir', Indaleko.default_config_dir)
-        # self.icloud_config_file = os.path.join(self.config_dir, IndalekoICloudIndexer.icloud_config_file)
-        # self.icloud_config = None
-        # self.load_icloud_config()
-        # logging.debug('iCloud config: %s', self.icloud_config)
         self.icloud_credentials = None
+        self.service = None
         self.load_icloud_credentials()
         if self.icloud_credentials is None:
             logging.debug('No iCloud credentials found, reconstructing.')
             self.query_user_for_credentials()
         if self.icloud_credentials is not None:
-            self.service = PyiCloudService(
-            self.icloud_credentials['username'],
-            self.icloud_credentials['password'])
+            logging.info(f"Using iCloud credentials: {self.icloud_credentials}")
+            try:
+                self.service = PyiCloudService(
+                    self.icloud_credentials['username'],
+                    self.icloud_credentials['password']
+                )
+            except Exception as e:
+                logging.error(f"Error initializing iCloud service: {e}")
         if 'platform' not in kwargs:
             kwargs['platform'] = IndalekoICloudIndexer.icloud_platform
         super().__init__(
             **kwargs,
-            indexer_name = IndalekoICloudIndexer.icloud_indexer_name,
+            indexer_name=IndalekoICloudIndexer.icloud_indexer_name,
             **IndalekoICloudIndexer.indaleko_icloud_local_indexer_service
         )
-        pass
 
     def setup_logging(self):
         logger = logging.getLogger('iCloudAuthLogger')
@@ -90,14 +88,15 @@ class IndalekoICloudIndexer(IndalekoIndexer):
                 user_id = input("Please select a username from the list above: ").strip()
         return user_id
 
-    def load_icloud_credentials(self) -> 'IndalekoICloudIndexer':
-        '''This method retrieves the stored credentials.'''
+    def load_icloud_credentials(self):
+        logging.info("Loading iCloud credentials.")
         username = keyring.get_password("iCloud", "username")
         password = keyring.get_password("iCloud", "password")
         if username and password:
             self.icloud_credentials = {'username': username, 'password': password}
+            logging.info(f"Loaded credentials for username: {username}")
         return self
-
+        
     def store_icloud_credentials(self) -> 'IndalekoICloudIndexer':
         '''This method stores the credentials.'''
         user_id = self.get_user_id()
@@ -183,58 +182,73 @@ class IndalekoICloudIndexer(IndalekoIndexer):
                 return IndalekoICloudIndexer.convert_to_serializable(data.__dict__)
             return None
 
-    def build_stat_dict(self, obj) -> dict:
-        '''
-        This method builds a dictionary with the metadata ofa file stored in
-        icloud.
-        '''
-        metadata_fields_of_interest = (
-            'File',
-            'Folder',
-            'Item'
-        )
+    def collect_metadata(self, item, item_path):
         metadata = {
-            'Indexer': 'IndalekoICloudIndexer',
-            'ObjectIdentifier': str(uuid.uuid4())
+            'name': item.name,
+            'path_display': item_path,
+            'size': getattr(item, 'size', 'Unknown'),
+            'modified': item.date_modified.strftime('%Y-%m-%d %H:%M:%S') if hasattr(item, 'date_modified') and item.date_modified else 'Unknown',
+            'created': item.date_created.strftime('%Y-%m-%d %H:%M:%S') if hasattr(item, 'date_created') and item.date_created else 'Unknown',
+            'last_opened': item.date_last_opened.strftime('%Y-%m-%d %H:%M:%S') if hasattr(item, 'date_last_opened') and item.date_last_opened else 'Unknown',
+            'date_changed': item.date_changed.strftime('%Y-%m-%d %H:%M:%S') if hasattr(item, 'date_changed') and item.date_changed else 'Unknown',
+            'ObjectIdentifier': str(uuid.uuid4()),  # Generate and add a UUID for each file
         }
-        fields = []
-        for foi in metadata_fields_of_interest:
-            if isinstance(obj, getattr(obj, foi, type(None))):
-                metadata[foi] = True
-                data = getattr(obj, foi)
-                for field in data.__dict__.keys():
-                    if field not in fields:
-                        fields.append(field)
-        for field in fields:
-            if not hasattr(obj, field):
-                logging.warning('Field %s not found in %s (but listed)', field, obj)
-                continue
-            attr = getattr(obj, field)
-            if isinstance(attr, datetime):
-                metadata[field] = attr.isoformat()
-                continue
-            value = IndalekoICloudIndexer.convert_to_serializable(attr)
-            if value is None:
-                continue
-            metadata[field] = value
         return metadata
+    # def collect_metadata(self, item, item_path) -> dict:
+    #     metadata = {
+    #         'name': item.name,
+    #         'type': item.type,
+    #         'size': item.size,
+    #         'date_modified': item.date_modified.strftime('%Y-%m-%d %H:%M:%S') if item.date_modified else 'Unknown',
+    #         'date_created': item.date_created.strftime('%Y-%m-%d %H:%M:%S') if item.date_created else 'Unknown',
+    #         'last_opened': item.last_opened.strftime('%Y-%m-%d %H:%M:%S') if item.last_opened else 'Unknown',
+    #         'path': item_path,
+    #         'parent': item.parent.name if item.parent else 'None',
+    #         'download_url': getattr(item, 'download_url', None),
+    #         'drivewsid': getattr(item, 'drivewsid', None),
+    #         'etag': getattr(item, 'etag', None),
+    #         'extension': getattr(item, 'extension', None),
+    #         'item_type': getattr(item, 'item_type', None),
+    #         'zone': getattr(item, 'zone', None),
+    #         'sharing_info': getattr(item, 'sharing_info', None),
+    #         'derivative_info': getattr(item, 'derivative_info', None),
+    #         'file_type': getattr(item, 'file_type', None),
+    #     }
+    #     return metadata
+
+    def index_directory(self, folder, path=''):
+        """Recursively get the contents of a folder and write metadata to a JSON Lines file."""
+        metadata_list = []
+        try:
+            logging.info(f"Entering folder: {path or '/'}")
+            for item_name in folder.dir():
+                item = folder[item_name]
+                item_path = f"{path}/{item_name}"
+
+                if item.type == 'folder':
+                    # Recursively get the contents of this folder
+                    self.index_directory(item, item_path)
+                else:
+                    metadata = self.collect_metadata(item, item_path)
+                    metadata_list.append(metadata)
+                    logging.debug(f"Indexed Item: {metadata}")
+        except Exception as e:
+            logging.error(f"Failed to process folder: {path}, Error: {e}")
+        return metadata_list
 
     def index(self, recursive=True):
-        """This is the indexer for iCloud."""
         api = self.authenticate()
         files = api.drive.root
-        indexed_data = self.index_directory(files, recursive)
-        return indexed_data
-
-    def index_directory(self, directory, recursive):
-        """Helper method to index a directory."""
-        indexed_data = []
-        for item in directory.get_children():
-            metadata = self.build_stat_dict(item)
-            indexed_data.append(metadata)
-            self.auth_logger.info(f"Indexed item: {metadata}")
-            if item.type == 'folder' and recursive:
-                indexed_data.extend(self.index_directory(item, recursive))
+        if recursive:
+            indexed_data = self.index_directory(files)
+        else:
+            indexed_data = []
+            for item_name in files.dir():
+                item = files[item_name]
+                if item.type != 'folder':
+                    metadata = self.collect_metadata(item, item_name)
+                    indexed_data.append(metadata)
+                    logging.debug(f"Indexed Item (non-recursive): {metadata}")
         return indexed_data
 
     @staticmethod
