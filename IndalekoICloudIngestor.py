@@ -15,7 +15,6 @@ from IndalekoICloudIndexer import IndalekoICloudIndexer
 from IndalekoServices import IndalekoService
 import IndalekoLogging
 from IndalekoObject import IndalekoObject
-from IndalekoUnix import UnixFileAttributes
 from IndalekoRelationshipContains import IndalekoRelationshipContains
 from IndalekoRelationshipContained import IndalekoRelationshipContainedBy
 
@@ -79,7 +78,7 @@ class IndalekoICloudIngester(IndalekoIngester):
             raise ValueError('indexer_data is not a list')
 
 
-    def normalize_index_data(self, data : dict ) -> IndalekoObject:
+    def normalize_index_data(self, data: dict) -> IndalekoObject:
         '''
         Given some metadata, this will create a record that can be inserted into the
         Object collection.
@@ -92,38 +91,39 @@ class IndalekoICloudIngester(IndalekoIngester):
             raise ValueError('Data must contain an ObjectIdentifier')
         if 'user_id' not in data:
             data['user_id'] = self.user_id
-        timestamps = []
-        size = 0
-        if 'FolderMetadata' in data:
-            unix_file_attributes = UnixFileAttributes.FILE_ATTRIBUTES['S_IFDIR']
-            #windows_file_attributes = IndalekoWindows.FILE_ATTRIBUTES['FILE_ATTRIBUTE_DIRECTORY']
-        if 'FileMetadata' in data:
-            unix_file_attributes = UnixFileAttributes.FILE_ATTRIBUTES['S_IFREG']
-            #windows_file_attributes = IndalekoWindows.FILE_ATTRIBUTES['FILE_ATTRIBUTE_NORMAL']
-            timestamps = [
-                {
-                    'Label' : IndalekoObject.MODIFICATION_TIMESTAMP,
-                    'Value' : data['client_modified'],
-                    'Description' : 'Client Modified'
-                },
-                {
-                    'Label' : IndalekoObject.CHANGE_TIMESTAMP,
-                    'Value' : data['server_modified'],
-                    'Description' : 'Server Modified'
-                },
-            ]
-            size = data['size']
+
+        timestamps = [
+            {
+                'Label': IndalekoObject.MODIFICATION_TIMESTAMP,
+                'Value': data['modified'],
+                'Description': 'Modified'
+            },
+            {
+                'Label': IndalekoObject.CHANGE_TIMESTAMP,
+                'Value': data['date_changed'],
+                'Description': 'Changed'
+            },
+            {
+                'Label': 'Created',
+                'Value': data['created'],
+                'Description': 'Created'
+            },
+            {
+                'Label': 'Last Opened',
+                'Value': data['last_opened'],
+                'Description': 'Last Opened'
+            }
+        ]
+
         kwargs = {
-            'source' : self.source,
-            'raw_data' : msgpack.packb(bytes(json.dumps(data).encode('utf-8'))),
-            # 'URI' : 'https://www.icloud.com/' + data['path_display'],
-            'Path' : data['path_display'],
-            'ObjectIdentifier' : data['ObjectIdentifier'],
-            'Timestamps' : timestamps,
-            'Size' : size,
-            'Attributes' : data,
-            'UnixFileAttributes' : UnixFileAttributes.map_file_attributes(unix_file_attributes),
-            #'WindowsFileAttributes' : IndalekoWindows.map_file_attributes(windows_file_attributes),
+            'source': self.source,
+            'raw_data': msgpack.packb(bytes(json.dumps(data).encode('utf-8'))),
+            'URI': 'https://www.icloud.com' + data['path_display'],
+            'Path': data['path_display'],
+            'ObjectIdentifier': data['ObjectIdentifier'],
+            'Timestamps': timestamps,
+            'Size': data.get('size', 0),
+            'Attributes': data,
         }
         return IndalekoObject(**kwargs)
 
@@ -170,75 +170,64 @@ class IndalekoICloudIngester(IndalekoIngester):
         dir_data_by_path = {}
         dir_data = []
         file_data = []
+
         for item in self.indexer_data:
             obj = self.normalize_index_data(item)
             assert 'Path' in obj.args
-            if 'S_IFDIR' in obj.args['UnixFileAttributes'] or \
-               'FILE_ATTRIBUTE_DIRECTORY' in obj.args['WindowsFileAttributes']:
+            if 'type' in item and item['type'] == 'folder':
                 if 'path_display' not in item:
                     logging.warning('Directory object does not have a path: %s', item)
-                    continue # skip
+                    continue  # skip
                 dir_data_by_path[item['path_display']] = obj
                 dir_data.append(obj)
                 self.dir_count += 1
             else:
                 file_data.append(obj)
                 self.file_count += 1
+
         dirmap = {}
         for item in dir_data:
             dirmap[item.args['Path']] = item.args['ObjectIdentifier']
+
         dir_edges = []
         source = {
-            'Identifier' : self.icloud_ingester_uuid,
-            'Version' : '1.0',
+            'Identifier': self.icloud_ingester_uuid,
+            'Version': '1.0',
         }
+
         for item in dir_data + file_data:
             if 'Path' not in item.args:
-                ic(item.args)
-                raise ValueError('Path not found in item')
+                logging.warning('Path not found in item: %s', item.args)
+                continue  # skip items without a path
             parent = item.args['Path']
             if parent not in dirmap:
                 logging.warning('Parent directory not found: %s', parent)
-                continue # skip an unknown parent
+                continue  # skip if parent directory is unknown
+
             parent_id = dirmap[parent]
             dir_edge = IndalekoRelationshipContains(
-                relationship = \
-                    IndalekoRelationshipContains.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR,
-                object1 = {
-                    'collection' : 'Objects',
-                    'object' : item.args['ObjectIdentifier'],
-                },
-                object2 = {
-                    'collection' : 'Objects',
-                    'object' : parent_id,
-                },
-                source = source
+                relationship=IndalekoRelationshipContains.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR,
+                object1={'collection': 'Objects', 'object': item.args['ObjectIdentifier']},
+                object2={'collection': 'Objects', 'object': parent_id},
+                source=source
             )
             dir_edges.append(dir_edge)
             self.edge_count += 1
+
             dir_edge = IndalekoRelationshipContainedBy(
-                relationship = \
-                    IndalekoRelationshipContainedBy.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR,
-                object1 = {
-                    'collection' : 'Objects',
-                    'object' : parent_id,
-                },
-                object2 = {
-                    'collection' : 'Objects',
-                    'object' : item.args['ObjectIdentifier'],
-                },
-                source = source
+                relationship=IndalekoRelationshipContainedBy.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR,
+                object1={'collection': 'Objects', 'object': parent_id},
+                object2={'collection': 'Objects', 'object': item.args['ObjectIdentifier']},
+                source=source
             )
             dir_edges.append(dir_edge)
             self.edge_count += 1
-        # Save the data to the ingester output file
+
         self.write_data_to_file(dir_data + file_data, self.output_file)
-        load_string = self.build_load_string(
-            collection='Objects',
-            file=self.output_file
-        )
+        load_string = self.build_load_string(collection='Objects', file=self.output_file)
         logging.info('Load string: %s', load_string)
         print('Load string: ', load_string)
+
         edge_file = self.generate_output_file_name(
             platform=self.platform,
             service='ingest',
@@ -246,10 +235,8 @@ class IndalekoICloudIngester(IndalekoIngester):
             timestamp=self.timestamp,
             output_dir=self.data_dir,
         )
-        load_string = self.build_load_string(
-            collection='Relationships',
-        )
         self.write_data_to_file(dir_edges, edge_file)
+        load_string = self.build_load_string(collection='Relationships', file=edge_file)
         logging.info('Load string: %s', load_string)
         print('Load string: ', load_string)
         return
@@ -259,9 +246,6 @@ def main():
     logging_levels = Indaleko.get_logging_levels()
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     pre_parser = argparse.ArgumentParser(add_help=False)
-    # pre_parser.add_argument('--configdir',
-    #                         help='Path to the config directory',
-    #                         default=Indaleko.default_config_dir)
     pre_parser.add_argument('--logdir', '-l',
                             help='Path to the log directory',
                             default=Indaleko.default_log_dir)

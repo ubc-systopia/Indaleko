@@ -192,27 +192,27 @@ class IndalekoICloudIndexer(IndalekoIndexer):
             'last_opened': item.date_last_opened.strftime('%Y-%m-%d %H:%M:%S') if hasattr(item, 'date_last_opened') and item.date_last_opened else 'Unknown',
             'date_changed': item.date_changed.strftime('%Y-%m-%d %H:%M:%S') if hasattr(item, 'date_changed') and item.date_changed else 'Unknown',
             'ObjectIdentifier': str(uuid.uuid4()),  # Generate and add a UUID for each file
+            'drivewsid': getattr(item, 'drivewsid', 'Unknown'),
+            'docwsid': getattr(item, 'docwsid', 'Unknown'),
+            'zone': getattr(item, 'zone', 'Unknown'),
+            'extension': getattr(item, 'extension', 'Unknown'),
+            'parentId': getattr(item, 'parentId', 'Unknown'),
+            'item_id': getattr(item, 'item_id', 'Unknown'),
+            'etag': getattr(item, 'etag', 'Unknown'),
+            'lastOpenTime': item.date_last_opened.strftime('%Y-%m-%d %H:%M:%S') if hasattr(item, 'date_last_opened') and item.date_last_opened else 'Unknown',
+            'type': getattr(item, 'type', 'Unknown')
         }
         return metadata
-    # def collect_metadata(self, item, item_path) -> dict:
+    # def collect_metadata(self, item, item_path):
     #     metadata = {
     #         'name': item.name,
-    #         'type': item.type,
-    #         'size': item.size,
-    #         'date_modified': item.date_modified.strftime('%Y-%m-%d %H:%M:%S') if item.date_modified else 'Unknown',
-    #         'date_created': item.date_created.strftime('%Y-%m-%d %H:%M:%S') if item.date_created else 'Unknown',
-    #         'last_opened': item.last_opened.strftime('%Y-%m-%d %H:%M:%S') if item.last_opened else 'Unknown',
-    #         'path': item_path,
-    #         'parent': item.parent.name if item.parent else 'None',
-    #         'download_url': getattr(item, 'download_url', None),
-    #         'drivewsid': getattr(item, 'drivewsid', None),
-    #         'etag': getattr(item, 'etag', None),
-    #         'extension': getattr(item, 'extension', None),
-    #         'item_type': getattr(item, 'item_type', None),
-    #         'zone': getattr(item, 'zone', None),
-    #         'sharing_info': getattr(item, 'sharing_info', None),
-    #         'derivative_info': getattr(item, 'derivative_info', None),
-    #         'file_type': getattr(item, 'file_type', None),
+    #         'path_display': item_path,
+    #         'size': getattr(item, 'size', 'Unknown'),
+    #         'modified': item.date_modified.strftime('%Y-%m-%d %H:%M:%S') if hasattr(item, 'date_modified') and item.date_modified else 'Unknown',
+    #         'created': item.date_created.strftime('%Y-%m-%d %H:%M:%S') if hasattr(item, 'date_created') and item.date_created else 'Unknown',
+    #         'last_opened': item.date_last_opened.strftime('%Y-%m-%d %H:%M:%S') if hasattr(item, 'date_last_opened') and item.date_last_opened else 'Unknown',
+    #         'date_changed': item.date_changed.strftime('%Y-%m-%d %H:%M:%S') if hasattr(item, 'date_changed') and item.date_changed else 'Unknown',
+    #         'ObjectIdentifier': str(uuid.uuid4()),  # Generate and add a UUID for each file
     #     }
     #     return metadata
 
@@ -227,6 +227,10 @@ class IndalekoICloudIndexer(IndalekoIndexer):
 
                 if item.type == 'folder':
                     # Recursively get the contents of this folder
+                    metadata = self.collect_metadata(item, item_path)
+                    metadata_list.append(metadata)
+                    logging.debug(f"Indexed Item (file): {metadata}")
+                    #continue indexing into file
                     self.index_directory(item, item_path)
                 else:
                     metadata = self.collect_metadata(item, item_path)
@@ -245,10 +249,9 @@ class IndalekoICloudIndexer(IndalekoIndexer):
             indexed_data = []
             for item_name in files.dir():
                 item = files[item_name]
-                if item.type != 'folder':
-                    metadata = self.collect_metadata(item, item_name)
-                    indexed_data.append(metadata)
-                    logging.debug(f"Indexed Item (non-recursive): {metadata}")
+                metadata = self.collect_metadata(item, item_name)
+                indexed_data.append(metadata)
+                logging.debug(f"Indexed Item (non-recursive): {metadata}")
         return indexed_data
 
     @staticmethod
