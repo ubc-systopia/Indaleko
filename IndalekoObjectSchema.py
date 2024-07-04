@@ -22,9 +22,15 @@ import jsonschema
 from jsonschema import validate
 
 from IndalekoRecordSchema import IndalekoRecordSchema
+from IndalekoObjectDataModel import IndalekoObjectDataModel
 
 class IndalekoObjectSchema(IndalekoRecordSchema):
     '''This class defines the schema for an Indaleko Object.'''
+
+    def __init__(self):
+        '''Initialize the Object schema.'''
+        self.base_type = IndalekoObjectDataModel.IndalekoObject
+        super().__init__()
 
     @staticmethod
     def is_valid_object(indaleko_object : dict) -> bool:
@@ -39,7 +45,7 @@ class IndalekoObjectSchema(IndalekoRecordSchema):
         return valid
 
     @staticmethod
-    def get_schema():
+    def get_old_schema():
         object_schema =  {
             "$schema": "https://json-schema.org/draft/2020-12/schema#",
             "$id" : "https://activitycontext.work/schema/indaleko-object.json",
@@ -129,16 +135,20 @@ class IndalekoObjectSchema(IndalekoRecordSchema):
             }
         }
         assert 'Record' not in object_schema['rule']['properties'], 'Record should not be in object schema.'
-        object_schema['rule']['properties']['Record'] = IndalekoRecordSchema.get_schema()['rule']
+        object_schema['rule']['properties']['Record'] = IndalekoRecordSchema.get_old_schema()['rule']
         object_schema['rule']['required'].append('Record')
         return object_schema
 
 
 def main():
     '''Test code for IndalekoObjectSchema.'''
-    if IndalekoObjectSchema.is_valid_schema(IndalekoObjectSchema.get_schema()):
+    object_schema = IndalekoObjectSchema()
+    if object_schema.is_valid_schema():
         print('Schema is valid.')
-    print(json.dumps(IndalekoObjectSchema.get_schema(), indent=4))
+    print('Old Schema:')
+    print(json.dumps(object_schema.get_old_schema(), indent=4))
+    print('New Schema:')
+    print(json.dumps(object_schema.get_schema(), indent=4))
 
 if __name__ == "__main__":
     main()

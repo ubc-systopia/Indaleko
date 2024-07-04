@@ -20,7 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
 from dataclasses import dataclass
-from typing import Dict, Any, Annotated
+from datetime import datetime
+from typing import Dict, Any, Annotated, Optional
 from uuid import UUID
 from apischema import schema
 from apischema.graphql import graphql_schema
@@ -49,6 +50,50 @@ class IndalekoDataModel:
             required
             ]
 
+    @dataclass
+    class Timestamp:
+        Label: Annotated[
+            UUID,
+            schema(description="UUID representing the semantic meaning of this timestamp."),
+            required
+        ]
+        Value: Annotated[
+            datetime,
+            schema(description="Timestamp in ISO date and time format.", format="date-time"),
+            required
+        ]
+        Description: Annotated[
+            Optional[str],
+            schema(description="Description of the timestamp.")
+        ] = None
+
+    @dataclass
+    class IndalekoUUID:
+        UUID: Annotated[
+            UUID,
+            schema(description="A Universally Unique Identifier", format="uuid"),
+            required
+        ]
+
+        Label: Annotated[
+            str,
+            schema(description="A human-readable label for the UUID.")
+        ]
+
+    @dataclass
+    class SemanticAttribute:
+        UUID: Annotated[
+            'IndalekoDataModel.IndalekoUUID',
+            schema(description="The UUID for this attribute.", format="uuid"),
+            required
+        ]
+        Data : Annotated[
+            str,
+            schema(description="The data associated with this attribute."),
+            required
+        ]
+
+
 def get_record()-> IndalekoDataModel.SourceIdentifier:
     '''Return a record'''
     record = IndalekoDataModel.SourceIdentifier(
@@ -58,11 +103,22 @@ def get_record()-> IndalekoDataModel.SourceIdentifier:
     )
     return record
 
+def get_timestamp() -> IndalekoDataModel.Timestamp:
+    '''Return a timestamp'''
+    timestamp = IndalekoDataModel.Timestamp(
+        Label=UUID('12345678-1234-5678-1234-567812345678'),
+        Value=datetime.now(),
+        Description='This is a test timestamp'
+    )
+    return timestamp
+
 def main():
     '''Test code for the IndalekoDataModel class'''
     print("This is the IndalekoDataModel module")
     print('graphql schema:')
-    print(print_schema(graphql_schema(query=[get_record], types=[IndalekoDataModel.SourceIdentifier])))
+    print(print_schema(graphql_schema(query=[get_record, get_timestamp],
+                                      types=[IndalekoDataModel.SourceIdentifier,
+                                             IndalekoDataModel.Timestamp])))
 
 if __name__ == "__main__":
     main()

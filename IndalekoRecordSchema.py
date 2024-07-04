@@ -43,45 +43,9 @@ class IndalekoRecordSchema(IndalekoSchema):
     '''
     def __init__(self):
         '''Initialize the schema.'''
-        self.base_type = IndalekoRecordDataModel.IndalekoRecord
-        self.schema = self.get_schema()
-
-    @staticmethod
-    def check_against_schema(data : dict, schema : dict) -> bool:
-        '''Given a dict, determine if it conforms to the given schema.'''
-        assert isinstance(data, dict), 'data must be a dict'
-        assert isinstance(schema, dict), 'schema must be a dict'
-        valid = False
-        try:
-            validate(instance=data, schema=IndalekoRecordSchema.get_schema())
-            valid = True
-        except jsonschema.exceptions.ValidationError as error:
-            print(f'Validation error: {error.message}')
-        return valid
-
-    @staticmethod
-    def is_valid_record(indaleko_record : dict) -> bool:
-        '''Given a dict, determine if it is a valid Indaleko Record.'''
-        assert isinstance(indaleko_record, dict), 'record must be a dict'
-        valid = False
-        try:
-            validate(instance=indaleko_record, schema=IndalekoRecordSchema.get_schema())
-            valid = True
-        except jsonschema.exceptions.ValidationError as error:
-            print(f'Validation error: {error.message}')
-        return valid
-
-    @staticmethod
-    def is_valid_schema(schema : dict) -> bool:
-        '''Given a dict representing a schema, determine if it is a valid schema.'''
-        valid = False
-        try:
-            Draft202012Validator.check_schema(schema)
-            valid = True
-        except exceptions.Schema as e:
-            print(f'Schema Validation Error: {e}')
-
-        return valid
+        if not hasattr(self, 'base_type'):
+            self.base_type = IndalekoRecordDataModel.IndalekoRecord
+        super().__init__()
 
     @staticmethod
     def get_old_schema():
@@ -175,7 +139,7 @@ class IndalekoRecordSchema(IndalekoSchema):
 def main():
     '''Test code for IndalekoRecordSchema.'''
     test_schema = IndalekoRecordSchema()
-    if test_schema.is_valid_schema(test_schema.get_schema()):
+    if test_schema.is_valid_schema():
         print('Schema is valid.')
     print(json.dumps(test_schema.get_old_schema(), indent=4))
     print(json.dumps(test_schema.get_schema(), indent=4))

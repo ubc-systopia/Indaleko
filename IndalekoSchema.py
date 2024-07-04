@@ -25,6 +25,7 @@ import uuid
 import apischema
 import graphql
 import jsonschema
+import jsonschema.exceptions
 
 from IndalekoDataModel import IndalekoDataModel
 
@@ -41,7 +42,8 @@ class IndalekoSchema:
 
     def __init__(self):
         '''Initialize the schema'''
-        self.base_type = IndalekoDataModel.SourceIdentifier
+        if not hasattr(self, 'base_type'):
+            self.base_type = IndalekoDataModel.SourceIdentifier
         self.schema = self.get_schema()
 
     def check_against_schema(self, data: dict) -> bool:
@@ -66,7 +68,7 @@ class IndalekoSchema:
         try:
             jsonschema.Draft202012Validator.check_schema(self.schema)
             valid = True
-        except jsonschema.exceptions.Schema as e:
+        except jsonschema.exceptions.SchemaError as e:
             print(f'Schema Validation Error: {e}')
         return valid
 
