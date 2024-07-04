@@ -114,6 +114,10 @@ class IndalekoCollection():
         self.collection.configure(schema=schema)
         return self
 
+    def get_schema(self) -> dict:
+        """Return the schema for the collection."""
+        return self.collection.properties().get('schema', {})
+
     def delete(self, key: str) -> 'IndalekoCollection':
         """Delete the document with the given key."""
         return self.collection.delete(key)

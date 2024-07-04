@@ -18,15 +18,34 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
+
+from dataclasses import dataclass, field
+from datetime import datetime
 import json
+from typing import Dict, Any, Annotated
+from uuid import UUID
+
+from apischema import schema
+from apischema.graphql import graphql_schema
+from apischema.json_schema import deserialization_schema
+from apischema.metadata import required
+from graphql import print_schema
 import jsonschema
 from jsonschema import validate, Draft202012Validator, exceptions
 
-class IndalekoRecordSchema:
+from IndalekoRecordDataModel import IndalekoRecordDataModel
+from IndalekoSchema import IndalekoSchema
+
+class IndalekoRecordSchema(IndalekoSchema):
     '''
     This is the schema for the Indaleko Record. Note that it is inherited and
     merged by other classes that derive from this base type.
     '''
+    def __init__(self):
+        '''Initialize the schema.'''
+        self.base_type = IndalekoRecordDataModel.IndalekoRecord
+        self.schema = self.get_schema()
+
     @staticmethod
     def check_against_schema(data : dict, schema : dict) -> bool:
         '''Given a dict, determine if it conforms to the given schema.'''
@@ -65,7 +84,7 @@ class IndalekoRecordSchema:
         return valid
 
     @staticmethod
-    def get_schema():
+    def get_old_schema():
         """
         Return the schema for data managed by this class.
         """
@@ -115,11 +134,53 @@ class IndalekoRecordSchema:
             }
         }
 
+    @staticmethod
+    def get_record(identifier : UUID = None) -> 'IndalekoRecordDataModel.IndalekoRecord':
+        '''Return the record with the given ID.'''
+        return IndalekoRecordDataModel.IndalekoRecord(
+            SourceIdentifier = IndalekoRecordDataModel.SourceIdentifier(
+                Identifier = identifier,
+                Version = '1.0',
+                Description = 'Test Source'
+            ),
+            Timestamp = datetime.now(),
+            Attributes={},
+            Data='Sample Data'
+        )
+
+    @staticmethod
+    def get_records() -> list[IndalekoRecordDataModel.IndalekoRecord]:
+        '''Return all records.'''
+        return [IndalekoRecordDataModel.IndalekoRecord(
+            SourceIdentifier = IndalekoRecordDataModel.SourceIdentifier(
+                Identifier = UUID('12345678-1234-5678-1234-567812345678'),
+                Version = '1.0',
+                Description = 'Test Source'
+            ),
+            Timestamp = datetime.now(),
+            Attributes={},
+            Data='Sample Data'
+        )]
+
+    @staticmethod
+    def get_graphql_schema():
+        '''Return the GraphQL schema for the record.'''
+        gql_schema = graphql_schema(
+            query=[IndalekoRecordSchema.get_record, IndalekoRecordSchema.get_records],
+            types=[IndalekoRecordDataModel.SourceIdentifier, IndalekoRecordDataModel.IndalekoRecord])
+        return gql_schema
+
+
+
 def main():
     '''Test code for IndalekoRecordSchema.'''
-    if IndalekoRecordSchema.is_valid_schema(IndalekoRecordSchema.get_schema()):
+    test_schema = IndalekoRecordSchema()
+    if test_schema.is_valid_schema(test_schema.get_schema()):
         print('Schema is valid.')
-    print(json.dumps(IndalekoRecordSchema.get_schema(), indent=4))
+    print(json.dumps(test_schema.get_old_schema(), indent=4))
+    print(json.dumps(test_schema.get_schema(), indent=4))
+    print('GraphQL Schema:')
+    print(print_schema(test_schema.get_graphql_schema()))
 
 if __name__ == "__main__":
     main()
