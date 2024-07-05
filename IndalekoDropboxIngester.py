@@ -29,6 +29,7 @@ import os
 import json
 import jsonlines
 import msgpack
+import uuid
 
 
 from IndalekoIngester import IndalekoIngester
