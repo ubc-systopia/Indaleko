@@ -23,6 +23,17 @@ class IndalekoICloudIndexer(IndalekoIndexer):
     indaleko_icloud_indexer_service_version = '1.0'
     indaleko_icloud_indexer_service_type = 'Indexer'
 
+    icloud_root_folder = {
+        'ObjectIdentifier': 'd0dac621-4de3-44df-a2c9-49841b86b508',
+        'name': 'icloud_root_dir',
+        'path_display': 'root',
+        'size': 0,
+        'modified': None,
+        'date_changed': None,
+        'created': None,
+        'last_opened': None,
+    }
+
     indaleko_icloud_local_indexer_service = {
         'service_name': indaleko_icloud_indexer_service_name,
         'service_description': indaleko_icloud_indexer_service_description,
@@ -32,7 +43,7 @@ class IndalekoICloudIndexer(IndalekoIndexer):
     }        
 
     def __init__(self, **kwargs):
-        self.auth_logger = self.setup_logging()
+        # self.auth_logger = self.setup_logging()
         self.icloud_credentials = None
         self.service = None
         self.load_icloud_credentials()
@@ -55,23 +66,6 @@ class IndalekoICloudIndexer(IndalekoIndexer):
             indexer_name=IndalekoICloudIndexer.icloud_indexer_name,
             **IndalekoICloudIndexer.indaleko_icloud_local_indexer_service
         )
-
-    def setup_logging(self):
-        logger = logging.getLogger('iCloudAuthLogger')
-        logger.setLevel(logging.DEBUG)
-        if not os.path.exists('logs'):
-            os.makedirs('logs')
-        log_filename = datetime.now().strftime('logs/%Y%m%d-%H%M%S-iCloudLoginLog.log')
-        file_handler = logging.FileHandler(log_filename)
-        file_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
-        logger.addHandler(file_handler)
-        
-        # Enable DEBUG logging for third-party libraries
-        logging.getLogger('pyicloud').setLevel(logging.DEBUG)
-        logging.getLogger('requests').setLevel(logging.DEBUG)
-        logging.getLogger('urllib3').setLevel(logging.DEBUG)
-        
-        return logger
 
     def get_user_id(self):
         '''This method returns the user id.'''
@@ -185,7 +179,7 @@ class IndalekoICloudIndexer(IndalekoIndexer):
     def collect_metadata(self, item, item_path):
         metadata = {
             'name': item.name,
-            'path_display': item_path,
+            'path_display':IndalekoICloudIndexer.icloud_root_folder['path_display'] +  '/' + item_path,
             'size': getattr(item, 'size', 'Unknown'),
             'modified': item.date_modified.strftime('%Y-%m-%d %H:%M:%S') if hasattr(item, 'date_modified') and item.date_modified else 'Unknown',
             'created': item.date_created.strftime('%Y-%m-%d %H:%M:%S') if hasattr(item, 'date_created') and item.date_created else 'Unknown',
@@ -203,18 +197,6 @@ class IndalekoICloudIndexer(IndalekoIndexer):
             'type': getattr(item, 'type', 'Unknown')
         }
         return metadata
-    # def collect_metadata(self, item, item_path):
-    #     metadata = {
-    #         'name': item.name,
-    #         'path_display': item_path,
-    #         'size': getattr(item, 'size', 'Unknown'),
-    #         'modified': item.date_modified.strftime('%Y-%m-%d %H:%M:%S') if hasattr(item, 'date_modified') and item.date_modified else 'Unknown',
-    #         'created': item.date_created.strftime('%Y-%m-%d %H:%M:%S') if hasattr(item, 'date_created') and item.date_created else 'Unknown',
-    #         'last_opened': item.date_last_opened.strftime('%Y-%m-%d %H:%M:%S') if hasattr(item, 'date_last_opened') and item.date_last_opened else 'Unknown',
-    #         'date_changed': item.date_changed.strftime('%Y-%m-%d %H:%M:%S') if hasattr(item, 'date_changed') and item.date_changed else 'Unknown',
-    #         'ObjectIdentifier': str(uuid.uuid4()),  # Generate and add a UUID for each file
-    #     }
-    #     return metadata
 
     def index_directory(self, folder, path=''):
         """Recursively get the contents of a folder and write metadata to a JSON Lines file."""
@@ -243,6 +225,7 @@ class IndalekoICloudIndexer(IndalekoIndexer):
     def index(self, recursive=True):
         api = self.authenticate()
         files = api.drive.root
+
         if recursive:
             indexed_data = self.index_directory(files)
         else:

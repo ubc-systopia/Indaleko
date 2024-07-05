@@ -171,10 +171,24 @@ class IndalekoICloudIngester(IndalekoIngester):
         dir_data = []
         file_data = []
 
+        # Create the icloud_root_dir object
+        icloud_root_dir_obj = self.normalize_index_data(IndalekoICloudIndexer.icloud_root_folder)
+        # Append icloud_root_dir object to file_data
+        file_data.append(icloud_root_dir_obj)
+
+        # Ensure root directory is in the dirmap
+        dirmap = {'root': icloud_root_dir_obj.args['ObjectIdentifier']}
+
+        # Now go into the Drive and create objects of every item
         for item in self.indexer_data:
             obj = self.normalize_index_data(item)
             assert 'Path' in obj.args
+            path = obj.args['Path']
+
             if 'type' in item and item['type'] == 'folder':
+                if path == "root/some_folder":
+                    # Ignore the folder item with path "root/some_folder"
+                    continue
                 if 'path_display' not in item:
                     logging.warning('Directory object does not have a path: %s', item)
                     continue  # skip
@@ -185,7 +199,6 @@ class IndalekoICloudIngester(IndalekoIngester):
                 file_data.append(obj)
                 self.file_count += 1
 
-        dirmap = {}
         for item in dir_data:
             dirmap[item.args['Path']] = item.args['ObjectIdentifier']
 
@@ -195,19 +208,57 @@ class IndalekoICloudIngester(IndalekoIngester):
             'Version': '1.0',
         }
 
-        for item in dir_data + file_data:
+        # Add relationships for files in the root directory to the icloud_root_folder
+        root_path = "root/"
+        root_object_id = icloud_root_dir_obj.args['ObjectIdentifier']
+
+        for item in file_data:
+            path = item.args['Path']
+            # Check if the file is directly under the root directory
+            if path.startswith(root_path) and path.count('/') == 1:
+                file_object_id = item.args['ObjectIdentifier']
+                assert file_object_id != root_object_id, "Relationship built can not be self referential"
+
+                dir_edge = IndalekoRelationshipContains(
+                    relationship=IndalekoRelationshipContains.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR,
+                    object1={'collection': 'Objects', 'object': file_object_id},
+                    object2={'collection': 'Objects', 'object': root_object_id},
+                    source=source
+                )
+                dir_edges.append(dir_edge)
+                self.edge_count += 1
+
+                dir_edge = IndalekoRelationshipContainedBy(
+                    relationship=IndalekoRelationshipContainedBy.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR,
+                    object1={'collection': 'Objects', 'object': root_object_id},
+                    object2={'collection': 'Objects', 'object': file_object_id},
+                    source=source
+                )
+                dir_edges.append(dir_edge)
+                self.edge_count += 1
+
+        for item in dir_data:
+            path = item.args['Path']
+            # Skip the root folder itself
+            if path == 'root':
+                continue
             if 'Path' not in item.args:
                 logging.warning('Path not found in item: %s', item.args)
                 continue  # skip items without a path
-            parent = item.args['Path']
+            parent = os.path.dirname(path)
             if parent not in dirmap:
                 logging.warning('Parent directory not found: %s', parent)
                 continue  # skip if parent directory is unknown
 
             parent_id = dirmap[parent]
+            object_id = item.args['ObjectIdentifier']
+
+            # Ensure that object1 is not the same as object2 for folders
+            assert object_id != parent_id, "Folder relationship built can not be self referential"
+
             dir_edge = IndalekoRelationshipContains(
                 relationship=IndalekoRelationshipContains.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR,
-                object1={'collection': 'Objects', 'object': item.args['ObjectIdentifier']},
+                object1={'collection': 'Objects', 'object': object_id},
                 object2={'collection': 'Objects', 'object': parent_id},
                 source=source
             )
@@ -217,7 +268,7 @@ class IndalekoICloudIngester(IndalekoIngester):
             dir_edge = IndalekoRelationshipContainedBy(
                 relationship=IndalekoRelationshipContainedBy.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR,
                 object1={'collection': 'Objects', 'object': parent_id},
-                object2={'collection': 'Objects', 'object': item.args['ObjectIdentifier']},
+                object2={'collection': 'Objects', 'object': object_id},
                 source=source
             )
             dir_edges.append(dir_edge)
