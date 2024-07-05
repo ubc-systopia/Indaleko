@@ -112,7 +112,8 @@ def check_command(args : argparse.Namespace) -> None:
     print('Database connection successful.')
 
     # make sure the collections exist
-    IndalekoCollections(db_config)
+    # must specify (call) db_config=db_config or script will not work
+    IndalekoCollections(db_config=db_config)
 
 
 def delete_command(args : argparse.Namespace) -> None:
