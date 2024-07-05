@@ -19,7 +19,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import json
 import jsonschema
+
+from apischema.graphql import graphql_schema
+from datetime import datetime
+from graphql import print_schema
 from jsonschema import validate
+from uuid import UUID
 
 from IndalekoRecordSchema import IndalekoRecordSchema
 from IndalekoObjectDataModel import IndalekoObjectDataModel
@@ -38,7 +43,7 @@ class IndalekoObjectSchema(IndalekoRecordSchema):
         assert isinstance(indaleko_object, dict), 'object must be a dict'
         valid = False
         try:
-            validate(instance=indaleko_object, schema=IndalekoObjectSchema.get_schema())
+            validate(instance=indaleko_object, schema=IndalekoObjectSchema.get_old_schema())
             valid = True
         except jsonschema.exceptions.ValidationError as error:
             print(f'Validation error: {error.message}')
@@ -139,16 +144,39 @@ class IndalekoObjectSchema(IndalekoRecordSchema):
         object_schema['rule']['required'].append('Record')
         return object_schema
 
+    @staticmethod
+    def get_object(service_id : UUID) -> IndalekoObjectDataModel.IndalekoObject:
+        '''Return an object.'''
+        object = IndalekoObjectDataModel.IndalekoObject(
+            Label='Test Object',
+            URI='http://www.example.com',
+            ObjectIdentifier=UUID('12345678-1234-5678-1234-567812345678'),
+            LocalIdentifier='12345678-1234-5678-1234-567812345678',
+            Timestamps=[IndalekoObjectDataModel.Timestamp(
+                Label=UUID('12345678-1234-5678-1234-567812345678'),
+                Value=datetime.now(),
+                Description='Test Timestamp')],
+            Size=1024,
+            RawData='This is a test object.',
+            SemanticAttributes=[IndalekoObjectDataModel.SemanticAttribute(
+                Data='Test Data',
+                UUID=UUID('12345678-1234-5678-1234-567812345678'))]
+        )
+        return object
 
 def main():
     '''Test code for IndalekoObjectSchema.'''
-    object_schema = IndalekoObjectSchema()
-    if object_schema.is_valid_schema():
-        print('Schema is valid.')
+    if IndalekoObjectSchema.is_valid_schema_dict(IndalekoObjectSchema.get_old_schema()):
+        print('Old schema is valid.')
     print('Old Schema:')
-    print(json.dumps(object_schema.get_old_schema(), indent=4))
+    print(json.dumps(IndalekoObjectSchema.get_old_schema(), indent=4))
     print('New Schema:')
+    object_schema = IndalekoObjectSchema()
     print(json.dumps(object_schema.get_schema(), indent=4))
+    print('GraphQL Schema:')
+    print(print_schema(graphql_schema(
+        query=[IndalekoObjectSchema.get_object],
+        types=[IndalekoObjectDataModel.IndalekoObject])))
 
 if __name__ == "__main__":
     main()

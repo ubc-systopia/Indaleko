@@ -44,11 +44,7 @@ class IndalekoObjectDataModel(IndalekoRecordDataModel):
             apischema.metadata.required
         ]
 
-        ObjectIdentifier : Annotated[
-            UUID,
-            apischema.schema(description="The object identifier (UUID)."),
-            apischema.metadata.required
-        ]
+        ObjectIdentifier : IndalekoDataModel.IndalekoUUID
 
         LocalIdentifier : Annotated[
             str,
@@ -81,12 +77,12 @@ class IndalekoObjectDataModel(IndalekoRecordDataModel):
             apischema.schema(description="The semantic attributes for the object."),
         ]
 
-def get_object() -> IndalekoObjectDataModel.IndalekoObject:
+def get_object(object_id : UUID) -> IndalekoObjectDataModel.IndalekoObject:
     '''Return an object.'''
-    object = IndalekoObjectDataModel.IndalekoObject(
+    indaleko_object = IndalekoObjectDataModel.IndalekoObject(
         Label='Test Object',
         URI='http://www.example.com',
-        ObjectIdentifier=UUID('12345678-1234-5678-1234-567812345678'),
+        ObjectIdentifier=object_id,
         LocalIdentifier='12345678-1234-5678-1234-567812345678',
         Timestamps=[IndalekoDataModel.Timestamp(
             Label=UUID('12345678-1234-5678-1234-567812345678'),
@@ -95,9 +91,10 @@ def get_object() -> IndalekoObjectDataModel.IndalekoObject:
         Size=1024,
         RawData='This is a test object.',
         SemanticAttributes=[IndalekoDataModel.SemanticAttribute(
-            UUID=UUID('12345678-1234-5678-1234-567812345678'))]
+            UUID=UUID('12345678-1234-5678-1234-567812345678'),
+            Data='Test Data')]
     )
-    return object
+    return indaleko_object
 
 
 def main():

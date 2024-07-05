@@ -19,12 +19,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import json
 import jsonschema
-from jsonschema import validate, Draft202012Validator, exceptions
+
+from apischema.graphql import graphql_schema
+from graphql import print_schema
+from uuid import UUID
 
 from IndalekoRecordSchema import IndalekoRecordSchema
+from IndalekoServicesDataModel import IndalekoServicesDataModel
 
 class IndalekoServicesSchema(IndalekoRecordSchema):
     '''This class defines the schema for Indaleko Services.'''
+
+    def __init__(self):
+        '''Initialize the Services schema.'''
+        self.base_type = IndalekoServicesDataModel.IndalekoService
+        super().__init__()
 
     @staticmethod
     def is_valid_services(indaleko_services : dict) -> bool:
@@ -32,14 +41,14 @@ class IndalekoServicesSchema(IndalekoRecordSchema):
         assert isinstance(indaleko_services, dict), 'services must be a dict'
         valid = False
         try:
-            validate(instance=indaleko_services, schema=IndalekoServicesSchema.get_schema())
+            jsonschema.validate(instance=indaleko_services, schema=IndalekoServicesSchema.get_old_schema())
             valid = True
         except jsonschema.exceptions.ValidationError as error:
             print(f'Validation error: {error.message}')
         return valid
 
     @staticmethod
-    def get_schema():
+    def get_old_schema():
         services_schema = {
             "$schema": "https://json-schema.org/draft/2020-12/schema#",
             "$id": "https://activitycontext.work/schema/serviceprovider.json",
@@ -70,15 +79,34 @@ class IndalekoServicesSchema(IndalekoRecordSchema):
             }
         }
         assert 'Record' not in services_schema['rule']['properties'], 'Record must not be specified.'
-        services_schema['rule']['properties']['Record'] = IndalekoRecordSchema.get_schema()['rule']
+        services_schema['rule']['properties']['Record'] = IndalekoRecordSchema.get_old_schema()['rule']
         services_schema['rule']['required'].append('Record')
         return services_schema
 
+    @staticmethod
+    def get_service(identifier : UUID) -> IndalekoServicesDataModel.IndalekoService:
+        '''Return an IndalekoService object.'''
+        service = IndalekoServicesDataModel.IndalekoService(
+            Identifier = identifier,
+            Version = '1.0.0',
+            Name = 'Test Service',
+            Type = 'Test'
+        )
+        return service
+
 def main():
     '''Test code for IndalekoObjectSchema.'''
-    if IndalekoServicesSchema.is_valid_schema(IndalekoServicesSchema.get_schema()):
-        print('Schema is valid.')
-    print(json.dumps(IndalekoServicesSchema.get_schema(), indent=4))
+    services_schema = IndalekoServicesSchema()
+    if services_schema.is_valid_schema_dict(IndalekoServicesSchema.get_old_schema()):
+        print('Old schema is valid.')
+    print(json.dumps(services_schema.get_old_schema(), indent=4))
+    if services_schema.is_valid_schema():
+        print('New schema is valid.')
+    print(json.dumps(services_schema.get_schema(), indent=4))
+    print('GraphQL Schema:')
+    print(print_schema(graphql_schema(
+        query=[IndalekoServicesSchema.get_service],
+        types=[IndalekoServicesDataModel.IndalekoService])))
 
 if __name__ == "__main__":
     main()

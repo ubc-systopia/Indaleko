@@ -63,10 +63,15 @@ class IndalekoSchema:
         return self.check_against_schema(indaleko_record)
 
     def is_valid_schema(self) -> bool:
+        '''Is the schema assocated with this object valid?'''
+        return IndalekoSchema.is_valid_schema_dict(self.schema)
+
+    @staticmethod
+    def is_valid_schema_dict(schema_dict : dict) -> bool:
         '''Given a dict representing a schema, determine if it is a valid schema.'''
         valid = False
         try:
-            jsonschema.Draft202012Validator.check_schema(self.schema)
+            jsonschema.Draft202012Validator.check_schema(schema_dict)
             valid = True
         except jsonschema.exceptions.SchemaError as e:
             print(f'Schema Validation Error: {e}')

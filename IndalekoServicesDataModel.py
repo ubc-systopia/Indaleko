@@ -19,11 +19,9 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import apischema
-from datetime import datetime
 from graphql import print_schema
 from uuid import UUID
-from typing import Annotated, List
-from IndalekoRecordDataModel import IndalekoRecordDataModel
+from typing import Annotated
 from dataclasses import dataclass
 from apischema.graphql import graphql_schema
 
@@ -56,15 +54,15 @@ class IndalekoServicesDataModel(IndalekoRecordDataModel):
             apischema.metadata.required
         ]
 
-def get_service() -> IndalekoServicesDataModel.IndalekoService:
+def get_service(service_identifier : UUID) -> IndalekoServicesDataModel.IndalekoService:
     '''Return an IndalekoService object.'''
     service = IndalekoServicesDataModel.IndalekoService(
-        Identifier = UUID('12345678-1234-5678-1234-567812345678'),
+        Identifier = service_identifier,
         Version = '1.0.0',
         Name = 'Test Service',
         Type = 'Test'
     )
-    return object
+    return service
 
 def main():
     '''Test the IndalekoServicesDataModel.'''
