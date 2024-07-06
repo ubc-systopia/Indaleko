@@ -23,11 +23,12 @@ from datetime import datetime
 from graphql import print_schema
 from uuid import UUID
 from typing import Annotated, List
-from IndalekoRecordDataModel import IndalekoRecordDataModel
 from dataclasses import dataclass
 from apischema.graphql import graphql_schema
 
+
 from IndalekoDataModel import IndalekoDataModel
+from IndalekoRecordDataModel import IndalekoRecordDataModel
 
 class IndalekoObjectDataModel(IndalekoRecordDataModel):
     '''This is the data model for the Indaleko Object type.'''

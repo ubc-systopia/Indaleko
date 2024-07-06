@@ -19,13 +19,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import json
 
+from uuid import UUID
+
 from IndalekoRecordSchema import IndalekoRecordSchema
+from IndalekoActivityDataProviderDataModel import IndalekoActivityDataProviderDataModel
 
 class IndalekoActivityProviderSchema(IndalekoRecordSchema):
     '''Define the schema for use with the ActivityProvider collection.'''
 
     @staticmethod
-    def get_schema():
+    def get_old_schema():
         activity_data_provider_schema = {
             '''
             This schema relates to the machine configuration collection,
@@ -118,14 +121,27 @@ class IndalekoActivityProviderSchema(IndalekoRecordSchema):
         activity_data_provider_schema['rule']['required'].append('Record')
         return activity_data_provider_schema
 
+    @staticmethod
+    def get_activity_provider(identifier : UUID) -> IndalekoActivityDataProviderDataModel.ActivityProvider:
+        '''Given an identifier, return an activity provider.'''
+        indaleko_activity_provider = IndalekoActivityDataProviderDataModel.ActivityProvider(
+            ActivityDataIdentifier=identifier,
+            ActivityProviderIdentifier=UUID('00000000-0000-0000-0000-000000000000'),
+            Timestamps=[IndalekoRecordSchema.get_timestamp()],
+            ActivityType=UUID('00000000-0000-0000-0000-000000000000'),
+            DataVersion='0.0.0',
+            Entities=[IndalekoRecordSchema.get_entity()],
+            Active=True
+        )
+        return indaleko_activity_provider
 
 def main():
     '''Test the IndalekoActivityProviderSchema class.'''
-    if IndalekoActivityProviderSchema.is_valid_schema(IndalekoActivityProviderSchema.get_schema()):
-        print('IndalekoActivityProviderSchema is a valid schema.')
-    else:
-        print('IndalekoActivityProviderSchema is not a valid schema.')
-    print(json.dumps(IndalekoActivityProviderSchema.get_schema(), indent=4))
+    activity_provider = IndalekoActivityProviderSchema()
+    activity_provider.schema_detail(
+        query=[IndalekoActivityProviderSchema.get_activity_provider],
+        types=[IndalekoActivityProviderDataModel.ActivityProvider]
+    )
 
 if __name__ == '__main__':
     main()

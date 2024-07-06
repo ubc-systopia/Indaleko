@@ -36,6 +36,8 @@ class IndalekoRecordSchema(IndalekoSchema):
     '''
     def __init__(self):
         '''Initialize the schema.'''
+        if not hasattr(self, 'data_model'):
+            self.data_model = IndalekoRecordDataModel()
         if not hasattr(self, 'base_type'):
             self.base_type = IndalekoRecordDataModel.IndalekoRecord
         super().__init__()
@@ -91,53 +93,13 @@ class IndalekoRecordSchema(IndalekoSchema):
             }
         }
 
-    @staticmethod
-    def get_record(identifier : UUID = None) -> 'IndalekoRecordDataModel.IndalekoRecord':
-        '''Return the record with the given ID.'''
-        return IndalekoRecordDataModel.IndalekoRecord(
-            SourceIdentifier = IndalekoRecordDataModel.SourceIdentifier(
-                Identifier = identifier,
-                Version = '1.0',
-                Description = 'Test Source'
-            ),
-            Timestamp = datetime.now(),
-            Attributes={},
-            Data='Sample Data'
-        )
-
-    @staticmethod
-    def get_records() -> list[IndalekoRecordDataModel.IndalekoRecord]:
-        '''Return all records.'''
-        return [IndalekoRecordDataModel.IndalekoRecord(
-            SourceIdentifier = IndalekoRecordDataModel.SourceIdentifier(
-                Identifier = UUID('12345678-1234-5678-1234-567812345678'),
-                Version = '1.0',
-                Description = 'Test Source'
-            ),
-            Timestamp = datetime.now(),
-            Attributes={},
-            Data='Sample Data'
-        )]
-
-    @staticmethod
-    def get_graphql_schema():
-        '''Return the GraphQL schema for the record.'''
-        gql_schema = graphql_schema(
-            query=[IndalekoRecordSchema.get_record, IndalekoRecordSchema.get_records],
-            types=[IndalekoRecordDataModel.SourceIdentifier, IndalekoRecordDataModel.IndalekoRecord])
-        return gql_schema
-
 
 
 def main():
     '''Test code for IndalekoRecordSchema.'''
-    test_schema = IndalekoRecordSchema()
-    if test_schema.is_valid_schema():
-        print('Schema is valid.')
-    print(json.dumps(test_schema.get_old_schema(), indent=4))
-    print(json.dumps(test_schema.get_schema(), indent=4))
-    print('GraphQL Schema:')
-    print(print_schema(test_schema.get_graphql_schema()))
+    record_schema = IndalekoRecordSchema()
+    record_schema.schema_detail(query=IndalekoRecordDataModel.get_queries(),
+                                types=IndalekoRecordDataModel.get_types())
 
 if __name__ == "__main__":
     main()

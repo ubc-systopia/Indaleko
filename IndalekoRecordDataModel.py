@@ -21,13 +21,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from dataclasses import dataclass, field
 from datetime import datetime
-import json
 from typing import Dict, Any, Annotated
 from uuid import UUID
 
 from apischema import schema
 from apischema.graphql import graphql_schema
-from apischema.json_schema import deserialization_schema
 from apischema.metadata import required
 from graphql import print_schema
 import jsonschema
@@ -38,14 +36,9 @@ from IndalekoDataModel import IndalekoDataModel
 class IndalekoRecordDataModel(IndalekoDataModel):
 
     @dataclass
-    class SourceIdentifier(IndalekoDataModel.SourceIdentifier):
-        '''Define the source identifier for the Indaleko Record.'''
-        pass
-
-    @dataclass
     class IndalekoRecord:
         '''Define data format for the Indaleko Record.'''
-        SourceIdentifier: Annotated['IndalekoRecordDataModel.SourceIdentifier',
+        SourceIdentifier: Annotated[IndalekoDataModel.SourceIdentifier,
                                     schema(description="The source identifier for the data."),
                                     required]
         Timestamp: Annotated[datetime,
@@ -60,24 +53,31 @@ class IndalekoRecordDataModel(IndalekoDataModel):
              schema(description="The raw (uninterpreted) data from the source."),
              required] = field(default=None)
 
-def get_record() -> IndalekoRecordDataModel.IndalekoRecord:
-    '''Return a record'''
-    record = IndalekoRecordDataModel.IndalekoRecord(
-        SourceIdentifier=IndalekoDataModel.SourceIdentifier(
-            Identifier=UUID('12345678-1234-5678-1234-567812345678'),
-            Version='1.0',
-            Description='This is a test record'
-        ),
-        Timestamp=datetime.now(),
-        Attributes={'Test': 'Test'},
-        Data='This is a test data record'
-    )
-    return record
+    @staticmethod
+    def get_indaleko_record() -> 'IndalekoRecordDataModel.IndalekoRecord':
+        '''Return an Indaleko Record.'''
+        return IndalekoRecordDataModel.IndalekoRecord(
+            SourceIdentifier=IndalekoDataModel.get_source_identifier(UUID('12345678-1234-5678-1234-567812345678')),
+            Timestamp=datetime.now(),
+            Attributes={'test': 'test'},
+            Data='This is a test record'
+        )
+
+    @staticmethod
+    def get_queries() -> list:
+        '''Return the queries for the Indaleko Record.'''
+        return [IndalekoRecordDataModel.get_indaleko_record]
+
+    @staticmethod
+    def get_types() -> list:
+        '''Return the types for the Indaleko Record.'''
+        return [IndalekoRecordDataModel.IndalekoRecord]
 
 def main():
     '''Test code for IndalekoRecordDataModel.'''
     print('GraphQL Schema:')
-    print(print_schema(graphql_schema(query=[get_record], types=[IndalekoRecordDataModel.IndalekoRecord])))
+    print(print_schema(graphql_schema(query=IndalekoRecordDataModel.get_queries(),
+                                      types=IndalekoRecordDataModel.get_types())))
 
 if __name__ == "__main__":
     main()

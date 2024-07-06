@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Dict, Any, Annotated, Optional
 from uuid import UUID
 from apischema import schema
@@ -50,6 +50,14 @@ class IndalekoDataModel:
             required
             ]
 
+    @staticmethod
+    def get_source_identifier(uuid : UUID) -> 'IndalekoDataModel.SourceIdentifier':
+        '''Lookup a source identifier'''
+        return IndalekoDataModel.SourceIdentifier(
+            Identifier=uuid,
+            Version='1.0',
+            Description='This is a test record'
+        )
     @dataclass
     class Timestamp:
         Label: Annotated[
@@ -67,6 +75,16 @@ class IndalekoDataModel:
             schema(description="Description of the timestamp.")
         ] = None
 
+    @staticmethod
+    def get_timestamp(uuid : UUID,
+                      value : datetime = datetime.now(UTC),
+                      description : str = 'Prototype description') -> 'IndalekoDataModel.Timestamp':
+        '''Lookup a timestamp'''
+        return IndalekoDataModel.Timestamp(
+            Label=uuid,
+            Value=value,
+            Description=description
+        )
     @dataclass
     class IndalekoUUID:
         UUID: Annotated[
@@ -80,8 +98,24 @@ class IndalekoDataModel:
             schema(description="A human-readable label for the UUID.")
         ]
 
+    @staticmethod
+    def get_indaleko_uuid() -> 'IndalekoDataModel.IndalekoUUID':
+        '''Lookup a UUID'''
+        return IndalekoDataModel.IndalekoUUID(
+            UUID=UUID('00000000-0000-0000-0000-000000000000'),
+            Label='This is a dummy label.'
+        )
+
     @dataclass
     class SemanticAttribute:
+        '''
+        A semantic attribute is something that relates to the semantics of
+        the data itself.  This is an abstract model because I don't know what
+        the meaning of the semantic attribute are - I just collect them. At some
+        point we'll need to know what a semantic attribute represents for it to
+        be useful, but indexing isn't about understanding, it's about collecting
+        data.
+        '''
         UUID: Annotated[
             'IndalekoDataModel.IndalekoUUID',
             schema(description="The UUID for this attribute.", format="uuid"),
@@ -93,32 +127,36 @@ class IndalekoDataModel:
             required
         ]
 
+    @staticmethod
+    def get_semantic_attribute() -> 'IndalekoDataModel.SemanticAttribute':
+        '''Lookup a semantic attribute'''
+        return IndalekoDataModel.SemanticAttribute(
+            UUID=UUID('00000000-0000-0000-0000-000000000000'),
+            Data='This is a dummy label for the semantic attribute.'
+        )
 
-def get_record()-> IndalekoDataModel.SourceIdentifier:
-    '''Return a record'''
-    record = IndalekoDataModel.SourceIdentifier(
-        Identifier=UUID('12345678-1234-5678-1234-567812345678'),
-        Version='1.0',
-        Description='This is a test record'
-    )
-    return record
+    @staticmethod
+    def get_queries() -> list:
+        '''Return the queries for the IndalekoDataModel'''
+        return [IndalekoDataModel.get_source_identifier,
+                IndalekoDataModel.get_timestamp,
+                IndalekoDataModel.get_indaleko_uuid,
+                IndalekoDataModel.get_semantic_attribute]
 
-def get_timestamp() -> IndalekoDataModel.Timestamp:
-    '''Return a timestamp'''
-    timestamp = IndalekoDataModel.Timestamp(
-        Label=UUID('12345678-1234-5678-1234-567812345678'),
-        Value=datetime.now(),
-        Description='This is a test timestamp'
-    )
-    return timestamp
+    @staticmethod
+    def get_types() -> list:
+        '''Return the types for the IndalekoDataModel'''
+        return [IndalekoDataModel.SourceIdentifier,
+                IndalekoDataModel.Timestamp,
+                IndalekoDataModel.IndalekoUUID,
+                IndalekoDataModel.SemanticAttribute]
 
 def main():
     '''Test code for the IndalekoDataModel class'''
     print("This is the IndalekoDataModel module")
     print('graphql schema:')
-    print(print_schema(graphql_schema(query=[get_record, get_timestamp],
-                                      types=[IndalekoDataModel.SourceIdentifier,
-                                             IndalekoDataModel.Timestamp])))
+    print(print_schema(graphql_schema(query=IndalekoDataModel.get_queries(),
+                                      types=IndalekoDataModel.get_types())))
 
 if __name__ == "__main__":
     main()

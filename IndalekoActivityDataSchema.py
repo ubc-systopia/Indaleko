@@ -19,13 +19,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import json
 
+from datetime import datetime
+from uuid import UUID
+
+from apischema.graphql import graphql_schema
+from graphql import print_schema
+
 from IndalekoRecordSchema import IndalekoRecordSchema
+from IndalekoActivityDataModel import IndalekoActivityDataModel
+from IndalekoDataModel import IndalekoDataModel
 
 class IndalekoActivityDataSchema(IndalekoRecordSchema):
     '''Schema defintion for activity data.'''
 
     @staticmethod
-    def get_schema():
+    def get_old_schema():
         activity_data_schema = {
             '''
             This schema relates to the activity data that is collected by
@@ -71,16 +79,44 @@ class IndalekoActivityDataSchema(IndalekoRecordSchema):
         }
         assert 'Record' not in activity_data_schema['rule'], \
             'Record should not be in activity data schema.'
-        activity_data_schema['rule']['Record'] = IndalekoRecordSchema.get_schema()
+        activity_data_schema['rule']['Record'] = IndalekoRecordSchema.get_old_schema()
         activity_data_schema['rule']['required'].append('Record')
         return activity_data_schema
 
+    @staticmethod
+    def get_activity_data(identifier : IndalekoDataModel.IndalekoUUID)\
+        -> IndalekoActivityDataModel.ActivityData:
+        '''Given an identifier, return an activity data.'''
+        indaleko_activity_data = IndalekoActivityDataModel.ActivityData(
+            ActivityDataIdentifier=identifier,
+            CollectionTimestamp=datetime.now(),
+            ActivityTimestamps=[
+                IndalekoDataModel.Timestamp(
+                    Label=IndalekoDataModel.IndalekoUUID(
+                        UUID=UUID('00000000-0000-0000-0000-000000000000'),
+                        Label='Activity Timestamp'
+                    ),
+                    Value=datetime.now()
+                )
+            ]
+        )
+        return indaleko_activity_data
+
 def main():
     '''Test the IndalekoActivityDataSchema class.'''
-    if IndalekoActivityDataSchema.is_valid_schema(IndalekoActivityDataSchema.get_schema()):
-        print('IndalekoActivityDataSchema is valid')
-    schema = IndalekoActivityDataSchema.get_schema()
-    print(json.dumps(schema, indent=4))
+    activity_data = IndalekoActivityDataSchema()
+    assert IndalekoActivityDataSchema.is_valid_schema_dict(activity_data.get_old_schema())
+    print('Old ActivityData schema is valid')
+    print('Old Schema:')
+    print(json.dumps(activity_data.get_old_schema(), indent=4))
+    assert activity_data.is_valid_schema()
+    print('New ActivityData schema is valid')
+    print('New Schema:')
+    print(json.dumps(activity_data.get_schema(), indent=4))
+    print('GraphQL Schema:')
+    print(print_schema(graphql_schema(
+        query=[IndalekoActivityDataSchema.get_activity_data],
+        types=[IndalekoActivityDataModel.ActivityData])))
 
 if __name__ == '__main__':
     main()

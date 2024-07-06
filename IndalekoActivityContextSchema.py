@@ -19,13 +19,25 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import json
 
-from IndalekoRecordSchema import IndalekoRecordSchema
+from datetime import datetime
+from uuid import UUID
 
+from apischema.graphql import graphql_schema
+from graphql import print_schema
+
+
+from IndalekoDataModel import IndalekoDataModel
+from IndalekoRecordSchema import IndalekoRecordSchema
+from IndalekoActivityContextDataModel import IndalekoActivityContextDataModel
 class IndalekoActivityContextSchema(IndalekoRecordSchema):
     '''Define the schema for use with the ActivityContext collection.'''
 
+    def __init__(self):
+        self.base_type = IndalekoActivityContextDataModel.ActivityContext
+        super().__init__()
+
     @staticmethod
-    def get_schema():
+    def get_old_schema():
         activity_data_provider_schema = {
             '''
             This schema relates to the machine configuration collection,
@@ -76,18 +88,45 @@ class IndalekoActivityContextSchema(IndalekoRecordSchema):
         }
         assert 'Record' not in activity_data_provider_schema['rule'], \
             'Record should not be in activity registration schema.'
-        activity_data_provider_schema['rule']['Record'] = IndalekoRecordSchema.get_schema()
+        activity_data_provider_schema['rule']['Record'] = IndalekoRecordSchema.get_old_schema()
         activity_data_provider_schema['rule']['required'].append('Record')
         return activity_data_provider_schema
 
+    @staticmethod
+    def get_activity_context(context_id : UUID) -> IndalekoActivityContextDataModel.ActivityContext:
+        '''Given a context ID, return an activity context.'''
+        indaleko_activity_context = IndalekoActivityContextDataModel.ActivityContext(
+            ActivityContextIdentifier=IndalekoDataModel.IndalekoUUID(
+                UUID=context_id,
+                Label='Activity Context Identifier'
+            ),
+            ActivityType=IndalekoDataModel.IndalekoUUID(
+                UUID=UUID('00000000-0000-0000-0000-000000000000'),
+                Label='Activity Type Identifier'),
+            Timestamps=[IndalekoDataModel.Timestamp(
+                Label=UUID('00000000-0000-0000-0000-000000000000'),
+                Value=datetime.now())
+            ]
+        )
+        return indaleko_activity_context
 
 def main():
     '''Test the IndalekoActivityContextSchema class.'''
-    if IndalekoActivityContextSchema.is_valid_schema(IndalekoActivityContextSchema.get_schema()):
-        print('IndalekoActivityContextSchema is a valid schema.')
-    else:
-        print('IndalekoActivityContextSchema is not a valid schema.')
-    print(json.dumps(IndalekoActivityContextSchema.get_schema(), indent=4))
+    if IndalekoActivityContextSchema.is_valid_schema_dict(
+        IndalekoActivityContextSchema.get_old_schema()):
+        print('Old schema is valid.')
+    print('Old Schema:')
+    print(json.dumps(IndalekoActivityContextSchema.get_old_schema(), indent=4))
+    print('New Schema:')
+    ac_schema = IndalekoActivityContextSchema()
+    if ac_schema.is_valid_schema():
+        print('New schema is valid')
+    print(json.dumps(ac_schema.get_schema(), indent=4))
+    print('GraphQL Schema:')
+    print(print_schema(graphql_schema(
+        query=[IndalekoActivityContextSchema.get_activity_context],
+        types=[IndalekoActivityContextDataModel.ActivityContext])))
+
 
 if __name__ == '__main__':
     main()

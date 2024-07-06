@@ -23,9 +23,12 @@ import json
 import uuid
 
 import apischema
-import graphql
 import jsonschema
 import jsonschema.exceptions
+
+from datetime import datetime
+from apischema.graphql import graphql_schema
+from graphql import print_schema
 
 from IndalekoDataModel import IndalekoDataModel
 
@@ -35,13 +38,15 @@ class IndalekoSchema:
     template = {
             "$schema": "https://json-schema.org/draft/2020-12/schema#",
             "$id": "https://fsgeek.ca/indaleko/schema/record.json",
-            "title": "Indaleko Record Schema",
+            "title": "Indaleko Schema",
             "description": "Schema for the JSON representation of an abstract record within Indaleko.",
             "type": "object",
         }
 
     def __init__(self):
         '''Initialize the schema'''
+        if not hasattr(self, 'data_model'):
+            self.data_model = IndalekoDataModel()
         if not hasattr(self, 'base_type'):
             self.base_type = IndalekoDataModel.SourceIdentifier
         self.schema = self.get_schema()
@@ -78,7 +83,7 @@ class IndalekoSchema:
         return valid
 
     @staticmethod
-    def get_record(identifier : uuid.UUID = None) -> IndalekoDataModel.SourceIdentifier:
+    def get_source_identifier(identifier : uuid.UUID = None) -> IndalekoDataModel.SourceIdentifier:
         '''Return info on the source identifier'''
         record = IndalekoDataModel.SourceIdentifier(
             Identifier=identifier,
@@ -88,17 +93,43 @@ class IndalekoSchema:
         return record
 
     @staticmethod
-    def get_records() -> list[IndalekoDataModel.SourceIdentifier]:
-        '''Return all records'''
-        return [IndalekoSchema.get_record() for _ in range(10)]
+    def get_indaleko_uuid(label : str = None, uuid : uuid.UUID = None) -> IndalekoDataModel.IndalekoUUID:
+        '''Return a UUID'''
+        indaleko_uuid = IndalekoDataModel.IndalekoUUID(
+            UUID=uuid,
+            Label=label
+        )
+        return indaleko_uuid
 
     @staticmethod
-    def get_graphql_schema():
-        '''Return the GraphQL schema for the Record collection.'''
-        return apischema.graphql.graphql_schema(
-            query=[IndalekoSchema.get_record],
-            types=[IndalekoDataModel.SourceIdentifier]
+    def get_semantic_attribute(uuid : IndalekoDataModel.IndalekoUUID = None, data : str = None) -> IndalekoDataModel.SemanticAttribute:
+        '''Return a semantic attribute'''
+        semantic_attribute = IndalekoDataModel.SemanticAttribute(
+            UUID=uuid,
+            Data=data
         )
+        return semantic_attribute
+
+    @staticmethod
+    def get_timestamp(label : uuid.UUID = None, value : datetime = None, description : str = None) -> IndalekoDataModel.Timestamp:
+        '''Return a timestamp'''
+        record = IndalekoDataModel.Timestamp(
+            Label=label,
+            Value=value,
+            Description=description
+        )
+        return record
+
+    def get_graphql_schema(self):
+        '''Return the GraphQL schema for the Record collection.'''
+        return graphql_schema(
+            query=self.data_model.get_queries(),
+            types=self.data_model.get_types()
+        )
+
+    def get_old_schema(self : 'IndalekoSchema') -> dict:
+        '''There was no old schema for the base class.'''
+        return self.get_schema()
 
     def get_schema(self : 'IndalekoSchema') -> dict:
         '''Return the JSON schema for the Indaleko Record'''
@@ -106,15 +137,30 @@ class IndalekoSchema:
         schema_dict['rule'] = apischema.json_schema.deserialization_schema(self.base_type)
         return schema_dict
 
+    def print_graphql_schema(self, **kwargs) -> str:
+        '''Return the GraphQL schema for the schema.'''
+        return print_schema(graphql_schema(**kwargs))
+
+    def schema_detail(self, **kwargs) -> None:
+        '''Provide a basic function to check the schema detail.'''
+        assert self.is_valid_schema_dict(self.get_old_schema()), 'Old schema is not valid.'
+        print('Old schema is valid.')
+        print('Old Schema:')
+        print(json.dumps(self.get_old_schema(), indent=4))
+        print('New Schema:')
+        assert self.is_valid_schema(), 'New schema is not valid.'
+        print('New schema is valid')
+        print(json.dumps(self.get_schema(), indent=4))
+        print('GraphQL Schema:')
+        print(self.print_graphql_schema(**kwargs))
+
+
+
 def main():
     '''Test code for IndalekoSchema.'''
     indaleko_schema = IndalekoSchema()
-    if indaleko_schema.is_valid_schema():
-        print('Schema is valid.')
-    print('JSON Schema:')
-    print(json.dumps(indaleko_schema.get_schema(), indent=4))
-    print('GraphQL Schema:')
-    print(graphql.print_schema(indaleko_schema.get_graphql_schema()))
+    indaleko_schema.schema_detail(query=IndalekoDataModel.get_queries(),
+                                  types=IndalekoDataModel.get_types())
 
 if __name__ == "__main__":
     main()
