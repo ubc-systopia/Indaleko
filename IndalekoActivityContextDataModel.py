@@ -66,31 +66,40 @@ class IndalekoActivityContextDataModel(IndalekoRecordDataModel):
 
         Timestamps : List[IndalekoDataModel.Timestamp]
 
+    @staticmethod
+    def get_activity_context() -> 'IndalekoActivityContextDataModel.ActivityContext':
+        '''Return an activity context.'''
+        indaleko_activity_context = IndalekoActivityContextDataModel.ActivityContext(
+            ActivityContextIdentifier=IndalekoDataModel.IndalekoUUID(
+                UUID=UUID('00000000-0000-0000-0000-000000000000'),
+                Label='Activity Context Identifier'
+            ),
+            ActivityType=IndalekoDataModel.IndalekoUUID(
+                UUID=UUID('00000000-0000-0000-0000-000000000000'),
+                Label='Activity Type Identifier'),
+            Timestamps=[IndalekoDataModel.Timestamp(
+                Label=UUID('00000000-0000-0000-0000-000000000000'),
+                Value=datetime.now())
+            ]
+        )
+        return indaleko_activity_context
 
-def get_activity_context(context_id : UUID) -> IndalekoActivityContextDataModel.ActivityContext:
-    '''Return an activity context.'''
-    indaleko_activity_context = IndalekoActivityContextDataModel.ActivityContext(
-        ActivityContextIdentifier=IndalekoDataModel.IndalekoUUID(
-            UUID=context_id,
-            Label='Activity Context Identifier'
-        ),
-        ActivityType=IndalekoDataModel.IndalekoUUID(
-            UUID=UUID('00000000-0000-0000-0000-000000000000'),
-            Label='Activity Type Identifier'),
-        Timestamps=[IndalekoDataModel.Timestamp(
-            Label=UUID('00000000-0000-0000-0000-000000000000'),
-            Value=datetime.now())
-        ]
-    )
-    return indaleko_activity_context
+    @staticmethod
+    def get_queries() -> list:
+        '''Return the queries for the schema.'''
+        return [IndalekoActivityContextDataModel.get_activity_context]
 
+    @staticmethod
+    def get_types() -> list:
+        '''Return the types for the schema.'''
+        return [IndalekoActivityContextDataModel.ActivityContext]
 
 def main():
     '''Test code for IndalekoObjectDataModel.'''
     print('GraphQL Schema:')
     print(print_schema(graphql_schema(
-        query=[get_activity_context],
-        types=[IndalekoActivityContextDataModel.ActivityContext]))
+        query=IndalekoActivityContextDataModel.get_queries(),
+        types=IndalekoActivityContextDataModel.get_types()))
     )
 
 if __name__ == '__main__':

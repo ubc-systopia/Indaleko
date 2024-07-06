@@ -34,6 +34,7 @@ class IndalekoDataModel:
 
     @dataclass
     class SourceIdentifier:
+        '''Define a source identifier for this Indaleko Record.'''
         Identifier: Annotated[
             UUID,
             schema(description="The identifier of the source of the data."),

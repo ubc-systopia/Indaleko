@@ -1,0 +1,123 @@
+'''
+This module defines the common database schema for Activity Data.
+
+Project Indaleko
+Copyright (C) 2024 Tony Mason
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+'''
+from datetime import datetime
+from uuid import UUID
+from typing import Annotated, List
+from dataclasses import dataclass
+
+from graphql import print_schema
+from apischema import schema
+from apischema.graphql import graphql_schema
+from apischema.metadata import required
+
+
+from IndalekoDataModel import IndalekoDataModel
+from IndalekoRecordDataModel import IndalekoRecordDataModel
+
+class IndalekoRelationshipDataModel(IndalekoRecordDataModel):
+    '''This is the data model Activity Provider Registration.'''
+
+    @dataclass
+    class RelationshipMetadataElement:
+        '''Defines a single metadata element for a relationship.'''
+        UUID : Annotated[
+            IndalekoDataModel.IndalekoUUID,
+            schema(description="The UUID defining the meaning of the metadata element."),
+            required
+        ]
+
+        Data : Annotated[
+            str,
+            schema(description="Data defining this metadata."),
+            required
+        ]
+
+    @staticmethod
+    def get_relationship_metadata_element() -> 'IndalekoRelationshipDataModel.RelationshipMetadataElement':
+        '''Return the relationship metadata element.'''
+        return IndalekoRelationshipDataModel.RelationshipMetadataElement(
+            UUID=IndalekoDataModel.get_source_identifier(UUID('12345678-1234-5678-1234-567812345678')),
+            Data='This is a test record'
+        )
+
+    @dataclass
+    class IndalekoRelationship:
+        '''
+        This defines the data model for relationship information.
+        '''
+        Object1 : Annotated[
+            IndalekoDataModel.IndalekoUUID,
+            schema(description="The first object in the relationship."),
+            required
+        ]
+
+        Object2 : Annotated[
+            IndalekoDataModel.IndalekoUUID,
+            schema(description="The second object in the relationship."),
+            required
+        ]
+
+        Relationship: Annotated[
+            IndalekoDataModel.IndalekoUUID,
+            schema(description="The relationship between the objects."),
+            required
+        ]
+
+        Metadata: Annotated[
+            List['IndalekoRelationshipDataModel.RelationshipMetadataElement'],
+            schema(description="Metadata for the relationship (optional).")
+        ]
+
+    @staticmethod
+    def get_relationship() -> 'IndalekoRelationshipDataModel.IndalekoRelationship':
+        '''Return the relationship information.'''
+        return IndalekoRelationshipDataModel.IndalekoRelationship(
+            Object1=IndalekoDataModel.get_source_identifier(UUID('12345678-1234-5678-1234-567812345678')),
+            Object2=IndalekoDataModel.get_source_identifier(UUID('12345678-1234-5678-1234-567812345678')),
+            Relationship=IndalekoDataModel.get_source_identifier(UUID('12345678-1234-5678-1234-567812345678')),
+            Metadata=[
+                IndalekoRelationshipDataModel.RelationshipMetadataElement(
+                    UUID=IndalekoDataModel.get_source_identifier(UUID('12345678-1234-5678-1234-567812345678')),
+                    Data='This is a test record'
+                )
+            ]
+        )
+
+    @staticmethod
+    def get_queries() -> list:
+        '''Return the queries for the relationship data model.'''
+        return [IndalekoRelationshipDataModel.get_relationship_metadata_element,
+                IndalekoRelationshipDataModel.get_relationship]
+
+    @staticmethod
+    def get_types() -> list:
+        '''Return the types for the relationship data model.'''
+        return [IndalekoRelationshipDataModel.RelationshipMetadataElement,
+                IndalekoRelationshipDataModel.IndalekoRelationship]
+
+def main():
+    '''Test code for IndalekoObjectDataModel.'''
+    print('GraphQL Schema:')
+    print(print_schema(graphql_schema(
+        query=IndalekoRelationshipDataModel.get_queries(),
+        types=IndalekoRelationshipDataModel.get_types())))
+
+if __name__ == '__main__':
+    main()

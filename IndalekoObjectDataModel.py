@@ -19,7 +19,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import apischema
-from datetime import datetime
+from datetime import datetime, UTC
 from graphql import print_schema
 from uuid import UUID
 from typing import Annotated, List
@@ -78,30 +78,38 @@ class IndalekoObjectDataModel(IndalekoRecordDataModel):
             apischema.schema(description="The semantic attributes for the object."),
         ]
 
-def get_object(object_id : UUID) -> IndalekoObjectDataModel.IndalekoObject:
-    '''Return an object.'''
-    indaleko_object = IndalekoObjectDataModel.IndalekoObject(
-        Label='Test Object',
-        URI='http://www.example.com',
-        ObjectIdentifier=object_id,
-        LocalIdentifier='12345678-1234-5678-1234-567812345678',
-        Timestamps=[IndalekoDataModel.Timestamp(
-            Label=UUID('12345678-1234-5678-1234-567812345678'),
-            Value=datetime.now(),
-            Description='Test Timestamp')],
-        Size=1024,
-        RawData='This is a test object.',
-        SemanticAttributes=[IndalekoDataModel.SemanticAttribute(
-            UUID=UUID('12345678-1234-5678-1234-567812345678'),
-            Data='Test Data')]
-    )
-    return indaleko_object
+    @staticmethod
+    def get_indaleko_object() -> 'IndalekoObjectDataModel.IndalekoObject':
+        '''Return an Indaleko Object.'''
+        return IndalekoObjectDataModel.IndalekoObject(
+            Label='Test Object',
+            URI='http://www.example.com',
+            ObjectIdentifier=IndalekoDataModel.IndalekoUUID(UUID('12345678-1234-5678-1234-567812345678'), 'Test Object'),
+            LocalIdentifier='12345678-1234-5678-1234-567812345678',
+            Timestamps=[IndalekoDataModel.Timestamp(
+                UUID('12345678-1234-5678-1234-567812345678'),
+                datetime.now(UTC),
+                'Test Timestamp')],
+            Size=1024,
+            RawData='This is a test object.',
+            SemanticAttributes=[IndalekoDataModel.get_semantic_attribute()]
+            )
 
+    @staticmethod
+    def get_queries() -> list:
+        '''Return the queries for the Indaleko Object.'''
+        return [IndalekoObjectDataModel.get_indaleko_object]
+
+    @staticmethod
+    def get_types() -> list:
+        '''Return the types for the Indaleko Object.'''
+        return [IndalekoObjectDataModel.IndalekoObject]
 
 def main():
     '''Test code for IndalekoObjectDataModel.'''
     print('GraphQL Schema:')
-    print(print_schema(graphql_schema(query=[get_object], types=[IndalekoObjectDataModel.IndalekoObject])))
+    print(print_schema(graphql_schema(query=IndalekoObjectDataModel.get_queries(),
+                                      types=IndalekoObjectDataModel.get_types())))
 
 if __name__ == '__main__':
     main()
