@@ -26,7 +26,7 @@ class IndalekoSourceSchema(IndalekoRecordSchema):
     '''Define the schema for use with the Source collection.'''
 
     @staticmethod
-    def get_schema():
+    def get_old_schema():
         source_schema = {
             "$schema": "https://json-schema.org/draft/2020-12/schema#",
             "$id": "https://activitycontext.work/schema/source.json",
@@ -57,7 +57,7 @@ def main():
     """Test the IndalekoMachineConfigSchema class."""
     if IndalekoSourceSchema.is_valid_schema(IndalekoSourceSchema.get_schema()):
         print('Schema is valid.')
-    print(json.dumps(IndalekoSourceSchema.get_schema(), indent=4))
+    print(json.dumps(IndalekoSourceSchema.get_old_schema(), indent=4))
 
 if __name__ == "__main__":
     main()
