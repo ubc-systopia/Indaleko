@@ -21,25 +21,22 @@ import json
 import jsonschema
 from jsonschema import validate
 
+from IndalekoUserDataModel import IndalekoUserDataModel
 from IndalekoRecordSchema import IndalekoRecordSchema
 
 class IndalekoUserSchema(IndalekoRecordSchema):
     '''This class defines the schema for Indaleko Users.'''
 
-    @staticmethod
-    def is_valid_services(indaleko_services : dict) -> bool:
-        '''Given a dict, determine if it is a valid Indaleko Services.'''
-        assert isinstance(indaleko_services, dict), 'services must be a dict'
-        valid = False
-        try:
-            validate(instance=indaleko_services, schema=IndalekoUserSchema.get_schema())
-            valid = True
-        except jsonschema.exceptions.ValidationError as error:
-            print(f'Validation error: {error.message}')
-        return valid
+    def __init__(self):
+        '''Initialize the schema.'''
+        if not hasattr(self, 'data_model'):
+            self.data_model = IndalekoUserDataModel()
+        if not hasattr(self, 'base_type'):
+            self.base_type = IndalekoUserDataModel.UserData
+        super().__init__()
 
     @staticmethod
-    def get_schema():
+    def get_old_schema():
         services_schema = {
             "$schema": "https://json-schema.org/draft/2020-12/schema#",
             "$id": "https://activitycontext.work/schema/user.json",
@@ -66,15 +63,15 @@ class IndalekoUserSchema(IndalekoRecordSchema):
         assert 'Record' not in \
             services_schema['rule']['properties'], 'Record must not be specified.'
         services_schema['rule']['properties']['Record'] = \
-            IndalekoRecordSchema.get_schema()['rule']
+            IndalekoRecordSchema.get_old_schema()['rule']
         services_schema['rule']['required'].append('Record')
         return services_schema
 
 def main():
     '''Test code for IndalekoUserSchema.'''
-    if IndalekoUserSchema.is_valid_schema(IndalekoUserSchema.get_schema()):
+    if IndalekoUserSchema.is_valid_schema(IndalekoUserSchema.get_old_schema()):
         print('Schema is valid.')
-    print(json.dumps(IndalekoUserSchema.get_schema(), indent=4))
+    print(json.dumps(IndalekoUserSchema.get_old_schema(), indent=4))
 
 if __name__ == "__main__":
     main()

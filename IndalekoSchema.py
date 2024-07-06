@@ -49,7 +49,8 @@ class IndalekoSchema:
             self.data_model = IndalekoDataModel()
         if not hasattr(self, 'base_type'):
             self.base_type = IndalekoDataModel.SourceIdentifier
-        self.schema = self.get_schema()
+        if not hasattr(self, 'schema'):
+            self.schema = self.get_schema()
 
     def check_against_schema(self, data: dict) -> bool:
         '''Check the data against the schema'''

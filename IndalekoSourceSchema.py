@@ -21,9 +21,26 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import json
 from IndalekoRecordSchema import IndalekoRecordSchema
+from IndalekoSourceDataModel import IndalekoSourceDataModel
 
 class IndalekoSourceSchema(IndalekoRecordSchema):
     '''Define the schema for use with the Source collection.'''
+
+    template = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema#",
+        "$id": "https://activitycontext.work/schema/source.json",
+        "title": "Data source schema",
+        "description": "This schema describes information about the sources of metadata within the Indaleko system.",
+        "type": "object",
+    }
+
+    def __init__(self):
+        '''Initialize the schema for the Source collection.'''
+        if not hasattr(self, 'data_model'):
+            self.data_model = IndalekoSourceDataModel()
+        if not hasattr(self, 'base_type'):
+            self.base_type = IndalekoSourceDataModel.SourceIdentifier
+        super().__init__()
 
     @staticmethod
     def get_old_schema():
@@ -49,17 +66,15 @@ class IndalekoSourceSchema(IndalekoRecordSchema):
             }
         }
         assert 'Record' not in source_schema, 'Record must not be specified.'
-        source_schema['rule']['properties']['Record'] = IndalekoRecordSchema.get_schema()
+        source_schema['rule']['properties']['Record'] = IndalekoRecordSchema.get_old_schema()
         source_schema['rule']['required'].append('Record')
         return source_schema
 
 def main():
     """Test the IndalekoMachineConfigSchema class."""
-    if IndalekoSourceSchema.is_valid_schema(IndalekoSourceSchema.get_schema()):
-        print('Schema is valid.')
-    print(json.dumps(IndalekoSourceSchema.get_old_schema(), indent=4))
+    source_schema = IndalekoSourceSchema()
+    source_schema.schema_detail(query=IndalekoSourceDataModel.get_queries(),
+                                types=IndalekoSourceDataModel.get_types())
 
 if __name__ == "__main__":
     main()
-
-
