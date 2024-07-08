@@ -37,19 +37,17 @@ class IndalekoDataModel:
         '''Define a source identifier for this Indaleko Record.'''
         Identifier: Annotated[
             UUID,
-            schema(description="The identifier of the source of the data."),
-            required
+            schema(description="The identifier of the source of the data.")
             ]
         Version: Annotated[
             str,
-            schema(description="The version of the source of the ,data."),
-            required
+            schema(description="The version of the source of the ,data.")
             ]
         Description: Annotated[
-            str,
+            Optional[str],
             schema(description="A human readable description of the source of the data."),
-            required
             ]
+
 
     @staticmethod
     def get_source_identifier(uuid : UUID) -> 'IndalekoDataModel.SourceIdentifier':
