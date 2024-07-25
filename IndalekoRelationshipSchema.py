@@ -74,7 +74,7 @@ class IndalekoRelationshipSchema(IndalekoRecordSchema):
             },
         }
         assert 'Record' not in relationship_schema, 'Record must not be specified.'
-        relationship_schema['rule']['properties']['Record'] = IndalekoRecordSchema.get_schema()['rule']
+        relationship_schema['rule']['properties']['Record'] = IndalekoRecordSchema().get_schema()['rule']
         relationship_schema['rule']['required'].append('Record')
         return relationship_schema
 
