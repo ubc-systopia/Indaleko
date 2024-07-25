@@ -35,8 +35,12 @@ def run_container(db_config: IndalekoDBConfig):
 
     indaleko_docker = IndalekoDocker(**{'container_name': db_config['container'],
                                         'container_volume':db_config['volume']})
+    indaleko_docker = IndalekoDocker(**{'container_name': db_config['container'],
+                                        'container_volume':db_config['volume']})
 
     if db_config['container'] not in indaleko_docker.list_containers():
+        logging.debug('run_container: there is no container with the name "%s"!\
+                       Creating one ...', db_config['container'])
         logging.debug('run_container: there is no container with the name "%s"!\
                        Creating one ...', db_config['container'])
         # we don't have the container! create one
@@ -114,8 +118,7 @@ def check_command(args : argparse.Namespace) -> None:
     print('Database connection successful.')
 
     # make sure the collections exist
-    # must specify (call) db_config=db_config or script will not work
-    IndalekoCollections(db_config=db_config=db_config)
+    IndalekoCollections(db_config=db_config)
 
 
 def delete_command(args : argparse.Namespace) -> None:
