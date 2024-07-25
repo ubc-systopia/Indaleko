@@ -94,7 +94,7 @@ class Indaleko:
 
     Collections = {
         Indaleko_Objects: {
-            'schema' : IndalekoObjectSchema.get_schema(),
+            'schema' : IndalekoObjectSchema().get_schema(),
             'edge' : False,
             'indices' : {
                 'URI' : {
@@ -142,7 +142,7 @@ class Indaleko:
             }
         },
         Indaleko_Services : {
-            'schema' : IndalekoServicesSchema.get_schema(),
+            'schema' : IndalekoServicesSchema().get_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {
@@ -153,7 +153,7 @@ class Indaleko:
             },
         },
         Indaleko_MachineConfig : {
-            'schema' : IndalekoMachineConfigSchema.get_schema(),
+            'schema' : IndalekoMachineConfigSchema().get_schema(),
             'edge' : False,
             'indices' : { },
         },
@@ -169,7 +169,7 @@ class Indaleko:
             },
         },
         Indaleko_ActivityContext : {
-            'schema' : IndalekoActivityContextSchema.get_schema(),
+            'schema' : IndalekoActivityContextSchema().get_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {
@@ -180,7 +180,7 @@ class Indaleko:
             },
         },
        Indaleko_Users : {
-            'schema' : IndalekoUserSchema.get_schema(),
+            'schema' : IndalekoUserSchema().get_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {
@@ -191,7 +191,7 @@ class Indaleko:
             },
         },
         Indaleko_User_Relationships : {
-            'schema' : IndalekoUserRelationshipSchema.get_schema(),
+            'schema' : IndalekoUserRelationshipSchema().get_schema(),
             'edge' : True,
             'indices' : {
                 'Identity1' : {

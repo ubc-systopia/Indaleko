@@ -66,7 +66,7 @@ class IndalekoActivityDataProviderRegistrationSchema(IndalekoRecordSchema):
         }
         assert 'Record' not in activity_registration_schema['rule'], \
             'Record should not be in activity registration schema.'
-        activity_registration_schema['rule']['Record'] = IndalekoRecordSchema.get_schema()
+        activity_registration_schema['rule']['Record'] = IndalekoRecordSchema().get_schema()
         activity_registration_schema['rule']['required'].append('Record')
         return activity_registration_schema
 

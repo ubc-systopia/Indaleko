@@ -26,7 +26,7 @@ class IndalekoUserRelationshipSchema(IndalekoRecordSchema):
     '''Define the schema for use with the Relationship collection.'''
 
     @staticmethod
-    def get_schema():
+    def get_old_schema():
         relationship_schema =  {
             "$schema": "https://json-schema.org/draft/2020-12/schema#",
             "$id" : "https://activitycontext.work/schema/indaleko-user-relationship.json",
@@ -70,7 +70,7 @@ class IndalekoUserRelationshipSchema(IndalekoRecordSchema):
         }
         assert 'Record' not in relationship_schema, 'Record must not be specified.'
         relationship_schema['rule']['properties']['Record'] = \
-            IndalekoRecordSchema.get_schema()['rule']
+            IndalekoRecordSchema().get_schema()['rule']
         relationship_schema['rule']['required'].append('Record')
         return relationship_schema
 
@@ -81,7 +81,7 @@ class IndalekoUserRelationshipSchema(IndalekoRecordSchema):
         valid = False
         try:
             validate(instance=indaleko_relationship,
-                     schema=IndalekoUserRelationshipSchema.get_schema())
+                     schema=IndalekoUserRelationshipSchema().get_schema())
             valid = True
         except exceptions.ValidationError as error:
             print(f'Validation error: {error.message}')
@@ -90,9 +90,9 @@ class IndalekoUserRelationshipSchema(IndalekoRecordSchema):
 
 def main():
     """Test the IndalekoMachineConfigSchema class."""
-    if IndalekoUserRelationshipSchema.is_valid_schema(IndalekoUserRelationshipSchema.get_schema()):
+    if IndalekoUserRelationshipSchema.is_valid_schema(IndalekoUserRelationshipSchema().get_schema()):
         print('Schema is valid.')
-    print(json.dumps(IndalekoUserRelationshipSchema.get_schema(), indent=4))
+    print(json.dumps(IndalekoUserRelationshipSchema().get_schema(), indent=4))
 
 if __name__ == "__main__":
     main()
