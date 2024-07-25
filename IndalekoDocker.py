@@ -21,7 +21,13 @@ class IndalekoDocker:
         self.volume_name = None
         if 'container_volume' in kwargs:
             self.volume_name = kwargs['container_name']
-        self.docker_client = docker.from_env()
+        try:
+            self.docker_client = docker.from_env()
+        except docker.errors.DockerException as error:
+            logging.error('Failed to connect to Docker: %s', error)
+            print(f'Failed to connect to Docker: {error}')
+            print('Please make sure Docker is running and you have the correct permissions.')
+            exit(1)
         self.docker_client.ping()
         logging.info('IndalekoDocker initialized, Docker connection instantiated.')
 

@@ -33,10 +33,12 @@ def run_container(db_config: IndalekoDBConfig):
         logging.critical('run_container: there is no "container", "volume" or "admin_password" configuration in the config file')
         exit(1)
 
-    indaleko_docker = IndalekoDocker(**{'container_name': db_config['container'], 'container_volume':db_config['volume']})
+    indaleko_docker = IndalekoDocker(**{'container_name': db_config['container'],
+                                        'container_volume':db_config['volume']})
 
     if db_config['container'] not in indaleko_docker.list_containers():
-        logging.debug(f'run_container: there is no container with the name "{db_config['container']}"! Creating one ...')
+        logging.debug('run_container: there is no container with the name "%s"!\
+                       Creating one ...', db_config['container'])
         # we don't have the container! create one
         indaleko_docker.create_container(
             container_name=db_config['container'],
@@ -112,7 +114,7 @@ def check_command(args : argparse.Namespace) -> None:
     print('Database connection successful.')
 
     # make sure the collections exist
-    IndalekoCollections(db_config)
+    IndalekoCollections(db_config=db_config)
 
 
 def delete_command(args : argparse.Namespace) -> None:
