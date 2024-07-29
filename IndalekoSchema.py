@@ -40,6 +40,7 @@ class IndalekoSchema:
             "$id": "https://fsgeek.ca/indaleko/schema/record.json",
             "title": "Indaleko Schema",
             "description": "Schema for the JSON representation of an abstract record within Indaleko.",
+            "level": "moderate",
             "type": "object",
         }
 
@@ -55,7 +56,8 @@ class IndalekoSchema:
     def check_against_schema(self, data: dict) -> bool:
         '''Check the data against the schema'''
         assert isinstance(data, dict), 'data must be a dictionary'
-        assert isinstance(self.schema, IndalekoSchema), 'schema must be a dictionary'
+        assert isinstance(self.schema, IndalekoSchema), \
+            f'schema must be an IndalekoSchema not {type(self.schema)}'
         try:
             jsonschema.validate(data, self.schema)
             return True
@@ -128,14 +130,17 @@ class IndalekoSchema:
             types=self.data_model.get_types()
         )
 
-    def get_old_schema(self : 'IndalekoSchema') -> dict:
+    @staticmethod
+    def get_old_schema() -> dict:
         '''There was no old schema for the base class.'''
-        return self.get_schema()
+        raise NotImplementedError('Old schema not implemented for base class.')
 
     def get_schema(self : 'IndalekoSchema') -> dict:
         '''Return the JSON schema for the Indaleko Record'''
         schema_dict = self.template.copy()
-        schema_dict['rule'] = apischema.json_schema.deserialization_schema(self.base_type)
+        schema_dict['rule'] = apischema.json_schema.deserialization_schema(
+            self.base_type,
+            additional_properties=True)
         return schema_dict
 
     def print_graphql_schema(self, **kwargs) -> str:

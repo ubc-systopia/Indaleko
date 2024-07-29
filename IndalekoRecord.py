@@ -36,11 +36,11 @@ class IndalekoRecord:
     keyword_map = (
         ('__raw_data__', 'Data'), # this is the raw captured data
         ('__attributes__', 'Attributes'),
-        ('__source__', 'Source Identifier'), # this identifies the data source.
+        ('__source__', 'SourceIdentifier'), # this identifies the data source.
         ('__timestamp__', 'Timestamp'), # this is the timestamp for this record.
     )
 
-    Schema = IndalekoRecordSchema.get_schema()
+    Schema = IndalekoRecordSchema().get_schema()
 
     @staticmethod
     def get_schema():
@@ -71,7 +71,7 @@ class IndalekoRecord:
         assert isinstance(self.__attributes__, dict), 'attributes must be a dict'
         if 'source' not in kwargs:
             raise ValueError('source must be specified')
-        self.__source__ = kwargs['source']
+        self.set_source(kwargs['source'])
         assert self.validate_source(self.__source__), f'source is not valid: {self.__source__}'
         if 'identifier' in kwargs:
             self.__identifier__ = kwargs['identifier']
@@ -130,6 +130,7 @@ class IndalekoRecord:
         self.__source__ = {
             'Identifier' : source['Identifier'],
             'Version' : source['Version'],
+            'Description' : None,
         }
         if 'Description' in source:
             self.__source__['Description'] = source['Description']

@@ -34,6 +34,8 @@ class IndalekoServicesSchema(IndalekoRecordSchema):
         '''Initialize the Services schema.'''
         self.base_type = IndalekoServicesDataModel.IndalekoService
         super().__init__()
+        self.template['description'] = \
+            'This schema describes information about service providers within the Indaleko system.'
 
     @staticmethod
     def is_valid_services(indaleko_services : dict) -> bool:
@@ -110,4 +112,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

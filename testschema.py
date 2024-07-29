@@ -1,4 +1,7 @@
 import json
+
+from icecream import ic
+
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoObject import IndalekoObject
 from IndalekoRelationshipSchema import IndalekoRelationshipSchema
@@ -171,6 +174,7 @@ test_schema5 = {
         "$id" : "https://activitycontext.work/schema/indaleko-relationship.json",
         "title" : "Indaleko Relationship Schema",
         "description" : "Schema for the JSON representation of an Indaleko Relationship, which is used for identifying related objects.",
+        "level" : "moderate",
         "type" : "object",
         "rule" : {
             "properties" : {
@@ -219,16 +223,19 @@ test_schema5 = {
 
 def main():
     '''Test schema insertion into Arango.'''
-    print(json.dumps(test_schema3, indent=4))
+    # print(json.dumps(test_schema3, indent=4))
 
     config = IndalekoDBConfig()
     config.start()
     if config.db.has_collection('schematest'):
         config.db.delete_collection('schematest')
-    collection = config.db.create_collection('schematest', schema=IndalekoObject.Schema)
-    json.dumps(IndalekoObject.Schema, indent=4)
-    collection.configure(schema=IndalekoRelationshipSchema.get_schema())
-    collection.configure(schema=IndalekoSourceSchema.get_schema())
+    schema = IndalekoObject.Schema
+    assert 'level' in schema, 'level must be in schema'
+    collection = config.db.create_collection('schematest', schema=schema)
+    print(json.dumps(schema, indent=4))
+    ic(schema)
+    #collection.configure(schema=IndalekoRelationshipSchema().get_schema())
+    #collection.configure(schema=IndalekoSourceSchema().get_schema())
     #collection.configure(schema=test_schema)
     #print(collection)
     #uuid1 = str(uuid.uuid4())

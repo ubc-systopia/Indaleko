@@ -27,6 +27,8 @@ import os
 import logging
 import re
 
+import arango
+
 from IndalekoCollections import IndalekoCollections
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoRecord import IndalekoRecord
@@ -47,7 +49,7 @@ class IndalekoMachineConfig(IndalekoRecord):
 
     default_config_dir = "./config"
 
-    Schema = IndalekoMachineConfigSchema.get_schema()
+    Schema = IndalekoMachineConfigSchema().get_schema()
 
     def __init__(
         self: "IndalekoMachineConfig",
@@ -282,11 +284,17 @@ class IndalekoMachineConfig(IndalekoRecord):
         assert self.validate_uuid_string(
             self.machine_id
         ), f"machine_id {self.machine_id} is not a valid UUID."
-        if not IndalekoMachineConfigSchema.is_valid_record(self.to_dict()):
+        if not IndalekoMachineConfigSchema().is_valid_schema_dict(self.to_dict()):
             print("Invalid record:")
             print(json.dumps(self.to_dict(), indent=4))
             raise AssertionError("Invalid record.")
-        self.collection.insert(self.to_json(), overwrite=True)
+        new_config = self.to_json()
+        try:
+            self.collection.insert(new_config, overwrite=True)
+        except arango.exceptions.DocumentInsertError as e:
+            print(f"Error inserting document: {e}")
+            print(f"Document: {new_config}")
+            raise e
 
     @staticmethod
     def load_config_from_file() -> dict:
@@ -308,7 +316,7 @@ class IndalekoMachineConfig(IndalekoRecord):
         # Using spaces in names complicates things, but this does work.
         cursor = collections.db_config.db.aql.execute(
             f'FOR doc IN {Indaleko.Indaleko_MachineConfig} FILTER '+\
-             'doc.Record["Source Identifier"].Identifier == ' +\
+             'doc.Record["SourceIdentifier"].Identifier == ' +\
              '@source_id RETURN doc',
             bind_vars={'source_id': source_id})
         entries = [entry for entry in cursor]

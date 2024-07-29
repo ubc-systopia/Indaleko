@@ -50,7 +50,7 @@ class IndalekoServices(IndalekoSingleton):
     This class defines the service model for Indaleko.
     '''
 
-    Schema = IndalekoServicesSchema.get_schema()
+    Schema = IndalekoServicesSchema().get_schema()
 
     indaleko_services = 'Services'
     assert indaleko_services in Indaleko.Collections, \

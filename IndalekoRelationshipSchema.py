@@ -26,7 +26,7 @@ class IndalekoRelationshipSchema(IndalekoRecordSchema):
     '''Define the schema for use with the Relationship collection.'''
 
     @staticmethod
-    def get_schema():
+    def get_old_schema():
         relationship_schema =  {
             "$schema": "https://json-schema.org/draft/2020-12/schema#",
             "$id" : "https://activitycontext.work/schema/indaleko-relationship.json",
@@ -95,7 +95,7 @@ def main():
     """Test the IndalekoMachineConfigSchema class."""
     if IndalekoRelationshipSchema.is_valid_schema(IndalekoRelationshipSchema.get_schema()):
         print('Schema is valid.')
-    print(json.dumps(IndalekoRelationshipSchema.get_schema(), indent=4))
+    print(json.dumps(IndalekoRelationshipSchema().get_schema(), indent=4))
 
 if __name__ == "__main__":
     main()

@@ -23,6 +23,8 @@ import json
 from typing import Annotated
 from uuid import UUID
 
+from icecream import ic
+
 from apischema import schema
 from apischema.graphql import graphql_schema
 from apischema.json_schema import deserialization_schema
@@ -31,8 +33,14 @@ from graphql import print_schema
 
 from IndalekoRecordSchema import IndalekoRecordSchema
 from IndalekoMachineConfigDataModel import IndalekoMachineConfigDataModel
+from IndalekoSchema import IndalekoSchema
 class IndalekoMachineConfigSchema(IndalekoRecordSchema):
     '''Define the schema for use with the MachineConfig collection.'''
+
+    template = {key : value for key, value in IndalekoRecordSchema.template.items()}
+    template['title'] = 'Machine Configuration Schema'
+    template['$id'] = 'https://activitycontext.work/schema/machineconfig.json'
+    template['description'] = 'Describes machine where data was captured'
 
     def __init__(self):
         '''Initialize the schema for the MachineConfig collection.'''
@@ -72,7 +80,7 @@ class IndalekoMachineConfigSchema(IndalekoRecordSchema):
                                     "description" : "Version of the software.",
                                 },
                             },
-                            "required" : ["OS", "version"],
+                            "required" : ["OS", "Version"],
                         },
                         "hardware" : {
                             "type" : "object",
@@ -86,7 +94,7 @@ class IndalekoMachineConfigSchema(IndalekoRecordSchema):
                                     "description" : "Version of the hardware.",
                                 },
                             },
-                            "required" : ["CPU", "version"],
+                            "required" : ["CPU", "Version"],
                         },
                     },
                 },
@@ -111,9 +119,21 @@ class IndalekoMachineConfigSchema(IndalekoRecordSchema):
         }
         assert 'Record' not in machine_config_schema['rule'], \
             'Record should not be in machine config schema.'
-        machine_config_schema['rule']['Record'] = IndalekoRecordSchema.get_old_schema()['rule']
+        machine_config_schema['rule']['Record'] = IndalekoRecordSchema().get_schema()['rule']
         machine_config_schema['rule']['required'].append('Record')
         return machine_config_schema
+
+    def get_schema(self: IndalekoSchema) -> dict:
+        '''
+        For some reason the schema generation is marking Platform as
+        required, which is not correct, so rather than fight it, I'm just
+        removing it if it is found.
+        '''
+        broken_schema = super().get_schema()
+        if 'rule' in broken_schema and 'required' in broken_schema['rule']:
+            required_list = [x for x in broken_schema['rule']['required'] if x != 'Platform']
+            broken_schema['rule']['required'] = required_list
+        return broken_schema
 
 def main():
     """Test the IndalekoMachineConfigSchema class."""

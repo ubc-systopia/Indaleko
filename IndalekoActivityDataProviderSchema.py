@@ -17,8 +17,10 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
+
 import json
 
+from icecream import ic
 from uuid import UUID
 
 from IndalekoRecordSchema import IndalekoRecordSchema
@@ -30,10 +32,6 @@ class IndalekoActivityProviderSchema(IndalekoRecordSchema):
     @staticmethod
     def get_old_schema():
         activity_data_provider_schema = {
-            '''
-            This schema relates to the machine configuration collection,
-            which captures meta-data about the machine where the data was indexed.
-            '''
             "$schema": "https://json-schema.org/draft/2020-12/schema#",
             "$id": "https://activitycontext.work/schema/activityprovider.json",
             "title": "Data source schema",
@@ -84,30 +82,6 @@ class IndalekoActivityProviderSchema(IndalekoRecordSchema):
                     "type" : "string",
                     "description" : "Version of the activity data.",
                 },
-                "Entities" : {
-                    "type" : "array",
-                    "properties" : {
-                        "Label" : {
-                            "type" : "string",
-                            "description" : "UUID representing the semantic meaning of this entity.",
-                            "format": "uuid",
-                        },
-                        "Value" : {
-                            "type" : "string",
-                            "description" : "UUID representing the entity.",
-                            "format" : "uuid",
-                        },
-                        "Description" : {
-                            "type" : "string",
-                            "description" : "Description of the entity.",
-                        },
-                    },
-                    "required" : [
-                        "Label",
-                        "Value"
-                    ],
-                    "description" : "List of users associated with this object."
-                },
                 "Active" : bool,
                 "required" : ["ActivityDataIdentifier",
                               "ActivityProviderIdentifier",
@@ -117,14 +91,16 @@ class IndalekoActivityProviderSchema(IndalekoRecordSchema):
         }
         assert 'Record' not in activity_data_provider_schema['rule'], \
             'Record should not be in activity registration schema.'
-        activity_data_provider_schema['rule']['Record'] = IndalekoRecordSchema.get_schema()
+        activity_data_provider_schema['rule']['Record'] = IndalekoRecordSchema().get_schema()
+        if 'required' not in activity_data_provider_schema['rule']:
+            activity_data_provider_schema['rule']['required'] = []
         activity_data_provider_schema['rule']['required'].append('Record')
         return activity_data_provider_schema
 
     @staticmethod
-    def get_activity_provider(identifier : UUID) -> IndalekoActivityDataProviderDataModel.ActivityProvider:
+    def get_activity_provider(identifier : UUID) -> IndalekoActivityDataProviderDataModel.ActivityDataProvider:
         '''Given an identifier, return an activity provider.'''
-        indaleko_activity_provider = IndalekoActivityDataProviderDataModel.ActivityProvider(
+        indaleko_activity_provider = IndalekoActivityDataProviderDataModel(
             ActivityDataIdentifier=identifier,
             ActivityProviderIdentifier=UUID('00000000-0000-0000-0000-000000000000'),
             Timestamps=[IndalekoRecordSchema.get_timestamp()],
@@ -137,10 +113,13 @@ class IndalekoActivityProviderSchema(IndalekoRecordSchema):
 
 def main():
     '''Test the IndalekoActivityProviderSchema class.'''
+
     activity_provider = IndalekoActivityProviderSchema()
+    ic(activity_provider.get_old_schema())
+    ic(json.dumps(activity_provider.get_old_schema(), indent=4))
     activity_provider.schema_detail(
         query=[IndalekoActivityProviderSchema.get_activity_provider],
-        types=[IndalekoActivityProviderDataModel.ActivityProvider]
+        types=[IndalekoActivityDataProviderDataModel]
     )
 
 if __name__ == '__main__':

@@ -38,7 +38,7 @@ class IndalekoRelationship(IndalekoRecord):
     This schema defines the fields that are required as part of identifying
     relationships between objects.
     '''
-    Schema = IndalekoRelationshipSchema.get_schema()
+    Schema = IndalekoRelationshipSchema().get_schema()
 
     class RelationshipConfiguration:
         '''This subclass will be a central hub for the registration data for relationships.'''
@@ -110,9 +110,6 @@ class IndalekoRelationship(IndalekoRecord):
 
 def main():
     """Test the IndalekoRelationship class."""
-    if IndalekoRelationshipSchema.is_valid_schema(IndalekoRelationship.get_schema()):
-        print('Schema is valid.')
-    print(json.dumps(IndalekoRelationship.get_schema(), indent=4))
     random_raw_data = msgpack.packb(os.urandom(64))
     source_uuid = str(uuid.uuid4())
     parser = argparse.ArgumentParser()

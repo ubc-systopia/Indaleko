@@ -59,6 +59,7 @@ class IndalekoDataModel:
         )
     @dataclass
     class Timestamp:
+        '''General definition of a timestamp'''
         Label: Annotated[
             UUID,
             schema(description="UUID representing the semantic meaning of this timestamp."),
@@ -88,12 +89,11 @@ class IndalekoDataModel:
     class IndalekoUUID:
         UUID: Annotated[
             UUID,
-            schema(description="A Universally Unique Identifier", format="uuid"),
-            required
+            schema(description="A Universally Unique Identifier", format="uuid")
         ]
 
         Label: Annotated[
-            str,
+            Optional[str],
             schema(description="A human-readable label for the UUID.")
         ]
 

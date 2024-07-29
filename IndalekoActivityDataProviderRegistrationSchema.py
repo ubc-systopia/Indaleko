@@ -25,7 +25,7 @@ class IndalekoActivityDataProviderRegistrationSchema(IndalekoRecordSchema):
     '''Define the schema for use with the ActivityRegistration collection.'''
 
     @staticmethod
-    def get_schema():
+    def get_old_schema():
         activity_registration_schema = {
             '''
             This schema relates to the activity data provider's registration collection,
@@ -74,9 +74,9 @@ class IndalekoActivityDataProviderRegistrationSchema(IndalekoRecordSchema):
 def main():
     '''Test the IndalekoActivityRegistrationSchema class.'''
     if IndalekoActivityDataProviderRegistrationSchema.\
-        is_valid_schema(IndalekoActivityDataProviderRegistrationSchema.get_schema()):
+        is_valid_schema(IndalekoActivityDataProviderRegistrationSchema().get_schema()):
         print('IndalekoActivityRegistrationSchema is a valid schema.')
-    print(json.dumps(IndalekoActivityDataProviderRegistrationSchema.get_schema(), indent=4))
+    print(json.dumps(IndalekoActivityDataProviderRegistrationSchema().get_schema(), indent=4))
 
 if __name__ == '__main__':
     main()

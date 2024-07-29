@@ -19,7 +19,7 @@ from IndalekoRecord import IndalekoRecord
 class IndalekoActivityContext(IndalekoSingleton):
     '''This class is used to manage Indaleko Activity Context.'''
 
-    Schema = IndalekoActivityContextSchema.get_schema()
+    Schema = IndalekoActivityContextSchema().get_schema()
 
     class ActivityContextData(IndalekoRecord):
         '''This defines the format of an activity context record.'''
