@@ -30,7 +30,7 @@ class IndalekoObject(IndalekoRecord):
     This defines the information that makes up an Indaleko Object (the
     things we store in the index)
     '''
-    Schema = IndalekoObjectSchema.get_schema()
+    Schema = IndalekoObjectSchema().get_schema()
 
     '''UUIDs we associate with specific timestamps that we capture'''
     CREATION_TIMESTAMP = '6b3f16ec-52d2-4e9b-afd0-e02a875ec6e6'

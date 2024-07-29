@@ -36,7 +36,7 @@ from IndalekoActivityDataSchema import IndalekoActivityDataSchema
 class IndalekoActivityDataProviderRegistration(IndalekoRecord):
     '''This class defines the activity data provider registration for the
     Indaleko system.'''
-    Schema = IndalekoActivityDataProviderRegistrationSchema.get_schema()
+    Schema = IndalekoActivityDataProviderRegistrationSchema().get_schema()
 
     UUID = '6c65350c-1dd5-4675-b17a-4dd409349a40'
     Version = '1.0'
@@ -271,7 +271,7 @@ class IndalekoActivityDataProviderRegistrationService(IndalekoSingleton):
             .create_collection(
                 name = activity_provider_collection_name,
                 config = {
-                    'schema' : IndalekoActivityDataSchema.get_schema(),
+                    'schema' : IndalekoActivityDataSchema().get_schema(),
                     'edge' : False,
                     'indices' : {
                     },

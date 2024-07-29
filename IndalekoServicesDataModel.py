@@ -34,7 +34,11 @@ class IndalekoServicesDataModel(IndalekoRecordDataModel):
     @dataclass
     class IndalekoService:
         '''This is the data model for the Indaleko Service type.'''
-        Identifier : IndalekoDataModel.IndalekoUUID
+        Identifier : Annotated[
+            UUID,
+            apischema.schema(description="This is the UUID of the service provider", format="uuid")
+        ]
+
 
         Version : Annotated[
             str,

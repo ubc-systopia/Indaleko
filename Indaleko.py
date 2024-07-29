@@ -116,7 +116,7 @@ class Indaleko:
             },
         },
         Indaleko_Relationships : {
-            'schema' : IndalekoRelationshipSchema.get_schema(),
+            'schema' : IndalekoRelationshipSchema().get_schema(),
             'edge' : True,
             'indices' : {
                 'relationship' : {
@@ -158,7 +158,7 @@ class Indaleko:
             'indices' : { },
         },
         Indaleko_ActivityDataProviders : {
-            'schema' : IndalekoActivityDataProviderRegistrationSchema.get_schema(),
+            'schema' : IndalekoActivityDataProviderRegistrationSchema().get_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {

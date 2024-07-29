@@ -19,7 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Optional
 from uuid import UUID
 
 from apischema import schema
@@ -108,8 +108,9 @@ class IndalekoMachineConfigDataModel:
     @dataclass
     class MachineConfig:
         '''Define the machine configuration data model.'''
-        Platform: Annotated['IndalekoMachineConfigDataModel.Platform',
-                            schema(description="The platform."), required]
+        Platform: Annotated[
+            Optional['IndalekoMachineConfigDataModel.Platform'],
+                      schema(description="The platform.")]
         Captured: Annotated['IndalekoMachineConfigDataModel.Captured',
                             schema(description="Raw platform data captured."), required]
         Record: Annotated[IndalekoRecordDataModel.IndalekoRecord,
@@ -137,9 +138,7 @@ class IndalekoMachineConfigDataModel:
     @staticmethod
     def get_types() -> list:
         '''Return the types for the MachineConfig collection.'''
-        return [IndalekoMachineConfigDataModel.Software,
-                IndalekoMachineConfigDataModel.Hardware,
-                IndalekoMachineConfigDataModel.Platform,
+        return [IndalekoMachineConfigDataModel.Platform,
                 IndalekoMachineConfigDataModel.Captured,
                 IndalekoMachineConfigDataModel.MachineConfig]
 
