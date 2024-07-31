@@ -25,7 +25,6 @@ import os
 import json
 import jsonlines
 import uuid
-import msgpack
 import filetype
 
 from IndalekoIngester import IndalekoIngester

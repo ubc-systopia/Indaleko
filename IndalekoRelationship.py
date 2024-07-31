@@ -28,7 +28,7 @@ import argparse
 import os
 import random
 import json
-import msgpack
+
 from Indaleko import Indaleko
 from IndalekoRecord import IndalekoRecord
 from IndalekoRelationshipSchema import IndalekoRelationshipSchema
@@ -38,7 +38,7 @@ class IndalekoRelationship(IndalekoRecord):
     This schema defines the fields that are required as part of identifying
     relationships between objects.
     '''
-    Schema = IndalekoRelationshipSchema().get_schema()
+    Schema = IndalekoRelationshipSchema().get_json_schema()
 
     class RelationshipConfiguration:
         '''This subclass will be a central hub for the registration data for relationships.'''
@@ -110,7 +110,7 @@ class IndalekoRelationship(IndalekoRecord):
 
 def main():
     """Test the IndalekoRelationship class."""
-    random_raw_data = msgpack.packb(os.urandom(64))
+    random_raw_data = Indaleko.encode_binary_data(os.urandom(64))
     source_uuid = str(uuid.uuid4())
     parser = argparse.ArgumentParser()
     parser.add_argument('--version', action='version', version='%(prog)s 1.0')

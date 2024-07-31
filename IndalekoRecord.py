@@ -19,14 +19,15 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import uuid
-import base64
 import json
 import datetime
 import argparse
 import os
 import random
-import msgpack
+
+from IndalekoDataModel import IndalekoDataModel
 from IndalekoRecordSchema import IndalekoRecordSchema
+from IndalekoRecordDataModel import IndalekoRecordDataModel
 from Indaleko import Indaleko
 class IndalekoRecord:
     '''
@@ -40,10 +41,10 @@ class IndalekoRecord:
         ('__timestamp__', 'Timestamp'), # this is the timestamp for this record.
     )
 
-    Schema = IndalekoRecordSchema().get_schema()
+    Schema = IndalekoRecordSchema().get_json_schema()
 
     @staticmethod
-    def get_schema():
+    def get_json_schema():
         """
         Return the schema for data managed by this class.
         """
@@ -54,54 +55,36 @@ class IndalekoRecord:
         """Given a string, verify that it is in fact a valid uuid."""
         return Indaleko.validate_uuid_string(uuid_string)
 
-
-    def __init__(self, **kwargs) -> None:
-        if 'raw_data' not in kwargs:
-            raise ValueError('raw_data must be specified')
-        self.__raw_data__ = kwargs['raw_data']
-        assert isinstance(self.__raw_data__, bytes), \
-            f'raw_data must be bytes (is {type(self.__raw_data__)})'
-        if isinstance(kwargs['raw_data'], str):
-            self.set_base64_data(kwargs['raw_data'])
-        else:
-            self.set_data(kwargs['raw_data'])
-        self.__attributes__ = {}
-        if 'attributes' in kwargs:
-            self.__attributes__ = kwargs['attributes']
-        assert isinstance(self.__attributes__, dict), 'attributes must be a dict'
-        if 'source' not in kwargs:
-            raise ValueError('source must be specified')
-        self.set_source(kwargs['source'])
-        assert self.validate_source(self.__source__), f'source is not valid: {self.__source__}'
-        if 'identifier' in kwargs:
-            self.__identifier__ = kwargs['identifier']
-            assert self.validate_uuid_string(self.__identifier__), 'identifier is not valid'
-        else:
-            self.__identifier__ = str(uuid.uuid4())
-        self.__timestamp__ = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        if 'timestamp' in kwargs:
-            self.__timestamp__ = kwargs['timestamp']
-            assert self.validate_iso_timestamp(self.__timestamp__), 'timestamp is not valid'
+    def __init__(self, source_identifier : IndalekoDataModel.SourceIdentifier, **kwargs):
+        timestamp = kwargs.get('timestamp', datetime.datetime.now(datetime.timezone.utc).isoformat())
+        attributes = kwargs.get('attributes', {})
+        raw_data = kwargs.get('raw_data', b'')
+        self.record = IndalekoRecordDataModel.IndalekoRecord(
+            SourceIdentifier = source_identifier,
+            Timestamp = timestamp,
+            Attributes = attributes,
+            Data = Indaleko.encode_binary_data(raw_data),
+        )
 
     def __setitem__(self, key, value):
-        self.__attributes__[key] = value
+        self.record.Attributes[key] = value
 
     def __getitem__(self, key):
-        if key not in self.__attributes__:
+        if key not in self.record.Attributes:
             raise KeyError(f'key {key} not found')
-        return self.__attributes__[key]
+        return self.record.Attributes[key]
 
     def __iter__(self):
-        return iter(self.__attributes__)
+        return iter(self.record.Attributes)
 
     def __len__(self):
-        return len(self.__attributes__)
+        return len(self.record.Attributes)
 
     def __str__(self):
         return self.to_json(indent=0)
 
     def __delitem__(self, key):
-        del self.__attributes__[key]
+        del self.record.Attributes[key]
 
     def to_dict(self):
         """Return a dictionary representation of the record."""
@@ -117,17 +100,17 @@ class IndalekoRecord:
 
     def set_attributes(self, attributes : dict) -> 'IndalekoRecord':
         """Set the attributes for this record."""
-        self.__attributes__ = attributes
+        self.record.Attributes = attributes
         return self
 
     def get_attributes(self) -> dict:
         """Return the attributes for this record."""
-        return self.__attributes__
+        return self.record.Attributes
 
     def set_source(self, source : dict) -> 'IndalekoRecord':
         """Set the source for this record."""
         assert self.validate_source(source), f'source is not valid: {source}'
-        self.__source__ = {
+        self.record.SourceIdentifier = {
             'Identifier' : source['Identifier'],
             'Version' : source['Version'],
             'Description' : None,
@@ -198,7 +181,7 @@ class IndalekoRecord:
 
 def main():
     """Test the IndalekoRecord class."""
-    random_raw_data = msgpack.packb(os.urandom(64))
+    random_raw_data = Indaleko.encode_binary_data(os.urandom(64))
     source_uuid = str(uuid.uuid4())
     parser = argparse.ArgumentParser()
     parser.add_argument('--version', action='version', version='%(prog)s 1.0')

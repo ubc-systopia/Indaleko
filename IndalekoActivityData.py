@@ -2,7 +2,6 @@
 
 import datetime
 import json
-import msgpack
 import uuid
 
 from IndalekoRecord import IndalekoRecord
@@ -58,7 +57,7 @@ class IndalekoActivityData(IndalekoRecord):
             'ActivityDataVersion': self.activity_data_version,
         }
         if 'raw_data' not in kwargs:
-            kwargs['raw_data'] = msgpack.packb(kwargs['attributes'])
+            kwargs['raw_data'] = Indaleko.encode_binary_data(kwargs['attributes'])
         super().__init__(**kwargs)
 
     def to_dict(self):

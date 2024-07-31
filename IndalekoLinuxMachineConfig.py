@@ -28,8 +28,6 @@ import datetime
 import logging
 import platform
 import os
-import base64
-import msgpack
 
 from Indaleko import Indaleko
 from IndalekoMachineConfig import IndalekoMachineConfig
@@ -305,7 +303,7 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
             source_version=IndalekoLinuxMachineConfig.linux_machine_config_service['service_version'],
             timestamp=file_metadata['timestamp'],
             attributes=config_data,
-            data=base64.b64encode(msgpack.packb(config_data)).decode('ascii '),
+            data=Indaleko.encode_binary_data(config_data),
             machine_id=file_uuid
         )
         # Should we do processing of the net/disk data?

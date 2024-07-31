@@ -23,7 +23,6 @@ import datetime
 import json
 import jsonlines
 import logging
-import msgpack
 import os
 import platform
 import uuid
@@ -166,7 +165,7 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
             })
         kwargs = {
             'source' : self.source,
-            'raw_data' : msgpack.packb(bytes(json.dumps(data).encode('utf-8'))),
+            'raw_data' : Indaleko.encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
             'URI' : data['URI'],
             'ObjectIdentifier' : oid,
             'Timestamps' : timestamps,
@@ -183,7 +182,8 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
         if 'st_file_attributes' in data:
             kwargs['WindowsFileAttributes'] = \
                 IndalekoWindows.map_file_attributes(data['st_file_attributes'])
-        return IndalekoObject(**kwargs)
+        indaleko_object = IndalekoObject(**kwargs)
+        return indaleko_object
 
 
     def ingest(self) -> None:
