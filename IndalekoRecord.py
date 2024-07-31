@@ -195,6 +195,7 @@ class IndalekoRecord:
         """Given a string, ensure it is a valid ISO timestamp."""
         return Indaleko.validate_iso_timestamp(source)
 
+
 def main():
     """Test the IndalekoRecord class."""
     random_raw_data = msgpack.packb(os.urandom(64))
@@ -230,7 +231,7 @@ def main():
     print(f'added field 4:\n{record.to_json()}')
     del record['field2']
     print(f'deleted field2 {record.to_json()}')
-    IndalekoRecordSchema.is_valid_record(record.to_dict())
+    IndalekoRecordSchema().check_against_schema(record.to_dict())
 
 if __name__ == "__main__":
     main()

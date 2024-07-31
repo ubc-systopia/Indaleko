@@ -52,12 +52,12 @@ class IndalekoSchema:
             self.base_type = IndalekoDataModel.SourceIdentifier
         if not hasattr(self, 'schema'):
             self.schema = self.get_schema()
+            assert isinstance(self.schema, dict), \
+                f'schema must be a dict not {type(self.schema)}'
 
     def check_against_schema(self, data: dict) -> bool:
         '''Check the data against the schema'''
         assert isinstance(data, dict), 'data must be a dictionary'
-        assert isinstance(self.schema, IndalekoSchema), \
-            f'schema must be an IndalekoSchema not {type(self.schema)}'
         try:
             jsonschema.validate(data, self.schema)
             return True

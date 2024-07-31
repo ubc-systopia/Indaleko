@@ -22,7 +22,7 @@ import apischema
 from datetime import datetime, UTC
 from graphql import print_schema
 from uuid import UUID
-from typing import Annotated, List
+from typing import Annotated, List, Optional
 from dataclasses import dataclass
 from apischema.graphql import graphql_schema
 
@@ -35,7 +35,7 @@ class IndalekoObjectDataModel(IndalekoRecordDataModel):
     @dataclass
     class IndalekoObject:
         Label : Annotated[
-            str,
+            Optional[str],
             apischema.schema(description="The object label (like a file name).")
         ]
 
@@ -45,7 +45,11 @@ class IndalekoObjectDataModel(IndalekoRecordDataModel):
             apischema.metadata.required
         ]
 
-        ObjectIdentifier : IndalekoDataModel.IndalekoUUID
+        ObjectIdentifier : Annotated[
+            UUID,
+            apischema.schema(description="UUID representing this object."),
+            apischema.metadata.required
+        ]
 
         LocalIdentifier : Annotated[
             str,

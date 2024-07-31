@@ -19,13 +19,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
-from datetime import datetime
-import json
-from uuid import UUID
-
-from apischema.graphql import graphql_schema
-from graphql import print_schema
-
 from IndalekoRecordDataModel import IndalekoRecordDataModel
 from IndalekoSchema import IndalekoSchema
 
@@ -93,6 +86,14 @@ class IndalekoRecordSchema(IndalekoSchema):
             }
         }
 
+    def get_schema(self : 'IndalekoRecordSchema') -> dict:
+        if IndalekoRecordDataModel.IndalekoRecord == self.base_type:
+            return super().get_schema()
+        record_schema = IndalekoRecordSchema()
+        schema = super().get_schema()
+        schema['rule']['properties']['Record'] = record_schema.get_schema()
+        schema['rule']['required'].append('Record')
+        return schema
 
 
 def main():
