@@ -1,14 +1,12 @@
 '''Indaleko Activity Data Provider: Location'''
 
 import argparse
-import base64
 import datetime
 from icecream import ic
 from itertools import cycle
 import json
 import logging
 import math
-import msgpack
 import os
 import platform
 import requests
@@ -23,7 +21,6 @@ from IndalekoLogging import IndalekoLogging
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoActivityDataProviderRegistration import IndalekoActivityDataProviderRegistrationService
 from IADPLocationData import IADPLocationData
-from IndalekoRecord import IndalekoRecord
 
 
 class IADPLocation(IndalekoActivityDataProvider):
@@ -64,8 +61,6 @@ class IADPLocation(IndalekoActivityDataProvider):
         self.location_capture = kwargs.get('capture_location', IADPLocation.capture_location)
         self.source = kwargs.get('source',
                                  IADPLocation.indaleko_activity_provider_location_source)
-        assert IndalekoRecord.validate_source(self.source), \
-            f'source is not valid: {self.source}'
         registration_data = IADPLocation.get_service_registration(source=self.source)
         if registration_data is None or len(registration_data) == 0:
             logging.info('Start Registration for location service %s', \

@@ -30,10 +30,9 @@ import random
 import json
 
 from Indaleko import Indaleko
-from IndalekoRecord import IndalekoRecord
 from IndalekoRelationshipSchema import IndalekoRelationshipSchema
 
-class IndalekoRelationship(IndalekoRecord):
+class IndalekoRelationship:
     '''
     This schema defines the fields that are required as part of identifying
     relationships between objects.

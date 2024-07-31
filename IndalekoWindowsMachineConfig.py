@@ -27,11 +27,10 @@ import re
 import arango
 
 from Indaleko import Indaleko
-from IndalekoRecord import IndalekoRecord
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoMachineConfig import IndalekoMachineConfig
 
-class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
+class IndalekoWindowsMachineConfig:
     '''
     The IndalekoWindowsMachineConfig class is used to capture information about
     a Windows machine.  It is a specialization of the IndalekoMachineConfig
@@ -154,7 +153,7 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             candidate = os.path.join(config_dir, candidate)
         return candidate
 
-    class WindowsDriveInfo(IndalekoRecord):
+    class WindowsDriveInfo:
         '''This class is used to capture information about a Windows drive.'''
         WindowsDriveInfo_UUID_str = 'a0b3b3e0-0b1a-4e1f-8b1a-4e1f8b1a4e1f'
         WindowsDriveInfo_UUID = uuid.UUID(WindowsDriveInfo_UUID_str)

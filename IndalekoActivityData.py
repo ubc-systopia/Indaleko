@@ -4,11 +4,10 @@ import datetime
 import json
 import uuid
 
-from IndalekoRecord import IndalekoRecord
 from IndalekoActivityDataProvider import IndalekoActivityDataProvider
 from Indaleko import Indaleko
 
-class IndalekoActivityData(IndalekoRecord):
+class IndalekoActivityData:
     """This defines the base class for the Indaleko Activity Data objects."""
 
     class ActivityTimestamp():

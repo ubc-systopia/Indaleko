@@ -14,14 +14,13 @@ from IndalekoDBConfig import IndalekoDBConfig
 from Indaleko import Indaleko
 from IndalekoLogging import IndalekoLogging
 from IndalekoCollections import IndalekoCollections
-from IndalekoRecord import IndalekoRecord
 
 class IndalekoActivityContext(IndalekoSingleton):
     '''This class is used to manage Indaleko Activity Context.'''
 
-    Schema = IndalekoActivityContextSchema().get_schema()
+    Schema = IndalekoActivityContextSchema().get_json_schema()
 
-    class ActivityContextData(IndalekoRecord):
+    class ActivityContextData:
         '''This defines the format of an activity context record.'''
 
         activity_context_name = 'ActivityContext'
@@ -53,6 +52,7 @@ class IndalekoActivityContext(IndalekoSingleton):
 
         def to_dict(self) -> dict:
             '''Capture activity context record as a dictionary.'''
+            raise NotImplementedError('This method needs to be switched to data model.')
             record = { key : value for key, value in self.attributes.items()}
             record['Record'] = super().to_dict()
             return record

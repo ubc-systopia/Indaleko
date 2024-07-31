@@ -31,13 +31,12 @@ import arango
 
 from IndalekoCollections import IndalekoCollections
 from IndalekoDBConfig import IndalekoDBConfig
-from IndalekoRecord import IndalekoRecord
 from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
 from Indaleko import Indaleko
 from IndalekoServices import IndalekoService
 
 
-class IndalekoMachineConfig(IndalekoRecord):
+class IndalekoMachineConfig:
     """
     This is the generic class for machine config.  It should be used to create
     platform specific machine configuration classes.

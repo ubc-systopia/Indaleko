@@ -27,12 +27,11 @@ from IndalekoServices import IndalekoService, IndalekoServices
 from IndalekoSingleton import IndalekoSingleton
 from IndalekoCollections import IndalekoCollections
 from IndalekoCollection import IndalekoCollection
-from IndalekoRecord import IndalekoRecord
 from IndalekoActivityDataProviderRegistrationSchema \
     import IndalekoActivityDataProviderRegistrationSchema
 from IndalekoActivityDataSchema import IndalekoActivityDataSchema
 
-class IndalekoActivityDataProviderRegistration(IndalekoRecord):
+class IndalekoActivityDataProviderRegistration:
     '''This class defines the activity data provider registration for the
     Indaleko system.'''
     Schema = IndalekoActivityDataProviderRegistrationSchema().get_schema()

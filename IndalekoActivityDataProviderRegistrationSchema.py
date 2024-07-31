@@ -66,17 +66,14 @@ class IndalekoActivityDataProviderRegistrationSchema(IndalekoRecordSchema):
         }
         assert 'Record' not in activity_registration_schema['rule'], \
             'Record should not be in activity registration schema.'
-        activity_registration_schema['rule']['Record'] = IndalekoRecordSchema().get_schema()
+        activity_registration_schema['rule']['Record'] = IndalekoRecordSchema().get_json_schema()
         activity_registration_schema['rule']['required'].append('Record')
         return activity_registration_schema
 
 
 def main():
     '''Test the IndalekoActivityRegistrationSchema class.'''
-    if IndalekoActivityDataProviderRegistrationSchema.\
-        is_valid_schema(IndalekoActivityDataProviderRegistrationSchema().get_schema()):
-        print('IndalekoActivityRegistrationSchema is a valid schema.')
-    print(json.dumps(IndalekoActivityDataProviderRegistrationSchema().get_schema(), indent=4))
+    print(json.dumps(IndalekoActivityDataProviderRegistrationSchema().get_json_schema(), indent=4))
 
 if __name__ == '__main__':
     main()
