@@ -19,7 +19,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import logging
-import msgpack
 import uuid
 
 from Indaleko import Indaleko
@@ -61,9 +60,9 @@ class IndalekoActivityDataProviderRegistration(IndalekoRecord):
         self.db_config = kwargs.get('DBConfig', IndalekoDBConfig())
         self.collections = kwargs.get('Collections', IndalekoCollections(db_config=self.db_config))
         self.active = kwargs.get('Active', True)
-        super().__init__(raw_data = msgpack.packb(b''),
+        super().__init__(raw_data = Indaleko.encode_binary_data(b''),
                          attributes = {},
-                         source = {
+                         source_identifier = {
                              'Identifier' : self.UUID,
                               'Version' : self.Version,
                               'Description' : self.Description,

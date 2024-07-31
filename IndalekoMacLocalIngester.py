@@ -8,7 +8,6 @@ import json
 import subprocess
 import jsonlines
 import uuid
-import msgpack
 from concurrent.futures import ThreadPoolExecutor
 
 from IndalekoIngester import IndalekoIngester
@@ -128,7 +127,7 @@ class IndalekoMacLocalIngester(IndalekoIngester):
             oid = str(uuid.uuid4())
         kwargs = {
             'source': self.source,
-            'raw_data': msgpack.packb(bytes(json.dumps(data).encode('utf-8'))),
+            'raw_data': Indaleko.encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
             'URI': data['URI'],
             'ObjectIdentifier': oid,
             'Timestamps': [
@@ -276,7 +275,7 @@ class IndalekoMacLocalIngester(IndalekoIngester):
         # import these using arangoimport tool
         self.arangoimport()
 <<<<<<< HEAD
-        
+
 =======
 
 

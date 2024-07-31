@@ -16,21 +16,25 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 '''
-from IndalekoRecord import IndalekoRecord
-import msgpack
 import argparse
 import os
 import uuid
 import json
+import datetime
 
-from IndalekoObjectSchema import IndalekoObjectSchema
+from icecream import ic
 
-class IndalekoObject(IndalekoRecord):
+from Indaleko import Indaleko
+from IndalekoObjectDataSchema import IndalekoObjectSchema
+from IndalekoObjectDataModel import IndalekoObjectDataModel
+from IndalekoRecordDataModel import IndalekoRecordDataModel
+from IndalekoDataModel import IndalekoDataModel, IndalekoUUID
+
+class IndalekoObject:
     '''
-    This defines the information that makes up an Indaleko Object (the
-    things we store in the index)
+    An IndalekoObject represents a single object (file/directory) in the Indaleko system.
     '''
-    Schema = IndalekoObjectSchema().get_schema()
+    Schema = IndalekoObjectSchema().get_json_schema()
 
     '''UUIDs we associate with specific timestamps that we capture'''
     CREATION_TIMESTAMP = '6b3f16ec-52d2-4e9b-afd0-e02a875ec6e6'
@@ -38,99 +42,114 @@ class IndalekoObject(IndalekoRecord):
     ACCESS_TIMESTAMP = '581b5332-4d37-49c7-892a-854824f5d66f'
     CHANGE_TIMESTAMP = '3bdc4130-774f-4e99-914e-0bec9ee47aab'
 
-    def __init__(self, source:dict, raw_data:bytes, **kwargs):
-        # the only _required_ field is the source
-        assert isinstance(source, dict), 'source must be a dict'
-        assert 'Identifier' in source, 'source must contain an Identifier field'
-        assert 'Version' in source, 'source must contain a Version field'
-        # there are four required object fields:
-        assert 'URI' in kwargs, 'URI must be specified'
-        assert 'ObjectIdentifier' in kwargs, 'ObjectIdentifier must be specified'
-        assert 'Timestamps' in kwargs, 'Timestamps must be specified'
-        assert 'Size' in kwargs, 'Size must be specified'
-        args = {key : value for key, value in kwargs.items()}
-        if 'Attributes' in args:
-            attributes = args['Attributes']
-            del args['Attributes']
-        else:
-            attributes = {}
-        assert 'source' not in args, 'source is a separate parameter'
-        assert '_key' not in args, '_key is a reserved parameter'
-        assert 'Data' not in args, 'Data is a reserved parameter'
-        self.args = args
-        if not isinstance(raw_data, bytes):
-            raise ValueError('raw_data must be bytes')
-        super().__init__(raw_data = msgpack.packb(raw_data),
-                         attributes = attributes,
-                         source = {
-                             'Identifier' : source['Identifier'],
-                              'Version' : source['Version']
-                         })
+    def __init__(self, **kwargs):
+        '''Initialize the object.'''
+        self.kwargs = kwargs
+        self.indaleko_object = IndalekoObjectDataModel.IndalekoObject.deserialize(
+            kwargs
+        )
 
-    def to_dict(self):
-        obj = {}
-        obj['Record'] = super().to_dict()
-        obj['_key'] = self.args['ObjectIdentifier']
-        for key, value in self.args.items():
-            obj[key] = value
-        return obj
+    @staticmethod
+    def deserialize(data: dict) -> 'IndalekoObject':
+        '''Deserialize a dictionary to an object.'''
+        return IndalekoObject(**data)
 
+    def serialize(self) -> dict:
+        '''Serialize the object to a dictionary.'''
+        serialized_data = IndalekoObjectDataModel.IndalekoObject.serialize(self.indaleko_object)
+        assert 'Label' in serialized_data, 'Label is missing from serialized data.'
+        serialized_data['_key'] = self.kwargs['ObjectIdentifier']
+        return serialized_data
+
+    @staticmethod
+    def create_indaleko_object(**kwargs) -> 'IndalekoObject':
+        '''Create an Indaleko Object from an old style description.'''
+        raise NotImplementedError('This method is not implemented.')
 
 def main():
     """Test code for the IndalekoObject class."""
-    random_raw_data = msgpack.packb(os.urandom(64))
+    random_raw_data = Indaleko.encode_binary_data(os.urandom(64))
     source_uuid = str(uuid.uuid4())
     parser = argparse.ArgumentParser()
     parser.add_argument('--version', action='version', version='%(prog)s 1.0')
     parser.add_argument('--source' , '-s', type=str, default=source_uuid, help='The source UUID of the data.')
     parser.add_argument('--raw-data', '-r', type=str, default=random_raw_data, help='The raw data to be stored.')
     args = parser.parse_args()
-    fattrs = {
-        'st_atime': 1704316478.2365057,
-        'st_atime_ns': 1704316478236505700,
-        'st_birthtime': 1641750540.6653576,
-        'st_birthtime_ns': 1641750540665357600,
-        'st_ctime': 1641750540.6653576,
-        'st_ctime_ns': 1641750540665357600,
-        'st_dev': 2756347094955649599,
-        'st_file_attributes': 16,
-        'st_gid': 0,
-        'st_ino': 844424930132312,
-        'st_mode': 16895,
-        'st_mtime': 1660077950.7485445,
-        'st_mtime_ns': 1660077950748544500,
-        'st_nlink': 1,
-        'st_reparse_tag': 0,
-        'st_size': 4096,
-        'st_uid': 0,
-        'File': 'ms',
-        'Path': 'D:\\dist',
-        'URI': '\\\\?\\Volume{3397d97b-2ca5-11ed-b2fc-b40ede9a5a3c}\\dist\\ms'
-    }
-    objattrs = {
-        "Label": "ms",
-        "Path": "D:\\dist",
-        "URI": "\\\\?\\Volume{3397d97b-2ca5-11ed-b2fc-b40ede9a5a3c}\\dist\\ms",
-        "ObjectIdentifier": "ea8ebe41-461a-4481-b77f-b83f8f2ea7dd",
-        "LocalIdentifier": "844424930132312",
+    data_object = {
+        "Record": {
+            "Data": "xQL6xQL3eyJzdF9hdGltZSI6IDE2OTMyMjM0NTYuMzMzNDI4MSwgInN0X2F0aW1lX25zIjogMTY5MzIyMzQ1NjMzMzQyODEwMCwgInN0X2JpcnRodGltZSI6IDE2ODU4OTEyMjEuNTU5MTkxNywgInN0X2JpcnRodGltZV9ucyI6IDE2ODU4OTEyMjE1NTkxOTE3MDAsICJzdF9jdGltZSI6IDE2ODU4OTEyMjEuNTU5MTkxNywgInN0X2N0aW1lX25zIjogMTY4NTg5MTIyMTU1OTE5MTcwMCwgInN0X2RldiI6IDI3NTYzNDcwOTQ5NTU2NDk1OTksICJzdF9maWxlX2F0dHJpYnV0ZXMiOiAzMiwgInN0X2dpZCI6IDAsICJzdF9pbm8iOiAxMTI1ODk5OTEwMTE5ODMyLCAic3RfbW9kZSI6IDMzMjc5LCAic3RfbXRpbWUiOiAxNjg1ODkxMjIxLjU1OTcxNTcsICJzdF9tdGltZV9ucyI6IDE2ODU4OTEyMjE1NTk3MTU3MDAsICJzdF9ubGluayI6IDEsICJzdF9yZXBhcnNlX3RhZyI6IDAsICJzdF9zaXplIjogMTQxMDEyMCwgInN0X3VpZCI6IDAsICJOYW1lIjogInJ1ZnVzLTQuMS5leGUiLCAiUGF0aCI6ICJkOlxcZGlzdCIsICJVUkkiOiAiXFxcXD9cXFZvbHVtZXszMzk3ZDk3Yi0yY2E1LTExZWQtYjJmYy1iNDBlZGU5YTVhM2N9XFxkaXN0XFxydWZ1cy00LjEuZXhlIiwgIkluZGV4ZXIiOiAiMDc5M2I0ZDUtZTU0OS00Y2I2LTgxNzctMDIwYTczOGI2NmI3IiwgIlZvbHVtZSBHVUlEIjogIjMzOTdkOTdiLTJjYTUtMTFlZC1iMmZjLWI0MGVkZTlhNWEzYyIsICJPYmplY3RJZGVudGlmaWVyIjogIjJjNzNkNmU1LWVhYmEtNGYwYS1hY2YzLWUwMmM1MjlmMDk3YSJ9",
+            "Attributes": {
+                "st_atime": 1693223456.3334281,
+                "st_atime_ns": 1693223456333428100,
+                "st_birthtime": 1685891221.5591917,
+                "st_birthtime_ns": 1685891221559191700,
+                "st_ctime": 1685891221.5591917,
+                "st_ctime_ns": 1685891221559191700,
+                "st_dev": 2756347094955649599,
+                "st_file_attributes": 32,
+                "st_gid": 0,
+                "st_ino": 1125899910119832,
+                "st_mode": 33279,
+                "st_mtime": 1685891221.5597157,
+                "st_mtime_ns": 1685891221559715700,
+                "st_nlink": 1, "st_reparse_tag": 0,
+                "st_size": 1410120,
+                "st_uid": 0,
+                "Name": "rufus-4.1.exe",
+                "Path": "d:\\dist",
+                "URI": "\\\\?\\Volume{3397d97b-2ca5-11ed-b2fc-b40ede9a5a3c}\\dist\\rufus-4.1.exe",
+                "Indexer": "0793b4d5-e549-4cb6-8177-020a738b66b7",
+                "Volume GUID": "3397d97b-2ca5-11ed-b2fc-b40ede9a5a3c",
+                "ObjectIdentifier": "2c73d6e5-eaba-4f0a-acf3-e02c529f097a"
+            },
+            "SourceIdentifier": {
+                "Identifier": "429f1f3c-7a21-463f-b7aa-cd731bb202b1",
+                "Version": "1.0", "Description": None
+            },
+            "Timestamp": "2024-07-30T23:38:48.319654+00:00"
+        },
+        "URI": "\\\\?\\Volume{3397d97b-2ca5-11ed-b2fc-b40ede9a5a3c}\\dist\\rufus-4.1.exe",
+        "ObjectIdentifier": "2c73d6e5-eaba-4f0a-acf3-e02c529f097a",
         "Timestamps": [
             {
                 "Label": "6b3f16ec-52d2-4e9b-afd0-e02a875ec6e6",
-                "Value": "2022-01-09T17:49:00.665358+00:00",
+                "Value": "2023-06-04T15:07:01.559192+00:00",
                 "Description": "Created"
+            },
+            {
+                "Label": "434f7ac1-f71a-4cea-a830-e2ea9a47db5a",
+                "Value": "2023-06-04T15:07:01.559716+00:00",
+                "Description": "Modified"
+            },
+            {
+                "Label": "581b5332-4d37-49c7-892a-854824f5d66f",
+                "Value": "2023-08-28T11:50:56.333428+00:00",
+                "Description": "Accessed"
+            },
+            {
+                "Label": "3bdc4130-774f-4e99-914e-0bec9ee47aab",
+                "Value": "2023-06-04T15:07:01.559192+00:00",
+                "Description": "Changed"
             }
         ],
-        "Size": 4096,
-        "FileId": "844424930132312",
+        "Size": 1410120,
         "Machine": "2e169bb7-0024-4dc1-93dc-18b7d2d28190",
-        "UnixFileAttributes": "S_IFDIR",
-        "WindowsFileAttributes": "FILE_ATTRIBUTE_DIRECTORY",
-        "Volume": "3397d97b-2ca5-11ed-b2fc-b40ede9a5a3c"
+        "Volume": "3397d97b-2ca5-11ed-b2fc-b40ede9a5a3c",
+        "UnixFileAttributes": "S_IFREG",
+        "WindowsFileAttributes": "FILE_ATTRIBUTE_ARCHIVE",
+        "SemanticAttributes" : [],
+        "Label" : None,
+        "LocalIdentifier" : None
     }
+    indaleko_object = IndalekoObject.deserialize(data_object)
+    ic(indaleko_object)
+    print(json.dumps(indaleko_object.serialize(), indent=2))
+    return
     objattrs['Attributes'] = fattrs
-    obj = IndalekoObject({'Identifier' : args.source, 'Version' : '1.0'}, args.raw_data, **objattrs)
-    print(json.dumps(obj.to_dict(), indent=4))
-    if IndalekoObjectSchema.is_valid_object(obj.to_dict()):
+    obj = IndalekoObject(source=source, raw_data=args.raw_data, **objattrs)
+    ic(obj.indaleko_object)
+    print(json.dumps(obj.serialize(), indent=4))
+    if IndalekoObjectSchema.is_valid_object(obj.serialize()):
         print('Object is valid.')
 
 if __name__ == "__main__":

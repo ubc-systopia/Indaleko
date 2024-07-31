@@ -46,7 +46,7 @@ from apischema.graphql import graphql_schema
 from apischema.metadata import required
 
 
-from IndalekoDataModel import IndalekoDataModel
+from IndalekoDataModel import IndalekoDataModel, IndalekoUUID
 from IndalekoRecordDataModel import IndalekoRecordDataModel
 
 class IndalekoActivityContextDataModel(IndalekoRecordDataModel):
@@ -55,12 +55,12 @@ class IndalekoActivityContextDataModel(IndalekoRecordDataModel):
     class ActivityContext:
 
         ActivityContextIdentifier : Annotated[
-            IndalekoDataModel.IndalekoUUID,
+            IndalekoUUID,
             required
         ]
 
         ActivityType: Annotated[
-            IndalekoDataModel.IndalekoUUID,
+            IndalekoUUID,
             required
         ]
 
@@ -70,11 +70,11 @@ class IndalekoActivityContextDataModel(IndalekoRecordDataModel):
     def get_activity_context() -> 'IndalekoActivityContextDataModel.ActivityContext':
         '''Return an activity context.'''
         indaleko_activity_context = IndalekoActivityContextDataModel.ActivityContext(
-            ActivityContextIdentifier=IndalekoDataModel.IndalekoUUID(
+            ActivityContextIdentifier=IndalekoUUID(
                 UUID=UUID('00000000-0000-0000-0000-000000000000'),
                 Label='Activity Context Identifier'
             ),
-            ActivityType=IndalekoDataModel.IndalekoUUID(
+            ActivityType=IndalekoUUID(
                 UUID=UUID('00000000-0000-0000-0000-000000000000'),
                 Label='Activity Type Identifier'),
             Timestamps=[IndalekoDataModel.Timestamp(

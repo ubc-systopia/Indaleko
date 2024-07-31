@@ -17,15 +17,11 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
+import apischema
 import jsonschema
-
-from apischema.graphql import graphql_schema
-from datetime import datetime
-from graphql import print_schema
 from jsonschema import validate
-from uuid import UUID
 
-from IndalekoSchema import IndalekoSchema
+from IndalekoDataSchema import IndalekoDataSchema
 from IndalekoRecordSchema import IndalekoRecordSchema
 from IndalekoObjectDataModel import IndalekoObjectDataModel
 
@@ -38,10 +34,29 @@ class IndalekoObjectSchema(IndalekoRecordSchema):
     template['description'] = 'Schema for the JSON representation of an Indaleko Object, which is used for indexing storage content.'
 
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         '''Initialize the Object schema.'''
-        self.base_type = IndalekoObjectDataModel.IndalekoObject
-        super().__init__()
+        if not hasattr(self, 'data_model'):
+            self.data_model = IndalekoObjectDataModel()
+        if not hasattr(self, 'base_type'):
+            self.base_type = IndalekoObjectDataModel.IndalekoObject
+        object_rules = apischema.json_schema.deserialization_schema(IndalekoObjectDataModel.IndalekoObject,
+                                                                    additional_properties=True)
+        if not hasattr(self, 'rules'):
+            self.rules = object_rules
+        else:
+            self.rules.update(object_rules)
+        schema_id = kwargs.get('schema_id', "https://activitycontext.work/schema/indaleko-object.json")
+        schema_title = kwargs.get('schema_title', "Indaleko Object Schema")
+        schema_description = kwargs.get('schema_description', "Schema for the JSON representation of an Indaleko Object.")
+        super().__init__(
+            schema_id = schema_id,
+            schema_title = schema_title,
+            schema_description = schema_description,
+            data_model = self.data_model,
+            base_type = self.base_type,
+            schema_rules = object_rules
+        )
 
     @staticmethod
     def is_valid_object(indaleko_object : dict) -> bool:
@@ -150,14 +165,14 @@ class IndalekoObjectSchema(IndalekoRecordSchema):
         object_schema['rule']['required'].append('Record')
         return object_schema
 
-    def get_schema(self: IndalekoSchema) -> dict:
+    def old_get_schema(self: IndalekoDataSchema) -> dict:
         '''
         For some reason the schema generation is marking optional fields as
         required, which is not correct, so rather than fight it, I'm just
         including only those that are required.
         '''
         required = ['URI', 'ObjectIdentifier', 'Timestamps', 'Size', 'Record']
-        broken_schema = super().get_schema()
+        broken_schema = super().get_json_schema()
         if 'rule' in broken_schema and 'required' in broken_schema['rule']:
             required_list = [x for x in broken_schema['rule']['required'] if x in required]
             broken_schema['rule']['required'] = required_list

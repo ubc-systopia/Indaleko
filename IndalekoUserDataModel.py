@@ -27,7 +27,7 @@ from apischema.graphql import graphql_schema
 from apischema.metadata import required
 from graphql import print_schema
 
-from IndalekoDataModel import IndalekoDataModel
+from IndalekoDataModel import IndalekoDataModel, IndalekoUUID
 from IndalekoRecordDataModel import IndalekoRecordDataModel
 class IndalekoUserDataModel(IndalekoRecordDataModel):
     '''
@@ -38,7 +38,7 @@ class IndalekoUserDataModel(IndalekoRecordDataModel):
     class UserDomain:
         '''Define the security domain for a user.'''
         Domain: Annotated[
-            IndalekoDataModel.IndalekoUUID,
+            IndalekoUUID,
             schema(description="The security domain for the user."),
             required
         ]
@@ -62,7 +62,7 @@ class IndalekoUserDataModel(IndalekoRecordDataModel):
         Define the data we maintain about users.
         '''
         Identifier : Annotated[
-            IndalekoDataModel.IndalekoUUID,
+            IndalekoUUID,
             schema(description="This is an Indaleko defined UUID that represents the user."),
             required
         ]

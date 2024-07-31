@@ -24,10 +24,9 @@ import uuid
 import datetime
 import argparse
 import re
-import base64
-import msgpack
 import arango
 
+from Indaleko import Indaleko
 from IndalekoRecord import IndalekoRecord
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoMachineConfig import IndalekoMachineConfig
@@ -107,7 +106,7 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             source_version=IndalekoWindowsMachineConfig.windows_machine_config_service['service_version'],
             timestamp=timestamp.isoformat(),
             attributes=config_data,
-            data=base64.b64encode(msgpack.packb(config_data)).decode('ascii'),
+            data=Indaleko.encode_binary_data(config_data),
             machine_id=config_data['MachineGuid']
         )
         config.extract_volume_info()
@@ -168,9 +167,9 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             assert drive_data['UniqueId'].startswith('\\\\?\\Volume{')
             drive_data['GUID'] = self.__find_volume_guid__(drive_data['UniqueId'])
             self.machine_id = machine_id
-            super().__init__(raw_data = msgpack.packb(drive_data),
+            super().__init__(raw_data = Indaleko.encode_binary_data(drive_data),
                              attributes = drive_data,
-                             source = {
+                             source_identifier = {
                                 'Identifier' : self.WindowsDriveInfo_UUID_str,
                                 'Version' : self.WindowsDriveInfo_Version,
                              })

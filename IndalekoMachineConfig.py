@@ -49,7 +49,7 @@ class IndalekoMachineConfig(IndalekoRecord):
 
     default_config_dir = "./config"
 
-    Schema = IndalekoMachineConfigSchema().get_schema()
+    Schema = IndalekoMachineConfigSchema().get_json_schema()
 
     def __init__(
         self: "IndalekoMachineConfig",
@@ -67,7 +67,7 @@ class IndalekoMachineConfig(IndalekoRecord):
         super().__init__(
             raw_data = b"",
             attributes = {},
-            source = {
+            source_identifier = {
                 "Identifier": IndalekoMachineConfig.indaleko_machine_config_uuid_str,
                 "Version": IndalekoMachineConfig.indaleko_machine_config_version_str,
             },

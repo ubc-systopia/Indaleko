@@ -28,8 +28,6 @@ import logging
 import os
 import json
 import jsonlines
-import msgpack
-import uuid
 
 
 from IndalekoIngester import IndalekoIngester
@@ -139,7 +137,7 @@ class IndalekoDropboxIngester(IndalekoIngester):
             size = data['size']
         kwargs = {
             'source' : self.source,
-            'raw_data' : msgpack.packb(bytes(json.dumps(data).encode('utf-8'))),
+            'raw_data' : Indaleko.encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
             'URI' : 'https://www.dropbox.com/home' + data['path_display'],
             'Path' : data['path_display'],
             'ObjectIdentifier' : data['ObjectIdentifier'],

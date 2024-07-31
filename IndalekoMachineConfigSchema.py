@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from IndalekoRecordSchema import IndalekoRecordSchema
 from IndalekoMachineConfigDataModel import IndalekoMachineConfigDataModel
-from IndalekoSchema import IndalekoSchema
+from IndalekoDataSchema import IndalekoDataSchema
 class IndalekoMachineConfigSchema(IndalekoRecordSchema):
     '''Define the schema for use with the MachineConfig collection.'''
 
@@ -106,17 +106,17 @@ class IndalekoMachineConfigSchema(IndalekoRecordSchema):
         }
         assert 'Record' not in machine_config_schema['rule'], \
             'Record should not be in machine config schema.'
-        machine_config_schema['rule']['Record'] = IndalekoRecordSchema().get_schema()['rule']
+        machine_config_schema['rule']['Record'] = IndalekoRecordSchema().get_json_schema()['rule']
         machine_config_schema['rule']['required'].append('Record')
         return machine_config_schema
 
-    def get_schema(self: IndalekoSchema) -> dict:
+    def get_json_schema(self: IndalekoDataSchema) -> dict:
         '''
         For some reason the schema generation is marking Platform as
         required, which is not correct, so rather than fight it, I'm just
         removing it if it is found.
         '''
-        broken_schema = super().get_schema()
+        broken_schema = super().get_json_schema()
         if 'rule' in broken_schema and 'required' in broken_schema['rule']:
             required_list = [x for x in broken_schema['rule']['required'] if x != 'Platform']
             broken_schema['rule']['required'] = required_list

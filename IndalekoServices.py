@@ -42,15 +42,15 @@ from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoCollections import IndalekoCollection, IndalekoCollections
 from IndalekoServicesSchema import IndalekoServicesSchema
 from Indaleko import Indaleko
-from IndalekoRecord import IndalekoRecord
 from IndalekoSingleton import IndalekoSingleton
+from IndalekoRecordDataModel import IndalekoRecordDataModel
 
 class IndalekoServices(IndalekoSingleton):
     '''
     This class defines the service model for Indaleko.
     '''
 
-    Schema = IndalekoServicesSchema().get_schema()
+    Schema = IndalekoServicesSchema().get_json_schema()
 
     indaleko_services = 'Services'
     assert indaleko_services in Indaleko.Collections, \
@@ -164,7 +164,7 @@ class IndalekoServices(IndalekoSingleton):
         self.service_collection.insert(new_service)
         return self.lookup_service_by_name(name)
 
-class IndalekoService(IndalekoRecord):
+class IndalekoService:
     """
     In Indaleko, a service is a component that provides some kind of
     functionality.  This class manages registration and lookup of services.
@@ -187,11 +187,6 @@ class IndalekoService(IndalekoRecord):
             does not exist, it will be created.  See Indaleko.Collections for
             known services.
         '''
-        super().__init__(raw_data=b'',
-                         attributes={},
-                         source={'Identifier' : IndalekoService.indaleko_service_uuid_str,
-                                 'Version' : IndalekoService.indaleko_service_version
-                        })
         self.collection = None
         self.service_identifier = None
         self.service_name = None
@@ -199,7 +194,6 @@ class IndalekoService(IndalekoRecord):
         self.service_description = None
         self.service_version = None
         self.service_type = None
-        self.creation_date = self.__timestamp__
         if 'service_identifier' in kwargs:
             self.service_identifier = kwargs['service_identifier']
         if 'service_name' in kwargs:
@@ -212,6 +206,7 @@ class IndalekoService(IndalekoRecord):
             self.service_type = kwargs['service_type']
         self.creation_date = kwargs.get('creation_date',
                                         datetime.datetime.now(datetime.timezone.utc).isoformat())
+        # Get the list of known collections
         if self.collection is None:
             self.collection = IndalekoCollections().get_collection(Indaleko.Indaleko_Services)
         assert self.collection.name == Indaleko.Indaleko_Services, \
@@ -220,12 +215,16 @@ class IndalekoService(IndalekoRecord):
             'service_collection must be an IndalekoCollection'
         found = False
         if self.service_identifier is not None:
+            # see if we can find it using the identifier
             found = self.lookup_service_by_identifier()
         else:
+            # no identifier, see if we can find it by name
             if self.service_name is None:
                 raise ValueError('service_name must be specified.')
             found = self.lookup_service_by_name()
         if not found:
+            # didn't find it, so let's see if we have the data needed
+            # to create it.
             if self.service_name is None:
                 raise ValueError('service_name must be specified.')
             if self.service_version is None:
@@ -234,7 +233,13 @@ class IndalekoService(IndalekoRecord):
                 raise ValueError('service_type must be one of ' +
                                  f'{IndalekoServices.service_types}, ' +
                                   f'is {self.service_type}')
-            self.register_service()
+            record = IndalekoRecordDataModel.IndalekoRecord(
+                SourceIdentifier=IndalekoService.indaleko_service_uuid_str,
+                Attributes={},
+                Data=Indaleko.encode_binary_data(b''),
+                Timestamp=self.creation_date
+            )
+            self.register_service(record)
 
     def load_record_data(self, record_data : dict) -> None:
         """Load the record data from the given dictionary."""
@@ -283,7 +288,7 @@ class IndalekoService(IndalekoRecord):
         self.load_record_data(data)
         return True
 
-    def register_service(self : 'IndalekoService') -> dict:
+    def register_service(self : 'IndalekoService', record) -> dict:
         '''
         This method registers a service with the given name, description,
         version, identifier (if specified,) type, and creation date (if

@@ -62,8 +62,10 @@ import platform
 import logging
 import socket
 import ipaddress
+import base64
+import msgpack
 
-from IndalekoObjectSchema import IndalekoObjectSchema
+from IndalekoObjectDataSchema import IndalekoObjectSchema
 from IndalekoServicesSchema import IndalekoServicesSchema
 from IndalekoRelationshipSchema import IndalekoRelationshipSchema
 from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
@@ -94,7 +96,7 @@ class Indaleko:
 
     Collections = {
         Indaleko_Objects: {
-            'schema' : IndalekoObjectSchema().get_schema(),
+            'schema' : IndalekoObjectSchema().get_json_schema(),
             'edge' : False,
             'indices' : {
                 'URI' : {
@@ -116,7 +118,7 @@ class Indaleko:
             },
         },
         Indaleko_Relationships : {
-            'schema' : IndalekoRelationshipSchema().get_schema(),
+            'schema' : IndalekoRelationshipSchema().get_json_schema(),
             'edge' : True,
             'indices' : {
                 'relationship' : {
@@ -142,7 +144,7 @@ class Indaleko:
             }
         },
         Indaleko_Services : {
-            'schema' : IndalekoServicesSchema().get_schema(),
+            'schema' : IndalekoServicesSchema().get_json_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {
@@ -153,12 +155,12 @@ class Indaleko:
             },
         },
         Indaleko_MachineConfig : {
-            'schema' : IndalekoMachineConfigSchema().get_schema(),
+            'schema' : IndalekoMachineConfigSchema().get_json_schema(),
             'edge' : False,
             'indices' : { },
         },
         Indaleko_ActivityDataProviders : {
-            'schema' : IndalekoActivityDataProviderRegistrationSchema().get_schema(),
+            'schema' : IndalekoActivityDataProviderRegistrationSchema().get_json_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {
@@ -169,7 +171,7 @@ class Indaleko:
             },
         },
         Indaleko_ActivityContext : {
-            'schema' : IndalekoActivityContextSchema().get_schema(),
+            'schema' : IndalekoActivityContextSchema().get_json_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {
@@ -180,7 +182,7 @@ class Indaleko:
             },
         },
        Indaleko_Users : {
-            'schema' : IndalekoUserSchema().get_schema(),
+            'schema' : IndalekoUserSchema().get_json_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {
@@ -191,7 +193,7 @@ class Indaleko:
             },
         },
         Indaleko_User_Relationships : {
-            'schema' : IndalekoUserRelationshipSchema().get_schema(),
+            'schema' : IndalekoUserRelationshipSchema().get_json_schema(),
             'edge' : True,
             'indices' : {
                 'Identity1' : {
@@ -446,6 +448,17 @@ class Indaleko:
             key, value = field.split('=')
             data[key] = value
         return data
+
+    @staticmethod
+    def encode_binary_data(data : bytes) -> str:
+        '''Encode binary data as a string.'''
+        return base64.b64encode(msgpack.packb(data)).decode('ascii')
+
+    @staticmethod
+    def decode_binary_data(data : str) -> bytes:
+        '''Decode binary data from a string.'''
+        return msgpack.unpackb(base64.b64decode(data))
+
 
 def main():
     """Test code for Indaleko.py"""
