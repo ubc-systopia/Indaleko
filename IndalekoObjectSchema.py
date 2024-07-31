@@ -17,7 +17,6 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
-import json
 import jsonschema
 
 from apischema.graphql import graphql_schema
@@ -26,11 +25,18 @@ from graphql import print_schema
 from jsonschema import validate
 from uuid import UUID
 
+from IndalekoSchema import IndalekoSchema
 from IndalekoRecordSchema import IndalekoRecordSchema
 from IndalekoObjectDataModel import IndalekoObjectDataModel
 
 class IndalekoObjectSchema(IndalekoRecordSchema):
     '''This class defines the schema for an Indaleko Object.'''
+
+    template = {key : value for key, value in IndalekoRecordSchema.template.items()}
+    template['title'] = "Indaleko Object Schema"
+    template['$id'] = 'https://activitycontext.work/schema/indaleko-object.json'
+    template['description'] = 'Schema for the JSON representation of an Indaleko Object, which is used for indexing storage content.'
+
 
     def __init__(self):
         '''Initialize the Object schema.'''
@@ -144,10 +150,24 @@ class IndalekoObjectSchema(IndalekoRecordSchema):
         object_schema['rule']['required'].append('Record')
         return object_schema
 
+    def get_schema(self: IndalekoSchema) -> dict:
+        '''
+        For some reason the schema generation is marking optional fields as
+        required, which is not correct, so rather than fight it, I'm just
+        including only those that are required.
+        '''
+        required = ['URI', 'ObjectIdentifier', 'Timestamps', 'Size', 'Record']
+        broken_schema = super().get_schema()
+        if 'rule' in broken_schema and 'required' in broken_schema['rule']:
+            required_list = [x for x in broken_schema['rule']['required'] if x in required]
+            broken_schema['rule']['required'] = required_list
+        return broken_schema
+
+
 
 def main():
     '''Test code for IndalekoObjectSchema.'''
-    record_schema = IndalekoRecordSchema()
+    record_schema = IndalekoObjectSchema()
     record_schema.schema_detail(query=IndalekoObjectDataModel.get_queries(),
                                 types=IndalekoObjectDataModel.get_types())
 

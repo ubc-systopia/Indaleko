@@ -106,13 +106,6 @@ def extract_params() -> tuple:
     unique_params_by_index = {index : list(set(params) - common_params) for index, params in IndalekoCollectionIndex.index_args.items()}
     return common_params, unique_params_by_index
 
-
-def main2():
-    '''Another test for this module.'''
-    common_params, unique_params_by_index = extract_params()
-    print(common_params)
-    print(unique_params_by_index)
-
 def main():
     '''Test the IndalekoCollections class.'''
     #start_time = datetime.datetime.now(datetime.UTC).isoformat()
