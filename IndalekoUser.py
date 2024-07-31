@@ -24,11 +24,10 @@ import logging
 import datetime
 
 from Indaleko import Indaleko
-from IndalekoRecord import IndalekoRecord
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoLogging import IndalekoLogging
 
-class IndalekoUser(IndalekoRecord):
+class IndalekoUser:
     '''This class is used to manage Indaleko Users.'''
 
     def __init__(self):

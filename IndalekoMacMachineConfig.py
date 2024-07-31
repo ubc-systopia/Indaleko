@@ -22,7 +22,6 @@ import datetime
 import arango
 import re
 import argparse
-from IndalekoRecord import IndalekoRecord
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoMachineConfig import IndalekoMachineConfig
 from Indaleko import Indaleko
@@ -141,7 +140,7 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
             candidate = os.path.join(config_dir, candidate)
         return candidate
 
-    class MacOSDriveInfo(IndalekoRecord):
+    class MacOSDriveInfo:
         '''This class is used to capture information about a macOS drive.'''
         MacOSDriveInfo_UUID_str = 'e23f71d8-0973-455b-af20-b9bc6ee8ebd6' # created manually
         MacOSDriveInfo_UUID = uuid.UUID(MacOSDriveInfo_UUID_str)
