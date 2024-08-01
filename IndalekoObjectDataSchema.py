@@ -21,18 +21,11 @@ import apischema
 import jsonschema
 from jsonschema import validate
 
-from IndalekoDataSchema import IndalekoDataSchema
 from IndalekoRecordSchema import IndalekoRecordSchema
 from IndalekoObjectDataModel import IndalekoObjectDataModel
 
 class IndalekoObjectSchema(IndalekoRecordSchema):
     '''This class defines the schema for an Indaleko Object.'''
-
-    template = {key : value for key, value in IndalekoRecordSchema.template.items()}
-    template['title'] = "Indaleko Object Schema"
-    template['$id'] = 'https://activitycontext.work/schema/indaleko-object.json'
-    template['description'] = 'Schema for the JSON representation of an Indaleko Object, which is used for indexing storage content.'
-
 
     def __init__(self, **kwargs):
         '''Initialize the Object schema.'''
@@ -40,8 +33,9 @@ class IndalekoObjectSchema(IndalekoRecordSchema):
             self.data_model = IndalekoObjectDataModel()
         if not hasattr(self, 'base_type'):
             self.base_type = IndalekoObjectDataModel.IndalekoObject
-        object_rules = apischema.json_schema.deserialization_schema(IndalekoObjectDataModel.IndalekoObject,
-                                                                    additional_properties=True)
+        object_rules = apischema.json_schema.deserialization_schema(
+            IndalekoObjectDataModel.IndalekoObject,
+            additional_properties=True)
         if not hasattr(self, 'rules'):
             self.rules = object_rules
         else:
@@ -165,26 +159,11 @@ class IndalekoObjectSchema(IndalekoRecordSchema):
         object_schema['rule']['required'].append('Record')
         return object_schema
 
-    def old_get_schema(self: IndalekoDataSchema) -> dict:
-        '''
-        For some reason the schema generation is marking optional fields as
-        required, which is not correct, so rather than fight it, I'm just
-        including only those that are required.
-        '''
-        required = ['URI', 'ObjectIdentifier', 'Timestamps', 'Size', 'Record']
-        broken_schema = super().get_json_schema()
-        if 'rule' in broken_schema and 'required' in broken_schema['rule']:
-            required_list = [x for x in broken_schema['rule']['required'] if x in required]
-            broken_schema['rule']['required'] = required_list
-        return broken_schema
-
-
 
 def main():
     '''Test code for IndalekoObjectSchema.'''
-    record_schema = IndalekoObjectSchema()
-    record_schema.schema_detail(query=IndalekoObjectDataModel.get_queries(),
-                                types=IndalekoObjectDataModel.get_types())
+    object_schema = IndalekoObjectSchema()
+    object_schema.schema_detail()
 
 if __name__ == "__main__":
     main()

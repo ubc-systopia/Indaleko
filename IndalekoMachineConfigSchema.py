@@ -17,6 +17,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
+import apischema
 
 from IndalekoRecordSchema import IndalekoRecordSchema
 from IndalekoMachineConfigDataModel import IndalekoMachineConfigDataModel
@@ -24,18 +25,26 @@ from IndalekoDataSchema import IndalekoDataSchema
 class IndalekoMachineConfigSchema(IndalekoRecordSchema):
     '''Define the schema for use with the MachineConfig collection.'''
 
-    template = {key : value for key, value in IndalekoRecordSchema.template.items()}
-    template['title'] = 'Machine Configuration Schema'
-    template['$id'] = 'https://activitycontext.work/schema/machineconfig.json'
-    template['description'] = 'Describes machine where data was captured'
-
     def __init__(self):
         '''Initialize the schema for the MachineConfig collection.'''
         if not hasattr(self, 'data_mode'):
             self.data_model = IndalekoMachineConfigDataModel()
         if not hasattr(self, 'base_type'):
             self.base_type = IndalekoMachineConfigDataModel.MachineConfig
-        super().__init__()
+        machine_config_rules = apischema.json_schema.deserialization_schema(
+            IndalekoMachineConfigDataModel.MachineConfig,
+            additional_properties=True)
+        schema_id = 'https://activitycontext.work/schema/machineconfig.json'
+        schema_title = 'Machine Configuration Schema'
+        schema_description = 'Describes the machine where the data was indexed.'
+        super().__init__(
+            schema_id = schema_id,
+            schema_title = schema_title,
+            schema_description = schema_description,
+            data_model = self.data_model,
+            base_type = self.base_type,
+            schema_rules = machine_config_rules
+        )
 
     @staticmethod
     def get_old_schema():
@@ -90,7 +99,8 @@ class IndalekoMachineConfigSchema(IndalekoRecordSchema):
                     "properties" : {
                         "Label" : {
                             "type" : "string",
-                            "description" : "UUID representing the semantic meaning of this timestamp.",
+                            "description" :
+                            "UUID representing the semantic meaning of this timestamp.",
                             "format": "uuid",
                         },
                         "Value" : {
@@ -125,8 +135,7 @@ class IndalekoMachineConfigSchema(IndalekoRecordSchema):
 def main():
     """Test the IndalekoMachineConfigSchema class."""
     machine_config_schema = IndalekoMachineConfigSchema()
-    machine_config_schema.schema_detail(query=IndalekoMachineConfigDataModel.get_queries(),
-                                        types=IndalekoMachineConfigDataModel.get_types())
+    machine_config_schema.schema_detail()
 
 if __name__ == "__main__":
     main()

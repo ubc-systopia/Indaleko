@@ -66,7 +66,7 @@ import base64
 import msgpack
 
 from IndalekoObjectDataSchema import IndalekoObjectSchema
-from IndalekoServicesSchema import IndalekoServicesSchema
+from IndalekoServiceSchema import IndalekoServiceSchema
 from IndalekoRelationshipSchema import IndalekoRelationshipSchema
 from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
 from IndalekoActivityDataProviderRegistrationSchema \
@@ -144,7 +144,7 @@ class Indaleko:
             }
         },
         Indaleko_Services : {
-            'schema' : IndalekoServicesSchema().get_json_schema(),
+            'schema' : IndalekoServiceSchema().get_json_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {
@@ -279,6 +279,14 @@ class Indaleko:
             except ValueError:
                 valid = False
         return valid
+
+    @staticmethod
+    def generate_iso_timestamp(ts : datetime = None) -> str:
+        """Given a timestamp, convert it to an ISO timestamp."""
+        if ts is None:
+            ts = datetime.datetime.now(datetime.timezone.utc)
+        assert isinstance(ts, datetime.datetime), f'ts must be a datetime, not {type(ts)}'
+        return ts.isoformat()
 
     @staticmethod
     def generate_iso_timestamp_for_file(ts : str = None) -> str:

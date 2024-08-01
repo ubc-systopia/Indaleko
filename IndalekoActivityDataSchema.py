@@ -27,7 +27,7 @@ from graphql import print_schema
 
 from IndalekoRecordSchema import IndalekoRecordSchema
 from IndalekoActivityDataModel import IndalekoActivityDataModel
-from IndalekoDataModel import IndalekoDataModel
+from IndalekoDataModel import IndalekoDataModel, IndalekoUUID
 
 class IndalekoActivityDataSchema(IndalekoRecordSchema):
     '''Schema defintion for activity data.'''
@@ -84,7 +84,7 @@ class IndalekoActivityDataSchema(IndalekoRecordSchema):
         return activity_data_schema
 
     @staticmethod
-    def get_activity_data(identifier : IndalekoDataModel.IndalekoUUID)\
+    def get_activity_data(identifier : IndalekoUUID)\
         -> IndalekoActivityDataModel.ActivityData:
         '''Given an identifier, return an activity data.'''
         indaleko_activity_data = IndalekoActivityDataModel.ActivityData(
@@ -92,8 +92,8 @@ class IndalekoActivityDataSchema(IndalekoRecordSchema):
             CollectionTimestamp=datetime.now(),
             ActivityTimestamps=[
                 IndalekoDataModel.Timestamp(
-                    Label=IndalekoDataModel.IndalekoUUID(
-                        UUID=UUID('00000000-0000-0000-0000-000000000000'),
+                    Label= IndalekoUUID(
+                        Identifier=UUID('00000000-0000-0000-0000-000000000000'),
                         Label='Activity Timestamp'
                     ),
                     Value=datetime.now()
@@ -105,14 +105,14 @@ class IndalekoActivityDataSchema(IndalekoRecordSchema):
 def main():
     '''Test the IndalekoActivityDataSchema class.'''
     activity_data = IndalekoActivityDataSchema()
-    assert IndalekoActivityDataSchema.is_valid_schema_dict(activity_data.get_old_schema())
+    assert IndalekoActivityDataSchema.is_valid_json_schema_dict(activity_data.get_old_schema())
     print('Old ActivityData schema is valid')
     print('Old Schema:')
     print(json.dumps(activity_data.get_old_schema(), indent=4))
-    assert activity_data.is_valid_schema()
+    assert activity_data.is_valid_json_schema()
     print('New ActivityData schema is valid')
     print('New Schema:')
-    print(json.dumps(activity_data.get_schema(), indent=4))
+    print(json.dumps(activity_data.get_json_schema(), indent=4))
     print('GraphQL Schema:')
     print(print_schema(graphql_schema(
         query=[IndalekoActivityDataSchema.get_activity_data],

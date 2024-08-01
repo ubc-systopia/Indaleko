@@ -33,7 +33,7 @@ from graphql import print_schema
 
 from IndalekoDataModel import IndalekoDataModel
 
-class IndalekoRecordDataModel(IndalekoDataModel):
+class IndalekoRecordDataModel:
 
     @dataclass
     class IndalekoRecord:

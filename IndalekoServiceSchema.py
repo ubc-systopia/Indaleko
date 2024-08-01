@@ -17,25 +17,41 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
-import json
 import jsonschema
+import apischema
 
-from apischema.graphql import graphql_schema
-from graphql import print_schema
 from uuid import UUID
 
 from IndalekoRecordSchema import IndalekoRecordSchema
-from IndalekoServicesDataModel import IndalekoServicesDataModel
+from IndalekoService import IndalekoService
+from IndalekoServiceDataModel import IndalekoServiceDataModel
 
-class IndalekoServicesSchema(IndalekoRecordSchema):
+class IndalekoServiceSchema(IndalekoRecordSchema):
     '''This class defines the schema for Indaleko Services.'''
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         '''Initialize the Services schema.'''
-        self.base_type = IndalekoServicesDataModel.IndalekoService
-        super().__init__()
-        self.template['description'] = \
-            'This schema describes information about service providers within the Indaleko system.'
+        if not hasattr(self, 'data_model'):
+            self.data_model = IndalekoServiceDataModel()
+        if not hasattr(self, 'base_type'):
+            self.base_type = IndalekoServiceDataModel.IndalekoService
+        services_rules = apischema.json_schema.deserialization_schema(IndalekoServiceDataModel.IndalekoService,
+                                                                    additional_properties=True)
+        if not hasattr(self, 'rules'):
+            self.rules = services_rules
+        else:
+            self.rules.update(services_rules)
+        schema_id = kwargs.get('schema_id', "https://activitycontext.work/schema/serviceprovider.json")
+        schema_title = kwargs.get('schema_title', "Service provider schema")
+        schema_description = kwargs.get('schema_description', "This schema describes information about service providers within the Indaleko system.")
+        super().__init__(
+            schema_id = schema_id,
+            schema_title = schema_title,
+            schema_description = schema_description,
+            data_model = self.data_model,
+            base_type = self.base_type,
+            schema_rules = services_rules
+        )
 
     @staticmethod
     def is_valid_services(indaleko_services : dict) -> bool:
@@ -43,7 +59,8 @@ class IndalekoServicesSchema(IndalekoRecordSchema):
         assert isinstance(indaleko_services, dict), 'services must be a dict'
         valid = False
         try:
-            jsonschema.validate(instance=indaleko_services, schema=IndalekoServicesSchema.get_old_schema())
+            jsonschema.validate(instance=indaleko_services,
+                                schema=IndalekoServiceSchema.get_old_schema())
             valid = True
         except jsonschema.exceptions.ValidationError as error:
             print(f'Validation error: {error.message}')
@@ -86,9 +103,10 @@ class IndalekoServicesSchema(IndalekoRecordSchema):
         return services_schema
 
     @staticmethod
-    def get_service(identifier : UUID) -> IndalekoServicesDataModel.IndalekoService:
+    def get_service(identifier : UUID) -> IndalekoServiceDataModel.IndalekoService:
         '''Return an IndalekoService object.'''
-        service = IndalekoServicesDataModel.IndalekoService(
+        service = IndalekoServiceDataModel.IndalekoService(
+            Record = None,
             Identifier = identifier,
             Version = '1.0.0',
             Name = 'Test Service',
@@ -98,17 +116,8 @@ class IndalekoServicesSchema(IndalekoRecordSchema):
 
 def main():
     '''Test code for IndalekoObjectSchema.'''
-    services_schema = IndalekoServicesSchema()
-    if services_schema.is_valid_schema_dict(IndalekoServicesSchema.get_old_schema()):
-        print('Old schema is valid.')
-    print(json.dumps(services_schema.get_old_schema(), indent=4))
-    if services_schema.is_valid_schema():
-        print('New schema is valid.')
-    print(json.dumps(services_schema.get_schema(), indent=4))
-    print('GraphQL Schema:')
-    print(print_schema(graphql_schema(
-        query=[IndalekoServicesSchema.get_service],
-        types=[IndalekoServicesDataModel.IndalekoService])))
+    services_schema = IndalekoServiceSchema()
+    services_schema.schema_detail()
 
 if __name__ == "__main__":
     main()

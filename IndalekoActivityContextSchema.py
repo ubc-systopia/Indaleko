@@ -26,7 +26,7 @@ from apischema.graphql import graphql_schema
 from graphql import print_schema
 
 
-from IndalekoDataModel import IndalekoDataModel
+from IndalekoDataModel import IndalekoDataModel, IndalekoUUID
 from IndalekoRecordSchema import IndalekoRecordSchema
 from IndalekoActivityContextDataModel import IndalekoActivityContextDataModel
 class IndalekoActivityContextSchema(IndalekoRecordSchema):
@@ -59,7 +59,8 @@ class IndalekoActivityContextSchema(IndalekoRecordSchema):
                     "properties" : {
                         "Label" : {
                             "type" : "string",
-                            "description" : "UUID representing the semantic meaning of this timestamp.",
+                            "description" :
+                            "UUID representing the semantic meaning of this timestamp.",
                             "format": "uuid",
                         },
                         "Value" : {
@@ -76,7 +77,8 @@ class IndalekoActivityContextSchema(IndalekoRecordSchema):
                         "Label",
                         "Value"
                     ],
-                    "description" : "List of timestamps with UUID-based semantic meanings associated with this object."
+                    "description" :
+                    "List of timestamps with UUID-based semantic meanings associated with this object."
                 },
                 "DataVersion" : {
                     "type" : "string",
@@ -96,12 +98,12 @@ class IndalekoActivityContextSchema(IndalekoRecordSchema):
     def get_activity_context(context_id : UUID) -> IndalekoActivityContextDataModel.ActivityContext:
         '''Given a context ID, return an activity context.'''
         indaleko_activity_context = IndalekoActivityContextDataModel.ActivityContext(
-            ActivityContextIdentifier=IndalekoDataModel.IndalekoUUID(
-                UUID=context_id,
+            ActivityContextIdentifier=IndalekoUUID(
+                Identifier=context_id,
                 Label='Activity Context Identifier'
             ),
-            ActivityType=IndalekoDataModel.IndalekoUUID(
-                UUID=UUID('00000000-0000-0000-0000-000000000000'),
+            ActivityType=IndalekoUUID(
+                Identifier=UUID('00000000-0000-0000-0000-000000000000'),
                 Label='Activity Type Identifier'),
             Timestamps=[IndalekoDataModel.Timestamp(
                 Label=UUID('00000000-0000-0000-0000-000000000000'),
@@ -112,16 +114,16 @@ class IndalekoActivityContextSchema(IndalekoRecordSchema):
 
 def main():
     '''Test the IndalekoActivityContextSchema class.'''
-    if IndalekoActivityContextSchema.is_valid_schema_dict(
+    if IndalekoActivityContextSchema.is_valid_json_schema_dict(
         IndalekoActivityContextSchema.get_old_schema()):
         print('Old schema is valid.')
     print('Old Schema:')
     print(json.dumps(IndalekoActivityContextSchema.get_old_schema(), indent=4))
     print('New Schema:')
     ac_schema = IndalekoActivityContextSchema()
-    if ac_schema.is_valid_schema():
+    if ac_schema.is_valid_json_schema():
         print('New schema is valid')
-    print(json.dumps(ac_schema.get_schema(), indent=4))
+    print(json.dumps(ac_schema.get_json_schema(), indent=4))
     print('GraphQL Schema:')
     print(print_schema(graphql_schema(
         query=[IndalekoActivityContextSchema.get_activity_context],
