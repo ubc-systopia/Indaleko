@@ -85,7 +85,8 @@ class IndalekoObjectDataModel(IndalekoRecordDataModel):
         def deserialize(data: dict) -> 'IndalekoObjectDataModel.IndalekoObject':
             '''Deserialize a dictionary to an object.'''
             return apischema.deserialize(IndalekoObjectDataModel.IndalekoObject,
-                                         data, additional_properties=True)
+                                         data,
+                                         additional_properties=True)
 
         @staticmethod
         def serialize(data) -> dict:

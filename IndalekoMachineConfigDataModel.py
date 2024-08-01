@@ -22,7 +22,7 @@ from datetime import datetime
 from typing import Annotated, Optional
 from uuid import UUID
 
-from apischema import schema
+from apischema import schema, deserialize, serialize
 from apischema.graphql import graphql_schema
 from apischema.metadata import required
 from graphql import print_schema
@@ -108,14 +108,29 @@ class IndalekoMachineConfigDataModel:
     @dataclass
     class MachineConfig:
         '''Define the machine configuration data model.'''
-        Platform: Annotated[
-            Optional['IndalekoMachineConfigDataModel.Platform'],
-                      schema(description="The platform.")]
         Captured: Annotated['IndalekoMachineConfigDataModel.Captured',
                             schema(description="Raw platform data captured."), required]
         Record: Annotated[IndalekoRecordDataModel.IndalekoRecord,
                           schema(description="The base record information."),
                           required]
+        Platform: Annotated[
+            Optional['IndalekoMachineConfigDataModel.Platform'],
+                      schema(description="The platform.")] = None
+
+        @staticmethod
+        def deserialize(data: dict) -> 'IndalekoMachineConfigDataModel.MachineConfig':
+            '''Deserialize a dictionary to an object.'''
+            return deserialize(IndalekoMachineConfigDataModel.MachineConfig,
+                            data,
+                            additional_properties=True)
+
+        @staticmethod
+        def serialize(data) -> dict:
+            '''Serialize the object to a dictionary.'''
+            return serialize(IndalekoMachineConfigDataModel.MachineConfig,
+                             data,
+                             additional_properties=True)
+
 
     @staticmethod
     def get_machine_config() -> 'IndalekoMachineConfigDataModel.MachineConfig':
@@ -141,6 +156,9 @@ class IndalekoMachineConfigDataModel:
         return [IndalekoMachineConfigDataModel.Platform,
                 IndalekoMachineConfigDataModel.Captured,
                 IndalekoMachineConfigDataModel.MachineConfig]
+
+
+
 
 def main():
     '''Test code for IndalekoMachineConfigDataModel.'''

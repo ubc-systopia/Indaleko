@@ -19,11 +19,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 from datetime import datetime
 from uuid import UUID
-from typing import Annotated, List
+from typing import Annotated, List, Optional
 from dataclasses import dataclass
 
 from graphql import print_schema
-from apischema import schema
+from apischema import schema, deserialize, serialize
 from apischema.graphql import graphql_schema
 from apischema.metadata import required
 
@@ -37,8 +37,8 @@ class IndalekoRelationshipDataModel(IndalekoRecordDataModel):
     @dataclass
     class RelationshipMetadataElement:
         '''Defines a single metadata element for a relationship.'''
-        UUID : Annotated[
-            IndalekoDataModel.IndalekoUUID,
+        Identifier : Annotated[
+            UUID,
             schema(description="The UUID defining the meaning of the metadata element."),
             required
         ]
@@ -53,7 +53,7 @@ class IndalekoRelationshipDataModel(IndalekoRecordDataModel):
     def get_relationship_metadata_element() -> 'IndalekoRelationshipDataModel.RelationshipMetadataElement':
         '''Return the relationship metadata element.'''
         return IndalekoRelationshipDataModel.RelationshipMetadataElement(
-            UUID=IndalekoDataModel.get_source_identifier(UUID('12345678-1234-5678-1234-567812345678')),
+            Identifier=IndalekoUUID.Identifier(UUID('12345678-1234-5678-1234-567812345678')),
             Data='This is a test record'
         )
 
@@ -63,38 +63,38 @@ class IndalekoRelationshipDataModel(IndalekoRecordDataModel):
         This defines the data model for relationship information.
         '''
         Object1 : Annotated[
-            IndalekoDataModel.IndalekoUUID,
+            UUID,
             schema(description="The first object in the relationship."),
             required
         ]
 
         Object2 : Annotated[
-            IndalekoDataModel.IndalekoUUID,
+            UUID,
             schema(description="The second object in the relationship."),
             required
         ]
 
         Relationship: Annotated[
-            IndalekoDataModel.IndalekoUUID,
+            UUID,
             schema(description="The relationship between the objects."),
             required
         ]
 
         Metadata: Annotated[
-            List['IndalekoRelationshipDataModel.RelationshipMetadataElement'],
+            Optional[List['IndalekoRelationshipDataModel.RelationshipMetadataElement']],
             schema(description="Metadata for the relationship (optional).")
-        ]
+        ] = None
 
     @staticmethod
-    def get_relationship() -> 'IndalekoRelationshipDataModel.IndalekoRelationship':
+    def get_relationship(relationship_identifier : UUID) -> 'IndalekoRelationshipDataModel.IndalekoRelationship':
         '''Return the relationship information.'''
         return IndalekoRelationshipDataModel.IndalekoRelationship(
             Object1=IndalekoDataModel.get_source_identifier(UUID('12345678-1234-5678-1234-567812345678')),
             Object2=IndalekoDataModel.get_source_identifier(UUID('12345678-1234-5678-1234-567812345678')),
-            Relationship=IndalekoDataModel.get_source_identifier(UUID('12345678-1234-5678-1234-567812345678')),
+            Relationship=IndalekoDataModel.get_source_identifier(relationship_identifier),
             Metadata=[
                 IndalekoRelationshipDataModel.RelationshipMetadataElement(
-                    UUID=IndalekoDataModel.get_source_identifier(UUID('12345678-1234-5678-1234-567812345678')),
+                    Identifier=UUID('12345678-1234-5678-1234-567812345678'),
                     Data='This is a test record'
                 )
             ]
@@ -111,6 +111,18 @@ class IndalekoRelationshipDataModel(IndalekoRecordDataModel):
         '''Return the types for the relationship data model.'''
         return [IndalekoRelationshipDataModel.RelationshipMetadataElement,
                 IndalekoRelationshipDataModel.IndalekoRelationship]
+
+    @staticmethod
+    def deserialize(data: dict) -> 'IndalekoRelationshipDataModel.IndalekoRelationship':
+        '''Deserialize a dictionary to an object.'''
+        return deserialize(IndalekoRelationshipDataModel.IndalekoRelationship,
+                           data,
+                           additional_properties=True)
+
+    @staticmethod
+    def serialize(data) -> dict:
+        '''Serialize the object to a dictionary.'''
+        return serialize(IndalekoRelationshipDataModel.IndalekoRelationship, data)
 
 def main():
     '''Test code for IndalekoObjectDataModel.'''

@@ -31,6 +31,8 @@ import json
 
 from Indaleko import Indaleko
 from IndalekoRelationshipSchema import IndalekoRelationshipSchema
+from IndalekoRelationshipDataModel import IndalekoRelationshipDataModel
+from IndalekoDataModel import IndalekoUUID
 
 class IndalekoRelationship:
     '''
@@ -63,7 +65,7 @@ class IndalekoRelationship:
         assert isinstance(vertex, dict), 'vertex must be a dict'
         assert 'object' in vertex, 'object1 must be specified.'
         assert 'collection' in vertex, 'collection must be specified.'
-        assert self.validate_uuid_string(vertex['object']), 'object must be a valid UUID.'
+        assert Indaleko.validate_uuid_string(vertex['object']), 'object must be a valid UUID.'
         assert isinstance(vertex['collection'], str), 'collection must be a string.'
         return True
 
@@ -85,23 +87,34 @@ class IndalekoRelationship:
             self.metadata = kwargs['metadata']
         assert self.validate_vertex(self.vertex1), 'vertex1 must be a valid vertex.'
         assert self.validate_vertex(self.vertex2), 'vertex2 must be a valid vertex.'
-        assert self.validate_uuid_string(self.relationship), 'relationship must be a valid UUID.'
+        assert Indaleko.validate_uuid_string(self.relationship), 'relationship must be a valid UUID.'
         assert isinstance(self.metadata, dict), 'metadata must be a dictionary.'
         if 'raw_data' not in kwargs:
             kwargs['raw_data'] = b''
-        super().__init__(**kwargs)
+        self.indaleko_relationship = IndalekoRelationshipDataModel.IndalekoRelationship(
+            uuid.UUID(self.vertex1['object']),
+            uuid.UUID(self.vertex2['object']),
+            uuid.UUID(self.relationship),
+            self.metadata
+        )
+
+    @staticmethod
+    def deserialize(data: dict) -> 'IndalekoRelationship':
+        '''Deserialize a dictionary to an object.'''
+        return IndalekoRelationship(**data)
+
+
+    def serialize(self) -> dict:
+        '''Serialize the object to a dictionary.'''
+        serialized_data = IndalekoRelationshipDataModel.serialize(self.indaleko_relationship)
+        serialized_data['_from'] = f'{self.vertex1["collection"]}/{self.vertex1["object"]}'
+        serialized_data['_to'] = f'{self.vertex2["collection"]}/{self.vertex2["object"]}'
+        return serialized_data
 
 
     def to_dict(self):
         """Return a dictionary representation of this object."""
-        obj = {}
-        obj['Record'] = super().to_dict()
-        obj['_from'] = f'{self.vertex1["collection"]}/{self.vertex1["object"]}'
-        obj['_to'] = f'{self.vertex2["collection"]}/{self.vertex2["object"]}'
-        obj['Object1'] = f'{self.vertex1["object"]}'
-        obj['Object2'] = f'{self.vertex2["object"]}'
-        obj['Relationship'] = f'{self.relationship}'
-        return obj
+        return self.serialize()
 
     def to_json(self, indent : int = 4) -> str:
         """Return a JSON representation of this object."""

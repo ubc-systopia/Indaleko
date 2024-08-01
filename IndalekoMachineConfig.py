@@ -34,6 +34,9 @@ from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
 from Indaleko import Indaleko
 from IndalekoServices import IndalekoService
+from IndalekoRecordDataModel import IndalekoRecordDataModel
+from IndalekoDataModel import IndalekoDataModel
+from IndalekoMachineConfigDataModel import IndalekoMachineConfigDataModel
 
 
 class IndalekoMachineConfig:
@@ -63,14 +66,12 @@ class IndalekoMachineConfig:
         self.machine_id = None
         if timestamp is None:
             timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        super().__init__(
-            raw_data = b"",
-            attributes = {},
-            source_identifier = {
-                "Identifier": IndalekoMachineConfig.indaleko_machine_config_uuid_str,
-                "Version": IndalekoMachineConfig.indaleko_machine_config_version_str,
-            },
-        )
+        self.data_source = None
+        self.set_source()
+        self.timestamp = timestamp
+        self.attributes = {}
+        self.data = Indaleko.encode_binary_data(b"")
+        self.indaleko_record = None
         self.platform = {}
         self.captured = {
             "Label": "Timestamp",
@@ -218,7 +219,7 @@ class IndalekoMachineConfig:
             assert isinstance(
                 timestamp["Value"], str
             ), "timestamp must contain a string Value field"
-            assert self.validate_iso_timestamp(
+            assert Indaleko.validate_iso_timestamp(
                 timestamp["Value"]
             ), f'timestamp {timestamp["Value"]} is not a valid ISO timestamp'
             self.captured = {
@@ -257,7 +258,7 @@ class IndalekoMachineConfig:
         This method sets the machine ID for the machine configuration.
         """
         if isinstance(machine_id, str):
-            assert self.validate_uuid_string(
+            assert Indaleko.validate_uuid_string(
                 machine_id
             ), f"machine_id {machine_id} is not a valid UUID."
         elif isinstance(machine_id, uuid.UUID):
@@ -273,6 +274,51 @@ class IndalekoMachineConfig:
             return self.machine_id
         return None
 
+    def set_source(self, identifier : str = None, version : str = None) -> None:
+        '''Set the source attribution for the machine configuration.'''
+        if identifier is None:
+            identifier = IndalekoMachineConfig.indaleko_machine_config_uuid_str
+        if version is None:
+            version = IndalekoMachineConfig.indaleko_machine_config_version_str
+        self.data_source = IndalekoDataModel.SourceIdentifier(
+            Identifier=identifier,
+            Version=version
+        )
+
+    def set_attributes(self, attributes: dict) -> None:
+        """
+        This method sets the attributes for the machine configuration.
+        """
+        if isinstance(attributes, dict):
+            self.attributes = attributes
+        self.indaleko_record = None # force recompute
+        return self
+
+    def get_attributes(self) -> dict:
+        '''Return the current attributes'''
+        return self.attributes
+
+    def get_indaleko_record(self) -> IndalekoRecordDataModel.IndalekoRecord:
+        """Returns the Indaleko record for the machine configuration."""
+        if self.indaleko_record is None:
+            self.indaleko_record = IndalekoRecordDataModel.IndalekoRecord(
+                self.data_source,
+                Timestamp=self.timestamp,
+                Attributes={},
+                Data=Indaleko.encode_binary_data(b""),
+            )
+        return self.indaleko_record
+
+    def set_base64_data(self, data: bytes) -> None:
+        """
+        This method sets the base64 encoded data for the machine configuration.
+        """
+        if isinstance(data, bytes):
+            self.data = Indaleko.encode_binary_data(data)
+            self.indaleko_record = None # force recompute
+        return self
+
+
     def write_config_to_db(self) -> None:
         """
         This method writes the configuration to the database.
@@ -280,10 +326,10 @@ class IndalekoMachineConfig:
         assert hasattr(
             self, "machine_id"
         ), "machine_id must be set before writing to the database."
-        assert self.validate_uuid_string(
+        assert Indaleko.validate_uuid_string(
             self.machine_id
         ), f"machine_id {self.machine_id} is not a valid UUID."
-        if not IndalekoMachineConfigSchema().is_valid_schema_dict(self.to_dict()):
+        if not IndalekoMachineConfigSchema().is_valid_json_schema_dict(self.to_dict()):
             print("Invalid record:")
             print(json.dumps(self.to_dict(), indent=4))
             raise AssertionError("Invalid record.")
@@ -309,7 +355,7 @@ class IndalekoMachineConfig:
         """
         This method finds all the machine configs with given source_id.
         """
-        if not IndalekoMachineConfig.validate_uuid_string(source_id):
+        if not Indaleko.validate_uuid_string(source_id):
             raise AssertionError(f"source_id {source_id} is not a valid UUID.")
         collections = IndalekoCollections()
         # Using spaces in names complicates things, but this does work.
@@ -326,68 +372,37 @@ class IndalekoMachineConfig:
         """
         This method deletes the specified machine config from the database.
         """
-        assert IndalekoMachineConfig.validate_uuid_string(
+        assert Indaleko.validate_uuid_string(
             machine_id
         ), f"machine_id {machine_id} is not a valid UUID."
         IndalekoCollections().get_collection(Indaleko.Indaleko_MachineConfig).delete(machine_id)
-
-    @staticmethod
-    def load_config_from_db(machine_id: str) -> "IndalekoMachineConfig":
-        """
-        This method loads the configuration from the database.
-        """
-        assert IndalekoMachineConfig.validate_uuid_string(
-            machine_id
-        ), f"machine_id {machine_id} is not a valid UUID."
-        entries = IndalekoCollections().get_collection(Indaleko.Indaleko_MachineConfig).find_entries(_key=machine_id)
-        if len(entries) == 0:
-            return None  # not found
-        assert (
-            len(entries) == 1
-        ), f"Found {len(entries)} entries for machine_id {machine_id} - multiple entries case not handled."
-        entry = entries[0]
-        machine_config = IndalekoMachineConfig()
-        machine_config.set_platform(entry["Platform"])
-        # temporary: I've changed the shape of the database, so I'll need to
-        # work around it temporarily
-        if 'Source' in entry and \
-            isinstance(entry["Source"], str) and \
-            "Version" in entry:
-            machine_config.set_source(
-                {
-                    "Identifier": entry["Source"],
-                    "Version": entry["Version"],
-                }
-            )
-        else:
-            assert isinstance(
-                entry["Source"], dict
-            ), f'entry[Source"] must be a dict, not {type(entry["Source"])}'
-            machine_config.set_source(entry["Source"])
-        machine_config.set_captured(entry["Captured"])
-        machine_config.set_base64_data(entry["Data"])
-        machine_config.set_attributes(entry["Attributes"])
-        machine_config.set_machine_id(machine_id)
-        return machine_config
 
     @staticmethod
     def get_machine_name() -> str:
         """This retrieves a user friendly machine name."""
         return socket.gethostname()
 
+    def deseralize(self) -> dict:
+        """
+        This method deserializes the machine config.
+        """
+        machine_config = IndalekoMachineConfigDataModel.MachineConfig(
+            Platform=self.get_platform(),
+            Captured=self.get_captured(),
+            Record=self.indaleko_record,
+        )
+        candidate = IndalekoMachineConfigDataModel.MachineConfig.deserialize(machine_config)
+        if hasattr(machine_config, 'machine_id'):
+            candidate["_key"] = machine_config.machine_id
+        candidate['hostname'] = self.get_machine_name()
+        return candidate
+
+
     def to_dict(self) -> dict:
         """
         This method returns the dictionary representation of the machine config.
         """
-        record = {}
-        record['Record'] = super().to_dict()
-        record["Platform"] = self.platform
-        assert self.captured is not None, "Captured timestamp must be set."
-        record["Captured"] = self.captured
-        if hasattr(self, "machine_id"):
-            record["_key"] = self.machine_id
-        record["hostname"] = IndalekoMachineConfig.get_machine_name()
-        return record
+        return self.deseralize()
 
     def to_json(self, indent: int = 4) -> str:
         """
@@ -420,7 +435,7 @@ class IndalekoMachineConfig:
         assert "data" in kwargs, "Data must be specified"
         assert "machine_id" in kwargs, "Machine ID must be specified"
         if "timestamp" in kwargs:
-            assert IndalekoMachineConfig.validate_iso_timestamp(
+            assert Indaleko.validate_iso_timestamp(
                 kwargs["timestamp"]
             ), f'Timestamp {kwargs["timestamp"]} is not a valid ISO timestamp'
             timestamp = kwargs["timestamp"]
