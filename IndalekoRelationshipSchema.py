@@ -74,7 +74,8 @@ class IndalekoRelationshipSchema(IndalekoRecordSchema):
             },
         }
         assert 'Record' not in relationship_schema, 'Record must not be specified.'
-        relationship_schema['rule']['properties']['Record'] = IndalekoRecordSchema().get_schema()['rule']
+        relationship_schema['rule']['properties']['Record'] = \
+            IndalekoRecordSchema().get_json_schema()['rule']
         relationship_schema['rule']['required'].append('Record')
         return relationship_schema
 
@@ -84,7 +85,8 @@ class IndalekoRelationshipSchema(IndalekoRecordSchema):
         assert isinstance(indaleko_relationship, dict), 'relationship must be a dict'
         valid = False
         try:
-            validate(instance=indaleko_relationship, schema=IndalekoRelationshipSchema.get_schema())
+            validate(instance=indaleko_relationship,
+                     schema=IndalekoRelationshipSchema().get_json_schema())
             valid = True
         except exceptions.ValidationError as error:
             print(f'Validation error: {error.message}')
@@ -93,9 +95,9 @@ class IndalekoRelationshipSchema(IndalekoRecordSchema):
 
 def main():
     """Test the IndalekoMachineConfigSchema class."""
-    if IndalekoRelationshipSchema.is_valid_schema(IndalekoRelationshipSchema.get_schema()):
+    if IndalekoRelationshipSchema.is_valid_json_schema(IndalekoRelationshipSchema().get_json_schema()):
         print('Schema is valid.')
-    print(json.dumps(IndalekoRelationshipSchema().get_schema(), indent=4))
+    print(json.dumps(IndalekoRelationshipSchema().get_json_schema(), indent=4))
 
 if __name__ == "__main__":
     main()

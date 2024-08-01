@@ -184,6 +184,10 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
                 IndalekoWindows.map_file_attributes(data['st_file_attributes'])
         if 'timestamp' not in kwargs:
             kwargs['timestamp'] = self.timestamp
+        if 'st_ino' in data:
+            kwargs['LocalIdentifier'] = str(data['st_ino'])
+        if 'Name' in data:
+            kwargs['Label'] = data['Name']
         indaleko_object = IndalekoObject(**kwargs)
         return indaleko_object
 
@@ -283,7 +287,7 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
         )
         load_string = self.build_load_string(
             collection='Relationships',
-
+            file=edge_file
         )
         self.write_data_to_file(dir_edges, edge_file)
         logging.info('Load string: %s', load_string)

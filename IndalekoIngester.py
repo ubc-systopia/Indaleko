@@ -49,7 +49,8 @@ import jsonlines
 import datetime
 import os
 import uuid
-from IndalekoServices import IndalekoService
+from IndalekoServiceManager import IndalekoServiceManager
+from IndalekoService import IndalekoService
 from Indaleko import Indaleko
 from IndalekoDBConfig import IndalekoDBConfig
 

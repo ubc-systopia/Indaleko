@@ -20,13 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
 from dataclasses import dataclass
-from datetime import datetime, UTC
-from typing import Dict, Any, Annotated, Optional
 from uuid import UUID
-from apischema import schema
 from apischema.graphql import graphql_schema
-from apischema.json_schema import deserialization_schema
-from apischema.metadata import required
 from graphql import print_schema
 
 from IndalekoRecordDataModel import IndalekoRecordDataModel

@@ -65,7 +65,6 @@ class IndalekoObject:
             ),
             Timestamp= datetime.datetime.now(datetime.UTC) # self.kwargs['timestamp']
         )
-        print(json.dumps(kwargs, indent=4))
         del kwargs['raw_data']
         del kwargs['Attributes']
         del kwargs['source']
@@ -83,8 +82,11 @@ class IndalekoObject:
     def serialize(self) -> dict:
         '''Serialize the object to a dictionary.'''
         serialized_data = IndalekoObjectDataModel.IndalekoObject.serialize(self.indaleko_object)
-        assert 'Label' in serialized_data, 'Label is missing from serialized data.'
-        serialized_data['_key'] = self.args['ObjectIdentifier']
+        if isinstance(serialized_data, tuple):
+            assert len(serialized_data) == 1, 'Serialized data is a multi-entry tuple.'
+            serialized_data = serialized_data[0]
+        if isinstance(serialized_data, dict):
+            serialized_data['_key'] = self.args['ObjectIdentifier']
         return serialized_data
 
     def to_dict(self):
@@ -180,15 +182,9 @@ def main():
         "LocalIdentifier" : None
     }
     indaleko_object = IndalekoObject.deserialize(data_object)
-    ic(indaleko_object)
     print(json.dumps(indaleko_object.serialize(), indent=2))
-    return
-    objattrs['Attributes'] = fattrs
-    obj = IndalekoObject(source=source, raw_data=args.raw_data, **objattrs)
-    ic(obj.indaleko_object)
-    print(json.dumps(obj.serialize(), indent=4))
-    if IndalekoObjectSchema.is_valid_object(obj.serialize()):
-        print('Object is valid.')
+    assert IndalekoObjectSchema.is_valid_object(indaleko_object.serialize()),\
+        'Object is not valid.'
 
 if __name__ == "__main__":
     main()

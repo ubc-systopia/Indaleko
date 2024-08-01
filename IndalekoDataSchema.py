@@ -35,23 +35,15 @@ from IndalekoDataModel import IndalekoDataModel, IndalekoUUID
 class IndalekoDataSchema:
     '''This is the base class for schema within Indaleko'''
 
-    template = {
-            "$schema": "https://json-schema.org/draft/2020-12/schema#",
-            "$id": "https://activitycontext.work/indaleko/schema/record.json",
-            "title": "Indaleko Schema",
-            "description": "Schema for the JSON representation of an abstract record in Indaleko.",
-            "type": "object",
-        }
-
     def __init__(self, **kwargs):
         '''Initialize the schema'''
         self.data_model = kwargs.get('data_model', IndalekoDataModel())
         self.base_type = kwargs.get('base_type', IndalekoDataModel.SourceIdentifier)
         self.schema_rules = kwargs.get('schema_rules', {})
         self.schema_standard = kwargs.get('schema_standard',
-                                                   "https://json-schema.org/draft/2020-12/schema#")
+                                            "https://json-schema.org/draft/2020-12/schema#")
         self.schema_id = kwargs.get('schema_id',
-                                             "https://activitycontext.work/indaleko/schema/record.json")
+                                    "https://activitycontext.work/indaleko/schema/record.json")
         self.schema_title = kwargs.get('schema_title', "Indaleko Schema")
         self.schema_description = kwargs.get('schema_description', "Default Schema.")
         self.schema_type = kwargs.get('schema_type', "object")
@@ -63,7 +55,7 @@ class IndalekoDataSchema:
                                         "title": self.schema_title,
                                         "description": self.schema_description,
                                         "type": self.schema_type,
-                                        "rules" : self.schema_rules
+                                        "rule" : self.schema_rules
                                     }
         )
         self.graphql_queries = self.data_model.get_queries()
@@ -122,7 +114,7 @@ class IndalekoDataSchema:
                           identifier : uuid.UUID = None) -> IndalekoUUID:
         '''Return a UUID'''
         indaleko_uuid = IndalekoUUID(
-            identifier=identifier,
+            Identifier=identifier,
             Label=label
         )
         return indaleko_uuid
@@ -132,7 +124,7 @@ class IndalekoDataSchema:
                                data : str = None) -> IndalekoDataModel.SemanticAttribute:
         '''Return a semantic attribute'''
         semantic_attribute = IndalekoDataModel.SemanticAttribute(
-            identifer=identifier,
+            Identifier=identifier,
             Data=data
         )
         return semantic_attribute
@@ -157,14 +149,14 @@ class IndalekoDataSchema:
         return default
 
     def get_json_schema(self : 'IndalekoDataSchema') -> dict:
-        '''Return the JSON schema for the Indaleko Record (for ArangoDB)'''
+        '''Return the JSON schema for the object.'''
         return self.json_schema
 
     def print_graphql_schema(self) -> str:
         '''Return the GraphQL schema for the schema.'''
         return print_schema(self.graphql_schema)
 
-    def schema_detail(self, **kwargs) -> None:
+    def schema_detail(self) -> None:
         '''Provide a basic function to check the schema detail.'''
         if hasattr(self, 'get_old_schema'):
             assert self.is_valid_json_schema_dict(self.get_old_schema()), 'Old schema is not valid.'

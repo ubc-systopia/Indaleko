@@ -24,11 +24,16 @@ import argparse
 import logging
 import datetime
 import os
+import json
+
+import arango
+
 from Indaleko import Indaleko
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoSingleton import IndalekoSingleton
 from IndalekoCollectionIndex import IndalekoCollectionIndex
 from IndalekoCollection import IndalekoCollection
+
 
 class IndalekoCollections(IndalekoSingleton):
     """
@@ -47,10 +52,19 @@ class IndalekoCollections(IndalekoSingleton):
         for name in Indaleko.Collections.items():
             name = name[0]
             logging.debug('Processing collection %s', name)
-            self.collections[name] = IndalekoCollection(name=name,
-                                                        definition=Indaleko.Collections[name],
-                                                        db=self.db_config,
-                                                        reset=self.reset)
+            try:
+                self.collections[name] = IndalekoCollection(name=name,
+                                                            definition=Indaleko.Collections[name],
+                                                            db=self.db_config,
+                                                            reset=self.reset)
+            except arango.exceptions.CollectionConfigureError as error: # pylint: disable=no-member
+                logging.error('Failed to configure collection %s', name)
+                print(f'Failed to configure collection {name}')
+                print(error)
+                if Indaleko.Collections[name]['schema'] is not None:
+                    print('Schema:')
+                    print(json.dumps(Indaleko.Collections[name]['schema'], indent=2))
+                raise error
 
     @staticmethod
     def get_collection(name: str) -> IndalekoCollection:

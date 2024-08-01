@@ -18,7 +18,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import json
-import jsonschema
 from jsonschema import validate
 
 from IndalekoUserDataModel import IndalekoUserDataModel
@@ -69,7 +68,7 @@ class IndalekoUserSchema(IndalekoRecordSchema):
 
 def main():
     '''Test code for IndalekoUserSchema.'''
-    if IndalekoUserSchema.is_valid_schema(IndalekoUserSchema.get_old_schema()):
+    if IndalekoUserSchema.is_valid_json_schema(IndalekoUserSchema.get_old_schema()):
         print('Schema is valid.')
     print(json.dumps(IndalekoUserSchema.get_old_schema(), indent=4))
 

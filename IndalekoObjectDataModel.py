@@ -91,10 +91,11 @@ class IndalekoObjectDataModel(IndalekoRecordDataModel):
         @staticmethod
         def serialize(data) -> dict:
             '''Serialize the object to a dictionary.'''
-            ic(data)
             candidate = apischema.serialize(IndalekoObjectDataModel.IndalekoObject,
                                             data,
-                                            additional_properties=True)
+                                            additional_properties=True,
+                                            exclude_none=True,
+                                            exclude_unset=True),
             return candidate
 
 
@@ -134,8 +135,10 @@ def main():
     ic('GraphQL Schema:')
     ic(print_schema(graphql_schema(query=IndalekoObjectDataModel.get_queries(),
                                       types=IndalekoObjectDataModel.get_types())))
-    unpack_schema = deserialization_schema(IndalekoObjectDataModel.IndalekoObject, additional_properties=True)
-    pack_schema = serialization_schema(IndalekoObjectDataModel.IndalekoObject, additional_properties=True)
+    unpack_schema = deserialization_schema(IndalekoObjectDataModel.IndalekoObject,
+                                           additional_properties=True)
+    pack_schema = serialization_schema(IndalekoObjectDataModel.IndalekoObject,
+                                       additional_properties=True)
     json_unpack_schema = json.dumps(unpack_schema, indent=2)
     print(json_unpack_schema)
     json_pack_schema = json.dumps(pack_schema, indent=2)
@@ -209,9 +212,7 @@ def main():
         "LocalIdentifier" : None
     }
     indaleko_object = IndalekoObjectDataModel.IndalekoObject.deserialize(data_object)
-    ic(indaleko_object)
-    serialized_object = IndalekoObjectDataModel.IndalekoObject.serialize(indaleko_object)
-    ic(serialized_object)
+    IndalekoObjectDataModel.IndalekoObject.serialize(indaleko_object)
 
     try:
         jsonschema.validate(instance=data_object, schema=unpack_schema)
@@ -222,5 +223,6 @@ def main():
         jsonschema.validate(instance=data_object, schema=pack_schema)
     except jsonschema.exceptions.ValidationError as error:
         print(f'Validation error: {error.message}')
+
 if __name__ == '__main__':
     main()
