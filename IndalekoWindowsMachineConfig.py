@@ -24,13 +24,18 @@ import uuid
 import datetime
 import argparse
 import re
+import base64
+import msgpack
 import arango
 
 from Indaleko import Indaleko
+from IndalekoMachineConfigDataModel import IndalekoMachineConfigDataModel
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoMachineConfig import IndalekoMachineConfig
+from IndalekoRecordDataModel import IndalekoRecordDataModel
+from IndalekoDataModel import IndalekoDataModel
 
-class IndalekoWindowsMachineConfig:
+class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
     '''
     The IndalekoWindowsMachineConfig class is used to capture information about
     a Windows machine.  It is a specialization of the IndalekoMachineConfig
@@ -105,7 +110,7 @@ class IndalekoWindowsMachineConfig:
             source_version=IndalekoWindowsMachineConfig.windows_machine_config_service['service_version'],
             timestamp=timestamp.isoformat(),
             attributes=config_data,
-            data=Indaleko.encode_binary_data(config_data),
+            data=base64.b64encode(msgpack.packb(config_data)).decode('ascii'),
             machine_id=config_data['MachineGuid']
         )
         config.extract_volume_info()
@@ -166,14 +171,22 @@ class IndalekoWindowsMachineConfig:
             assert drive_data['UniqueId'].startswith('\\\\?\\Volume{')
             drive_data['GUID'] = self.__find_volume_guid__(drive_data['UniqueId'])
             self.machine_id = machine_id
-            super().__init__(raw_data = Indaleko.encode_binary_data(drive_data),
-                             attributes = drive_data,
-                             source_identifier = {
-                                'Identifier' : self.WindowsDriveInfo_UUID_str,
-                                'Version' : self.WindowsDriveInfo_Version,
-                             })
-            assert isinstance(captured, dict), 'captured must be a dict'
+            self.indaleko_record = IndalekoRecordDataModel.IndalekoRecord(
+                SourceIdentifier = IndalekoDataModel.SourceIdentifier(
+                    Identifier = self.WindowsDriveInfo_UUID_str,
+                    Version = self.WindowsDriveInfo_Version,
+                    Description = self.WindowsDriveInfo_Description
+                ),
+                Timestamp = captured['Value'],
+                Data = Indaleko.encode_binary_data(drive_data),
+                Attributes = drive_data
+            )
             self.captured = captured
+            self.platform = None
+
+        def get_attributes(self) -> dict:
+            '''Return the attributes of the volume.'''
+            return self.indaleko_record.Attributes
 
         @staticmethod
         def __find_volume_guid__(vol_name : str) -> str:
@@ -186,13 +199,21 @@ class IndalekoWindowsMachineConfig:
             '''Return the GUID of the volume.'''
             return self.get_attributes()['GUID']
 
+        def serialize(self) -> dict:
+            '''Serialize the WindowsDriveInfo object.'''
+            obj = IndalekoMachineConfigDataModel.MachineConfig(
+                Captured = self.captured,
+                Record = self.indaleko_record
+            )
+            config_data = IndalekoMachineConfigDataModel.MachineConfig.serialize(obj)
+            if hasattr(self, 'machine_id'):
+                config_data['Machine'] = self.machine_id
+            config_data['_key'] = self.get_vol_guid()
+            return config_data
+
         def to_dict(self):
-            obj = {}
-            obj['Record'] = super().to_dict()
-            obj['Machine'] = self.machine_id
-            obj['Captured'] = self.captured
-            obj['_key'] = self.get_vol_guid()
-            return obj
+            '''Return the WindowsDriveInfo object as a dictionary.'''
+            return self.serialize()
 
     def extract_volume_info(self: 'IndalekoWindowsMachineConfig') -> None:
         '''Extract the volume information from the machine configuration.'''

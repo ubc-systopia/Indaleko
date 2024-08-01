@@ -44,10 +44,36 @@ class IndalekoObject:
 
     def __init__(self, **kwargs):
         '''Initialize the object.'''
-        self.kwargs = kwargs
-        self.indaleko_object = IndalekoObjectDataModel.IndalekoObject.deserialize(
-            kwargs
+        self.args = kwargs
+        if 'Record' not in kwargs:
+            self.legacy_constructor()
+        else:
+            self.indaleko_object = IndalekoObjectDataModel.IndalekoObject.deserialize(
+                kwargs
+            )
+
+    def legacy_constructor(self):
+        '''Create an object using the old format.'''
+        kwargs = self.args
+        record = IndalekoRecordDataModel.IndalekoRecord(
+            Data=kwargs['raw_data'],
+            Attributes=kwargs['Attributes'],
+            SourceIdentifier=IndalekoDataModel.SourceIdentifier(
+                Identifier=kwargs['source']['Identifier'],
+                Version=kwargs['source']['Version'],
+                Description=None
+            ),
+            Timestamp= datetime.datetime.now(datetime.UTC) # self.kwargs['timestamp']
         )
+        print(json.dumps(kwargs, indent=4))
+        del kwargs['raw_data']
+        del kwargs['Attributes']
+        del kwargs['source']
+        del kwargs['timestamp']
+        assert 'Record' not in kwargs, 'Record is still in kwargs - new style constructor.'
+        kwargs['Record'] = IndalekoRecordDataModel.IndalekoRecord.serialize(record)
+        self.indaleko_object = IndalekoObjectDataModel.IndalekoObject.deserialize(kwargs)
+
 
     @staticmethod
     def deserialize(data: dict) -> 'IndalekoObject':
@@ -58,13 +84,25 @@ class IndalekoObject:
         '''Serialize the object to a dictionary.'''
         serialized_data = IndalekoObjectDataModel.IndalekoObject.serialize(self.indaleko_object)
         assert 'Label' in serialized_data, 'Label is missing from serialized data.'
-        serialized_data['_key'] = self.kwargs['ObjectIdentifier']
+        serialized_data['_key'] = self.args['ObjectIdentifier']
         return serialized_data
+
+    def to_dict(self):
+        '''Return a dictionary representation of this object.'''
+        return self.serialize()
 
     @staticmethod
     def create_indaleko_object(**kwargs) -> 'IndalekoObject':
         '''Create an Indaleko Object from an old style description.'''
         raise NotImplementedError('This method is not implemented.')
+
+    def __getitem__(self, key):
+        '''Get an item from the object.'''
+        return self.indaleko_object.Record.Attributes[key]
+
+    def __contains__(self, key):
+        '''Check if an item is in the object.'''
+        return key in self.indaleko_object.Record.Attributes
 
 def main():
     """Test code for the IndalekoObject class."""

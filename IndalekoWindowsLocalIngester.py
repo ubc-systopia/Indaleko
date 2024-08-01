@@ -182,6 +182,8 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
         if 'st_file_attributes' in data:
             kwargs['WindowsFileAttributes'] = \
                 IndalekoWindows.map_file_attributes(data['st_file_attributes'])
+        if 'timestamp' not in kwargs:
+            kwargs['timestamp'] = self.timestamp
         indaleko_object = IndalekoObject(**kwargs)
         return indaleko_object
 
@@ -206,7 +208,7 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
                 continue
             if 'S_IFDIR' in obj.args['UnixFileAttributes'] or \
                'FILE_ATTRIBUTE_DIRECTORY' in obj.args['WindowsFileAttributes']:
-                if 'Path' not in obj:
+                if 'Path' not in obj.indaleko_object.Record.Attributes:
                     logging.warning('Directory object does not have a path: %s', obj.to_json())
                     continue # skip
                 dir_data_by_path[os.path.join(obj['Path'], obj['Volume GUID'])] = obj
