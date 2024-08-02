@@ -33,7 +33,7 @@ import jsonlines
 from IndalekoIngester import IndalekoIngester
 from Indaleko import Indaleko
 from IndalekoDropboxIndexer import IndalekoDropboxIndexer
-from IndalekoServices import IndalekoService
+from IndalekoServiceManager import IndalekoServiceManager
 import IndalekoLogging
 from IndalekoObject import IndalekoObject
 from IndalekoUnix import UnixFileAttributes
@@ -48,12 +48,12 @@ class IndalekoDropboxIngester(IndalekoIngester):
     '''
 
     dropbox_ingester_uuid = '389ce9e0-3924-4cd1-be8d-5dc4b268e668'
-    dropbox_ingester_service = IndalekoService.create_service_data(
+    dropbox_ingester_service = IndalekoServiceManager().register_service(
         service_name = 'Dropbox Ingester',
         service_description = 'This service ingests captured index info from Dropbox.',
         service_version = '1.0',
         service_type = 'Ingester',
-        service_identifier = dropbox_ingester_uuid,
+        service_id = dropbox_ingester_uuid,
     )
 
     dropbox_platform = IndalekoDropboxIndexer.dropbox_platform
@@ -66,7 +66,7 @@ class IndalekoDropboxIngester(IndalekoIngester):
             raise ValueError('timestamp must be specified')
         if 'platform' not in kwargs:
             raise ValueError('platform must be specified')
-        for key, value in self.dropbox_ingester_service.items():
+        for key, value in self.dropbox_ingester_service.serialize().items():
             if key not in kwargs:
                 kwargs[key] = value
         super().__init__(**kwargs)

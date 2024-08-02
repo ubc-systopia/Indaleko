@@ -31,7 +31,7 @@ from IndalekoIngester import IndalekoIngester
 from IndalekoLinuxMachineConfig import IndalekoLinuxMachineConfig
 from Indaleko import Indaleko
 from IndalekoLinuxLocalIndexer import IndalekoLinuxLocalIndexer
-from IndalekoServices import IndalekoService
+from IndalekoServiceManager import IndalekoServiceManager
 from IndalekoObject import IndalekoObject
 from IndalekoUnix import UnixFileAttributes
 from IndalekoRelationshipContains import IndalekoRelationshipContains
@@ -44,13 +44,13 @@ class IndalekoLinuxLocalIngester(IndalekoIngester):
     '''
 
     linux_local_ingester_uuid = '14ab60a0-3a5a-456f-8400-07c47a274f4b'
-    linux_local_ingester_service = IndalekoService.create_service_data(
-        service_name = 'Linux Local Ingester',
-        service_description = 'This service ingests captured index info from the local filesystems of a Linux machine.',
-        service_version = '1.0',
-        service_type = 'Ingester',
-        service_identifier = linux_local_ingester_uuid,
-    )
+    linux_local_ingester_service = {
+        'service_name' : 'Linux Local Ingester',
+        'service_description' : 'This service ingests captured index info from the local filesystems of a Linux machine.',
+        'service_version' : '1.0',
+        'service_type' : 'Ingester',
+        'service_identifier' : linux_local_ingester_uuid,
+    }
 
     linux_platform = IndalekoLinuxLocalIndexer.linux_platform
     linux_local_ingester = 'local_fs_ingester'

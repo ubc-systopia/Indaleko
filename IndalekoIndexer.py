@@ -26,7 +26,7 @@ import jsonlines
 import json
 import uuid
 from Indaleko import Indaleko
-from IndalekoServices import IndalekoService
+from IndalekoServiceManager import IndalekoServiceManager
 
 class IndalekoIndexer:
     '''
@@ -127,9 +127,9 @@ class IndalekoIndexer:
         self.service_identifier = self.indaleko_generic_indexer_uuid
         if 'service_identifier' in kwargs:
             self.service_identifier = kwargs['service_identifier']
-        self.indexer_service = IndalekoService(
+        self.indexer_service = IndalekoServiceManager().register_service(
             service_name=self.service_name,
-            service_identifier=self.service_identifier,
+            service_id=self.service_identifier,
             service_description=self.service_description,
             service_version=self.service_version,
             service_type=self.service_type

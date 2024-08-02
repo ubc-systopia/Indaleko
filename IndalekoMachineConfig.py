@@ -33,7 +33,7 @@ from IndalekoCollections import IndalekoCollections
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
 from Indaleko import Indaleko
-from IndalekoServices import IndalekoService
+from IndalekoServiceManager import IndalekoServiceManager
 from IndalekoRecordDataModel import IndalekoRecordDataModel
 from IndalekoDataModel import IndalekoDataModel
 from IndalekoMachineConfigDataModel import IndalekoMachineConfigDataModel
@@ -95,11 +95,13 @@ class IndalekoMachineConfig:
         service_type = "Machine Configuration"
         if "service_type" in kwargs:
             service_type = kwargs["service_type"]
-        self.machine_config_service = IndalekoService(service_name=service_name,
-                              service_identifier=service_identifier,
-                              service_description=service_description,
-                              service_version=service_version,
-                              service_type=service_type)
+        self.machine_config_service = IndalekoServiceManager().register_service(
+            service_name=service_name,
+            service_id=service_identifier,
+            service_description=service_description,
+            service_version=service_version,
+            service_type=service_type
+        )
         assert self.machine_config_service is not None, "MachineConfig service does not exist."
 
     @staticmethod

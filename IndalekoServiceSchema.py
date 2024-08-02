@@ -23,7 +23,6 @@ import apischema
 from uuid import UUID
 
 from IndalekoRecordSchema import IndalekoRecordSchema
-from IndalekoService import IndalekoService
 from IndalekoServiceDataModel import IndalekoServiceDataModel
 
 class IndalekoServiceSchema(IndalekoRecordSchema):
