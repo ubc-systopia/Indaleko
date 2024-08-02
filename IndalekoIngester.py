@@ -111,8 +111,8 @@ class IndalekoIngester():
         self.storage_description = None
         if 'storage_description' in kwargs:
             if kwargs['storage_description'] is None or \
-               kwargs['storage_description'] == 'unknown':
-                    del kwargs['storage_description']
+                kwargs['storage_description'] == 'unknown':
+                del kwargs['storage_description']
             else:
                 self.storage_description = str(uuid.UUID(kwargs['storage_description']).hex)
         self.data_dir = kwargs.get('data_dir', Indaleko.default_data_dir)
@@ -120,19 +120,24 @@ class IndalekoIngester():
         self.input_dir = kwargs.get('input_dir', self.data_dir)
         self.config_dir = kwargs.get('config_dir', Indaleko.default_config_dir)
         self.log_dir = kwargs.get('log_dir', Indaleko.default_log_dir)
-        self.service_name = kwargs.get('Name', IndalekoIngester.indaleko_generic_ingester_service_name)
-        self.service_description = kwargs.get('Description', IndalekoIngester.indaleko_generic_ingester_service_description)
-        self.service_version = kwargs.get('Version', IndalekoIngester.indaleko_generic_ingester_service_version)
+        self.service_name = kwargs.get('Name', kwargs.get('service_name', None))
+        assert self.service_name is not None, 'Service name must be specified'
+        self.service_description = kwargs.get('Description',
+                                              IndalekoIngester\
+                                                .indaleko_generic_ingester_service_description)
+        self.service_version = kwargs.get('Version',
+                                          IndalekoIngester\
+                                            .indaleko_generic_ingester_service_version)
         self.service_type = kwargs.get('Type', 'Ingester')
-        self.service_identifier = kwargs.get('Identifier', IndalekoIngester.indaleko_generic_ingester_uuid_str)
-        assert self.service_identifier != self.indaleko_generic_ingester_uuid_str, \
-            'Service identifier must be specified'
-        self.ingester_service = IndalekoService(
+        self.service_identifier = kwargs.get('Identifier', kwargs.get('service_identifier', None))
+        assert self.service_identifier is not None, \
+            f'Service identifier must be specified\n{kwargs}'
+        self.ingester_service = IndalekoServiceManager().register_service(
             service_name = self.service_name,
             service_description = self.service_description,
             service_version = self.service_version,
             service_type = self.service_type,
-            service_identifier = self.service_identifier,
+            service_id = self.service_identifier,
         )
         assert self.ingester_service is not None, 'Ingester service does not exist'
         for count in IndalekoIngester.counter_values:

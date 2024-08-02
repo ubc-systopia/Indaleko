@@ -35,6 +35,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import argparse
 import uuid
 import datetime
+import logging
 
 from icecream import ic
 from IndalekoDBConfig import IndalekoDBConfig
@@ -45,7 +46,7 @@ from IndalekoServiceSchema import IndalekoServiceSchema
 from IndalekoService import IndalekoService
 from IndalekoRecordDataModel import IndalekoRecordDataModel
 from IndalekoDataModel import IndalekoDataModel
-
+from IndalekoLogging import IndalekoLogging
 class IndalekoServiceManager(IndalekoSingleton):
     '''
     This class defines the service model for Indaleko.
@@ -100,6 +101,8 @@ class IndalekoServiceManager(IndalekoSingleton):
             definition=self.CollectionDefinition,
             db=self.db_config,
             reset=reset)
+        if not self.db_config.db.has_collection(self.indaleko_services):
+            self.create_indaleko_services_collection()
 
 
     def create_indaleko_services_collection(self) -> IndalekoCollection:
@@ -137,7 +140,7 @@ class IndalekoServiceManager(IndalekoSingleton):
         """
         if not Indaleko.validate_uuid_string(service_identifier):
             raise ValueError(f'{service_identifier} is not a valid UUID.')
-        entries = self.service_collection.find_entries(identifier =  service_identifier)
+        entries = self.service_collection.find_entries(Identifier =  service_identifier)
         assert len(entries) < 2, \
             f'Multiple entries found for service {service_identifier}, not handled.'
         if len(entries) == 0:
@@ -147,9 +150,9 @@ class IndalekoServiceManager(IndalekoSingleton):
 
 
     def register_service(self,
-                         name: str,
-                         description: str,
-                         version: str,
+                         service_name: str,
+                         service_description: str,
+                         service_version: str,
                          service_type : str = 'Indexer',
                          service_id : str  = None) -> IndalekoService:
         """
@@ -171,9 +174,9 @@ class IndalekoServiceManager(IndalekoSingleton):
                 Attributes = {},
                 Data = Indaleko.encode_binary_data(b'{}')
             ),
-            service_name=name,
-            service_description=description,
-            service_version=version,
+            service_name=service_name,
+            service_description=service_description,
+            service_version=service_version,
             service_type=service_type,
             service_identifier=service_id
         )
@@ -182,40 +185,128 @@ class IndalekoServiceManager(IndalekoSingleton):
         # return self.lookup_service_by_name(name)
         return new_service
 
-def old_main():
-    """Test the IndalekoServices class."""
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--identifier', type=str, default='4debd7e6-c71a-4830-a0a1-8b4e599faea6', help='The identifier of the service to look up.')
-    parser.add_argument('--version', action='version', version='%(prog)s 1.0')
-    parser.add_argument('--reset', action='store_true', help='Reset the service collection.')
-    args = parser.parse_args()
-    service = IndalekoService(service_name='test',
-                              service_identifier=args.identifier,
-                              service_description='This is a test service.',
-                              service_version='1.0',
-                              service_type='Test')
-    print('Dump record after the lookup by name test:')
-    print(service.to_json())
-    service = IndalekoService(service_identifier='4debd7e6-c71a-4830-a0a1-8b4e599faea6')
-    print('Dump record after the lookup by identifier test:')
-    print(service.to_json())
+class IndalekoServiceManagerTest:
+    '''This class defines the test operations for the IndalekoServiceManager.'''
 
-def main():
-    '''Test code for IndalekoServiceManager.'''
-    service_manager = IndalekoServiceManager()
-    print('service manager created successfully')
-    existing_service = service_manager.lookup_service_by_name('Test Service')
-    if existing_service is not None:
-        print('Found existing service:')
-        print(existing_service.to_json())
-    else:
-        print('No existing service found.')
+    def __init__(self):
+        self.service_manager = IndalekoServiceManager()
+
+    @staticmethod
+    def find_test_service():
+        '''Find the test service.'''
+        service_manager = IndalekoServiceManager()
+        return service_manager.lookup_service_by_name('Test Service')
+
+    @staticmethod
+    def test_create_service(args : argparse.Namespace) -> None:
+        '''Test creating a service.'''
+        ic('Creating the test service')
+        ic(args)
+        service_manager = IndalekoServiceManager()
         new_service = service_manager.register_service(
-            name='Test Service',
-            description='This is a test service.',
-            version='1.0.0',
+            service_name='Test Service',
+            service_description='This is a test service.',
+            service_version='1.0.0',
             service_type='Test'
         )
+        ic(new_service)
+
+
+    @staticmethod
+    def test_lookup_service(args : argparse.Namespace) -> None:
+        '''Test looking up a service.'''
+        ic('Looking up the test service')
+        ic(args)
+
+    @staticmethod
+    def test_delete_service(args : argparse.Namespace) -> None:
+        '''Test deleting a service.'''
+        ic('Deleting the service')
+        ic(args)
+        service_manager = IndalekoServiceManager()
+        service = service_manager.lookup_service_by_name('Test Service')
+        if service is not None:
+            ic(dir(service))
+            ic(service.service_identifier)
+            service_manager.service_collection.delete(service.service_identifier)
+            ic('Test Service deleted.')
+        else:
+            ic('Test Service not found.')
+
+def list_services(args : argparse.Namespace) -> None:
+    '''List the services in the database.'''
+    ic('List the services')
+    ic(args)
+    service_manager = IndalekoServiceManager()
+    services = service_manager.service_collection.find_entries()
+    for service in services:
+        ic(service)
+
+def delete_service(args : argparse.Namespace) -> None:
+    '''Delete a service from the database.'''
+    ic('Deleting the service')
+    ic(args)
+    service_manager = IndalekoServiceManager()
+    if args.name:
+        ic('Function not implemented yet.')
+    else:
+        service = service_manager.lookup_service_by_identifier(args.identifier)
+        if service is not None:
+            service_manager.service_collection.delete(service.service_identifier)
+            ic(f'Service {args.identifier} deleted.')
+        else:
+            ic(f'Service {args.identifier} not found.')
+
+def main():
+    '''The interface for the service manager.'''
+    now = datetime.datetime.now(datetime.timezone.utc)
+    timestamp=now.isoformat()
+    parser = argparse.ArgumentParser(description='Indaleko Service Manager')
+    parser.add_argument('--logdir' , type=str, default=Indaleko.default_log_dir, help='Log directory')
+    parser.add_argument('--log', type=str, default=None, help='Log file name')
+    parser.add_argument('--loglevel', type=int, default=logging.DEBUG, choices=IndalekoLogging.get_logging_levels(), help='Log level')
+    command_subparser = parser.add_subparsers(dest='command')
+    parser_test = command_subparser.add_parser('test', help='Test the service manager')
+    # Set up the test logic
+    test_subparser = parser_test.add_subparsers(dest='test_command')
+    parser_test_create = test_subparser.add_parser('create', help='Create the test service manager')
+    parser_test_create.set_defaults(func=IndalekoServiceManagerTest.test_create_service)
+    parser_test_lookup = test_subparser.add_parser('lookup', help='Lookup the test service')
+    parser_test_lookup.set_defaults(func=IndalekoServiceManagerTest.test_lookup_service)
+    parser_test_delete = test_subparser.add_parser('delete', help='Delete the test service')
+    parser_test_delete.set_defaults(func=IndalekoServiceManagerTest.test_delete_service)
+    # List the registered services
+    parser_list = command_subparser.add_parser('list', help='List the registered services')
+    parser_list.set_defaults(func=list_services)
+    # Delete a registered service
+    parser_delete = command_subparser.add_parser('delete', help='Delete a registered services')
+    parser_delete.add_argument('--name', type=str, help='The name of the service to delete')
+    parser_delete.add_argument('--identifier', type=str, help='The identifier of the service to delete')
+    parser_delete.set_defaults(func=delete_service)
+    parser.set_defaults(func=list_services)
+    args = parser.parse_args()
+    ic(args)
+    if args.log is None:
+        args.log=Indaleko.generate_file_name(
+            suffix='log',
+            service='IndalekoServiceManager',
+            timestamp=timestamp
+        )
+    indaleko_logging = IndalekoLogging(
+        service_name='IndalekoServiceManager',
+        log_level=args.loglevel,
+        log_file=args.log,
+        log_dir=args.logdir
+    )
+    if indaleko_logging is None:
+        print('Could not create logging object')
+        exit(1)
+    logging.info('Starting IndalekoServiceManager')
+    logging.debug(args)
+    args.func(args)
+    logging.info('IndalekoServiceManager: done processing.')
+
+
 
 
 if __name__ == "__main__":

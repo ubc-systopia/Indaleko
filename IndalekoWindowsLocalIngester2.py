@@ -24,31 +24,24 @@ import logging
 import os
 import json
 import jsonlines
-import uuid
-import filetype
 
 from IndalekoIngester import IndalekoIngester
 from IndalekoWindowsMachineConfig import IndalekoWindowsMachineConfig
 from Indaleko import Indaleko
 from IndalekoWindowsLocalIndexer import IndalekoWindowsLocalIndexer
-from IndalekoServices import IndalekoService
-from IndalekoObject import IndalekoObject
-from IndalekoUnix import UnixFileAttributes
-from IndalekoWindows import IndalekoWindows
-from IndalekoRelationshipContains import IndalekoRelationshipContains
-from IndalekoRelationshipContained import IndalekoRelationshipContainedBy
+from IndalekoServiceManager import IndalekoServiceManager
 
 
 class IndalekoWindowsLocalSupplementalIngester(IndalekoIngester):
 
     windows_local_supplemental_ingester_uuid = 'e38c23ea-0f21-40dd-9efc-3de49f282bba'
-    windows_local_supplemental_ingester_service = IndalekoService.create_service_data(
-        service_name = 'Windows Local Supplemental Ingester',
-        service_description = 'This service generates and updates entries based upon extracted metadata from local files',
-        service_version = '1.0',
-        service_type = 'Ingester',
-        service_identifier = windows_local_supplemental_ingester_uuid,
-    )
+    windows_local_supplemental_ingester_service = {
+        'service_name' : 'Windows Local Supplemental Ingester',
+        'service_description' : 'This service generates and updates entries based upon extracted metadata from local files',
+        'service_version' : '1.0',
+        'service_type' : 'Ingester',
+        'service_identifier' : windows_local_supplemental_ingester_uuid,
+    }
 
     windows_platform = IndalekoWindowsLocalIndexer.windows_platform
     windows_local_ingester = 'supplemental_fs_ingester'

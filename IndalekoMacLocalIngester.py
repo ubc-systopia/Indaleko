@@ -14,8 +14,6 @@ from IndalekoIngester import IndalekoIngester
 from Indaleko import Indaleko
 from IndalekoMacLocalIndexer import IndalekoMacLocalIndexer
 from IndalekoMacMachineConfig import IndalekoMacOSMachineConfig
-from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
-from IndalekoServices import IndalekoService
 from IndalekoObject import IndalekoObject
 from IndalekoUnix import UnixFileAttributes
 from IndalekoRelationshipContains import IndalekoRelationshipContains
@@ -29,13 +27,13 @@ class IndalekoMacLocalIngester(IndalekoIngester):
     '''
 
     mac_local_ingester_uuid = '07670255-1e82-4079-ad6f-f2bb39f44f8f'
-    mac_local_ingester_service = IndalekoService.create_service_data(
-        service_name='Mac Local Ingester',
-        service_description='This service ingests captured index info from the local filesystems of a Mac machine.',
-        service_version='1.0',
-        service_type='Ingester',
-        service_identifier=mac_local_ingester_uuid,
-    )
+    mac_local_ingester_service = {
+        'service_name' : 'Mac Local Ingester',
+        'service_description' : 'This service ingests captured index info from the local filesystems of a Mac machine.',
+        'service_version' : '1.0',
+        'service_type' : 'Ingester',
+        'service_identifier' : mac_local_ingester_uuid,
+    }
 
     mac_platform = IndalekoMacLocalIndexer.mac_platform
     mac_local_ingester = 'local_fs_ingester'
@@ -274,12 +272,8 @@ class IndalekoMacLocalIngester(IndalekoIngester):
 
         # import these using arangoimport tool
         self.arangoimport()
-<<<<<<< HEAD
-
-=======
 
 
->>>>>>> main
     def arangoimport(self):
         print('{:-^20}'.format(""))
         print('using arangoimport to import objects')
@@ -306,12 +300,17 @@ class IndalekoMacLocalIngester(IndalekoIngester):
         overwrite = str(self.reset_collection).lower()
 
         # copy the files first
-        for filename, dest_filename in [(self.objects_file, "objects.jsonl"), (self.relations_file, "relations.jsonl")]:
+        for filename, dest_filename in [
+            (self.objects_file, "objects.jsonl"),
+            (self.relations_file, "relations.jsonl")
+        ]:
             self.__run_docker_cmd(f'docker cp {filename} {
                                   container_name}:{dest}/{dest_filename}')
 
         # run arangoimport on both of these files
-        for filename, collection_name in [("objects.jsonl", "Objects"), ("relations.jsonl", "Relationships")]:
+        for filename, collection_name in [
+            ("objects.jsonl", "Objects"),
+            ("relations.jsonl", "Relationships")]:
             self.__run_docker_cmd(f'docker exec -t {container_name} arangoimport --file {dest}/{filename} --type "jsonl" --collection "{collection_name}" --server.username "{
                                   server_username}" --server.password "{server_password}" --server.database "{server_database}" --overwrite {overwrite}')
 

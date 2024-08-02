@@ -31,7 +31,7 @@ from IndalekoIngester import IndalekoIngester
 from IndalekoWindowsMachineConfig import IndalekoWindowsMachineConfig
 from Indaleko import Indaleko
 from IndalekoWindowsLocalIndexer import IndalekoWindowsLocalIndexer
-from IndalekoServices import IndalekoService
+from IndalekoServiceManager import IndalekoServiceManager
 from IndalekoObject import IndalekoObject
 from IndalekoUnix import UnixFileAttributes
 from IndalekoWindows import IndalekoWindows
@@ -44,13 +44,13 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
     '''
 
     windows_local_ingester_uuid = '429f1f3c-7a21-463f-b7aa-cd731bb202b1'
-    windows_local_ingester_service = IndalekoService.create_service_data(
-        service_name = 'Windows Local Ingester',
-        service_description = 'This service ingests captured index info from the local filesystems of a Windows machine.',
-        service_version = '1.0',
-        service_type = 'Ingester',
-        service_identifier = windows_local_ingester_uuid,
-    )
+    windows_local_ingester_service = {
+        'service_name' : 'Windows Local Ingester',
+        'service_description' : 'This service ingests captured index info from the local filesystems of a Windows machine.',
+        'service_version' : '1.0',
+        'service_type' : 'Ingester',
+        'service_identifier' : windows_local_ingester_uuid,
+    }
 
     windows_platform = IndalekoWindowsLocalIndexer.windows_platform
     windows_local_ingester = 'local_fs_ingester'
