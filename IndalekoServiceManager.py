@@ -117,7 +117,7 @@ class IndalekoServiceManager(IndalekoSingleton):
             db=self.db_config.db
         )
         self.service_collection.add_schema(IndalekoServiceManager.Schema)
-        self.service_collection.create_index('name', 'persistent', ['name'], unique=True)
+        self.service_collection.create_index('name', 'persistent', ['Name'], unique=True)
         return self.service_collection
 
     def lookup_service_by_name(self, name: str) -> dict:
@@ -161,29 +161,47 @@ class IndalekoServiceManager(IndalekoSingleton):
         """
         assert service_type in IndalekoServiceManager.service_types, \
             f'Invalid service type {service_type} specified.'
-        if service_id is None:
-            service_id = str(uuid.uuid4())
-        new_service = IndalekoService(
-            record = IndalekoRecordDataModel.IndalekoRecord(
-                SourceIdentifier = IndalekoDataModel.SourceIdentifier(
-                    Identifier = IndalekoServiceManager.service_manager_uuid_str,
-                    Version = IndalekoServiceManager.service_manager_version,
-                    Description = 'Indaleko Service Manager'
+        ic(service_name, service_description, service_version, service_type, service_id)
+        existing_service = None
+        if service_id is not None:
+            existing_service = self.lookup_service_by_identifier(service_id)
+            if existing_service is not None:
+                # Make sure the registration data matches.
+                if existing_service.service_name != service_name:
+                    ic('Service name mismatch', existing_service.service_name, service_name)
+                if existing_service.service_description != service_description:
+                    ic('Service description mismatch', existing_service.service_description, service_description)
+                if existing_service.service_version != service_version:
+                    ic('Service version mismatch', existing_service.service_version, service_version)
+                if existing_service.service_type != service_type:
+                    ic('Service type mismatch', existing_service.service_type, service_type)
+                ic('Service already exists', existing_service)
+        if existing_service is None:
+            if service_id is None:
+                service_id = str(uuid.uuid4())
+            ic('Creating new service:', service_id)
+            new_service = IndalekoService(
+                record = IndalekoRecordDataModel.IndalekoRecord(
+                    SourceIdentifier = IndalekoDataModel.SourceIdentifier(
+                        Identifier = IndalekoServiceManager.service_manager_uuid_str,
+                        Version = IndalekoServiceManager.service_manager_version,
+                        Description = 'Indaleko Service Manager'
+                    ),
+                    Timestamp = datetime.datetime.now(datetime.UTC),
+                    Attributes = {},
+                    Data = Indaleko.encode_binary_data(b'{}')
                 ),
-                Timestamp = datetime.datetime.now(datetime.UTC),
-                Attributes = {},
-                Data = Indaleko.encode_binary_data(b'{}')
-            ),
-            service_name=service_name,
-            service_description=service_description,
-            service_version=service_version,
-            service_type=service_type,
-            service_identifier=service_id
-        )
-        ic(new_service.serialize())
-        self.service_collection.insert(new_service.serialize())
-        # return self.lookup_service_by_name(name)
-        return new_service
+                service_name=service_name,
+                service_description=service_description,
+                service_version=service_version,
+                service_type=service_type,
+                service_identifier=service_id
+            )
+            document = new_service.serialize()
+            ic(document)
+            self.service_collection.insert(document)
+            existing_service = self.lookup_service_by_identifier(service_id)
+        return existing_service
 
 class IndalekoServiceManagerTest:
     '''This class defines the test operations for the IndalekoServiceManager.'''

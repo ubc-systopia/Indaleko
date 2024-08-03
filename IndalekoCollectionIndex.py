@@ -17,10 +17,11 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
+from icecream import ic
 
 from IndalekoSingleton import IndalekoSingleton
 
-class IndalekoCollectionIndex(IndalekoSingleton):
+class IndalekoCollectionIndex:
     '''Manages an index for an IndalekoCollection object.'''
 
     index_args = {
@@ -113,8 +114,6 @@ class IndalekoCollectionIndex(IndalekoSingleton):
 
             unique: if True, the index is unique
         """
-        if self._initialized:
-            return
         if 'collection' not in kwargs:
             raise ValueError('collection is a required parameter')
         self.collection = kwargs['collection']
@@ -174,7 +173,7 @@ class IndalekoCollectionIndex(IndalekoSingleton):
                                                        unique=self.unique)
         else:
             raise ValueError('Invalid index type')
-        self._initialized = True
+        ic(f'Created index {self.index}')
 
 def main():
     '''Test the IndalekoCollectionIndex class.'''

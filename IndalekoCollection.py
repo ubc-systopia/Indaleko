@@ -18,7 +18,11 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
+import arango
+import json
+
 from icecream import ic
+
 
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoCollectionIndex import IndalekoCollectionIndex
@@ -71,7 +75,14 @@ class IndalekoCollection():
         else:
             self.collection = self.db_config.db.create_collection(name, edge=config['edge'])
             if 'schema' in config:
-                self.collection.configure(schema=config['schema'])
+                try:
+                    self.collection.configure(schema=config['schema'])
+                except arango.exceptions.CollectionConfigureError as error: # pylint: disable=no-member
+                    print(f'Failed to configure collection {name}')
+                    print(error)
+                    print('Schema:')
+                    print(json.dumps(config['schema'], indent=2))
+                    raise error
             if 'indices' in config:
                 for index in config['indices']:
                     self.create_index(index,

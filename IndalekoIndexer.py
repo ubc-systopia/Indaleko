@@ -127,13 +127,17 @@ class IndalekoIndexer:
         self.service_identifier = self.indaleko_generic_indexer_uuid
         if 'service_identifier' in kwargs:
             self.service_identifier = kwargs['service_identifier']
-        self.indexer_service = IndalekoServiceManager().register_service(
-            service_name=self.service_name,
-            service_id=self.service_identifier,
-            service_description=self.service_description,
-            service_version=self.service_version,
-            service_type=self.service_type
-        )
+        self.indexer_service = IndalekoServiceManager()\
+            .lookup_service_by_identifier(self.service_identifier)
+        if self.indexer_service is None:
+            self.indexer_service = IndalekoServiceManager()\
+                .register_service(
+                service_name=self.service_name,
+                service_id=self.service_identifier,
+                service_description=self.service_description,
+                service_version=self.service_version,
+                service_type=self.service_type
+            )
         assert self.indexer_service is not None, "Indexer service does not exist."
         for count in IndalekoIndexer.counter_values:
             setattr(self, count, 0)
