@@ -17,21 +17,23 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
-from datetime import datetime
+
 from uuid import UUID
 from typing import Annotated, List, Optional
 from dataclasses import dataclass
+import json
 
 from graphql import print_schema
 from apischema import schema, deserialize, serialize
 from apischema.graphql import graphql_schema
 from apischema.metadata import required
+from apischema.json_schema import deserialization_schema, serialization_schema
 
 
-from IndalekoDataModel import IndalekoDataModel
+from IndalekoDataModel import IndalekoDataModel, IndalekoUUID
 from IndalekoRecordDataModel import IndalekoRecordDataModel
 
-class IndalekoRelationshipDataModel(IndalekoRecordDataModel):
+class IndalekoRelationshipDataModel:
     '''This is the data model Activity Provider Registration.'''
 
     @dataclass
@@ -49,12 +51,16 @@ class IndalekoRelationshipDataModel(IndalekoRecordDataModel):
             required
         ]
 
+        Record: IndalekoRecordDataModel.IndalekoRecord
+
     @staticmethod
-    def get_relationship_metadata_element() -> 'IndalekoRelationshipDataModel.RelationshipMetadataElement':
+    def get_relationship_metadata_element() -> \
+        'IndalekoRelationshipDataModel.RelationshipMetadataElement':
         '''Return the relationship metadata element.'''
         return IndalekoRelationshipDataModel.RelationshipMetadataElement(
             Identifier=IndalekoUUID.Identifier(UUID('12345678-1234-5678-1234-567812345678')),
-            Data='This is a test record'
+            Data='This is a test record',
+            Record = None
         )
 
     @dataclass
@@ -95,7 +101,8 @@ class IndalekoRelationshipDataModel(IndalekoRecordDataModel):
             Metadata=[
                 IndalekoRelationshipDataModel.RelationshipMetadataElement(
                     Identifier=UUID('12345678-1234-5678-1234-567812345678'),
-                    Data='This is a test record'
+                    Data='This is a test record',
+                    Record=None
                 )
             ]
         )
@@ -130,6 +137,16 @@ def main():
     print(print_schema(graphql_schema(
         query=IndalekoRelationshipDataModel.get_queries(),
         types=IndalekoRelationshipDataModel.get_types())))
+    unpack_schema = deserialization_schema(IndalekoRelationshipDataModel.IndalekoRelationship,
+                                           additional_properties=True)
+    json_unpack_schema = json.dumps(unpack_schema, indent=4)
+    print('Deserialization Schema:')
+    print(json_unpack_schema)
+    pack_schema = serialization_schema(IndalekoRelationshipDataModel.IndalekoRelationship,
+                                       additional_properties=True)
+    json_pack_schema = json.dumps(pack_schema, indent=4)
+    print('Serialization Schema:')
+    print(json_pack_schema)
 
 if __name__ == '__main__':
     main()

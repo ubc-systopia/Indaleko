@@ -19,65 +19,37 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import json
 from jsonschema import validate, exceptions
+import apischema
 
+from IndalekoRelationshipDataModel import IndalekoRelationshipDataModel
 from IndalekoRecordSchema import IndalekoRecordSchema
-
 class IndalekoRelationshipSchema(IndalekoRecordSchema):
     '''Define the schema for use with the Relationship collection.'''
 
-    @staticmethod
-    def get_old_schema():
-        relationship_schema =  {
-            "$schema": "https://json-schema.org/draft/2020-12/schema#",
-            "$id" : "https://activitycontext.work/schema/indaleko-relationship.json",
-            "title" : "Indaleko Relationship Schema",
-            "description" : "Schema for the JSON representation of an Indaleko Relationship, which is used for identifying related objects.",
-            "type" : "object",
-            "rule" : {
-                "properties" : {
-                    "Object1" : {
-                        "type" : "string",
-                        "format" : "uuid",
-                        "description" : "The Indaleko UUID for the first object in the relationship.",
-                    },
-                    "Object2" : {
-                        "type" : "string",
-                        "format" : "uuid",
-                        "description" : "The Indaleko UUID for the second object in the relationship.",
-                    },
-                    "Relationship" : {
-                        "type" : "string",
-                        "description" : "The UUID specifying the specific relationship between the two objects.",
-                        "format" : "uuid",
-                    },
-                    "Metadata" :  {
-                        "type" : "array",
-                        "items" : {
-                            "type" : "object",
-                            "properties" : {
-                                "UUID" : {
-                                    "type" : "string",
-                                    "format" : "uuid",
-                                    "description" : "The UUID for this metadata.",
-                                },
-                                "Data" : {
-                                    "type" : "string",
-                                    "description" : "The data associated with this metadata.",
-                                },
-                            },
-                            "required" : ["UUID", "Data"],
-                        },
-                        "description" : "Optional metadata associated with this relationship.",
-                    },
-                },
-                "required" : ["Object1", "Object2" , "Relationship"],
-            },
-        }
-        assert 'Record' not in relationship_schema, 'Record must not be specified.'
-        relationship_schema['rule']['properties']['Record'] = \
-            IndalekoRecordSchema().get_json_schema()['rule']
-        relationship_schema['rule']['required'].append('Record')
-        return relationship_schema
+    def __init__(self, **kwargs):
+        '''Initialize the Relationship schema.'''
+        if not hasattr(self, 'data_model'):
+            self.data_model = IndalekoRelationshipDataModel()
+        if not hasattr(self, 'base_type'):
+            self.base_type = IndalekoRelationshipDataModel.IndalekoRelationship
+        relationship_rules = apischema.json_schema.deserialization_schema(
+            IndalekoRelationshipDataModel.IndalekoRelationship,
+            additional_properties=True)
+        if not hasattr(self, 'rules'):
+            self.rules = relationship_rules
+        else:
+            self.rules.update(relationship_rules)
+        schema_id = kwargs.get('schema_id', "https://activitycontext.work/schema/indaleko-relationship.json")
+        schema_title = kwargs.get('schema_title', "Indaleko Relationship Schema")
+        schema_description = kwargs.get('schema_description', "Schema for the JSON representation of an Indaleko Relationship.")
+        super().__init__(
+            schema_id = schema_id,
+            schema_title = schema_title,
+            schema_description = schema_description,
+            data_model = self.data_model,
+            base_type = self.base_type,
+            schema_rules = relationship_rules
+        )
 
     @staticmethod
     def is_valid_relationship(indaleko_relationship : dict) -> bool:
@@ -95,7 +67,8 @@ class IndalekoRelationshipSchema(IndalekoRecordSchema):
 
 def main():
     """Test the IndalekoMachineConfigSchema class."""
-    if IndalekoRelationshipSchema.is_valid_json_schema(IndalekoRelationshipSchema().get_json_schema()):
+    if IndalekoRelationshipSchema\
+        .is_valid_json_schema_dict(IndalekoRelationshipSchema().get_json_schema()):
         print('Schema is valid.')
     print(json.dumps(IndalekoRelationshipSchema().get_json_schema(), indent=4))
 

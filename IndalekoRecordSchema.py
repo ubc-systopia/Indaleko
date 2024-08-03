@@ -43,7 +43,6 @@ class IndalekoRecordSchema(IndalekoDataSchema):
             self.rules = record_rules
         else:
             self.rules['properties'].update({'Record' : record_rules['properties']})
-            self.rules['required'].append('Record')
         schema_id = kwargs.get('schema_id',
                                "https://activitycontext.work/indaleko/schema/record.json")
         schema_title = kwargs.get('schema_title', "Indaleko Record Schema")
