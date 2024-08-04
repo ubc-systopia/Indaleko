@@ -365,7 +365,8 @@ def main():
                         help='Logging level to use.')
     args = parser.parse_args()
     metadata = IndalekoWindowsLocalIndexer.extract_metadata_from_indexer_file_name(args.input)
-    timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    timestamp = metadata.get('timestamp',
+                             datetime.datetime.now(datetime.timezone.utc).isoformat())
     machine_id = 'unknown'
     if 'machine' in metadata:
         if metadata['machine'] != machine_config.machine_id:

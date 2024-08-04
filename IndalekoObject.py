@@ -63,12 +63,13 @@ class IndalekoObject:
                 Version=kwargs['source']['Version'],
                 Description=None
             ),
-            Timestamp= datetime.datetime.now(datetime.UTC) # self.kwargs['timestamp']
+            Timestamp = kwargs.get('timestamp', datetime.datetime.now(datetime.UTC))
         )
         del kwargs['raw_data']
         del kwargs['Attributes']
         del kwargs['source']
-        del kwargs['timestamp']
+        if 'timestamp' in kwargs:
+            del kwargs['timestamp']
         assert 'Record' not in kwargs, 'Record is still in kwargs - new style constructor.'
         kwargs['Record'] = IndalekoRecordDataModel.IndalekoRecord.serialize(record)
         self.indaleko_object = IndalekoObjectDataModel.IndalekoObject.deserialize(kwargs)
