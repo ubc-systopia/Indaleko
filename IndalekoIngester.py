@@ -121,7 +121,8 @@ class IndalekoIngester():
         self.config_dir = kwargs.get('config_dir', Indaleko.default_config_dir)
         self.log_dir = kwargs.get('log_dir', Indaleko.default_log_dir)
         self.service_name = kwargs.get('Name', kwargs.get('service_name', None))
-        assert self.service_name is not None, 'Service name must be specified'
+        assert self.service_name is not None, \
+            f'Service name must be specified, kwargs={kwargs}'
         self.service_description = kwargs.get('Description',
                                               IndalekoIngester\
                                                 .indaleko_generic_ingester_service_description)

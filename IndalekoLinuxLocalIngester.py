@@ -27,6 +27,8 @@ import json
 import jsonlines
 import uuid
 
+from icecream import ic
+
 from IndalekoIngester import IndalekoIngester
 from IndalekoLinuxMachineConfig import IndalekoLinuxMachineConfig
 from Indaleko import Indaleko
@@ -77,6 +79,9 @@ class IndalekoLinuxLocalIngester(IndalekoIngester):
             kwargs['ingester'] = IndalekoLinuxLocalIngester.linux_local_ingester
         if 'input_file' not in kwargs:
             kwargs['input_file'] = None
+        for key, value in self.linux_local_ingester_service.items():
+            if key not in kwargs:
+                kwargs[key] = value
         super().__init__(**kwargs)
         self.input_file = kwargs['input_file']
         if 'output_file' not in kwargs:
@@ -169,6 +174,11 @@ class IndalekoLinuxLocalIngester(IndalekoIngester):
         }
         if 'st_mode' in data:
             kwargs['UnixFileAttributes'] = UnixFileAttributes.map_file_attributes(data['st_mode'])
+        if 'timestamp' not in kwargs:
+            if isinstance(self.timestamp, str):
+                kwargs['timestamp'] = datetime.datetime.fromisoformat(self.timestamp)
+            else:
+                kwargs['timestamp'] = self.timestamp
         return IndalekoObject(**kwargs)
 
     def ingest(self) -> None:
@@ -327,7 +337,8 @@ def main():
                             help='Linux Local Indexer file to ingest.')
     pre_args, _ = pre_parser.parse_known_args()
     indexer_file_metadata = Indaleko.extract_keys_from_file_name(pre_args.input)
-    timestamp = indexer_file_metadata['timestamp']
+    timestamp = indexer_file_metadata.get('timestamp',
+                                          datetime.datetime.now(datetime.timezone.utc).isoformat())
     log_file_name = IndalekoLinuxLocalIngester.generate_log_file_name(
         platform=indexer_file_metadata['platform'],
         ingester=IndalekoLinuxLocalIngester.linux_local_ingester,
