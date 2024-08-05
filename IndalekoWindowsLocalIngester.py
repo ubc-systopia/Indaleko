@@ -182,12 +182,15 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
         if 'st_file_attributes' in data:
             kwargs['WindowsFileAttributes'] = \
                 IndalekoWindows.map_file_attributes(data['st_file_attributes'])
-        if 'timestamp' not in kwargs:
-            kwargs['timestamp'] = self.timestamp
         if 'st_ino' in data:
             kwargs['LocalIdentifier'] = str(data['st_ino'])
         if 'Name' in data:
             kwargs['Label'] = data['Name']
+        if 'timestamp' not in kwargs:
+            if isinstance(self.timestamp, str):
+                kwargs['timestamp'] = datetime.datetime.fromisoformat(self.timestamp)
+            else:
+                kwargs['timestamp'] = self.timestamp
         indaleko_object = IndalekoObject(**kwargs)
         return indaleko_object
 
