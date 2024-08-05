@@ -215,6 +215,10 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             '''Return the WindowsDriveInfo object as a dictionary.'''
             return self.serialize()
 
+        def __getitem__(self, key):
+            '''Return the item from the dictionary.'''
+            return self.get_attributes()[key]
+
     def extract_volume_info(self: 'IndalekoWindowsMachineConfig') -> None:
         '''Extract the volume information from the machine configuration.'''
         for volume_data in self.get_attributes()['VolumeInfo']:
