@@ -78,7 +78,11 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
             self.__load_cache__()
             self.__output_file_name__ = None
             self.port = self.find_unused_tcp_port()
-            self.public_url = ngrok.connect(self.port)
+            try:
+                self.public_url = ngrok.connect(self.port)
+            except PermissionError as e:
+                ic(f'Access denied trying to use port {self.port}')
+                raise e
             ic(f'Public URL: {self.public_url}')
             self.redirect_uri = f'{self.public_url}/auth'
             # Note: this will prompt for credentials, if needed
