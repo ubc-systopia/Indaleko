@@ -61,14 +61,6 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
         self.volume_data = kwargs.get('volume_data', {})
         self.volume_data = {}
 
-    def __old_init__(self : 'IndalekoMacOSMachineConfig',
-                 timestamp : datetime = None,
-                 db : IndalekoDBConfig = None):
-        super().__init__(timestamp=timestamp,
-                         db=db,
-                         **IndalekoMacOSMachineConfig.macos_machine_config_service)
-        self.volume_data = {}
-
     @staticmethod
     def find_config_files(directory : str) -> list:
         '''This looks for configuration files in the given directory.'''
@@ -124,7 +116,6 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
                 Attributes = config_data
             )
         )
-        config.extract_volume_info()
         return config
 
     @staticmethod
@@ -167,105 +158,6 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
             candidate = os.path.join(config_dir, candidate)
         return candidate
 
-    class MacOSDriveInfo:
-        '''This class is used to capture information about a macOS drive.'''
-        MacOSDriveInfo_UUID_str = 'e23f71d8-0973-455b-af20-b9bc6ee8ebd6' # created manually
-        MacOSDriveInfo_UUID = uuid.UUID(MacOSDriveInfo_UUID_str)
-        MacOSDriveInfo_Version = '1.0'
-        MacOSDriveInfo_Description = 'macOS Drive Info'
-
-        def __init__(self, machine_id : str, drive_data : dict, captured: IndalekoMachineConfigDataModel.Captured) -> None:
-            assert 'GUID' not in drive_data, 'GUID should not be in drive_data'
-            assert 'UniqueId' in drive_data, 'UniqueId must be in drive_data'
-            assert drive_data['UniqueId'].startswith('/dev/')
-            drive_data['GUID'] = self.__find_volume_guid__(drive_data['UniqueId'])
-            self.machine_id = machine_id
-            self.indaleko_record = IndalekoRecordDataModel.IndalekoRecord(
-                SourceIdentifier = IndalekoDataModel.SourceIdentifier(
-                    Identifier = self.MacOSDriveInfo_UUID_str,
-                    Version = self.MacOSDriveInfo_Version,
-                    Description = self.MacOSDriveInfo_Description
-                ),
-                Timestamp = captured.Value,
-                Data = Indaleko.encode_binary_data(drive_data),
-                Attributes = drive_data
-            )
-            assert isinstance(captured, IndalekoMachineConfigDataModel.Captured), 'captured must be a dict'
-            self.captured = captured
-            ic(self.indaleko_record)
-            self.config_object = IndalekoMachineConfigDataModel.MachineConfig(
-                Captured = self.captured,
-                Record = self.indaleko_record
-            )
-
-        @staticmethod
-        def __find_volume_guid__(vol_name : str) -> str:
-            assert vol_name is not None, 'Volume name cannot be None'
-            assert isinstance(vol_name, str), 'Volume name must be a string'
-            assert vol_name.startswith('/dev/')  # based on distutil list
-            return vol_name[5:]  # extracting the name after /dev/, e.g. /dev/[volume name]
-
-        def get_vol_guid(self):
-            '''Return the GUID of the volume.'''
-            return self.get_attributes()['GUID']
-
-        def get_attributes(self) -> dict:
-            '''Return the attributes of the volume.'''
-            return self.indaleko_record.Attributes
-
-        def to_dict(self) -> dict:
-            '''Return a dictionary representation of this object.'''
-            return self.serialize()
-
-        def to_json(self) -> dict:
-            '''Return a JSON representation of this object.'''
-            return self.serialize()
-
-        def serialize(self) -> dict:
-            '''Serialize the MacOSDriveInfo object to a dictionary.'''
-            obj = IndalekoMachineConfigDataModel.MachineConfig(
-                Captured = self.captured,
-                Record = self.indaleko_record,
-            )
-            config_data = IndalekoMachineConfigDataModel.MachineConfig.serialize(obj)
-            if isinstance(config_data, tuple):
-                assert len(config_data) == 1, 'Serialized data is a multi-entry tuple'
-                config_data = config_data[0]
-            if hasattr(self, 'machine_id'):
-                config_data['MachineId'] = self.machine_id
-            config_data['_key'] = self.get_vol_guid()
-            return config_data
-
-    def extract_volume_info(self: 'IndalekoMacOSMachineConfig') -> None:
-        '''Extract the volume information from the machine configuration.'''
-        for volume_data in self.get_attributes()['VolumeInfo']:
-            mdi = self.MacOSDriveInfo(self.machine_id, volume_data, self.captured)
-            assert mdi.get_vol_guid() not in self.volume_data, \
-                  f'Volume GUID {mdi.get_vol_guid()} already in volume_data'
-            self.volume_data[mdi.get_vol_guid()] = mdi
-
-    def get_volume_info(self: 'IndalekoMacOSMachineConfig') -> dict:
-        '''This returns the volume information.'''
-        return self.volume_data
-
-    def map_drive_letter_to_volume_guid(self: 'IndalekoMacOSMachineConfig', drive_letter : str) -> str:
-        '''Map a drive letter to a volume GUID.'''
-        # Drive letters are not used in macOS
-        return None
-
-    def write_volume_info_to_db(self: 'IndalekoMacOSMachineConfig',
-                                volume_data : MacOSDriveInfo) -> bool:
-        '''Write the volume information to the database.'''
-        assert isinstance(volume_data, self.MacOSDriveInfo), \
-            'volume_data must be a MacOSDriveInfo'
-        success = False
-        try:
-            self.collection.insert(volume_data.serialize(), overwrite=True)
-            success = True
-        except arango.exceptions.DocumentInsertError as error:
-            print(f'Error inserting volume data: {error}')
-            print(volume_data.serialize())
-        return success
 
     def write_config_to_db(self) -> None:
         '''Write the machine configuration to the database.'''
