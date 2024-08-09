@@ -22,21 +22,21 @@ import json
 import jsonschema
 import apischema
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Annotated, Optional
 from uuid import UUID
 
 from icecream import ic
 
-from apischema import schema, deserialize, serialize
+from apischema import schema, deserialize, serialize, Undefined
 from apischema.graphql import graphql_schema
-from apischema.metadata import required
+from apischema.metadata import required, skip
 from apischema.json_schema import deserialization_schema, serialization_schema
 from graphql import print_schema
 
 from IndalekoRecordDataModel import IndalekoRecordDataModel
-
+from IndalekoDataModel import IndalekoDataModel
 
 class IndalekoMachineConfigDataModel:
     '''
@@ -57,7 +57,18 @@ class IndalekoMachineConfigDataModel:
         Architecture: Annotated[
             Optional[str],
             schema(description="Processor architecture.")
-        ]
+        ] = Undefined
+
+        @staticmethod
+        def deserialize(data: dict) -> 'IndalekoMachineConfigDataModel.Software':
+            '''Deserialize a dictionary to an object.'''
+            return deserialize(IndalekoMachineConfigDataModel.Software, data, additional_properties=True)
+
+        @staticmethod
+        def serialize(data) -> dict:
+            '''Serialize the object to a dictionary.'''
+            return serialize(IndalekoMachineConfigDataModel.Software, data, additional_properties=True)
+
 
     @staticmethod
     def get_software() -> 'IndalekoMachineConfigDataModel.Software':
@@ -66,6 +77,7 @@ class IndalekoMachineConfigDataModel:
             OS='Linux',
             Version='5.0.0'
         )
+
 
     @dataclass
     class Hardware:
@@ -84,6 +96,16 @@ class IndalekoMachineConfigDataModel:
             Optional[int],
             schema(description="Number of cores.")
         ] = 1
+
+        @staticmethod
+        def deserialize(data: dict) -> 'IndalekoMachineConfigDataModel.Hardware':
+            '''Deserialize a dictionary to an object.'''
+            return deserialize(IndalekoMachineConfigDataModel.Hardware, data, additional_properties=True)
+
+        @staticmethod
+        def serialize(data) -> dict:
+            '''Serialize the object to a dictionary.'''
+            return serialize(IndalekoMachineConfigDataModel.Hardware, data, additional_properties=True)
 
     @staticmethod
     def get_hardware() -> 'IndalekoMachineConfigDataModel.Hardware':
@@ -107,6 +129,16 @@ class IndalekoMachineConfigDataModel:
             required
         ]
 
+        @staticmethod
+        def deserialize(data: dict) -> 'IndalekoMachineConfigDataModel.Platform':
+            '''Deserialize a dictionary to an object.'''
+            return deserialize(IndalekoMachineConfigDataModel.Platform, data, additional_properties=True)
+
+        @staticmethod
+        def serialize(data) -> dict:
+            '''Serialize the object to a dictionary.'''
+            return serialize(IndalekoMachineConfigDataModel.Platform, data, additional_properties=True)
+
     @staticmethod
     def get_platform() -> 'IndalekoMachineConfigDataModel.Platform':
         '''Return the platform information.'''
@@ -125,6 +157,16 @@ class IndalekoMachineConfigDataModel:
                          schema(description="Timestamp in ISO date and time format.",
                                 format="date-time"),
                          required]
+
+        @staticmethod
+        def deserialize(data: dict) -> 'IndalekoMachineConfigDataModel.Captured':
+            '''Deserialize a dictionary to an object.'''
+            return deserialize(IndalekoMachineConfigDataModel.Captured, data, additional_properties=True)
+
+        @staticmethod
+        def serialize(data) -> dict:
+            '''Serialize the object to a dictionary.'''
+            return serialize(IndalekoMachineConfigDataModel.Captured, data, additional_properties=True)
 
     @staticmethod
     def get_captured() -> 'IndalekoMachineConfigDataModel.Captured':
@@ -151,25 +193,31 @@ class IndalekoMachineConfigDataModel:
 
         Platform: Annotated[
             Optional['IndalekoMachineConfigDataModel.Platform'],
-            schema(description="The platform."),
-            required
-        ] = None
+            schema(description="The platform.")
+        ] = field(default=None, metadata=skip)
 
         @staticmethod
         def deserialize(data: dict) -> 'IndalekoMachineConfigDataModel.MachineConfig':
             '''Deserialize a dictionary to an object.'''
-            return deserialize(IndalekoMachineConfigDataModel.MachineConfig,
+            ic(data)
+            results = deserialize(IndalekoMachineConfigDataModel.MachineConfig,
                             data,
                             additional_properties=True)
+            assert results is not None
+            assert hasattr(results, 'Platform')
+            if results.Platform is None:
+                results.Platform = IndalekoMachineConfigDataModel.Platform(
+                    software=IndalekoMachineConfigDataModel.Software.deserialize(data['Platform']['software']),
+                    hardware=IndalekoMachineConfigDataModel.Hardware.deserialize(data['Platform']['hardware'])
+                )
+            assert hasattr(results, 'Captured') and results.Captured is not None
+            return results
 
         @staticmethod
         def serialize(data) -> dict:
             '''Serialize the object to a dictionary.'''
             return serialize(IndalekoMachineConfigDataModel.MachineConfig,
-                             data,
-                             additional_properties=True,
-                             exclude_unset=True,
-                             exclude_none=True),
+                             data, additional_properties=True),
 
 
     @staticmethod
@@ -207,221 +255,69 @@ def main():
     unpack_schema = deserialization_schema(IndalekoMachineConfigDataModel.MachineConfig, additional_properties=True)
     pack_schema = serialization_schema(IndalekoMachineConfigDataModel.MachineConfig, additional_properties=True)
     json_unpack_schema = json.dumps(unpack_schema, indent=2)
-    print(json_unpack_schema)
+    #print(json_unpack_schema)
     json_pack_schema = json.dumps(pack_schema, indent=2)
-    print(json_pack_schema)
+    #print(json_pack_schema)
 
 
     data_object = {
-        "Platform": {
-            "software": {
-                "OS": "macOS",
-                "Version": "23.5.0",
-                "Architecture": "arm64"
-            },
-            "hardware": {
-                "CPU": "arm",
-                "Version": "arm",
-                "Cores": 8
-            }
-        },
         "Captured": {
             "Label": "eb7eaeed-6b21-4b6a-a586-dddca6a1d5a4",
             "Value": "2024-08-08T21:26:22.418196+00:00"
         },
         "Record": {
+            "Attributes": {
+                "MachineGuid": "f7a439ec-c2d0-4844-a043-d8ac24d9ac0b"
+            },
+            "Data": "xx",
             "SourceIdentifier": {
                 "Identifier": "8a948e74-6e43-4a6e-91c0-0cb5fd97355e",
                 "Version": "1.0",
-                "Description": "This service provides the configuration information for a macOS machine."
             },
-            "Timestamp": "2024-08-09T05:12:20.250797+00:00",
-            "Attributes": {
-                "MachineGuid": "f7a439ec-c2d0-4844-a043-d8ac24d9ac0b",
-                "OperatingSystem": {
-                    "Caption": "macOS",
-                    "OSArchitecture": "arm64",
-                    "Version": "23.5.0"
-                },
-                "CPU": {
-                    "Name": "arm",
-                    "Cores": 8
-                },
-                "VolumeInfo": [
-                    {
-                        "UniqueId": "/dev/disk3s1s1",
-                        "VolumeName": "disk3s1s1",
-                        "Size": "1858.19 GB",
-                        "Filesystem": "apfs",
-                        "GUID": "disk3s1s1"
-                    },
-                    {
-                        "UniqueId": "/dev/disk3s6",
-                        "VolumeName": "disk3s6",
-                        "Size": "1858.19 GB",
-                        "Filesystem": "apfs",
-                        "GUID": "disk3s6"
-                    },
-                    {
-                        "UniqueId": "/dev/disk3s2",
-                        "VolumeName": "disk3s2",
-                        "Size": "1858.19 GB",
-                        "Filesystem": "apfs",
-                        "GUID": "disk3s2"
-                    },
-                    {
-                        "UniqueId": "/dev/disk3s4",
-                        "VolumeName": "disk3s4",
-                        "Size": "1858.19 GB",
-                        "Filesystem": "apfs",
-                        "GUID": "disk3s4"
-                    },
-                    {
-                        "UniqueId": "/dev/disk1s2",
-                        "VolumeName": "disk1s2",
-                        "Size": "0.49 GB",
-                        "Filesystem": "apfs",
-                        "GUID": "disk1s2"
-                    },
-                    {
-                        "UniqueId": "/dev/disk1s1",
-                        "VolumeName": "disk1s1",
-                        "Size": "0.49 GB",
-                        "Filesystem": "apfs",
-                        "GUID": "disk1s1"
-                    },
-                    {
-                        "UniqueId": "/dev/disk1s3",
-                        "VolumeName": "disk1s3",
-                        "Size": "0.49 GB",
-                        "Filesystem": "apfs",
-                        "GUID": "disk1s3"
-                    },
-                    {
-                        "UniqueId": "/dev/disk3s5",
-                        "VolumeName": "disk3s5",
-                        "Size": "1858.19 GB",
-                        "Filesystem": "apfs",
-                        "GUID": "disk3s5"
-                    },
-                    {
-                        "UniqueId": "/dev/disk5s1",
-                        "VolumeName": "disk5s1",
-                        "Size": "8.31 GB",
-                        "Filesystem": "apfs",
-                        "GUID": "disk5s1"
-                    },
-                    {
-                        "UniqueId": "/dev/disk7s1",
-                        "VolumeName": "disk7s1",
-                        "Size": "9.66 GB",
-                        "Filesystem": "apfs",
-                        "GUID": "disk7s1"
-                    },
-                    {
-                        "UniqueId": "/dev/disk9s1",
-                        "VolumeName": "disk9s1",
-                        "Size": "4.03 GB",
-                        "Filesystem": "apfs",
-                        "GUID": "disk9s1"
-                    },
-                    {
-                        "UniqueId": "/dev/disk11s1",
-                        "VolumeName": "disk11s1",
-                        "Size": "16.14 GB",
-                        "Filesystem": "apfs",
-                        "GUID": "disk11s1"
-                    },
-                    {
-                        "UniqueId": "/dev/disk13s1",
-                        "VolumeName": "disk13s1",
-                        "Size": "16.22 GB",
-                        "Filesystem": "apfs",
-                        "GUID": "disk13s1"
-                    },
-                    {
-                        "UniqueId": "/dev/disk15s1",
-                        "VolumeName": "disk15s1",
-                        "Size": "3.72 GB",
-                        "Filesystem": "apfs",
-                        "GUID": "disk15s1"
-                    },
-                    {
-                        "UniqueId": "/dev/disk17s1",
-                        "VolumeName": "disk17s1",
-                        "Size": "8.72 GB",
-                        "Filesystem": "apfs",
-                        "GUID": "disk17s1"
-                    },
-                    {
-                        "UniqueId": "/dev/disk19s1",
-                        "VolumeName": "disk19s1",
-                        "Size": "8.48 GB",
-                        "Filesystem": "apfs",
-                        "GUID": "disk19s1"
-                    },
-                    {
-                        "UniqueId": "/dev/disk21s1",
-                        "VolumeName": "disk21s1",
-                        "Size": "16.35 GB",
-                        "Filesystem": "apfs",
-                        "GUID": "disk21s1"
-                    },
-                    {
-                        "UniqueId": "/dev/disk23s1",
-                        "VolumeName": "disk23s1",
-                        "Size": "3.87 GB",
-                        "Filesystem": "apfs",
-                        "GUID": "disk23s1"
-                    },
-                    {
-                        "UniqueId": "/dev/disk25s1",
-                        "VolumeName": "disk25s1",
-                        "Size": "8.68 GB",
-                        "Filesystem": "apfs",
-                        "GUID": "disk25s1"
-                    },
-                    {
-                        "UniqueId": "/dev/disk27s1",
-                        "VolumeName": "disk27s1",
-                        "Size": "4.31 GB",
-                        "Filesystem": "apfs",
-                        "GUID": "disk27s1"
-                    },
-                    {
-                        "UniqueId": "/dev/disk29s1",
-                        "VolumeName": "disk29s1",
-                        "Size": "9.46 GB",
-                        "Filesystem": "apfs",
-                        "GUID": "disk29s1"
-                    },
-                    {
-                        "UniqueId": "/dev/disk31s1",
-                        "VolumeName": "disk31s1",
-                        "Size": "9.71 GB",
-                        "Filesystem": "apfs",
-                        "GUID": "disk31s1"
-                    },
-                    {
-                        "UniqueId": "/dev/disk33s1",
-                        "VolumeName": "disk33s1",
-                        "Size": "15.95 GB",
-                        "Filesystem": "apfs",
-                        "GUID": "disk33s1"
-                    }
-                ]
+            "Timestamp": "2024-08-09T07:52:59.839237+00:00",
+        },
+        "Platform": {
+            "software": {
+                "OS": "Linux",
+                "Version": "5.4.0-104-generic",
+                "Architecture": "x86_64"
             },
-        "Data": "hKtNYWNoaW5lR3VpZNkkZjdhNDM5ZWMtYzJkMC00ODQ0LWEwNDMtZDhhYzI0ZDlhYzBir09wZXJhdGluZ1N5c3RlbYOnQ2FwdGlvbqVtYWNPU65PU0FyY2hpdGVjdHVyZaVhcm02NKdWZXJzaW9upjIzLjUuMKNDUFWCpE5hbWWjYXJtpUNvcmVzCKpWb2x1bWVJbmZv3AAXhKhVbmlxdWVJZK4vZGV2L2Rpc2szczFzMapWb2x1bWVOYW1lqWRpc2szczFzMaRTaXplqjE4NTguMTkgR0KqRmlsZXN5c3RlbaRhcGZzhKhVbmlxdWVJZKwvZGV2L2Rpc2szczaqVm9sdW1lTmFtZadkaXNrM3M2pFNpemWqMTg1OC4xOSBHQqpGaWxlc3lzdGVtpGFwZnOEqFVuaXF1ZUlkrC9kZXYvZGlzazNzMqpWb2x1bWVOYW1lp2Rpc2szczKkU2l6ZaoxODU4LjE5IEdCqkZpbGVzeXN0ZW2kYXBmc4SoVW5pcXVlSWSsL2Rldi9kaXNrM3M0qlZvbHVtZU5hbWWnZGlzazNzNKRTaXplqjE4NTguMTkgR0KqRmlsZXN5c3RlbaRhcGZzhKhVbmlxdWVJZKwvZGV2L2Rpc2sxczKqVm9sdW1lTmFtZadkaXNrMXMypFNpemWnMC40OSBHQqpGaWxlc3lzdGVtpGFwZnOEqFVuaXF1ZUlkrC9kZXYvZGlzazFzMapWb2x1bWVOYW1lp2Rpc2sxczGkU2l6ZacwLjQ5IEdCqkZpbGVzeXN0ZW2kYXBmc4SoVW5pcXVlSWSsL2Rldi9kaXNrMXMzqlZvbHVtZU5hbWWnZGlzazFzM6RTaXplpzAuNDkgR0KqRmlsZXN5c3RlbaRhcGZzhKhVbmlxdWVJZKwvZGV2L2Rpc2szczWqVm9sdW1lTmFtZadkaXNrM3M1pFNpemWqMTg1OC4xOSBHQqpGaWxlc3lzdGVtpGFwZnOEqFVuaXF1ZUlkrC9kZXYvZGlzazVzMapWb2x1bWVOYW1lp2Rpc2s1czGkU2l6Zac4LjMxIEdCqkZpbGVzeXN0ZW2kYXBmc4SoVW5pcXVlSWSsL2Rldi9kaXNrN3MxqlZvbHVtZU5hbWWnZGlzazdzMaRTaXplpzkuNjYgR0KqRmlsZXN5c3RlbaRhcGZzhKhVbmlxdWVJZKwvZGV2L2Rpc2s5czGqVm9sdW1lTmFtZadkaXNrOXMxpFNpemWnNC4wMyBHQqpGaWxlc3lzdGVtpGFwZnOEqFVuaXF1ZUlkrS9kZXYvZGlzazExczGqVm9sdW1lTmFtZahkaXNrMTFzMaRTaXplqDE2LjE0IEdCqkZpbGVzeXN0ZW2kYXBmc4SoVW5pcXVlSWStL2Rldi9kaXNrMTNzMapWb2x1bWVOYW1lqGRpc2sxM3MxpFNpemWoMTYuMjIgR0KqRmlsZXN5c3RlbaRhcGZzhKhVbmlxdWVJZK0vZGV2L2Rpc2sxNXMxqlZvbHVtZU5hbWWoZGlzazE1czGkU2l6ZaczLjcyIEdCqkZpbGVzeXN0ZW2kYXBmc4SoVW5pcXVlSWStL2Rldi9kaXNrMTdzMapWb2x1bWVOYW1lqGRpc2sxN3MxpFNpemWnOC43MiBHQqpGaWxlc3lzdGVtpGFwZnOEqFVuaXF1ZUlkrS9kZXYvZGlzazE5czGqVm9sdW1lTmFtZahkaXNrMTlzMaRTaXplpzguNDggR0KqRmlsZXN5c3RlbaRhcGZzhKhVbmlxdWVJZK0vZGV2L2Rpc2syMXMxqlZvbHVtZU5hbWWoZGlzazIxczGkU2l6ZagxNi4zNSBHQqpGaWxlc3lzdGVtpGFwZnOEqFVuaXF1ZUlkrS9kZXYvZGlzazIzczGqVm9sdW1lTmFtZahkaXNrMjNzMaRTaXplpzMuODcgR0KqRmlsZXN5c3RlbaRhcGZzhKhVbmlxdWVJZK0vZGV2L2Rpc2syNXMxqlZvbHVtZU5hbWWoZGlzazI1czGkU2l6Zac4LjY4IEdCqkZpbGVzeXN0ZW2kYXBmc4SoVW5pcXVlSWStL2Rldi9kaXNrMjdzMapWb2x1bWVOYW1lqGRpc2syN3MxpFNpemWnNC4zMSBHQqpGaWxlc3lzdGVtpGFwZnOEqFVuaXF1ZUlkrS9kZXYvZGlzazI5czGqVm9sdW1lTmFtZahkaXNrMjlzMaRTaXplpzkuNDYgR0KqRmlsZXN5c3RlbaRhcGZzhKhVbmlxdWVJZK0vZGV2L2Rpc2szMXMxqlZvbHVtZU5hbWWoZGlzazMxczGkU2l6Zac5LjcxIEdCqkZpbGVzeXN0ZW2kYXBmc4SoVW5pcXVlSWStL2Rldi9kaXNrMzNzMapWb2x1bWVOYW1lqGRpc2szM3MxpFNpemWoMTUuOTUgR0KqRmlsZXN5c3RlbaRhcGZz"
+            "hardware": {
+                "CPU": "Intel(R) Core(TM) i7-7700HQ CPU @ 2.80GHz",
+                "Version": "06_9E_09",
+                "Cores": 8
+            }
         },
         "_key": "f7a439ec-c2d0-4844-a043-d8ac24d9ac0b",
-        "hostname": "wam-msi"
+        "hostname": "f7a439ec-c2d0-4844-a043-d8ac24d9ac0b"
     }
 
-    machine_config = IndalekoMachineConfigDataModel.MachineConfig.deserialize(data_object)
-    serialized_object = IndalekoMachineConfigDataModel.MachineConfig.serialize(machine_config)
-    jsonschema.validate(instance=serialized_object, schema=pack_schema)
-    jsonschema.validate(instance=data_object, schema=unpack_schema)
+    #machine_config = IndalekoMachineConfigDataModel.MachineConfig.deserialize(data_object)
+    #serialized_object = IndalekoMachineConfigDataModel.MachineConfig.serialize(machine_config)
+    #jsonschema.validate(instance=serialized_object, schema=pack_schema)
+    #jsonschema.validate(instance=data_object, schema=unpack_schema)
 
+    ic('check source identifier')
+    print(json.dumps(data_object['Record']['SourceIdentifier'], indent=2))
+    source_identifier = IndalekoDataModel.SourceIdentifier.deserialize(data_object['Record']['SourceIdentifier'])
+    ic(source_identifier)
+    jsonschema.validate(instance=IndalekoDataModel.SourceIdentifier.serialize(source_identifier),
+                        schema=serialization_schema(IndalekoDataModel.SourceIdentifier,
+                                                    additional_properties=True))
+
+    ic('check record')
+    record = IndalekoRecordDataModel.IndalekoRecord.deserialize(data_object['Record'])
+    jsonschema.validate(instance=IndalekoRecordDataModel.IndalekoRecord.serialize(record),
+                        schema=serialization_schema(IndalekoRecordDataModel.IndalekoRecord,
+                                                    additional_properties=True))
+
+    ic('check machine config')
+    machine_config = IndalekoMachineConfigDataModel.MachineConfig.deserialize(data_object)
+    machine_config_data = IndalekoMachineConfigDataModel.MachineConfig.serialize(machine_config)
+    print(json.dumps(machine_config_data, indent=2))
+    jsonschema.validate(instance=machine_config_data,
+                        schema=serialization_schema(IndalekoMachineConfigDataModel.MachineConfig,
+                                                    additional_properties=True))
 
 if __name__ == "__main__":
     main()

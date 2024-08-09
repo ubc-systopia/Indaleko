@@ -33,7 +33,7 @@ class IndalekoObjectSchema(IndalekoRecordSchema):
             self.data_model = IndalekoObjectDataModel()
         if not hasattr(self, 'base_type'):
             self.base_type = IndalekoObjectDataModel.IndalekoObject
-        object_rules = apischema.json_schema.deserialization_schema(
+        object_rules = apischema.json_schema.serialization_schema(
             IndalekoObjectDataModel.IndalekoObject,
             additional_properties=True)
         if not hasattr(self, 'rules'):

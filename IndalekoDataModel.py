@@ -19,13 +19,13 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Dict, Any, Annotated, Optional, List
 from uuid import UUID, uuid4
-from apischema import schema, ValidationError, deserialize, serialize
+from apischema import schema, ValidationError, deserialize, serialize, Undefined
 from apischema.graphql import graphql_schema
-from apischema.metadata import required
+from apischema.metadata import required, skip
 from graphql import print_schema
 from icecream import ic
 
@@ -41,7 +41,7 @@ class IndalekoUUID:
     Label: Annotated[
         Optional[str],
         schema(description="A human-readable label for the UUID.")
-    ] = None
+    ] = Undefined
 
     @staticmethod
     def get_indaleko_uuid(identifier : UUID, label : str = None) -> 'IndalekoUUID':
@@ -79,18 +79,18 @@ class IndalekoDataModel:
         Description: Annotated[
             Optional[str],
             schema(description="A human-readable description of the source of the data.")
-        ] = None
+        ] = field(default=None, metadata=skip)
 
         @staticmethod
         def serialize(data) -> Dict[str, Any]:
             """Serialize the object to a dictionary."""
-            return serialize(IndalekoDataModel.SourceIdentifier, data)
+            return serialize(IndalekoDataModel.SourceIdentifier, data, additional_properties=True)
 
         @staticmethod
         def deserialize(data: Dict[str, Any]) -> 'IndalekoDataModel.SourceIdentifier':
             """Deserialize a dictionary to an object."""
             try:
-                deserialize(IndalekoDataModel.SourceIdentifier, data)
+                return deserialize(IndalekoDataModel.SourceIdentifier, data, additional_properties=True)
             except ValidationError as error:
                 raise ValidationError(f"Validation error: {error}") from error
 

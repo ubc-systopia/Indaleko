@@ -15,18 +15,9 @@ class IndalekoLogging(IndalekoSingleton):
         """Initialize a new instance of the IndalekoLogging class object."""
         if self._initialized:
             return
-        if 'log_level' in kwargs:
-            self.log_level = kwargs['log_level']
-        else:
-            self.log_level = logging.DEBUG
-        if 'log_dir' in kwargs:
-            self.log_dir = kwargs['log_dir']
-        else:
-            self.log_dir = Indaleko.default_log_dir
-        if 'log_file' in kwargs:
-            self.log_file = kwargs['log_file']
-        else:
-            self.log_file = IndalekoLogging.generate_log_file_name(**kwargs)
+        self.log_level = kwargs.get('log_level', logging.DEBUG)
+        self.log_dir = kwargs.get('log_dir', Indaleko.default_log_dir)
+        self.log_file = kwargs.get('log_file', IndalekoLogging.generate_log_file_name(**kwargs))
         log_name = os.path.join(self.log_dir, self.log_file)
         logging.basicConfig(filename=log_name,
                             level=self.log_level,
