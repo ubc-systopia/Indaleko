@@ -28,6 +28,7 @@ import base64
 import msgpack
 import arango
 
+
 from Indaleko import Indaleko
 from IndalekoMachineConfigDataModel import IndalekoMachineConfigDataModel
 from IndalekoDBConfig import IndalekoDBConfig
@@ -110,7 +111,7 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             source_version=IndalekoWindowsMachineConfig.windows_machine_config_service['service_version'],
             timestamp=timestamp.isoformat(),
             attributes=config_data,
-            data=base64.b64encode(msgpack.packb(config_data)).decode('ascii'),
+            data=Indaleko.encode_binary_data(config_data),
             machine_id=config_data['MachineGuid']
         )
         config.extract_volume_info()
@@ -249,11 +250,11 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             'volume_data must be a WindowsDriveInfo'
         success = False
         try:
-            self.collection.insert(volume_data.to_json(), overwrite=True)
+            self.collection.insert(volume_data.serialize(), overwrite=True)
             success = True
         except arango.exceptions.DocumentInsertError as error:
             print(f'Error inserting volume data: {error}')
-            print(volume_data.to_json(indent=4))
+            print(volume_data.serialize())
         return success
 
     def write_config_to_db(self) -> None:

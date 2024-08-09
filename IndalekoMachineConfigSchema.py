@@ -21,7 +21,7 @@ import apischema
 
 from IndalekoRecordSchema import IndalekoRecordSchema
 from IndalekoMachineConfigDataModel import IndalekoMachineConfigDataModel
-from IndalekoDataSchema import IndalekoDataSchema
+
 class IndalekoMachineConfigSchema(IndalekoRecordSchema):
     '''Define the schema for use with the MachineConfig collection.'''
 
@@ -34,6 +34,10 @@ class IndalekoMachineConfigSchema(IndalekoRecordSchema):
         machine_config_rules = apischema.json_schema.deserialization_schema(
             IndalekoMachineConfigDataModel.MachineConfig,
             additional_properties=True)
+        if not hasattr(self, 'rules'):
+            self.rules = machine_config_rules
+        else:
+            self.rules.update(machine_config_rules)
         schema_id = 'https://activitycontext.work/schema/machineconfig.json'
         schema_title = 'Machine Configuration Schema'
         schema_description = 'Describes the machine where the data was indexed.'
