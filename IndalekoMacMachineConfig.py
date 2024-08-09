@@ -31,6 +31,7 @@ from Indaleko import Indaleko
 from IndalekoRecordDataModel import IndalekoRecordDataModel
 from IndalekoDataModel import IndalekoDataModel
 from IndalekoMachineConfigDataModel import IndalekoMachineConfigDataModel
+from IndalekoRecordDataModel import IndalekoRecordDataModel
 
 
 class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
@@ -78,7 +79,7 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
                               config_file : str = None) -> 'IndalekoMacOSMachineConfig':
         config_data = {}
         if config_dir is None and config_file is None:
-            config_dir = IndalekoMacOSMachineConfig.default_config_dir
+            config_dir = Indaleko.default_config_dir
         if config_file is None:
             assert config_dir is not None, 'config_dir must be specified'
             config_file = IndalekoMacOSMachineConfig.get_most_recent_config_file(config_dir)
@@ -89,33 +90,52 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
             assert os.path.isfile(config_file), f'Config file {config_file} is not a file'
             with open(config_file, 'rt', encoding='utf-8-sig') as fd:
                 config_data = json.load(fd)
-                ic(config_data)
             assert str(guid) == config_data['MachineGuid'], \
                   f'GUID mismatch: {guid} != {config_data["MachineGuid"]}'
-        config = IndalekoMacOSMachineConfig(
-            os=config_data['OperatingSystem']['Caption'],
-            arch=config_data['OperatingSystem']['OSArchitecture'],
-            os_version=config_data['OperatingSystem']['Version'],
-            cpu=config_data['CPU']['Name'],
-            cpu_version=config_data['CPU']['Name'],
-            cpu_cores=config_data['CPU']['Cores'],
-            source_id=IndalekoMacOSMachineConfig.macos_machine_config_service['service_identifier'],
-            source_version=IndalekoMacOSMachineConfig.macos_machine_config_service['service_version'],
-            timestamp=timestamp.isoformat(),
-            attributes=config_data,
-            data=Indaleko.encode_binary_data(config_data),
-            machine_id=config_data['MachineGuid'],
-            Record = IndalekoRecordDataModel.IndalekoRecord(
-                SourceIdentifier = IndalekoDataModel.SourceIdentifier(
-                    Identifier=IndalekoMacOSMachineConfig.macos_machine_config_service['service_identifier'],
-                    Version=IndalekoMacOSMachineConfig.macos_machine_config_service['service_version'],
-                    Description=IndalekoMacOSMachineConfig.macos_machine_config_service['service_description']
-                ),
-                Timestamp = datetime.datetime.now(datetime.timezone.utc),
-                Data = Indaleko.encode_binary_data(config_data),
-                Attributes = config_data
+        assert len(config_data) > 0, 'No configuration data found'
+        ic(config_data)
+        record = IndalekoRecordDataModel.IndalekoRecord(
+            SourceIdentifier = IndalekoDataModel.SourceIdentifier(
+                Identifier=IndalekoMacOSMachineConfig.macos_machine_config_service['service_identifier'],
+                Version=IndalekoMacOSMachineConfig.macos_machine_config_service['service_version'],
+                Description=IndalekoMacOSMachineConfig.macos_machine_config_service['service_description']
+            ),
+            Timestamp = datetime.datetime.now(datetime.timezone.utc),
+            Data = Indaleko.encode_binary_data(config_data),
+            Attributes = config_data
+        )
+        captured = IndalekoMachineConfigDataModel.Captured(
+            Value = timestamp,
+            Label = IndalekoMachineConfig.indaleko_machine_config_captured_label_str
+        )
+        platform = IndalekoMachineConfigDataModel.Platform(
+            software = IndalekoMachineConfigDataModel.Software(
+                OS = config_data['OperatingSystem']['Caption'],
+                Version = config_data['OperatingSystem']['Version'],
+                Architecture = config_data['OperatingSystem']['OSArchitecture']
+            ),
+            hardware = IndalekoMachineConfigDataModel.Hardware(
+                CPU = config_data['CPU']['Name'],
+                Version = 'Unknown',
+                Cores = config_data['CPU']['Cores']
             )
         )
+        config = IndalekoMacOSMachineConfig(
+            Record=IndalekoRecordDataModel.IndalekoRecord.serialize(record),
+            Platform=IndalekoMachineConfigDataModel.Platform.serialize(platform),
+            Captured=IndalekoMachineConfigDataModel.Captured.serialize(captured),
+            machine_id=config_data['MachineGuid'],
+            hostname='Unknown'
+        )
+        assert config is not None, 'Failed to create configuration object'
+        if not hasattr(config, 'Platform'): # why does this happen?
+            config.Platform = platform
+            assert isinstance(config.Platform, IndalekoMachineConfigDataModel.Platform), \
+                'config is not an instance of IndalekoMachineConfigDataModel.Platform'
+        if not hasattr(config, 'Captured'): # why does this happen?
+            config.Captured = captured
+            assert isinstance(config.Captured, IndalekoMachineConfigDataModel.Captured), \
+                'config is not an instance of IndalekoMachineConfigDataModel.Captured'
         return config
 
     @staticmethod
@@ -162,10 +182,6 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
     def write_config_to_db(self) -> None:
         '''Write the machine configuration to the database.'''
         super().write_config_to_db()
-        for _, vol_data in self.volume_data.items():
-            if not self.write_volume_info_to_db(vol_data):
-                print('DB write failed, aborting')
-                break
 
 def main():
     '''Main function for the Indaleko macOS Machine Config service.'''
@@ -207,10 +223,10 @@ def main():
         return
 
     if args.files:
-        assert os.path.exists(IndalekoMacOSMachineConfig.default_config_dir), f'config path {IndalekoMacOSMachineConfig.default_config_dir} does not exists'
+        assert os.path.exists(Indaleko.default_config_dir), f'config path {Indaleko.default_config_dir} does not exists'
         print('Listing machine configuration files in the default directory.')
         files = IndalekoMacOSMachineConfig.find_config_files(
-            IndalekoMacOSMachineConfig.default_config_dir)
+            Indaleko.default_config_dir)
         for file in files:
             print(file)
         return

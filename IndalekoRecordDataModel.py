@@ -38,9 +38,7 @@ class IndalekoRecordDataModel:
     @dataclass
     class IndalekoRecord:
         '''Define data format for the Indaleko Record.'''
-        SourceIdentifier: Annotated[IndalekoDataModel.SourceIdentifier,
-                                    schema(description="The source identifier for the data."),
-                                    required]
+        SourceIdentifier: IndalekoDataModel.SourceIdentifier
         Timestamp: Annotated[datetime,
                              schema(description="The timestamp of when this record was created."),
                              required] = field(default_factory=datetime.now)

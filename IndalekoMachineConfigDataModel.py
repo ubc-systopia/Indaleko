@@ -22,21 +22,21 @@ import json
 import jsonschema
 import apischema
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Annotated, Optional
 from uuid import UUID
 
 from icecream import ic
 
-from apischema import schema, deserialize, serialize
+from apischema import schema, deserialize, serialize, Undefined
 from apischema.graphql import graphql_schema
-from apischema.metadata import required
+from apischema.metadata import required, skip
 from apischema.json_schema import deserialization_schema, serialization_schema
 from graphql import print_schema
 
 from IndalekoRecordDataModel import IndalekoRecordDataModel
-
+from IndalekoDataModel import IndalekoDataModel
 
 class IndalekoMachineConfigDataModel:
     '''
@@ -57,7 +57,18 @@ class IndalekoMachineConfigDataModel:
         Architecture: Annotated[
             Optional[str],
             schema(description="Processor architecture.")
-        ]
+        ] = Undefined
+
+        @staticmethod
+        def deserialize(data: dict) -> 'IndalekoMachineConfigDataModel.Software':
+            '''Deserialize a dictionary to an object.'''
+            return deserialize(IndalekoMachineConfigDataModel.Software, data, additional_properties=True)
+
+        @staticmethod
+        def serialize(data) -> dict:
+            '''Serialize the object to a dictionary.'''
+            return serialize(IndalekoMachineConfigDataModel.Software, data, additional_properties=True)
+
 
     @staticmethod
     def get_software() -> 'IndalekoMachineConfigDataModel.Software':
@@ -66,6 +77,7 @@ class IndalekoMachineConfigDataModel:
             OS='Linux',
             Version='5.0.0'
         )
+
 
     @dataclass
     class Hardware:
@@ -84,6 +96,16 @@ class IndalekoMachineConfigDataModel:
             Optional[int],
             schema(description="Number of cores.")
         ] = 1
+
+        @staticmethod
+        def deserialize(data: dict) -> 'IndalekoMachineConfigDataModel.Hardware':
+            '''Deserialize a dictionary to an object.'''
+            return deserialize(IndalekoMachineConfigDataModel.Hardware, data, additional_properties=True)
+
+        @staticmethod
+        def serialize(data) -> dict:
+            '''Serialize the object to a dictionary.'''
+            return serialize(IndalekoMachineConfigDataModel.Hardware, data, additional_properties=True)
 
     @staticmethod
     def get_hardware() -> 'IndalekoMachineConfigDataModel.Hardware':
@@ -107,6 +129,16 @@ class IndalekoMachineConfigDataModel:
             required
         ]
 
+        @staticmethod
+        def deserialize(data: dict) -> 'IndalekoMachineConfigDataModel.Platform':
+            '''Deserialize a dictionary to an object.'''
+            return deserialize(IndalekoMachineConfigDataModel.Platform, data, additional_properties=True)
+
+        @staticmethod
+        def serialize(data) -> dict:
+            '''Serialize the object to a dictionary.'''
+            return serialize(IndalekoMachineConfigDataModel.Platform, data, additional_properties=True)
+
     @staticmethod
     def get_platform() -> 'IndalekoMachineConfigDataModel.Platform':
         '''Return the platform information.'''
@@ -125,6 +157,16 @@ class IndalekoMachineConfigDataModel:
                          schema(description="Timestamp in ISO date and time format.",
                                 format="date-time"),
                          required]
+
+        @staticmethod
+        def deserialize(data: dict) -> 'IndalekoMachineConfigDataModel.Captured':
+            '''Deserialize a dictionary to an object.'''
+            return deserialize(IndalekoMachineConfigDataModel.Captured, data, additional_properties=True)
+
+        @staticmethod
+        def serialize(data) -> dict:
+            '''Serialize the object to a dictionary.'''
+            return serialize(IndalekoMachineConfigDataModel.Captured, data, additional_properties=True)
 
     @staticmethod
     def get_captured() -> 'IndalekoMachineConfigDataModel.Captured':
@@ -152,20 +194,30 @@ class IndalekoMachineConfigDataModel:
         Platform: Annotated[
             Optional['IndalekoMachineConfigDataModel.Platform'],
             schema(description="The platform.")
-        ] = None
+        ] = field(default=None, metadata=skip)
 
         @staticmethod
         def deserialize(data: dict) -> 'IndalekoMachineConfigDataModel.MachineConfig':
             '''Deserialize a dictionary to an object.'''
-            return deserialize(IndalekoMachineConfigDataModel.MachineConfig,
+            ic(data)
+            results = deserialize(IndalekoMachineConfigDataModel.MachineConfig,
                             data,
                             additional_properties=True)
+            assert results is not None
+            assert hasattr(results, 'Platform')
+            if results.Platform is None:
+                results.Platform = IndalekoMachineConfigDataModel.Platform(
+                    software=IndalekoMachineConfigDataModel.Software.deserialize(data['Platform']['software']),
+                    hardware=IndalekoMachineConfigDataModel.Hardware.deserialize(data['Platform']['hardware'])
+                )
+            assert hasattr(results, 'Captured') and results.Captured is not None
+            return results
 
         @staticmethod
         def serialize(data) -> dict:
             '''Serialize the object to a dictionary.'''
             return serialize(IndalekoMachineConfigDataModel.MachineConfig,
-                             data),
+                             data, additional_properties=True),
 
 
     @staticmethod
@@ -214,16 +266,15 @@ def main():
             "Value": "2024-08-08T21:26:22.418196+00:00"
         },
         "Record": {
-            "SourceIdentifier": {
-                "Identifier": "8a948e74-6e43-4a6e-91c0-0cb5fd97355e",
-                "Version": "1.0",
-                "Description": "This service provides the configuration information for a macOS machine."
-            },
-            "Timestamp": "2024-08-09T07:52:59.839237+00:00",
             "Attributes": {
                 "MachineGuid": "f7a439ec-c2d0-4844-a043-d8ac24d9ac0b"
             },
-            "Data": "xx"
+            "Data": "xx",
+            "SourceIdentifier": {
+                "Identifier": "8a948e74-6e43-4a6e-91c0-0cb5fd97355e",
+                "Version": "1.0",
+            },
+            "Timestamp": "2024-08-09T07:52:59.839237+00:00",
         },
         "Platform": {
             "software": {
@@ -246,14 +297,27 @@ def main():
     #jsonschema.validate(instance=serialized_object, schema=pack_schema)
     #jsonschema.validate(instance=data_object, schema=unpack_schema)
 
+    ic('check source identifier')
+    print(json.dumps(data_object['Record']['SourceIdentifier'], indent=2))
+    source_identifier = IndalekoDataModel.SourceIdentifier.deserialize(data_object['Record']['SourceIdentifier'])
+    ic(source_identifier)
+    jsonschema.validate(instance=IndalekoDataModel.SourceIdentifier.serialize(source_identifier),
+                        schema=serialization_schema(IndalekoDataModel.SourceIdentifier,
+                                                    additional_properties=True))
+
     ic('check record')
     record = IndalekoRecordDataModel.IndalekoRecord.deserialize(data_object['Record'])
-    jsonschema.validate(instance=record, schema=serialization_schema(IndalekoRecordDataModel.IndalekoRecord, additional_properties=True))
+    jsonschema.validate(instance=IndalekoRecordDataModel.IndalekoRecord.serialize(record),
+                        schema=serialization_schema(IndalekoRecordDataModel.IndalekoRecord,
+                                                    additional_properties=True))
 
-    ic('check captured')
-    captured = IndalekoMachineConfigDataModel.Captured.deserialize(data_object['Captured'])
-    jsonschema.validate(instance=captured, schema=IndalekoMachineConfigDataModel.Captured.get_json_schema())
-
+    ic('check machine config')
+    machine_config = IndalekoMachineConfigDataModel.MachineConfig.deserialize(data_object)
+    machine_config_data = IndalekoMachineConfigDataModel.MachineConfig.serialize(machine_config)
+    print(json.dumps(machine_config_data, indent=2))
+    jsonschema.validate(instance=machine_config_data,
+                        schema=serialization_schema(IndalekoMachineConfigDataModel.MachineConfig,
+                                                    additional_properties=True))
 
 if __name__ == "__main__":
     main()

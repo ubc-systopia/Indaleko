@@ -105,7 +105,17 @@ class IndalekoMachineConfig:
         self.machine_id = machine_id
         del kwargs['machine_id']
         self.hostname = kwargs.get('hostname', machine_id)
+        ic(kwargs)
         self.machine_config = IndalekoMachineConfigDataModel.MachineConfig.deserialize(kwargs)
+        if 'db' in kwargs:
+            db = kwargs['db']
+        else:
+            db = IndalekoDBConfig()
+        if 'collection' in kwargs:
+            self.collection = kwargs['collection']
+        else:
+            self.collection = IndalekoCollections(db_config=db).get_collection(Indaleko.Indaleko_MachineConfig)
+
 
 
     def __init_2__(self, **kwargs):
@@ -385,10 +395,6 @@ class IndalekoMachineConfig:
             self.machine_id
         ), f"machine_id {self.machine_id} is not a valid UUID."
         assert isinstance(self.machine_config, IndalekoMachineConfigDataModel.MachineConfig), f"machine_config is not a MachineConfig object, it is {type(self.machine_config)}"
-        ic(dir(self.machine_config))
-        ic(dir(self.machine_config.Captured))
-        ic(dir(self.machine_config.Platform.software))
-        ic(dir(self.machine_config.Record))
         new_config = IndalekoMachineConfigDataModel.MachineConfig.serialize(self.machine_config)
         try:
             self.collection.insert(new_config, overwrite=True)
@@ -396,6 +402,7 @@ class IndalekoMachineConfig:
             print(f"Error inserting document: {e}")
             print(f"Document: {new_config}")
             raise e
+        ic('wrote config to db')
 
     @staticmethod
     def load_config_from_file() -> dict:
