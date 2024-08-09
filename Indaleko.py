@@ -155,7 +155,7 @@ class Indaleko:
             },
         },
         Indaleko_MachineConfig : {
-            'schema' : IndalekoMachineConfigSchema().get_json_schema(),
+            'schema' : { }, # IndalekoMachineConfigSchema().get_json_schema(),
             'edge' : False,
             'indices' : { },
         },
