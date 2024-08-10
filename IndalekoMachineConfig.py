@@ -38,7 +38,10 @@ from IndalekoDataModel import IndalekoDataModel
 from IndalekoRecordDataModel import IndalekoRecordDataModel
 from IndalekoMachineConfigDataModel import IndalekoMachineConfigDataModel
 from Indaleko import Indaleko
-from IndalekoServices import IndalekoService
+from IndalekoServiceManager import IndalekoServiceManager
+from IndalekoRecordDataModel import IndalekoRecordDataModel
+from IndalekoDataModel import IndalekoDataModel
+from IndalekoMachineConfigDataModel import IndalekoMachineConfigDataModel
 
 
 class IndalekoMachineConfig:
@@ -393,15 +396,17 @@ class IndalekoMachineConfig:
         assert Indaleko.validate_uuid_string(
             self.machine_id
         ), f"machine_id {self.machine_id} is not a valid UUID."
-        assert isinstance(self.machine_config, IndalekoMachineConfigDataModel.MachineConfig), f"machine_config is not a MachineConfig object, it is {type(self.machine_config)}"
-        new_config = IndalekoMachineConfigDataModel.MachineConfig.serialize(self.machine_config)
+        if not IndalekoMachineConfigSchema().is_valid_json_schema_dict(self.to_dict()):
+            print("Invalid record:")
+            print(json.dumps(self.to_dict(), indent=4))
+            raise AssertionError("Invalid record.")
+        new_config = self.to_json()
         try:
             self.collection.insert(new_config, overwrite=True)
         except arango.exceptions.DocumentInsertError as e:
             print(f"Error inserting document: {e}")
             print(f"Document: {new_config}")
             raise e
-        ic('wrote config to db')
 
     @staticmethod
     def load_config_from_file() -> dict:
@@ -483,11 +488,27 @@ class IndalekoMachineConfig:
         return candidate
 
 
+    def deseralize(self) -> dict:
+        """
+        This method deserializes the machine config.
+        """
+        machine_config = IndalekoMachineConfigDataModel.MachineConfig(
+            Platform=self.get_platform(),
+            Captured=self.get_captured(),
+            Record=self.indaleko_record,
+        )
+        candidate = IndalekoMachineConfigDataModel.MachineConfig.deserialize(machine_config)
+        if hasattr(machine_config, 'machine_id'):
+            candidate["_key"] = machine_config.machine_id
+        candidate['hostname'] = self.get_machine_name()
+        return candidate
+
+
     def to_dict(self) -> dict:
         """
         This method returns the dictionary representation of the machine config.
         """
-        return self.serialize()
+        return self.deseralize()
 
     def to_json(self, indent: int = 4) -> str:
         """

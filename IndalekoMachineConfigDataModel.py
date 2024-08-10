@@ -24,12 +24,10 @@ import apischema
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Annotated, Optional, Optional
+from typing import Annotated, Optional
 from uuid import UUID
 
-from icecream import ic
-
-from apischema import schema, deserialize, serialize, Undefined
+from apischema import schema, deserialize, serialize
 from apischema.graphql import graphql_schema
 from apischema.metadata import required, skip
 from apischema.json_schema import deserialization_schema, serialization_schema
@@ -179,45 +177,28 @@ class IndalekoMachineConfigDataModel:
     @dataclass
     class MachineConfig:
         '''Define the machine configuration data model.'''
-        Captured: Annotated[
-            'IndalekoMachineConfigDataModel.Captured',
-            schema(description="Raw platform data captured."),
-            required
-        ]
-
-        Record: Annotated[
-            IndalekoRecordDataModel.IndalekoRecord,
-            schema(description="The base record information."),
-            required
-        ]
-
+        Captured: Annotated['IndalekoMachineConfigDataModel.Captured',
+                            schema(description="Raw platform data captured."), required]
+        Record: Annotated[IndalekoRecordDataModel.IndalekoRecord,
+                          schema(description="The base record information."),
+                          required]
         Platform: Annotated[
             Optional['IndalekoMachineConfigDataModel.Platform'],
-            schema(description="The platform.")
-        ] = field(default=None, metadata=skip)
+                      schema(description="The platform.")] = None
 
         @staticmethod
         def deserialize(data: dict) -> 'IndalekoMachineConfigDataModel.MachineConfig':
             '''Deserialize a dictionary to an object.'''
-            ic(data)
-            results = deserialize(IndalekoMachineConfigDataModel.MachineConfig,
+            return deserialize(IndalekoMachineConfigDataModel.MachineConfig,
                             data,
                             additional_properties=True)
-            assert results is not None
-            assert hasattr(results, 'Platform')
-            if results.Platform is None:
-                results.Platform = IndalekoMachineConfigDataModel.Platform(
-                    software=IndalekoMachineConfigDataModel.Software.deserialize(data['Platform']['software']),
-                    hardware=IndalekoMachineConfigDataModel.Hardware.deserialize(data['Platform']['hardware'])
-                )
-            assert hasattr(results, 'Captured') and results.Captured is not None
-            return results
 
         @staticmethod
         def serialize(data) -> dict:
             '''Serialize the object to a dictionary.'''
             return serialize(IndalekoMachineConfigDataModel.MachineConfig,
-                             data, additional_properties=True),
+                             data,
+                             additional_properties=True)
 
 
     @staticmethod
@@ -244,6 +225,7 @@ class IndalekoMachineConfigDataModel:
         return [IndalekoMachineConfigDataModel.Platform,
                 IndalekoMachineConfigDataModel.Captured,
                 IndalekoMachineConfigDataModel.MachineConfig]
+
 
 
 

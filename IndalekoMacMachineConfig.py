@@ -28,11 +28,6 @@ from icecream import ic
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoMachineConfig import IndalekoMachineConfig
 from Indaleko import Indaleko
-from IndalekoRecordDataModel import IndalekoRecordDataModel
-from IndalekoDataModel import IndalekoDataModel
-from IndalekoMachineConfigDataModel import IndalekoMachineConfigDataModel
-from IndalekoRecordDataModel import IndalekoRecordDataModel
-
 
 class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
     '''

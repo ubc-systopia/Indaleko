@@ -25,7 +25,7 @@ from typing import Dict, Any, Annotated, Optional, List
 from uuid import UUID, uuid4
 from apischema import schema, ValidationError, deserialize, serialize, Undefined
 from apischema.graphql import graphql_schema
-from apischema.metadata import required, skip
+from apischema.metadata import required
 from graphql import print_schema
 from icecream import ic
 
@@ -41,7 +41,7 @@ class IndalekoUUID:
     Label: Annotated[
         Optional[str],
         schema(description="A human-readable label for the UUID.")
-    ] = Undefined
+    ] = None
 
     @staticmethod
     def get_indaleko_uuid(identifier : UUID, label : str = None) -> 'IndalekoUUID':

@@ -118,7 +118,7 @@ class Indaleko:
             },
         },
         Indaleko_Relationships : {
-            'schema' : IndalekoRelationshipSchema().get_json_json_schema(),
+            'schema' : IndalekoRelationshipSchema().get_json_schema(),
             'edge' : True,
             'indices' : {
                 'relationship' : {
