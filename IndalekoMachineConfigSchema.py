@@ -21,6 +21,7 @@ import apischema
 
 from IndalekoRecordSchema import IndalekoRecordSchema
 from IndalekoMachineConfigDataModel import IndalekoMachineConfigDataModel
+from IndalekoDataSchema import IndalekoDataSchema
 
 class IndalekoMachineConfigSchema(IndalekoRecordSchema):
     '''Define the schema for use with the MachineConfig collection.'''

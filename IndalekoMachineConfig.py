@@ -34,6 +34,9 @@ from icecream import ic
 from IndalekoCollections import IndalekoCollections
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
+from IndalekoDataModel import IndalekoDataModel
+from IndalekoRecordDataModel import IndalekoRecordDataModel
+from IndalekoMachineConfigDataModel import IndalekoMachineConfigDataModel
 from Indaleko import Indaleko
 from IndalekoServiceManager import IndalekoServiceManager
 from IndalekoRecordDataModel import IndalekoRecordDataModel
@@ -439,6 +442,7 @@ class IndalekoMachineConfig:
             machine_id
         ), f"machine_id {machine_id} is not a valid UUID."
         IndalekoCollections().get_collection(Indaleko.Indaleko_MachineConfig).delete(machine_id)
+
 
 
     @staticmethod
