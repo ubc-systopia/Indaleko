@@ -29,14 +29,16 @@ import re
 
 import arango
 
+from icecream import ic
+
 from IndalekoCollections import IndalekoCollections
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
-from Indaleko import Indaleko
-from IndalekoServiceManager import IndalekoServiceManager
-from IndalekoRecordDataModel import IndalekoRecordDataModel
 from IndalekoDataModel import IndalekoDataModel
+from IndalekoRecordDataModel import IndalekoRecordDataModel
 from IndalekoMachineConfigDataModel import IndalekoMachineConfigDataModel
+from Indaleko import Indaleko
+from IndalekoServices import IndalekoService
 
 
 class IndalekoMachineConfig:
@@ -46,14 +48,117 @@ class IndalekoMachineConfig:
     """
 
     indaleko_machine_config_uuid_str = "e65e412e-7862-4d81-affd-2bbd4f6b9a01"
+    indaleko_machine_config_uuid = uuid.UUID(indaleko_machine_config_uuid_str)
     indaleko_machine_config_version_str = "1.0"
     indaleko_machine_config_captured_label_str = "eb7eaeed-6b21-4b6a-a586-dddca6a1d5a4"
-
-    default_config_dir = "./config"
+    indaleko_machine_config_captured_label_uuid = uuid.UUID(indaleko_machine_config_captured_label_str)
 
     Schema = IndalekoMachineConfigSchema().get_json_schema()
 
-    def __init__(
+    def __new_init__(self, **kwargs):
+        '''This is the constructor for the IndalekoMachineConfig class.'''
+        self.args = kwargs
+        if 'Record' not in kwargs:
+            ic(kwargs)
+            self.legacy_constructor()
+        else:
+            self.machine_config = IndalekoMachineConfigDataModel.MachineConfig.deserialize(
+                kwargs
+            )
+
+    def legacy_constructor(self):
+        '''Create an object using the old format.'''
+        raise NotImplementedError('This method has not been implemented yet.')
+
+    def __init__(self, **kwargs):
+        '''Set up a new machine configuration object.'''
+        self.args = kwargs
+        self.timestamp = kwargs.get('timestamp', datetime.datetime.now(datetime.UTC))
+        if isinstance(self.timestamp, str):
+            assert Indaleko.validate_iso_timestamp(
+                self.timestamp
+            ), f'Timestamp {self.timestamp} is not a valid ISO timestamp'
+            self.timestamp = datetime.datetime.fromisoformat(self.timestamp)
+        assert isinstance(self.timestamp, datetime.datetime), f'Timestamp must be a datetime object, not {type(self.timestamp)}'
+        if 'Record' not in kwargs:
+            record = IndalekoRecordDataModel.IndalekoRecord(
+                Data=kwargs['raw_data'],
+                Attributes=kwargs['Attributes'],
+                SourceIdentifier=IndalekoDataModel.SourceIdentifier(
+                    Identifier=kwargs['source']['Identifier'],
+                    Version=kwargs['source']['Version'],
+                    Description=None
+                ),
+                Timestamp = self.timestamp
+            )
+            kwargs['Record'] = IndalekoRecordDataModel.IndalekoRecord.serialize(record)
+            del kwargs['raw_data']
+            del kwargs['Attributes']
+            del kwargs['source']
+            if 'timestamp' in kwargs:
+                del kwargs['timestamp']
+        machine_id = kwargs['machine_id'] # UUID to use for this machine
+        assert Indaleko.validate_uuid_string(
+            machine_id
+        ), f"machine_id {machine_id} is not a valid UUID."
+        self.machine_id = machine_id
+        del kwargs['machine_id']
+        self.hostname = kwargs.get('hostname', machine_id)
+        ic(kwargs)
+        self.machine_config = IndalekoMachineConfigDataModel.MachineConfig.deserialize(kwargs)
+        if 'db' in kwargs:
+            db = kwargs['db']
+        else:
+            db = IndalekoDBConfig()
+        if 'collection' in kwargs:
+            self.collection = kwargs['collection']
+        else:
+            self.collection = IndalekoCollections(db_config=db).get_collection(Indaleko.Indaleko_MachineConfig)
+
+
+
+    def __init_2__(self, **kwargs):
+        '''This is the constructor for the IndalekoMachineConfig class.'''
+        self.args = kwargs
+        assert 'Record' in kwargs, 'Record must be provided in initialization.'
+        timestamp = kwargs.get('timestamp', datetime.datetime.now(datetime.timezone.utc))
+        if isinstance(timestamp, str):
+            assert Indaleko.validate_iso_timestamp(
+                timestamp
+            ), f'Timestamp {timestamp} is not a valid ISO timestamp'
+            timestamp = datetime.datetime.fromisoformat(timestamp)
+        self.captured = IndalekoMachineConfigDataModel.Captured(
+            Label = IndalekoMachineConfig.indaleko_machine_config_captured_label_uuid,
+            Value = timestamp,
+        )
+        ic(kwargs)
+        self.platform = IndalekoMachineConfigDataModel.Platform(
+            software = IndalekoMachineConfigDataModel.Software(
+                OS = kwargs.get('os', None),
+                Version = kwargs.get('os_version', None),
+                Architecture = kwargs.get('arch', None),
+            ),
+            hardware = IndalekoMachineConfigDataModel.Hardware(
+                CPU = kwargs.get('cpu', None),
+                Version = kwargs.get('cpu_version', None),
+                Cores = kwargs.get('cpu_cores', None),
+            )
+        )
+        self.indaleko_record = kwargs.get('Record', None)
+        db = kwargs.get('db', IndalekoDBConfig())
+        self.collection = kwargs.get('collection', IndalekoCollections(db_config=db).get_collection(Indaleko.Indaleko_MachineConfig))
+        assert isinstance(self.captured, IndalekoMachineConfigDataModel.Captured)
+        assert isinstance(self.indaleko_record, IndalekoRecordDataModel.IndalekoRecord)
+        assert isinstance(self.platform, IndalekoMachineConfigDataModel.Platform) or self.platform is None, f'Platform must be a Platform object, not {type(self.platform)}'
+        self.machine_config = IndalekoMachineConfigDataModel.MachineConfig(
+            Platform=self.platform,
+            Captured=self.captured,
+            Record=self.indaleko_record,
+        )
+
+
+
+    def __old_init__(
         self: "IndalekoMachineConfig",
         timestamp: datetime = None,
         db: IndalekoDBConfig = None,
@@ -69,10 +174,14 @@ class IndalekoMachineConfig:
         self.data_source = None
         self.set_source()
         self.timestamp = timestamp
+        if isinstance(self.timestamp, str):
+            assert Indaleko.validate_iso_timestamp(
+                self.timestamp
+            ), f'Timestamp {self.timestamp} is not a valid ISO timestamp'
+            self.timestamp = datetime.datetime.fromisoformat(self.timestamp)
         self.attributes = {}
         self.data = Indaleko.encode_binary_data(b"")
         self.indaleko_record = None
-        self.platform = {}
         self.captured = {
             "Label": "Timestamp",
             "Value": timestamp,
@@ -200,54 +309,6 @@ class IndalekoMachineConfig:
         self.platform = platform_data
         return self
 
-    def get_platform(self) -> dict:
-        """
-        This method returns the platform information for the machine.
-        """
-        if hasattr(self, "Platform"):
-            return self.platform
-        return None
-
-    def set_captured(self, timestamp: datetime) -> None:
-        """
-        This method sets the timestamp for the machine configuration.
-        """
-        if isinstance(timestamp, dict):
-            assert "Label" in timestamp, "timestamp must contain a Label field"
-            assert (
-                timestamp["Label"] == "Timestamp"
-            ), "timestamp must have a Label of Timestamp"
-            assert "Value" in timestamp, "timestamp must contain a Value field"
-            assert isinstance(
-                timestamp["Value"], str
-            ), "timestamp must contain a string Value field"
-            assert Indaleko.validate_iso_timestamp(
-                timestamp["Value"]
-            ), f'timestamp {timestamp["Value"]} is not a valid ISO timestamp'
-            self.captured = {
-                "Label": "Timestamp",
-                "Value": timestamp["Value"],
-            }
-        elif isinstance(timestamp, datetime.datetime):
-            timestamp = timestamp.isoformat()
-        else:
-            assert isinstance(
-                timestamp, str
-            ), f"timestamp must be a string or timestamp (not {type(timestamp)})"
-        self.captured = {
-            "Label": IndalekoMachineConfig.indaleko_machine_config_captured_label_str,
-            "Value": timestamp,
-            "Description" : "Timestamp when this machine configuration was captured.",
-        }
-        return self
-
-    def get_captured(self) -> datetime.datetime:
-        """
-        This method returns the timestamp for the machine configuration.
-        """
-        if hasattr(self, "captured"):
-            return self.captured
-        return None
 
     def parse_config_file(self) -> None:
         """
@@ -276,7 +337,7 @@ class IndalekoMachineConfig:
             return self.machine_id
         return None
 
-    def set_source(self, identifier : str = None, version : str = None) -> None:
+    def set_source(self, identifier : str = None, version : str = None, description : str = "") -> None:
         '''Set the source attribution for the machine configuration.'''
         if identifier is None:
             identifier = IndalekoMachineConfig.indaleko_machine_config_uuid_str
@@ -284,7 +345,8 @@ class IndalekoMachineConfig:
             version = IndalekoMachineConfig.indaleko_machine_config_version_str
         self.data_source = IndalekoDataModel.SourceIdentifier(
             Identifier=identifier,
-            Version=version
+            Version=version,
+            Description="Machine configuration data"
         )
 
     def set_attributes(self, attributes: dict) -> None:
@@ -331,17 +393,15 @@ class IndalekoMachineConfig:
         assert Indaleko.validate_uuid_string(
             self.machine_id
         ), f"machine_id {self.machine_id} is not a valid UUID."
-        if not IndalekoMachineConfigSchema().is_valid_json_schema_dict(self.to_dict()):
-            print("Invalid record:")
-            print(json.dumps(self.to_dict(), indent=4))
-            raise AssertionError("Invalid record.")
-        new_config = self.to_json()
+        assert isinstance(self.machine_config, IndalekoMachineConfigDataModel.MachineConfig), f"machine_config is not a MachineConfig object, it is {type(self.machine_config)}"
+        new_config = IndalekoMachineConfigDataModel.MachineConfig.serialize(self.machine_config)
         try:
             self.collection.insert(new_config, overwrite=True)
         except arango.exceptions.DocumentInsertError as e:
             print(f"Error inserting document: {e}")
             print(f"Document: {new_config}")
             raise e
+        ic('wrote config to db')
 
     @staticmethod
     def load_config_from_file() -> dict:
@@ -379,10 +439,33 @@ class IndalekoMachineConfig:
         ), f"machine_id {machine_id} is not a valid UUID."
         IndalekoCollections().get_collection(Indaleko.Indaleko_MachineConfig).delete(machine_id)
 
+
     @staticmethod
-    def get_machine_name() -> str:
-        """This retrieves a user friendly machine name."""
-        return socket.gethostname()
+    def deserialize(self) -> "IndalekoMachineConfig":
+        '''Deserialize a dictionary to an object.'''
+        return IndalekoMachineConfig(**self)
+
+
+    def serialize(self) -> dict:
+        """
+        This method deserializes the machine config.
+        """
+        if hasattr(self, "machine_config"):
+            serialized_data = IndalekoMachineConfigDataModel.MachineConfig.serialize(self.machine_config)
+        else:
+            serialized_data = {
+                "Platform": self.platform,
+                "Captured": self.captured,
+                "Record" : IndalekoRecordDataModel.IndalekoRecord.serialize(self.get_indaleko_record()),
+            }
+        if isinstance(serialized_data, tuple):
+            assert len(serialized_data) == 1, 'Serialized data is a multi-entry tuple.'
+            serialized_data = serialized_data[0]
+        if isinstance(serialized_data, dict):
+            serialized_data['_key'] = self.machine_id
+            serialized_data['hostname'] = self.hostname
+        return ic(serialized_data)
+
 
     def deseralize(self) -> dict:
         """
@@ -404,7 +487,7 @@ class IndalekoMachineConfig:
         """
         This method returns the dictionary representation of the machine config.
         """
-        return self.deseralize()
+        return self.serialize()
 
     def to_json(self, indent: int = 4) -> str:
         """
@@ -444,34 +527,10 @@ class IndalekoMachineConfig:
         else:
             timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
         if "machine_config" not in kwargs:
-            machine_config = IndalekoMachineConfig()
+            machine_config = IndalekoMachineConfig(**kwargs)
         else:
             machine_config = kwargs["machine_config"]
-        machine_config.set_platform(
-            {
-                "software": {
-                    "OS": kwargs["os"],
-                    "Architecture": kwargs["arch"],
-                    "Version": kwargs["os_version"],
-                },
-                "hardware": {
-                    "CPU": kwargs["cpu"],
-                    "Version": kwargs["cpu_version"],
-                    "Cores": kwargs["cpu_cores"],
-                },
-            }
-        )
-        machine_config.set_captured(timestamp)
-        machine_config.set_source(
-            {
-                "Identifier": kwargs["source_id"],
-                "Version": kwargs["source_version"],
-            }
-        )
-        machine_config.set_attributes(kwargs["attributes"])
-        machine_config.set_base64_data(kwargs["data"])
-        machine_config.set_machine_id(kwargs["machine_id"])
-        return machine_config
+        return ic(machine_config)
 
 def get_script_name(platform_name : str = platform.system()) -> str:
     '''This routine returns the name of the script.'''
@@ -528,7 +587,98 @@ def delete_command(args: argparse.Namespace) -> None:
     print(args)
     return
 
+def test_command(args: argparse.Namespace) -> None:
+    '''This routine tests the machine config functionality.'''
+    print(args)
+    test_machine_config_data = {
+        "machine_id" : "f7a439ec-c2d0-4844-a043-d8ac24d9ac0b",
+        "Record" : {
+            "SourceIdentifier": {
+                "Identifier": "8a948e74-6e43-4a6e-91c0-0cb5fd97355e",
+                "Version": "1.0",
+                "Description": "This service provides the configuration information for a macOS machine."
+            },
+            "Timestamp": "2024-08-09T07:52:59.839237+00:00",
+            "Attributes": {
+                "MachineGuid": "f7a439ec-c2d0-4844-a043-d8ac24d9ac0b",
+            },
+            "Data": "xx"
+        },
+        "Captured" : {
+            "Label": "eb7eaeed-6b21-4b6a-a586-dddca6a1d5a4",
+            "Value": "2024-08-08T21:26:22.418196+00:00"
+        },
+        "Platform" : {
+            "software": {
+                "OS": "Linux",
+                "Version": "5.4.0-104-generic",
+                "Architecture": "x86_64"
+            },
+            "hardware": {
+                "CPU": "Intel(R) Core(TM) i7-7700HQ CPU @ 2.80GHz",
+                "Version": "06_9E_09",
+                "Cores": 8
+            }
+        }
+    }
+    machine_config = IndalekoMachineConfig.deserialize(test_machine_config_data)
+    print(json.dumps(machine_config.serialize(), indent=4))
+
 def main():
+    '''Interact with the InalekoMachineConfig class.'''
+    pre_parser = argparse.ArgumentParser(add_help=False)
+    pre_parser.add_argument('--timestamp',
+                            type=str,
+                            default=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                            help='Timestamp to use')
+    pre_parser.add_argument('--configdir',
+                            type=str,
+                            default=Indaleko.default_config_dir,
+                            help='Configuration directory to use')
+    pre_parser.add_argument('--logdir',
+                            type=str,
+                            default=Indaleko.default_log_dir,
+                            help='Directory into which to write logs')
+    pre_parser.add_argument('--loglevel',
+                            type=int,
+                            default=logging.DEBUG,
+                            choices=IndalekoLogging.get_logging_levels(),
+                            help='Log level')
+    pre_args, _ = pre_parser.parse_known_args()
+    parser = argparse.ArgumentParser(description='Indaleko Machine Config',
+                                     parents=[pre_parser])
+    if Indaleko.validate_iso_timestamp(pre_args.timestamp):
+        timestamp = datetime.datetime.fromisoformat(pre_args.timestamp)
+    else:
+        raise AssertionError(f'Timestamp {pre_args.timestamp} is not a valid ISO timestamp')
+    log_file_name = Indaleko.generate_file_name(
+        suffix='log',
+        platform=platform.system(),
+        service='machine_config',
+        timestamp=timestamp.isoformat()
+    )
+    parser.add_argument('--log', type=str, default=log_file_name, help='Log file name to use')
+    subparsers = parser.add_subparsers(dest='command')
+    parser_test = subparsers.add_parser('test', help='Test the machine config functionality')
+    parser_test.set_defaults(func=test_command)
+    parser.set_defaults(func=test_command)
+    args = parser.parse_args()
+    indaleko_logging = IndalekoLogging(
+        service_name='IndalekoMachineConfig',
+        log_level=pre_args.loglevel,
+        log_file=args.log,
+        log_dir=pre_args.logdir
+    )
+    assert indaleko_logging is not None, 'Unable to start logging'
+    logging.info('Starting IndalekoMachineConfig')
+    logging.debug(args)
+    args.func(args)
+    logging.info('IndalekoMachineConfig: done processing.')
+
+
+
+
+def old_main():
     '''
     This is the main function for the IndalekoMachineConfig class.
     '''
@@ -567,7 +717,7 @@ def main():
         help='Log file name to use')
     parser.add_argument('--configdir',
                         type=str,
-                        default=IndalekoMachineConfig.default_config_dir,
+                        default=Indaleko.default_config_dir,
                         help='Configuration directory to use')
     parser.add_argument('--timestamp', type=str,
                        default=datetime.datetime.now(datetime.timezone.utc).isoformat(),

@@ -35,12 +35,8 @@ def run_container(db_config: IndalekoDBConfig):
 
     indaleko_docker = IndalekoDocker(**{'container_name': db_config['container'],
                                         'container_volume':db_config['volume']})
-    indaleko_docker = IndalekoDocker(**{'container_name': db_config['container'],
-                                        'container_volume':db_config['volume']})
 
     if db_config['container'] not in indaleko_docker.list_containers():
-        logging.debug('run_container: there is no container with the name "%s"!\
-                       Creating one ...', db_config['container'])
         logging.debug('run_container: there is no container with the name "%s"!\
                        Creating one ...', db_config['container'])
         # we don't have the container! create one

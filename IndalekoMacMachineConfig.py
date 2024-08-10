@@ -22,9 +22,17 @@ import datetime
 import arango
 import re
 import argparse
+
+from icecream import ic
+
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoMachineConfig import IndalekoMachineConfig
 from Indaleko import Indaleko
+from IndalekoRecordDataModel import IndalekoRecordDataModel
+from IndalekoDataModel import IndalekoDataModel
+from IndalekoMachineConfigDataModel import IndalekoMachineConfigDataModel
+from IndalekoRecordDataModel import IndalekoRecordDataModel
+
 
 class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
     '''
@@ -38,23 +46,26 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
     macos_machine_config_uuid_str = '8a948e74-6e43-4a6e-91c0-0cb5fd97355e'
 
     macos_machine_config_service = {
-        'name': 'MacOSMachineConfig',
-        'description': 'This service provides the configuration information for a macOS machine.',
-        'version': '1.0',
-        'identifier': macos_machine_config_uuid_str,
-        'created': datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        'type': 'Indexer',
+        'service_name': 'MacOSMachineConfig',
+        'service_description': 'This service provides the configuration information for a macOS machine.',
+        'service_version': '1.0',
+        'service_identifier': macos_machine_config_uuid_str,
+        'service_type': 'Indexer',
     }
 
-    def __init__(self : 'IndalekoMacOSMachineConfig',
-                 timestamp : datetime = None,
-                 db : IndalekoDBConfig = None):
-        super().__init__(timestamp=timestamp, db=db)
+    def __init__(self : 'IndalekoMacOSMachineConfig', **kwargs):
+        ic(kwargs)
+        super().__init__(**kwargs)
+        self.attributes = kwargs.get('attributes', {})
+        self.machine_id = kwargs.get('machine_id', None)
+        self.data = kwargs.get('data', None)
+        self.volume_data = kwargs.get('volume_data', {})
         self.volume_data = {}
 
     @staticmethod
     def find_config_files(directory : str) -> list:
         '''This looks for configuration files in the given directory.'''
+        ic(directory)
         return [x for x in os.listdir(directory)
                 if x.startswith(IndalekoMacOSMachineConfig.macos_machine_config_file_prefix)
                 and x.endswith('.json')]
@@ -68,7 +79,7 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
                               config_file : str = None) -> 'IndalekoMacOSMachineConfig':
         config_data = {}
         if config_dir is None and config_file is None:
-            config_dir = IndalekoMacOSMachineConfig.default_config_dir
+            config_dir = Indaleko.default_config_dir
         if config_file is None:
             assert config_dir is not None, 'config_dir must be specified'
             config_file = IndalekoMacOSMachineConfig.get_most_recent_config_file(config_dir)
@@ -81,23 +92,50 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
                 config_data = json.load(fd)
             assert str(guid) == config_data['MachineGuid'], \
                   f'GUID mismatch: {guid} != {config_data["MachineGuid"]}'
-        config = IndalekoMacOSMachineConfig()
-        config = IndalekoMachineConfig.build_config(
-            machine_config=IndalekoMacOSMachineConfig(),
-            os=config_data['OperatingSystem']['Caption'],
-            arch=config_data['OperatingSystem']['OSArchitecture'],
-            os_version=config_data['OperatingSystem']['Version'],
-            cpu=config_data['CPU']['Name'],
-            cpu_version=config_data['CPU']['Name'],
-            cpu_cores=config_data['CPU']['Cores'],
-            source_id=IndalekoMacOSMachineConfig.macos_machine_config_service['identifier'],
-            source_version=IndalekoMacOSMachineConfig.macos_machine_config_service['version'],
-            timestamp=timestamp.isoformat(),
-            attributes=config_data,
-            data=Indaleko.encode_binary_data(config_data),
-            machine_id=config_data['MachineGuid']
+        assert len(config_data) > 0, 'No configuration data found'
+        ic(config_data)
+        record = IndalekoRecordDataModel.IndalekoRecord(
+            SourceIdentifier = IndalekoDataModel.SourceIdentifier(
+                Identifier=IndalekoMacOSMachineConfig.macos_machine_config_service['service_identifier'],
+                Version=IndalekoMacOSMachineConfig.macos_machine_config_service['service_version'],
+                Description=IndalekoMacOSMachineConfig.macos_machine_config_service['service_description']
+            ),
+            Timestamp = datetime.datetime.now(datetime.timezone.utc),
+            Data = Indaleko.encode_binary_data(config_data),
+            Attributes = config_data
         )
-        config.extract_volume_info()
+        captured = IndalekoMachineConfigDataModel.Captured(
+            Value = timestamp,
+            Label = IndalekoMachineConfig.indaleko_machine_config_captured_label_str
+        )
+        platform = IndalekoMachineConfigDataModel.Platform(
+            software = IndalekoMachineConfigDataModel.Software(
+                OS = config_data['OperatingSystem']['Caption'],
+                Version = config_data['OperatingSystem']['Version'],
+                Architecture = config_data['OperatingSystem']['OSArchitecture']
+            ),
+            hardware = IndalekoMachineConfigDataModel.Hardware(
+                CPU = config_data['CPU']['Name'],
+                Version = 'Unknown',
+                Cores = config_data['CPU']['Cores']
+            )
+        )
+        config = IndalekoMacOSMachineConfig(
+            Record=IndalekoRecordDataModel.IndalekoRecord.serialize(record),
+            Platform=IndalekoMachineConfigDataModel.Platform.serialize(platform),
+            Captured=IndalekoMachineConfigDataModel.Captured.serialize(captured),
+            machine_id=config_data['MachineGuid'],
+            hostname='Unknown'
+        )
+        assert config is not None, 'Failed to create configuration object'
+        if not hasattr(config, 'Platform'): # why does this happen?
+            config.Platform = platform
+            assert isinstance(config.Platform, IndalekoMachineConfigDataModel.Platform), \
+                'config is not an instance of IndalekoMachineConfigDataModel.Platform'
+        if not hasattr(config, 'Captured'): # why does this happen?
+            config.Captured = captured
+            assert isinstance(config.Captured, IndalekoMachineConfigDataModel.Captured), \
+                'config is not an instance of IndalekoMachineConfigDataModel.Captured'
         return config
 
     @staticmethod
@@ -140,85 +178,10 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
             candidate = os.path.join(config_dir, candidate)
         return candidate
 
-    class MacOSDriveInfo:
-        '''This class is used to capture information about a macOS drive.'''
-        MacOSDriveInfo_UUID_str = 'e23f71d8-0973-455b-af20-b9bc6ee8ebd6' # created manually
-        MacOSDriveInfo_UUID = uuid.UUID(MacOSDriveInfo_UUID_str)
-        MacOSDriveInfo_Version = '1.0'
-        MacOSDriveInfo_Description = 'macOS Drive Info'
-
-        def __init__(self, machine_id : str, drive_data : dict, captured: dict) -> None:
-            assert 'GUID' not in drive_data, 'GUID should not be in drive_data'
-            assert 'UniqueId' in drive_data, 'UniqueId must be in drive_data'
-            assert drive_data['UniqueId'].startswith('/dev/')
-            drive_data['GUID'] = self.__find_volume_guid__(drive_data['UniqueId'])
-            self.machine_id = machine_id
-            super().__init__(raw_data=Indaleko.encode_binary_data(drive_data),
-                             attributes=drive_data,
-                             source_identifier={
-                                'Identifier': self.MacOSDriveInfo_UUID_str,
-                                'Version': self.MacOSDriveInfo_Version,
-                             })
-            assert isinstance(captured, dict), 'captured must be a dict'
-            self.captured = captured
-
-        @staticmethod
-        def __find_volume_guid__(vol_name : str) -> str:
-            assert vol_name is not None, 'Volume name cannot be None'
-            assert isinstance(vol_name, str), 'Volume name must be a string'
-            assert vol_name.startswith('/dev/')  # based on distutil list
-            return vol_name[5:]  # extracting the name after /dev/, e.g. /dev/[volume name]
-
-        def get_vol_guid(self):
-            '''Return the GUID of the volume.'''
-            return self.get_attributes()['GUID']
-
-        def to_dict(self):
-            obj = {}
-            obj['Record'] = super().to_dict()
-            obj['Machine'] = self.machine_id
-            obj['Captured'] = self.captured
-            obj['_key'] = self.get_vol_guid()
-            return obj
-
-    def extract_volume_info(self: 'IndalekoMacOSMachineConfig') -> None:
-        '''Extract the volume information from the machine configuration.'''
-        for volume_data in self.get_attributes()['VolumeInfo']:
-            mdi = self.MacOSDriveInfo(self.machine_id, volume_data, self.get_captured())
-            assert mdi.get_vol_guid() not in self.volume_data, \
-                  f'Volume GUID {mdi.get_vol_guid()} already in volume_data'
-            self.volume_data[mdi.get_vol_guid()] = mdi
-
-    def get_volume_info(self: 'IndalekoMacOSMachineConfig') -> dict:
-        '''This returns the volume information.'''
-        return self.volume_data
-
-    def map_drive_letter_to_volume_guid(self: 'IndalekoMacOSMachineConfig', drive_letter : str) -> str:
-        '''Map a drive letter to a volume GUID.'''
-        # Drive letters are not used in macOS
-        return None
-
-    def write_volume_info_to_db(self: 'IndalekoMacOSMachineConfig',
-                                volume_data : MacOSDriveInfo) -> bool:
-        '''Write the volume information to the database.'''
-        assert isinstance(volume_data, self.MacOSDriveInfo), \
-            'volume_data must be a MacOSDriveInfo'
-        success = False
-        try:
-            self.collection.insert(volume_data.to_json(), overwrite=True)
-            success = True
-        except arango.exceptions.DocumentInsertError as error:
-            print(f'Error inserting volume data: {error}')
-            print(volume_data.to_json(indent=4))
-        return success
 
     def write_config_to_db(self) -> None:
         '''Write the machine configuration to the database.'''
         super().write_config_to_db()
-        for _, vol_data in self.volume_data.items():
-            if not self.write_volume_info_to_db(vol_data):
-                print('DB write failed, aborting')
-                break
 
 def main():
     '''Main function for the Indaleko macOS Machine Config service.'''
@@ -260,10 +223,10 @@ def main():
         return
 
     if args.files:
-        assert os.path.exists(IndalekoMacOSMachineConfig.default_config_dir), f'config path {IndalekoMacOSMachineConfig.default_config_dir} does not exists'
+        assert os.path.exists(Indaleko.default_config_dir), f'config path {Indaleko.default_config_dir} does not exists'
         print('Listing machine configuration files in the default directory.')
         files = IndalekoMacOSMachineConfig.find_config_files(
-            IndalekoMacOSMachineConfig.default_config_dir)
+            Indaleko.default_config_dir)
         for file in files:
             print(file)
         return
