@@ -467,6 +467,62 @@ class Indaleko:
         '''Decode binary data from a string.'''
         return msgpack.unpackb(base64.b64decode(data))
 
+    @staticmethod
+    def find_candidate_files(input_strings : list[str], directory : str) -> list[tuple[str,str]]:
+        '''Given a directory location, find a list of candidate files that match
+        the input strings.'''
+
+        @staticmethod
+        def get_unique_identifier(file_name, all_files):
+            """
+            Generate a unique identifier for a file by finding the shortest
+            unique substring from a list of candidate files.
+            """
+            for i in range(1, len(file_name) + 1):
+                for j in range(len(file_name) - i + 1):
+                    substring = file_name[j:j+i]
+                    if sum(substring in f for f in all_files) == 1:
+                        return substring
+            return file_name
+
+        all_files = os.listdir(directory)
+        matched_files = []
+
+        for file in all_files:
+            matched_files.append((file, get_unique_identifier(file, all_files)))
+
+        if len(input_strings) == 0:
+            return matched_files
+
+        candidates = matched_files[:]
+
+        for input_string in input_strings:
+            updated_candidates = []
+            for candidate, unique_id in candidates:
+                if input_string in candidate:
+                    updated_candidates.append((candidate, unique_id))
+            candidates = updated_candidates
+
+        if len(candidates) > 0:
+            return candidates
+        return []
+
+    @staticmethod
+    def print_candidate_files(candidates : list[tuple[str,str]]) -> None:
+        '''Print the candidate files in a nice format.'''
+        print(candidates)
+        if len(candidates) == 0:
+            print('No candidate files found')
+            return
+        unique_id_label = 'Unique identifier'
+        unique_id_label_length = len(unique_id_label)
+        max_unique_id_length = unique_id_label_length
+        for file, unique_id in candidates:
+            if len(unique_id) > max_unique_id_length:
+                max_unique_id_length = len(unique_id)
+        print('Unique identifier', (max_unique_id_length-len('Unique identifier')) * ' ', 'File name')
+        for file, unique_id in candidates:
+            print(f'{unique_id.strip()} {(max_unique_id_length-len(unique_id))*" "} {file}')
 
 def main():
     """Test code for Indaleko.py"""

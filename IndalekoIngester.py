@@ -49,6 +49,9 @@ import jsonlines
 import datetime
 import os
 import uuid
+
+from icecream import ic
+
 from IndalekoServiceManager import IndalekoServiceManager
 from IndalekoService import IndalekoService
 from Indaleko import Indaleko
@@ -246,6 +249,25 @@ class IndalekoIngester():
     ## arangoimport -collection Objects --server.username uiRXxRxF --server.password jDrcwy9VcAhhSmt --ssl.protocol 5
     ## .\indaleko-plt=Windows-svc=ingest-ingester=local_fs_ingester-machine=2e169bb700244dc193dc18b7d2d28190-storage=3397d97b2ca511edb2fcb40ede9a5a3c-collection=Objects-ts=2024_01_19T01#12#01.057294+00#00.jsonl
     ## --server.endpoint http+ssl://activitycontext.work:8529 --server.database Indaleko
+
+    def load_indexer_data_from_file(self : 'IndalekoIngester') -> None:
+        '''This function loads the indexer data from the file.'''
+        if self.input_file is None:
+            raise ValueError('input_file must be specified')
+        if self.input_file.endswith('.jsonl'):
+            self.indexer_data = []
+            with jsonlines.open(self.input_file) as reader:
+                for entry in reader:
+                    self.indexer_data.append(entry)
+            ic(len(self.indexer_data))
+        elif self.input_file.endswith('.json'):
+            with open(self.input_file, 'r', encoding='utf-8-sig') as file:
+                self.indexer_data = json.load(file)
+                ic(len(self.indexer_data))
+        else:
+            raise ValueError(f'Input file {self.input_file} is an unknown type')
+        if not isinstance(self.indexer_data, list):
+            raise ValueError('indexer_data is not a list')
 
 
 def main():

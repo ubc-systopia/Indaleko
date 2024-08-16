@@ -31,7 +31,6 @@ from IndalekoIngester import IndalekoIngester
 from IndalekoWindowsMachineConfig import IndalekoWindowsMachineConfig
 from Indaleko import Indaleko
 from IndalekoWindowsLocalIndexer import IndalekoWindowsLocalIndexer
-from IndalekoServiceManager import IndalekoServiceManager
 from IndalekoObject import IndalekoObject
 from IndalekoUnix import UnixFileAttributes
 from IndalekoWindows import IndalekoWindows

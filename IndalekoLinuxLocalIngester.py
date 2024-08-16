@@ -231,11 +231,11 @@ class IndalekoLinuxLocalIngester(IndalekoIngester):
                     IndalekoRelationshipContains.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR,
                 object1 = {
                     'collection' : 'Objects',
-                    'object' : item.args['ObjectIdentifier'],
+                    'object' : parent_id,
                 },
                 object2 = {
                     'collection' : 'Objects',
-                    'object' : parent_id,
+                    'object' : item.args['ObjectIdentifier'],
                 },
                 source = source
             )
@@ -246,11 +246,11 @@ class IndalekoLinuxLocalIngester(IndalekoIngester):
                     IndalekoRelationshipContainedBy.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR,
                 object1 = {
                     'collection' : 'Objects',
-                    'object' : parent_id,
+                    'object' : item.args['ObjectIdentifier'],
                 },
                 object2 = {
                     'collection' : 'Objects',
-                    'object' : item.args['ObjectIdentifier'],
+                    'object' : parent_id,
                 },
                 source = source
             )

@@ -237,7 +237,7 @@ class IndalekoGDriveIndexer(IndalekoIndexer):
             suffix: suffix of the file to ingest (default is .json)
         '''
         prospects = IndalekoIndexer.find_indexer_files(search_dir, prefix, suffix)
-        return [f for f in prospects if IndalekoGDriveIndexer.dropbox_platform in f]
+        return [f for f in prospects if IndalekoGDriveIndexer.gdrive_platform in f]
 
 
 def main():
