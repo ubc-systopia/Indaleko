@@ -257,6 +257,7 @@ class IndalekoLinuxLocalIngester(IndalekoIngester):
             dir_edges.append(dir_edge)
             self.edge_count += 1
         # Save the data to the ingester output file
+        ic(self.output_file)
         self.write_data_to_file(dir_data + file_data, self.output_file)
         kwargs = {
             'machine' : self.machine_id,
@@ -270,6 +271,7 @@ class IndalekoLinuxLocalIngester(IndalekoIngester):
             kwargs['storage'] = self.args['storage_description']
         edge_file = self.generate_output_file_name(**kwargs)
         self.write_data_to_file(dir_edges, edge_file)
+        ic(edge_file)
 
     @staticmethod
     def generate_log_file_name(**kwargs) -> str:

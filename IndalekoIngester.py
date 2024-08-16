@@ -220,6 +220,7 @@ class IndalekoIngester():
                         logging.error('Entry: %s', entry)
                         raise err
             logging.info('Wrote JSONLines data to %s', file_name)
+            ic('Wrote JSON data to', file_name)
         else:
             json.dump(data, file_name, indent=4)
             logging.info('Wrote JSON data to %s', file_name)

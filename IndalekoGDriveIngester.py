@@ -54,21 +54,23 @@ class IndalekoGDriveIngester(IndalekoIngester):
 
     def __init__(self, **kwargs : dict) -> None:
         '''Initialize the Google Drive Ingester'''
-        ic(kwargs)
         if 'input_file' not in kwargs:
             raise ValueError('input_file is required for the Google Drive Ingester')
         for key, value in self.gdrive_ingester_service.items():
             if key not in kwargs:
                 kwargs[key] = value
         super().__init__(**kwargs)
+        self.data_dir = kwargs.get('data_dir', Indaleko.default_data_dir)
         self.input_file = kwargs['input_file']
-        self.output_file = kwargs.get('output_file', self.generate_file_name())
+        self.indexer_file_metadata = Indaleko.extract_keys_from_file_name(self.input_file)
+        self.ingester = IndalekoGDriveIngester.gdrive_ingester
         self.indexer_data = []
         self.source = {
             'Identifier' : self.gdrive_ingester_uuid_str,
             'Version' : '1.0.0',
         }
         self.ingester_service = IndalekoGDriveIngester.gdrive_ingester_service
+
 
     def normalize_index_data(self, data: dict) -> dict:
         '''Normalize the index data'''
@@ -179,7 +181,10 @@ class IndalekoGDriveIngester(IndalekoIngester):
             'Size' : int(data.get('size', 0)),
             'Attributes' : data
         }
-        kwargs['UnixFileAttributes'] = self.map_gdrive_attributes_to_unix_attributes(data)
+        kwargs['UnixFileAttributes'] = \
+            UnixFileAttributes.map_file_attributes(
+                self.map_gdrive_attributes_to_unix_attributes(data)
+            )
         if 'timestamp' not in kwargs:
             if isinstance(self.timestamp, str):
                 kwargs['timestamp'] = datetime.datetime.fromisoformat(self.timestamp)
@@ -204,6 +209,12 @@ class IndalekoGDriveIngester(IndalekoIngester):
                 attributes |= UnixFileAttributes.FILE_ATTRIBUTES['S_IFREG']
         return attributes
 
+    @staticmethod
+    def generate_ingester_file_name(**kwargs):
+        '''Generate the file name for the ingester'''
+        assert 'user_id' in kwargs, 'user_id is required'
+        return Indaleko.generate_file_name(**kwargs)
+
     def ingest(self) -> None:
         '''Ingest the data from the Google Drive Indexer'''
         self.load_indexer_data_from_file()
@@ -226,7 +237,7 @@ class IndalekoGDriveIngester(IndalekoIngester):
                         dir_oids.append(parent_oid)
                 data['parents'] = parent_oids
             obj = self.normalize_index_data(data)
-            if data['id'] in dir_oids:
+            if 'S_IFDIR' in obj.args['UnixFileAttributes']:
                 dir_data.append(obj)
                 self.dir_count += 1
             else:
@@ -271,16 +282,22 @@ class IndalekoGDriveIngester(IndalekoIngester):
                         )
                     )
                     self.edge_count += 1
-        self.write_data_to_file(dir_data + file_data, self.output_file)
+        ic(self.indexer_file_metadata)
         kwargs = {
-            'service' : self.gdrive_ingester,
-            'collection' : 'Relationships',
+            'platform' : self.indexer_file_metadata['platform'],
+            'prefix' : self.indexer_file_metadata['prefix'],
+            'service' : 'ingester',
+            'suffix' : 'jsonl',
             'timestamp' : self.timestamp,
-            'output_dir' : self.data_dir
+            'collection' : 'Objects',
+            'user_id' : self.indexer_file_metadata['user_id']
         }
-        edge_file = self.generate_output_file_name(**kwargs)
+        data_file = os.path.join(self.data_dir, Indaleko.generate_file_name(**kwargs))
+        kwargs['collection'] = 'Relationships'
+        edge_file = os.path.join(self.data_dir, Indaleko.generate_file_name(**kwargs))
+        ic(data_file, edge_file)
+        self.write_data_to_file(dir_data + file_data, data_file)
         self.write_data_to_file(dir_edges, edge_file)
-        return
 
 
 
@@ -310,10 +327,12 @@ def ingest_file(args: argparse.Namespace) -> None:
         print('Multiple files match the filter strings: ', args.strings)
         Indaleko.print_candidate_files(candidates)
         return
-    print('Ingesting:', candidates[0][0])
-    ingester = IndalekoGDriveIngester(input_file=os.path.join(args.datadir, candidates[0][0]))
-    print(ingester)
+    ingester = IndalekoGDriveIngester(input_file=os.path.join(args.datadir, candidates[0][0]), data_dir=args.datadir)
     ingester.ingest()
+    for count_type, count_value in ingester.get_counts().items():
+        logging.info('%s: %d', count_type, count_value)
+        ic(count_type, count_value)
+    ic('Done ingesting')
 
 
 def main() -> None:
@@ -351,40 +370,6 @@ def main() -> None:
     args = parser.parse_args()
     print(args)
     args.func(args)
-
-
-
-
-def old_main():
-    '''This is the front-end for the Google Drive Ingester'''
-
-    logging_levels = IndalekoLogging.get_logging_levels()
-    pre_parser = argparse.ArgumentParser(add_help=False)
-    pre_parser.add_argument('--configdir',
-                            help=f'Path to the config directory (default is {Indaleko.default_config_dir})',
-                            default=Indaleko.default_config_dir)
-    pre_parser.add_argument('--logdir',
-                            help=f'Path to the log directory (default is {Indaleko.default_log_dir})',
-                            default=Indaleko.default_log_dir)
-    pre_parser.add_argument('--loglevel',
-                        choices=logging_levels,
-                        default=logging.DEBUG,
-                        help='Logging level to use.')
-    pre_parser.add_argument('--datadir',
-                            help=f'Path to the data directory (default is {Indaleko.default_data_dir})',
-                            type=str,
-                            default=Indaleko.default_data_dir)
-    pre_args, _ = pre_parser.parse_known_args()
-    indexer_files = IndalekoGDriveIndexer.find_indexer_files(pre_args.datadir)
-    pre_parser.add_argument('--input',
-                            help='Indexer file to use',
-                            type=str)
-    pre_args, _ = pre_parser.parse_known_args()
-    print(indexer_files)
-    print(pre_args)
-
-
-
 
 if __name__ == '__main__':
     main()
