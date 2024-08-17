@@ -39,6 +39,11 @@ def run_container(db_config: IndalekoDBConfig):
     if db_config['container'] not in indaleko_docker.list_containers():
         logging.debug('run_container: there is no container with the name "%s"!\
                        Creating one ...', db_config['container'])
+<<<<<<<<< Temporary merge branch 1
+        logging.debug('run_container: there is no container with the name "%s"!\
+                       Creating one ...', db_config['container'])
+=========
+>>>>>>>>> Temporary merge branch 2
         # we don't have the container! create one
         indaleko_docker.create_container(
             container_name=db_config['container'],
@@ -114,6 +119,7 @@ def check_command(args : argparse.Namespace) -> None:
     print('Database connection successful.')
 
     # make sure the collections exist
+    IndalekoCollections(db_config=db_config)
     IndalekoCollections(db_config=db_config)
 
 

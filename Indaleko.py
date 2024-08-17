@@ -64,7 +64,11 @@ import socket
 import ipaddress
 import base64
 import msgpack
+import base64
+import msgpack
 
+from IndalekoObjectDataSchema import IndalekoObjectSchema
+from IndalekoServiceSchema import IndalekoServiceSchema
 from IndalekoObjectDataSchema import IndalekoObjectSchema
 from IndalekoServiceSchema import IndalekoServiceSchema
 from IndalekoRelationshipSchema import IndalekoRelationshipSchema
@@ -97,6 +101,7 @@ class Indaleko:
     Collections = {
         Indaleko_Objects: {
             'schema' : IndalekoObjectSchema().get_json_schema(),
+            'schema' : IndalekoObjectSchema().get_json_schema(),
             'edge' : False,
             'indices' : {
                 'URI' : {
@@ -118,6 +123,7 @@ class Indaleko:
             },
         },
         Indaleko_Relationships : {
+            'schema' : IndalekoRelationshipSchema().get_json_schema(),
             'schema' : IndalekoRelationshipSchema().get_json_schema(),
             'edge' : True,
             'indices' : {
@@ -145,6 +151,7 @@ class Indaleko:
         },
         Indaleko_Services : {
             'schema' : IndalekoServiceSchema().get_json_schema(),
+            'schema' : IndalekoServiceSchema().get_json_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {
@@ -155,11 +162,13 @@ class Indaleko:
             },
         },
         Indaleko_MachineConfig : {
-            'schema' : { }, # IndalekoMachineConfigSchema().get_json_schema(),
+            'schema' : IndalekoMachineConfigSchema().get_json_schema(),
+>>>>>>>>> Temporary merge branch 2
             'edge' : False,
             'indices' : { },
         },
         Indaleko_ActivityDataProviders : {
+            'schema' : IndalekoActivityDataProviderRegistrationSchema().get_json_schema(),
             'schema' : IndalekoActivityDataProviderRegistrationSchema().get_json_schema(),
             'edge' : False,
             'indices' : {
@@ -172,6 +181,7 @@ class Indaleko:
         },
         Indaleko_ActivityContext : {
             'schema' : IndalekoActivityContextSchema().get_json_schema(),
+            'schema' : IndalekoActivityContextSchema().get_json_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {
@@ -183,6 +193,7 @@ class Indaleko:
         },
        Indaleko_Users : {
             'schema' : IndalekoUserSchema().get_json_schema(),
+            'schema' : IndalekoUserSchema().get_json_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {
@@ -193,6 +204,7 @@ class Indaleko:
             },
         },
         Indaleko_User_Relationships : {
+            'schema' : IndalekoUserRelationshipSchema().get_json_schema(),
             'schema' : IndalekoUserRelationshipSchema().get_json_schema(),
             'edge' : True,
             'indices' : {
@@ -279,6 +291,14 @@ class Indaleko:
             except ValueError:
                 valid = False
         return valid
+
+    @staticmethod
+    def generate_iso_timestamp(ts : datetime = None) -> str:
+        """Given a timestamp, convert it to an ISO timestamp."""
+        if ts is None:
+            ts = datetime.datetime.now(datetime.timezone.utc)
+        assert isinstance(ts, datetime.datetime), f'ts must be a datetime, not {type(ts)}'
+        return ts.isoformat()
 
     @staticmethod
     def generate_iso_timestamp(ts : datetime = None) -> str:
@@ -523,6 +543,7 @@ class Indaleko:
         print('Unique identifier', (max_unique_id_length-len('Unique identifier')) * ' ', 'File name')
         for file, unique_id in candidates:
             print(f'{unique_id.strip()} {(max_unique_id_length-len(unique_id))*" "} {file}')
+
 
 def main():
     """Test code for Indaleko.py"""

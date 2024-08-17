@@ -25,6 +25,7 @@ import apischema
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Annotated, Optional
+from typing import Annotated, Optional
 from uuid import UUID
 
 from icecream import ic
@@ -217,7 +218,8 @@ class IndalekoMachineConfigDataModel:
         def serialize(data) -> dict:
             '''Serialize the object to a dictionary.'''
             return serialize(IndalekoMachineConfigDataModel.MachineConfig,
-                             data, additional_properties=True),
+                             data,
+                             additional_properties=True)
 
 
     @staticmethod
@@ -241,6 +243,7 @@ class IndalekoMachineConfigDataModel:
     @staticmethod
     def get_types() -> list:
         '''Return the types for the MachineConfig collection.'''
+        return [IndalekoMachineConfigDataModel.Platform,
         return [IndalekoMachineConfigDataModel.Platform,
                 IndalekoMachineConfigDataModel.Captured,
                 IndalekoMachineConfigDataModel.MachineConfig]
