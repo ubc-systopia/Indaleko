@@ -163,7 +163,6 @@ class Indaleko:
         },
         Indaleko_MachineConfig : {
             'schema' : IndalekoMachineConfigSchema().get_json_schema(),
->>>>>>>>> Temporary merge branch 2
             'edge' : False,
             'indices' : { },
         },
