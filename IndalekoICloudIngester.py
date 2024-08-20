@@ -1,11 +1,10 @@
 import argparse
-import datetime
+from datetime import datetime, timezone
 from icecream import ic
 import logging
 import os
 import json
 import jsonlines
-import msgpack
 import uuid
 
 
@@ -92,33 +91,42 @@ class IndalekoICloudIngester(IndalekoIngester):
             data['user_id'] = self.user_id
         
         ic(data)
-        
-        timestamps = [
-            {
-                'Label': IndalekoObject.MODIFICATION_TIMESTAMP,
-                'Value': data['modified'],
-                'Description': 'Modified'
-            },
-            {
-                'Label': IndalekoObject.CHANGE_TIMESTAMP,
-                'Value': data['date_changed'],
-                'Description': 'Changed'
-            },
-            {
-                'Label': 'Created',
-                'Value': data['created'],
-                'Description': 'Created'
-            },
-            {
-                'Label': 'Last Opened',
-                'Value': data['last_opened'],
-                'Description': 'Last Opened'
-            }
-        ]
+        timestamps = []
+
+        if 'created' in data:
+            timestamps.append({
+                'Label' : IndalekoObject.CREATION_TIMESTAMP,
+                'Value' : data['created'].isoformat() if isinstance(data['created'], datetime) else data['created'],
+                'Description' : 'Created',
+            })
+        if 'modified' in data:
+            timestamps.append({
+                'Label' : IndalekoObject.MODIFICATION_TIMESTAMP,
+                'Value' : data['modified'].isoformat() if isinstance(data['modified'], datetime) else data['modified'],
+                'Description' : 'Modified',
+            })
+        if 'last_opened' in data:
+            timestamps.append({
+                'Label' : IndalekoObject.ACCESS_TIMESTAMP,
+                'Value' : data['last_opened'].isoformat() if isinstance(data['last_opened'], datetime) else data['last_opened'],
+                'Description' : 'Last Opened',
+            })
+        if 'date_changed' in data:
+            timestamps.append({
+                'Label' : IndalekoObject.CHANGE_TIMESTAMP,
+                'Value' : data['date_changed'].isoformat() if isinstance(data['date_changed'], datetime) else data['date_changed'],
+                'Description' : 'Changed',
+            })
+
+        # Convert datetime objects to ISO 8601 strings before serializing
+        serializable_data = {
+            k: (v.isoformat() if isinstance(v, datetime) else v)
+            for k, v in data.items()
+        }
 
         kwargs = {
             'source': self.source,
-            'raw_data': Indaleko.encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
+            'raw_data': Indaleko.encode_binary_data(bytes(json.dumps(serializable_data).encode('utf-8'))),
             'URI': 'https://www.icloud.com' + data['path_display'],
             'Path': data['path_display'],
             'ObjectIdentifier': data['ObjectIdentifier'],
@@ -298,7 +306,7 @@ class IndalekoICloudIngester(IndalekoIngester):
 def main():
     '''This is the main handler for the iCloud ingester.'''
     logging_levels = Indaleko.get_logging_levels()
-    timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    timestamp = datetime.now(timezone.utc).isoformat()
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument('--logdir', '-l',
                             help='Path to the log directory',

@@ -133,15 +133,15 @@ class IndalekoIngester():
                                           IndalekoIngester\
                                             .indaleko_generic_ingester_service_version)
         self.service_type = kwargs.get('Type', 'Ingester')
-        self.service_identifier = kwargs.get('Identifier', kwargs.get('service_identifier', None))
-        assert self.service_identifier is not None, \
+        self.service_id = kwargs.get('Identifier', kwargs.get('service_id', None))
+        assert self.service_id is not None, \
             f'Service identifier must be specified\n{kwargs}'
         self.ingester_service = IndalekoServiceManager().register_service(
             service_name = self.service_name,
             service_description = self.service_description,
             service_version = self.service_version,
             service_type = self.service_type,
-            service_id = self.service_identifier,
+            service_id = self.service_id,
         )
         assert self.ingester_service is not None, 'Ingester service does not exist'
         for count in IndalekoIngester.counter_values:

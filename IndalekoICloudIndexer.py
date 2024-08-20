@@ -28,10 +28,10 @@ class IndalekoICloudIndexer(IndalekoIndexer):
         'name': 'icloud_root_dir',
         'path_display': 'root',
         'size': 0,
-        'modified': None,
-        'date_changed': None,
-        'created': None,
-        'last_opened': None,
+        'modified': datetime.now(timezone.utc),
+        'date_changed': datetime.now(timezone.utc),
+        'created': datetime.now(timezone.utc),
+        'last_opened': datetime.now(timezone.utc),
     }
 
     indaleko_icloud_local_indexer_service = {
@@ -179,12 +179,12 @@ class IndalekoICloudIndexer(IndalekoIndexer):
     def collect_metadata(self, item, item_path):
         metadata = {
             'name': item.name,
-            'path_display':IndalekoICloudIndexer.icloud_root_folder['path_display'] +  '/' + item_path,
-            'size': getattr(item, 'size', 'Unknown'),
-            'modified': item.date_modified.strftime('%Y-%m-%d %H:%M:%S') if hasattr(item, 'date_modified') and item.date_modified else 'Unknown',
-            'created': item.date_created.strftime('%Y-%m-%d %H:%M:%S') if hasattr(item, 'date_created') and item.date_created else 'Unknown',
-            'last_opened': item.date_last_opened.strftime('%Y-%m-%d %H:%M:%S') if hasattr(item, 'date_last_opened') and item.date_last_opened else 'Unknown',
-            'date_changed': item.date_changed.strftime('%Y-%m-%d %H:%M:%S') if hasattr(item, 'date_changed') and item.date_changed else 'Unknown',
+            'path_display': IndalekoICloudIndexer.icloud_root_folder['path_display'] + '/' + item_path,
+            'size': getattr(item, 'size', 0) or 0, # Default to 0 if size is None or 0
+            'modified': item.date_modified.isoformat() if hasattr(item, 'date_modified') and item.date_modified else datetime(1970, 1, 1, 0, 0).isoformat(),
+            'created': item.date_created.isoformat() if hasattr(item, 'date_created') and item.date_created else datetime(1970, 1, 1, 0, 0).isoformat(),
+            'last_opened': item.date_last_opened.isoformat() if hasattr(item, 'date_last_opened') and item.date_last_opened else datetime(1970, 1, 1, 0, 0).isoformat(),
+            'date_changed': item.date_changed.isoformat() if hasattr(item, 'date_changed') and item.date_changed else datetime(1970, 1, 1, 0, 0).isoformat(),
             'ObjectIdentifier': str(uuid.uuid4()),  # Generate and add a UUID for each file
             'drivewsid': getattr(item, 'drivewsid', 'Unknown'),
             'docwsid': getattr(item, 'docwsid', 'Unknown'),
@@ -193,7 +193,7 @@ class IndalekoICloudIndexer(IndalekoIndexer):
             'parentId': getattr(item, 'parentId', 'Unknown'),
             'item_id': getattr(item, 'item_id', 'Unknown'),
             'etag': getattr(item, 'etag', 'Unknown'),
-            'lastOpenTime': item.date_last_opened.strftime('%Y-%m-%d %H:%M:%S') if hasattr(item, 'date_last_opened') and item.date_last_opened else 'Unknown',
+            'lastOpenTime': item.date_last_opened.isoformat() if hasattr(item, 'date_last_opened') and item.date_last_opened else datetime(1970, 1, 1, 0, 0).isoformat(),
             'type': getattr(item, 'type', 'Unknown')
         }
         return metadata
