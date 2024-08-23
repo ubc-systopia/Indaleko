@@ -24,6 +24,8 @@ import os
 import logging
 import platform
 
+from icecream import ic
+
 from Indaleko import Indaleko
 from IndalekoIndexer import IndalekoIndexer
 from IndalekoMacMachineConfig import IndalekoMacOSMachineConfig
@@ -116,7 +118,7 @@ class IndalekoMacLocalIndexer(IndalekoIndexer):
         return data
 
 def main():
-    '''This is the main handler for the Indaleko Windows Local Indexer
+    '''This is the main handler for the Indaleko Mac Local Indexer
     service.'''
     if platform.python_version() < '3.12':
         logging_levels = []
