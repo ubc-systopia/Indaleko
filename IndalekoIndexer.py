@@ -67,35 +67,16 @@ class IndalekoIndexer:
     )
 
     def __init__(self, **kwargs):
-        if 'file_prefix' in kwargs:
-            self.file_prefix = kwargs['file_prefix']
-        else:
-            self.file_prefix = IndalekoIndexer.default_file_prefix
-        self.file_prefix = self.file_prefix.replace('-', '_')
-        if 'file_suffix' in kwargs:
-            self.file_suffix = kwargs['file_suffix'].replace('-', '_')
-        else:
-            self.file_suffix = IndalekoIndexer.default_file_suffix
-        self.file_suffix = self.file_suffix.replace('-', '_')
-        if 'data_dir' in kwargs:
-            self.data_dir = kwargs['data_dir']
-        else:
-            self.data_dir = Indaleko.default_data_dir
+        self.file_prefix = kwargs.get('file_prefix', IndalekoIndexer.default_file_prefix).replace('-', '_')
+        self.file_suffix = kwargs.get('file_suffix', IndalekoIndexer.default_file_suffix).replace('-', '_')
+        self.data_dir = kwargs.get('data_dir', Indaleko.default_data_dir)
         assert os.path.isdir(self.data_dir), f'{self.data_dir} must be an existing directory'
-        if 'config_dir' in kwargs:
-            self.config_dir = kwargs['config_dir']
-        else:
-            self.config_dir = Indaleko.default_config_dir
+        self.config_dir = kwargs.get('config_dir', Indaleko.default_config_dir)
         assert os.path.isdir(self.data_dir), f'{self.data_dir} must be an existing directory'
-        if 'log_dir' in kwargs:
-            self.log_dir = kwargs['log_dir']
-        else:
-            self.log_dir = Indaleko.default_log_dir
+        self.log_dir = kwargs.get('log_dir', Indaleko.default_log_dir)
         assert os.path.isdir(self.data_dir), f'{self.data_dir} must be an existing directory'
-        if 'timestamp' in kwargs:
-            self.timestamp = kwargs['timestamp']
-        else:
-            self.timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        self.timestamp = kwargs.get('timestamp', datetime.datetime.now(datetime.timezone.utc).isoformat())
+        assert isinstance(self.timestamp, str), 'timestamp must be a string'
         if 'platform' in kwargs:
             self.platform = kwargs['platform']
         if 'indexer_name' in kwargs:
@@ -170,34 +151,26 @@ class IndalekoIndexer:
     def generate_indexer_file_name(**kwargs) -> str:
         '''This will generate a file name for the indexer output file.'''
         # platform : str, target_dir : str = None, suffix : str = None) -> str:
-        platform = 'unknown_platform'
-        if 'platform' in kwargs:
-            platform = kwargs['platform']
+        assert 'platform' in kwargs, 'platform must be specified'
+        assert 'indexer_name' in kwargs, 'indexer_name must be specified'
+        platform = kwargs.get('platform', 'unknown_platform').replace('-', '_')
         if not isinstance(platform, str):
             raise ValueError('platform must be a string')
-        platform = platform.replace('-', '_')
-        indexer_name = 'unknown_indexer'
-        if 'indexer_name' in kwargs:
-            indexer_name = kwargs['indexer_name']
+        indexer_name = kwargs.get('indexer_name', 'unknown_indexer').replace('-', '_')
         if not isinstance(indexer_name, str):
             raise ValueError('indexer_name must be a string')
-        indexer_name = indexer_name.replace('-', '_')
-        indexer_name = indexer_name.replace('-', '_')
-        machine_id = str(uuid.UUID('00000000-0000-0000-0000-000000000000').hex)
-        if 'machine_id' in kwargs:
-            machine_id = str(uuid.UUID(kwargs['machine_id']).hex)
+        machine_id = kwargs.get('machine_id',
+                                str(uuid.UUID('00000000-0000-0000-0000-000000000000').hex))
         storage_description = None
         if 'storage_description' in kwargs:
             storage_description = str(uuid.UUID(kwargs['storage_description']).hex)
-        timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        if 'timestamp' in kwargs:
-            timestamp = kwargs['timestamp']
+        timestamp = kwargs.get('timestamp',
+                               datetime.datetime.now(datetime.timezone.utc).isoformat())
+        assert isinstance(timestamp, str), 'timestamp must be a string'
         target_dir = Indaleko.default_data_dir
         if 'target_dir' in kwargs:
             target_dir = kwargs['target_dir']
-        suffix = None
-        if 'suffix' in kwargs:
-            suffix = kwargs['suffix']
+        suffix = kwargs.get('suffix')
         kwargs = {
             'platform' : platform,
             'service' : indexer_name,
@@ -206,8 +179,7 @@ class IndalekoIndexer:
         }
         if storage_description is not None:
             kwargs['storage'] = storage_description
-        if 'suffix' in kwargs:
-            kwargs['suffix'] = kwargs['suffix']
+        kwargs['suffix'] = suffix
         name = Indaleko.generate_file_name(**kwargs)
         return os.path.join(target_dir,name)
 

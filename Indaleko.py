@@ -65,7 +65,7 @@ import ipaddress
 import base64
 import msgpack
 
-from IndalekoObjectDataSchema import IndalekoObjectSchema
+from IndalekoObjectDataSchema import IndalekoObjectDataSchema
 from IndalekoServiceSchema import IndalekoServiceSchema
 from IndalekoRelationshipSchema import IndalekoRelationshipSchema
 from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
@@ -96,7 +96,7 @@ class Indaleko:
 
     Collections = {
         Indaleko_Objects: {
-            'schema' : IndalekoObjectSchema().get_json_schema(),
+            'schema' : IndalekoObjectDataSchema().get_json_schema(),
             'edge' : False,
             'indices' : {
                 'URI' : {

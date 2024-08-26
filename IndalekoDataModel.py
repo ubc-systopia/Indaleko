@@ -27,6 +27,7 @@ from apischema import schema, ValidationError, deserialize, serialize, Undefined
 from apischema.graphql import graphql_schema
 from apischema.metadata import required, skip
 from graphql import print_schema
+from pydantic import BaseModel, create_model
 from icecream import ic
 
 @dataclass
@@ -172,6 +173,16 @@ class IndalekoDataModel:
             IndalekoUUID,
             IndalekoDataModel.SemanticAttribute
         ]
+
+    @staticmethod
+    def convert_dataclass_to_pydantic(dataclass_instance: Any) -> BaseModel:
+        """Convert a dataclass instance to a Pydantic model."""
+        fields = {
+            field.name :
+            (field.type, field.default) for field in dataclass_instance.__dataclass_fields__.values()
+            }
+        PydanticModel = create_model(dataclass_instance.__class__.__name__, **fields)
+        return PydanticModel(**dataclass_instance.__dict__)
 
 def main():
     """Test code for the IndalekoDataModel class."""

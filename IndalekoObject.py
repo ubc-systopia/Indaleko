@@ -25,7 +25,7 @@ import datetime
 from icecream import ic
 
 from Indaleko import Indaleko
-from IndalekoObjectDataSchema import IndalekoObjectSchema
+from IndalekoObjectDataSchema import IndalekoObjectDataSchema
 from IndalekoObjectDataModel import IndalekoObjectDataModel
 from IndalekoRecordDataModel import IndalekoRecordDataModel
 from IndalekoDataModel import IndalekoDataModel, IndalekoUUID
@@ -34,7 +34,7 @@ class IndalekoObject:
     '''
     An IndalekoObject represents a single object (file/directory) in the Indaleko system.
     '''
-    Schema = IndalekoObjectSchema().get_json_schema()
+    Schema = IndalekoObjectDataSchema().get_json_schema()
 
     '''UUIDs we associate with specific timestamps that we capture'''
     CREATION_TIMESTAMP = '6b3f16ec-52d2-4e9b-afd0-e02a875ec6e6'
@@ -184,7 +184,7 @@ def main():
     }
     indaleko_object = IndalekoObject.deserialize(data_object)
     print(json.dumps(indaleko_object.serialize(), indent=2))
-    assert IndalekoObjectSchema.is_valid_object(indaleko_object.serialize()),\
+    assert IndalekoObjectDataSchema.is_valid_object(indaleko_object.serialize()),\
         'Object is not valid.'
 
 if __name__ == "__main__":
