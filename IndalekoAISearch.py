@@ -32,6 +32,26 @@ class IndalekoAISearch:
     default_categories = []
 
     class Collection(str, Enum):
+        Objects = 'Objects'
+        Relationships = 'Relationships'
+        Machines = 'MachineConfig'
+
+    class object_columns(str, Enum):
+        uri = 'URI'
+        label = 'Label'
+        object_identifier = 'ObjectIdentifier'
+        size = 'Size'
+        timestamps = 'Timestamps'
+
+    class relationship_columns(str, Enum):
+        object1 = 'Object1'
+        object2 = 'Object2'
+        relationship_type = 'Relationship'
+
+    class machineconfig_columns(str, Enum):
+        machine_name = 'MachineName'
+        machine_type = 'MachineType'
+        machine_config = 'MachineConfig'
 
     def __init__(self, **kwargs):
         '''Initialize the AI agent'''
