@@ -124,14 +124,11 @@ class IndalekoServiceManager(IndalekoSingleton):
         """
         This method is used to lookup a service by name.
         """
-        ic(name)
         entries = self.service_collection.find_entries(Name =  name)
-        ic(entries)
         assert len(entries) < 2, f'Multiple entries found for service {name}, not handled.'
         if len(entries) == 0:
             return None
         else:
-            ic(entries[0])
             return IndalekoService.deserialize(entries[0])
 
     def lookup_service_by_identifier(self, service_identifier: str) -> dict:
@@ -161,7 +158,6 @@ class IndalekoServiceManager(IndalekoSingleton):
         """
         assert service_type in IndalekoServiceManager.service_types, \
             f'Invalid service type {service_type} specified.'
-        ic(service_name, service_description, service_version, service_type, service_id)
         existing_service = None
         if service_id is not None:
             existing_service = self.lookup_service_by_identifier(service_id)
@@ -170,9 +166,13 @@ class IndalekoServiceManager(IndalekoSingleton):
                 if existing_service.service_name != service_name:
                     ic('Service name mismatch', existing_service.service_name, service_name)
                 if existing_service.service_description != service_description:
-                    ic('Service description mismatch', existing_service.service_description, service_description)
+                    ic('Service description mismatch',
+                       existing_service.service_description,
+                       service_description)
                 if existing_service.service_version != service_version:
-                    ic('Service version mismatch', existing_service.service_version, service_version)
+                    ic('Service version mismatch',
+                       existing_service.service_version,
+                       service_version)
                 if existing_service.service_type != service_type:
                     ic('Service type mismatch', existing_service.service_type, service_type)
                 ic('Service already exists', existing_service)
@@ -198,7 +198,6 @@ class IndalekoServiceManager(IndalekoSingleton):
                 service_identifier=service_id
             )
             document = new_service.serialize()
-            ic(document)
             self.service_collection.insert(document)
             existing_service = self.lookup_service_by_identifier(service_id)
         return existing_service
@@ -227,7 +226,6 @@ class IndalekoServiceManagerTest:
             service_version='1.0.0',
             service_type='Test'
         )
-        ic(new_service)
 
 
     @staticmethod

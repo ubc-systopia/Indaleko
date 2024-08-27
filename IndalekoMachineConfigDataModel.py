@@ -55,6 +55,10 @@ class IndalekoMachineConfigDataModel:
                            schema(description="Version of the software."),
                            required]
 
+        Hostname: Annotated[str,
+                            schema(description="Hostname of the machine."),
+                            required] = 'unknown'
+
         Architecture: Annotated[
             Optional[str],
             schema(description="Processor architecture.")
@@ -195,23 +199,14 @@ class IndalekoMachineConfigDataModel:
         Platform: Annotated[
             Optional['IndalekoMachineConfigDataModel.Platform'],
             schema(description="The platform.")
-        ] = field(default=None, metadata=skip)
+        ] = field(default=None)
 
         @staticmethod
         def deserialize(data: dict) -> 'IndalekoMachineConfigDataModel.MachineConfig':
             '''Deserialize a dictionary to an object.'''
-            ic(data)
             results = deserialize(IndalekoMachineConfigDataModel.MachineConfig,
                             data,
                             additional_properties=True)
-            assert results is not None
-            assert hasattr(results, 'Platform')
-            if results.Platform is None:
-                results.Platform = IndalekoMachineConfigDataModel.Platform(
-                    software=IndalekoMachineConfigDataModel.Software.deserialize(data['Platform']['software']),
-                    hardware=IndalekoMachineConfigDataModel.Hardware.deserialize(data['Platform']['hardware'])
-                )
-            assert hasattr(results, 'Captured') and results.Captured is not None
             return results
 
         @staticmethod
@@ -243,7 +238,6 @@ class IndalekoMachineConfigDataModel:
     @staticmethod
     def get_types() -> list:
         '''Return the types for the MachineConfig collection.'''
-        return [IndalekoMachineConfigDataModel.Platform,
         return [IndalekoMachineConfigDataModel.Platform,
                 IndalekoMachineConfigDataModel.Captured,
                 IndalekoMachineConfigDataModel.MachineConfig]
@@ -283,7 +277,8 @@ def main():
             "software": {
                 "OS": "Linux",
                 "Version": "5.4.0-104-generic",
-                "Architecture": "x86_64"
+                "Architecture": "x86_64",
+                "Hostname" : "testhost"
             },
             "hardware": {
                 "CPU": "Intel(R) Core(TM) i7-7700HQ CPU @ 2.80GHz",
@@ -292,7 +287,6 @@ def main():
             }
         },
         "_key": "f7a439ec-c2d0-4844-a043-d8ac24d9ac0b",
-        "hostname": "f7a439ec-c2d0-4844-a043-d8ac24d9ac0b"
     }
 
     #machine_config = IndalekoMachineConfigDataModel.MachineConfig.deserialize(data_object)

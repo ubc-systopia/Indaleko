@@ -129,9 +129,9 @@ class IndalekoDataModel:
         ] = None
 
     @staticmethod
-    def get_timestamp(uuid: UUID, value: datetime = datetime.now(timezone.utc), description: str = 'Prototype description') -> 'IndalekoDataModel.Timestamp':
-        """Lookup a timestamp."""
-    def get_timestamp(uuid: UUID, value: datetime = datetime.now(timezone.utc), description: str = 'Prototype description') -> 'IndalekoDataModel.Timestamp':
+    def get_timestamp(uuid: UUID,
+                      value: datetime = datetime.now(timezone.utc),
+                      description: str = 'Prototype description') -> 'IndalekoDataModel.Timestamp':
         """Lookup a timestamp."""
         return IndalekoDataModel.Timestamp(
             Label=uuid,
@@ -155,13 +155,9 @@ class IndalekoDataModel:
     @staticmethod
     def get_semantic_attribute(identifier : IndalekoUUID) -> 'IndalekoDataModel.SemanticAttribute':
         """Lookup a semantic attribute."""
-    def get_semantic_attribute(identifier : IndalekoUUID) -> 'IndalekoDataModel.SemanticAttribute':
-        """Lookup a semantic attribute."""
         return IndalekoDataModel.SemanticAttribute(
             Identifier=identifier,
-            Data='This is the dummy data for the semantic attribute.'
-            Identifier=identifier,
-            Data='This is the dummy data for the semantic attribute.'
+            Data='This is the dummy data for the semantic attribute.',
         )
 
     @staticmethod
@@ -173,24 +169,8 @@ class IndalekoDataModel:
             IndalekoUUID.get_indaleko_uuid,
             IndalekoDataModel.get_semantic_attribute
         ]
-    def get_queries() -> List:
-        """Return the queries for the IndalekoDataModel."""
-        return [
-            IndalekoDataModel.get_source_identifier,
-            IndalekoDataModel.get_timestamp,
-            IndalekoUUID.get_indaleko_uuid,
-            IndalekoDataModel.get_semantic_attribute
-        ]
 
     @staticmethod
-    def get_types() -> List:
-        """Return the types for the IndalekoDataModel."""
-        return [
-            IndalekoDataModel.SourceIdentifier,
-            IndalekoDataModel.Timestamp,
-            IndalekoUUID,
-            IndalekoDataModel.SemanticAttribute
-        ]
     def get_types() -> List:
         """Return the types for the IndalekoDataModel."""
         return [
@@ -215,6 +195,7 @@ def main():
     ic("This is the IndalekoDataModel module")
     ic('GraphQL schema:')
     ic(print_schema(graphql_schema(query=IndalekoDataModel.get_queries(),
+                                   types=IndalekoDataModel.get_types())))
 
 
     source_id = {
