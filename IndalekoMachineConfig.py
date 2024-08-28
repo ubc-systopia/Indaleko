@@ -43,7 +43,8 @@ class IndalekoMachineConfig:
     '''
     default_config_dir = "./config"
     indaleko_machine_config_captured_label_str = "eb7eaeed-6b21-4b6a-a586-dddca6a1d5a4"
-    indaleko_machine_config_captured_label_uuid = uuid.UUID(indaleko_machine_config_captured_label_str)
+    indaleko_machine_config_captured_label_uuid = \
+        uuid.UUID(indaleko_machine_config_captured_label_str)
 
     def __init__(self,
                  **kwargs):
@@ -52,7 +53,7 @@ class IndalekoMachineConfig:
             self.source_identifier = None
         ic(kwargs)
         self.machine_id = kwargs.get('machine_id',
-                                     kwargs['data']['MachineGuid']
+                                     kwargs['data']['MachineUUID']
         )
         self.machine_config = IndalekoMachineConfigDataModel.MachineConfig.deserialize(**kwargs)
         self.collection = IndalekoCollections().get_collection(Indaleko.Indaleko_MachineConfig)
@@ -80,8 +81,8 @@ class IndalekoMachineConfig:
         doc = self.serialize()
         if '_key' not in doc:
             doc['_key'] = self.machine_id
-        if 'MachineGuid' not in doc:
-            doc['MachineGuid'] = self.machine_id
+        if 'MachineUUID' not in doc:
+            doc['MachineUUID'] = self.machine_id
         ic(doc)
         print(json.dumps(doc, indent=4))
         try:
@@ -123,7 +124,7 @@ class IndalekoMachineConfig:
         if source_id is not None:
             assert Indaleko.validate_uuid_string(source_id), 'Invalid source identifier'
             query = 'FOR doc IN @@collection '
-            query += 'FILTER doc.Record["SourceIdentifier"].Identifier '
+            query += 'FILTER doc.Record["SourceIdentifier"].Identifier == '
             query += '@source RETURN doc'
             bind_vars = { '@collection' : Indaleko.Indaleko_MachineConfig, 'source' : source_id }
         results = collections.db_config.db.aql.execute(query, bind_vars = bind_vars)
@@ -181,7 +182,7 @@ class TestMachineConfig:
             },
             "Timestamp": "2024-08-09T07:52:59.839237+00:00",
             "Attributes": {
-                "MachineGuid": "f7a439ec-c2d0-4844-a043-d8ac24d9ac0b",
+                "MachineUUID": "f7a439ec-c2d0-4844-a043-d8ac24d9ac0b",
             },
             "Data": "xx"
         },
@@ -282,7 +283,7 @@ def test_handler(args : argparse.Namespace) -> None:
             },
             "Timestamp": "2024-08-09T07:52:59.839237+00:00",
             "Attributes": {
-                "MachineGuid": "f7a439ec-c2d0-4844-a043-d8ac24d9ac0b",
+                "MachineUUID": "f7a439ec-c2d0-4844-a043-d8ac24d9ac0b",
             },
             "Data": "xx"
         },

@@ -35,6 +35,9 @@ from icecream import ic
 from Indaleko import Indaleko
 from IndalekoMachineConfig import IndalekoMachineConfig
 from IndalekoDBConfig import IndalekoDBConfig
+from IndalekoMachineConfigDataModel import IndalekoMachineConfigDataModel
+from IndalekoRecordDataModel import IndalekoRecordDataModel
+from IndalekoDataModel import IndalekoDataModel
 
 class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
     '''
@@ -59,19 +62,31 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
     }
 
     def __init__(self : 'IndalekoLinuxMachineConfig',
-                 timestamp : datetime = None,
-                 db : IndalekoDBConfig = None) -> None:
+                 **kwargs):
         '''Constructor for the IndalekoLinuxMachineConfig class'''
-        super().__init__(timestamp=timestamp,
-                         db=db,
-                         **IndalekoLinuxMachineConfig.linux_machine_config_service)
+        self.service_registration = IndalekoMachineConfig.register_machine_configuration_service(
+            **IndalekoLinuxMachineConfig.linux_machine_config_service
+        )
+        self.db = kwargs.get('db', IndalekoDBConfig())
+        super().__init__(**kwargs)
 
     @staticmethod
-    def find_config_files(config_dir):
+    def find_configs_in_db(source_id : str = linux_machine_config_uuid_str) -> list:
+        '''Find the machine configurations in the database for Windows.'''
+        return [
+            IndalekoMachineConfig.serialize(config)
+            for config in IndalekoMachineConfig.lookup_machine_configurations(source_id=source_id)
+        ]
+
+    @staticmethod
+    def find_config_files(directory : str, prefix : str = None, suffix : str = '.json') ->list:
         '''Find all of the configuration files in the specified directory.'''
+        if prefix is None:
+            prefix = IndalekoLinuxMachineConfig.linux_machine_config_file_prefix
         return IndalekoMachineConfig.find_config_files(
-            config_dir,
-            IndalekoLinuxMachineConfig.linux_machine_config_file_prefix
+            directory=directory,
+            prefix=prefix,
+            suffix=suffix
         )
 
     @staticmethod
@@ -80,18 +95,19 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
         Execute a command and return the output.
         '''
         if not isinstance(command, list):
-            raise Exception(f"Command must be a list: {command}")
+            raise ValueError(f"Command must be a list: {command}")
         try:
             output = subprocess.check_output(command, stderr=subprocess.STDOUT)
             return output.decode().strip()
         except subprocess.CalledProcessError as error:
-            raise Exception(f"Error executing {command}: {error.output.decode().strip()}")
+            print(f"Error executing {command}: {error.output.decode().strip()}")
+            raise error
 
     @staticmethod
     def gather_system_information():
+        '''Get information about the running kernel.'''
         system_info = {}
         system_info['UUID'] = str(uuid.UUID(open('/etc/machine-id').read().strip()))
-        '''Get information about the running kernel.'''
         os_info = {}
         uname_operations = {
             'kernel_name': '-s',
@@ -215,10 +231,10 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
         configuration in to the specified file.
         '''
         if os.path.exists(config_file):
-            print('Configuration file already exists: %s' % config_file)
+            print(f'Configuration file already exists: {config_file}')
             print('aborting')
             exit(1)
-        with open(config_file, 'w') as config_fd:
+        with open(config_file, 'wt', encoding='utf-8-sig') as config_fd:
             json.dump(config, config_fd, indent=4)
 
     @staticmethod
@@ -235,13 +251,12 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
         if 'suffix' in kwargs:
             suffix = kwargs['suffix']
             del kwargs['suffix']
-        platform = IndalekoLinuxMachineConfig.linux_platform
+        platform_name = IndalekoLinuxMachineConfig.linux_platform
         if 'platform' in kwargs:
-            platform = kwargs['platform']
+            platform_name = kwargs['platform']
             del kwargs['platform']
-        if 'service' in kwargs:
-            service = kwargs['service']
-            del kwargs['service']
+        service = kwargs['service']
+        del kwargs['service']
         prefix = IndalekoLinuxMachineConfig.linux_machine_config_file_prefix
         if 'prefix' in kwargs:
             prefix = kwargs['prefix']
@@ -249,7 +264,7 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
 
         fname = Indaleko.generate_file_name(
             suffix=suffix,
-            platform=platform,
+            platform=platform_name,
             service=service,
             prefix=prefix,
             **kwargs
@@ -278,43 +293,82 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
         This method creates a new IndalekoMachineConfig object from an
         existing config file.
         """
+        config_data = {}
         if config_dir is None and config_file is None:
             # nothing specified, so let's search and find
             config_dir = Indaleko.default_config_dir
         if config_file is None:
             assert config_dir is not None, 'config_dir must be specified'
             config_file = IndalekoLinuxMachineConfig.get_most_recent_config_file(config_dir)
-        assert os.path.exists(config_file), f"Config file does not exist: {config_file}"
-        file_metadata = Indaleko.extract_keys_from_file_name(config_file)
-        file_uuid = uuid.UUID(file_metadata['machine'])
-        with open(config_file, 'rt', encoding='utf-8-sig') as config_fd:
-            config_data = json.load(config_fd)
-        machine_uuid = uuid.UUID(config_data['MachineUUID'])
-        if machine_uuid != file_uuid:
-            print('Machine UUID in file name does not match UUID in config file')
-            print(f"File name: {file_uuid}")
-            print(f"Config file: {machine_uuid}")
-        config = IndalekoLinuxMachineConfig.build_config(
-            machine_config=IndalekoLinuxMachineConfig(),
-            os=config_data['OSInfo']['operating_system'],
-            arch=config_data['CPU']['Architecture'],
-            os_version=config_data['OSInfo']['kernel_version'],
-            cpu=config_data['CPU']['Model name'],
-            cpu_version=config_data['CPU']['Model'],
-            cpu_cores=int(config_data['CPU']['CPU(s)']),
-            source_id=IndalekoLinuxMachineConfig.linux_machine_config_service['service_identifier'],
-            source_version=IndalekoLinuxMachineConfig.linux_machine_config_service['service_version'],
-            timestamp=file_metadata['timestamp'],
-            attributes=config_data,
-            data=Indaleko.encode_binary_data(config_data),
-            machine_id=file_uuid
+        if config_file is not None:
+            file_metadata = Indaleko.extract_keys_from_file_name(config_file)
+            file_uuid = uuid.UUID(file_metadata['machine'])
+            with open(config_file, 'rt', encoding='utf-8-sig') as config_fd:
+                config_data = json.load(config_fd)
+            machine_uuid = uuid.UUID(config_data['MachineUUID'])
+            ic(machine_uuid)
+            if machine_uuid != file_uuid:
+                print('Machine UUID in file name does not match UUID in config file')
+                print(f"\tFile name: {file_uuid}")
+                print(f"\tConfig file: {machine_uuid}")
+        if 'MachineUUID' not in config_data:
+            config_data['MachineUUID'] = str(file_uuid)
+        ic(config_data)
+        ic(file_metadata)
+        timestamp = datetime.datetime.fromisoformat(file_metadata['timestamp'])
+        software = IndalekoMachineConfigDataModel.Software(
+            OS=config_data['OSInfo']['operating_system'],
+            Version=config_data['OSInfo']['kernel_version'],
+            Architecture=config_data['CPU']['Architecture'],
+            Hostname=config_data['Hostname'],
         )
-        # Should we do processing of the net/disk data?
+        hardware = IndalekoMachineConfigDataModel.Hardware(
+            CPU=config_data['CPU']['Model name'],
+            Cores=int(config_data['CPU']['CPU(s)']),
+            Version=config_data['CPU']['Model'],
+        )
+        captured = IndalekoMachineConfigDataModel.Captured(
+            Label = IndalekoMachineConfig.indaleko_machine_config_captured_label_uuid,
+            Value = timestamp
+        )
+        platform_info = IndalekoMachineConfigDataModel.Platform(
+            software=software,
+            hardware=hardware,
+        )
+        record = IndalekoRecordDataModel.IndalekoRecord(
+            SourceIdentifier = IndalekoDataModel.SourceIdentifier(
+                Identifier = IndalekoLinuxMachineConfig.\
+                    linux_machine_config_service['service_identifier'],
+                Version = IndalekoLinuxMachineConfig.\
+                    linux_machine_config_service['service_version'],
+                Description = IndalekoLinuxMachineConfig.\
+                    linux_machine_config_service['service_description'],
+            ),
+            Timestamp = timestamp,
+            Data = Indaleko.encode_binary_data(config_data),
+            Attributes = config_data,
+        )
+        machine_config_data = {
+            'Platform' : IndalekoMachineConfigDataModel.Platform.serialize(platform_info),
+            'Captured' : IndalekoMachineConfigDataModel.Captured.serialize(captured),
+            'Record' : IndalekoRecordDataModel.IndalekoRecord.serialize(record),
+        }
+        if 'MachineUUID' not in machine_config_data:
+            machine_config_data['MachineUUID'] = str(file_uuid)
+        if 'Hostname' not in machine_config_data:
+            machine_config_data['Hostname'] = config_data['Hostname']
+        config = IndalekoLinuxMachineConfig(data=machine_config_data)
+        ic(IndalekoMachineConfigDataModel.MachineConfig.serialize(config.machine_config))
+        config.write_config_to_db()
+        if hasattr(config, 'extract_volume_info'):
+            getattr(config, 'extract_volume_info')(config_data)
         return config
 
-    def write_config_to_db(self) -> None:
+    def write_config_to_db(self, overwrite : bool = True) -> None:
+        ic(self.machine_id)
         assert self.machine_id is not None, 'Machine ID must be specified'
-        super().write_config_to_db()
+        assert Indaleko.validate_uuid_string(self.machine_id), 'Machine ID must be a valid UUID'
+        super().write_config_to_db(overwrite=overwrite)
         # Should we add storage data here?
 
     @staticmethod
@@ -366,39 +420,25 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
         Add a machine configuration.
         '''
         print(f"Add command handler: {args}")
-        raise Exception('Needs to be re-implemented')
         existing_configs = IndalekoLinuxMachineConfig.find_config_files(args.configdir)
         if len(existing_configs) == 0:
             if not args.create:
                 print(f'No configuration files found in {args.configdir} and --create was not specified')
                 print('aborting')
                 return
-            cpu_data, ram_data, disk_data, net_data = IndalekoLinuxMachineConfig.extract_config_data()
-            sys_data = IndalekoLinuxMachineConfig.gather_system_information()
-            linux_config = {
-                'MachineUUID': sys_data['UUID'],
-                'Hostname' : socket.gethostname(),
-                'OSInfo': sys_data['OSInfo'],
-            }
-            linux_config['CPU'] = cpu_data
-            linux_config['RAM'] = ram_data
-            linux_config['Disk'] = disk_data
-            linux_config['Network'] = net_data
-            machine_uuid = uuid.UUID(linux_config['MachineUUID'])
-            config = IndalekoLinuxMachineConfig.generate_config_file_name(
-                config_dir=args.configdir,
-                timestamp=args.timestamp,
+            config_file = IndalekoLinuxMachineConfig.capture_machine_data(
                 platform=args.platform,
-                machine=machine_uuid.hex,
-                service=IndalekoLinuxMachineConfig.linux_machine_config_service_file_name,
+                timestamp=args.timestamp,
+                config_dir=args.configdir,
             )
         else:
-            if (args.config is not None):
+            if args.config is not None:
                 config_file = args.config
             else:
                 config_file = IndalekoLinuxMachineConfig.get_most_recent_config_file(args.configdir)
             config = IndalekoLinuxMachineConfig.load_config_from_file(config_file=config_file)
-        assert isinstance(config, IndalekoLinuxMachineConfig), f"Unexpected config type: {type(config)}"
+        assert isinstance(config, IndalekoLinuxMachineConfig), \
+            f"Unexpected config type: {type(config)}"
         # Now to add the configuration to the database
         config.write_config_to_db()
         return
@@ -410,9 +450,21 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
         List machine configurations.
         '''
         print(f"List command handler: {args}")
-        return IndalekoMachineConfig.find_configs_in_db(
-            source_id = IndalekoLinuxMachineConfig.linux_machine_config_uuid_str
-            )
+        configs = IndalekoLinuxMachineConfig.find_configs_in_db()
+        if len(configs) == 0:
+            print('No machine configurations found in the database')
+            return
+        for config in configs:
+            hostname = 'unknown'
+            if 'hostname' in config:
+                hostname = config['hostname']
+            print(json.dumps(config, indent=4))
+            print('Configuration for machine:', hostname)
+            print(f'\t    UUID: {config["_key"]}')
+            print(f'\tCaptured: {config["Captured"]["Value"]}')
+            print(f'\tPlatform: {config["Platform"]["software"]["OS"]}')
+            return
+
 
     @staticmethod
     def delete_command_handler(args) -> None:
