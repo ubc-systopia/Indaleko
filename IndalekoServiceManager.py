@@ -297,7 +297,8 @@ def main():
     # Delete a registered service
     parser_delete = command_subparser.add_parser('delete', help='Delete a registered services')
     parser_delete.add_argument('--name', type=str, help='The name of the service to delete')
-    parser_delete.add_argument('--identifier', type=str, help='The identifier of the service to delete')
+    parser_delete.add_argument('--identifier',
+                               type=str, help='The identifier of the service to delete')
     parser_delete.set_defaults(func=delete_service)
     parser.set_defaults(func=list_services)
     args = parser.parse_args()
