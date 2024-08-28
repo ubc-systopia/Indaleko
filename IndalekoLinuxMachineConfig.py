@@ -28,6 +28,9 @@ import datetime
 import logging
 import platform
 import os
+import socket
+
+from icecream import ic
 
 from Indaleko import Indaleko
 from IndalekoMachineConfig import IndalekoMachineConfig
@@ -189,7 +192,7 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
         return interfaces
 
     @staticmethod
-    def extract_some_data1():
+    def extract_config_data():
         cpu_data = {
             l.split(':')[0].strip() : l.split(':')[1].strip() \
                 for l in IndalekoLinuxMachineConfig.execute_command(['lscpu']).split('\n')
@@ -315,28 +318,72 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
         # Should we add storage data here?
 
     @staticmethod
+    def capture_machine_data(config_dir : str = Indaleko.default_config_dir,
+                             timestamp : str = datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                             platform: str = None) -> str:
+        '''Capture the machine data and write it to the specified file.'''
+        if platform is None:
+            platform = IndalekoLinuxMachineConfig.linux_platform
+        cpu_data, ram_data, disk_data, net_data = IndalekoLinuxMachineConfig.extract_config_data()
+        sys_data = IndalekoLinuxMachineConfig.gather_system_information()
+        linux_config = {
+            'MachineUUID': sys_data['UUID'],
+            'OSInfo': sys_data['OSInfo'],
+            'Hostname' : socket.gethostname(),
+        }
+        linux_config['CPU'] = cpu_data
+        linux_config['RAM'] = ram_data
+        linux_config['Disk'] = disk_data
+        linux_config['Network'] = net_data
+        print(linux_config['MachineUUID'])
+        machine_uuid = uuid.UUID(linux_config['MachineUUID'])
+        config_file_name = IndalekoLinuxMachineConfig.generate_config_file_name(
+            config_dir=config_dir,
+            timestamp=timestamp,
+            platform=platform,
+            machine=machine_uuid.hex,
+            service=IndalekoLinuxMachineConfig.linux_machine_config_service_file_name,
+        )
+        IndalekoLinuxMachineConfig.save_config_to_file(config_file_name, linux_config)
+        return config_file_name
+
+    @staticmethod
+    def capture_command_handler(args) -> None:
+        '''
+        Capture current machine configuration.
+        '''
+        print(f'Capture command handler: {args}')
+        config_file = IndalekoLinuxMachineConfig.capture_machine_data(
+            platform=args.platform,
+            timestamp=args.timestamp,
+            config_dir=args.configdir,
+        )
+        ic(config_file)
+
+    @staticmethod
     def add_command_handler(args) -> None:
         '''
         Add a machine configuration.
         '''
         print(f"Add command handler: {args}")
+        raise Exception('Needs to be re-implemented')
         existing_configs = IndalekoLinuxMachineConfig.find_config_files(args.configdir)
         if len(existing_configs) == 0:
             if not args.create:
                 print(f'No configuration files found in {args.configdir} and --create was not specified')
                 print('aborting')
                 return
-            cpu_data, ram_data, disk_data, net_data = IndalekoLinuxMachineConfig.extract_some_data1()
+            cpu_data, ram_data, disk_data, net_data = IndalekoLinuxMachineConfig.extract_config_data()
             sys_data = IndalekoLinuxMachineConfig.gather_system_information()
             linux_config = {
                 'MachineUUID': sys_data['UUID'],
+                'Hostname' : socket.gethostname(),
                 'OSInfo': sys_data['OSInfo'],
             }
             linux_config['CPU'] = cpu_data
             linux_config['RAM'] = ram_data
             linux_config['Disk'] = disk_data
             linux_config['Network'] = net_data
-            print(linux_config['MachineUUID'])
             machine_uuid = uuid.UUID(linux_config['MachineUUID'])
             config = IndalekoLinuxMachineConfig.generate_config_file_name(
                 config_dir=args.configdir,
@@ -374,21 +421,6 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
         '''
         print(f"Delete command handler: {args}")
 
-def old_main():
-    parse = argparse.ArgumentParser()
-    parse.add_argument('--configdir', type=str, default='./config', help='Directory where configuration data is written.')
-    parse.add_argument('--timestamp', type=str,
-                       default=datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                       help='Timestamp to use')
-    args = parse.parse_args()
-    print(f"Config dir: {args.configdir}")
-    print(json.dumps(IndalekoLinuxMachineConfig.gather_system_information(),indent=4))
-    cpu_data, ram_data, disk_data, net_data = IndalekoLinuxMachineConfig.extract_some_data1()
-    print(json.dumps(cpu_data, indent=4))
-    print(json.dumps(ram_data, indent=4))
-    print(json.dumps(disk_data, indent=4))
-    print(json.dumps(net_data, indent=4))
-
 
 def main():
     '''UI implementation for Linux machine configuration processing.'''
@@ -425,6 +457,11 @@ def main():
         log_file_name = pre_args.log
     parser = argparse.ArgumentParser(parents=[pre_parser], description='Indaleko Linux Machine Config')
     subparsers = parser.add_subparsers(dest='command', required=True)
+    parser_capture = subparsers.add_parser('capture', help='Capture machine configuration')
+    parser_capture.add_argument('--platform', type=str, default=platform.system(), help='Platform to use')
+    parser_capture.add_argument('--timestamp', type=str, default=timestamp, help='Timestamp to use')
+    parser_capture.add_argument('--configdir', type=str, default=config_dir, help='Configuration directory to use')
+    parser_capture.set_defaults(func=IndalekoLinuxMachineConfig.capture_command_handler)
     parser_add = subparsers.add_parser('add', help='Add a machine config')
     parser_add.add_argument('--platform', type=str, default=platform.system(), help='Platform to use')
     parser_add.add_argument('--config', type=str, default=None, help='Config file to use')
@@ -432,11 +469,15 @@ def main():
                             default=False,
                             action='store_true',
                             help='Create a new config file for current machine.')
+    parser_add.set_defaults(func=IndalekoLinuxMachineConfig.add_command_handler)
     parser_list = subparsers.add_parser('list', help='List machine configs')
     parser_list.add_argument('--files', default=False, action='store_true', help='Source ID')
     parser_list.add_argument('--db', type=str, default=True, help='Source ID')
+    parser_list.set_defaults(func=IndalekoLinuxMachineConfig.list_command_handler)
     parser_delete = subparsers.add_parser('delete', help='Delete a machine config')
     parser_delete.add_argument('--platform', type=str, default=platform.system(), help='Platform to use')
+    parser_delete.set_defaults(func=IndalekoLinuxMachineConfig.delete_command_handler)
+    parser.set_defaults(func=IndalekoLinuxMachineConfig.list_command_handler)
     args = parser.parse_args()
     if log_file_name is not None:
         logging.basicConfig(filename=log_file_name, level=logging.DEBUG)
@@ -447,15 +488,7 @@ def main():
         logging.warning('Warning logging enabled')
         logging.info('Info logging enabled')
         logging.debug('Debug logging enabled')
-    if args.command == 'add':
-        IndalekoLinuxMachineConfig.add_command_handler(args)
-    elif args.command == 'list':
-        IndalekoLinuxMachineConfig.list_command_handler(args)
-    elif args.command == 'delete':
-        IndalekoLinuxMachineConfig.delete_command_handler(args)
-    else:
-        logging.error('Unexpected command: %s', args.command)
-        raise Exception(f"Unexpected command: {args.command}")
+    args.func(args)
     if log_file_name is not None:
         logging.info('Done with Indaleko Linux Machine Config')
 
