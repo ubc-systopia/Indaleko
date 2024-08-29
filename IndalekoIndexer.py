@@ -170,7 +170,7 @@ class IndalekoIndexer:
         target_dir = Indaleko.default_data_dir
         if 'target_dir' in kwargs:
             target_dir = kwargs['target_dir']
-        suffix = kwargs.get('suffix')
+        suffix = kwargs.get('suffix', IndalekoIndexer.default_file_suffix)
         kwargs = {
             'platform' : platform,
             'service' : indexer_name,

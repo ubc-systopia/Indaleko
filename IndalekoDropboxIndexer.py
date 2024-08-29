@@ -228,7 +228,7 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
         return self
 
     @staticmethod
-    def generate_indexer_file_name(**kwargs):
+    def generate_windows_indexer_file_name(**kwargs):
         '''
         This method generates the name of the file that will contain the metadata
         of the files in the Dropbox folder.
@@ -362,7 +362,7 @@ def main():
     ic(log_file_name)
     indexer = IndalekoDropboxIndexer(timestamp=timestamp)
 
-    output_file_name = IndalekoDropboxIndexer.generate_indexer_file_name(
+    output_file_name = IndalekoDropboxIndexer.generate_windows_indexer_file_name(
             platform=IndalekoDropboxIndexer.dropbox_platform,
             user_id=indexer.get_user_id(),
             service='indexer',

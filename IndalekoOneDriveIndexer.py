@@ -221,7 +221,7 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
         self.root_processed = False
 
     @staticmethod
-    def generate_indexer_file_name(**kwargs):
+    def generate_windows_indexer_file_name(**kwargs):
         '''
         This method generates the name of the file that will contain the metadata
         of the files in the Dropbox folder.
@@ -484,7 +484,7 @@ def main():
     log_file_name = indaleko_logging.get_log_file_name()
     ic(log_file_name)
     indexer = IndalekoOneDriveIndexer(timestamp=timestamp, recurse=(not pre_args.norecurse), max_workers=pre_args.threads)
-    output_file_name = IndalekoOneDriveIndexer.generate_indexer_file_name(
+    output_file_name = IndalekoOneDriveIndexer.generate_windows_indexer_file_name(
             platform=IndalekoOneDriveIndexer.onedrive_platform,
             user_id=indexer.get_email(),
             service='indexer',

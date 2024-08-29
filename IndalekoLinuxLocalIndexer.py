@@ -61,13 +61,13 @@ class IndalekoLinuxLocalIndexer(IndalekoIndexer):
 
 
     @staticmethod
-    def generate_indexer_file_name(**kwargs):
+    def generate_windows_indexer_file_name(**kwargs):
         '''Generate a file name for the Linux local indexer'''
         if 'platform' not in kwargs:
             kwargs['platform'] = IndalekoLinuxLocalIndexer.linux_platform
         if 'indexer_name' not in kwargs:
             kwargs['indexer_name'] = IndalekoLinuxLocalIndexer.linux_local_indexer_name
-        return IndalekoIndexer.generate_indexer_file_name(**kwargs)
+        return IndalekoIndexer.generate_windows_indexer_file_name(**kwargs)
 
 
 def main():
@@ -95,7 +95,7 @@ def main():
     config_platform = IndalekoLinuxLocalIndexer.linux_platform
     if 'platform' in config_file_metadata:
         config_platform = config_file_metadata['platform']
-    log_file_name = IndalekoLinuxLocalIndexer.generate_indexer_file_name(
+    log_file_name = IndalekoLinuxLocalIndexer.generate_windows_indexer_file_name(
         platform=config_platform,
         indexer_name=IndalekoLinuxLocalIndexer.linux_local_indexer_name,
         machine_id = config_file_metadata['machine'],
@@ -127,7 +127,7 @@ def main():
         timestamp=timestamp,
         path=pre_args.path
     )
-    output_file = IndalekoLinuxLocalIndexer.generate_indexer_file_name(
+    output_file = IndalekoLinuxLocalIndexer.generate_windows_indexer_file_name(
         platform=config_platform,
         indexer_name=IndalekoLinuxLocalIndexer.linux_local_indexer_name,
         machine_id = config_file_metadata['machine'],
