@@ -26,6 +26,9 @@ import logging
 import os
 import platform
 import uuid
+import tempfile
+
+from icecream import ic
 
 from IndalekoIngester import IndalekoIngester
 from IndalekoWindowsMachineConfig import IndalekoWindowsMachineConfig
@@ -271,13 +274,37 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
             dir_edges.append(dir_edge)
             self.edge_count += 1
         # Save the data to the ingester output file
-        self.write_data_to_file(dir_data + file_data, self.output_file)
+        temp_file_name = ""
+        with tempfile.NamedTemporaryFile(dir=self.data_dir, delete=False) as tf:
+            temp_file_name = tf.name
+        self.write_data_to_file(dir_data + file_data, temp_file_name)
+        try:
+            if os.path.exists(self.output_file):
+                os.remove(self.output_file)
+            os.rename(temp_file_name, self.output_file)
+        except (
+            FileNotFoundError,
+            PermissionError,
+            FileExistsError,
+            OSError,
+        ) as e:
+            logging.error(
+                'Unable to rename temp file %s to output file %s', 
+                temp_file_name, 
+                self.output_file
+            )
+            print(f'Unable to rename temp file {temp_file_name} to output file {self.output_file}')
+            print(e)
+            self.output_file = temp_file_name
         load_string = self.build_load_string(
             collection='Objects',
             file=self.output_file
         )
         logging.info('Load string: %s', load_string)
         print('Load string: ', load_string)
+        temp_file_name = ""
+        with tempfile.NamedTemporaryFile(dir=self.data_dir, delete=False) as tf:
+            temp_file_name = tf.name
         edge_file = self.generate_output_file_name(
             machine=self.machine_id,
             platform=self.platform,
@@ -287,11 +314,31 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
             timestamp=self.timestamp,
             output_dir=self.data_dir,
         )
+        self.write_data_to_file(dir_edges, temp_file_name)
+        try:
+            if os.path.exists(edge_file):
+                os.remove(edge_file)
+            os.rename(temp_file_name, edge_file)
+        except (
+            FileNotFoundError,
+            PermissionError,
+            FileExistsError,
+            OSError,
+        ) as e:
+            logging.error(
+                'Unable to rename temp file %s to output file %s', 
+                temp_file_name, 
+                edge_file
+            )
+            print(f'Unable to rename temp file {temp_file_name} to output file {edge_file}')
+            print(f'Error: {e}')
+            print(f'Target file name is {edge_file[len(self.data_dir)+1:]}')
+            print(f'Target file name length is {len(edge_file[len(self.data_dir)+1:])}')
+            edge_file=temp_file_name
         load_string = self.build_load_string(
             collection='Relationships',
             file=edge_file
         )
-        self.write_data_to_file(dir_edges, edge_file)
         logging.info('Load string: %s', load_string)
         print('Load string: ', load_string)
 
