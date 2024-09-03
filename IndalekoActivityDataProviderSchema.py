@@ -26,7 +26,7 @@ from uuid import UUID
 from IndalekoRecordSchema import IndalekoRecordSchema
 from IndalekoActivityDataProviderDataModel import IndalekoActivityDataProviderDataModel
 
-class IndalekoActivityProviderSchema(IndalekoRecordSchema):
+class IndalekoActivityDataProviderSchema(IndalekoRecordSchema):
     '''Define the schema for use with the ActivityProvider collection.'''
 
     @staticmethod
@@ -114,11 +114,11 @@ class IndalekoActivityProviderSchema(IndalekoRecordSchema):
 def main():
     '''Test the IndalekoActivityProviderSchema class.'''
 
-    activity_provider = IndalekoActivityProviderSchema()
+    activity_provider = IndalekoActivityDataProviderSchema()
     ic(activity_provider.get_old_schema())
     ic(json.dumps(activity_provider.get_old_schema(), indent=4))
     activity_provider.schema_detail(
-        query=[IndalekoActivityProviderSchema.get_activity_provider],
+        query=[IndalekoActivityDataProviderSchema.get_activity_provider],
         types=[IndalekoActivityDataProviderDataModel]
     )
 

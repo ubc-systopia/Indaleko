@@ -24,7 +24,7 @@ from jsonschema import validate
 from IndalekoRecordSchema import IndalekoRecordSchema
 from IndalekoObjectDataModel import IndalekoObjectDataModel
 
-class IndalekoObjectDataSchema(IndalekoRecordSchema):
+class IndalekoObjectSchema(IndalekoRecordSchema):
     '''This class defines the schema for an Indaleko Object.'''
 
     def __init__(self, **kwargs):
@@ -58,7 +58,7 @@ class IndalekoObjectDataSchema(IndalekoRecordSchema):
         assert isinstance(indaleko_object, dict), 'object must be a dict'
         valid = False
         try:
-            validate(instance=indaleko_object, schema=IndalekoObjectDataSchema.get_old_schema())
+            validate(instance=indaleko_object, schema=IndalekoObjectSchema.get_old_schema())
             valid = True
         except jsonschema.exceptions.ValidationError as error:
             print(f'Validation error: {error.message}')
@@ -162,7 +162,7 @@ class IndalekoObjectDataSchema(IndalekoRecordSchema):
 
 def main():
     '''Test code for IndalekoObjectSchema.'''
-    object_schema = IndalekoObjectDataSchema()
+    object_schema = IndalekoObjectSchema()
     object_schema.schema_detail()
 
 if __name__ == "__main__":

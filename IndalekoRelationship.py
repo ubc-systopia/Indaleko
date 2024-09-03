@@ -144,11 +144,11 @@ def main():
     }
     vertex1 = {
         'object' : str(uuid.uuid4()),
-        'collection' : Indaleko.Indaleko_Objects,
+        'collection' : Indaleko.Indaleko_Object,
     }
     vertex2 = {
         'object' : str(uuid.uuid4()),
-        'collection' : Indaleko.Indaleko_Objects,
+        'collection' : Indaleko.Indaleko_Object,
     }
     r = IndalekoRelationship(
         source = {

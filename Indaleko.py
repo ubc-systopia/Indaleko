@@ -67,7 +67,7 @@ import msgpack
 import base64
 import msgpack
 
-from IndalekoObjectDataSchema import IndalekoObjectDataSchema
+from IndalekoObjectSchema import IndalekoObjectSchema
 from IndalekoServiceSchema import IndalekoServiceSchema
 from IndalekoRelationshipSchema import IndalekoRelationshipSchema
 from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
@@ -85,7 +85,7 @@ class Indaleko:
 
     default_db_timeout=10
 
-    Indaleko_Objects = 'Objects'
+    Indaleko_Object = 'Object'
     Indaleko_Relationships = 'Relationships'
     Indaleko_Services = 'Services'
     Indaleko_MachineConfig = 'MachineConfig'
@@ -97,8 +97,8 @@ class Indaleko:
     Indaleko_Prefix = 'indaleko'
 
     Collections = {
-        Indaleko_Objects: {
-            'schema' : IndalekoObjectDataSchema().get_json_schema(),
+        Indaleko_Object: {
+            'schema' : IndalekoObjectSchema().get_json_schema(),
             'edge' : False,
             'indices' : {
                 'URI' : {
@@ -120,7 +120,6 @@ class Indaleko:
             },
         },
         Indaleko_Relationships : {
-            'schema' : IndalekoRelationshipSchema().get_json_schema(),
             'schema' : IndalekoRelationshipSchema().get_json_schema(),
             'edge' : True,
             'indices' : {
@@ -148,7 +147,6 @@ class Indaleko:
         },
         Indaleko_Services : {
             'schema' : IndalekoServiceSchema().get_json_schema(),
-            'schema' : IndalekoServiceSchema().get_json_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {
@@ -165,7 +163,6 @@ class Indaleko:
         },
         Indaleko_ActivityDataProviders : {
             'schema' : IndalekoActivityDataProviderRegistrationSchema().get_json_schema(),
-            'schema' : IndalekoActivityDataProviderRegistrationSchema().get_json_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {
@@ -176,7 +173,6 @@ class Indaleko:
             },
         },
         Indaleko_ActivityContext : {
-            'schema' : IndalekoActivityContextSchema().get_json_schema(),
             'schema' : IndalekoActivityContextSchema().get_json_schema(),
             'edge' : False,
             'indices' : {
@@ -189,7 +185,6 @@ class Indaleko:
         },
        Indaleko_Users : {
             'schema' : IndalekoUserSchema().get_json_schema(),
-            'schema' : IndalekoUserSchema().get_json_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {
@@ -200,7 +195,6 @@ class Indaleko:
             },
         },
         Indaleko_User_Relationships : {
-            'schema' : IndalekoUserRelationshipSchema().get_json_schema(),
             'schema' : IndalekoUserRelationshipSchema().get_json_schema(),
             'edge' : True,
             'indices' : {
@@ -287,14 +281,6 @@ class Indaleko:
             except ValueError:
                 valid = False
         return valid
-
-    @staticmethod
-    def generate_iso_timestamp(ts : datetime = None) -> str:
-        """Given a timestamp, convert it to an ISO timestamp."""
-        if ts is None:
-            ts = datetime.datetime.now(datetime.timezone.utc)
-        assert isinstance(ts, datetime.datetime), f'ts must be a datetime, not {type(ts)}'
-        return ts.isoformat()
 
     @staticmethod
     def generate_iso_timestamp(ts : datetime = None) -> str:
