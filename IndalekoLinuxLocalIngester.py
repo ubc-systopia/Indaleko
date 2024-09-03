@@ -174,7 +174,7 @@ class IndalekoLinuxLocalIngester(IndalekoIngester):
             'Machine' : self.machine_config.machine_id,
         }
         if 'st_mode' in data:
-            kwargs['UnixFileAttributes'] = UnixFileAttributes.map_file_attributes(data['st_mode'])
+            kwargs['PosixFileAttributes'] = UnixFileAttributes.map_file_attributes(data['st_mode'])
         if 'timestamp' not in kwargs:
             if isinstance(self.timestamp, str):
                 kwargs['timestamp'] = datetime.datetime.fromisoformat(self.timestamp)

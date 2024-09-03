@@ -177,7 +177,7 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
         elif data['URI'].startswith('\\\\?\\Volume{'):
             kwargs['Volume'] = data['URI'][11:47]
         if 'st_mode' in data:
-            kwargs['UnixFileAttributes'] = UnixFileAttributes.map_file_attributes(data['st_mode'])
+            kwargs['PosixFileAttributes'] = UnixFileAttributes.map_file_attributes(data['st_mode'])
         if 'st_file_attributes' in data:
             kwargs['WindowsFileAttributes'] = \
                 IndalekoWindows.map_file_attributes(data['st_file_attributes'])
@@ -212,10 +212,10 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
                 logging.error('Data: %s', item)
                 self.error_count += 1
                 continue
-            if 'S_IFDIR' in obj.args['UnixFileAttributes'] or \
+            if 'S_IFDIR' in obj.args['PosixFileAttributes'] or \
                'FILE_ATTRIBUTE_DIRECTORY' in obj.args['WindowsFileAttributes']:
                 if 'Path' not in obj.indaleko_object.Record.Attributes:
-                    logging.warning('Directory object does not have a path: %s', obj.to_json())
+                    logging.warning('Directory object does not have a path: %s', obj.serialize())
                     continue # skip
                 dir_data_by_path[os.path.join(obj['Path'], obj['Volume GUID'])] = obj
                 dir_data.append(obj)

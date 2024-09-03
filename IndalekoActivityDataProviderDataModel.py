@@ -28,7 +28,7 @@ from apischema.graphql import graphql_schema
 from apischema.metadata import required
 from apischema import schema
 
-from IndalekoDataModel import IndalekoDataModel
+from IndalekoDataModel import IndalekoDataModel, IndalekoUUID
 from IndalekoRecordDataModel import IndalekoRecordDataModel
 
 class IndalekoActivityDataProviderDataModel(IndalekoRecordDataModel):
@@ -39,13 +39,13 @@ class IndalekoActivityDataProviderDataModel(IndalekoRecordDataModel):
         '''This is the data model for the activity data provider entity.'''
 
         Label : Annotated[
-            IndalekoDataModel.IndalekoUUID,
+            IndalekoUUID,
             schema(description="The UUID representing the semantic meaning of this entity."),
             required
         ]
 
         Value : Annotated[
-            IndalekoDataModel.IndalekoUUID,
+            IndalekoUUID,
             schema(description="The UUID corresponding to this entity."),
             required
         ]
@@ -61,19 +61,19 @@ class IndalekoActivityDataProviderDataModel(IndalekoRecordDataModel):
         '''This is the data model for the activity data provider.'''
 
         ActivityDataIdentifer: Annotated[
-            IndalekoDataModel.IndalekoUUID,
+            IndalekoUUID,
             required
         ]
 
         ActivityProviderIdentifier : Annotated[
-            IndalekoDataModel.IndalekoUUID,
+            IndalekoUUID,
             required
         ]
 
         Timestamps: List[IndalekoDataModel.Timestamp]
 
         ActivityType : Annotated[
-            IndalekoDataModel.IndalekoUUID,
+            IndalekoUUID,
             required
         ]
 
@@ -93,11 +93,11 @@ class IndalekoActivityDataProviderDataModel(IndalekoRecordDataModel):
 def get_activity_data_provider(activity_data_provider_id : UUID) -> IndalekoActivityDataProviderDataModel.ActivityDataProvider:
     '''Look up an activity data provider.'''
     indaleko_activity_data_provider = IndalekoActivityDataProviderDataModel.ActivityDataProvider(
-        ActivityDataIdentifer=IndalekoDataModel.IndalekoUUID(
+        ActivityDataIdentifer=IndalekoUUID(
             UUID=UUID('00000000-0000-0000-0000-000000000000'),
             Label='Activity Data Identifier'
         ),
-        ActivityProviderIdentifier=IndalekoDataModel.IndalekoUUID(
+        ActivityProviderIdentifier=IndalekoUUID(
             UUID=activity_data_provider_id,
             Label='Activity Provider Identifier'
         ),
@@ -105,16 +105,16 @@ def get_activity_data_provider(activity_data_provider_id : UUID) -> IndalekoActi
             Label=UUID('00000000-0000-0000-0000-000000000000'),
             Value=datetime.now())
         ],
-        ActivityType=IndalekoDataModel.IndalekoUUID(
+        ActivityType=IndalekoUUID(
             UUID=UUID('00000000-0000-0000-0000-000000000000'),
             Label='Activity Type Identifier'),
         DataVersion='1.0.0',
         Entities=[IndalekoActivityDataProviderDataModel.ActivityDataProviderEntity(
-            Label=IndalekoDataModel.IndalekoUUID(
+            Label=IndalekoUUID(
                 UUID=UUID('00000000-0000-0000-0000-000000000000'),
                 Label='Entity Label'
             ),
-            Value=IndalekoDataModel.IndalekoUUID(
+            Value=IndalekoUUID(
                 UUID=UUID('00000000-0000-0000-0000-000000000000'),
                 Label='Entity Value'
             ),
