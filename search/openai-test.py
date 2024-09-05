@@ -15,6 +15,7 @@ class OpenAITest():
         self.api_key = self.get_api_key()
         self.client = openai.OpenAI(api_key=self.api_key)
         self.models = self.get_openai_models()
+        ic('OpenAITest initialized')
 
     def get_api_key(self) -> str:
         '''Get the API key from the config file'''

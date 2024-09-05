@@ -1,16 +1,43 @@
 '''
-This module is used to perform specific searches in the Indaleko database.
+This module is used to provide a simple conversational interface for the
+Indaleko search tool.
+
+Project Indaleko
+Copyright (C) 2024 Tony Mason
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import argparse
-import logging
-import platform
-import datetime
+import configparser
 import os
-import arango
 
-from Indaleko import Indaleko
+from datetime import datetime
+from icecream import ic
+
 from IndalekoDBConfig import IndalekoDBConfig
+from IndalekoSchema import IndalekoSchema
 
+from search.interface.cli import CLI
+from search.query_processing.nl_parser import NLParser
+from search.query_processing.query_translator.aql_translator import AQLTranslator
+from search.query_processing.query_history import QueryHistory
+from search.search_execution.query_executor.aql_executor import AQLExecutor
+from search.result_analysis.metadata_analyzer import MetadataAnalyzer
+from search.result_analysis.facet_generator import FacetGenerator
+from search.result_analysis.result_ranker import ResultRanker
+from search.utils.llm_connector.openai_connector import OpenAIConnector
+from search.utils.logging_service import LoggingService
 class IndalekoSearch():
     '''
     This is a class object for performing specific searches in the Indaleko database.
@@ -18,137 +45,107 @@ class IndalekoSearch():
 
     def __init__(self, **kwargs):
         '''Initialize a new instance of the IndalekoSearch class object.'''
-        if 'db_config' in kwargs:
-            self.db_config = kwargs['db_config']
-        else:
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+        if not hasattr(self, 'db_config'):
             self.db_config = IndalekoDBConfig()
-        self.view_name = None
-        self.view_properties = None
-        self.db_config.start()
-        logging.info('IndalekoSearch initialized, Database connection instantiated.')
+        schema_table = IndalekoSchema.build_from_db()
+        if hasattr(schema_table, 'schema'):
+            self.db_info = schema_table.schema
+        else:
+            raise ValueError("Schema table not found")
+        self.interface = CLI()
+        self.nl_parser = NLParser()
+        self.query_translator = AQLTranslator()
+        self.query_history = QueryHistory()
+        self.query_executor = AQLExecutor()
+        self.metadata_analyzer = MetadataAnalyzer()
+        self.facet_generator = FacetGenerator()
+        self.result_ranker = ResultRanker()
+        self.openai_key = self.get_api_key()
+        self.llm_connector = OpenAIConnector(api_key=self.openai_key)
 
-    def create_view(self, **kwargs):
-        '''Create a view for searching the Indaleko database.'''
-        if 'timestamp' in kwargs:
-            timestamp = kwargs['timestamp']
-            if not Indaleko.validate_iso_timestamp(timestamp):
-                raise ValueError('Invalid timestamp: {}'.format(timestamp))
-        else:
-            timestamp = Indaleko.generate_iso_timestamp_for_file()
-        # view names are limited to alpha numerics and _ and - are allowed
-        # timestamps have : and +
-        if 'view_name' in kwargs:
-            logging.info('Reusing existing view %s', kwargs['view_name'])
-            self.view_name = kwargs['view_name']
-        else:
-            self.view_name = 'search_{}'.format(timestamp)
-            self.view_name = self.view_name.replace(':', '_').replace('+', '_').replace('.', '_')
-            logging.info('Creating new view %s', self.view_name)
-            result = self.db_config.db.create_arangosearch_view(
-                name=self.view_name,
-                properties=self.view_properties
+        ic('IndalekoSearch initialized, Database connection instantiated.')
+
+
+    @staticmethod
+    def get_api_key(api_key_file : str = 'config/openai-key.ini') -> str:
+        '''Get the API key from the config file'''
+        assert os.path.exists(api_key_file), \
+            f"API key file ({api_key_file}) not found"
+        config = configparser.ConfigParser()
+        config.read(api_key_file, encoding='utf-8-sig')
+        openai_key = config['openai']['api_key']
+        if openai_key is None:
+            raise ValueError("OpenAI API key not found in config file")
+        if openai_key[0] == '"' or openai_key[0] == "'":
+            openai_key = openai_key[1:]
+        if openai_key[-1] == '"' or openai_key[-1] == "'":
+            openai_key = openai_key[:-1]
+        return openai_key
+
+    @staticmethod
+    def time_operation(operation, **kwargs) -> datetime:
+        '''Given a function, return the time and results of the operation'''
+        ic(type(operation))
+        start_time = datetime.now()
+        results = operation(**kwargs)
+        end_time = datetime.now()
+        operation_time = end_time - start_time
+        return str(operation_time), results
+
+
+    def run(self, logging_service : LoggingService = None) -> None:
+        '''Main function for the search tool.'''
+        while True:
+            # Get query from user
+            user_query_time, user_query = self.time_operation(self.interface.get_query)
+            ic(f"User query: {user_query}")
+            ic(f"Query time: {user_query_time}")
+
+            # Log the query
+            # self.logging_service.log_query(user_query)
+
+            # Process the query
+            parse_query_time, parsed_query = self.time_operation(self.nl_parser.parse, query=user_query, schema=self.db_info)
+            ic(f"Parsed query: {parsed_query}")
+            ic(f"Parse time: {parse_query_time}")
+            translate_query_time, translated_query = \
+                self.time_operation(self.query_translator.translate, parsed_query=parsed_query, llm_connector=self.llm_connector)
+            ic(f"Translated query: {translated_query}")
+            ic(f"Translation time: {translate_query_time}")
+            # Execute the query
+            execute_time, raw_results = self.time_operation(
+                self.query_executor.execute,
+                query=translated_query,
+                data_connector=self.db_config
             )
-            print(result)
-        if 'properties' not in kwargs:
-            raise ValueError('No properties specified for view.')
-        else:
-            self.view_properties = kwargs['properties']
-        logging.debug('Creating view %s with properties %s', self.view_name, self.view_properties)
+            ic(f"Raw results: {raw_results}")
+            ic(f"Execution time: {execute_time}")
 
-    def delete_view(self) -> None:
-        if self.view_name is not None:
-            self.db_config.db.delete_arangosearch_view(
-                name=self.view_name
-            )
-            self.view_name = None
-            self.view_properties = None
+            # Analyze and refine results
+            analyzed_results = self.metadata_analyzer.analyze(raw_results)
+            facets = self.facet_generator.generate(analyzed_results)
+            ranked_results = self.result_ranker.rank(analyzed_results)
 
-    def search_by_name(self, name : str):
-        if self.view_name is None:
-            raise ValueError('No existing view to use.')
-        query=f"FOR doc in {self.view_name} SEARCH ANALYZER(Objects.Record.Attributes.Name == @fileName, 'text_en') RETURN doc"
-        bind_vars={'fileName': name}
-        logging.debug('Executing query: %s, with bind_vars %s', query, bind_vars)
-        result = self.db_config.db.aql.execute(query, bind_vars=bind_vars)
-        return result
+            # Display results to user
+            self.interface.display_results(ranked_results, facets)
 
-    def create_oid_view(self) -> None:
-        self.db_config.db.create_arangosearch_view(
-            name='wam_oid_view',
-            properties={
-                'links' : {
-                    'Objects' : {
-                        'includeAllFields' : False,
-                        'fields' : {
-                            'ObjectIdentifier' : {
-                                'analyzers' : ['identity'],
-                            },
-                        }
-                    }
-                }
-            })
+            # Update query history
+            self.query_history.add(user_query, ranked_results)
 
-    def does_oid_view_exist(self) -> bool:
-        existing_views = self.db_config.db.views()
-        return any(view['name'] == 'wam_oid_view' for view in existing_views)
+            # Check if user wants to continue
+            if not self.interface.continue_session():
+                break
 
-    def search_by_oid(self, oid : str) -> None:
-        if not Indaleko.validate_uuid_string(oid):
-            raise ValueError('Invalid OID: {}'.format(oid))
-        if not self.does_oid_view_exist():
-            self.create_oid_view()
-        query=f"FOR doc in wam_oid_view SEARCH ANALYZER(Objects.ObjectIdentifier == @oid, 'identity') RETURN doc"
-        bind_vars={'oid': oid}
-        logging.debug('Executing query: %s, with bind_vars %s', query, bind_vars)
-        result = self.db_config.db.aql.execute(query, bind_vars=bind_vars)
-        return result
+
 
 def main() -> None:
     '''Main function for the IndalekoSearch module.'''
-    timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    log_name = os.path.join(
-        Indaleko.default_log_dir,
-        Indaleko.generate_file_name(
-            suffix='log',
-            platform=platform.system(),
-            service='IndalekoSearch',
-            timestamp=timestamp
-        )
-    )
-    logging.basicConfig(filename=log_name, level=logging.DEBUG)
-    logging.debug('Starting IndalekoSearch')
-    logging.debug(f'Logging to {log_name}')
-    parser = argparse.ArgumentParser(description='Search the Indaleko database.')
-    parser.add_argument('-l', '--limit', default=10, type=int, help='Limit the number of results.')
-    subparsers = parser.add_subparsers(dest='command', required=True)
-    parser_by_name = subparsers.add_parser('name', help='Search by name.')
-    parser_by_name.add_argument('name', type=str, help='Name to search for.')
-    parser_by_name.add_argument('-c', '--case-sensitive', action='store_true', help='Search case sensitively.')
-    parser_by_name.add_argument('-r', '--regex', action='store_true', help='Search using regular expressions.')
-    parser_by_date = subparsers.add_parser('date', help='Search by date.')
-    parser_by_date.add_argument('date', type=str, help='Date to search for.')
-    parser_by_oid = subparsers.add_parser('oid', help='Search by OID.')
-    parser_by_oid.add_argument('oid', type=str, default='7376f876-3e2b-404b-9a70-338db6152523', help='OID to search for.')
+    parser = argparse.ArgumentParser(description='Indaleko Search Tool')
     args = parser.parse_args()
-    print(args)
-    indaleko_search = IndalekoSearch()
-    print('Search object created')
-    if args.command == 'name':
-        print('Searching by name')
-        results = indaleko_search.search_by_name(args.name)
-        print('Search results:')
-        for result in results:
-            print(result)
-    elif args.command == 'date':
-        print('Searching by date')
-        assert False, 'Not implemented yet'
-    elif args.command == 'oid':
-        print('Searching by OID')
-        results = indaleko_search.search_by_oid(args.oid)
-        print('Search results:')
-        for result in results:
-            print(result)
-    logging.debug('Ending IndalekoSearch')
+    search_tool = IndalekoSearch(args=args)
+    search_tool.run()
 
 if __name__ == '__main__':
     main()
