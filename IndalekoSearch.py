@@ -120,7 +120,7 @@ class IndalekoSearch():
                 query=translated_query,
                 data_connector=self.db_config
             )
-            ic(f"Raw results: {raw_results}")
+            #ic(f"Raw results: {raw_results}")
             ic(f"Execution time: {execute_time}")
 
             # Analyze and refine results
