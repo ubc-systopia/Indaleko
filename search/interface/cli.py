@@ -59,8 +59,9 @@ class CLI:
         print("\nSearch Results:")
         ic(len(results))
         if len(results) < 10:
-            result = results[0]['original']['result']
-            print(result)
+            for i, result in enumerate(results, 1):
+                doc = result['original']['result']
+                ic(doc['Record']['Attributes']['Path'])
 
         if facets:
             print("Suggested refinements:")

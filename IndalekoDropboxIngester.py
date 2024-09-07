@@ -28,7 +28,9 @@ import logging
 import os
 import json
 import jsonlines
-
+import tempfile
+import uuid
+import datetime
 
 from IndalekoIngester import IndalekoIngester
 from Indaleko import Indaleko
@@ -100,6 +102,21 @@ class IndalekoDropboxIngester(IndalekoIngester):
         if not isinstance(self.indexer_data, list):
             raise ValueError('indexer_data is not a list')
 
+    def build_dummy_root_dir_entry(self) -> IndalekoObject:
+        '''This is used to build a dummy root directory object.'''
+        dummy_attributes = {
+            'Indexer' : '7c18f9c7-9153-427a-967a-55d942ac1f10',
+            'ObjectIdentifier' : str(uuid.uuid4()),
+            'FolderMetadata' : True,
+            'Metadata' : True,
+            'path_lower' : '/',
+            'path_display' : '/',
+            'name' : '',
+            'user_id' : self.user_id
+        }
+        return self.normalize_index_data(dummy_attributes)
+
+
 
     def normalize_index_data(self, data : dict ) -> IndalekoObject:
         '''
@@ -122,6 +139,8 @@ class IndalekoDropboxIngester(IndalekoIngester):
         if 'FileMetadata' in data:
             unix_file_attributes = UnixFileAttributes.FILE_ATTRIBUTES['S_IFREG']
             windows_file_attributes = IndalekoWindows.FILE_ATTRIBUTES['FILE_ATTRIBUTE_NORMAL']
+            # ArangoDB is VERY fussy about the timestamps.  If there is no TZ
+            # data, it will fail the schema validation.
             timestamps = [
                 {
                     'Label' : IndalekoObject.MODIFICATION_TIMESTAMP,
@@ -135,16 +154,36 @@ class IndalekoDropboxIngester(IndalekoIngester):
                 },
             ]
             size = data['size']
+        name = data['name']
+        path = data['path_display']
+        if path == '/' and name == '':
+            pass # root directory
+        elif path.endswith(name):
+            path = os.path.dirname(path)
+            assert len(path) < len(data['path_display'])
+            if len(path) == 1 and path[0] == '/':
+                test_path = path + name
+            else:
+                test_path = path + '/' + name
+            assert test_path == data['path_display'], f'test_path: {test_path}, path_display: {data["path_display"]}'
+        else:
+            # unexpected, so let's dump some data
+            ic('Path does not end with child name')
+            ic(data)
+            ic(name)
+            ic(path)
+            raise ValueError('Path does not end with child name')
         kwargs = {
             'source' : self.source,
             'raw_data' : Indaleko.encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
             'URI' : 'https://www.dropbox.com/home' + data['path_display'],
-            'Path' : data['path_display'],
+            'Path' : path,
             'ObjectIdentifier' : data['ObjectIdentifier'],
             'Timestamps' : timestamps,
             'Size' : size,
             'Attributes' : data,
-            'UnixFileAttributes' : UnixFileAttributes.map_file_attributes(unix_file_attributes),
+            'Label' : name,
+            'PosixFileAttributes' : UnixFileAttributes.map_file_attributes(unix_file_attributes),
             'WindowsFileAttributes' : IndalekoWindows.map_file_attributes(windows_file_attributes),
         }
         return IndalekoObject(**kwargs)
@@ -190,12 +229,18 @@ class IndalekoDropboxIngester(IndalekoIngester):
         '''
         self.load_indexer_data_from_file()
         dir_data_by_path = {}
-        dir_data = []
+        dir_data = [self.build_dummy_root_dir_entry()]
         file_data = []
         for item in self.indexer_data:
-            obj = self.normalize_index_data(item)
+            try:
+                obj = self.normalize_index_data(item)
+            except OSError as e:
+                logging.error('Error normalizing data: %s', e)
+                logging.error('Data: %s', item)
+                self.error_count +=1
+                continue
             assert 'Path' in obj.args
-            if 'S_IFDIR' in obj.args['UnixFileAttributes'] or \
+            if 'S_IFDIR' in obj.args['PosixFileAttributes'] or \
                'FILE_ATTRIBUTE_DIRECTORY' in obj.args['WindowsFileAttributes']:
                 if 'path_display' not in item:
                     logging.warning('Directory object does not have a path: %s', item)
@@ -207,8 +252,17 @@ class IndalekoDropboxIngester(IndalekoIngester):
                 file_data.append(obj)
                 self.file_count += 1
         dirmap = {}
+        dirmap_lower = {}
         for item in dir_data:
-            dirmap[item.args['Path']] = item.args['ObjectIdentifier']
+            parent_name = item.args['Path']
+            child_name = item.args['Label']
+            if parent_name == '/':
+                path = parent_name + child_name
+            else:
+                path = parent_name + '/' + child_name # force use of UNIX style separator
+            assert path not in dirmap, f'Duplicate path: {path}'
+            dirmap[path] = item.args['ObjectIdentifier']
+            dirmap_lower[path.lower()] = item.args['ObjectIdentifier']
         dir_edges = []
         source = {
             'Identifier' : self.dropbox_ingester_uuid,
@@ -219,10 +273,19 @@ class IndalekoDropboxIngester(IndalekoIngester):
                 ic(item.args)
                 raise ValueError('Path not found in item')
             parent = item.args['Path']
-            if parent not in dirmap:
+            if parent in dirmap:
+                parent_id = dirmap[parent]
+            elif parent.lower() in dirmap_lower:
+                parent_id = dirmap_lower[parent.lower()]
+            elif parent == '/':
+                ic(f'Skipping root directory edges for: {item.args}')
+                continue # skip the root directory
+            else:
+                ic(item.args)
+                ic('Parent directory not found. aborting.')
+                exit(1)
                 logging.warning('Parent directory not found: %s', parent)
                 continue # skip an unknown parent
-            parent_id = dirmap[parent]
             dir_edge = IndalekoRelationshipContains(
                 relationship = \
                     IndalekoRelationshipContains.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR,
@@ -254,25 +317,67 @@ class IndalekoDropboxIngester(IndalekoIngester):
             dir_edges.append(dir_edge)
             self.edge_count += 1
         # Save the data to the ingester output file
-        self.write_data_to_file(dir_data + file_data, self.output_file)
+        temp_file_name = ''
+        with tempfile.NamedTemporaryFile(dir=self.data_dir, delete=False) as temp_file:
+            temp_file_name = temp_file.name
+        self.write_data_to_file(dir_data + file_data, temp_file_name)
+        try:
+            if os.path.exists(self.output_file):
+                os.remove(self.output_file)
+            os.rename(temp_file_name, self.output_file)
+        except (
+            FileNotFoundError,
+            PermissionError,
+            FileExistsError,
+            OSError,
+        ) as e:
+            logging.error(
+                'Unable to rename temp file %s to output file %s',
+                temp_file_name,
+                self.output_file
+            )
+            print(f'Unable to rename temp file {temp_file_name} to output file {self.output_file}')
+            print(e)
+            self.output_file = temp_file_name
         load_string = self.build_load_string(
             collection='Objects',
             file=self.output_file
         )
         logging.info('Load string: %s', load_string)
         print('Load string: ', load_string)
+        with tempfile.NamedTemporaryFile(dir=self.data_dir, delete=False) as temp_file:
+            temp_file_name = temp_file.name
         edge_file = self.generate_output_file_name(
             platform=self.platform,
             service='ingest',
+            user_id=self.user_id,
             collection='Relationships',
             timestamp=self.timestamp,
             output_dir=self.data_dir,
         )
+        self.write_data_to_file(dir_edges, edge_file)
+        try:
+            if os.path.exists(edge_file):
+                os.remove(edge_file)
+            os.rename(temp_file_name, edge_file)
+        except (
+            FileNotFoundError,
+            PermissionError,
+            FileExistsError,
+            OSError,
+        ) as e:
+            logging.error(
+                'Unable to rename temp file %s to output file %s',
+                temp_file_name,
+                edge_file
+            )
+            print(f'Unable to rename temp file {temp_file_name} to output file {edge_file}')
+            print(e)
+            edge_file = temp_file
         load_string = self.build_load_string(
             collection='Relationships',
-
+            file=edge_file
         )
-        self.write_data_to_file(dir_edges, edge_file)
         logging.info('Load string: %s', load_string)
         print('Load string: ', load_string)
         return
@@ -348,8 +453,8 @@ def main():
     )
     output_file = ingester.generate_file_name()
     logging.info('Indaleko Dropbox Ingester started.')
-    logging.info(f'Input file: {input_file}')
-    logging.info(f'Output file: {output_file}')
+    logging.info('Input file: %s', input_file)
+    logging.info('Output file: %s', output_file)
     logging.info(args)
     ingester.ingest()
     total=0

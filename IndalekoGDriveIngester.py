@@ -300,6 +300,18 @@ class IndalekoGDriveIngester(IndalekoIngester):
         ic(data_file, edge_file)
         self.write_data_to_file(dir_data + file_data, data_file)
         self.write_data_to_file(dir_edges, edge_file)
+        load_string = self.build_load_string(
+            collection='Objects',
+            file=data_file
+        )
+        logging.info('Load string: %s', load_string)
+        ic('Object Collection load string is:\n', load_string)
+        load_string = self.build_load_string(
+            collection='Relationships',
+            file=edge_file
+        )
+        logging.info('Load string: %s', load_string)
+        ic('Relationship Collection load string is:\n', load_string)
 
 
 
@@ -329,7 +341,9 @@ def ingest_file(args: argparse.Namespace) -> None:
         print('Multiple files match the filter strings: ', args.strings)
         Indaleko.print_candidate_files(candidates)
         return
-    ingester = IndalekoGDriveIngester(input_file=os.path.join(args.datadir, candidates[0][0]), data_dir=args.datadir)
+    ingester = IndalekoGDriveIngester(input_file=os.path.join(args.datadir,
+                                                              candidates[0][0]),
+                                                              data_dir=args.datadir)
     ingester.ingest()
     for count_type, count_value in ingester.get_counts().items():
         logging.info('%s: %d', count_type, count_value)
@@ -339,8 +353,6 @@ def ingest_file(args: argparse.Namespace) -> None:
 
 def main() -> None:
     '''This provides command processing for the Google Drive Ingester'''
-    now = datetime.datetime.now(datetime.UTC)
-    timestamp=now.isoformat()
     logging_levels = IndalekoLogging.get_logging_levels()
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument('--configdir',

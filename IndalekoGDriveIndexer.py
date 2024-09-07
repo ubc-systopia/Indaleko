@@ -121,8 +121,10 @@ class IndalekoGDriveIndexer(IndalekoIndexer):
         self.email = None
         self.config_dir = kwargs.get('config_dir', Indaleko.default_config_dir)
         self.gdrive_config_file = os.path.join(self.config_dir, IndalekoGDriveIndexer.gdrive_config_file)
-        assert os.path.exists(self.gdrive_config_file), f'No GDrive config file found at {self.gdrive_config_file}'
-        self.gdrive_token_file = os.path.join(self.config_dir, IndalekoGDriveIndexer.gdrive_token_file)
+        assert os.path.exists(self.gdrive_config_file), \
+            f'No GDrive config file found at {self.gdrive_config_file}'
+        self.gdrive_token_file = \
+            os.path.join(self.config_dir, IndalekoGDriveIndexer.gdrive_token_file)
         self.gdrive_config = None
         self.load_gdrive_config()
         self.gdrive_credentials = None

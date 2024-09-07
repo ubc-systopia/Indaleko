@@ -51,6 +51,10 @@ class IndalekoObject:
             self.indaleko_object = IndalekoObjectDataModel.IndalekoObject.deserialize(
                 kwargs
             )
+        if self.indaleko_object.Timestamps is not None:
+            for timestamp in self.indaleko_object.Timestamps:
+                if timestamp.Value.tzinfo is None:
+                    timestamp.Value = timestamp.Value.replace(tzinfo=datetime.timezone.utc)
 
     def legacy_constructor(self):
         '''Create an object using the old format.'''
