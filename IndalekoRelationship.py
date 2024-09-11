@@ -65,7 +65,7 @@ class IndalekoRelationship:
         assert isinstance(vertex, dict), 'vertex must be a dict'
         assert 'object' in vertex, 'object1 must be specified.'
         assert 'collection' in vertex, 'collection must be specified.'
-        assert Indaleko.validate_uuid_string(vertex['object']), 'object must be a valid UUID.'
+        assert Indaleko.validate_uuid_string(vertex['object']), f'object ({vertex['object']}) must be a valid UUID.'
         assert isinstance(vertex['collection'], str), 'collection must be a string.'
         return True
 

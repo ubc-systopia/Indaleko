@@ -2,6 +2,16 @@ data*/*
 config*/*
 logs*/*
 __pycache__/*
+*/__pycache__/*
+*/*/__pycache__/*
+*/*/*/__pycache__/*
+*/*/*/*/__pycache__/*
+*/*/*/*/*/__pycache__/*
+*/*/*/*/*/*/__pycache__/*
+*/*/*/*/*/*/*/__pycache__/*
+*/*/*/*/*/*/*/*/__pycache__/*
+*/*/*/*/*/*/*/*/*/__pycache__/*
+*/*/*/*/*/*/*/*/*/*/__pycache__/*
 .trunk/
 .vscode/
 wmiobject-list.txt

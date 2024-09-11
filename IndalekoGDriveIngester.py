@@ -1,5 +1,5 @@
 '''
-This module handles data ingestion into Indaleko from the Linux local data
+This module handles data ingestion into Indaleko from the Google Drive data
 indexer.
 
 Indaleko Linux Local Ingester
@@ -379,7 +379,7 @@ def main() -> None:
     pre_args, _ = pre_parser.parse_known_args()
     if pre_args.command == 'list':
         list_files(pre_args)
-    parser = argparse.ArgumentParser(parents=[pre_parser], description='Google Drive Metadataa Ingest Management')
+    parser = argparse.ArgumentParser(parents=[pre_parser], description='Google Drive Metadata Ingest Management')
     parser.set_defaults(func=ingest_file)
     args = parser.parse_args()
     print(args)
