@@ -59,6 +59,7 @@ class IndalekoObject:
     def legacy_constructor(self):
         '''Create an object using the old format.'''
         kwargs = self.args
+        ic(kwargs)
         record = IndalekoRecordDataModel.IndalekoRecord(
             Data=kwargs['raw_data'],
             Attributes=kwargs['Attributes'],
@@ -73,15 +74,17 @@ class IndalekoObject:
         del kwargs['Attributes']
         del kwargs['source']
         if 'timestamp' in kwargs:
-            del kwargs['timestamp']
+            del kwargs['Timestamps']
         assert 'Record' not in kwargs, 'Record is still in kwargs - new style constructor.'
         kwargs['Record'] = IndalekoRecordDataModel.IndalekoRecord.serialize(record)
+        ic(kwargs['Record'])
         self.indaleko_object = IndalekoObjectDataModel.IndalekoObject.deserialize(kwargs)
 
 
     @staticmethod
     def deserialize(data: dict) -> 'IndalekoObject':
         '''Deserialize a dictionary to an object.'''
+        ic(data)
         return IndalekoObject(**data)
 
     def serialize(self) -> dict:

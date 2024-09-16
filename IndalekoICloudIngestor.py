@@ -12,7 +12,6 @@ import uuid
 from IndalekoIngester import IndalekoIngester
 from Indaleko import Indaleko
 from IndalekoICloudIndexer import IndalekoICloudIndexer
-from IndalekoServices import IndalekoService
 import IndalekoLogging
 from IndalekoObject import IndalekoObject
 from IndalekoRelationshipContains import IndalekoRelationshipContains
@@ -25,13 +24,13 @@ class IndalekoICloudIngester(IndalekoIngester):
     '''
 
     icloud_ingester_uuid = 'c2b887b3-2a2f-4fbf-83dd-062743f31477'
-    icloud_ingester_service = IndalekoService.create_service_data(
-        service_name = 'iCloud Ingester',
-        service_description = 'This service ingests captured index info from iCloud.',
-        service_version = '1.0',
-        service_type = 'Ingester',
-        service_identifier = icloud_ingester_uuid,
-    )
+    icloud_ingester_service = {
+        'service_name' : 'iCloud Ingester',
+        'service_description' : 'This service ingests captured index info from iCloud.',
+        'service_version' : '1.0',
+        'service_type' : 'Ingester',
+        'service_id' : icloud_ingester_uuid,
+    }
 
     icloud_platform = IndalekoICloudIndexer.icloud_platform
     icloud_ingester = 'icloud_ingester'
@@ -91,7 +90,9 @@ class IndalekoICloudIngester(IndalekoIngester):
             raise ValueError('Data must contain an ObjectIdentifier')
         if 'user_id' not in data:
             data['user_id'] = self.user_id
-
+        
+        ic(data)
+        
         timestamps = [
             {
                 'Label': IndalekoObject.MODIFICATION_TIMESTAMP,
@@ -117,7 +118,7 @@ class IndalekoICloudIngester(IndalekoIngester):
 
         kwargs = {
             'source': self.source,
-            'raw_data': msgpack.packb(bytes(json.dumps(data).encode('utf-8'))),
+            'raw_data': Indaleko.encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
             'URI': 'https://www.icloud.com' + data['path_display'],
             'Path': data['path_display'],
             'ObjectIdentifier': data['ObjectIdentifier'],
@@ -125,6 +126,8 @@ class IndalekoICloudIngester(IndalekoIngester):
             'Size': data.get('size', 0),
             'Attributes': data,
         }
+        ic(kwargs)
+
         return IndalekoObject(**kwargs)
 
     def generate_output_file_name(self, **kwargs) -> str:
