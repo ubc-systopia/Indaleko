@@ -1,4 +1,7 @@
-
+'''
+This is a simple script for constructing an upload operation for an ingestion
+file with the Indaleko database.
+'''
 
 import os
 
