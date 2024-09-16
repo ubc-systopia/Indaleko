@@ -19,9 +19,14 @@ wmiobject-list.txt
 *.json
 scratch*.py
 scratch*.ipynb
+scratch/*
 *.jsonl
 wam/
 .DS_Store
 creds.py
 wam*
+count_files_and_directories_aql.sql
+import_list.cmd
+upload-notes.md
+
 
