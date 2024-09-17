@@ -22,13 +22,15 @@ import uuid
 import json
 import datetime
 
+import apischema
+
 from icecream import ic
 
 from Indaleko import Indaleko
 from IndalekoObjectSchema import IndalekoObjectSchema
 from IndalekoObjectDataModel import IndalekoObjectDataModel
 from IndalekoRecordDataModel import IndalekoRecordDataModel
-from IndalekoDataModel import IndalekoDataModel, IndalekoUUID
+from IndalekoDataModel import IndalekoDataModel
 
 class IndalekoObject:
     '''
@@ -45,6 +47,9 @@ class IndalekoObject:
     def __init__(self, **kwargs):
         '''Initialize the object.'''
         self.args = kwargs
+        assert 'ObjectIdentifier' in kwargs, 'ObjectIdentifier is missing.'
+        assert isinstance(kwargs['ObjectIdentifier'], str), 'ObjectIdentifier is not a string.'
+        assert "None" != kwargs['ObjectIdentifier'], 'ObjectIdentifier is None.'
         if 'Record' not in kwargs:
             self.legacy_constructor()
         else:
@@ -59,7 +64,7 @@ class IndalekoObject:
     def legacy_constructor(self):
         '''Create an object using the old format.'''
         kwargs = self.args
-        ic(kwargs)
+        # ic(kwargs)
         record = IndalekoRecordDataModel.IndalekoRecord(
             Data=kwargs['raw_data'],
             Attributes=kwargs['Attributes'],
@@ -77,14 +82,17 @@ class IndalekoObject:
             del kwargs['Timestamps']
         assert 'Record' not in kwargs, 'Record is still in kwargs - new style constructor.'
         kwargs['Record'] = IndalekoRecordDataModel.IndalekoRecord.serialize(record)
-        ic(kwargs['Record'])
-        self.indaleko_object = IndalekoObjectDataModel.IndalekoObject.deserialize(kwargs)
-
+        #ic(kwargs['Record'])
+        try:
+            self.indaleko_object = IndalekoObjectDataModel.IndalekoObject.deserialize(kwargs)
+        except apischema.validation.errors.ValidationError as e:
+            ic(e)
+            ic(kwargs)
+            raise e
 
     @staticmethod
     def deserialize(data: dict) -> 'IndalekoObject':
         '''Deserialize a dictionary to an object.'''
-        ic(data)
         return IndalekoObject(**data)
 
     def serialize(self) -> dict:

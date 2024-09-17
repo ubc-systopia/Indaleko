@@ -59,6 +59,8 @@ class IndalekoGDriveIngester(IndalekoIngester):
         for key, value in self.gdrive_ingester_service.items():
             if key not in kwargs:
                 kwargs[key] = value
+        if 'service_id' not in kwargs and 'Identifier' not in kwargs:
+            kwargs['Identifier'] = self.gdrive_ingester_uuid_str
         super().__init__(**kwargs)
         self.data_dir = kwargs.get('data_dir', Indaleko.default_data_dir)
         self.input_file = kwargs['input_file']

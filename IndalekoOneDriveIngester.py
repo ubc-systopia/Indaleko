@@ -61,10 +61,15 @@ class IndalekoOneDriveIngester(IndalekoIngester):
         for key, value in self.onedrive_ingester_service.items():
             if key not in kwargs:
                 kwargs[key] = value
-        super().__init__(**kwargs)
+        if 'service_id' not in kwargs and 'Identifier' not in kwargs:
+            kwargs['service_id'] = self.onedrive_ingester_uuid_str
         self.data_dir = kwargs.get('data_dir', Indaleko.default_data_dir)
         self.input_file = kwargs['input_file']
         self.indexer_file_metadata = Indaleko.extract_keys_from_file_name(self.input_file)
+        kwargs['timestamp'] = \
+            self.indexer_file_metadata.get('timestamp',
+                                            datetime.datetime.now(datetime.UTC).isoformat())
+        super().__init__(**kwargs)
         self.ingester = IndalekoOneDriveIngester.onedrive_ingester
         self.indexer_data = []
         self.source = {
@@ -96,6 +101,9 @@ class IndalekoOneDriveIngester(IndalekoIngester):
         else:
             ic('No eTag in data, generating a new UUID')
             oid = uuid.uuid4()
+            # "eTag": "\"{4F181015-B1D6-4793-8104-806A631830FF},1\""
+            data['eTag'] = '"{' + str(oid) + '},1"'
+            ic(data['eTag'])
         # assert data['parentReference']['path'].strip() == '/drive/root:', \
         #    f'Only root is supported\n{data['parentReference']['path']}\n{json.dumps(data, indent=2)}'
         path = '/' + data['parentReference']['name'] + '/' + data['name']
@@ -105,7 +113,9 @@ class IndalekoOneDriveIngester(IndalekoIngester):
                 timestamps.append(
                     {
                         'Label': IndalekoObject.CREATION_TIMESTAMP,
-                        'Value' : datetime.datetime.fromisoformat(data['fileSystemInfo']['createdDateTime']).isoformat(),
+                        'Value' : datetime.datetime\
+                            .fromisoformat(data['fileSystemInfo']['createdDateTime'])\
+                                .isoformat(),
                         'Description' : 'Creation Time',
                     }
                 )
@@ -114,14 +124,18 @@ class IndalekoOneDriveIngester(IndalekoIngester):
                 timestamps.append(
                     {
                         'Label': IndalekoObject.MODIFICATION_TIMESTAMP,
-                        'Value' : datetime.datetime.fromisoformat(data['fileSystemInfo']['lastModifiedDateTime']).isoformat(),
+                        'Value' : datetime.datetime\
+                            .fromisoformat(data['fileSystemInfo']['lastModifiedDateTime'])\
+                                .isoformat(),
                         'Description' : 'Modification Time',
                     }
                 )
                 timestamps.append(
                     {
                         'Label': IndalekoObject.CHANGE_TIMESTAMP,
-                    'Value' : datetime.datetime.fromisoformat(data['fileSystemInfo']['lastModifiedDateTime']).isoformat(),
+                    'Value' : datetime.datetime\
+                        .fromisoformat(data['fileSystemInfo']['lastModifiedDateTime'])\
+                            .isoformat(),
                     'Description' : 'Access Time',
                     }
                 )
@@ -242,11 +256,14 @@ class IndalekoOneDriveIngester(IndalekoIngester):
             )
             dir_edges.append(dir_edge)
             self.edge_count += 1
-        return
         for data in self.indexer_data:
             if 'ObjectIdentifier' not in data:
-                data['ObjectId'] = str(self.extract_uuid_from_etag(data['eTag']))
-            id_to_oid_map[data['id']] = data['ObjectId']
+                data['ObjectIdentifier'] = str(self.extract_uuid_from_etag(data['eTag']))
+            assert isinstance(data['ObjectIdentifier'], str),\
+                f'ObjectIdentifier is not a string: {data["ObjectIdentifier"]}'
+            assert Indaleko.validate_uuid_string(data['ObjectIdentifier']),\
+                f'ObjectIdentifier is not a valid UUID: {data["ObjectIdentifier"]}'
+            id_to_oid_map[data['id']] = data['ObjectIdentifier']
         # Now let's update the data with the parent object identifiers
         dir_oids = []
         for data in self.indexer_data:
@@ -274,51 +291,14 @@ class IndalekoOneDriveIngester(IndalekoIngester):
         source = {
             'Identifier' : self.onedrive_ingester,
             'Version' : '1.0.0',
-            'Description' : 'Google Drive Ingester',
+            'Description' : self.onedrive_ingester_service['service_description'],
         }
-        dir_edges = []
-        for item in dir_data + file_data:
-            data = item.args
-            oid = data['ObjectIdentifier']
-            if 'parents' in item:
-                for parent_id in item['parents']:
-                    dir_edges.append(
-                        IndalekoRelationshipContains(
-                            relationship = IndalekoRelationshipContains.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR,
-                            object1 = {
-                                'collection' : 'Objects',
-                                'object' : parent_id,
-                            },
-                            object2 = {
-                                'collection' : 'Objects',
-                                'object' : oid
-                            },
-                            source = source
-                        )
-                    )
-                    self.edge_count += 1
-                    dir_edges.append(
-                        IndalekoRelationshipContainedBy(
-                            relationship = IndalekoRelationshipContainedBy.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR,
-                            object1 = {
-                                'collection' : 'Objects',
-                                'object' : oid
-                            },
-                            object2 = {
-                                'collection' : 'Objects',
-                                'object' : parent_id
-                            },
-                            source = source
-                        )
-                    )
-                    self.edge_count += 1
-        ic(self.indexer_file_metadata)
         kwargs = {
             'platform' : self.indexer_file_metadata['platform'],
             'prefix' : self.indexer_file_metadata['prefix'],
             'service' : 'ingester',
             'suffix' : 'jsonl',
-            'timestamp' : self.timestamp,
+            'timestamp' : self.indexer_file_metadata.get('timestamp', self.timestamp),
             'collection' : 'Objects',
             'user_id' : self.indexer_file_metadata['user_id']
         }
@@ -328,6 +308,7 @@ class IndalekoOneDriveIngester(IndalekoIngester):
         ic(data_file, edge_file)
         self.write_data_to_file(dir_data + file_data, data_file)
         self.write_data_to_file(dir_edges, edge_file)
+        print(f'size of dir_edges: {len(dir_edges)}')
         load_string = self.build_load_string(
             collection='Objects',
             file=data_file
@@ -357,8 +338,12 @@ def list_files(args: argparse.Namespace) -> None:
 def ingest_file(args: argparse.Namespace) -> None:
     '''Ingest the specified file'''
     print('ingest_file called: ', args)
-    if args.input is None:
+    if not hasattr(args, 'input') or args.input is None:
         print('Pick the most likely file')
+        candidates = Indaleko.find_candidate_files([IndalekoOneDriveIndexer.onedrive_platform,
+                                                    'indexer',
+                                                    IndalekoOneDriveIndexer.default_file_suffix],
+                                                    args.datadir)
     else:
         candidates = Indaleko.find_candidate_files([args.input], args.datadir)
     if len(candidates) == 0:
@@ -369,9 +354,11 @@ def ingest_file(args: argparse.Namespace) -> None:
         print('Multiple files match the filter strings: ', args.strings)
         Indaleko.print_candidate_files(candidates)
         return
-    ingester = IndalekoOneDriveIngester(input_file=os.path.join(args.datadir,
-                                                              candidates[0][0]),
-                                                              data_dir=args.datadir)
+    ingester = IndalekoOneDriveIngester(
+        input_file=os.path.join(args.datadir,
+                                candidates[0][0]),
+        data_dir=args.datadir
+    )
     ingester.ingest()
     for count_type, count_value in ingester.get_counts().items():
         logging.info('%s: %d', count_type, count_value)
@@ -401,7 +388,7 @@ def main() -> None:
     parser_list.add_argument('strings', nargs='*', type=str, help='Strings to search for')
     parser_list.set_defaults(func=list_files)
     parser_ingest = command_subparser.add_parser('ingest', help='Ingest the specified file')
-    parser_ingest.add_argument('--input', help='Indexer file to ingest', type=str)
+    parser_ingest.add_argument('--input', default=None, help='Indexer file to ingest', type=str)
     parser_ingest.set_defaults(func=ingest_file)
     pre_args, _ = pre_parser.parse_known_args()
     if pre_args.command == 'list':
