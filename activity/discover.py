@@ -25,6 +25,8 @@ import sys
 
 from icecream import ic
 
+# This logic is part of what allows me to execute it locally or as part of the
+# overall package/project.  It's a bit of a hack, but it works.
 try:
     from provider_base import ProviderBase
 except ImportError:
