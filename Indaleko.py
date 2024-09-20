@@ -64,8 +64,6 @@ import socket
 import ipaddress
 import base64
 import msgpack
-import base64
-import msgpack
 
 from IndalekoObjectSchema import IndalekoObjectSchema
 from IndalekoServiceSchema import IndalekoServiceSchema
