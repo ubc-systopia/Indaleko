@@ -49,6 +49,14 @@ class ProviderBase(ABC):
         '''
 
     @abstractmethod
+    def get_provider_name(self) -> str:
+        '''Get the name of the provider'''
+
+    @abstractmethod
+    def get_provider_id(self) -> uuid.UUID:
+        '''Get the UUID for the provider'''
+
+    @abstractmethod
     def retrieve_data(self, data_id: uuid.UUID) -> Dict:
         '''
         This call retrieves the data associated with the provided data_id.
@@ -112,7 +120,7 @@ class ProviderBase(ABC):
         '''
 
     @abstractmethod
-    def get_json_schema(self) -> str:
+    def get_json_schema(self) -> dict:
         '''
         Retrieve the JSON data schema to use for the database.
         '''

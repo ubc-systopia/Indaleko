@@ -18,29 +18,52 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import argparse
+import datetime
 import logging
 import os
 import sys
 
-def __get_project_root() -> str:
-    '''Get the root of the project'''
-    if 'project_root' in globals():
-        return project_root
+from abc import abstractmethod
+from typing import List, Dict, Any
+
+if os.environ.get('INDALEKO_ROOT') is None:
+    print('adding root')
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
         current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
-    return current_path
 
-project_root = __get_project_root()
+# This logic is part of what allows me to execute it locally or as part of the
+# overall package/project.  It's a bit of a hack, but it works.
+try:
+    from activity import ProviderBase
+except ImportError:
+    from .provider_base import ProviderBase
 
-from .. import provider_base
+
 
 class LocationProvider(ProviderBase):
     '''This is a location activity data provider for Indaleko.'''
 
-    def __init__(self, **kwargs):
-        '''Set up the location activity data provider.'''
+    @abstractmethod
+    def get_location_name(self) -> Any:
+        '''Get the location'''
+
+    @abstractmethod
+    def get_coordinates(self) -> Dict[str, float]:
+        '''Get the coordinates for the location'''
+
+    @abstractmethod
+    def get_location_history(
+        self,
+        start_time : datetime.datetime,
+        end_time : datetime.datetime) -> List[Dict[str, Any]]:
+        '''Get the location history for the location'''
+
+    @abstractmethod
+    def get_distance(self, location1: Dict[str, float], location2: Dict[str, float]) -> float:
+        '''Get the distance between two locations'''
 
 
 def main():
@@ -65,3 +88,23 @@ def main():
     args.func(args)
     args = parser.parse_args()
     parser.add_argument('--config', type=str, help='Configuration file for the location provider')
+
+if __name__ == '__main__':
+    def __get_project_root() -> str:
+        '''Get the root of the project'''
+        current_path = os.path.dirname(os.path.abspath(__file__))
+        while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+            current_path = os.path.dirname(current_path)
+        return current_path
+
+    if 'INDALEKO_ROOT' not in os.environ:
+        project_root = __get_project_root()
+        os.environ['INDALEKO_ROOT'] = project_root
+        sys.path.append(project_root)
+
+    # now we can import modules from the project root
+    from Indaleko import Indaleko
+    from IndalekoLogging import IndalekoLogging
+
+    from activity.provider_base import ProviderBase
+    main()
