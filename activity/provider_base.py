@@ -18,16 +18,24 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
-import uuid
 import datetime
+import os
+import sys
+import uuid
 
 from abc import ABC, abstractmethod
 from typing import List, Dict
 
-try:
-    from provider_characteristics import ProviderCharacteristics
-except ImportError:
-    from .provider_characteristics import ProviderCharacteristics
+from icecream import ic
+
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+from activity.provider_characteristics import ProviderCharacteristics
 
 class ProviderBase(ABC):
     '''
@@ -124,3 +132,10 @@ class ProviderBase(ABC):
         '''
         Retrieve the JSON data schema to use for the database.
         '''
+
+def main():
+    '''This is a test interface for the provider base.'''
+    ic('ProviderBase test interface')
+
+if __name__ == '__main__':
+    main()

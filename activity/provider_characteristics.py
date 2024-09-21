@@ -20,6 +20,18 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
+import os
+import sys
+
+from icecream import ic
+
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
 class ProviderCharacteristics:
 
     '''
@@ -40,3 +52,19 @@ class ProviderCharacteristics:
     PROVIDER_DEVICE_STATE_DATA = '8c7ac170-fe89-4d42-8ae1-de4c3c998917'
     PROVIDER_ENVIRONMENTAL_DATA = '96b30aa4-635e-45e9-b3f2-1763c59a877a'
 
+    @staticmethod
+    def get_provider_characteristics():
+        '''Get the characteristics of the provider'''
+        return {
+            label : value for label, value in ProviderCharacteristics.__dict__.items() if label.startswith('PROVIDER_')
+        }
+
+def main():
+    '''Main entry point for the module'''
+    import json
+
+    ic('ProviderCharacteristics module test.')
+    print(json.dumps(ProviderCharacteristics.get_provider_characteristics(), indent=4))
+
+if __name__ == '__main__':
+    main()

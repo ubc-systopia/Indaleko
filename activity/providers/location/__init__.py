@@ -25,14 +25,14 @@ from typing import Dict, Type
 
 from icecream import ic
 
-from .location_base import LocationProvider
-
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
         current_path = os.path.dirname(current_path)
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
+
+from activity.providers.location.location_base import LocationProvider
 
 def discover_provider_names():
     '''Discover names of potential provider modules.'''
@@ -67,11 +67,8 @@ class LazyProviderLoader:
                 if isinstance(attr, type) and issubclass(attr, LocationProvider) and attr != LocationProvider:
                     self.provider_class = attr
                     break
-            assert self.provider_class is not None
-            ic(self.spec)
-            ic(self.module)
-            ic(self.provider_class)
-        self.provider = self.provider_class()
+        if self.provider_class is not None:
+            self.provider = self.provider_class()
 
     def get_class_name(self):
         if self.provider_class is None:
@@ -82,10 +79,17 @@ class LazyProviderLoader:
 provider_names = discover_provider_names()
 
 providers = {name: LazyProviderLoader(name) for name in provider_names}
-ic(providers)
 
-# Create a dictionary to map class names to their respective LazyProviderLoader instances
-class_name_to_loader = {loader.get_class_name(): loader for loader in providers.values()}
+# Create a dictionary to map class names to their respective LazyProviderLoader
+# instances
+
+class_name_to_loader = {}
+for name, loader in providers.items():
+    loader._load_provider()
+    if loader.provider_class is not None:
+        class_name_to_loader[name] = loader.get_class_name()
+
+# class_name_to_loader = {loader.get_class_name(): loader for loader in providers.values() if loader.provider_class is not None}
 
 # Define a custom __getattr__ function for the module
 def __getattr__(name):
@@ -94,8 +98,11 @@ def __getattr__(name):
     raise AttributeError(f"module {__name__} has no attribute {name}")
 
 # Define what should be available when importing from this package
-__all__ = ['LocationProvider'] + list(class_name_to_loader.keys())
-ic(__all__)
+__all__ = ['LocationProvider']
+for key, value in class_name_to_loader.items():
+    assert value not in __all__, \
+        f"Duplicate class name {value} found in provider {key}"
+    __all__.append(value)
 
 # Optionally, provide a function to get all providers
 def get_providers():

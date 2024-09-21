@@ -1,10 +1,17 @@
-'''This implements the Foo Location Service'''
+'''This implements the Windows GPS Location Service'''
 
+import asyncio
 import datetime
 import os
+import platform
+import sys
 import uuid
+import winsdk.windows.devices.geolocation as wdg
 
 from typing import List, Dict, Any
+
+
+from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -13,19 +20,33 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
-try:
-    from activity.providers.location import LocationProvider
-    from activity.provider_characteristics import ProviderCharacteristics
-except ImportError:
-    from .location_base import LocationProvider
-    from ..provider_characteristics import ProviderCharacteristics
+from activity import ProviderCharacteristics
+from activity.providers.location.data_models.windows_gps_location_data_model import WindowsGPSLocationDataModel
+from activity.providers.location.location_base import LocationProvider
 
-class FooLocation(LocationProvider):
-    '''This is the Foo Location Service'''
+class WindowsGPSLocation(LocationProvider):
+    '''This is the Windows GPS Location Service'''
     def __init__(self):
-        self._name = 'Foo Location Service'
-        self._location = 'Foo Location'
-        self._provider_id = uuid.UUID('6387a248-4e03-46ad-b03d-9bb3d2e1fd91')
+        self._name = 'GPS Location Service'
+        self._location = 'GPS Location'
+        self._provider_id = uuid.UUID('750fd846-b6cd-4c81-b774-53ba25905e29')
+        self.coords = self.get_coords()
+        ic(type(self.coords))
+        ic(dir(self.coords))
+        ic(self.coords.civic_address)
+        ic(self.coords.coordinate)
+        ic(dir(self.coords.coordinate))
+        ic(self.coords.venue_data)
+
+    @staticmethod
+    async def get_coords_async():
+        '''Get the coordinates for the location'''
+        geolocator = wdg.Geolocator()
+        return await geolocator.get_geoposition_async()
+
+    def get_coords(self):
+        '''Get the coordinates for the location'''
+        return asyncio.run(self.get_coords_async())
 
     def get_provider_characteristics(self) -> List[ProviderCharacteristics]:
         '''Get the provider characteristics'''

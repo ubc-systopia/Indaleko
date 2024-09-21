@@ -24,20 +24,14 @@ import sys
 
 from icecream import ic
 
-project_root = os.environ.get('INDALEKO_ROOT')
+init_path = os.path.dirname(os.path.abspath(__file__))
 
-if project_root is None:
+if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
         current_path = os.path.dirname(current_path)
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
-
-
-def initialize_module():
-    '''initialize the module'''
-    ic('Indaleko activity data providers initialized.')
-
 
 __version__ = '0.1.0'
 
@@ -55,6 +49,7 @@ def discover_providers():
 def discover_plugins():
     plugins = {}
     plugin_dir = os.path.dirname(__file__)
+    ic(plugin_dir)
 
     for filename in os.listdir(plugin_dir):
         if filename.endswith('.py') and filename != '__init__.py':
@@ -70,14 +65,15 @@ def discover_plugins():
 
 # Discover and load all plugins
 #discovered_plugins = discover_plugins()
+#ic(discovered_plugins)
 
 # Make discovered plugins available when importing the package
-#globals().update(discovered_plugins)
+# globals().update(discovered_plugins)
 
-#__all__ = list(discovered_plugins.keys())
+__all__ = [] # list(discovered_plugins.keys())
 
 # You could also provide a function to get all discovered plugins
 #def get_all_plugins():
 #    return discovered_plugins
 
-discover_providers()
+print(discover_providers())

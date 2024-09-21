@@ -36,12 +36,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # This logic is part of what allows me to execute it locally or as part of the
 # overall package/project.  It's a bit of a hack, but it works.
-try:
-    from activity import ProviderBase
-except ImportError:
-    from .provider_base import ProviderBase
-
-
+from activity import ProviderBase
 
 class LocationProvider(ProviderBase):
     '''This is a location activity data provider for Indaleko.'''

@@ -25,12 +25,14 @@ import sys
 
 from icecream import ic
 
-# This logic is part of what allows me to execute it locally or as part of the
-# overall package/project.  It's a bit of a hack, but it works.
-try:
-    from provider_base import ProviderBase
-except ImportError:
-    from .provider_base import ProviderBase
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+from activity import ProviderBase
 
 
 # This is a hack to get the project root
