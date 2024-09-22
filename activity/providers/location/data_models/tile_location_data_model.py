@@ -104,7 +104,7 @@ class TileLocationDataModel(BaseLocationDataModel):
 
     def serialize(self):
         '''Serialize the data model'''
-        return self.dict()
+        return self.json()
 
     @staticmethod
     def deserialize(data):

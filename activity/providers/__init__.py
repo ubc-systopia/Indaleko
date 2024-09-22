@@ -22,7 +22,7 @@ import os
 import importlib
 import sys
 
-from icecream import ic
+# from icecream import ic
 
 init_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -44,12 +44,12 @@ def discover_providers():
             continue
         if os.path.isdir(os.path.join(file_parent, x)):
             categories.append(x)
-    ic(categories)
+    # ic(categories)
 
 def discover_plugins():
     plugins = {}
     plugin_dir = os.path.dirname(__file__)
-    ic(plugin_dir)
+    # ic(plugin_dir)
 
     for filename in os.listdir(plugin_dir):
         if filename.endswith('.py') and filename != '__init__.py':
@@ -76,4 +76,4 @@ __all__ = [] # list(discovered_plugins.keys())
 #def get_all_plugins():
 #    return discovered_plugins
 
-print(discover_providers())
+#print(discover_providers())

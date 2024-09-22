@@ -31,12 +31,6 @@ class WindowsGPSLocation(LocationProvider):
         self._location = 'GPS Location'
         self._provider_id = uuid.UUID('750fd846-b6cd-4c81-b774-53ba25905e29')
         self.coords = self.get_coords()
-        ic(type(self.coords))
-        ic(dir(self.coords))
-        ic(self.coords.civic_address)
-        ic(self.coords.coordinate)
-        ic(dir(self.coords.coordinate))
-        ic(self.coords.venue_data)
 
     @staticmethod
     async def get_coords_async():

@@ -78,7 +78,7 @@ class IPLocationDataModel(BaseLocationDataModel):
         }
 
     def serialize(self):
-        return self.dict()
+        return self.json()
 
     @staticmethod
     def deserialize(data):

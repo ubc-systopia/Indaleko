@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+import uuid
 
 from icecream import ic
 
@@ -45,12 +46,21 @@ class ProviderCharacteristics:
     PROVIDER_COLLABORATION_ACTIVITY_DATA = '0b1014b0-b290-440c-98a7-5074f2bfa68e'
     PROVIDER_APPLICATION_USAGE_DATA = 'a6a87ac5-0263-4c97-807e-7c4965c6c7c1'
     PROVIDER_SCHEDULED_EVENT_DATA = '267f3db7-5983-444c-a594-8ea9caf3ce7d'
+    PROVIDER_NETWORK_DATA = '75ad4c17-f8a9-451d-a197-a09c5e75fc06'
     PROVIDER_NETWORK_ACTIVITY_DATA = '651b3b00-23f3-45ae-8d0e-79454a61ff3a'
     PROVIDER_SENSORY_DATA = '7ddd355d-706d-4856-94f3-ac44bfb2deca'
     PROVIDER_MEDIA_CONSUMPTION_DATA = '3897c906-fb6d-4e6d-81c5-02334436e80d'
     PROVIDER_SOCIAL_INTERACTION_DATA = '8c848e18-dd2b-4cc4-901f-7c32036eda4f'
     PROVIDER_DEVICE_STATE_DATA = '8c7ac170-fe89-4d42-8ae1-de4c3c998917'
     PROVIDER_ENVIRONMENTAL_DATA = '96b30aa4-635e-45e9-b3f2-1763c59a877a'
+
+    def __init__(self):
+        '''Initialize the provider characteristics'''
+        self.uuid_to_label = {}
+        for label, value in ProviderCharacteristics.__dict__.items():
+            if label.startswith('PROVIDER_'):
+                setattr(self, label+'_UUID', uuid.UUID(value))
+                self.uuid_to_label[value] = label
 
     @staticmethod
     def get_provider_characteristics():
@@ -59,12 +69,19 @@ class ProviderCharacteristics:
             label : value for label, value in ProviderCharacteristics.__dict__.items() if label.startswith('PROVIDER_')
         }
 
+    @staticmethod
+    def get_provider_label(uuid: uuid.UUID):
+        '''Get the label for the provider'''
+        return ProviderCharacteristics().uuid_to_label.get(uuid, None)
+
 def main():
     '''Main entry point for the module'''
     import json
 
     ic('ProviderCharacteristics module test.')
-    print(json.dumps(ProviderCharacteristics.get_provider_characteristics(), indent=4))
+    for label, value in ProviderCharacteristics.get_provider_characteristics().items():
+        ic(label, value)
+        ic(ProviderCharacteristics.get_provider_label(value))
 
 if __name__ == '__main__':
     main()

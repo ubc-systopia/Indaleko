@@ -4,7 +4,7 @@ import os
 import importlib
 import sys
 
-from icecream import ic
+# from icecream import ic
 
 init_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -25,7 +25,7 @@ providers = [
         if os.path.isdir(os.path.join(provider_dir, x))
         and not x.startswith('_')
 ]
-ic(providers)
+# ic(providers)
 
 __version__ = '0.1.0'
 

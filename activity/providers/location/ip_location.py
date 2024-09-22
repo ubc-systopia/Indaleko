@@ -1,6 +1,7 @@
 '''This implements the IP Location Service'''
 
 import datetime
+import ipaddress
 import os
 import platform
 import requests
@@ -19,6 +20,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
+# now we can import modules from the project root
 from activity.providers.location import LocationProvider
 from activity import ProviderCharacteristics
 from activity.providers.location.data_models.ip_location_data_model import IPLocationDataModel
@@ -28,11 +30,12 @@ class IPLocation(LocationProvider):
     def __init__(self):
         self.timeout = 10
         self._name = 'IP Location Service'
-        self._location = 'IP Location'
+        self._location = ''
         self._provider_id = uuid.UUID('82ae879d-7280-4b5a-a98a-5ebc1bf61bbc')
         self.ip_address = self.capture_public_ip_address()
         self.ip_location_data = self.get_ip_location_data()
-        ic(self.ip_location_data)
+        self.location_data = self.map_ip_location_data_to_data_model(self.ip_location_data)
+
 
     @staticmethod
     def capture_public_ip_address(timeout : int = 10) -> str:
@@ -41,16 +44,66 @@ class IPLocation(LocationProvider):
         data = response.json()
         return data.get('ip')
 
+    def map_ip_location_data_to_data_model(self, location_data : dict) -> IPLocationDataModel:
+        '''Map the IP location data to the data model'''
+        # start with the required fields
+        if 'ip_address' in location_data:
+            ip_address = location_data.get('ip_address')
+        else:
+            try:
+                ip_address = ipaddress.IPv4Address(location_data.get('query'))
+            except ipaddress.AddressValueError:
+                ip_address = ipaddress.IPv6Address(location_data.get('query'))
+        assert isinstance(ip_address, ipaddress.IPv4Address) \
+            or isinstance(ip_address, ipaddress.IPv6Address), \
+            f'The IP address is not a valid IP address. It is {type(ip_address)}'
+        kwargs = {
+            "latitude": location_data.get('lat'),
+            "longitude": location_data.get('lon'),
+            "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
+            "source": "IP",
+            "ip_address": ip_address,
+        }
+        # add the optional fields
+        if 'altitude' in location_data:
+            kwargs['altitude'] = location_data.get('altitude')
+        if 'accuracy' in location_data:
+            kwargs['accuracy'] = location_data.get('accuracy')
+        if 'heading' in location_data:
+            kwargs['heading'] = location_data.get('heading')
+        if 'speed' in location_data:
+            kwargs['speed'] = location_data.get('speed')
+        if 'city' in location_data:
+            kwargs['city'] = location_data.get('city')
+        if 'country' in location_data:
+            kwargs['country'] = location_data.get('country')
+        if 'country_code' in location_data:
+            kwargs['country_code'] = location_data.get('country_code')
+        if 'region' in location_data:
+            kwargs['region'] = location_data.get('region')
+        if 'region_name' in location_data:
+            kwargs['region_name'] = location_data.get('region_name')
+        if 'postal_code' in location_data:
+            kwargs['postal_code'] = location_data.get('postal_code')
+        if 'isp' in location_data:
+            kwargs['isp'] = location_data.get('isp')
+        if 'org' in location_data:
+            kwargs['org'] = location_data.get('org')
+        if 'as_name' in location_data:
+            kwargs['as_name'] = location_data.get('as_name')
+        if 'timezone' in location_data:
+            kwargs['timezone'] = location_data.get('timezone')
+        return IPLocationDataModel(**kwargs)
+
     def get_ip_location_data(self) -> dict:
         '''Get the coordinates for the location'''
         if self.ip_address is None:
             return None
         url = f'http://ip-api.com/json/{self.ip_address}'
         response = requests.get(url, timeout=self.timeout)
-        ic(response)
         data = response.json()
         if data.get('status') == 'success':
-            return ic(data)
+            return data
         else:
             return None
 
@@ -112,7 +165,7 @@ class IPLocation(LocationProvider):
 
     def get_json_schema(self) -> dict:
         '''Get the JSON schema for the provider'''
-        return {}
+        return IPLocationDataModel.schema_json()
 
     def get_location_name(self) -> str:
         '''Get the location'''
@@ -138,23 +191,18 @@ class IPLocation(LocationProvider):
 
 def main():
     '''This is the interface for testing the foo.py module.'''
+    location = IPLocation()
+    ic(location.get_provider_name())
+    ic(location.get_provider_id())
+    ic(location.get_provider_characteristics())
+    ic(location.get_description())
+    ic(location.get_json_schema())
+    ic(location.get_location_name())
+    ic(location.get_coordinates())
+    ic(location.get_location_history(datetime.datetime.now(), datetime.datetime.now()))
+    ic(location.ip_address)
+    ic(location.ip_location_data)
+    ic(location.location_data.json())
 
 if __name__ == '__main__':
-    def __get_project_root() -> str:
-        '''Get the root of the project'''
-        current_path = os.path.dirname(os.path.abspath(__file__))
-        while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
-            current_path = os.path.dirname(current_path)
-        return current_path
-
-    if 'INDALEKO_ROOT' not in os.environ:
-        project_root = __get_project_root()
-        os.environ['INDALEKO_ROOT'] = project_root
-        sys.path.append(project_root)
-
-    # now we can import modules from the project root
-    from Indaleko import Indaleko
-    from IndalekoLogging import IndalekoLogging
-
-    from activity.provider_base import ProviderBase
     main()
