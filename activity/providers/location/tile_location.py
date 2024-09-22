@@ -1,5 +1,10 @@
 '''This implements the IP Location Service'''
 
+
+
+
+import asyncio
+import configparser
 import datetime
 import os
 import platform
@@ -10,7 +15,8 @@ import uuid
 from typing import List, Dict, Any
 
 from icecream import ic
-
+from pytile import async_login
+from aiohttp import ClientSession
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -24,35 +30,34 @@ from activity import ProviderCharacteristics
 from activity.providers.location.data_models.tile_location_data_model import TileLocationDataModel
 
 class TileLocation(LocationProvider):
-    '''This is the IP Location Service'''
+    '''This is the Tile Location Service'''
     def __init__(self):
         self.timeout = 10
-        self._name = 'IP Location Service'
-        self._location = 'IP Location'
+        self._name = 'Tile Location Service'
+        self._location = 'Tile Location'
         self._provider_id = uuid.UUID('83496cc6-c3d8-4941-b5ab-ad064c345ebe')
-        self.ip_address = self.capture_public_ip_address()
-        self.ip_location_data = self.get_ip_location_data()
-        ic(self.ip_location_data)
+        self.tile_config = self.get_tile_config()
+        self.tile_data = self.get_tile_data()
 
-    @staticmethod
-    def capture_public_ip_address(timeout : int = 10) -> str:
-        '''Capture the public IP address'''
-        response = requests.get('https://api.ipify.org?format=json', timeout=timeout)
-        data = response.json()
-        return data.get('ip')
+    def get_tile_config(self, config_file : str = None) -> configparser.ConfigParser:
+        config = configparser.ConfigParser()
+        if config_file is None:
+            config_file = os.path.join(os.environ['INDALEKO_ROOT'], 'config', 'tile.ini')
+        config.read(config_file)
+        return config
 
-    def get_ip_location_data(self) -> dict:
-        '''Get the coordinates for the location'''
-        if self.ip_address is None:
-            return None
-        url = f'http://ip-api.com/json/{self.ip_address}'
-        response = requests.get(url, timeout=self.timeout)
-        ic(response)
-        data = response.json()
-        if data.get('status') == 'success':
-            return ic(data)
-        else:
-            return None
+    def get_tile_data(self) -> dict:
+        async def get_tile_data_async(email : str, password : str) -> dict:
+            async with ClientSession() as session:
+                api = await async_login(email, password, session)
+                tiles = await api.async_get_tiles()
+                return tiles
+        return asyncio.run(
+            get_tile_data_async(
+                self.tile_config['tile']['email'],
+                self.tile_config['tile']['password']
+                )
+            )
 
     def get_provider_characteristics(self) -> List[ProviderCharacteristics]:
         '''Get the provider characteristics'''
@@ -106,8 +111,7 @@ class TileLocation(LocationProvider):
         description.
         '''
         return '''
-        This is a geolocation service that provides location data for
-        the device.
+        This is a service that retrieves Tile tracking information for the user.
         '''
 
     def get_json_schema(self) -> dict:

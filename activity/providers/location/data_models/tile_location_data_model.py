@@ -36,18 +36,43 @@ if os.environ.get('INDALEKO_ROOT') is None:
 from activity.providers.location.data_models.location_data_model import BaseLocationDataModel
 
 class TileLocationDataModel(BaseLocationDataModel):
+    '''
+    This class defines the data model for the Tile-based location activity data
+    provider.  Fields visible from the data provider are:
+        'accuracy', # already in base class
+        'altitude', # already in base class
+        'archetype',
+        'as_dict',  # returns data back as a dictionary
+        'async_history', # method for retrieving historical data (Tile Premium feature)
+        'async_update', # method for updating the Tile device data?
+        'dead', # boolean indicating if the Tile device is dead
+        'firmware_version', # version of the firmware
+        'hardware_version', # version of the hardware
+        'kind', # kind of Tile device.  Only things observed are TILE and PHONE
+        'last_timestamp', # last time the Tile device was seen - maps to base class
+        'latitude', # already in base class
+        'longitude', # already in base class
+        'lost', # boolean indicating if the Tile device is lost
+        'lost_timestamp', # timestamp when the Tile device was lost
+        'name', # user defined name for the Tile device
+        'ring_state', # current ring state
+        'uuid', # unique identifier for the Tile device: note, this isn't a UUID.
+        'visible', # boolean indicating if the Tile device is visible (in app?)
+        'voip_state' # state of the voip connection (only seen 'OFFLINE')
+    '''
     tile_id: str = Field(..., description="Unique identifier for the Tile device")
-    customer_name: Optional[str] = Field(None, description="Custom name of the Tile device (e.g., 'keys', 'backpack')")
-    proximity: Optional[bool] = Field(None, description="Indicates if the Tile is in proximity (True if within range)")
-    battery_level: Optional[float] = Field(None, description="Battery level of the Tile device as a percentage")
-    ring_state: Optional[str] = Field(None, description="The current ring state (e.g., 'ringing', 'silent')")
-    connection_status: Optional[str] = Field(None, description="Status of connection (e.g., 'connected', 'disconnected')")
-    last_seen: Optional[datetime] = Field(None, description="Timestamp of the last interaction with the Tile device")
-    last_location: Optional[dict] = Field(
-        None, description="The last location data containing detailed information"
-    )
-    type: Optional[str] = Field(None, description="Type of Tile device (e.g., 'Mate', 'Pro', etc.)")
-    owner_id: Optional[str] = Field(None, description="User or account ID of the Tile's owner")
+    archetype : Optional[str] = Field(None, description="Archetype of the Tile device")
+    dead : bool = Field(False, description="Boolean indicating if the Tile device is dead")
+    firmware_version: Optional[str] = Field(None, description="Version of the firmware")
+    hardware_version: Optional[str] = Field(None, description="Version of the hardware")
+    kind: Optional[str] = Field(None, description="Kind of Tile device")
+    lost: bool = Field(False, description="Boolean indicating if the Tile device is lost")
+    lost_timestamp: Optional[datetime] = Field(None, description="Timestamp when the Tile device was lost")
+    name : str = Field(..., description="User defined name for the Tile device")
+    ring_state: Optional[str] = Field(None, description="Current ring state")
+    visible: bool = Field(False, description="Boolean indicating if the Tile device is visible")
+    voip_state: Optional[str] = Field(None, description="State of the voip connection")
+    email : str = Field(..., description="Email address associated with the Tile device")
 
     class Config:
         json_schema_extra = {
@@ -61,21 +86,19 @@ class TileLocationDataModel(BaseLocationDataModel):
                 "timestamp": "2023-09-21T10:30:00Z",
                 "source": "Tile",
                 "tile_id": "12345abcde",
-                "name": "backpack",
-                "timestamp": "2023-09-21T12:00:00Z",
-                "proximity": True,
-                "battery_level": 85.0,
-                "ring_state": "silent",
-                "connection_status": "connected",
-                "last_seen": "2023-09-21T11:59:00Z",
-                "last_location": {
-                    "latitude": 37.7749,
-                    "longitude": -122.4194,
-                    "accuracy": 5.0,
-                    "timestamp": "2023-09-21T11:55:00Z"
-                },
-                "type": "Mate",
-                "owner_id": "user123"
+                "archetype": "BACKPACK",
+                "dead": False,
+                "firmware_version": "05.03.07.0",
+                "hardware_version": "08.03",
+                "kind": "TILE",
+                "lost": False,
+                "lost_timestamp": "1970-01-01T00:00:00Z",
+                "name": "Backpack",
+                "ring_state": "STOPPED",
+                "tile_id" : "77736942235f491e",
+                "visible": True,
+                "voip_state": "OFFLINE",
+                "email": "aki@null.com"
             }
         }
 
