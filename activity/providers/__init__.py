@@ -47,6 +47,7 @@ def discover_providers():
     # ic(categories)
 
 def discover_plugins():
+    '''This function discovers all plugins in the plugins directory'''
     plugins = {}
     plugin_dir = os.path.dirname(__file__)
     # ic(plugin_dir)

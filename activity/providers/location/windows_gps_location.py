@@ -20,9 +20,11 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
+# pylint: disable=wrong-import-position
 from activity import ProviderCharacteristics
 from activity.providers.location.data_models.windows_gps_location_data_model import WindowsGPSLocationDataModel
 from activity.providers.location.location_base import LocationProvider
+# pylint: enable=wrong-import-position
 
 class WindowsGPSLocation(LocationProvider):
     '''This is the Windows GPS Location Service'''

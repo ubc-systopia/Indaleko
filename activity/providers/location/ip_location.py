@@ -20,10 +20,12 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
+# pylint: disable=wrong-import-position
 # now we can import modules from the project root
 from activity.providers.location import LocationProvider
 from activity import ProviderCharacteristics
 from activity.providers.location.data_models.ip_location_data_model import IPLocationDataModel
+# pylint: enable=wrong-import-position
 
 class IPLocation(LocationProvider):
     '''This is the IP Location Service'''

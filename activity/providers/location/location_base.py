@@ -26,8 +26,9 @@ import sys
 from abc import abstractmethod
 from typing import List, Dict, Any
 
+from icecream import ic
+
 if os.environ.get('INDALEKO_ROOT') is None:
-    print('adding root')
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
         current_path = os.path.dirname(current_path)
@@ -36,7 +37,12 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # This logic is part of what allows me to execute it locally or as part of the
 # overall package/project.  It's a bit of a hack, but it works.
+# pylint: disable=wrong-import-position
 from activity import ProviderBase
+
+from Indaleko import Indaleko
+from IndalekoLogging import IndalekoLogging
+# pylint: enable=wrong-import-position
 
 class LocationProvider(ProviderBase):
     '''This is a location activity data provider for Indaleko.'''
@@ -60,45 +66,36 @@ class LocationProvider(ProviderBase):
     def get_distance(self, location1: Dict[str, float], location2: Dict[str, float]) -> float:
         '''Get the distance between two locations'''
 
+def list_data_providers_command(args: argparse.Namespace):
+    '''List the data providers available'''
+    ic(args)
+    ic('This needs to be implemented')
+
 
 def main():
     '''This is a test interface for the location provider.'''
     parser = argparse.ArgumentParser(description='Location provider test interface')
+    # pylint: disable=no-member
+    # the reference is valid, but pylint doesn't see it
     parser.add_argument('--logdir',
                         type=str,
-                        default=LocationProvider.default_log_dir,
+                        default=Indaleko.default_log_dir,
                         help='Directory for log files')
+
     parser.add_argument('--log', type=str, default=None, help='Log file name')
     parser.add_argument('--loglevel', type=int, default = logging.DEBUG,
-                        choices= LocationProvider.get_logging_levels(),
+                        choices= IndalekoLogging.get_logging_levels(),
                         help='Logging level')
     command_subparser = parser.add_subparsers(dest='command', help='Command to execute')
     parser_list = command_subparser.add_parser('list', help='List the data providers available')
     parser_list.add_argument('--providerdir',
                              type=str,
                              )
-    parser_list.set_defaults(func=LocationProvider.list_data_providers)
-    parser.set_defaults(func=LocationProvider.list_data_providers)
+    parser_list.set_defaults(func=list_data_providers_command)
+    parser.set_defaults(func=list_data_providers_command)
     parser.add_argument('--config', type=str, help='Configuration file for the location provider')
     args=parser.parse_args()
     args.func(args)
 
 if __name__ == '__main__':
-    def __get_project_root() -> str:
-        '''Get the root of the project'''
-        current_path = os.path.dirname(os.path.abspath(__file__))
-        while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
-            current_path = os.path.dirname(current_path)
-        return current_path
-
-    if 'INDALEKO_ROOT' not in os.environ:
-        project_root = __get_project_root()
-        os.environ['INDALEKO_ROOT'] = project_root
-        sys.path.append(project_root)
-
-    # now we can import modules from the project root
-    from Indaleko import Indaleko
-    from IndalekoLogging import IndalekoLogging
-
-    from activity.provider_base import ProviderBase
     main()

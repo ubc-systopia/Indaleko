@@ -85,7 +85,6 @@ class TileLocationDataModel(BaseLocationDataModel):
                 "speed": 10.5,
                 "timestamp": "2023-09-21T10:30:00Z",
                 "source": "Tile",
-                "tile_id": "12345abcde",
                 "archetype": "BACKPACK",
                 "dead": False,
                 "firmware_version": "05.03.07.0",

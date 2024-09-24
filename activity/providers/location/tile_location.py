@@ -7,8 +7,6 @@ import asyncio
 import configparser
 import datetime
 import os
-import platform
-import requests
 import sys
 import uuid
 
@@ -25,9 +23,11 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
+# pylint: disable=wrong-import-position
 from activity.providers.location import LocationProvider
 from activity import ProviderCharacteristics
 from activity.providers.location.data_models.tile_location_data_model import TileLocationDataModel
+# pylint: enable=wrong-import-position
 
 class TileLocation(LocationProvider):
     '''This is the Tile Location Service'''
@@ -40,24 +40,52 @@ class TileLocation(LocationProvider):
         self.tile_data = self.get_tile_data()
 
     def get_tile_config(self, config_file : str = None) -> configparser.ConfigParser:
+        '''Get the Tile configuration'''
         config = configparser.ConfigParser()
         if config_file is None:
             config_file = os.path.join(os.environ['INDALEKO_ROOT'], 'config', 'tile.ini')
         config.read(config_file)
         return config
 
-    def get_tile_data(self) -> dict:
+    def get_tile_data(self) -> List[TileLocationDataModel]:
+        '''Get the Tile data'''
         async def get_tile_data_async(email : str, password : str) -> dict:
             async with ClientSession() as session:
                 api = await async_login(email, password, session)
                 tiles = await api.async_get_tiles()
                 return tiles
-        return asyncio.run(
+        tiles = asyncio.run(
             get_tile_data_async(
                 self.tile_config['tile']['email'],
                 self.tile_config['tile']['password']
                 )
             )
+        return_data = []
+        for tile_id, tile_data in tiles.items():
+            tile_data = tile_data.as_dict()
+            kwargs = {
+                'latitude' : tile_data['latitude'],
+                'longitude' : tile_data['longitude'],
+                'altitude' : tile_data['altitude'],
+                'accuracy' : tile_data['accuracy'],
+                'timestamp' : tile_data['last_timestamp'],
+                'source' : str(self._provider_id),
+                'archetype' : tile_data['archetype'],
+                'dead' : tile_data['dead'],
+                'firmware_version' : tile_data['firmware_version'],
+                'hardware_version' : tile_data['hardware_version'],
+                'kind' : tile_data['kind'],
+                'lost' : tile_data['lost'],
+                'lost_timestamp' : tile_data['lost_timestamp'],
+                'name' : tile_data['name'],
+                'ring_state' : tile_data['ring_state'],
+                'tile_id' : tile_id,
+                'visible' : tile_data['visible'],
+                'voip_state' : tile_data['voip_state'],
+                'email' : self.tile_config['tile']['email']
+            }
+            return_data.append(TileLocationDataModel(**kwargs))
+        return return_data
 
     def get_provider_characteristics(self) -> List[ProviderCharacteristics]:
         '''Get the provider characteristics'''
@@ -75,7 +103,7 @@ class TileLocation(LocationProvider):
         '''Get the provider ID'''
         return self._provider_id
 
-    def retrieve_data(self, data_type: str) -> str:
+    def retrieve_data(self, data_id: str) -> str:
         '''Retrieve data from the provider'''
         raise NotImplementedError('This method is not implemented yet.')
 
@@ -141,7 +169,9 @@ class TileLocation(LocationProvider):
         raise NotImplementedError('This method is not implemented yet.')
 
 def main():
-    '''This is the interface for testing the foo.py module.'''
+    '''This is the interface for testing the Tile location module.'''
+    tile_location = TileLocation()
+    ic(tile_location.get_tile_data())
 
 if __name__ == '__main__':
     main()

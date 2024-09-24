@@ -1,5 +1,5 @@
 '''
-This implements the IP Location Service
+This implements the WiFi map based Location Service
 
 Project Indaleko
 Copyright (C) 2024 Tony Mason
@@ -19,8 +19,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import datetime
 import os
-import platform
-import requests
 import sys
 import uuid
 
@@ -35,9 +33,11 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
+# pylint: disable=wrong-import-position
 from activity.providers.location import LocationProvider
 from activity import ProviderCharacteristics
 from activity.providers.location.data_models.wifi_location_data_model import WiFiLocationDataModel
+# pylint: enable=wrong-import-position
 
 class WiFiLocation(LocationProvider):
     '''This is the IP Location Service'''
