@@ -77,11 +77,11 @@ from IndalekoUserRelationshipSchema import IndalekoUserRelationshipSchema
 
 class Indaleko:
     '''This class defines constants used by Indaleko.'''
-    default_data_dir = './data'
-    default_config_dir = './config'
-    default_log_dir = './logs'
+    default_data_dir = os.path.join(os.environ.get('INDALEKO_ROOT', '.'), 'data')
+    default_config_dir = os.path.join(os.environ.get('INDALEKO_ROOT', '.'), 'config')
+    default_log_dir = os.path.join(os.environ.get('INDALEKO_ROOT', '.'), 'logs')
 
-    default_db_timeout=10
+    default_db_timeout=os.environ.get('INDALEKO_DB_TIMEOUT', 10)
 
     Indaleko_Object = 'Object'
     Indaleko_Relationships = 'Relationships'

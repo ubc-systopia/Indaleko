@@ -79,10 +79,9 @@ def main():
                              )
     parser_list.set_defaults(func=LocationProvider.list_data_providers)
     parser.set_defaults(func=LocationProvider.list_data_providers)
+    parser.add_argument('--config', type=str, help='Configuration file for the location provider')
     args=parser.parse_args()
     args.func(args)
-    args = parser.parse_args()
-    parser.add_argument('--config', type=str, help='Configuration file for the location provider')
 
 if __name__ == '__main__':
     def __get_project_root() -> str:
