@@ -1,5 +1,5 @@
 '''
-This module defines the data model for the WiFibased location
+This module defines the data model for the WiFi based location
 activity data provider.
 
 Project Indaleko
@@ -29,10 +29,12 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
+# pylint: disable=wrong-import-position
 import activity.providers.collaboration.semantic_attributes as collaboration
 import activity.providers.location.semantic_attributes as location
 import activity.providers.network.semantic_attributes as network
 import activity.providers.storage.semantic_attributes as storage
+# pylint: enable=wrong-import-position
 
 class KnownSemanticAttributes:
     '''
@@ -46,7 +48,7 @@ class KnownSemanticAttributes:
         semantic attributes'''
         self.attributes_by_provider_type = {}
         for provider in [collaboration, location, network, storage]:
-            provider_name = provider.__name__.split('.')[-1]
+            provider_name = provider.__name__.rsplit('.', maxsplit=1)[-1]
             self.attributes_by_provider_type[provider_name] = {}
             for label, value in provider.__dict__.items():
                 if label.startswith('ADP_'):
