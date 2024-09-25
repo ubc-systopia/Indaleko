@@ -17,6 +17,8 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
+import os
+import sys
 
 from icecream import ic
 
@@ -34,6 +36,8 @@ from IndalekoDBConfig import IndalekoDBConfig
 
 __all__ = [
     'Indaleko',
+    'IndalekoDBConfig',
+    'IndalekoSingleton',
 ]
 
-__version__ = '2024.09.20.1'
+__version__ = '2024.09.25.1'

@@ -32,10 +32,14 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from Indaleko import Indaleko
+from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoSingleton import IndalekoSingleton
 from IndalekoService import IndalekoService
 from IndalekoServiceManager import IndalekoServiceManager
 from IndalekoCollection import IndalekoCollection
+from IndalekoCollections import IndalekoCollections
+from IndalekoRecordDataModel import IndalekoRecordDataModel
+from provider_registration import IndalekoActivityDataProviderRegistration
 from data_models.activity_data_provider_registration \
     import IndalekoActivityDataProviderRegistrationDataModel
 # pylint: enable=wrong-import-position
@@ -45,7 +49,6 @@ class IndalekoActivityDataProviderRegistrationService(IndalekoSingleton):
     This class is used to implement and access the Indaleko Activity Data
     Provider Registration Service.
     '''
-
     service_uuid_str = '5ef4125d-4e46-4e35-bea5-f23a9fcb3f63'
     Version = '1.0'
     Description = 'Indaleko Activity Data Provider Registration Service'
@@ -55,20 +58,20 @@ class IndalekoActivityDataProviderRegistrationService(IndalekoSingleton):
         '''
         Create an instance of the registration service.
         '''
-        if self._initialize:
+        if self._initialized:
             return
-        self.service = IndalekoService(
+        self.service = IndalekoServiceManager().register_service(
             service_name = Indaleko.Indaleko_ActivityDataProviders,
             service_description = self.Description,
             service_version = self.Version,
             service_type = IndalekoServiceManager.service_type_activity_data_registrar,
-            service_identifier = self.service_uuid_str,
+            service_id = self.service_uuid_str,
         )
-        self.activity_provider_collection = IndalekoCollection.get_collection(
+        self.activity_providers = IndalekoCollections().get_collection(
             Indaleko.Indaleko_ActivityDataProviders
         )
         assert self.activity_providers is not None, 'Activity provider collection must exist'
-        self._initialize = True
+        self._initialized = True
 
     @staticmethod
     def deserialize(data : dict) -> 'IndalekoActivityDataProviderRegistrationService':
@@ -106,7 +109,7 @@ class IndalekoActivityDataProviderRegistrationService(IndalekoSingleton):
             FOR provider IN {Indaleko.Indaleko_ActivityDataProviders}
             RETURN provider
         '''
-        cursor = IndalekoActivityDataProviderRegistrationService().db_config.db.aql.execute(aql_query)
+        cursor = IndalekoDBConfig().db.aql.execute(aql_query)
         return [document for document in cursor]
 
 
@@ -212,4 +215,13 @@ class IndalekoActivityDataProviderRegistrationService(IndalekoSingleton):
         print('TODO: mark as inactive')
         return False
 
+def main():
+    '''Test the IndalekoActivityDataProviderRegistrationService.'''
+    service = IndalekoActivityDataProviderRegistrationService()
+
+    print(service.to_json())
+    print(service.get_provider_list())
+
+if __name__ == '__main__':
+    main()
 

@@ -1,4 +1,5 @@
 apischema==0.18.1
+grapql-core==3.2.4
 discord.py==2.3.2
 docker_py==1.10.6
 Faker==29.0.0
