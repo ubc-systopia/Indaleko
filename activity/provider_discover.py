@@ -33,6 +33,8 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 from activity import ProviderBase
+from Indaleko import Indaleko
+from IndalekoLogging import IndalekoLogging
 
 
 # This is a hack to get the project root
@@ -70,11 +72,18 @@ class IndalekoActivityDataProviderDiscovery:
                     )
         self.provider_dir = kwargs.get('provider_dir',
                                        IndalekoActivityDataProviderDiscovery.default_provider_dir)
+        self.config_dir = kwargs.get('config_dir',
+                                     IndalekoActivityDataProviderDiscovery.default_config_dir)
+        self.data_dir = kwargs.get('data_dir',
+                                    IndalekoActivityDataProviderDiscovery.default_data_dir)
+        self.log_dir = kwargs.get('log_dir',
+                                    IndalekoActivityDataProviderDiscovery.default_log_dir)
+        ic(self.provider_dir)
         ic(self.config_dir)
         ic(self.data_dir)
         ic(self.log_dir)
-        ic(self.provider_dir)
-        self.data_providers = IndalekoActivityDataProviderDiscovery.find_data_providers(self.provider_dir)
+        self.data_providers = \
+            IndalekoActivityDataProviderDiscovery.find_data_providers(self.provider_dir)
         ic(self.data_providers)
 
     @staticmethod
@@ -130,21 +139,4 @@ def main():
     args = parser.parse_args()
 
 if __name__ == '__main__':
-    def __get_project_root() -> str:
-        '''Get the root of the project'''
-        current_path = os.path.dirname(os.path.abspath(__file__))
-        while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
-            current_path = os.path.dirname(current_path)
-        return current_path
-
-    if 'INDALEKO_ROOT' not in os.environ:
-        project_root = __get_project_root()
-        os.environ['INDALEKO_ROOT'] = project_root
-        sys.path.append(project_root)
-
-    # now we can import modules from the project root
-    from Indaleko import Indaleko
-    from IndalekoLogging import IndalekoLogging
-
-    from activity.provider_base import ProviderBase
     main()

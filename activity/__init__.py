@@ -15,9 +15,11 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
+# pylint: disable=wrong-import-position
 from activity.provider_base import ProviderBase
 from activity.provider_characteristics import ProviderCharacteristics
 from Indaleko import Indaleko
+# pylint: enable=wrong-import-position
 
 provider_dir = os.path.join(init_path, 'providers')
 providers = [

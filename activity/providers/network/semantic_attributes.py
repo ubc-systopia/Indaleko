@@ -19,5 +19,5 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
-ADP_IPV4_NETWORK_ADDRESS = 'd56bb969-82b0-4426-8fd2-09c43bebfbdf'
-ADP_IPV6_NETWORK_ADDRESS = '509d30ab-cf70-4171-a428-d7dd55610d49'
+ADP_NETWORK_IPV4_ADDRESS = 'd56bb969-82b0-4426-8fd2-09c43bebfbdf'
+ADP_NETWORK_IPV6_ADDRESS = '509d30ab-cf70-4171-a428-d7dd55610d49'

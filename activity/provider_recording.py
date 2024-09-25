@@ -48,6 +48,7 @@ class RecordingInterface:
         db = IndalekoDBConfig()
         ic(db)
 
+
 def main():
     '''This allows testing the data model'''
     now = datetime.datetime.now(datetime.UTC)

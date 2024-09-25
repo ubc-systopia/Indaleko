@@ -258,7 +258,7 @@ class Indaleko:
     def validate_uuid_string(uuid_string : str) -> bool:
         """Given a string, verify that it is in fact a valid uuid."""
         if not isinstance(uuid_string, str):
-            print(f'uuid is not a string it is a {type(uuid)}')
+            print(f'uuid is not a string it is a {type(uuid_string)}')
             return False
         try:
             uuid.UUID(uuid_string)
