@@ -22,8 +22,6 @@ import os
 import sys
 import uuid
 
-from pydantic import BaseModel, Field
-from typing import Optional
 from datetime import datetime
 from icecream import ic
 
@@ -38,6 +36,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 from Indaleko import Indaleko
 from IndalekoDBConfig import IndalekoDBConfig
 from activity.provider_registration import IndalekoActivityDataProviderRegistration
+from activity.provider_registration_service import IndalekoActivityDataProviderRegistrationService
 from data_models.activity_data_provider_registration import IndalekoActivityDataProviderRegistrationDataModel
 from data_models.indaleko_record_data_model import IndalekoRecordDataModel
 from data_models.indaleko_source_identifier_data_model import IndalekoSourceIdentifierDataModel
@@ -55,23 +54,26 @@ class WindowsGPSLocationCollector:
         '''Initialize the Windows GPS Location Collector.'''
         self.db_config = IndalekoDBConfig()
         assert self.db_config is not None, 'Failed to get the database configuration'
+        source_identifier = IndalekoSourceIdentifierDataModel(
+            Identifier=self.identifier,
+            Version=self.version,
+            Description=self.description
+        )
+        ic(source_identifier.serialize())
         kwargs = {
             'Identifier' : str(self.identifier),
             'Version' : self.version,
             'Description' : self.description,
             'Record' : IndalekoRecordDataModel(
-                SourceIdentifier=IndalekoSourceIdentifierDataModel(
-                    Identifier=str(self.identifier),
-                    Version=self.version,
-                    Description=self.description
-                ),
+                SourceIdentifier=source_identifier,
                 Timestamp=datetime.now(),
                 Attributes={},
                 Data=''
             )
         }
-
-        self.registration_data_object = IndalekoActivityDataProviderRegistration(**kwargs)
+        self.provider_registrar = IndalekoActivityDataProviderRegistrationService()
+        assert self.provider_registrar is not None, 'Failed to get the provider registrar'
+        self.provider_registrar.register_provider(**kwargs)
 
 
 

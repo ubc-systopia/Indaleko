@@ -55,7 +55,9 @@ class IndalekoActivityDataProviderRegistration:
                 registration_data : Union[Dict[str, Any], IndalekoActivityDataProviderRegistrationDataModel]):
         '''Initialize an activity data provider registration.'''
         self.registration_data = registration_data
+        ic(registration_data)
         if isinstance(registration_data, dict):
+            ic(registration_data)
             self.registration_object = \
                 IndalekoActivityDataProviderRegistrationDataModel(**registration_data)
         elif isinstance(registration_data, IndalekoActivityDataProviderRegistrationDataModel):
@@ -65,7 +67,7 @@ class IndalekoActivityDataProviderRegistration:
         ic(self.registration_object.Identifier)
         self.activity_collection_name = \
             IndalekoActivityDataProviderRegistration.generate_activity_data_provider_collection_name(
-                str(self.registration_object.Identifier.Identifier)
+                str(self.registration_object.Identifier)
             )
 
     @staticmethod
@@ -84,7 +86,7 @@ class IndalekoActivityDataProviderRegistration:
 
     def get_activity_collection_uuid(self) -> str:
         '''Return the UUID for the activity collection.'''
-        return self.registration_object.Identifier.Identifier
+        return self.registration_object.Identifier
 
     def get_activity_collection_name(self) -> str:
         '''Return the name of the activity collection.'''

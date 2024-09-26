@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+import uuid
 
 from typing import Dict, Any, Union
 
@@ -46,9 +47,9 @@ class IndalekoActivityDataProviderRegistrationDataModel(BaseModel):
     This class defines the activity data provider registration for the
     Indaleko system.
     '''
-    Identifier : IndalekoSourceIdentifierDataModel = Field(...,
-                                        title='Identifier',
-                                        description='The identifier for the activity data provider.')
+    Identifier : uuid.UUID = Field(...,
+                              title='Identifier',
+                              description='The UUID for the activity data provider.')
 
     Version : str = Field(...,
                            title='Version',
@@ -81,29 +82,28 @@ class IndalekoActivityDataProviderRegistrationDataModel(BaseModel):
         return self.model_dump(exclude_unset=True)
 
     @staticmethod
-    def deserialize(data : Dict[str, Any]) -> 'IndalekoActivityDataProviderRegistration':
+    def deserialize(data : Dict[str, Any]) -> \
+        'IndalekoActivityDataProviderRegistrationDataModel':
         '''Deserialize the object from a dictionary'''
         if isinstance(data, str):
-            return IndalekoActivityDataProviderRegistration.parse_raw(data)
+            return IndalekoActivityDataProviderRegistrationDataModel.parse_raw(data)
         elif isinstance(data, dict):
-            return IndalekoActivityDataProviderRegistration(**data)
+            return IndalekoActivityDataProviderRegistrationDataModel(**data)
         else:
             raise ValueError(f"Expected str or dict, got {type(data)}")
 
 def main():
     '''This allows testing the data model.'''
-    data = IndalekoActivityDataProviderRegistration(
-        **IndalekoActivityDataProviderRegistration.Config.json_schema_extra['example']
+    data = IndalekoActivityDataProviderRegistrationDataModel(
+        **IndalekoActivityDataProviderRegistrationDataModel.Config.json_schema_extra['example']
     )
     ic(data)
-    ic(data.json())
-    ic(data.dict())
     serial_data = data.serialize()
     ic(type(serial_data))
     ic(serial_data)
-    data_check = IndalekoActivityDataProviderRegistration.deserialize(serial_data)
+    data_check = IndalekoActivityDataProviderRegistrationDataModel.deserialize(serial_data)
     assert data_check == data
-    ic(IndalekoActivityDataProviderRegistration.schema_json())
+    ic(IndalekoActivityDataProviderRegistrationDataModel.model_json_schema())
 
 if __name__ == '__main__':
     main()

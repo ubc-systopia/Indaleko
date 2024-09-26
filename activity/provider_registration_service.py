@@ -19,9 +19,14 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import json
+import logging
 import os
 import sys
 import uuid
+
+from typing import Union, Tuple
+
+from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -39,7 +44,7 @@ from IndalekoServiceManager import IndalekoServiceManager
 from IndalekoCollection import IndalekoCollection
 from IndalekoCollections import IndalekoCollections
 from IndalekoRecordDataModel import IndalekoRecordDataModel
-from provider_registration import IndalekoActivityDataProviderRegistration
+from activity.provider_registration import IndalekoActivityDataProviderRegistration
 from data_models.activity_data_provider_registration \
     import IndalekoActivityDataProviderRegistrationDataModel
 # pylint: enable=wrong-import-position
@@ -96,6 +101,13 @@ class IndalekoActivityDataProviderRegistrationService(IndalekoSingleton):
         return json.dumps(self.serialize(), indent=4)
 
     @staticmethod
+    def lookup_provider_by_identifier(identifier : str) -> dict:
+        '''Return the provider with the given identifier.'''
+        providers = IndalekoActivityDataProviderRegistrationService().\
+            activity_providers.find_entries(_key=identifier)
+        return providers
+
+    @staticmethod
     def lookup_provider_by_name(name : str) -> dict:
         '''Return the provider with the given name.'''
         providers = IndalekoActivityDataProviderRegistrationService().\
@@ -128,6 +140,7 @@ class IndalekoActivityDataProviderRegistrationService(IndalekoSingleton):
     @staticmethod
     def create_activity_provider_collection(identifier : str, reset : bool = False) -> IndalekoCollection:
         '''Create an activity provider collection.'''
+        assert isinstance(identifier, str), 'Identifier must be a string'
         assert Indaleko.validate_uuid_string(identifier), 'Identifier must be a valid UUID'
         activity_provider_collection_name = \
             IndalekoActivityDataProviderRegistration.\
@@ -144,7 +157,11 @@ class IndalekoActivityDataProviderRegistrationService(IndalekoSingleton):
             .create_collection(
                 name = activity_provider_collection_name,
                 config = {
-                    'schema' : IndalekoActivityDataSchema().get_json_schema(),
+                    'schema' :{
+                        'rule' : IndalekoActivityDataProviderRegistrationDataModel.model_json_schema(),
+                        'level' : 'strict',
+                        'message' : 'The document failed schema validation.  Sorry!'
+                    },
                     'edge' : False,
                     'indices' : {
                     },
@@ -189,20 +206,25 @@ class IndalekoActivityDataProviderRegistrationService(IndalekoSingleton):
 
     def register_provider(self, **kwargs) -> tuple:
         '''Register an activity data provider.'''
-        assert 'Identifier' in kwargs, 'Identifier must be in kwargs'
+        assert 'Identifier' in kwargs, f'Identifier must be in kwargs: {kwargs}'
+        provider_id = kwargs['Identifier']
+        assert isinstance(provider_id, str), f'Provider ID must be a string: {provider_id}'
+        ic(provider_id)
         # print('Registering provider: ', kwargs)
-        existing_provider = self.lookup_provider_by_identifier(kwargs['Identifier'])
+        existing_provider = self.lookup_provider_by_identifier(provider_id)
         if existing_provider is not None and len(existing_provider) > 0:
             raise NotImplementedError('Provider already exists, not updating.')
-        activity_registration = IndalekoActivityDataProviderRegistration(**kwargs)
-        self.activity_providers.insert(activity_registration.to_dict())
+        activity_registration = IndalekoActivityDataProviderRegistration(
+            registration_data=kwargs
+        )
+        self.activity_providers.insert(activity_registration.json())
         activity_provider_collection = None
         create_collection = kwargs.get('CreateCollection', True)
         if create_collection:
             activity_provider_collection = self.create_activity_provider_collection(
-                activity_registration.get_activity_collection_uuid()
+                str(activity_registration.get_activity_collection_uuid())
             )
-        existing_provider = self.lookup_provider_by_identifier(kwargs['Identifier'])
+        existing_provider = self.lookup_provider_by_identifier(provider_id)
         assert existing_provider is not None, 'Provider creation failed'
         print(f"Registered Provider {kwargs['Identifier']}")
         return activity_registration, activity_provider_collection
