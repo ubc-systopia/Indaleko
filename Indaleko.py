@@ -460,12 +460,12 @@ class Indaleko:
     @staticmethod
     def encode_binary_data(data : bytes) -> str:
         '''Encode binary data as a string.'''
-        return base64.b64encode(msgpack.packb(data)).decode('ascii')
+        return base64.b64encode(msgpack.packb(data, use_bin_type=True)).decode('ascii')
 
     @staticmethod
     def decode_binary_data(data : str) -> bytes:
         '''Decode binary data from a string.'''
-        return msgpack.unpackb(base64.b64decode(data))
+        return msgpack.unpackb(base64.b64decode(data), raw=False)
 
     @staticmethod
     def find_candidate_files(input_strings : list[str], directory : str) -> list[tuple[str,str]]:

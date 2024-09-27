@@ -19,5 +19,10 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
-ADP_LOCATION_COORDINATES = 'edfdb410-8150-4bf0-8969-8ee4b9ba77c2'
+ADP_LOCATION_LATITUDE = 'edfdb410-8150-4bf0-8969-8ee4b9ba77c2'
+ADP_LOCATION_LONGITUDE = '243753bd-553b-4a19-a6b7-4c969be493f2'
+ADP_LOCATION_ALTITUDE = '8c7d68ec-27c6-4930-a526-8d6803185174'
+ADP_LOCATION_ACCURACY = 'b0f1f937-cf10-4f72-b644-617d3565250a'
+ADP_LOCATION_HEADING = '6033e55d-8ea6-4d86-8eb2-f6da4be8e63f'
+ADP_LOCATION_SPEED = 'e57973a5-c86f-4a8f-901a-17fa7232e57e'
 ADP_LOCATION_NAME = '79df3322-83db-457a-8d51-fa9e88a19336'

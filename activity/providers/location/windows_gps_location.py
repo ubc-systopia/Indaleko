@@ -35,14 +35,38 @@ class WindowsGPSLocation(LocationProvider):
         self.coords = self.get_coords()
 
     @staticmethod
-    async def get_coords_async():
+    async def get_coords_async() -> wdg.Geoposition:
         '''Get the coordinates for the location'''
         geolocator = wdg.Geolocator()
         return await geolocator.get_geoposition_async()
 
-    def get_coords(self):
+    def get_coords(self) -> WindowsGPSLocationDataModel:
         '''Get the coordinates for the location'''
-        return asyncio.run(self.get_coords_async())
+        coords = asyncio.run(self.get_coords_async())
+        data = coords.coordinate
+        if isinstance(data.timestamp, str):
+            data.timestamp = datetime.fromisoformat(data.timestamp)
+        kwargs = {
+            'latitude' : data.latitude,
+            'longitude' : data.longitude,
+            'timestamp' : data.timestamp,
+            'source' : 'GPS',
+            'altitude' : getattr(data, 'altitude', None),
+            'accuracy' : getattr(data, 'accuracy', None),
+            'altitude_accuracy' : getattr(data, 'altitude_accuracy', None),
+            'is_remote_source' : False,
+            'point' : f'POINT({data.latitude} {data.longitude})',
+            'position_source' : 'GPS',
+            'position_source_timestamp' : data.timestamp,
+            'civic_address' : getattr(coords, 'civic_address', None),
+            'venue_data' : getattr(coords, 'venue_data', None)
+        }
+        if hasattr(data, 'satellite_data'):
+            kwargs['satellite_data'] = {}
+            for attr in dir(data.satellite_data):
+                if not attr.startswith('_'):
+                    kwargs['satellite_data'][attr] = getattr(data.satellite_data, attr)
+        return WindowsGPSLocationDataModel(**kwargs)
 
     def get_provider_characteristics(self) -> List[ProviderCharacteristics]:
         '''Get the provider characteristics'''

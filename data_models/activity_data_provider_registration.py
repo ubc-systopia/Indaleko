@@ -67,10 +67,7 @@ class IndalekoActivityDataProviderRegistrationDataModel(BaseModel):
         '''Sample configuration data for the data model.'''
         json_schema_extra = {
             "example": {
-                "Identifier": {
-                    "Identifier": "429f1f3c-7a21-463f-b7aa-cd731bb202b1",
-                    "Version": "1.0",
-                },
+                "Identifier": "429f1f3c-7a21-463f-b7aa-cd731bb202b1",
                 "Version": "1.0",
                 "Description": "This is a sample activity data provider registration.",
                 "Record": IndalekoRecordDataModel.Config.json_schema_extra['example'],

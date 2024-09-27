@@ -92,9 +92,9 @@ class IndalekoActivityDataProviderRegistration:
         '''Return the name of the activity collection.'''
         return self.activity_collection_name
 
-    def json(self) -> str:
-        '''Return the JSON representation of the object.'''
-        return self.registration_object.json()
+    def model_dump(self) -> dict:
+        '''Return the model dump for the object.'''
+        return self.registration_object.model_dump()
 
 
 def main():
@@ -105,7 +105,7 @@ def main():
         registration_data=example
     )
     ic(data)
-    ic(data.json())
+    ic(data.model_dump())
 
 
 if __name__ == '__main__':

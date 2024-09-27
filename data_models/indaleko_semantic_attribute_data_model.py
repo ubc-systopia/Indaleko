@@ -23,6 +23,8 @@ import os
 import sys
 import uuid
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 from icecream import ic
 
@@ -56,7 +58,7 @@ class IndalekoSemanticAttributeDataModel(BaseModel):
                                    title='Identifier',
                                    description='The UUID specific to this type of semantic attribute.',
                                     example='12345678-1234-5678-1234-567812345678')
-    Data : str = Field(...,
+    Data : Any = Field(...,
                        title='Data',
                        description='The data associated with this semantic attribute.')
 

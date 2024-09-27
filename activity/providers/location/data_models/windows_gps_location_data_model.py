@@ -22,7 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 from typing import Optional
 from datetime import datetime
 from icecream import ic
@@ -35,6 +35,8 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 from activity.providers.location.data_models.location_data_model import BaseLocationDataModel
+from activity.providers.location.data_models.windows_gps_satellite_data\
+     import WindowsGPSLocationSatelliteDataModel
 
 class WindowsGPSLocationDataModel(BaseLocationDataModel):
     '''This is the data model for the Windows GPS location service.'''
@@ -43,7 +45,7 @@ class WindowsGPSLocationDataModel(BaseLocationDataModel):
     point: Optional[str] = Field(None, description="A string representation of the point data")
     position_source: Optional[str] = Field(None, description="The source of the position data")
     position_source_timestamp: Optional[datetime] = Field(None, description="Timestamp of the position source")
-    satellite_data: Optional[str] = Field(None, description="Details about satellite data used for the position")
+    satellite_data: Optional[WindowsGPSLocationSatelliteDataModel] = Field(None, description="Details about satellite data used for the position")
     civic_address: Optional[str] = Field(None, description="Civic address for the location, if available")
     venue_data: Optional[str] = Field(None, description="Details about the venue data for the location, if available")
 
@@ -57,20 +59,21 @@ class WindowsGPSLocationDataModel(BaseLocationDataModel):
                 "altitude_accuracy": 2.0,
                 "heading": 90.0,
                 "speed": 10.0,
+                "source": "GPS",
                 "timestamp": "2023-09-21T10:30:00Z",
                 "is_remote_source": False,
                 "point": "POINT(49.2827 -123.1207)",
                 "position_source": "GPS",
                 "position_source_timestamp": "2023-09-21T10:31:00Z",
-                "satellite_data": "Satellites: 10 used",
-                "civic_address": None,
+                "satellite_data": WindowsGPSLocationSatelliteDataModel.Config.json_schema_extra['example'],
+                "civic_address" : None,
                 "venue_data": None,
             }
         }
 
     def serialize(self):
         '''Serialize the data model'''
-        return self.json()
+        return self.model_dump(exclude_unset=True)
 
     @staticmethod
     def deserialize(data):
@@ -79,19 +82,16 @@ class WindowsGPSLocationDataModel(BaseLocationDataModel):
 
 def main():
     '''This allows testing the data model'''
+    ic(WindowsGPSLocationDataModel.Config.json_schema_extra['example'])
     data = WindowsGPSLocationDataModel(
-        **BaseLocationDataModel.Config.json_schema_extra['example'],
+        **WindowsGPSLocationDataModel.Config.json_schema_extra['example'],
     )
     ic(data)
-    ic(data.json())
-    ic(dir(data))
-    ic(type(data.json()))
-    ic(data.dict())
+    ic(data.model_dump())
     serial_data = data.serialize()
     data_check = WindowsGPSLocationDataModel.deserialize(serial_data)
     assert data_check == data
-    ic(WindowsGPSLocationDataModel.schema_json())
-    # print(json.dumps(data.json(), indent=2))
+    ic(WindowsGPSLocationDataModel.model_json_schema())
 
 
 if __name__ == '__main__':

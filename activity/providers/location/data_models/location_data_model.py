@@ -62,9 +62,7 @@ def main():
         source="GPS"
     )
     ic(data)
-    ic(data.json())
-    ic(type(data.json()))
-    # print(json.dumps(data.json(), indent=2))
+    print(json.dumps(data.model_dump(), indent=2))
 
 
 if __name__ == '__main__':

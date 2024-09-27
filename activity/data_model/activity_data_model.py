@@ -22,8 +22,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
+from datetime import datetime
 from typing import List
-from pydantic import Field
+from pydantic import Field, BaseModel
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -35,7 +36,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 from data_models.indaleko_record_data_model import IndalekoRecordDataModel
 from data_models.indaleko_semantic_attribute_data_model import IndalekoSemanticAttributeDataModel
 
-class IndalekoActivityDataModel(IndalekoRecordDataModel):
+class IndalekoActivityDataModel(BaseModel):
     '''
     This class defines the common model used by activity data providers in the
     Indaleko Project.
@@ -52,6 +53,10 @@ class IndalekoActivityDataModel(IndalekoRecordDataModel):
     Record : IndalekoRecordDataModel = Field(...,
                                              title='Record',
                                              description='The record for the activity data.')
+
+    Timestamp : datetime = Field(...,
+                            title='Timestamp',
+                            description='The timestamp when the activity data was collected.')
 
     SemanticAttributes : List[IndalekoSemanticAttributeDataModel] \
         = Field(...,
@@ -75,6 +80,7 @@ class IndalekoActivityDataModel(IndalekoRecordDataModel):
                     },
                     "Data": "This is a sample record."
                 },
+                "Timestamp": "2024-01-01T00:00:00Z",
                 "SemanticAttributes": [
                     {
                         "Attribute": "Attribute1",
@@ -87,3 +93,16 @@ class IndalekoActivityDataModel(IndalekoRecordDataModel):
                 ]
             }
         }
+
+    def serialize(self):
+        '''Serialize the data model'''
+        return self.model_dump(exclude_unset=True)
+
+    @staticmethod
+    def deserialize(data):
+        '''Deserialize the data model'''
+        # if type(data['Identifier']) == str:
+        #    data['Identifier'] = IndalekoUUIDDataModel.deserialize(eval(data['Identifier']))
+        #assert isinstance(data['Identifier'], IndalekoUUIDDataModel),\
+        #    f"Expected IndalekoUUIDDataModel, got {type(data['Identifier'])}"
+        return IndalekoSemanticAttributeDataModel(**data)
