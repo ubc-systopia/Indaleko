@@ -78,30 +78,6 @@ class ProviderBase(ABC):
         '''
 
     @abstractmethod
-    def retrieve_temporal_data(self,
-                               reference_time : datetime.datetime,
-                               prior_time_window : datetime.timedelta,
-                               subsequent_time_window : datetime.timedelta,
-                               max_entries : int = 0) -> List[Dict]:
-        '''
-        This call retrieves temporal data available to the data provider within
-        the specified time window.
-
-        Args:
-            reference_time (datetime.datetime): The reference time for the
-            query.
-            prior_time_window (datetime.timedelta): The time window before the
-            reference time.
-            subsequent_time_window (datetime.timedelta): The time window after
-            the reference time.
-            max_entries (int): The maximum number of entries to return.  If 0,
-            then all entries are returned.
-
-        Returns:
-            List[Dict]: The data available within the specified time window.
-        '''
-
-    @abstractmethod
     def get_cursor(self, activity_context : uuid. UUID) -> uuid.UUID:
         '''Retrieve the current cursor for this data provider
            Input:

@@ -21,9 +21,10 @@ import json
 import math
 import os
 import sys
+import uuid
 
 from datetime import datetime
-from typing import Union, List
+from typing import Union, List, Dict
 from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -45,6 +46,8 @@ from data_models.indaleko_source_identifier_data_model import IndalekoSourceIden
 from activity.providers.location.data_models.location_data_model import BaseLocationDataModel
 from activity.data_model.activity_data_model import IndalekoActivityDataModel
 from data_models.indaleko_semantic_attribute_data_model import IndalekoSemanticAttributeDataModel
+from activity.provider_base import ProviderBase
+from activity.provider_characteristics import ProviderCharacteristics
 # pylint: enable=wrong-import-position
 
 class BaseLocationDataCollector:
@@ -59,6 +62,10 @@ class BaseLocationDataCollector:
                                                          self.default_min_movement_change_required)
         self.max_time_between_updates = kwargs.get('max_time_between_updates',
                                                     self.default_max_time_between_updates)
+        self.provider = kwargs.get('provider', None)
+        if self.provider is not None:
+            assert isinstance(self.provider, ProviderBase),\
+                f'provider is not an ProviderBase {type(self.provider)}'
 
     @staticmethod
     def compute_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -182,3 +189,127 @@ class BaseLocationDataCollector:
         activity_data = IndalekoActivityDataModel(**activity_data_args)
         return activity_data.model_dump_json()
 
+    def retrieve_temporal_data(self,
+                               reference_time : datetime.datetime,
+                               prior_time_window : datetime.timedelta,
+                               subsequent_time_window : datetime.timedelta,
+                               max_entries : int = 0) -> Union[List[Dict],None]:
+        '''
+        This call retrieves temporal data available to the data provider within
+        the specified time window.
+
+        Args:
+            reference_time (datetime.datetime): The reference time for the
+            query.
+            prior_time_window (datetime.timedelta): The time window before the
+            reference time.
+            subsequent_time_window (datetime.timedelta): The time window after
+            the reference time.
+            max_entries (int): The maximum number of entries to return.  If 0,
+            then all entries are returned.
+
+        Returns:
+            List[Dict]: The data available within the specified time window.
+        '''
+        raise NotImplementedError('retrieve_temporal_data is not implemented')
+
+    # Note: the following methods map to the abstract methods in the
+    # ProviderBase.  Since many of them involve interacting with the database,
+    # we can interact with the provider to interpret and handle the data, while
+    # we handle the database interactions.
+    def get_provider_characteristics(self) -> Union[List[ProviderCharacteristics],None]:
+        '''
+        This call returns the characteristics of the data provider.  This is
+        intended to be used to help users understand the data provider and to
+        help the system understand how to interact with the data provider.
+
+        Returns:
+            Dict: A dictionary containing the characteristics of the provider.
+        '''
+        if hasattr(self, 'provider'):
+            assert isinstance(self.provider, ProviderBase),\
+                f'provider is not an ProviderBase {type(self.provider)}'
+            return self.provider.get_provider_characteristics()
+        return None
+
+    def get_provider_name(self) -> Union[str, None]:
+        '''
+        Get the name of the provider
+
+            Returns:
+                str: The name of the provider
+        '''
+        if hasattr(self, 'provider'):
+            assert isinstance(self.provider, ProviderBase),\
+                f'provider is not an ProviderBase {type(self.provider)}'
+            return self.provider.get_provider_name()
+        return None
+
+    def get_provider_id(self) -> Union[uuid.UUID, None]:
+        '''Get the UUID for the provider'''
+        if hasattr(self, 'provider'):
+            assert isinstance(self.provider, ProviderBase),\
+                f'provider is not an ProviderBase {type(self.provider)}'
+            return self.provider.get_provider_id()
+        return None
+
+    def retrieve_data(self, data_id: uuid.UUID) -> Union[Dict, None]:
+        '''
+        This call retrieves the data associated with the provided data_id.
+
+        Args:
+            data_id (uuid.UUID): The UUID that represents the data to be
+            retrieved.
+
+        Returns:
+            Dict: The data associated with the data_id.
+
+        Note: this API may change (e.g., so that it includes both the activity
+        context value as well as the provider value.)
+        '''
+        if hasattr(self, 'provider'):
+            assert isinstance(self.provider, ProviderBase),\
+                f'provider is not an ProviderBase {type(self.provider)}'
+            return self.provider.retrieve_data(data_id)
+        return None
+
+    def cache_duration(self) -> Union[datetime.timedelta, None]:
+        '''
+        Retrieve the maximum duration that data from this provider may be
+        cached.
+        '''
+        if hasattr(self, 'provider'):
+            assert isinstance(self.provider, ProviderBase),\
+                f'provider is not an ProviderBase {type(self.provider)}'
+            return self.provider.cache_duration()
+        return None
+
+    def get_description(self) -> Union[str, None]:
+        '''
+        Retrieve a description of the data provider. Note: this is used for
+        prompt construction, so please be concise and specific in your
+        description.
+        '''
+        if hasattr(self, 'provider'):
+            assert isinstance(self.provider, ProviderBase),\
+                f'provider is not an ProviderBase {type(self.provider)}'
+            return self.provider.get_description()
+        return None
+
+    def get_json_schema(self) -> Union[dict, None]:
+        '''
+        Retrieve the JSON data schema to use for the database.
+        '''
+        if hasattr(self, 'provider'):
+            assert isinstance(self.provider, ProviderBase),\
+                f'provider is not an ProviderBase {type(self.provider)}'
+            return self.provider.get_json_schema()
+        return None
+
+    def get_cursor(self, activity_context : uuid.UUID) -> Union[uuid.UUID, None]:
+        '''Retrieve the current cursor for this data provider'''
+        if hasattr(self, 'provider'):
+            assert isinstance(self.provider, ProviderBase),\
+                f'provider is not an ProviderBase {type(self.provider)}'
+            return self.provider.get_cursor(activity_context)
+        return None
