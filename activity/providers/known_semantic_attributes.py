@@ -31,12 +31,6 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
-# pylint: disable=wrong-import-position
-import activity.providers.collaboration.semantic_attributes
-import activity.providers.location.semantic_attributes
-import activity.providers.network.semantic_attributes
-import activity.providers.storage.semantic_attributes
-# pylint: enable=wrong-import-position
 
 class KnownSemanticAttributes:
     '''
@@ -44,26 +38,39 @@ class KnownSemanticAttributes:
     attributes from each of the provider types.  In this way, we can distribute
     the definition process, yet end up with a unified list.
     '''
+    _initialized = False
+    _attributes_by_provider_type = {}
+    _attributes_by_uuid = {}
 
-    def __init__(self):
+    @classmethod
+    def _initialize(cls):
         '''Dynamically construct the list of known activity data provider
         semantic attributes'''
-        self.attributes_by_provider_type = {}
-        for provider in [
-            activity.providers.collaboration.semantic_attributes,
-            activity.providers.location.semantic_attributes,
-            activity.providers.network.semantic_attributes,
-            activity.providers.storage.semantic_attributes,
-            ]:
+        if cls._initialized:
+            return
+        cls._initialized = True
+        import activity.providers.collaboration.semantic_attributes as collaboration
+        import activity.providers.location.semantic_attributes as location
+        import activity.providers.network.semantic_attributes as network
+        import activity.providers.storage.semantic_attributes as storage
+        for provider in [collaboration, location, network, storage]:
             for label, value in provider.__dict__.items():
                 if label.startswith('ADP_'):
                     full_label = 'ACTIVITY_DATA_PROVIDER' + label[3:]
-                    assert not hasattr(self, full_label), f"Duplicate definition of {full_label}"
-                    setattr(self, full_label, value)
+                    assert not hasattr(cls, full_label), f"Duplicate definition of {full_label}"
+                    setattr(cls, full_label, value)
                     provider_type = label.rsplit('_', maxsplit=2)[-2]
-                    if provider_type not in self.attributes_by_provider_type:
-                        self.attributes_by_provider_type[provider_type] = {}
-                    self.attributes_by_provider_type[provider_type][full_label] = value
+                    if provider_type not in cls._attributes_by_provider_type:
+                        cls._attributes_by_provider_type[provider_type] = {}
+                    cls._attributes_by_provider_type[provider_type][full_label] = value
+                    cls._attributes_by_uuid[value] = full_label
+
+    @staticmethod
+    def get_attribute_by_uuid(uuid_value):
+        '''Get the attribute by the UUID'''
+        return KnownSemanticAttributes._attributes_by_uuid.get(uuid_value)
+
+KnownSemanticAttributes._initialize()
 
 def main():
     '''Main function for the module'''
@@ -71,7 +78,6 @@ def main():
     for attr in dir(known_semantic_attributes):
         if attr.startswith('ACTIVITY_DATA_PROVIDER'):
             ic(attr)
-
 
 if __name__ == '__main__':
     main()

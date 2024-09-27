@@ -23,7 +23,7 @@ import os
 import sys
 import uuid
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Union, List, Dict
 from icecream import ic
 
@@ -48,10 +48,17 @@ from activity.data_model.activity_data_model import IndalekoActivityDataModel
 from data_models.indaleko_semantic_attribute_data_model import IndalekoSemanticAttributeDataModel
 from activity.provider_base import ProviderBase
 from activity.provider_characteristics import ProviderCharacteristics
+from activity.providers.known_semantic_attributes import KnownSemanticAttributes
 # pylint: enable=wrong-import-position
 
 class BaseLocationDataCollector:
-    '''This class provides a common base for location data collectors.'''
+    '''
+    This class provides a common base for location data collectors. Typically a
+    location data _collector_ will be associated with a location data
+    _provider_.  The latter is responsible for actually collecting the data, and
+    the former is responsible for interpreting the data and storing it in the
+    database.
+    '''
 
     default_min_movement_change_required = 500 # meters
     default_max_time_between_updates = 360 # seconds = 10 min
@@ -69,7 +76,20 @@ class BaseLocationDataCollector:
 
     @staticmethod
     def compute_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-        '''Compute the distance between two points.'''
+        '''
+        Compute the distance between two points.
+
+        Input:
+            lat1: the latitude of the first point
+            lon1: the longitude of the first point
+            lat2: the latitude of the second point
+            lon2: the longitude of the second point
+
+        Output:
+            The distance between the two points in **meters**.
+
+        Note: this is a simple implementation of the Haversine formula.
+        '''
         lat1_rad = math.radians(lat1)
         lat2_rad = math.radians(lat2)
         lon1_rad = math.radians(lon1)
@@ -88,7 +108,18 @@ class BaseLocationDataCollector:
     @staticmethod
     def compute_time_difference(time1: Union[datetime, str],
                                 time2: Union[datetime, str]) -> float:
-        '''Compute the time difference between two times.'''
+        '''
+        Compute the time difference between two times.
+
+        Input:
+            time1: the first time
+            time2: the second time
+
+        Output:
+            The time difference in **seconds**.
+
+        Note: this is a simple implementation of the time difference.
+        '''
         assert isinstance(time1, datetime) or isinstance(time1, str), 'time1 is not a datetime or string'
         assert isinstance(time2, datetime) or isinstance(time2, str), 'time2 is not a datetime or string'
         if isinstance(time1, str):
@@ -126,7 +157,20 @@ class BaseLocationDataCollector:
 
     @staticmethod
     def get_latest_db_update_dict(collection : IndalekoCollection) -> Union[dict, None]:
-        '''Get the latest update from the database.'''
+        '''
+        Get the latest update from the database.
+
+        Input:
+            collection: the collection from which to retrieve the latest update.
+
+        Output:
+            The latest update from the database, or None if no update is
+            available.
+
+        Note: this implementation assumes the timestamp field(s) are indexed.
+        Collection names are passed via bind variables to allow names with
+        special characters (e.g., the UUID we use).
+        '''
         assert isinstance(collection, IndalekoCollection),\
              f'collection is not an IndalekoCollection {type(collection)}'
         query = '''
@@ -162,6 +206,10 @@ class BaseLocationDataCollector:
             semantic_attributes: the semantic attributes associated with the
             location data.  Note that this can be any combination of known and
             unknown semantic attributes.  These are indexed.
+
+        Output:
+            A dictionary that can be used to generate the json required to
+            insert the record into the database.
         '''
         assert isinstance(source_data, IndalekoSourceIdentifierDataModel) \
             or isinstance(source_data, dict),\
@@ -190,20 +238,20 @@ class BaseLocationDataCollector:
         return activity_data.model_dump_json()
 
     def retrieve_temporal_data(self,
-                               reference_time : datetime.datetime,
-                               prior_time_window : datetime.timedelta,
-                               subsequent_time_window : datetime.timedelta,
+                               reference_time : datetime,
+                               prior_time_window : timedelta,
+                               subsequent_time_window : timedelta,
                                max_entries : int = 0) -> Union[List[Dict],None]:
         '''
         This call retrieves temporal data available to the data provider within
         the specified time window.
 
         Args:
-            reference_time (datetime.datetime): The reference time for the
+            reference_time (datetime): The reference time for the
             query.
-            prior_time_window (datetime.timedelta): The time window before the
+            prior_time_window (timedelta): The time window before the
             reference time.
-            subsequent_time_window (datetime.timedelta): The time window after
+            subsequent_time_window (timedelta): The time window after
             the reference time.
             max_entries (int): The maximum number of entries to return.  If 0,
             then all entries are returned.
@@ -231,6 +279,35 @@ class BaseLocationDataCollector:
                 f'provider is not an ProviderBase {type(self.provider)}'
             return self.provider.get_provider_characteristics()
         return None
+
+    def get_provider_semantic_attributes(self) -> Union[List[str], None]:
+        '''
+        This call returns the semantic attributes that the provider
+        supports/uses.  It is used in prompt construction, so if you do not
+        declare a semantic attribute, it will not be available for use in the
+        query interface.
+
+        Returns:
+            List[str]: A list of the semantic attributes that the provider
+            supports. Note that these are UUIDs, not the symbolic names.
+            None: If no semantic attributes are available.
+
+        Note:
+            Given that this is in the _base class_ it defines the minimal set of
+            attributes that are expected by all location data providers.  It can
+            be overridden by subclasses to provide additional attributes.
+        '''
+        return [
+            KnownSemanticAttributes.ACTIVITY_DATA_PROVIDER_LOCATION_LATITUDE,
+            KnownSemanticAttributes.ACTIVITY_DATA_PROVIDER_LOCATION_LONGITUDE,
+            KnownSemanticAttributes.ACTIVITY_DATA_PROVIDER_LOCATION_ACCURACY
+        ]
+        if hasattr(self, 'provider'):
+            assert isinstance(self.provider, ProviderBase),\
+                f'provider is not an ProviderBase {type(self.provider)}'
+            return self.provider.get_provider_semantic_attributes()
+        return None
+
 
     def get_provider_name(self) -> Union[str, None]:
         '''
@@ -273,7 +350,7 @@ class BaseLocationDataCollector:
             return self.provider.retrieve_data(data_id)
         return None
 
-    def cache_duration(self) -> Union[datetime.timedelta, None]:
+    def cache_duration(self) -> Union[timedelta, None]:
         '''
         Retrieve the maximum duration that data from this provider may be
         cached.
@@ -289,16 +366,41 @@ class BaseLocationDataCollector:
         Retrieve a description of the data provider. Note: this is used for
         prompt construction, so please be concise and specific in your
         description.
+
+        Returns:
+            str: The description of the data provider.
+            None: If no description is available.
         '''
+        provider_description =''
         if hasattr(self, 'provider'):
             assert isinstance(self.provider, ProviderBase),\
                 f'provider is not an ProviderBase {type(self.provider)}'
-            return self.provider.get_description()
-        return None
+            provider_description += self.provider.get_description()
+        semantic_attributes = '\n'
+        for semantic_attribute in self.get_provider_semantic_attributes():
+            semantic_attributes +=\
+            f'''\n{KnownSemanticAttributes.\
+                 get_attribute_by_uuid(semantic_attribute)}
+                 : {semantic_attribute}
+            '''
+        provider_description += f'''\n
+            It stores its data inside the
+            {self.collection.name} collection. It exports semantic
+            attributes with the following labels and UUIDs:
+            {semantic_attributes}.
+            The schema for the data in this collection is:
+            {self.get_json_schema()}.
+            The "SemanticAttributes" field is indexed.
+        '''
+        return provider_description
 
     def get_json_schema(self) -> Union[dict, None]:
         '''
         Retrieve the JSON data schema to use for the database.
+
+        Returns:
+            dict: The JSON schema for the data provider.
+            None: If no schema is available.
         '''
         if hasattr(self, 'provider'):
             assert isinstance(self.provider, ProviderBase),\
@@ -307,7 +409,21 @@ class BaseLocationDataCollector:
         return None
 
     def get_cursor(self, activity_context : uuid.UUID) -> Union[uuid.UUID, None]:
-        '''Retrieve the current cursor for this data provider'''
+        '''
+        Retrieve the current cursor for this data provider
+
+        Input:
+            activity_context: the UUID representing the activity context to
+            which this cursor is being mapped.
+
+        Output:
+            The cursor for this data provider, which can be used to retrieve
+            data from this provider (via the retrieve_data call).
+
+        Returns:
+            uuid.UUID: The cursor for the data provider.
+            None: If no cursor is available.
+        '''
         if hasattr(self, 'provider'):
             assert isinstance(self.provider, ProviderBase),\
                 f'provider is not an ProviderBase {type(self.provider)}'

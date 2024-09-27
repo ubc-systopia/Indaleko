@@ -38,7 +38,6 @@ from activity.providers.location.ip_location import IPLocation
 from activity.providers.location.tile_location import TileLocation
 from activity.providers.location.wifi_location import WiFiLocation
 from activity.providers.location.windows_gps_location import WindowsGPSLocation
-from activity.providers.known_semantic_attributes import KnownSemanticAttributes
 # pylint: enable=wrong-import-position
 
 __version__ = '0.1.0'

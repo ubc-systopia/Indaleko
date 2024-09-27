@@ -118,14 +118,13 @@ class WindowsGPSLocation(LocationProvider):
         prompt construction, so please be concise and specific in your
         description.
         '''
-        return '''
-        This is a geolocation service that provides location data for
-        the device.
-        '''
+        return '''WindowsGPSLocation is a geolocation service.'''
 
     def get_json_schema(self) -> dict:
         '''Get the JSON schema for the provider'''
-        return {}
+        return WindowsGPSLocationDataModel(
+            **WindowsGPSLocationDataModel.Config.json_schema_extra['example']
+        ).model_json_schema()
 
     def get_location_name(self) -> str:
         '''Get the location'''
@@ -143,6 +142,7 @@ class WindowsGPSLocation(LocationProvider):
         start_time : datetime.datetime,
         end_time : datetime.datetime) -> List[Dict[str, Any]]:
         '''Get the location history for the location'''
+        raise NotImplementedError('This method is not implemented yet.')
         return []
 
     def get_distance(self, location1: Dict[str, float], location2: Dict[str, float]) -> float:

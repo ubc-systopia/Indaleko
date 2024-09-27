@@ -58,6 +58,12 @@ class WindowsGPSLocationCollector(BaseLocationDataCollector):
     version = '1.0.0'
     description = 'Windows GPS Location Collector'
 
+    semantic_attributes_supported = {
+        KnownSemanticAttributes.ACTIVITY_DATA_PROVIDER_LOCATION_LATITUDE: 'Latitude',
+        KnownSemanticAttributes.ACTIVITY_DATA_PROVIDER_LOCATION_LONGITUDE: 'Longitude',
+        KnownSemanticAttributes.ACTIVITY_DATA_PROVIDER_LOCATION_ACCURACY: 'Accuracy',
+    }
+
     def __init__(self, **kwargs):
         '''Initialize the Windows GPS Location Collector.'''
         self.min_movement_change_required = kwargs.get('min_movement_change_required',
@@ -85,17 +91,18 @@ class WindowsGPSLocationCollector(BaseLocationDataCollector):
         }
         self.provider_registrar = IndalekoActivityDataProviderRegistrationService()
         assert self.provider_registrar is not None, 'Failed to get the provider registrar'
-        provider = self.provider_registrar.lookup_provider_by_identifier(str(self.identifier))
-        if provider is None:
+        provider_data = self.provider_registrar.lookup_provider_by_identifier(str(self.identifier))
+        if provider_data is None:
             ic('Registering the provider')
-            provider, collection = self.provider_registrar.register_provider(**record_kwargs)
+            provider_data, collection = self.provider_registrar.register_provider(**record_kwargs)
         else:
             ic('Provider already registered')
             collection = IndalekoActivityDataProviderRegistrationService\
                 .lookup_activity_provider_collection(str(self.identifier))
-        ic(provider)
+        ic(provider_data)
         ic(collection)
-        self.provider = provider
+        self.provider_data = provider_data
+        self.provider = WindowsGPSLocation()
         self.collection = collection
 
     def get_latest_db_update(self) -> Union[WindowsGPSLocation, None]:
@@ -109,7 +116,7 @@ class WindowsGPSLocationCollector(BaseLocationDataCollector):
 
     def update_data(self) -> Union[WindowsGPSLocationDataModel, None]:
         '''Update the data in the database.'''
-        ksa = KnownSemanticAttributes()
+        ksa = KnownSemanticAttributes
         current_data = WindowsGPSLocation().get_coords()
         ic(type(current_data))
         assert isinstance(current_data, WindowsGPSLocationDataModel),\
@@ -174,6 +181,7 @@ def main():
     collector.update_data()
     latest = collector.get_latest_db_update()
     ic(latest)
+    ic(collector.get_description())
     ic('Finished Windows GPS Location Collector')
 
 if __name__ == '__main__':

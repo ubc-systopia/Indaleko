@@ -66,6 +66,8 @@ class LocationProvider(ProviderBase):
     def get_distance(self, location1: Dict[str, float], location2: Dict[str, float]) -> float:
         '''Get the distance between two locations'''
 
+
+
 def list_data_providers_command(args: argparse.Namespace):
     '''List the data providers available'''
     ic(args)

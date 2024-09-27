@@ -68,6 +68,28 @@ class WindowsGPSLocationDataModel(BaseLocationDataModel):
                 "satellite_data": WindowsGPSLocationSatelliteDataModel.Config.json_schema_extra['example'],
                 "civic_address" : None,
                 "venue_data": None,
+            },
+            "new_example" : {
+                'accuracy': 209.0,
+                'altitude': 0.0,
+                'altitude_accuracy': None,
+                'civic_address': None,
+                'heading': None,
+                'is_remote_source': False,
+                'latitude': 49.28042203230194,
+                'longitude': -123.12734913090786,
+                'point': 'POINT(49.28042203230194 -123.12734913090786)',
+                'position_source': 'GPS',
+                'position_source_timestamp': '2024-09-27T00:04:29.060275Z',
+                'satellite_data': {'geometric_dilution_of_precision': None,
+                                    'horizontal_dilution_of_precision': None,
+                                    'position_dilution_of_precision': None,
+                                    'time_dilution_of_precision': None,
+                                    'vertical_dilution_of_precision': None},
+                'source': 'GPS',
+                'speed': None,
+                'timestamp': '2024-09-27T00:04:29.060275Z',
+                'venue_data': None
             }
         }
 
