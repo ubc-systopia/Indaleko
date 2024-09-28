@@ -101,8 +101,4 @@ class IndalekoActivityDataModel(BaseModel):
     @staticmethod
     def deserialize(data):
         '''Deserialize the data model'''
-        # if type(data['Identifier']) == str:
-        #    data['Identifier'] = IndalekoUUIDDataModel.deserialize(eval(data['Identifier']))
-        #assert isinstance(data['Identifier'], IndalekoUUIDDataModel),\
-        #    f"Expected IndalekoUUIDDataModel, got {type(data['Identifier'])}"
         return IndalekoSemanticAttributeDataModel(**data)
