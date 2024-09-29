@@ -60,7 +60,6 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
 
     def __init__(self : 'IndalekoWindowsMachineConfig',
                  **kwargs):
-        ic(kwargs)
         self.service_registration = IndalekoMachineConfig.register_machine_configuration_service(
             **IndalekoWindowsMachineConfig.windows_machine_config_service
         )
@@ -108,7 +107,6 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
                 config_data['MachineUUID'] = config_data['MachineGuid']
             assert str(guid) == config_data['MachineUUID'],\
                   f'GUID mismatch: {guid} != {config_data["MachineUUID"]}'
-        ic(config_data)
         software = IndalekoMachineConfigDataModel.Software(
             OS = config_data['OperatingSystem']['Caption'],
             Version = config_data['OperatingSystem']['Version'],
@@ -148,7 +146,7 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
         if 'Hostname' not in machine_config_data:
             machine_config_data['Hostname'] = config_data['Hostname']
         config = IndalekoWindowsMachineConfig(data=machine_config_data)
-        ic(IndalekoMachineConfigDataModel.MachineConfig.serialize(config.machine_config))
+        IndalekoMachineConfigDataModel.MachineConfig.serialize(config.machine_config)
         config.write_config_to_db()
         if hasattr(config, 'extract_volume_info'):
             getattr(config, 'extract_volume_info')()
@@ -213,7 +211,6 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             if self.attributes['UniqueId'].startswith('\\\\?\\Volume{'):
                 self.volume_guid = self.__find_volume_guid__(drive_data['UniqueId'])
             self.attributes['GUID'] = self.volume_guid
-            ic(self.attributes)
             self.machine_config = IndalekoMachineConfigDataModel.MachineConfig(
                 Platform=IndalekoMachineConfigDataModel.Platform.deserialize(platform),
                 Captured=IndalekoMachineConfigDataModel.Captured.deserialize(captured),
@@ -260,16 +257,13 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
 
     def extract_volume_info(self: 'IndalekoWindowsMachineConfig') -> None:
         '''Extract the volume information from the machine configuration.'''
-        ic('Extracting volume information')
         config_data = self.serialize()
         volume_info = config_data['Record']['Attributes']['VolumeInfo']
         machine_id = config_data['Record']['Attributes']['MachineUUID']
         captured = config_data['Captured']
         platform = config_data['Platform']
-        ic(volume_info)
         for volume in volume_info:
             wdi = self.WindowsDriveInfo(machine_id, platform, volume, captured)
-            ic(volume)
             assert wdi.get_vol_guid() not in self.volume_data,\
                   f'Volume GUID {wdi.get_vol_guid()} already in volume_data'
             self.volume_data[wdi.get_vol_guid()] = wdi

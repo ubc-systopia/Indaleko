@@ -175,7 +175,6 @@ class IndalekoServiceManager(IndalekoSingleton):
                        service_version)
                 if existing_service.service_type != service_type:
                     ic('Service type mismatch', existing_service.service_type, service_type)
-                ic('Service already exists', existing_service)
         if existing_service is None:
             if service_id is None:
                 service_id = str(uuid.uuid4())

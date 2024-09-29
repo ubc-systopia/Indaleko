@@ -51,7 +51,6 @@ class IndalekoMachineConfig:
         '''Initialize the machine configuration'''
         if not hasattr(self, 'source'): # override in derived classes
             self.source_identifier = None
-        ic(kwargs)
         self.machine_id = kwargs.get('machine_id',
                                      kwargs['data']['MachineUUID']
         )
@@ -76,15 +75,14 @@ class IndalekoMachineConfig:
         if not overwrite:
             existing_machine_config = IndalekoMachineConfig.lookup_machine_configuration_by_machine_id(self.machine_id)
             if existing_machine_config:
-                ic('Machine configuration already exists, ovewrite not set')
+                ic('Machine configuration already exists, overwrite not set')
                 return status
         doc = self.serialize()
         if '_key' not in doc:
             doc['_key'] = self.machine_id
         if 'MachineUUID' not in doc:
             doc['MachineUUID'] = self.machine_id
-        ic(doc)
-        print(json.dumps(doc, indent=4))
+        # print(json.dumps(doc, indent=4))
         try:
             self.collection.insert(doc, overwrite=overwrite)
             status = True
@@ -156,15 +154,12 @@ def register_handler(args : argparse.Namespace) -> None:
         service_version = '1.0.2',
         service_identifier='05567376-0f4f-4d40-97f1-3ac5f764fcf3'
     )
-    ic(args)
 
 def list_handler(args : argparse.Namespace) -> None:
     '''List all machine configurations.'''
     ic('List the services')
-    ic(args)
     machine_configs = IndalekoMachineConfig.lookup_machine_configurations()
     for machine_config in machine_configs:
-        ic(machine_config)
         print(json.dumps(machine_config.serialize(), indent=4))
 
 class TestMachineConfig:
@@ -227,7 +222,6 @@ class TestMachineConfig:
         retrieved_config = IndalekoMachineConfig.\
             lookup_machine_configuration_by_machine_id(TestMachineConfig.\
                                          test_machine_config_data['machine_id'])
-        ic(retrieved_config)
 
     @staticmethod
     def list_test_machine_config(machine_id : str = None) -> None:
@@ -272,7 +266,6 @@ class TestMachineConfig:
 def test_handler(args : argparse.Namespace) -> None:
     '''Test creating a machine configuration.'''
     ic('Test creating a machine configuration')
-    ic(args)
     test_machine_config_data = {
         "machine_id" : "f7a439ec-c2d0-4844-a043-d8ac24d9ac0b",
         "Record" : {
@@ -313,7 +306,6 @@ def test_handler(args : argparse.Namespace) -> None:
     machine_config = IndalekoMachineConfig(data=test_machine_config_data)
     machine_config.write_config_to_db()
     retrieved_config = IndalekoMachineConfig.lookup_machine_configuration_by_machine_id(test_machine_config_data['machine_id'])
-    ic(retrieved_config)
 
 
 def main():
