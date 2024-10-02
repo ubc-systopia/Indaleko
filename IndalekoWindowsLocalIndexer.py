@@ -93,13 +93,13 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
             kwargs['indexer_name'] = IndalekoWindowsLocalIndexer.windows_local_indexer_name
         super().__init__(**kwargs)
 
-    def generate_indexer_file_name(self, **kwargs) -> str:
+    def generate_windows_indexer_file_name(self, **kwargs) -> str:
         if 'platform' not in kwargs:
             kwargs['platform'] = IndalekoWindowsLocalIndexer.windows_platform
         if 'indexer_name' not in kwargs:
             kwargs['indexer_name'] = IndalekoWindowsLocalIndexer.windows_local_indexer_name
         if 'machine_id' not in kwargs:
-            kwargs['machine_id'] = self.machine_config.machine_id
+            kwargs['machine_id'] = uuid.UUID(self.machine_config.machine_id).hex
         return IndalekoIndexer.generate_indexer_file_name(**kwargs)
 
     def convert_windows_path_to_guid_uri(self, path : str) -> str:
@@ -218,11 +218,11 @@ def main():
     drive = os.path.splitdrive(pre_args.path)[0][0].upper()
     drive_guid = machine_config.map_drive_letter_to_volume_guid(drive)
     if drive_guid is None:
-        drive_guid = drive
+        drive_guid = uuid.uuid4().hex
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     indexer = IndalekoWindowsLocalIndexer(machine_config=machine_config,
                                           timestamp=timestamp)
-    output_file = indexer.generate_indexer_file_name(storage_description=drive_guid)
+    output_file = indexer.generate_windows_indexer_file_name(storage_description=drive_guid)
     parser= argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--datadir', '-d',
                         help='Path to the data directory',
@@ -245,7 +245,7 @@ def main():
                                           machine_config=machine_config,
                                           storage_description=drive_guid)
     output_file = args.output
-    log_file_name = indexer.generate_indexer_file_name(target_dir=args.logdir, suffix='log')
+    log_file_name = indexer.generate_windows_indexer_file_name(target_dir=args.logdir, suffix='log')
     logging.basicConfig(filename=os.path.join(log_file_name),
                                 level=args.loglevel,
                                 format='%(asctime)s - %(levelname)s - %(message)s',

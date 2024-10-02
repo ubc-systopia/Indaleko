@@ -42,10 +42,11 @@ from urllib.parse import urlencode, parse_qs, urlparse
 
 from Indaleko import Indaleko
 from IndalekoIndexer import IndalekoIndexer
-import IndalekoLogging as IndalekoLogging
+from IndalekoLogging import IndalekoLogging
 
 
 class IndalekoOneDriveIndexer(IndalekoIndexer):
+    '''This is the class for the OneDrive Indexer for Indaleko.'''
 
     onedrive_platform = "OneDrive"
     onedrive_indexer_name = "onedrive_indexer"
@@ -73,7 +74,7 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
 
         def __init__(self, config: str, cache_file: str):
             self.__chosen_account__ = -1
-            self.config = json.load(open(config, 'rt'))
+            self.config = json.load(open(config, 'rt', encoding='utf-8-sig'))
             self.cache_file = cache_file
             self.__load_cache__()
             self.__output_file_name__ = None
@@ -218,10 +219,12 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
         self.results = Queue()
         self.max_workers = kwargs.get('max_workers', 1)
         self.recurse = kwargs.get('recurse', True)
+        ic(self.recurse)
+        self.drives = self.get_drives()
         self.root_processed = False
 
     @staticmethod
-    def generate_indexer_file_name(**kwargs):
+    def generate_onedrive_indexer_file_name(**kwargs):
         '''
         This method generates the name of the file that will contain the metadata
         of the files in the Dropbox folder.
@@ -241,6 +244,26 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
         ic('Indexing OneDrive Drive')
         ic('Recurse: ', self.recurse)
         return self.get_onedrive_metadata()
+
+    def get_drives(self) -> list:
+        '''
+        Given an authenticated user, return a list of the drives available to
+        them.
+        '''
+        headers = self.get_headers()
+        url = 'https://graph.microsoft.com/v1.0/me/drives'
+        response = requests.get(url, headers=headers, timeout=(10,30))
+        response.raise_for_status()
+        if response.status_code == 200:
+            drives = response.json().get('value', [])
+            for drive in drives:
+                ic(drive)
+            return drives
+        else:
+            logging.error("Error retrieving drives: %s - %s",
+                          response.status_code,
+                          response.text)
+            raise ValueError(f"Error retrieving drives: {response.status_code} - {response.text}")
 
 
     def get_email(self) -> str:
@@ -292,7 +315,8 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
                 directories = []
                 for item in items:
                     # Process the item
-                    if 'folder' in item:
+                    if 'folder' in item and self.recurse:
+                        ic(f'{tid}: Found folder: {item["id"]}')
                         directories.append(item['id'])
                     self.results.put(self.build_stat_dict(item),timeout=30)
                 return ic(directories)
@@ -378,21 +402,83 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
         return [self.results.get() for _ in range(self.results.qsize())]
 
     @staticmethod
-    def get_url_for_folder(folder_id=None):
+    def get_url_for_folder(drive_id : str = None,
+                           folder_id : str = None,
+                           return_children : bool = True) -> None:
         '''This method returns the URL for the folder.'''
-        if folder_id is None:
-            return 'https://graph.microsoft.com/v1.0/me/drive/root/children'
+        url = 'https://graph.microsoft.com/v1.0'
+        if drive_id is None:
+            url += '/me/drive/items/'
+            if folder_id is None:
+                url += 'root'
+            else:
+                url += folder_id
         else:
-            return f"https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}/children"
+            url += f'/drives/{drive_id}/'
+            if folder_id is not None:
+                url += f'items/{folder_id}'
+        if return_children:
+            url += '/children'
+        return url
 
+    def fetch_onedrive_metadata(self, drive_id : str  = "me", item_id : str = "root") -> dict:
+        '''This method retrieves the metadata of the object in the OneDrive.'''
+        if item_id == 'root':
+            url = f"https://graph.microsoft.com/v1.0/{drive_id}/drive/root"
+        else:
+            url = f"https://graph.microsoft.com/v1.0/{drive_id}/drive/items/{item_id}"
+        headers = self.get_headers()
+        try:
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Error: {response.status_code} - {response.text}")
+            ic(e)
+            return None
+        return response.json()
 
-    def get_onedrive_metadata(self, folder_id=None):
+    def process_root(self, root : dict) -> None:
+        '''This method processes the root of the OneDrive.'''
+        assert isinstance(root, dict), 'Root must be a dict'
+        assert not self.root_processed, 'Root already processed'
+        self.results.put(self.build_stat_dict(root), timeout=30)
+        ic(root)
+        if 'folder' in root:
+            drive_id = root['parentReference']['driveId']
+            folder_id = root['id']
+            url = self.get_url_for_folder(drive_id, folder_id, return_children=True)
+            self.queue.put(url, timeout=30)
+            ic(url)
+            self.dir_count += 1
+        else:
+            self.file_count += 1
+        ic(root)
+        item = {
+            'createdDateTime' : root['createdDateTime'],
+            'fileSystemInfo' : root['fileSystemInfo'],
+            'folder' : root['folder'],
+            'id' : root['id'],
+            'lastModifiedDateTime' : root['lastModifiedDateTime'],
+            'name' : '', # root
+            'parentReference' : root['parentReference'],
+            'size' : root['size'],
+            'webUrl' : root['webUrl']
+        }
+        item['parentReference']['path'] = '/drive/root:'
+        item['parentReference']['name'] = ''
+        item['parentReference']['id'] = root['id'] # root is its own parent.
+        self.root_processed = True
+        return item
+
+    def get_onedrive_metadata(self, drive_id : str = None, folder_id : str = None) -> list:
         '''This method retrieves the metadata of the OneDrive.'''
         queue = []
         refresh_count = 0
         error_count = 0
         success_error_count = 0
-        url = self.get_url_for_folder(folder_id)
+        url = self.get_url_for_folder(drive_id=drive_id,
+                                      folder_id=folder_id,
+                                      return_children=False)
         queue.append(url)
         results = []
         passes = 0
@@ -401,18 +487,18 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
             if 0 == passes % 100:
                 ic(f'Pending queue size is {len(queue)} at pass {passes}')
             url = queue.pop()
-            # ic(f'Processing URL: {url}')
             headers = self.get_headers()
             params = {'$top': '999'}
             try:
-                response = requests.get(url, headers=headers, params=params)
+                response = requests.get(url, headers=headers, params=params, timeout=(10,30))
                 response.raise_for_status()
             except requests.exceptions.Timeout as e:
                 logging.error(ic(f"Request timed out: {e}. Retrying {url}"))
                 queue.insert(0, url)
                 continue
             except requests.exceptions.RequestException as e:
-                logging.error(f"Error: {response.status_code} - {response.text}")
+                logging.error("Error: %s - %s", response.status_code, response.text)
+                ic(e)
                 if 401 == response.status_code: # seems to indicate a stale token
                     self.graphcreds.clear_token()
                     # try again
@@ -422,16 +508,34 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
                     continue
                 elif 200 == response.status_code:
                     # success code, but error status raise?
-                    logging.error(f"Error (for 200): for URL {url} - {response.status_code} - {response.text}")
+                    logging.error("Error (for 200): for URL %s - %s - %s", url, response.status_code, response.text)
                     success_error_count = error_count + 1
                     # note we want to fall through and process this.
                 else:
-                    logging.warning(ic(f"Error: for URL {url} - {response.status_code} - {response.text}"))
+                    logging.warning(
+                        ic(f"Error: for URL {url} - {response.status_code} - {response.text}")
+                    )
                     error_count = error_count + 1
+                    self.error_count += 1
                     continue
-            for item in response.json().get('value', []):
-                if 'folder' in item:
-                    queue.append(self.get_url_for_folder(item['id']))
+            if 'value' not in response.json():
+                item = self.process_root(response.json())
+                results.append(self.build_stat_dict(item))
+                url = self.get_url_for_folder(drive_id=drive_id,
+                                              folder_id=item['id'],
+                                              return_children=True)
+                queue.append(url)
+                continue
+            for item in response.json()['value']:
+                if 'folder' in item and self.recurse:
+                    queue.append(self.get_url_for_folder(drive_id=None, folder_id=item['id']))
+                    self.dir_count += 1
+                else:
+                    self.file_count += 1
+                # metadata = self.fetch_onedrive_metadata(drive_id="me",
+                # Note: we are not using the metadata because it does not
+                # provide useful additional detail.  I preserve it here to
+                # explain why we are not using it.
                 results.append(self.build_stat_dict(item))
         ic(f'Processed {len(results)} items, refresh_count {refresh_count}, error_count {error_count}, success_error_count {success_error_count}')
         return results
@@ -475,16 +579,16 @@ def main():
                             default=1,
                             type=int)
     pre_args, _ = pre_parser.parse_known_args()
-    indaleko_logging = IndalekoLogging.IndalekoLogging(platform=IndalekoOneDriveIndexer.onedrive_indexer_name,
-                                                       service_name='indexer',
-                                                       log_dir=pre_args.logdir,
-                                                       log_level=pre_args.loglevel,
-                                                       timestamp=timestamp,
-                                                       suffix='log')
+    indaleko_logging = IndalekoLogging(platform=IndalekoOneDriveIndexer.onedrive_indexer_name,
+                                        service_name='indexer',
+                                        log_dir=pre_args.logdir,
+                                        log_level=pre_args.loglevel,
+                                        timestamp=timestamp,
+                                        suffix='log')
     log_file_name = indaleko_logging.get_log_file_name()
     ic(log_file_name)
     indexer = IndalekoOneDriveIndexer(timestamp=timestamp, recurse=(not pre_args.norecurse), max_workers=pre_args.threads)
-    output_file_name = IndalekoOneDriveIndexer.generate_indexer_file_name(
+    output_file_name = IndalekoOneDriveIndexer.generate_onedrive_indexer_file_name(
             platform=IndalekoOneDriveIndexer.onedrive_platform,
             user_id=indexer.get_email(),
             service='indexer',

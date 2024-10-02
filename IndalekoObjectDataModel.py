@@ -80,6 +80,20 @@ class IndalekoObjectDataModel(IndalekoRecordDataModel):
                                 "as a UUID or inode number."),
         ] = None
 
+        Volume : Annotated[
+            Optional[UUID],
+            apischema.schema(description="The volume UUID where the object is located."),
+        ] = field(default=None)
+
+        PosixFileAttributes : Annotated[
+            Optional[str],
+            apischema.schema(description="The POSIX file attributes for the object."),
+        ] = field(default=None)
+
+        WindowsFileAttributes : Annotated[
+            Optional[str],
+            apischema.schema(description="The Windows file attributes for the object."),
+        ] = field(default=None)
 
         @staticmethod
         def deserialize(data: dict) -> 'IndalekoObjectDataModel.IndalekoObject':

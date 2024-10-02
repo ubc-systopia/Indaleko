@@ -40,7 +40,7 @@ class IndalekoICloudIndexer(IndalekoIndexer):
         'service_version': indaleko_icloud_indexer_service_version,
         'service_type': indaleko_icloud_indexer_service_type,
         'service_identifier': indaleko_icloud_indexer_uuid,
-    }        
+    }
 
     def __init__(self, **kwargs):
         # self.auth_logger = self.setup_logging()
@@ -90,7 +90,7 @@ class IndalekoICloudIndexer(IndalekoIndexer):
             self.icloud_credentials = {'username': username, 'password': password}
             logging.info(f"Loaded credentials for username: {username}")
         return self
-        
+
     def store_icloud_credentials(self) -> 'IndalekoICloudIndexer':
         '''This method stores the credentials.'''
         user_id = self.get_user_id()
@@ -145,7 +145,7 @@ class IndalekoICloudIndexer(IndalekoIndexer):
     def authenticate(self):
         user_id, password = self.get_icloud_credentials()
         api = PyiCloudService(user_id, password)
-        
+
         if api.requires_2fa:
             code = input("Enter the code you received on one of your approved devices: ")
             result = api.validate_2fa_code(code)
@@ -154,9 +154,9 @@ class IndalekoICloudIndexer(IndalekoIndexer):
             if not api.is_trusted_session:
                 api.trust_session()
         return api
-    
+
     @staticmethod
-    def generate_indexer_file_name(**kwargs):
+    def generate_windows_indexer_file_name(**kwargs):
         '''This method generates the name of the file that wiil contain the metadata
         of the files in the iCloud folder.'''
         assert 'user_id' in kwargs, 'No user_id found in kwargs'
@@ -280,7 +280,7 @@ def main():
     ic(log_file_name)
     indexer = IndalekoICloudIndexer(timestamp=timestamp)
 
-    output_file_name = IndalekoICloudIndexer.generate_indexer_file_name(
+    output_file_name = IndalekoICloudIndexer.generate_windows_indexer_file_name(
         platform=IndalekoICloudIndexer.icloud_platform,
         user_id = indexer.get_user_id(),
         service = 'indexer',

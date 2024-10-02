@@ -1,5 +1,6 @@
-'''IndalekoCollectionIndex ---
-This module is used to manage index creation for IndalekoCollection objects.
+'''
+IndalekoCollectionIndex: This module is used to manage index creation for
+IndalekoCollection objects.
 
 Project Indaleko
 Copyright (C) 2024 Tony Mason

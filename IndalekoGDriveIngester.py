@@ -1,5 +1,5 @@
 '''
-This module handles data ingestion into Indaleko from the Linux local data
+This module handles data ingestion into Indaleko from the Google Drive data
 indexer.
 
 Indaleko Linux Local Ingester
@@ -59,6 +59,8 @@ class IndalekoGDriveIngester(IndalekoIngester):
         for key, value in self.gdrive_ingester_service.items():
             if key not in kwargs:
                 kwargs[key] = value
+        if 'service_id' not in kwargs and 'Identifier' not in kwargs:
+            kwargs['Identifier'] = self.gdrive_ingester_uuid_str
         super().__init__(**kwargs)
         self.data_dir = kwargs.get('data_dir', Indaleko.default_data_dir)
         self.input_file = kwargs['input_file']
@@ -300,6 +302,18 @@ class IndalekoGDriveIngester(IndalekoIngester):
         ic(data_file, edge_file)
         self.write_data_to_file(dir_data + file_data, data_file)
         self.write_data_to_file(dir_edges, edge_file)
+        load_string = self.build_load_string(
+            collection='Objects',
+            file=data_file
+        )
+        logging.info('Load string: %s', load_string)
+        ic('Object Collection load string is:\n', load_string)
+        load_string = self.build_load_string(
+            collection='Relationships',
+            file=edge_file
+        )
+        logging.info('Load string: %s', load_string)
+        ic('Relationship Collection load string is:\n', load_string)
 
 
 
@@ -329,7 +343,9 @@ def ingest_file(args: argparse.Namespace) -> None:
         print('Multiple files match the filter strings: ', args.strings)
         Indaleko.print_candidate_files(candidates)
         return
-    ingester = IndalekoGDriveIngester(input_file=os.path.join(args.datadir, candidates[0][0]), data_dir=args.datadir)
+    ingester = IndalekoGDriveIngester(input_file=os.path.join(args.datadir,
+                                                              candidates[0][0]),
+                                                              data_dir=args.datadir)
     ingester.ingest()
     for count_type, count_value in ingester.get_counts().items():
         logging.info('%s: %d', count_type, count_value)
@@ -339,8 +355,6 @@ def ingest_file(args: argparse.Namespace) -> None:
 
 def main() -> None:
     '''This provides command processing for the Google Drive Ingester'''
-    now = datetime.datetime.now(datetime.UTC)
-    timestamp=now.isoformat()
     logging_levels = IndalekoLogging.get_logging_levels()
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument('--configdir',
@@ -367,7 +381,7 @@ def main() -> None:
     pre_args, _ = pre_parser.parse_known_args()
     if pre_args.command == 'list':
         list_files(pre_args)
-    parser = argparse.ArgumentParser(parents=[pre_parser], description='Google Drive Metadataa Ingest Management')
+    parser = argparse.ArgumentParser(parents=[pre_parser], description='Google Drive Metadata Ingest Management')
     parser.set_defaults(func=ingest_file)
     args = parser.parse_args()
     print(args)

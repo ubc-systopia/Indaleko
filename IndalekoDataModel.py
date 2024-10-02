@@ -27,6 +27,7 @@ from apischema import schema, ValidationError, deserialize, serialize, Undefined
 from apischema.graphql import graphql_schema
 from apischema.metadata import required, skip
 from graphql import print_schema
+from pydantic import BaseModel, create_model
 from icecream import ic
 
 @dataclass
@@ -104,6 +105,8 @@ class IndalekoDataModel:
         )
 
 
+
+
     @dataclass
     class Timestamp:
         """General definition of a timestamp."""
@@ -116,6 +119,8 @@ class IndalekoDataModel:
             datetime,
             schema(description="Timestamp in ISO date and time format.",
                    format="date-time"),
+            schema(description="Timestamp in ISO date and time format.",
+                   format="date-time"),
             required
         ]
         Description: Annotated[
@@ -124,7 +129,9 @@ class IndalekoDataModel:
         ] = None
 
     @staticmethod
-    def get_timestamp(uuid: UUID, value: datetime = datetime.now(timezone.utc), description: str = 'Prototype description') -> 'IndalekoDataModel.Timestamp':
+    def get_timestamp(uuid: UUID,
+                      value: datetime = datetime.now(timezone.utc),
+                      description: str = 'Prototype description') -> 'IndalekoDataModel.Timestamp':
         """Lookup a timestamp."""
         return IndalekoDataModel.Timestamp(
             Label=uuid,
@@ -150,7 +157,7 @@ class IndalekoDataModel:
         """Lookup a semantic attribute."""
         return IndalekoDataModel.SemanticAttribute(
             Identifier=identifier,
-            Data='This is the dummy data for the semantic attribute.'
+            Data='This is the dummy data for the semantic attribute.',
         )
 
     @staticmethod
@@ -173,12 +180,56 @@ class IndalekoDataModel:
             IndalekoDataModel.SemanticAttribute
         ]
 
+    @staticmethod
+    def convert_dataclass_to_pydantic(dataclass_instance: Any) -> BaseModel:
+        """Convert a dataclass instance to a Pydantic model."""
+        fields = {
+            field.name :
+            (field.type, field.default) for field in dataclass_instance.__dataclass_fields__.values()
+            }
+        PydanticModel = create_model(dataclass_instance.__class__.__name__, **fields)
+        return PydanticModel(**dataclass_instance.__dict__)
+
 def main():
     """Test code for the IndalekoDataModel class."""
     ic("This is the IndalekoDataModel module")
     ic('GraphQL schema:')
     ic(print_schema(graphql_schema(query=IndalekoDataModel.get_queries(),
-                                      types=IndalekoDataModel.get_types())))
+                                   types=IndalekoDataModel.get_types())))
+
+
+    source_id = {
+        "Identifier" : str(uuid4()),
+        "Version" : "1.0",
+        "Description" : "This is a test ID"
+    }
+    ic(IndalekoDataModel.SourceIdentifier.deserialize(source_id))
+    ic(IndalekoDataModel.get_source_identifier(source_id['Identifier']))
+    ic(IndalekoDataModel.SourceIdentifier.serialize(IndalekoDataModel.get_source_identifier(source_id['Identifier'])))
+
+    timestamp = {
+        "Label" : str(uuid4()),
+        "Value" : datetime.now(timezone.utc).isoformat(),
+        "Description" : "This is a test timestamp"
+    }
+    ic(deserialize(IndalekoDataModel.Timestamp, timestamp))
+    ic(IndalekoDataModel.get_timestamp(UUID(timestamp['Label']),
+                                       datetime.fromisoformat(timestamp['Value']),
+                                       timestamp['Description']))
+
+    indaleko_uuid = {
+        "Identifier" : str(uuid4()),
+        "Label" : "This is a test UUID"
+    }
+    ic(IndalekoUUID.deserialize(indaleko_uuid))
+    ic(IndalekoUUID.get_indaleko_uuid(UUID(indaleko_uuid['Identifier']), indaleko_uuid['Label']))
+    ic(IndalekoUUID.serialize(IndalekoUUID.get_indaleko_uuid(UUID(indaleko_uuid['Identifier']), indaleko_uuid['Label'])))
+    semantic_attribute = {
+        "Identifier" : indaleko_uuid,
+        "Data" : "This is a test semantic attribute"
+    }
+    ic(deserialize(IndalekoDataModel.SemanticAttribute, semantic_attribute))
+    ic(IndalekoDataModel.get_semantic_attribute(indaleko_uuid))
 
 
     source_id = {
