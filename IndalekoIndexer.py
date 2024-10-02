@@ -169,6 +169,8 @@ class IndalekoIndexer:
     @staticmethod
     def generate_indexer_file_name(**kwargs) -> str:
         '''This will generate a file name for the indexer output file.'''
+        assert 'platform' in kwargs, 'Platform must be specified'
+        assert 'indexer_name' in kwargs, 'Indexer_name must be specified'
         # platform : str, target_dir : str = None, suffix : str = None) -> str:
         platform = 'unknown_platform'
         if 'platform' in kwargs:

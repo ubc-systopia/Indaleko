@@ -177,14 +177,22 @@ class IndalekoICloudIndexer(IndalekoIndexer):
             return None
 
     def collect_metadata(self, item, item_path):
+        def to_utc_iso(dt):
+            # Convert to UTC and format with 'Z' suffix
+            if dt is not None:
+                return dt.astimezone(timezone.utc).isoformat().replace('+00:00', 'Z')
+            else:
+                # Return the default UTC time with 'Z' suffix
+                return datetime(1970, 1, 1, 0, 0, tzinfo=timezone.utc).isoformat().replace('+00:00', 'Z')
+
         metadata = {
             'name': item.name,
             'path_display': IndalekoICloudIndexer.icloud_root_folder['path_display'] + '/' + item_path,
             'size': getattr(item, 'size', 0) or 0, # Default to 0 if size is None or 0
-            'modified': item.date_modified.isoformat() if hasattr(item, 'date_modified') and item.date_modified else datetime(1970, 1, 1, 0, 0).isoformat(),
-            'created': item.date_created.isoformat() if hasattr(item, 'date_created') and item.date_created else datetime(1970, 1, 1, 0, 0).isoformat(),
-            'last_opened': item.date_last_opened.isoformat() if hasattr(item, 'date_last_opened') and item.date_last_opened else datetime(1970, 1, 1, 0, 0).isoformat(),
-            'date_changed': item.date_changed.isoformat() if hasattr(item, 'date_changed') and item.date_changed else datetime(1970, 1, 1, 0, 0).isoformat(),
+            'date_created': to_utc_iso(getattr(item, 'date_created', None)),
+            'date_modified': to_utc_iso(getattr(item, 'date_modified', None)),
+            'last_opened': to_utc_iso(getattr(item, 'date_last_opened', None)),
+            'date_changed': to_utc_iso(getattr(item, 'date_changed', None)),
             'ObjectIdentifier': str(uuid.uuid4()),  # Generate and add a UUID for each file
             'drivewsid': getattr(item, 'drivewsid', 'Unknown'),
             'docwsid': getattr(item, 'docwsid', 'Unknown'),
@@ -193,7 +201,6 @@ class IndalekoICloudIndexer(IndalekoIndexer):
             'parentId': getattr(item, 'parentId', 'Unknown'),
             'item_id': getattr(item, 'item_id', 'Unknown'),
             'etag': getattr(item, 'etag', 'Unknown'),
-            'lastOpenTime': item.date_last_opened.isoformat() if hasattr(item, 'date_last_opened') and item.date_last_opened else datetime(1970, 1, 1, 0, 0).isoformat(),
             'type': getattr(item, 'type', 'Unknown')
         }
         return metadata

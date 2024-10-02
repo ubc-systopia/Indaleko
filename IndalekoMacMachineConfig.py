@@ -54,7 +54,6 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
     }
 
     def __init__(self : 'IndalekoMacOSMachineConfig', **kwargs):
-        ic(kwargs)
         super().__init__(**kwargs)
         self.attributes = kwargs.get('attributes', {})
         self.machine_id = kwargs.get('machine_id', None)
@@ -65,7 +64,6 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
     @staticmethod
     def find_config_files(directory : str) -> list:
         '''This looks for configuration files in the given directory.'''
-        ic(directory)
         return [x for x in os.listdir(directory)
                 if x.startswith(IndalekoMacOSMachineConfig.macos_machine_config_file_prefix)
                 and x.endswith('.json')]
@@ -93,7 +91,6 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
             assert str(guid) == config_data['MachineGuid'], \
                   f'GUID mismatch: {guid} != {config_data["MachineGuid"]}'
         assert len(config_data) > 0, 'No configuration data found'
-        ic(config_data)
         record = IndalekoRecordDataModel.IndalekoRecord(
             SourceIdentifier = IndalekoDataModel.SourceIdentifier(
                 Identifier=IndalekoMacOSMachineConfig.macos_machine_config_service['service_identifier'],
