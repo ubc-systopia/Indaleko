@@ -1,4 +1,5 @@
 import os
+import sys
 import logging
 from datetime import datetime
 from unstructured.partition.auto import partition  # type: ignore
@@ -9,38 +10,46 @@ import json
 LOGS_PATH = "/app/logs"
 TEST_PATH = "/app/test"
 
-# Ask the user for the output file name
-output_file_name = input("Enter the desired output file name (without extension): ")
+# Get the output file name from command-line arguments
+if len(sys.argv) < 2:
+    print("Error: Output file name not provided.")
+    sys.exit(1)
+# output_file_name = 'test_7'#input("Enter the desired output file name (without extension): ")
+output_file_name = sys.argv[1]
 output_file_json = output_file_name + ".json"
 output_file_jsonl = output_file_name + ".jsonl"
 
 # Setup logging
 log_file_name = datetime.now().strftime('%Y-%m-%d_%H-%M-%S') + '-metadataExtraction.log'
 log_file_path = os.path.join(LOGS_PATH, log_file_name)
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
+
+logger = logging.getLogger(__name__)  # Use a named logger
+logger.setLevel(logging.INFO)
+
+# Remove existing handlers to prevent duplicates
+if logger.hasHandlers():
+    logger.handlers.clear()
 
 # Create file handler
 file_handler = logging.FileHandler(log_file_path)
 file_handler.setLevel(logging.INFO)
-file_handler.setFormatter(
-    logging.Formatter('%(asctime)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-)
-
-# Create stream handler
-stream_handler = logging.StreamHandler()
-stream_handler.setLevel(logging.INFO)
-stream_handler.setFormatter(
-    logging.Formatter('%(asctime)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-)
-
-# Add handlers to the logger
-logger = logging.getLogger()
+file_formatter = logging.Formatter('%(asctime)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+file_handler.setFormatter(file_formatter)
 logger.addHandler(file_handler)
-logger.addHandler(stream_handler)
+
+#Uncomment out the following if I want the following to be printed out to Terminal.
+#Even commented out the following will still record in log file.
+# # Create stream handler
+# stream_handler = logging.StreamHandler()
+# stream_handler.setLevel(logging.INFO)
+# stream_handler.setFormatter(
+#     logging.Formatter('%(asctime)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+# )
+
+# # Add handlers to the logger
+# logger = logging.getLogger()
+# logger.addHandler(file_handler)
+# logger.addHandler(stream_handler)
 
 # Function to process files
 def process_files(file_list, output_file_json):
