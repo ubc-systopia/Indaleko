@@ -5,18 +5,13 @@ import sys  # Added to use sys.exit()
 from datetime import datetime
 
 # Prompt the user for the necessary paths
-# PathToWhereLogFileWillBeStored = input('Type path where you want the log file for this process to be stored: \n')
-# PathToIndalekoProjectDirectory = input('Please input path to directory where project is: \n')
-# PathToUserDefinedFolder = input('Input the directory you want to have indexed by Unstructured: \n')
-# PathToOutputFileWillBeSaved = input('Please specify where you want the resulting JSONL file to be stored: \n')
+PathToWhereLogFileWillBeStored = input('Type path where you want the log file for this process to be stored: \n')
+PathToIndalekoProjectDirectory = input('Please input path to directory where project is: \n')
+PathToUserDefinedFolder = input('Input the directory you want to have indexed by Unstructured: \n')
+PathToOutputFileWillBeSaved = input('Please specify where you want the resulting JSONL file to be stored: \n')
 
 # Ask the user for the output file name
 output_file_name = input("Enter the desired output file name (without extension): ")
-
-PathToWhereLogFileWillBeStored = '/Users/zeethompson/indaleko/Indaleko/logs'
-PathToIndalekoProjectDirectory = '/Users/zeethompson/indaleko/Indaleko'
-PathToUserDefinedFolder = '/Users/zeethompson/Downloads'
-PathToOutputFileWillBeSaved = '/Users/zeethompson/indaleko/Indaleko/data'
 
 # Setup logging
 log_file_name = datetime.now().strftime('%Y-%m-%d_%H-%M-%S') + '-dockerSetup.log'
