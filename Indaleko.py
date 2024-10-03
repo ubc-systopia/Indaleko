@@ -65,7 +65,7 @@ import ipaddress
 import base64
 import msgpack
 
-from IndalekoObjectDataSchema import IndalekoObjectSchema
+from IndalekoObjectSchema import IndalekoObjectSchema
 from IndalekoServiceSchema import IndalekoServiceSchema
 from IndalekoRelationshipSchema import IndalekoRelationshipSchema
 from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
@@ -77,13 +77,13 @@ from IndalekoUserRelationshipSchema import IndalekoUserRelationshipSchema
 
 class Indaleko:
     '''This class defines constants used by Indaleko.'''
-    default_data_dir = './data'
-    default_config_dir = './config'
-    default_log_dir = './logs'
+    default_data_dir = os.path.join(os.environ.get('INDALEKO_ROOT', '.'), 'data')
+    default_config_dir = os.path.join(os.environ.get('INDALEKO_ROOT', '.'), 'config')
+    default_log_dir = os.path.join(os.environ.get('INDALEKO_ROOT', '.'), 'logs')
 
-    default_db_timeout=10
+    default_db_timeout=os.environ.get('INDALEKO_DB_TIMEOUT', 10)
 
-    Indaleko_Objects = 'Objects'
+    Indaleko_Object = 'Object'
     Indaleko_Relationships = 'Relationships'
     Indaleko_Services = 'Services'
     Indaleko_MachineConfig = 'MachineConfig'
@@ -95,7 +95,7 @@ class Indaleko:
     Indaleko_Prefix = 'indaleko'
 
     Collections = {
-        Indaleko_Objects: {
+        Indaleko_Object: {
             'schema' : IndalekoObjectSchema().get_json_schema(),
             'edge' : False,
             'indices' : {
@@ -155,7 +155,7 @@ class Indaleko:
             },
         },
         Indaleko_MachineConfig : {
-            'schema' : { }, # IndalekoMachineConfigSchema().get_json_schema(),
+            'schema' : IndalekoMachineConfigSchema().get_json_schema(),
             'edge' : False,
             'indices' : { },
         },
@@ -258,7 +258,7 @@ class Indaleko:
     def validate_uuid_string(uuid_string : str) -> bool:
         """Given a string, verify that it is in fact a valid uuid."""
         if not isinstance(uuid_string, str):
-            print(f'uuid is not a string it is a {type(uuid)}')
+            print(f'uuid is not a string it is a {type(uuid_string)}')
             return False
         try:
             uuid.UUID(uuid_string)
@@ -523,6 +523,7 @@ class Indaleko:
         print('Unique identifier', (max_unique_id_length-len('Unique identifier')) * ' ', 'File name')
         for file, unique_id in candidates:
             print(f'{unique_id.strip()} {(max_unique_id_length-len(unique_id))*" "} {file}')
+
 
 def main():
     """Test code for Indaleko.py"""

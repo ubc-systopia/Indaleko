@@ -85,7 +85,6 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
                          indexer_name=IndalekoDropboxIndexer.dropbox_indexer_name,
                          **IndalekoDropboxIndexer.indaleko_dropbox_indexer_service
         )
-        pass
 
     def get_user_id(self):
         '''This method returns the user id.'''
@@ -95,7 +94,9 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
     def load_dropbox_credentials(self) -> 'IndalekoDropboxIndexer':
         '''This method retrieves the stored credentials.'''
         try:
-            with open(self.dropbox_token_file, 'rt') as f:
+            with open(self.dropbox_token_file,
+                      'rt',
+                      encoding='utf-8-sig') as f:
                 self.dropbox_credentials = json.load(f)
             logging.debug('Loaded Dropbox credentials from %s', self.dropbox_token_file)
         except FileNotFoundError:
@@ -106,7 +107,7 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
     def store_dropbox_credentials(self) -> 'IndalekoDropboxIndexer':
         '''This method stores the credentials.'''
         assert self.dropbox_credentials is not None, 'No credentials to store'
-        with open(self.dropbox_token_file, 'wt') as f:
+        with open(self.dropbox_token_file, 'wt', encoding='utf-8-sig') as f:
             json.dump(self.dropbox_credentials, f, indent=4)
         return self
 
@@ -132,16 +133,23 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
             'client_id': self.dropbox_config['app_key'],
             'client_secret': self.dropbox_config['app_secret'],
         }
-        response = requests.post(IndalekoDropboxIndexer.dropbox_token_url, data=data)
+        response = requests.post(
+            IndalekoDropboxIndexer.dropbox_token_url,
+            data=data,
+            timeout=10)
         response.raise_for_status()
         response_data = response.json()
-        if 'access_token' not in response_data or 'refresh_token' not in response_data or 'expires_in' not in response_data or 'refresh_token' not in response_data:
+        assert 'expires_in' in response_data, 'No expires_in in response'
+        if 'access_token' not in response_data and 'refresh_token' not in response_data:
+            ic(response_data)
             raise ValueError(f'Invalid response from Dropbox {response_data}')
         self.dropbox_credentials = {
-            'token': response_data['access_token'],
-            'refresh_token': response_data['refresh_token'],
-            'expires_at': time.time() + response_data['expires_in']
+            'expires_at' : time.time() + response_data['expires_in'],
         }
+        if 'access_token' in response_data:
+            self.dropbox_credentials['token'] = response_data['access_token']
+        if 'refresh_token' in response_data:
+            self.dropbox_credentials['refresh_token'] = response_data['refresh_token']
         return self
 
 
@@ -158,7 +166,7 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
             return self.dropbox_credentials
 
         assert os.path.exists(self.dropbox_token_file), f'File {self.dropbox_token_file} does not exist, aborting'
-        data = json.load(open(self.dropbox_token_file, 'rt'))
+        data = json.load(open(self.dropbox_token_file, 'rt', encoding='utf-8-sig'))
         return data['token']
 
     def is_token_expired(self) -> bool:
@@ -175,7 +183,8 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
         '''
         This method refreshes the access token.
         '''
-        logging.debug('Refresh token called with credentials:' , self.dropbox_credentials)
+        logging.debug('Refresh token called with credentials: %s',
+                      self.dropbox_credentials)
         if self.dropbox_credentials is None:
             raise ValueError('No credentials to refresh')
         if 'refresh_token' not in self.dropbox_credentials:
@@ -186,16 +195,18 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
             'client_id': self.dropbox_config['app_key'],
             'client_secret': self.dropbox_config['app_secret']
         }
-        response = requests.post(IndalekoDropboxIndexer.dropbox_token_url, data=data)
+        response = requests.post(IndalekoDropboxIndexer.dropbox_token_url,
+                                 data=data,
+                                 timeout=10)
         response.raise_for_status()
-        logging.debug('Response:', response.json())
+        logging.debug('Response: %s', response.json())
         response_data = response.json()
         self.dropbox_credentials = {
             'token': response_data['access_token'],
             'refresh_token': self.dropbox_credentials['refresh_token'],
             'expires_at': time.time() + response_data['expires_in']
         }
-        logging.debug('Updated credentials:', self.dropbox_credentials)
+        logging.debug('Updated credentials: %s', self.dropbox_credentials)
         self.store_dropbox_credentials()
         return self
 
@@ -219,16 +230,16 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
         '''
         This method stores the Dropbox configuration.
         '''
-        self.config = {
+        self.dropbox_config = {
             'app_key': app_id,
             'app_secret': app_secret
         }
         with open(self.dropbox_config_file, 'wt', encoding='utf-8') as f:
-            json.dump(self.config, f, indent=4)
+            json.dump(self.dropbox_config, f, indent=4)
         return self
 
     @staticmethod
-    def generate_indexer_file_name(**kwargs):
+    def generate_windows_indexer_file_name(**kwargs):
         '''
         This method generates the name of the file that will contain the metadata
         of the files in the Dropbox folder.
@@ -318,7 +329,7 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
                 if not result.has_more:
                     break
         except dropbox.exceptions.ApiError as e:
-            logging.error(f"Error enumerating folder, exception {e}")
+            logging.error("Error enumerating folder, exception %s", e)
             print(f"Error enumerating folder, exception {e}")
         return metadata_list
 
@@ -337,6 +348,7 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
 
 
 def main():
+    '''This is the entry point for using the Dropbox indexer.'''
     logging_levels = Indaleko.get_logging_levels()
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     pre_parser = argparse.ArgumentParser(add_help=False)
@@ -362,7 +374,7 @@ def main():
     ic(log_file_name)
     indexer = IndalekoDropboxIndexer(timestamp=timestamp)
 
-    output_file_name = IndalekoDropboxIndexer.generate_indexer_file_name(
+    output_file_name = IndalekoDropboxIndexer.generate_windows_indexer_file_name(
             platform=IndalekoDropboxIndexer.dropbox_platform,
             user_id=indexer.get_user_id(),
             service='indexer',

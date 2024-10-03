@@ -98,7 +98,7 @@ class IndalekoMacLocalIndexer(IndalekoIndexer):
     def index(self) -> list:
         data = []
         last_uri = None
-        
+
         # indexing path itself has to have a root node
         root_entry= self.build_stat_dict(os.path.basename(self.path), os.path.dirname(self.path), last_uri)
         if root_entry:
@@ -147,10 +147,10 @@ def main():
                             help='Path to the config directory',
                             default=Indaleko.default_config_dir)
     pre_args, _ = pre_parser.parse_known_args()
-    
+
     config_files = IndalekoMacOSMachineConfig.find_config_files(pre_args.configdir)
     default_config_file = IndalekoMacOSMachineConfig.get_most_recent_config_file(pre_args.configdir)
-    
+
     # Step 2: figure out the default config file
     pre_parser = argparse.ArgumentParser(add_help=False, parents=[pre_parser])
     pre_parser.add_argument('--config', choices=config_files, default=default_config_file)
@@ -161,10 +161,10 @@ def main():
 
     # Step 3: now we can compute the machine config and drive GUID
     machine_config = IndalekoMacOSMachineConfig.load_config_from_file(config_file=pre_args.config)
-    
+
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     indexer = IndalekoMacLocalIndexer(machine_config=machine_config, timestamp=timestamp)
-    output_file = indexer.generate_indexer_file_name()
+    output_file = indexer.generate_windows_indexer_file_name()
     parser= argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--datadir', '-d',
                         help='Path to the data directory',
@@ -186,8 +186,8 @@ def main():
     indexer = IndalekoMacLocalIndexer(timestamp=timestamp,
                                           path=args.path,
                                           machine_config=machine_config)
-    output_file = indexer.generate_indexer_file_name()
-    log_file_name = indexer.generate_indexer_file_name(target_dir=args.logdir, suffix='.log')
+    output_file = indexer.generate_windows_indexer_file_name()
+    log_file_name = indexer.generate_windows_indexer_file_name(target_dir=args.logdir, suffix='.log')
     logging.basicConfig(filename=os.path.join(log_file_name),
                                 level=args.loglevel,
                                 format='%(asctime)s - %(levelname)s - %(message)s',

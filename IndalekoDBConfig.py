@@ -37,9 +37,12 @@ class IndalekoDBConfig(IndalekoSingleton):
     needed) the database.
     """
 
-    default_db_config_file = './config/indaleko-db-config.ini'
+    default_db_config_file = os.path.join(os.environ.get('INDALEKO_ROOT', '.'), 'config/indaleko-db-config.ini')
 
-    def __init__(self, config_file: str = default_db_config_file, no_new_config : bool = False):
+    def __init__(self,
+                 config_file: str = default_db_config_file,
+                 no_new_config : bool = False,
+                 start : bool = True):
         if self._initialized:
             return
         self._initialized = True
@@ -64,6 +67,8 @@ class IndalekoDBConfig(IndalekoSingleton):
         self.sys_db = None
         self.db = None
         self.collections = {}
+        if start:
+            self.start()
 
     def start(self, timeout : int = 60) -> bool:
         '''Once the container is running, this method will set up connections to

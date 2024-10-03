@@ -9,6 +9,7 @@ param(
 
 # Define an object to store hardware data
 $hardwareData = @{
+    Hostname = [System.Net.Dns]::GetHostByName($env:COMPUTERNAME).HostName
     CPU             = @{
         Name              = (Get-WmiObject -Class Win32_Processor).Name
         Cores             = (Get-WmiObject -Class Win32_Processor).NumberOfCores

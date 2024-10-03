@@ -61,6 +61,12 @@ class IndalekoServiceDataModel:
             apischema.metadata.required
         ]
 
+        Description : Annotated[
+            str,
+            apischema.schema(description="This is the description of the service provider."),
+            apischema.metadata.required
+        ]
+
         @staticmethod
         def deserialize(data : dict) -> 'IndalekoServiceDataModel.IndalekoService':
             '''Deserialize the data into an IndalekoService object.'''
@@ -86,7 +92,8 @@ class IndalekoServiceDataModel:
             Identifier = service_identifier,
             Version = '1.0.0',
             Name = 'Test Service',
-            Type = 'Test'
+            Type = 'Test',
+            Description = 'Test Service Description'
         )
         return service
 

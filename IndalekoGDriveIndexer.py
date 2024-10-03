@@ -121,8 +121,10 @@ class IndalekoGDriveIndexer(IndalekoIndexer):
         self.email = None
         self.config_dir = kwargs.get('config_dir', Indaleko.default_config_dir)
         self.gdrive_config_file = os.path.join(self.config_dir, IndalekoGDriveIndexer.gdrive_config_file)
-        assert os.path.exists(self.gdrive_config_file), f'No GDrive config file found at {self.gdrive_config_file}'
-        self.gdrive_token_file = os.path.join(self.config_dir, IndalekoGDriveIndexer.gdrive_token_file)
+        assert os.path.exists(self.gdrive_config_file), \
+            f'No GDrive config file found at {self.gdrive_config_file}'
+        self.gdrive_token_file = \
+            os.path.join(self.config_dir, IndalekoGDriveIndexer.gdrive_token_file)
         self.gdrive_config = None
         self.load_gdrive_config()
         self.gdrive_credentials = None
@@ -180,7 +182,7 @@ class IndalekoGDriveIndexer(IndalekoIndexer):
         return self.email
 
     @staticmethod
-    def generate_indexer_file_name(**kwargs):
+    def generate_windows_indexer_file_name(**kwargs):
         '''
         This method generates the name of the file that will contain the metadata
         of the files in the Dropbox folder.
@@ -265,7 +267,7 @@ def main():
     log_file_name = indaleko_logging.get_log_file_name()
     ic(log_file_name)
     indexer = IndalekoGDriveIndexer(timestamp=timestamp)
-    output_file_name = IndalekoGDriveIndexer.generate_indexer_file_name(
+    output_file_name = IndalekoGDriveIndexer.generate_windows_indexer_file_name(
             platform=IndalekoGDriveIndexer.gdrive_platform,
             user_id=indexer.get_email(),
             service='indexer',

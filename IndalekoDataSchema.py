@@ -141,6 +141,7 @@ class IndalekoDataSchema:
 
     def get_graphql_schema(self):
         '''Return the GraphQL schema for the Record collection.'''
+        return self.graphql_schema
 
     def get(self, key : str, default : str = None) -> str:
         '''Get a value from the schema object.'''

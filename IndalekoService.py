@@ -20,8 +20,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import argparse
-import uuid
 import datetime
 import json
 
@@ -61,7 +59,8 @@ class IndalekoService:
         self.service_type = kwargs.get('service_type', kwargs.get('Type', None))
         self.service_identifier = kwargs.get('service_identifier', kwargs.get('Identifier', None))
         self.service_name = kwargs.get('service_name', kwargs.get('Name', None))
-        self.service_description = kwargs.get('service_description', kwargs.get('Description', 'Unknown Service'))
+        self.service_description = kwargs.get('service_description', \
+                                              kwargs.get('Description', 'Unknown Service'))
         self.service_version = kwargs.get('service_version', kwargs.get('Version', '0.1'))
         self.creation_date = kwargs.get('creation_date',
                                         datetime.datetime.now(datetime.timezone.utc).isoformat())
@@ -73,14 +72,14 @@ class IndalekoService:
         assert self.service_identifier is not None, 'Identifier is required for IndalekoService'
 
         if type(self.record) is dict:
-            ic(self.record)
             self.record = IndalekoRecordDataModel.IndalekoRecord.deserialize(self.record)
         self.service_object = IndalekoServiceDataModel.IndalekoService(
             Record = self.record,
             Identifier = self.service_identifier,
             Version = self.service_version,
             Name = self.service_name,
-            Type = self.service_type
+            Type = self.service_type,
+            Description = self.service_description
         )
 
     @staticmethod
