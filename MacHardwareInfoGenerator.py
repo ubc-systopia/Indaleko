@@ -122,24 +122,25 @@ def main():
 
     config_data = generator.generate_config(str(guid))
 
-    if args.skip:
-        print('checking if we need to create a new config ...')
-        # search config directory for mac-hardware-info
-        latest_config_file = find_all_config_files(args.save_to_dir)
+    ## The following makes the code crash if uncommented.
+    # if args.skip:
+    #     print('checking if we need to create a new config ...')
+    #     # search config directory for mac-hardware-info
+    #     latest_config_file = find_all_config_files(args.save_to_dir)
 
-        latest_config = None
-        if latest_config_file:
-            latest_config = MacHardwareInfoGenerator.read_config_from_file(
-                latest_config_file)
+    #     latest_config = None
+    #     if latest_config_file:
+    #         latest_config = MacHardwareInfoGenerator.read_config_from_file(
+    #             latest_config_file)
 
-            if latest_config:
-                latest_config['MachineGuid'] = guid
-                if latest_config == config_data:
-                    print('Config is the same! Skip creating a new one')
-                    return
-            else:
-                print(f"Warning: the latest config file seems to be an invalid json file, path={
-                      latest_config_file}. Saving a new config ...")
+    #         if latest_config:
+    #             latest_config['MachineGuid'] = guid
+    #             if latest_config == config_data:
+    #                 print('Config is the same! Skip creating a new one')
+    #                 return
+    #         else:
+    #             print(f"Warning: the latest config file seems to be an invalid json file, path={
+    #                   latest_config_file}. Saving a new config ...")
 
     file_path = os.path.join(
         args.save_to_dir, f'macos-hardware-info-{guid}-{timestamp}.json')
