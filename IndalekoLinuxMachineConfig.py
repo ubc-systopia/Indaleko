@@ -64,10 +64,16 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
     def __init__(self : 'IndalekoLinuxMachineConfig',
                  **kwargs):
         '''Constructor for the IndalekoLinuxMachineConfig class'''
-        self.service_registration = IndalekoMachineConfig.register_machine_configuration_service(
-            **IndalekoLinuxMachineConfig.linux_machine_config_service
-        )
-        self.db = kwargs.get('db', IndalekoDBConfig())
+        self.offline = getattr(self, 'offline', kwargs.get('offline', False))
+        # ic(self.offline)
+        if not self.offline:
+            self.service_registration = IndalekoMachineConfig.register_machine_configuration_service(
+                **IndalekoLinuxMachineConfig.linux_machine_config_service
+            )
+            self.db = kwargs.get('db', IndalekoDBConfig())
+        else:
+            self.service_registration = None
+            self.db = None
         super().__init__(**kwargs)
 
     @staticmethod
@@ -288,7 +294,8 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
 
     @staticmethod
     def load_config_from_file(config_dir : str = None,
-                              config_file : str = None) -> 'IndalekoLinuxMachineConfig':
+                              config_file : str = None,
+                              offline : bool = False) -> 'IndalekoLinuxMachineConfig':
         """
         This method creates a new IndalekoMachineConfig object from an
         existing config file.
@@ -306,15 +313,15 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
             with open(config_file, 'rt', encoding='utf-8-sig') as config_fd:
                 config_data = json.load(config_fd)
             machine_uuid = uuid.UUID(config_data['MachineUUID'])
-            ic(machine_uuid)
+            # ic(machine_uuid)
             if machine_uuid != file_uuid:
                 print('Machine UUID in file name does not match UUID in config file')
                 print(f"\tFile name: {file_uuid}")
                 print(f"\tConfig file: {machine_uuid}")
         if 'MachineUUID' not in config_data:
             config_data['MachineUUID'] = str(file_uuid)
-        ic(config_data)
-        ic(file_metadata)
+        # ic(config_data)
+        # ic(file_metadata)
         timestamp = datetime.datetime.fromisoformat(file_metadata['timestamp'])
         software = IndalekoMachineConfigDataModel.Software(
             OS=config_data['OSInfo']['operating_system'],
@@ -357,15 +364,16 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
             machine_config_data['MachineUUID'] = str(file_uuid)
         if 'Hostname' not in machine_config_data:
             machine_config_data['Hostname'] = config_data['Hostname']
-        config = IndalekoLinuxMachineConfig(data=machine_config_data)
-        ic(IndalekoMachineConfigDataModel.MachineConfig.serialize(config.machine_config))
-        config.write_config_to_db()
+        config = IndalekoLinuxMachineConfig(data=machine_config_data, offline=offline)
+        # ic(IndalekoMachineConfigDataModel.MachineConfig.serialize(config.machine_config))
+        if not offline:
+            config.write_config_to_db()
         if hasattr(config, 'extract_volume_info'):
             getattr(config, 'extract_volume_info')(config_data)
         return config
 
     def write_config_to_db(self, overwrite : bool = True) -> None:
-        ic(self.machine_id)
+        # ic(self.machine_id)
         assert self.machine_id is not None, 'Machine ID must be specified'
         assert Indaleko.validate_uuid_string(self.machine_id), 'Machine ID must be a valid UUID'
         super().write_config_to_db(overwrite=overwrite)
@@ -412,7 +420,7 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
             timestamp=args.timestamp,
             config_dir=args.configdir,
         )
-        ic(config_file)
+        # ic(config_file)
 
     @staticmethod
     def add_command_handler(args) -> None:

@@ -21,6 +21,7 @@ import argparse
 import datetime
 import os
 import logging
+import uuid
 
 from Indaleko import Indaleko
 from IndalekoIndexer import IndalekoIndexer
@@ -53,21 +54,26 @@ class IndalekoLinuxLocalIndexer(IndalekoIndexer):
         self.machine_config = kwargs['machine_config']
         if 'machine_id' not in kwargs:
             kwargs['machine_id'] = self.machine_config.machine_id
+        self.offline = False
+        if 'offline' in kwargs:
+            self.offline = kwargs['offline']
+            del self.offline
         super().__init__(**kwargs,
                          platform=IndalekoLinuxLocalIndexer.linux_platform,
                          indexer_name=IndalekoLinuxLocalIndexer.linux_local_indexer_name,
                          **IndalekoLinuxLocalIndexer.indaleko_linux_local_indexer_service
         )
-
-
+        
     @staticmethod
-    def generate_windows_indexer_file_name(**kwargs):
-        '''Generate a file name for the Linux local indexer'''
+    def generate_linux_indexer_file_name(**kwargs) -> str:
         if 'platform' not in kwargs:
             kwargs['platform'] = IndalekoLinuxLocalIndexer.linux_platform
         if 'indexer_name' not in kwargs:
             kwargs['indexer_name'] = IndalekoLinuxLocalIndexer.linux_local_indexer_name
-        return IndalekoIndexer.generate_windows_indexer_file_name(**kwargs)
+        if 'machine_id' not in kwargs:
+            kwargs['machine_id'] = uuid.UUID(self.machine_config.machine_id).hex
+        return IndalekoIndexer.generate_indexer_file_name(**kwargs)
+
 
 
 def main():
@@ -95,7 +101,7 @@ def main():
     config_platform = IndalekoLinuxLocalIndexer.linux_platform
     if 'platform' in config_file_metadata:
         config_platform = config_file_metadata['platform']
-    log_file_name = IndalekoLinuxLocalIndexer.generate_windows_indexer_file_name(
+    log_file_name = IndalekoLinuxLocalIndexer.generate_linux_indexer_file_name(
         platform=config_platform,
         indexer_name=IndalekoLinuxLocalIndexer.linux_local_indexer_name,
         machine_id = config_file_metadata['machine'],
@@ -116,23 +122,28 @@ def main():
     pre_parser.add_argument('--datadir', '-d',
                             help='Path to the data directory',
                             default=Indaleko.default_data_dir)
+    pre_parser.add_argument('--offline', 
+                        help='Do not require live database access', 
+                        default=False, 
+                        action='store_true')
     pre_args, _ = pre_parser.parse_known_args()
 
     # Step 3: now we can load the machine configuration
-    machine_config = IndalekoLinuxMachineConfig.load_config_from_file(config_file=pre_args.config)
+    machine_config = IndalekoLinuxMachineConfig.load_config_from_file(config_file=pre_args.config, offline=pre_args.offline)
 
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     indexer = IndalekoLinuxLocalIndexer(
         machine_config=machine_config,
         timestamp=timestamp,
-        path=pre_args.path
+        path=pre_args.path,
+        offline=pre_args.offline
     )
-    output_file = IndalekoLinuxLocalIndexer.generate_windows_indexer_file_name(
+    output_file = IndalekoLinuxLocalIndexer.generate_linux_indexer_file_name(
         platform=config_platform,
         indexer_name=IndalekoLinuxLocalIndexer.linux_local_indexer_name,
         machine_id = config_file_metadata['machine'],
         target_dir=pre_args.datadir,
-        suffix='log')
+        suffix='jsonl')
     parser= argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--output', '-o',
                         help='name to assign to output file',

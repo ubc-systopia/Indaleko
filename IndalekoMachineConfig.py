@@ -49,15 +49,23 @@ class IndalekoMachineConfig:
     def __init__(self,
                  **kwargs):
         '''Initialize the machine configuration'''
+        if not hasattr(self, 'offline'):
+            if 'offline' in kwargs:
+                self.offline = kwargs['offline']
+            else:
+                self.offline = False
+        if 'offline' in kwargs:
+            del kwargs['offline']
         if not hasattr(self, 'source'): # override in derived classes
             self.source_identifier = None
-        ic(kwargs)
+        # ic(kwargs)
         self.machine_id = kwargs.get('machine_id',
                                      kwargs['data']['MachineUUID']
         )
         self.machine_config = IndalekoMachineConfigDataModel.MachineConfig.deserialize(**kwargs)
-        self.collection = IndalekoCollections().get_collection(Indaleko.Indaleko_MachineConfig)
-        assert self.collection is not None, 'Failed to get the machine configuration collection'
+        if not self.offline:
+            self.collection = IndalekoCollections().get_collection(Indaleko.Indaleko_MachineConfig)
+            assert self.collection is not None, 'Failed to get the machine configuration collection'
 
     @staticmethod
     def register_machine_configuration_service(**kwargs):
@@ -83,7 +91,7 @@ class IndalekoMachineConfig:
             doc['_key'] = self.machine_id
         if 'MachineUUID' not in doc:
             doc['MachineUUID'] = self.machine_id
-        ic(doc)
+        # ic(doc)
         print(json.dumps(doc, indent=4))
         try:
             self.collection.insert(doc, overwrite=overwrite)
@@ -156,15 +164,15 @@ def register_handler(args : argparse.Namespace) -> None:
         service_version = '1.0.2',
         service_identifier='05567376-0f4f-4d40-97f1-3ac5f764fcf3'
     )
-    ic(args)
+    # ic(args)
 
 def list_handler(args : argparse.Namespace) -> None:
     '''List all machine configurations.'''
     ic('List the services')
-    ic(args)
+    #ic(args)
     machine_configs = IndalekoMachineConfig.lookup_machine_configurations()
     for machine_config in machine_configs:
-        ic(machine_config)
+        #ic(machine_config)
         print(json.dumps(machine_config.serialize(), indent=4))
 
 class TestMachineConfig:
