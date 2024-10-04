@@ -91,6 +91,7 @@ class IndalekoDocker:
             ports={'8529/tcp': 8529},
             volumes={volume_name: {'bind': '/var/lib/arangodb3', 'mode': 'rw'}},
             environment={'ARANGO_ROOT_PASSWORD': password},
+            restart_policy={self.container_name : 'unless-stopped'},
             detach=True
         )
         logging.debug('Created container %s', container_name)
