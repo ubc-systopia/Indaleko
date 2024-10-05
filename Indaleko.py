@@ -64,16 +64,29 @@ import socket
 import ipaddress
 import base64
 import msgpack
+import sys
+
+
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+# pylint: disable=wrong-import-position
+from data_models.activity_data_registration \
+    import IndalekoActivityDataRegistrationDataModel
+from activity.data_model.activity \
+    import IndalekoActivityDataModel
 
 from IndalekoObjectSchema import IndalekoObjectSchema
 from IndalekoServiceSchema import IndalekoServiceSchema
 from IndalekoRelationshipSchema import IndalekoRelationshipSchema
 from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
-from IndalekoActivityDataProviderRegistrationSchema \
-    import IndalekoActivityDataProviderRegistrationSchema
-from IndalekoActivityContextSchema import IndalekoActivityContextSchema
 from IndalekoUserSchema import IndalekoUserSchema
 from IndalekoUserRelationshipSchema import IndalekoUserRelationshipSchema
+# pylint: enable=wrong-import-position
 
 class Indaleko:
     '''This class defines constants used by Indaleko.'''
@@ -160,7 +173,7 @@ class Indaleko:
             'indices' : { },
         },
         Indaleko_ActivityDataProviders : {
-            'schema' : IndalekoActivityDataProviderRegistrationSchema().get_json_schema(),
+            'schema' :  IndalekoActivityDataRegistrationDataModel.get_json_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {
@@ -171,7 +184,9 @@ class Indaleko:
             },
         },
         Indaleko_ActivityContext : {
-            'schema' : IndalekoActivityContextSchema().get_json_schema(),
+            'schema' : IndalekoActivityDataModel(
+                **IndalekoActivityDataModel.Config.json_schema_extra['example']
+            ).model_dump_json(),
             'edge' : False,
             'indices' : {
                 'identifier' : {

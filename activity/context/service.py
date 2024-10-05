@@ -38,8 +38,6 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
-from IndalekoActivityContextSchema import IndalekoActivityContextSchema
-from IndalekoActivityDataProviderRegistration import IndalekoActivityDataProviderRegistrationService
 from IndalekoSingleton import IndalekoSingleton
 from IndalekoDBConfig import IndalekoDBConfig
 from Indaleko import Indaleko
@@ -214,14 +212,15 @@ class IndalekoActivityContextTest:
     def check_command(self):
         '''Check the activity context database connectivity.'''
         ic('check_command called')
-        context = IndalekoActivityContext()
-        ic(context.get_current_activity_context())
 
     def test_command(self):
         '''Test the activity context data.'''
         ic('test_command called')
-        data = IndalekoActivityContext.ActivityContextData()
-        ic(data.to_dict())
+
+    def schema_command(self):
+        '''Show the data schema'''
+        ic('show schema')
+        ic(IndalekoActivityContextDataModel.get_arangodb_schema())
 
 def main():
     '''Test the IndalekoActivityContext class.'''
@@ -254,6 +253,8 @@ def main():
     parser_test = command_subparsers.add_parser('test', help='Test the activity context data')
     parser_test.set_defaults(func=IndalekoActivityContextTest.test_command)
     parser.set_defaults(func=IndalekoActivityContextTest.check_command)
+    parser_schema = command_subparsers.add_parser('schema', help='Display ArangoDB schema')
+    parser_schema.set_defaults(func=IndalekoActivityContextTest.schema_command)
     args = parser.parse_args()
     if args.debug:
         ic('Testing IndalekoActivityContext')

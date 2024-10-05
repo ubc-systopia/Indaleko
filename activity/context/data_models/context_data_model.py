@@ -34,9 +34,10 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 from activity.context.data_models.activity_data import ActivityDataModel
-from data_models.indaleko_record_data_model import IndalekoRecordDataModel
+from data_models.record import IndalekoRecordDataModel
+from data_models.base import IndalekoBaseModel
 
-class IndalekoActivityContextDataModel(BaseModel):
+class IndalekoActivityContextDataModel(IndalekoBaseModel):
     '''
     This class defines the data model for the activity context in the Indaleko
     Project.
@@ -101,27 +102,10 @@ class IndalekoActivityContextDataModel(BaseModel):
             }
         }
 
-    def serialize(self):
-        '''Serialize the object to a dictionary.'''
-        return self.model_dump(exclude_unset=True)
-
-    @staticmethod
-    def deserialize(data: dict):
-        '''Deserialize the data from a dictionary.'''
-        return IndalekoActivityContextDataModel(**data)
 
 def main():
     '''Test code for IndalekoActivityContextDataModel.'''
-    activity_context = IndalekoActivityContextDataModel(
-        **IndalekoActivityContextDataModel.Config.json_schema_extra['example']
-    )
-    print(activity_context.serialize())
-    print(activity_context.model_json_schema())
-    doc = activity_context.serialize()
-    print(type(doc))
-    print(doc)
-    check_data = IndalekoActivityContextDataModel.deserialize(doc)
-    print(check_data.serialize())
+    IndalekoActivityContextDataModel.test_model_main()
 
 if __name__ == '__main__':
     main()
