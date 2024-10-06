@@ -24,8 +24,8 @@ import sys
 
 from typing import Dict, Any, Union
 
-from datetime import datetime
-from pydantic import BaseModel, Field
+from datetime import datetime, timezone
+from pydantic import Field, field_validator, field_serializer, AwareDatetime
 from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -47,7 +47,7 @@ class IndalekoRecordDataModel(IndalekoBaseModel):
     SourceIdentifier : IndalekoSourceIdentifierDataModel = Field(...,
                                       title='SourceIdentifier',
                                       description='The source identifier for the record.')
-    Timestamp : datetime = Field(...,
+    Timestamp : AwareDatetime = Field(...,
                                  title='Timestamp',
                                  description='The timestamp of when this record was created.')
     Attributes : Dict[str, Any] = \
@@ -57,7 +57,15 @@ class IndalekoRecordDataModel(IndalekoBaseModel):
     Data : str = Field(...,
                        title='Data',
                        description='The raw (uninterpreted) data from the source.')
-
+    
+    @field_validator('Timestamp', mode='before')
+    def ensure_timezone(cls, value: datetime):
+        if isinstance(value, str):
+            value = datetime.fromisoformat(value)
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value
+    
     class Config:
         '''Sample configuration data for the data model.'''
         json_schema_extra = {
@@ -99,20 +107,7 @@ class IndalekoRecordDataModel(IndalekoBaseModel):
 
 def main():
     '''This allows testing the data model'''
-    data = IndalekoRecordDataModel(
-        **IndalekoRecordDataModel.Config.json_schema_extra['example']
-    )
-    ic(data)
-    ic(data.model_dump())
-    ic(data.model_dump_json(indent=2))
-    ic(data.json())
-    ic(data.dict())
-    serial_data = data.serialize()
-    ic(type(serial_data))
-    ic(serial_data)
-    data_check = IndalekoRecordDataModel.deserialize(serial_data)
-    assert data_check == data
-    ic(data.model_dump_json(indent=2))
+    IndalekoRecordDataModel.test_model_main()
 
 if __name__ == '__main__':
     main()

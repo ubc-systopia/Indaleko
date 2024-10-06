@@ -18,6 +18,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
+import json
 import os
 import sys
 import uuid
@@ -95,6 +96,14 @@ class IndalekoActivityDataRegistration:
     def model_dump(self) -> dict:
         '''Return the model dump for the object.'''
         return self.registration_object.model_dump()
+    
+    def model_dump_json(self) -> dict:
+        '''Return a JSON compatible dictionary.'''
+        data = self.registration_object.model_dump_json()
+        assert isinstance(data, str)
+        doc = json.loads(data)
+        assert isinstance(doc, dict)
+        return doc
 
 
 def main():

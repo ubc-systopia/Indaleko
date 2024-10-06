@@ -44,6 +44,8 @@ class KnownSemanticAttributes:
     _initialized = False
     _attributes_by_provider_type = {}
     _attributes_by_uuid = {}
+    _short_prefix = 'ADP_'
+    full_prefix = 'ACTIVITY_DATA'
 
     _modules_to_load = {
         'collaboration' : 'activity.collectors.collaboration.semantic_attributes',
@@ -62,8 +64,8 @@ class KnownSemanticAttributes:
         for label, name in cls._modules_to_load.items():
             module = KnownSemanticAttributes.safe_import(name)
             for label, value in module.__dict__.items():
-                if label.startswith('ADP_'):
-                    full_label = 'ACTIVITY_DATA_PROVIDER' + label[3:]
+                if label.startswith(KnownSemanticAttributes._short_prefix):
+                    full_label = KnownSemanticAttributes.full_prefix + label[3:]
                     assert not hasattr(cls, full_label), f"Duplicate definition of {full_label}"
                     setattr(cls, full_label, value)
                     provider_type = label.rsplit('_', maxsplit=2)[-2]
@@ -71,14 +73,6 @@ class KnownSemanticAttributes:
                         cls._attributes_by_provider_type[provider_type] = {}
                     cls._attributes_by_provider_type[provider_type][full_label] = value
                     cls._attributes_by_uuid[value] = full_label
-
-    @staticmethod
-    def extract_attributes(raw_data : dict) -> dict:
-        '''Extract the attributes from the raw data provided.'''
-        ic(raw_data)
-        for label, value in raw_data.items():
-            if label.startswith('ADP_'):
-                full_label = 'ACTIVITY_DATA_PROVIDER' + label[3:]
 
     @staticmethod
     def safe_import(name : str) -> Union[Dict[str, Any], None]:

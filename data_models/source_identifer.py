@@ -70,18 +70,8 @@ class IndalekoSourceIdentifierDataModel(IndalekoBaseModel):
 
 def main():
     '''This allows testing the data model'''
-    data = IndalekoSourceIdentifierDataModel(
-        **IndalekoSourceIdentifierDataModel.Config.json_schema_extra['example']
-    )
-    ic(data)
-    ic(data.json())
-    ic(data.dict())
-    serial_data = data.serialize()
-    ic(type(serial_data))
-    ic(serial_data)
-    data_check = IndalekoSourceIdentifierDataModel.deserialize(serial_data)
-    assert data_check == data
-    ic(IndalekoSourceIdentifierDataModel.schema_json())
+    IndalekoSourceIdentifierDataModel.test_model_main()
 
+    
 if __name__ == '__main__':
     main()

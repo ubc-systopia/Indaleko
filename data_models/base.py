@@ -23,10 +23,10 @@ import sys
 import uuid
 import json
 
-from typing import Dict, Any, Type, TypeVar
+from typing import Dict, Any, Type, TypeVar, Union
 
-from datetime import datetime
-from pydantic import BaseModel, Field
+from datetime import datetime, timezone
+from pydantic import BaseModel, field_validator, FieldValidationInfo, field_serializer, FieldSerializationInfo
 from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -86,6 +86,7 @@ class IndalekoBaseModel(BaseModel):
         data = cls.get_example()
         ic(data)
         ic(dir(data))
+        print(data.model_dump_json(indent=2))
         serial_data = data.serialize()
         data_check = cls.deserialize(serial_data)
         assert data_check == data

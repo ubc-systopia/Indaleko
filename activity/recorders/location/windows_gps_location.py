@@ -61,9 +61,9 @@ class WindowsGPSLocationCollector(BaseLocationDataCollector):
     description = 'Windows GPS Location Collector'
 
     semantic_attributes_supported = {
-        KnownSemanticAttributes.ACTIVITY_DATA_PROVIDER_LOCATION_LATITUDE: 'Latitude',
-        KnownSemanticAttributes.ACTIVITY_DATA_PROVIDER_LOCATION_LONGITUDE: 'Longitude',
-        KnownSemanticAttributes.ACTIVITY_DATA_PROVIDER_LOCATION_ACCURACY: 'Accuracy',
+        KnownSemanticAttributes.ACTIVITY_DATA_LOCATION_LATITUDE: 'Latitude',
+        KnownSemanticAttributes.ACTIVITY_DATA_LOCATION_LONGITUDE: 'Longitude',
+        KnownSemanticAttributes.ACTIVITY_DATA_LOCATION_ACCURACY: 'Accuracy',
     }
 
     def __init__(self, **kwargs):
@@ -138,7 +138,7 @@ class WindowsGPSLocationCollector(BaseLocationDataCollector):
         semantic_attributes = [
             IndalekoSemanticAttributeDataModel(
                 Identifier = IndalekoUUIDDataModel(
-                    Identifier=ksa.ACTIVITY_DATA_PROVIDER_LOCATION_LATITUDE,
+                    Identifier=ksa.ACTIVITY_DATA_LOCATION_LATITUDE,
                     Version='1',
                     Description='Latitude'
                 ),
@@ -146,7 +146,7 @@ class WindowsGPSLocationCollector(BaseLocationDataCollector):
             ),
             IndalekoSemanticAttributeDataModel(
                 Identifier= IndalekoUUIDDataModel(
-                    Identifier=ksa.ACTIVITY_DATA_PROVIDER_LOCATION_LONGITUDE,
+                    Identifier=ksa.ACTIVITY_DATA_LOCATION_LONGITUDE,
                     Version='1',
                     Description='Longitude'
                 ),
@@ -154,7 +154,7 @@ class WindowsGPSLocationCollector(BaseLocationDataCollector):
             ),
             IndalekoSemanticAttributeDataModel(
                 Identifier = IndalekoUUIDDataModel(
-                    Identifier=ksa.ACTIVITY_DATA_PROVIDER_LOCATION_ACCURACY,
+                    Identifier=ksa.ACTIVITY_DATA_LOCATION_ACCURACY,
                     Version='1',
                     Description='Accuracy'
                 ),

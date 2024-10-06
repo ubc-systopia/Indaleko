@@ -295,9 +295,9 @@ class BaseLocationDataCollector:
             be overridden by subclasses to provide additional attributes.
         '''
         return [
-            KnownSemanticAttributes.ACTIVITY_DATA_PROVIDER_LOCATION_LATITUDE,
-            KnownSemanticAttributes.ACTIVITY_DATA_PROVIDER_LOCATION_LONGITUDE,
-            KnownSemanticAttributes.ACTIVITY_DATA_PROVIDER_LOCATION_ACCURACY
+            KnownSemanticAttributes.ACTIVITY_DATA_LOCATION_LATITUDE,
+            KnownSemanticAttributes.ACTIVITY_DATA_LOCATION_LONGITUDE,
+            KnownSemanticAttributes.ACTIVITY_DATA_LOCATION_ACCURACY
         ]
         if hasattr(self, 'provider'):
             assert isinstance(self.provider, CollectorBase),\

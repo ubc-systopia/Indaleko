@@ -173,7 +173,7 @@ class Indaleko:
             'indices' : { },
         },
         Indaleko_ActivityDataProviders : {
-            'schema' :  IndalekoActivityDataRegistrationDataModel.get_json_schema(),
+            'schema' :  IndalekoActivityDataRegistrationDataModel.get_arangodb_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {
@@ -184,9 +184,7 @@ class Indaleko:
             },
         },
         Indaleko_ActivityContext : {
-            'schema' : IndalekoActivityDataModel(
-                **IndalekoActivityDataModel.Config.json_schema_extra['example']
-            ).model_dump_json(),
+            'schema' : IndalekoActivityDataModel.get_arangodb_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {

@@ -77,60 +77,9 @@ class IndalekoActivityDataRegistrationDataModel(IndalekoBaseModel):
             }
         }
 
-    def serialize(self) -> Dict[str, Any]:
-        '''Serialize the object to a dictionary'''
-        return self.model_dump(exclude_unset=True)
-
-    @staticmethod
-    def deserialize(data : Dict[str, Any]) -> \
-        'IndalekoActivityDataRegistrationDataModel':
-        '''Deserialize the object from a dictionary'''
-        if isinstance(data, str):
-            return IndalekoActivityDataRegistrationDataModel.parse_raw(data)
-        elif isinstance(data, dict):
-            return IndalekoActivityDataRegistrationDataModel(**data)
-        else:
-            raise ValueError(f"Expected str or dict, got {type(data)}")
-        
-    @staticmethod
-    def get_json_example() -> dict:
-        '''This will return a JSON compatible encoding as a python dictionary'''
-        return json.loads(IndalekoActivityDataRegistrationDataModel(
-            **IndalekoActivityDataRegistrationDataModel.Config.json_schema_extra['example']
-        ).model_dump_json())
-    
-    @staticmethod
-    def get_example() -> 'IndalekoActivityDataRegistrationDataModel':
-        return IndalekoActivityDataRegistrationDataModel(
-            **IndalekoActivityDataRegistrationDataModel.get_json_example()
-        )
-
-    @staticmethod
-    def get_json_schema() -> dict:
-        '''Returns the JSON schema for the data model in Python dictionary format.'''
-        example = IndalekoActivityDataRegistrationDataModel.get_example()
-        return json.loads(example.model_dump_json())
-
 def main():
     '''This allows testing the data model.'''
-    data = IndalekoActivityDataRegistrationDataModel.get_example()
-    ic(data)
-    serial_data = data.serialize()
-    ic(type(serial_data))
-    ic(serial_data)
-    data_check = IndalekoActivityDataRegistrationDataModel.deserialize(serial_data)
-    assert data_check == data
-    #ic(IndalekoActivityDataProviderRegistrationDataModel.model_json_schema())
-    data_model = IndalekoActivityDataRegistrationDataModel(
-        **IndalekoActivityDataRegistrationDataModel.Config.json_schema_extra['example']
-    ).model_dump()
-    arango_schema = {
-        "message": "",
-        "level": "strict",
-        "type": "json",
-        "rule" : IndalekoActivityDataRegistrationDataModel.model_json_schema()
-    }
-    print(json.dumps(arango_schema, indent=4))
+    IndalekoActivityDataRegistrationDataModel.test_model_main()
 
 if __name__ == '__main__':
     main()

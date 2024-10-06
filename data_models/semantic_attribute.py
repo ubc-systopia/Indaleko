@@ -78,21 +78,7 @@ class IndalekoSemanticAttributeDataModel(IndalekoBaseModel):
 
 def main():
     '''This allows testing the data model'''
-    data = IndalekoSemanticAttributeDataModel(
-            Identifier=IndalekoUUIDDataModel(
-                Identifier=uuid.uuid4(),
-                Label='This is a sample IndalekoUUID.'),
-            Data='foo.lua'
-    )
-    ic(data)
-    ic(data.model_dump())
-    ic(data.model_dump_json(indent=4))
-    serial_data = data.serialize()
-    ic(type(serial_data))
-    ic(serial_data)
-    data_check = IndalekoSemanticAttributeDataModel.deserialize(serial_data)
-    assert data_check == data
-    ic(IndalekoSemanticAttributeDataModel.get_json_example())
+    IndalekoSemanticAttributeDataModel.test_model_main()
 
 if __name__ == '__main__':
     main()

@@ -254,7 +254,9 @@ class IndalekoActivityDataRegistrationService(IndalekoSingleton):
         activity_registration = IndalekoActivityDataRegistration(
             registration_data=kwargs
         )
-        activity_registration_data = activity_registration.model_dump()
+        activity_registration_data = activity_registration.model_dump_json()
+        check_data = json.dumps(activity_registration_data, indent=2)
+        print(check_data)
         activity_registration_data['_key'] = provider_id
         self.activity_provider_collection.\
             insert(json.dumps(activity_registration_data, default=str))

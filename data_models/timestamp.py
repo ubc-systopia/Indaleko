@@ -23,7 +23,7 @@ import os
 import sys
 import uuid
 
-from pydantic import BaseModel, Field
+from pydantic import Field, AwareDatetime, field_validator
 from typing import Optional, Dict, Any
 from datetime import datetime, UTC
 from icecream import ic
@@ -48,7 +48,7 @@ class IndalekoTimestampDataModel(IndalekoBaseModel):
                               title='Label',
                               description='UUID representing the semantic meaning of this timestamp.',
                               example='12345678-1234-5678-1234-567812345678')
-    Value : datetime = Field(...,
+    Value : AwareDatetime = Field(...,
                              title='Value',
                              description='The timestamp value.',
                              example='2024-01-01T00:00:00Z')
@@ -67,17 +67,18 @@ class IndalekoTimestampDataModel(IndalekoBaseModel):
             }
         }
 
+    @field_validator('Value', mode='before')
+    def ensure_timezone(cls, value: datetime):
+        if isinstance(value, str):
+            value = datetime.fromisoformat(value)
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value
+
 
 def main():
     '''This allows testing the data model'''
-    data = IndalekoTimestampDataModel.get_example()
-    ic(data)
-    serial_data = data.serialize()
-    ic(type(serial_data))
-    ic(serial_data)
-    data_check = IndalekoTimestampDataModel.deserialize(serial_data)
-    assert data_check == data
-    ic(IndalekoTimestampDataModel.schema_json())
+    IndalekoTimestampDataModel.test_model_main()
 
 if __name__ == '__main__':
     main()

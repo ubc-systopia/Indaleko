@@ -64,17 +64,7 @@ class IndalekoUUIDDataModel(IndalekoBaseModel):
 
 def main():
     '''This allows testing the data model'''
-    data = IndalekoUUIDDataModel(
-        **IndalekoUUIDDataModel.Config.json_schema_extra['example']
-    )
-    ic(data)
-    ic(data.model_dump_json(indent=4))
-    serial_data = data.serialize()
-    ic(type(serial_data))
-    ic(serial_data)
-    data_check = IndalekoUUIDDataModel.deserialize(serial_data)
-    assert data_check == data
-    ic(IndalekoUUIDDataModel.get_json_example())
+    IndalekoUUIDDataModel.test_model_main()
 
 if __name__ == '__main__':
     main()

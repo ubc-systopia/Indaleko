@@ -56,7 +56,7 @@ class IndalekoActivityDataProviderKnownSemanticAttributes(IndalekoSingleton):
         self.uuid_to_label = {}
         ksa = KnownSemanticAttributes()
         for label, value in ksa.__dict__.items():
-            if label.startswith('ACTIVITY_DATA_PROVIDER_'):
+            if label.startswith(KnownSemanticAttributes.full_prefix):
                 setattr(self, label+'_UUID', uuid.UUID(value))
                 self.uuid_to_label[value] = label
         self._initialized = True
@@ -66,7 +66,7 @@ class IndalekoActivityDataProviderKnownSemanticAttributes(IndalekoSingleton):
         '''Get the known semantic attributes for the activity data providers'''
         return {
             label : value for label, value in KnownSemanticAttributes.\
-                __dict__.items() if label.startswith('ACTIVITY_DATA_PROVIDER_')
+                __dict__.items() if label.startswith('KnownSemanticAttributes.full_prefix')
         }
 
     @staticmethod
