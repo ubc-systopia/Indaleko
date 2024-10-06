@@ -21,9 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os 
 import sys
 
-from pydantic import BaseModel, Field
+from pydantic import  Field, field_validator, AwareDatetime
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 from icecream import ic
 
@@ -44,8 +44,17 @@ class BaseLocationDataModel(IndalekoBaseModel):
     accuracy: Optional[float] = Field(None, description="Accuracy of the location data")
     heading: Optional[float] = Field(None, description="Heading/direction of movement")
     speed: Optional[float] = Field(None, description="Speed of movement")
-    timestamp: datetime = Field(..., description="Timestamp when the location was recorded")
+    timestamp: AwareDatetime = Field(..., description="Timestamp when the location was recorded")
     source: str = Field(..., description="Source of the location data, e.g., 'GPS', 'IP', etc.")
+
+    @field_validator('timestamp', mode='before')
+    def ensure_timezone(cls, value: datetime):
+        if isinstance(value, str):
+            value = datetime.fromisoformat(value)
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value
+
 
     class Config:
         json_schema_extra = {
@@ -63,19 +72,7 @@ class BaseLocationDataModel(IndalekoBaseModel):
 
 def main():
     '''This allows testing the data model'''
-    data = BaseLocationDataModel(
-        latitude=49.2827,
-        longitude=-123.1207,
-        altitude=70.0,
-        accuracy=5.0,
-        heading=270.0,
-        speed=10.5,
-        timestamp="2023-09-21T10:30:00Z",
-        source="GPS"
-    )
-    ic(data)
-    print(data.get_json_schema())
-
+    BaseLocationDataModel.test_model_main()
 
 if __name__ == '__main__':
     main()

@@ -18,13 +18,13 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-import datetime
 import os
 import sys
 import uuid
 
 from typing import List
-from pydantic import Field, BaseModel
+from pydantic import Field, field_validator, AwareDatetime
+from datetime import datetime, timezone
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -77,7 +77,7 @@ class IndalekoActivityContextDataModel(IndalekoBaseModel):
                                title='Handle',
                                description='The activity context handle.')
 
-    Timestamp : datetime.datetime = Field(...,
+    Timestamp : AwareDatetime = Field(...,
                                     title='Timestamp',
                                     description='The timestamp when the activity context was created.'
                                 )
@@ -87,6 +87,15 @@ class IndalekoActivityContextDataModel(IndalekoBaseModel):
                   title='ActivityData',
                   description='The activity data associated with the activity context.'
             )
+    
+    @field_validator('Timestamp', mode='before')
+    def ensure_timezone(cls, value: datetime):
+        if isinstance(value, str):
+            value = datetime.fromisoformat(value)
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value
+
 
     class Config:
         '''Configuration for the class.'''

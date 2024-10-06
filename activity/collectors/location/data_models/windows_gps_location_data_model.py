@@ -22,9 +22,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
-from pydantic import Field
+from pydantic import Field, field_validator, AwareDatetime
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -44,10 +44,19 @@ class WindowsGPSLocationDataModel(BaseLocationDataModel):
     is_remote_source: Optional[bool] = Field(None, description="Is the source remote?")
     point: Optional[str] = Field(None, description="A string representation of the point data")
     position_source: Optional[str] = Field(None, description="The source of the position data")
-    position_source_timestamp: Optional[datetime] = Field(None, description="Timestamp of the position source")
+    position_source_timestamp: Optional[AwareDatetime] = Field(None, description="Timestamp of the position source")
     satellite_data: Optional[WindowsGPSLocationSatelliteDataModel] = Field(None, description="Details about satellite data used for the position")
     civic_address: Optional[str] = Field(None, description="Civic address for the location, if available")
     venue_data: Optional[str] = Field(None, description="Details about the venue data for the location, if available")
+
+    @field_validator('position_source_timestamp', mode='before')
+    def ensure_timezone(cls, value: datetime):
+        if isinstance(value, str):
+            value = datetime.fromisoformat(value)
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value
+
 
     class Config:
         json_schema_extra = {
@@ -93,27 +102,9 @@ class WindowsGPSLocationDataModel(BaseLocationDataModel):
             }
         }
 
-    def serialize(self):
-        '''Serialize the data model'''
-        return self.model_dump(exclude_unset=True)
-
-    @staticmethod
-    def deserialize(data):
-        '''Deserialize the data model'''
-        return WindowsGPSLocationDataModel(**data)
-
 def main():
     '''This allows testing the data model'''
-    ic(WindowsGPSLocationDataModel.Config.json_schema_extra['example'])
-    data = WindowsGPSLocationDataModel(
-        **WindowsGPSLocationDataModel.Config.json_schema_extra['example'],
-    )
-    ic(data)
-    ic(data.model_dump())
-    serial_data = data.serialize()
-    data_check = WindowsGPSLocationDataModel.deserialize(serial_data)
-    assert data_check == data
-    ic(WindowsGPSLocationDataModel.model_json_schema())
+    WindowsGPSLocationDataModel.test_model_main()
 
 
 if __name__ == '__main__':

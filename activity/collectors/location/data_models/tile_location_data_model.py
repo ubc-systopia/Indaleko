@@ -21,9 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
-from pydantic import BaseModel, Field
+from pydantic import  Field, field_validator, AwareDatetime
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -67,12 +67,22 @@ class TileLocationDataModel(BaseLocationDataModel):
     hardware_version: Optional[str] = Field(None, description="Version of the hardware")
     kind: Optional[str] = Field(None, description="Kind of Tile device")
     lost: bool = Field(False, description="Boolean indicating if the Tile device is lost")
-    lost_timestamp: Optional[datetime] = Field(None, description="Timestamp when the Tile device was lost")
+    lost_timestamp: Optional[AwareDatetime] = Field(None, description="Timestamp when the Tile device was lost")
     name : str = Field(..., description="User defined name for the Tile device")
     ring_state: Optional[str] = Field(None, description="Current ring state")
     visible: bool = Field(False, description="Boolean indicating if the Tile device is visible")
     voip_state: Optional[str] = Field(None, description="State of the voip connection")
     email : str = Field(..., description="Email address associated with the Tile device")
+
+    @field_validator('lost_timestamp', mode='before')
+    def ensure_timezone(cls, value: datetime):
+        if isinstance(value, str):
+            value = datetime.fromisoformat(value)
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value
+
+
 
     class Config:
         json_schema_extra = {
@@ -104,15 +114,8 @@ class TileLocationDataModel(BaseLocationDataModel):
 
 def main():
     '''This allows testing the data model'''
-    data = TileLocationDataModel(
-        **TileLocationDataModel.Config.json_schema_extra['example']
-    )
-    ic(data)
-    ic(dir(data))
-    serial_data = data.serialize()
-    data_check = TileLocationDataModel.deserialize(serial_data)
-    assert data_check == data
-    ic(TileLocationDataModel.get_arangodb_schema())
+    TileLocationDataModel.test_model_main()
 
+    
 if __name__ == '__main__':
     main()
