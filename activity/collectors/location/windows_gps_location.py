@@ -71,7 +71,7 @@ class WindowsGPSLocation(LocationCollector):
     def get_provider_characteristics(self) -> List[ActivityDataCharacteristics]:
         '''Get the provider characteristics'''
         return [
-            ActivityDataCharacteristics.PROVIDER_SPATIAL_DATA,
+            ActivityDataCharacteristics.ACTIVITY_DATA_SPATIAL,
             ActivityDataCharacteristics.PROVIDER_DEVICE_STATE_DATA,
         ]
 

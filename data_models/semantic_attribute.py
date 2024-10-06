@@ -19,10 +19,8 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import json
 import os
 import sys
-import uuid
 
 from typing import Any
 
@@ -57,10 +55,11 @@ class IndalekoSemanticAttributeDataModel(IndalekoBaseModel):
     this way, we allow Indaleko to index these values without understanding the
     meaning of them.
     '''
-    Identifier : IndalekoUUIDDataModel = Field(...,
-                                   title='Identifier',
-                                   description='The UUID specific to this type of semantic attribute.',
-                                    example='12345678-1234-5678-1234-567812345678')
+    Identifier : IndalekoUUIDDataModel =\
+          Field(...,
+                title='Identifier',
+                description='The UUID specific to this type of semantic attribute.',
+                example='12345678-1234-5678-1234-567812345678')
     Data : Any = Field(...,
                        title='Data',
                        description='The data associated with this semantic attribute.')

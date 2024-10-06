@@ -51,8 +51,8 @@ class WiFiLocation(LocationCollector):
         '''Get the provider characteristics'''
         raise NotImplementedError('This method is not fully implemented yet.')
         return [
-            ActivityDataCharacteristics.PROVIDER_SPATIAL_DATA,
-            ActivityDataCharacteristics.PROVIDER_NETWORK_DATA,
+            ActivityDataCharacteristics.ACTIVITY_DATA_SPATIAL,
+            ActivityDataCharacteristics.ACTIVITY_DATA_NETWORK,
             ActivityDataCharacteristics.PROVIDER_DEVICE_STATE_DATA,
         ]
 

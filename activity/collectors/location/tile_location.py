@@ -90,8 +90,8 @@ class TileLocation(LocationCollector):
     def get_provider_characteristics(self) -> List[ActivityDataCharacteristics]:
         '''Get the provider characteristics'''
         return [
-            ActivityDataCharacteristics.PROVIDER_SPATIAL_DATA,
-            ActivityDataCharacteristics.PROVIDER_NETWORK_DATA,
+            ActivityDataCharacteristics.ACTIVITY_DATA_SPATIAL,
+            ActivityDataCharacteristics.ACTIVITY_DATA_NETWORK,
             ActivityDataCharacteristics.PROVIDER_DEVICE_STATE_DATA,
         ]
 
