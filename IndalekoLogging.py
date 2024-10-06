@@ -2,7 +2,6 @@
 
 import logging
 import os
-from Indaleko import Indaleko
 import datetime
 import argparse
 import platform
@@ -13,6 +12,7 @@ class IndalekoLogging(IndalekoSingleton):
 
     def __init__(self, **kwargs):
         """Initialize a new instance of the IndalekoLogging class object."""
+        from Indaleko import Indaleko 
         if self._initialized:
             return
         self.log_level = kwargs.get('log_level', logging.DEBUG)
@@ -37,10 +37,13 @@ class IndalekoLogging(IndalekoSingleton):
     @staticmethod
     def get_logging_levels() -> list:
         """Return a list of valid logging levels."""
+        from Indaleko import Indaleko
+
         return Indaleko.get_logging_levels()
 
     @staticmethod
     def generate_log_file_name(**kwargs) -> str:
+        from Indaleko import Indaleko
         now = datetime.datetime.now(datetime.timezone.utc)
         timestamp=now.isoformat()
         service_name = kwargs.get('service_name', 'unknown_service')
@@ -57,8 +60,11 @@ class IndalekoLogging(IndalekoSingleton):
         return fname
 
     @staticmethod
-    def list_service_logs(service_name : str, logs_dir : str = Indaleko.default_log_dir) -> list:
+    def list_service_logs(service_name : str, logs_dir : str = None) -> list:
         """List the log files for a given service."""
+        from Indaleko import Indaleko
+        if logs_dir is None:
+            logs_dir = Indaleko.default_log_dir
         return [x for x in os.listdir(logs_dir) if service_name in x]
 
     @staticmethod
@@ -133,6 +139,8 @@ def prune_logs(args: argparse.Namespace) -> None:
 
 def main():
     """Main function for the IndalekoLogging class."""
+    from Indaleko import Indaleko
+
     print("Welcome to Indaleko Logging Management")
     indaleko_logging = IndalekoLogging(service_name='IndalekoLogging')
     assert indaleko_logging is not None, "IndalekoLogging is None"
