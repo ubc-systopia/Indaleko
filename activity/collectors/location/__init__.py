@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import importlib
 import os
+import platform
 import sys
 
 from typing import Dict, Type
@@ -36,7 +37,8 @@ from activity.collectors.location.location_base import LocationCollector
 from activity.collectors.location.ip_location import IPLocation
 from activity.collectors.location.tile_location import TileLocation
 from activity.collectors.location.wifi_location import WiFiLocation
-from activity.collectors.location.windows_gps_location import WindowsGPSLocation
+if platform.system() == 'Windows':
+    WindowsGPSLocation = importlib.import_module('activity.collectors.location.windows_gps_location').WindowsGPSLocation
 # pylint: enable=wrong-import-position
 
 # Define what should be available when importing from this package
@@ -45,5 +47,7 @@ __all__ = [
     'IPLocation',
     'TileLocation',
     'WiFiLocation',
-    'WindowsGPSLocation',
     ]
+
+if platform.system() == 'Windows':
+    __all__.append('WindowsGPSLocation')
