@@ -38,7 +38,7 @@ from activity.collectors.location.ip_location import IPLocation
 from activity.collectors.location.tile_location import TileLocation
 from activity.collectors.location.wifi_location import WiFiLocation
 if platform.system() == 'Windows':
-    from activity.collectors.location.windows_gps_location import WindowsGPSLocation
+    WindowsGPSLocation = importlib.import_module('activity.collectors.location.windows_gps_location').WindowsGPSLocation
 # pylint: enable=wrong-import-position
 
 # Define what should be available when importing from this package
