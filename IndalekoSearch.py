@@ -28,16 +28,7 @@ from icecream import ic
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoSchema import IndalekoSchema
 
-from search.interface.cli import CLI
-from search.query_processing.nl_parser import NLParser
-from search.query_processing.query_translator.aql_translator import AQLTranslator
-from search.query_processing.query_history import QueryHistory
-from search.search_execution.query_executor.aql_executor import AQLExecutor
-from search.result_analysis.metadata_analyzer import MetadataAnalyzer
-from search.result_analysis.facet_generator import FacetGenerator
-from search.result_analysis.result_ranker import ResultRanker
-from search.utils.llm_connector.openai_connector import OpenAIConnector
-from search.utils.logging_service import LoggingService
+from query import CLI, NLParser, AQLTranslator, QueryHistory, AQLExecutor, MetadataAnalyzer, FacetGenerator, ResultRanker, OpenAIConnector, LoggingService
 class IndalekoSearch():
     '''
     This is a class object for performing specific searches in the Indaleko database.

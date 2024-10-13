@@ -29,6 +29,8 @@ import os
 
 import arango
 
+from typing import Union
+
 from icecream import ic
 
 from IndalekoMachineConfigDataModel import IndalekoMachineConfigDataModel
@@ -58,6 +60,16 @@ class IndalekoMachineConfig:
         self.machine_config = IndalekoMachineConfigDataModel.MachineConfig.deserialize(**kwargs)
         self.collection = IndalekoCollections().get_collection(Indaleko.Indaleko_MachineConfig)
         assert self.collection is not None, 'Failed to get the machine configuration collection'
+
+    @staticmethod
+    def find_configs_in_db(source_id : Union[str,None]= None) -> list:
+        '''Find the machine configurations in the database.'''
+        assert source_id is not None and Indaleko.validate_uuid_string(source_id), 'Invalid source identifier'
+        return [
+            IndalekoMachineConfig.serialize(config)
+            for config in IndalekoMachineConfig.lookup_machine_configurations(source_id=source_id)
+        ]
+
 
     @staticmethod
     def register_machine_configuration_service(**kwargs):
@@ -103,7 +115,7 @@ class IndalekoMachineConfig:
     @staticmethod
     def lookup_machine_configuration_by_machine_id(machine_id : str) -> 'IndalekoMachineConfig':
         '''Lookup a machine configuration service'''
-        assert isinstance(machine_id, str), 'Machine ID must be a UUID string'
+        assert isinstance(machine_id, str), f'Machine ID must be a UUID string, not {type(machine_id)}'
         assert Indaleko.validate_uuid_string(machine_id), 'Invalid machine identifier'
         collections = IndalekoCollections()
         results = collections.db_config.db.aql.execute(

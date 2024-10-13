@@ -26,6 +26,8 @@ import argparse
 import re
 import arango
 
+from typing import Union
+
 from icecream import ic
 
 from Indaleko import Indaleko
@@ -75,20 +77,21 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             prefix = IndalekoWindowsMachineConfig.windows_machine_config_file_prefix
         return IndalekoMachineConfig.find_config_files(
             directory,
-            prefix
+            prefix,
+            suffix=suffix
         )
 
     @staticmethod
-    def find_configs_in_db(source_id : str = windows_machine_config_uuid_str) -> list:
+    def find_configs_in_db(source_id : Union[str, None]) -> list:
         '''Find the machine configurations in the database for Windows.'''
-        return [
-            IndalekoMachineConfig.serialize(config)
-            for config in IndalekoMachineConfig.lookup_machine_configurations(source_id=source_id)
-        ]
+        if source_id is None:
+            source_id = IndalekoWindowsMachineConfig.windows_machine_config_uuid_str
+        return IndalekoMachineConfig.find_configs_in_db(source_id)
 
     @staticmethod
     def load_config_from_file(config_dir : str = None,
                               config_file : str = None) -> 'IndalekoWindowsMachineConfig':
+        '''Given the directory and name of a configuration file, load the configuration.'''
         config_data ={}
         if config_dir is None and config_file is None:
             # nothing specified, so we'll search and find
@@ -331,7 +334,7 @@ def main():
     args = parser.parse_args()
     if args.list:
         print('Listing machine configurations in the database.')
-        configs = IndalekoWindowsMachineConfig.find_configs_in_db()
+        configs = IndalekoWindowsMachineConfig.find_configs_in_db(None)
         for config in configs:
             hostname = 'unknown'
             if 'hostname' in config:
