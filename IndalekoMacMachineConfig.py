@@ -205,13 +205,11 @@ def main():
 
         configs = IndalekoMacOSMachineConfig.find_configs_in_db(IndalekoMacOSMachineConfig.macos_machine_config_uuid_str)
         for config in configs:
-            hostname = 'unknown'
+            hostname = 'Unknown'
             if 'hostname' in config:
                 hostname = config['hostname']
             print('Configuration for machine:', hostname)
-            print(f'\t    UUID: {config["_key"]}')
-            print(f'\tCaptured: {config["Captured"]["Value"]}')
-            print(f'\tPlatform: {config["Platform"]["software"]["OS"]}')
+            print(json.dumps(config, indent=4))
         return
 
     if args.delete:
@@ -227,7 +225,8 @@ def main():
         assert os.path.exists(Indaleko.default_config_dir), f'config path {Indaleko.default_config_dir} does not exists'
         print('Listing machine configuration files in the default directory.')
         files = IndalekoMacOSMachineConfig.find_config_files(
-            Indaleko.default_config_dir)
+            Indaleko.default_config_dir,
+            IndalekoMacOSMachineConfig.macos_machine_config_file_prefix)
         for file in files:
             print(file)
         return
