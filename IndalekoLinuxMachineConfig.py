@@ -67,12 +67,11 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
         self.service_registration = IndalekoMachineConfig.register_machine_configuration_service(
             **IndalekoLinuxMachineConfig.linux_machine_config_service
         )
-        self.db = kwargs.get('db', IndalekoDBConfig())
         super().__init__(**kwargs)
 
     @staticmethod
     def find_configs_in_db(source_id : str = linux_machine_config_uuid_str) -> list:
-        '''Find the machine configurations in the database for Windows.'''
+        '''Find the machine configurations in the database for Linux.'''
         return [
             IndalekoMachineConfig.serialize(config)
             for config in IndalekoMachineConfig.lookup_machine_configurations(source_id=source_id)
@@ -440,7 +439,7 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
         assert isinstance(config, IndalekoLinuxMachineConfig), \
             f"Unexpected config type: {type(config)}"
         # Now to add the configuration to the database
-        config.write_config_to_db()
+        config.write_config_to_db(overwrite=True)
         return
 
 
@@ -497,11 +496,13 @@ def main():
         config_dir = pre_args.configdir
     if not os.path.isdir(config_dir):
         raise Exception(f"Configuration directory does not exist: {config_dir}")
+    if platform.system() != 'Linux':
+        ic('Warning: foreign import of Linux configuration.')
     log_file_name = None
     if pre_args.log is None:
         file_name = Indaleko.generate_file_name(
             suffix='log',
-            platform=platform.system(),
+            platform='Linux', # Note: this is the platform of the machine where the config came from.
             service='machine_config',
             timestamp=timestamp)
         log_file_name = os.path.join(Indaleko.default_log_dir, file_name)

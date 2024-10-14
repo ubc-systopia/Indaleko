@@ -1,5 +1,5 @@
 apischema==0.18.1
-grapql-core==3.2.4
+graphql-core==3.2.4
 discord.py==2.3.2
 docker_py==1.10.6
 Faker==29.0.0
@@ -20,4 +20,5 @@ pyicloud==1.0.0
 pyngrok==7.2.0
 python_arango==7.7.0
 Requests==2.32.3
+pytile==2023.12.0
 winsdk==1.0.0b10; sys_platform == 'win32'

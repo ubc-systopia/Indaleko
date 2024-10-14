@@ -54,11 +54,10 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
     }
 
     def __init__(self : 'IndalekoMacOSMachineConfig', **kwargs):
+        self.service_registration = IndalekoMachineConfig.register_machine_configuration_service(
+            **IndalekoMacOSMachineConfig.macos_machine_config_service
+        )
         super().__init__(**kwargs)
-        self.attributes = kwargs.get('attributes', {})
-        self.data = kwargs.get('data', None)
-        self.volume_data = kwargs.get('volume_data', {})
-        self.volume_data = {}
 
     @staticmethod
     def find_configs_in_db(source_id : Union[str, None] = None) -> list:
