@@ -46,7 +46,7 @@ class CollectorBase(ABC):
     '''
 
     @abstractmethod
-    def get_provider_characteristics(self) -> List[ActivityDataCharacteristics]:
+    def get_collector_characteristics(self) -> List[ActivityDataCharacteristics]:
         '''
         This call returns the characteristics of the data provider.  This is
         intended to be used to help users understand the data provider and to
@@ -57,7 +57,7 @@ class CollectorBase(ABC):
         '''
 
     @abstractmethod
-    def get_provider_name(self) -> str:
+    def get_collectorr_name(self) -> str:
         '''Get the name of the provider'''
 
     @abstractmethod

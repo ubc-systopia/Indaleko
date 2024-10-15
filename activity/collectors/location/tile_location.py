@@ -87,7 +87,7 @@ class TileLocation(LocationCollector):
             return_data.append(TileLocationDataModel(**kwargs))
         return return_data
 
-    def get_provider_characteristics(self) -> List[ActivityDataCharacteristics]:
+    def get_collector_characteristics(self) -> List[ActivityDataCharacteristics]:
         '''Get the provider characteristics'''
         return [
             ActivityDataCharacteristics.ACTIVITY_DATA_SPATIAL,
@@ -95,7 +95,7 @@ class TileLocation(LocationCollector):
             ActivityDataCharacteristics.PROVIDER_DEVICE_STATE_DATA,
         ]
 
-    def get_provider_name(self) -> str:
+    def get_collectorr_name(self) -> str:
         '''Get the provider name'''
         return self._name
 

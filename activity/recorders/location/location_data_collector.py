@@ -274,7 +274,7 @@ class BaseLocationDataCollector:
         if hasattr(self, 'provider'):
             assert isinstance(self.provider, CollectorBase),\
                 f'provider is not an CollectorBase {type(self.provider)}'
-            return self.provider.get_provider_characteristics()
+            return self.provider.get_collector_characteristics()
         return None
 
     def get_provider_semantic_attributes(self) -> Union[List[str], None]:
@@ -299,11 +299,6 @@ class BaseLocationDataCollector:
             KnownSemanticAttributes.ACTIVITY_DATA_LOCATION_LONGITUDE,
             KnownSemanticAttributes.ACTIVITY_DATA_LOCATION_ACCURACY
         ]
-        if hasattr(self, 'provider'):
-            assert isinstance(self.provider, CollectorBase),\
-                f'provider is not an CollectorBase {type(self.provider)}'
-            return self.provider.get_provider_semantic_attributes()
-        return None
 
 
     def get_provider_name(self) -> Union[str, None]:
@@ -316,7 +311,7 @@ class BaseLocationDataCollector:
         if hasattr(self, 'provider'):
             assert isinstance(self.provider, CollectorBase),\
                 f'provider is not an CollectorBase {type(self.provider)}'
-            return self.provider.get_provider_name()
+            return self.provider.get_collectorr_name()
         return None
 
     def get_provider_id(self) -> Union[uuid.UUID, None]:

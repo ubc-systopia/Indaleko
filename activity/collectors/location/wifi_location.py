@@ -47,7 +47,7 @@ class WiFiLocation(LocationCollector):
         self._location = 'WiFi Location'
         self._provider_id = uuid.UUID('a6647dfc-de28-4f89-82ca-d61b775a4c15')
 
-    def get_provider_characteristics(self) -> List[ActivityDataCharacteristics]:
+    def get_collector_characteristics(self) -> List[ActivityDataCharacteristics]:
         '''Get the provider characteristics'''
         raise NotImplementedError('This method is not fully implemented yet.')
         return [
@@ -56,7 +56,7 @@ class WiFiLocation(LocationCollector):
             ActivityDataCharacteristics.PROVIDER_DEVICE_STATE_DATA,
         ]
 
-    def get_provider_name(self) -> str:
+    def get_collectorr_name(self) -> str:
         '''Get the provider name'''
         return self._name
 

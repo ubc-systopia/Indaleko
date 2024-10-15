@@ -109,7 +109,7 @@ class IPLocation(LocationCollector):
         else:
             return None
 
-    def get_provider_characteristics(self) -> List[ActivityDataCharacteristics]:
+    def get_collector_characteristics(self) -> List[ActivityDataCharacteristics]:
         '''Get the provider characteristics'''
         return [
             ActivityDataCharacteristics.ACTIVITY_DATA_SPATIAL,
@@ -117,7 +117,7 @@ class IPLocation(LocationCollector):
             ActivityDataCharacteristics.PROVIDER_DEVICE_STATE_DATA,
         ]
 
-    def get_provider_name(self) -> str:
+    def get_collectorr_name(self) -> str:
         '''Get the provider name'''
         return self._name
 
@@ -194,9 +194,9 @@ class IPLocation(LocationCollector):
 def main():
     '''This is the interface for testing the foo.py module.'''
     location = IPLocation()
-    ic(location.get_provider_name())
+    ic(location.get_collectorr_name())
     ic(location.get_provider_id())
-    ic(location.get_provider_characteristics())
+    ic(location.get_collector_characteristics())
     ic(location.get_description())
     ic(location.get_json_schema())
     ic(location.get_location_name())
