@@ -21,11 +21,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os 
 import sys
 
-from pydantic import  Field, field_validator, AwareDatetime
 from typing import Optional
 from datetime import datetime, timezone
-import json
-from icecream import ic
+
+from pydantic import  Field, field_validator, AwareDatetime
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -34,7 +33,9 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
+# pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
+# pylint: enable=wrong-import-position
 
 
 class BaseLocationDataModel(IndalekoBaseModel):
@@ -47,8 +48,10 @@ class BaseLocationDataModel(IndalekoBaseModel):
     timestamp: AwareDatetime = Field(..., description="Timestamp when the location was recorded")
     source: str = Field(..., description="Source of the location data, e.g., 'GPS', 'IP', etc.")
 
+    @classmethod
     @field_validator('timestamp', mode='before')
     def ensure_timezone(cls, value: datetime):
+        '''Ensure that the timestamp is in explicit UTC timezone'''
         if isinstance(value, str):
             value = datetime.fromisoformat(value)
         if value.tzinfo is None:

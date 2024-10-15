@@ -19,7 +19,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
-SEM_OBJECT_ID = 'bec7f956-8a49-402b-bc70-ef83c8deb27d'
 SEM_FILE_TYPE = 'b4a5a775-bba8-4697-91bf-4acf99927221'
 SEM_LAST_MODIFIED = 'ed55af45-b5a2-43de-aa89-89526189388f'
 SEM_PAGE_NUMBER = 'af847833-ff07-4eda-9753-bda0f5308bc4'

@@ -21,11 +21,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os 
 import sys
 
-from pydantic import  Field, field_validator, AwareDatetime
-from typing import Optional, List
+from typing import List
 from datetime import datetime, timezone
-from icecream import ic
 from uuid import UUID
+
+from icecream import ic
+from pydantic import  Field, field_validator, AwareDatetime
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -61,14 +62,15 @@ class BaseSemanticDataModel(IndalekoBaseModel):
                                              title='Record',
                                              description='The record for the activity data.')
 
-    Timestamp : datetime = Field(...,
-                                 title='Timestamp',
-                                 description='The timestamp when the semantic data was collected.')
-    
+    Timestamp : AwareDatetime = \
+        Field(...,
+              title='Timestamp',
+              description='The timestamp when the semantic data was collected.')
+
     RelatedObjects : List[UUID] = \
         Field(...,
               title='RelatedObjects',
-              description='The UUIDs of objects related to this metadata.',
+              description='The UUIDs of storage objects related to this metadata.',
               min_items=1)
 
     SemanticAttributes : List[IndalekoSemanticAttributeDataModel] =\
@@ -89,6 +91,7 @@ class BaseSemanticDataModel(IndalekoBaseModel):
 
 
     class Config:
+        '''Sample configuration data for the data model'''
         json_schema_extra = {
             "example": {
                 "Record" : {
@@ -106,7 +109,7 @@ class BaseSemanticDataModel(IndalekoBaseModel):
                 ],
                 "SemanticAttributes" : [
                     {
-                        "Identifier" : 
+                        "Identifier" :
                             IndalekoUUIDDataModel(
                                 Identifier = 'b4a5a775-bba8-4697-91bf-4acf99927221',
                                 Label = "File Type"
@@ -127,8 +130,9 @@ class BaseSemanticDataModel(IndalekoBaseModel):
 
 def main():
     '''This allows testing the data model'''
+    ic(os.path.abspath(__file__))
+    ic('Testing base_data_model.py')
     BaseSemanticDataModel.test_model_main()
 
 if __name__ == '__main__':
     main()
-
