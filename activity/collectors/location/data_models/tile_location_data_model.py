@@ -74,6 +74,7 @@ class TileLocationDataModel(BaseLocationDataModel):
     voip_state: Optional[str] = Field(None, description="State of the voip connection")
     email : str = Field(..., description="Email address associated with the Tile device")
 
+    @classmethod
     @field_validator('lost_timestamp', mode='before')
     def ensure_timezone(cls, value: datetime):
         if isinstance(value, str):
@@ -85,6 +86,7 @@ class TileLocationDataModel(BaseLocationDataModel):
 
 
     class Config:
+        '''Define configuraiton info for the data model'''
         json_schema_extra = {
             "example": {
                 "latitude": 49.2827,

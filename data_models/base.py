@@ -20,13 +20,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-import uuid
 import json
 
-from typing import Dict, Any, Type, TypeVar, Union
+from typing import Dict, Any, Type, TypeVar
 
-from datetime import datetime, timezone
-from pydantic import BaseModel, field_validator, FieldValidationInfo, field_serializer, FieldSerializationInfo
+from pydantic import BaseModel
 from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -50,17 +48,17 @@ class IndalekoBaseModel(BaseModel):
     def deserialize(cls: Type[T], data : Dict[str, Any]) -> T:
         '''Deserialize the object from a dictionary'''
         if isinstance(data, str):
-            return cls(json.loads(data))
+            return cls(**json.loads(data))
         elif isinstance(data, dict):
             return cls(**data)
         else:
             raise ValueError(f"Expected str or dict, got {type(data)}")
-        
+
     @classmethod
     def get_json_example(cls: Type[T]) -> dict:
         '''This will return a JSON compatible encoding as a python dictionary'''
         return json.loads(cls(**cls.Config.json_schema_extra['example']).model_dump_json())
-    
+
     @classmethod
     def get_example(cls : Type[T]) -> T:
         return cls(**cls.get_json_example())
@@ -69,7 +67,7 @@ class IndalekoBaseModel(BaseModel):
     def get_json_schema(cls : Type[T]) -> dict:
         '''Returns the JSON schema for the data model in Python dictionary format.'''
         return cls.get_example().model_json_schema()
-    
+
     @classmethod
     def get_arangodb_schema(cls : Type[T]) -> dict:
         '''Returns the JSON schema for the data model in the format required by ArangoDB'''

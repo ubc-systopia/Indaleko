@@ -19,7 +19,7 @@ The main goal of this project is to create a synthetic data generation tool that
 2. **Synthetic Data Generation**:
    - The tool will create output metadata records that capture the attributes describing potentially useful information. This would include:
       - Storage metadata (e.g., file name, path, size, timestamps)
-      - Semantic metadata, as described in the [semantic README](../semantic/README.md)
+      - Semantic metadata, as described in the [semantic README](../semantic/recorders/unstructured/README.md)
       - Activity context metadata, simulating various contextual attributes for each metadata record.  See the activity [README.md](../activity/README.md)
 
 3. **Oracular Set Creation**:

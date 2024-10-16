@@ -1,14 +1,35 @@
-'''This implements a prototype example of semantic extraction: checksums'''
+'''
+This implements a prototype example of semantic extraction: checksums
 
-import datetime
-import ipaddress
+Project Indaleko
+Copyright (C) 2024 Tony Mason
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+'''
+
+# standard imports
+import hashlib
+import mmap
 import os
-import requests
 import sys
+import unittest
 import uuid
 
-from typing import List, Dict, Any
+# third-party imports
 
+# explicit imports
+from typing import List, Dict, Union
 from icecream import ic
 
 
@@ -19,192 +40,181 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
+# Indaleko imports
 # pylint: disable=wrong-import-position
-# now we can import modules from the project root
+from IndalekoObject import IndalekoObject
+
 from semantic.collectors.semantic_collector import SemanticCollector
-from activity.collectors.location import LocationCollector
-from activity.characteristics import ActivityDataCharacteristics
-from activity.collectors.location.data_models.ip_location_data_model import IPLocationDataModel
+from semantic.characteristics import SemanticDataCharacteristics
+import semantic.recorders.checksum.characteristics as ChecksumDataCharacteristics
+from semantic.collectors.checksum.data_model import SemanticChecksumDataModel
 # pylint: enable=wrong-import-position
 
-class IPLocation(LocationCollector):
-    '''This is the IP Location Service'''
-    def __init__(self):
-        self.timeout = 10
-        self._name = 'IP Location Service'
-        self._location = ''
-        self._provider_id = uuid.UUID('82ae879d-7280-4b5a-a98a-5ebc1bf61bbc')
-        self.ip_address = self.capture_public_ip_address()
-        self.ip_location_data = self.get_ip_location_data()
-        self.location_data = self.map_ip_location_data_to_data_model(self.ip_location_data)
 
+class IndalkeoSemanticChecksums(SemanticCollector):
+    '''This class defines the semantic file checksums for the Indaleko project.'''
 
-    @staticmethod
-    def capture_public_ip_address(timeout : int = 10) -> str:
-        '''Capture the public IP address'''
-        response = requests.get('https://api.ipify.org?format=json', timeout=timeout)
-        data = response.json()
-        return data.get('ip')
+    def __init__(self, **kwargs):
+        '''Initialize the semantic file checksums collector'''
+        self._name = 'Semantic File Checksums'
+        self._provider_id = uuid.UUID('de7ff1c7-2550-4cb3-9538-775f9464746e')
+        self._checksum_data = None # SemanticChecksumDataModel(**SemanticChecksumDataModel.Config.json_schema_extra['example'])
+        for key, values in kwargs.items():
+            setattr(self, key, values)
+        assert hasattr(self, 'name') or hasattr(self, 'provider_id'), \
+            'The name or provider_id must be provided for the semantic file checksums collector.'
+        
+    def lookup_file(self) -> Union[IndalekoObject, None]:
+        '''Lookup the file for the collector'''
+        raise NotImplementedError('This method is not implemented yet.')
+    
+    def get_checksums_for_file(self) -> None:
+        '''Get the checksums for the file'''
+        # this is just a placeholder for now
+        self._checksum_data = SemanticChecksumDataModel(**SemanticChecksumDataModel.Config.json_schema_extra['example'])
+        raise NotImplementedError('This method is not implemented yet.')
 
-    def map_ip_location_data_to_data_model(self, location_data : dict) -> IPLocationDataModel:
-        '''Map the IP location data to the data model'''
-        # start with the required fields
-        if 'ip_address' in location_data:
-            ip_address = location_data.get('ip_address')
-        else:
-            try:
-                ip_address = ipaddress.IPv4Address(location_data.get('query'))
-            except ipaddress.AddressValueError:
-                ip_address = ipaddress.IPv6Address(location_data.get('query'))
-        assert isinstance(ip_address, ipaddress.IPv4Address) \
-            or isinstance(ip_address, ipaddress.IPv6Address), \
-            f'The IP address is not a valid IP address. It is {type(ip_address)}'
-        kwargs = {
-            "latitude": location_data.get('lat'),
-            "longitude": location_data.get('lon'),
-            "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
-            "source": "IP",
-            "ip_address": ip_address,
-        }
-        # add the optional fields
-        if 'altitude' in location_data:
-            kwargs['altitude'] = location_data.get('altitude')
-        if 'accuracy' in location_data:
-            kwargs['accuracy'] = location_data.get('accuracy')
-        if 'heading' in location_data:
-            kwargs['heading'] = location_data.get('heading')
-        if 'speed' in location_data:
-            kwargs['speed'] = location_data.get('speed')
-        if 'city' in location_data:
-            kwargs['city'] = location_data.get('city')
-        if 'country' in location_data:
-            kwargs['country'] = location_data.get('country')
-        if 'country_code' in location_data:
-            kwargs['country_code'] = location_data.get('country_code')
-        if 'region' in location_data:
-            kwargs['region'] = location_data.get('region')
-        if 'region_name' in location_data:
-            kwargs['region_name'] = location_data.get('region_name')
-        if 'postal_code' in location_data:
-            kwargs['postal_code'] = location_data.get('postal_code')
-        if 'isp' in location_data:
-            kwargs['isp'] = location_data.get('isp')
-        if 'org' in location_data:
-            kwargs['org'] = location_data.get('org')
-        if 'as_name' in location_data:
-            kwargs['as_name'] = location_data.get('as_name')
-        if 'timezone' in location_data:
-            kwargs['timezone'] = location_data.get('timezone')
-        return IPLocationDataModel(**kwargs)
-
-    def get_ip_location_data(self) -> dict:
-        '''Get the coordinates for the location'''
-        if self.ip_address is None:
-            return None
-        url = f'http://ip-api.com/json/{self.ip_address}'
-        response = requests.get(url, timeout=self.timeout)
-        data = response.json()
-        if data.get('status') == 'success':
-            return data
-        else:
-            return None
-
-    def get_provider_characteristics(self) -> List[ActivityDataCharacteristics]:
-        '''Get the provider characteristics'''
+    def get_collector_characteristics(self) -> List[SemanticDataCharacteristics]:
+        '''Get the characteristics of the collector'''
         return [
-            ActivityDataCharacteristics.ACTIVITY_DATA_SPATIAL,
-            ActivityDataCharacteristics.ACTIVITY_DATA_NETWORK,
-            ActivityDataCharacteristics.PROVIDER_DEVICE_STATE_DATA,
+            SemanticDataCharacteristics.SEMANTIC_DATA_CHECKSUMS,
+            ChecksumDataCharacteristics.SEMANTIC_CHECKSUM_MD5,
+            ChecksumDataCharacteristics.SEMANTIC_CHECKSUM_SHA1,
+            ChecksumDataCharacteristics.SEMANTIC_CHECKSUM_SHA256,
+            ChecksumDataCharacteristics.SEMANTIC_CHECKSUM_DROPBOX_SHA2,
         ]
 
-    def get_provider_name(self) -> str:
-        '''Get the provider name'''
+    def get_collector_name(self) -> str:
+        '''Get the name of the collector'''
         return self._name
 
-    def get_provider_id(self) -> uuid.UUID:
-        '''Get the provider ID'''
+    def get_collector_id(self) -> str:
+        '''Get the ID of the collector'''
         return self._provider_id
 
-    def retrieve_data(self, data_type: str) -> str:
-        '''Retrieve data from the provider'''
+
+    def retrieve_data(self, data_id: str) -> Dict:
+        '''Retrieve the data for the collector'''
         raise NotImplementedError('This method is not implemented yet.')
 
-    def retrieve_temporal_data(self,
-                               reference_time : datetime.datetime,
-                               prior_time_window : datetime.timedelta,
-                               subsequent_time_window : datetime.timedelta,
-                               max_entries : int = 0) -> List[Dict]:
-        '''Retrieve temporal data from the provider'''
-        raise NotImplementedError('This method is not implemented yet.')
-
-    def get_cursor(self, activity_context : uuid. UUID) -> uuid.UUID:
-        '''Retrieve the current cursor for this data provider
-           Input:
-                activity_context: the activity context into which this cursor is
-                being used
-            Output:
-                The cursor for this data provider, which can be used to retrieve
-                data from this provider (via the retrieve_data call).
-        '''
-
-    def cache_duration(self) -> datetime.timedelta:
-        '''
-        Retrieve the maximum duration that data from this provider may be
-        cached
-        '''
-        return datetime.timedelta(minutes=10)
-
-    def get_description(self) -> str:
-        '''
-        Retrieve a description of the data provider. Note: this is used for
-        prompt construction, so please be concise and specific in your
-        description.
-        '''
-        return '''
-        This is a geolocation service that provides location data for
-        the device.
-        '''
+    def get_collector_description(self) -> str:
+        '''Get the description of the collector'''
+        return '''This collector provides semantic checksums for files.'''
 
     def get_json_schema(self) -> dict:
-        '''Get the JSON schema for the provider'''
-        return IPLocationDataModel.schema_json()
+        '''Get the JSON schema for the collector'''
+        return {
+            "type": "object",
+            "properties": {
+                "MD5": {"type": "string"},
+                "SHA1": {"type": "string"},
+                "SHA256": {"type": "string"},
+                "Dropbox": {"type": "string"},
+            },
+            "required": ["MD5", "SHA1", "SHA256", "Dropbox"],
+        }
 
-    def get_location_name(self) -> str:
-        '''Get the location'''
-        location = self._location
-        if location is None:
-            location = ''
-        return location
 
-    def get_coordinates(self) -> Dict[str, float]:
-        '''Get the coordinates for the location'''
-        return {'latitude': 0.0, 'longitude': 0.0}
 
-    def get_location_history(
-        self,
-        start_time : datetime.datetime,
-        end_time : datetime.datetime) -> List[Dict[str, Any]]:
-        '''Get the location history for the location'''
-        return []
+# Define Dropbox checksum
+class DropboxChecksum:
+    def __init__(self):
+        self.block_hashes = []
 
-    def get_distance(self, location1: Dict[str, float], location2: Dict[str, float]) -> float:
-        '''Get the distance between two locations'''
-        raise NotImplementedError('This method is not implemented yet.')
+    def update(self, data):
+        # Compute SHA256 hash of each 4MB block
+        sha256 = hashlib.sha256()
+        sha256.update(data)
+        self.block_hashes.append(sha256.digest())
 
-def main():
-    '''This is the interface for testing the foo.py module.'''
-    location = IPLocation()
-    ic(location.get_provider_name())
-    ic(location.get_provider_id())
-    ic(location.get_provider_characteristics())
-    ic(location.get_description())
-    ic(location.get_json_schema())
-    ic(location.get_location_name())
-    ic(location.get_coordinates())
-    ic(location.get_location_history(datetime.datetime.now(), datetime.datetime.now()))
-    ic(location.ip_address)
-    ic(location.ip_location_data)
-    ic(location.location_data.json())
+    def digest(self):
+        # Concatenate all block hashes and compute final SHA256 hash
+        final_sha256 = hashlib.sha256()
+        final_sha256.update(b"".join(self.block_hashes))
+        return final_sha256.hexdigest()
 
-if __name__ == '__main__':
-    main()
+# Define chunk size and threshold for mmap usage
+CHUNK_SIZE = 4 * 1024 * 1024  # 4MB per chunk
+MMAP_THRESHOLD = 16 * 1024 * 1024  # 16MB file size threshold
+
+def compute_checksums(file_path):
+    # Initialize checksum calculators
+    md5 = hashlib.md5()
+    sha1 = hashlib.sha1()
+    sha256 = hashlib.sha256()
+    dropbox = DropboxChecksum()
+
+    file_size = os.path.getsize(file_path)
+
+    if file_size < MMAP_THRESHOLD:
+        # For small files, read the entire file at once
+        with open(file_path, 'rb') as f:
+            data = f.read()
+            md5.update(data)
+            sha1.update(data)
+            sha256.update(data)
+            dropbox.update(data)
+    else:
+        # For large files, use memory mapping and process chunks
+        with open(file_path, 'rb') as f:
+            with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as mmapped_file:
+                for offset in range(0, file_size, CHUNK_SIZE):
+                    chunk = mmapped_file[offset:offset + min(CHUNK_SIZE, file_size - offset)]
+                    md5.update(chunk)
+                    sha1.update(chunk)
+                    sha256.update(chunk)
+                    dropbox.update(chunk)
+
+    # Get digests for each checksum
+    md5_hash = md5.hexdigest()
+    sha1_hash = sha1.hexdigest()
+    sha256_hash = sha256.hexdigest()
+    dropbox_hash = dropbox.digest()
+
+    return {
+        'MD5': md5_hash,
+        'SHA1': sha1_hash,
+        'SHA256': sha256_hash,
+        'Dropbox': dropbox_hash,
+    }
+
+# Unit tests
+class TestChecksum(unittest.TestCase):
+    def setUp(self):
+        # Create test files
+        with open("test_file_1.txt", "w", encoding='utf-8-sig') as f:
+            f.write("Hello World!")
+        with open("test_file_2.txt", "wb") as f:
+            f.write(b"A" * 4 * 1024 * 1024)  # 4MB of 'A'
+
+    def tearDown(self):
+        # Clean up test files
+        os.remove("test_file_1.txt")
+        os.remove("test_file_2.txt")
+
+    def test_small_file_checksums(self):
+        '''Test small file operations'''
+        expected_md5 = "65a8e27d8879283831b664bd8b7f0ad4"
+        expected_sha1 = "2ef7bde608ce5404e97d5f042f95f89f1c232871"
+        expected_sha256 = "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b53a72f2bd90d5e33"
+        expected_dropbox = "4bfe31fa6076540f83efcaf8b9f96a303ec40b9fdb10a9c0ff18b75e5f6b9b5e"
+
+        checksums = compute_checksums("test_file_1.txt")
+        self.assertEqual(checksums['MD5'], expected_md5)
+        self.assertEqual(checksums['SHA1'], expected_sha1)
+        self.assertEqual(checksums['SHA256'], expected_sha256)
+        self.assertEqual(checksums['Dropbox'], expected_dropbox)
+
+    def test_large_file_checksums(self):
+        '''Test large file operations'''
+        checksums = compute_checksums("test_file_2.txt")
+        self.assertEqual(len(checksums['Dropbox']), 64)  # SHA-256 hash length in hex is 64 characters
+
+if __name__ == "__main__":
+    unittest.main()
+
+# Example usage
+if __name__ == "__main__":
+    test_file_path = "example_file.txt"  # Replace with your file path
+    for algo, checksum in compute_checksums(test_file_path).items():
+        ic(f"{algo}: {checksum}")
