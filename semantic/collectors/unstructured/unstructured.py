@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # standard library imports
 import argparse
 import configparser
+import logging
 import os
 import sys
 import uuid
@@ -42,6 +43,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # pylint: disable=wrong-import-position
 from Indaleko import Indaleko
 from IndalekoObject import IndalekoObject
+from IndalekoLogging import IndalekoLogging
 
 from semantic.collectors.semantic_collector import SemanticCollector
 # pylint: enable=wrong-import-position
@@ -61,8 +63,6 @@ class IndalekoUnstructured(SemanticCollector):
 
     config_file_layout = {
         'DATA': {
-            'BaseDir': '/path/to/temp',
-            'OriginalFilesDir': '/path/to/original/files',
             'ScriptsDir': '/path/to/scripts',
             'BatchSize': 5000,
             'SupportedFormats': '.txt,.pdf,.docx,.html,.pptx',
@@ -108,7 +108,7 @@ class IndalekoUnstructured(SemanticCollector):
         if self.config_file is None:
             self.config_file = os.path.join(Indaleko.default_config_dir, self.config_file_name)
         config = configparser.ConfigParser()
-        config.read(self.config_file)
+        config.read(self.config_file, encoding='utf-8-sig')
         config.write(sys.stdout)
         return config
 
@@ -146,6 +146,37 @@ def main():
     ic('Unstructured Data Collector')
     unstructured = IndalekoUnstructured()
     ic(unstructured.config)
+    parser = argparse.ArgumentParser(description='Indaleko Unstructured Data Collector')
+    parser.add_argument('--log_dir',
+                        default=Indaleko.default_log_dir,
+                        type=str,
+                        help='Directory for log files')
+    parser.add_argument('--config_dir',
+                        default=Indaleko.default_config_dir,
+                        type=str,
+                        help='Directory for configuration files')
+    parser.add_argument('--data_dir',
+                        default=Indaleko.default_data_dir,
+                        type=str,
+                        help='Directory for data files')
+    parser.add_argument('--log_file',
+                        default=None,
+                        type=str,
+                        help='Log file name')
+    parser.add_argument('--config_file',
+                        default=None,
+                        type=str, help='Configuration file name')
+    parser.add_argument('--data_file',
+                        default=None,
+                        type=str,
+                        help='Data file name')
+    parser.add_argument('--loglevel',
+                        choices=IndalekoLogging.get_logging_levels(),
+                        default=logging.DEBUG,
+                        type=str,
+                        help='Logging level')
+    args = parser.parse_args()
+    ic(args)
 
 if __name__ == '__main__':
     main()
