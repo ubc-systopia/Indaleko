@@ -22,9 +22,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import uuid
-import json
-
-from typing import Dict, Any
 
 from pydantic import Field
 from icecream import ic
@@ -40,9 +37,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
-from data_models.timestamp import IndalekoTimestampDataModel
 from data_models.record import IndalekoRecordDataModel
-from data_models.source_identifer import IndalekoSourceIdentifierDataModel
 # pylint: enable=wrong-import-position
 
 class IndalekoActivityDataRegistrationDataModel(IndalekoBaseModel):
@@ -79,6 +74,7 @@ class IndalekoActivityDataRegistrationDataModel(IndalekoBaseModel):
 
 def main():
     '''This allows testing the data model.'''
+    ic('Testing IndalekoActivityDataRegistrationDataModel')
     IndalekoActivityDataRegistrationDataModel.test_model_main()
 
 if __name__ == '__main__':
