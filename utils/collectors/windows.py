@@ -20,16 +20,27 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import argparse
 import datetime
-import os
 import logging
+import os
+import sys
 import uuid
 
+init_path = os.path.dirname(os.path.abspath(__file__))
+
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+# pylint: disable=wrong-import-position
 from Indaleko import Indaleko
-from IndalekoIndexer import IndalekoIndexer
 from IndalekoWindowsMachineConfig import IndalekoWindowsMachineConfig
+from storage import BaseStorageCollector
+# pylint: enable=wrong-import-position
 
-
-class IndalekoWindowsLocalIndexer(IndalekoIndexer):
+class IndalekoWindowsLocalCollector(BaseStorageCollector):
     '''
     This is the class that indexes Windows local file systems.
     '''
@@ -88,19 +99,19 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
             if key not in kwargs:
                 kwargs[key] = value
         if 'platform' not in kwargs:
-            kwargs['platform'] = IndalekoWindowsLocalIndexer.windows_platform
+            kwargs['platform'] = IndalekoWindowsLocalCollector.windows_platform
         if 'indexer_name' not in kwargs:
-            kwargs['indexer_name'] = IndalekoWindowsLocalIndexer.windows_local_indexer_name
+            kwargs['indexer_name'] = IndalekoWindowsLocalCollector.windows_local_indexer_name
         super().__init__(**kwargs)
 
     def generate_windows_indexer_file_name(self, **kwargs) -> str:
         if 'platform' not in kwargs:
-            kwargs['platform'] = IndalekoWindowsLocalIndexer.windows_platform
+            kwargs['platform'] = IndalekoWindowsLocalCollector.windows_platform
         if 'indexer_name' not in kwargs:
-            kwargs['indexer_name'] = IndalekoWindowsLocalIndexer.windows_local_indexer_name
+            kwargs['indexer_name'] = IndalekoWindowsLocalCollector.windows_local_indexer_name
         if 'machine_id' not in kwargs:
             kwargs['machine_id'] = uuid.UUID(self.machine_config.machine_id).hex
-        return IndalekoIndexer.generate_indexer_file_name(**kwargs)
+        return BaseStorageCollector.generate_indexer_file_name(**kwargs)
 
     def convert_windows_path_to_guid_uri(self, path : str) -> str:
         '''This method handles converting a Windows path to a volume GUID based URI.'''
@@ -220,7 +231,7 @@ def main():
     if drive_guid is None:
         drive_guid = uuid.uuid4().hex
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    indexer = IndalekoWindowsLocalIndexer(machine_config=machine_config,
+    indexer = IndalekoWindowsLocalCollector(machine_config=machine_config,
                                           timestamp=timestamp)
     output_file = indexer.generate_windows_indexer_file_name(storage_description=drive_guid)
     parser= argparse.ArgumentParser(parents=[pre_parser])
@@ -240,7 +251,7 @@ def main():
                         help='Logging level to use (lower number = more logging)')
 
     args = parser.parse_args()
-    indexer = IndalekoWindowsLocalIndexer(timestamp=timestamp,
+    indexer = IndalekoWindowsLocalCollector(timestamp=timestamp,
                                           path=args.path,
                                           machine_config=machine_config,
                                           storage_description=drive_guid)

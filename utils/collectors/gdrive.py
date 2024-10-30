@@ -1,5 +1,5 @@
 '''
-IndalekoGDriveIndexer.py
+IndalekoGDriveCollector.py
 
 This script is used to index the files in the Google Drive folder of Indaleko.
 It will create a JSONL file with the metadata of the files in the Dropbox
@@ -25,22 +25,34 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import argparse
 import datetime
+import json
+import logging
+import os
+import sys
+
 from googleapiclient.discovery import build, HttpError
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from icecream import ic
-import json
-import logging
-import os
-from urllib.parse import urlencode, parse_qs, urlparse
 
+init_path = os.path.dirname(os.path.abspath(__file__))
+
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+# pylint: disable=wrong-import-position
 from Indaleko import Indaleko
-from IndalekoIndexer import IndalekoIndexer
-import IndalekoLogging as IndalekoLogging
+from IndalekoLogging import IndalekoLogging
+from storage import BaseStorageCollector
+# pylint: enable=wrong-import-position
 
 
-class IndalekoGDriveIndexer(IndalekoIndexer):
+class IndalekoGDriveCollector(BaseStorageCollector):
     gdrive_platform = "GoogleDrive"
     gdrive_indexer_name = "gdrive_indexer"
 
@@ -120,30 +132,30 @@ class IndalekoGDriveIndexer(IndalekoIndexer):
     def __init__(self, **kwargs):
         self.email = None
         self.config_dir = kwargs.get('config_dir', Indaleko.default_config_dir)
-        self.gdrive_config_file = os.path.join(self.config_dir, IndalekoGDriveIndexer.gdrive_config_file)
+        self.gdrive_config_file = os.path.join(self.config_dir, IndalekoGDriveCollector.gdrive_config_file)
         assert os.path.exists(self.gdrive_config_file), \
             f'No GDrive config file found at {self.gdrive_config_file}'
         self.gdrive_token_file = \
-            os.path.join(self.config_dir, IndalekoGDriveIndexer.gdrive_token_file)
+            os.path.join(self.config_dir, IndalekoGDriveCollector.gdrive_token_file)
         self.gdrive_config = None
         self.load_gdrive_config()
         self.gdrive_credentials = None
         self.load_gdrive_credentials()
         super().__init__(**kwargs,
-                         indexer_name=IndalekoGDriveIndexer.gdrive_indexer_name,
-                         **IndalekoGDriveIndexer.indaleko_gdrive_indexer_service)
+                         indexer_name=IndalekoGDriveCollector.gdrive_indexer_name,
+                         **IndalekoGDriveCollector.indaleko_gdrive_indexer_service)
 
-    def load_gdrive_config(self) -> 'IndalekoGDriveIndexer':
+    def load_gdrive_config(self) -> 'IndalekoGDriveCollector':
         '''This method loads the GDrive configuration'''
-        with open(self.gdrive_config_file, 'rt') as f:
+        with open(self.gdrive_config_file, 'rt', encoding='utf-8') as f:
             self.gdrive_config = json.load(f)
         return self
 
-    def load_gdrive_credentials(self) -> 'IndalekoGDriveIndexer':
+    def load_gdrive_credentials(self) -> 'IndalekoGDriveCollector':
         '''This method gets the GDrive credentials'''
         if os.path.exists(self.gdrive_token_file):
             logging.debug('Loading GDrive credentials from %s', self.gdrive_token_file)
-            self.gdrive_credentials = Credentials.from_authorized_user_file(self.gdrive_token_file, IndalekoGDriveIndexer.SCOPES)
+            self.gdrive_credentials = Credentials.from_authorized_user_file(self.gdrive_token_file, IndalekoGDriveCollector.SCOPES)
         if not self.gdrive_credentials or not self.gdrive_credentials.valid:
             if self.gdrive_credentials and self.gdrive_credentials.expired and self.gdrive_credentials.refresh_token:
                 self.gdrive_credentials.refresh(Request())
@@ -152,16 +164,16 @@ class IndalekoGDriveIndexer(IndalekoIndexer):
             self.store_gdrive_credentials()
         return self
 
-    def store_gdrive_credentials(self) -> 'IndalekoGDriveIndexer':
+    def store_gdrive_credentials(self) -> 'IndalekoGDriveCollector':
         '''This method stores the credentials'''
         assert self.gdrive_credentials is not None, 'No credentials to store'
-        with open(self.gdrive_token_file, 'wt') as f:
+        with open(self.gdrive_token_file, 'wt', encoding='utf-8') as f:
             f.write(self.gdrive_credentials.to_json())
         return self
 
-    def query_user_for_credentials(self) -> 'IndalekoGDriveIndexer':
+    def query_user_for_credentials(self) -> 'IndalekoGDriveCollector':
         '''This method queries the user for credentials'''
-        flow = InstalledAppFlow.from_client_config(self.gdrive_config, IndalekoGDriveIndexer.SCOPES)
+        flow = InstalledAppFlow.from_client_config(self.gdrive_config, IndalekoGDriveCollector.SCOPES)
         self.gdrive_credentials = flow.run_local_server(port=0)
         return self
 
@@ -203,7 +215,7 @@ class IndalekoGDriveIndexer(IndalekoIndexer):
             self.load_gdrive_credentials()
         page_token = None
         field_to_use = 'nextPageToken, files({})'.format(
-            ', '.join(IndalekoGDriveIndexer.FILE_METADATA_FIELDS))
+            ', '.join(IndalekoGDriveCollector.FILE_METADATA_FIELDS))
         metadata_list = []
         service = None
 
@@ -231,15 +243,15 @@ class IndalekoGDriveIndexer(IndalekoIndexer):
     @staticmethod
     def find_indexer_files(
             search_dir : str,
-            prefix : str = IndalekoIndexer.default_file_prefix,
-            suffix : str = IndalekoIndexer.default_file_suffix) -> list:
+            prefix : str = BaseStorageCollector.default_file_prefix,
+            suffix : str = BaseStorageCollector.default_file_suffix) -> list:
         '''This function finds the files to ingest:
             search_dir: path to the search directory
             prefix: prefix of the file to ingest
             suffix: suffix of the file to ingest (default is .json)
         '''
-        prospects = IndalekoIndexer.find_indexer_files(search_dir, prefix, suffix)
-        return [f for f in prospects if IndalekoGDriveIndexer.gdrive_platform in f]
+        prospects = BaseStorageCollector.find_indexer_files(search_dir, prefix, suffix)
+        return [f for f in prospects if IndalekoGDriveCollector.gdrive_platform in f]
 
 
 def main():
@@ -258,17 +270,17 @@ def main():
                             choices=logging_levels,
                             help='Logging level to use (lower number = more logging)')
     pre_args, _ = pre_parser.parse_known_args()
-    indaleko_logging = IndalekoLogging.IndalekoLogging(platform=IndalekoGDriveIndexer.gdrive_platform,
-                                                       service_name='indexer',
-                                                       log_dir=pre_args.logdir,
-                                                       log_level=pre_args.loglevel,
-                                                       timestamp=timestamp,
-                                                       suffix='log')
+    indaleko_logging = IndalekoLogging(platform=IndalekoGDriveCollector.gdrive_platform,
+                                       service_name='indexer',
+                                       log_dir=pre_args.logdir,
+                                       log_level=pre_args.loglevel,
+                                       timestamp=timestamp,
+                                       suffix='log')
     log_file_name = indaleko_logging.get_log_file_name()
     ic(log_file_name)
-    indexer = IndalekoGDriveIndexer(timestamp=timestamp)
-    output_file_name = IndalekoGDriveIndexer.generate_windows_indexer_file_name(
-            platform=IndalekoGDriveIndexer.gdrive_platform,
+    indexer = IndalekoGDriveCollector(timestamp=timestamp)
+    output_file_name = IndalekoGDriveCollector.generate_windows_indexer_file_name(
+            platform=IndalekoGDriveCollector.gdrive_platform,
             user_id=indexer.get_email(),
             service='indexer',
             timestamp=timestamp,

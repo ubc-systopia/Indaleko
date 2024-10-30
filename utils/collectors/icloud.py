@@ -1,18 +1,57 @@
+'''
+This script handles collecting storage meatadata from iCloud.
+
+This script is used to index the files in the Google Drive folder of Indaleko.
+It will create a JSONL file with the metadata of the files in the Dropbox
+folder.
+The JSONL file will be used by the IndalekoGDriveIngester.py to load data into
+the database.
+
+Project Indaleko
+Copyright (C) 2024 Tony Mason
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+'''
 import argparse
 import keyring
 import logging
 import os
+import sys
 import uuid
 
 from datetime import datetime, timezone
 from getpass import getpass
 from icecream import ic
-from Indaleko import Indaleko
-from IndalekoIndexer import IndalekoIndexer
-import IndalekoLogging as IndalekoLogging
 from pyicloud import PyiCloudService
 
-class IndalekoICloudIndexer(IndalekoIndexer):
+
+init_path = os.path.dirname(os.path.abspath(__file__))
+
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+# pylint: disable=wrong-import-position
+from Indaleko import Indaleko
+from IndalekoLogging import IndalekoLogging
+from storage import BaseStorageCollector
+# pylint: enable=wrong-import-position
+
+class IndalekoICloudCollector(BaseStorageCollector):
 
     icloud_platform = 'iCloud'
     icloud_indexer_name = 'icloud_indexer'
@@ -60,11 +99,11 @@ class IndalekoICloudIndexer(IndalekoIndexer):
             except Exception as e:
                 logging.error(f"Error initializing iCloud service: {e}")
         if 'platform' not in kwargs:
-            kwargs['platform'] = IndalekoICloudIndexer.icloud_platform
+            kwargs['platform'] = IndalekoICloudCollector.icloud_platform
         super().__init__(
             **kwargs,
-            indexer_name=IndalekoICloudIndexer.icloud_indexer_name,
-            **IndalekoICloudIndexer.indaleko_icloud_local_indexer_service
+            indexer_name=IndalekoICloudCollector.icloud_indexer_name,
+            **IndalekoICloudCollector.indaleko_icloud_local_indexer_service
         )
 
     def get_user_id(self):
@@ -91,7 +130,7 @@ class IndalekoICloudIndexer(IndalekoIndexer):
             logging.info(f"Loaded credentials for username: {username}")
         return self
 
-    def store_icloud_credentials(self) -> 'IndalekoICloudIndexer':
+    def store_icloud_credentials(self) -> 'IndalekoICloudCollector':
         '''This method stores the credentials.'''
         user_id = self.get_user_id()
         password = getpass("Enter your iCloud password: ")
@@ -99,7 +138,7 @@ class IndalekoICloudIndexer(IndalekoIndexer):
         self.update_stored_usernames(user_id)
         return self
 
-    def set_icloud_credentials(self, credentials: dict) -> 'IndalekoICloudIndexer':
+    def set_icloud_credentials(self, credentials: dict) -> 'IndalekoICloudCollector':
         '''This method sets the credentials.'''
         user_id = credentials.get("username")
         password = credentials.get("password")
@@ -107,7 +146,7 @@ class IndalekoICloudIndexer(IndalekoIndexer):
         self.update_stored_usernames(user_id)
         return self
 
-    def query_user_for_credentials(self) -> 'IndalekoICloudIndexer':
+    def query_user_for_credentials(self) -> 'IndalekoICloudCollector':
         '''This method queries the user for credentials.'''
         user_id = self.get_user_id()
         password = keyring.get_password('iCloud', user_id)
@@ -168,12 +207,12 @@ class IndalekoICloudIndexer(IndalekoIndexer):
         if isinstance(data, (int, float, str, bool, type(None))):
             return data
         elif isinstance(data, list):
-            return [IndalekoICloudIndexer.convert_to_serializable(item) for item in data]
+            return [IndalekoICloudCollector.convert_to_serializable(item) for item in data]
         elif isinstance(data, dict):
-            return {key: IndalekoICloudIndexer.convert_to_serializable(value) for key, value in data.items()}
+            return {key: IndalekoICloudCollector.convert_to_serializable(value) for key, value in data.items()}
         else:
             if hasattr(data, '__dict__'):
-                return IndalekoICloudIndexer.convert_to_serializable(data.__dict__)
+                return IndalekoICloudCollector.convert_to_serializable(data.__dict__)
             return None
 
     def collect_metadata(self, item, item_path):
@@ -187,7 +226,7 @@ class IndalekoICloudIndexer(IndalekoIndexer):
 
         metadata = {
             'name': item.name,
-            'path_display': IndalekoICloudIndexer.icloud_root_folder['path_display'] + '/' + item_path,
+            'path_display': IndalekoICloudCollector.icloud_root_folder['path_display'] + '/' + item_path,
             'size': getattr(item, 'size', 0) or 0, # Default to 0 if size is None or 0
             'date_created': to_utc_iso(getattr(item, 'date_created', None)),
             'date_modified': to_utc_iso(getattr(item, 'date_modified', None)),
@@ -247,15 +286,15 @@ class IndalekoICloudIndexer(IndalekoIndexer):
     @staticmethod
     def find_indexer_files(
         search_dir : str,
-        prefix : str = IndalekoIndexer.default_file_prefix,
-        suffix : str = IndalekoIndexer.default_file_suffix) -> list:
+        prefix : str = BaseStorageCollector.default_file_prefix,
+        suffix : str = BaseStorageCollector.default_file_suffix) -> list:
         '''This function finds the files to ingest:
             search_dir: path to the search directory
             prefix: prefix of the file to ingest
             suffix: suffix of the file to ingest (default is .json)
         '''
-        prospects = IndalekoIndexer.find_indexer_files(search_dir, prefix, suffix)
-        return [f for f in prospects if IndalekoICloudIndexer.icloud_platform in f]
+        prospects = BaseStorageCollector.find_indexer_files(search_dir, prefix, suffix)
+        return [f for f in prospects if IndalekoICloudCollector.icloud_platform in f]
 
 def main():
     logging_levels = Indaleko.get_logging_levels()
@@ -270,18 +309,18 @@ def main():
                             choices=logging_levels,
                             help='Logging level to use (lower number = more logging)')
     pre_args, _ = pre_parser.parse_known_args()
-    indaleko_logging = IndalekoLogging.IndalekoLogging(platform=IndalekoICloudIndexer.icloud_platform,
-                                                       service_name='indexer',
-                                                       log_dir=pre_args.logdir,
-                                                       log_level=pre_args.loglevel,
-                                                       timestamp=timestamp,
-                                                       suffix='log')
+    indaleko_logging = IndalekoLogging(platform=IndalekoICloudCollector.icloud_platform,
+                                        service_name='indexer',
+                                        log_dir=pre_args.logdir,
+                                        log_level=pre_args.loglevel,
+                                        timestamp=timestamp,
+                                        suffix='log')
     log_file_name = indaleko_logging.get_log_file_name()
     ic(log_file_name)
-    indexer = IndalekoICloudIndexer(timestamp=timestamp)
+    indexer = IndalekoICloudCollector(timestamp=timestamp)
 
-    output_file_name = IndalekoICloudIndexer.generate_windows_indexer_file_name(
-        platform=IndalekoICloudIndexer.icloud_platform,
+    output_file_name = IndalekoICloudCollector.generate_windows_indexer_file_name(
+        platform=IndalekoICloudCollector.icloud_platform,
         user_id = indexer.get_user_id(),
         service = 'indexer',
         timestamp=timestamp,

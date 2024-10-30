@@ -19,15 +19,28 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import argparse
 import datetime
-import os
 import logging
+import os
+import sys
 
+init_path = os.path.dirname(os.path.abspath(__file__))
+
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+# pylint: disable=wrong-import-position
 from Indaleko import Indaleko
-from IndalekoIndexer import IndalekoIndexer
 from IndalekoLinuxMachineConfig import IndalekoLinuxMachineConfig
+from storage import BaseStorageCollector
+# pylint: enable=wrong-import-position
 
 
-class IndalekoLinuxLocalIndexer(IndalekoIndexer):
+
+class IndalekoLinuxLocalCollector(BaseStorageCollector):
     '''
     This is the class that indexes Linux local file systems.
     '''
@@ -54,9 +67,9 @@ class IndalekoLinuxLocalIndexer(IndalekoIndexer):
         if 'machine_id' not in kwargs:
             kwargs['machine_id'] = self.machine_config.machine_id
         super().__init__(**kwargs,
-                         platform=IndalekoLinuxLocalIndexer.linux_platform,
-                         indexer_name=IndalekoLinuxLocalIndexer.linux_local_indexer_name,
-                         **IndalekoLinuxLocalIndexer.indaleko_linux_local_indexer_service
+                         platform=IndalekoLinuxLocalCollector.linux_platform,
+                         indexer_name=IndalekoLinuxLocalCollector.linux_local_indexer_name,
+                         **IndalekoLinuxLocalCollector.indaleko_linux_local_indexer_service
         )
 
 
@@ -64,10 +77,10 @@ class IndalekoLinuxLocalIndexer(IndalekoIndexer):
     def generate_linux_indexer_file_name(**kwargs):
         '''Generate a file name for the Linux local indexer'''
         if 'platform' not in kwargs:
-            kwargs['platform'] = IndalekoLinuxLocalIndexer.linux_platform
+            kwargs['platform'] = IndalekoLinuxLocalCollector.linux_platform
         if 'indexer_name' not in kwargs:
-            kwargs['indexer_name'] = IndalekoLinuxLocalIndexer.linux_local_indexer_name
-        return IndalekoIndexer.generate_indexer_file_name(**kwargs)
+            kwargs['indexer_name'] = IndalekoLinuxLocalCollector.linux_local_indexer_name
+        return BaseStorageCollector.generate_indexer_file_name(**kwargs)
 
 
 def main():
@@ -92,12 +105,12 @@ def main():
     config_files = IndalekoLinuxMachineConfig.find_config_files(pre_args.configdir)
     default_config_file = IndalekoLinuxMachineConfig.get_most_recent_config_file(pre_args.configdir)
     config_file_metadata = Indaleko.extract_keys_from_file_name(default_config_file)
-    config_platform = IndalekoLinuxLocalIndexer.linux_platform
+    config_platform = IndalekoLinuxLocalCollector.linux_platform
     if 'platform' in config_file_metadata:
         config_platform = config_file_metadata['platform']
-    log_file_name = IndalekoLinuxLocalIndexer.generate_linux_indexer_file_name(
+    log_file_name = IndalekoLinuxLocalCollector.generate_linux_indexer_file_name(
         platform=config_platform,
-        indexer_name=IndalekoLinuxLocalIndexer.linux_local_indexer_name,
+        indexer_name=IndalekoLinuxLocalCollector.linux_local_indexer_name,
         machine_id = config_file_metadata['machine'],
         target_dir=pre_args.logdir,
         timestamp=timestamp,
@@ -122,14 +135,14 @@ def main():
     machine_config = IndalekoLinuxMachineConfig.load_config_from_file(config_file=pre_args.config)
 
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    indexer = IndalekoLinuxLocalIndexer(
+    indexer = IndalekoLinuxLocalCollector(
         machine_config=machine_config,
         timestamp=timestamp,
         path=pre_args.path
     )
-    output_file = IndalekoLinuxLocalIndexer.generate_linux_indexer_file_name(
+    output_file = IndalekoLinuxLocalCollector.generate_linux_indexer_file_name(
         platform=config_platform,
-        indexer_name=IndalekoLinuxLocalIndexer.linux_local_indexer_name,
+        indexer_name=IndalekoLinuxLocalCollector.linux_local_indexer_name,
         machine_id = config_file_metadata['machine'],
         target_dir=pre_args.datadir,
         suffix='log')

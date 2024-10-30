@@ -10,7 +10,8 @@ authors = [{name = "Tony Mason", email = "fsgeek@gatech.edu"}]
 dependencies = [
     "apischema==0.18.1",
     "discord.py==2.3.2",
-    "docker_py==1.10.6",
+    "docker==7.1.0",
+    "dropbox==12.0.2",
     "Faker==29.0.0",
     "geopy==2.4.1",
     "google_api_python_client==2.146.0",

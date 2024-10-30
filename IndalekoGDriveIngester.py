@@ -29,7 +29,7 @@ from icecream import ic
 
 from IndalekoLogging import IndalekoLogging
 from Indaleko import Indaleko
-from IndalekoGDriveIndexer import IndalekoGDriveIndexer
+from IndalekoGDriveIndexer import IndalekoGDriveCollector
 from IndalekoIngester import IndalekoIngester
 from IndalekoObject import IndalekoObject
 from IndalekoRelationshipContains import IndalekoRelationshipContains
@@ -321,7 +321,7 @@ class IndalekoGDriveIngester(IndalekoIngester):
 def list_files(args: argparse.Namespace) -> None:
     '''List the available indexer files'''
     if len(args.strings) == 0:
-        strings = [IndalekoGDriveIndexer.gdrive_platform, 'indexer', IndalekoGDriveIndexer.default_file_suffix]
+        strings = [IndalekoGDriveCollector.gdrive_platform, 'indexer', IndalekoGDriveCollector.default_file_suffix]
     else:
         strings = args.strings
     print(strings)

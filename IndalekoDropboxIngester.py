@@ -34,7 +34,7 @@ import datetime
 
 from IndalekoIngester import IndalekoIngester
 from Indaleko import Indaleko
-from IndalekoDropboxIndexer import IndalekoDropboxIndexer
+from IndalekoDropboxIndexer import IndalekoDropboxCollector
 from IndalekoServiceManager import IndalekoServiceManager
 import IndalekoLogging
 from IndalekoObject import IndalekoObject
@@ -58,7 +58,7 @@ class IndalekoDropboxIngester(IndalekoIngester):
         service_id = dropbox_ingester_uuid,
     )
 
-    dropbox_platform = IndalekoDropboxIndexer.dropbox_platform
+    dropbox_platform = IndalekoDropboxCollector.dropbox_platform
     dropbox_ingester = 'dropbox_ingester'
 
     def __init__(self, **kwargs) -> None:
@@ -413,7 +413,7 @@ def main():
     )
     log_file_name = indaleko_logging.get_log_file_name()
     ic(log_file_name)
-    indexer = IndalekoDropboxIndexer()
+    indexer = IndalekoDropboxCollector()
     indexer_files = indexer.find_indexer_files(pre_args.datadir)
     ic(indexer_files)
     parser = argparse.ArgumentParser(parents=[pre_parser])
@@ -423,7 +423,7 @@ def main():
                         help='Dropbox index data file to ingest')
     args=parser.parse_args()
     ic(args)
-    input_metadata = IndalekoDropboxIndexer.extract_metadata_from_indexer_file_name(args.input)
+    input_metadata = IndalekoDropboxCollector.extract_metadata_from_indexer_file_name(args.input)
     ic(input_metadata)
     input_timestamp = timestamp
     if 'timestamp' in input_metadata:

@@ -26,12 +26,23 @@ import platform
 
 from icecream import ic
 
+init_path = os.path.dirname(os.path.abspath(__file__))
+
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+# pylint: disable=wrong-import-position
 from Indaleko import Indaleko
-from IndalekoIndexer import IndalekoIndexer
 from IndalekoMacMachineConfig import IndalekoMacOSMachineConfig
+from storage import BaseStorageCollector
+# pylint: enable=wrong-import-position
 
 
-class IndalekoMacLocalIndexer(IndalekoIndexer):
+class IndalekoMacLocalCollector(BaseStorageCollector):
     '''
     This is the class that indexes Mac local file systems.
     '''
@@ -58,9 +69,9 @@ class IndalekoMacLocalIndexer(IndalekoIndexer):
         if 'machine_id' not in kwargs:
             kwargs['machine_id'] = self.machine_config.machine_id
         super().__init__(**kwargs,
-                         platform=IndalekoMacLocalIndexer.mac_platform,
-                         indexer_name=IndalekoMacLocalIndexer.mac_local_indexer_name,
-                         **IndalekoMacLocalIndexer.indaleko_mac_local_indexer_service
+                         platform=IndalekoMacLocalCollector.mac_platform,
+                         indexer_name=IndalekoMacLocalCollector.mac_local_indexer_name,
+                         **IndalekoMacLocalCollector.indaleko_mac_local_indexer_service
         )
 
         self.dir_count=0
@@ -163,7 +174,7 @@ def main():
     machine_config = IndalekoMacOSMachineConfig.load_config_from_file(config_file=pre_args.config)
 
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    indexer = IndalekoMacLocalIndexer(machine_config=machine_config, timestamp=timestamp)
+    indexer = IndalekoMacLocalCollector(machine_config=machine_config, timestamp=timestamp)
     output_file = indexer.generate_windows_indexer_file_name()
     parser= argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--datadir', '-d',
@@ -183,7 +194,7 @@ def main():
 
     args = parser.parse_args()
     args.path=os.path.abspath(args.path)
-    indexer = IndalekoMacLocalIndexer(timestamp=timestamp,
+    indexer = IndalekoMacLocalCollector(timestamp=timestamp,
                                           path=args.path,
                                           machine_config=machine_config)
     output_file = indexer.generate_windows_indexer_file_name()
