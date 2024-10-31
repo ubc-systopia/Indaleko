@@ -9,31 +9,36 @@ File metadata generator for:
 
 Pipeline workflow:
     - Query processor takes in a json config consisting of parameters for:
-           
         0) output_json_file: the output json file to store the metadata
         1) n_metadata_records: The total number of metadata 
         2) total_storage_size: the total dataset size in terms of file size
-        3) n_queries: number of queries; started with one for now
-        4) n_matching_queries: N
-        5) query: query itself in aql or text 
+        3) n_matching_queries: N
+        4) query: query itself in aql or text 
 
     - query is processed by NLP to generate an aql query 
     - components of query will have to be extracted to specifiy selected_md_attributes for the metadata generator: 
 
-    selected_md_attributes{  file.size: ["target_min", "target_max", "command"], 
-                             file.modified: ["starttime", "endtime", "command"],
-                             file.name: ["pattern", "command", "extension"], ... }  # extension is optional
+    selected_md_attributes{  file.size: {"target_min":int, "target_max":int, "command":str}, 
+                             file.modified: {"starttime":str, "endtime":str, "command":str},
+                            ... }  
 
     - The resulting metadata is then stored within the Indaleko DB
     - the aql query is run with Indaleko
     - the resulting metadata are compared with what was intended to be found
     - the precision and recall are calculated and outputted in a txt format
+--------------------------------------------------------------------------------------------------------------
+TODOs....
 
+TODO:   1) Create time
+        2) Modify time
+        3) Last read time
 
-TODO: finish creating metadata for activity context and semantics
-TODO: figure out how to process the queries to generate the intended input for the metadata generator 
-TODO: feed metadata into the Indaleko DB and run against query 
-TODO: create the recall/precision tool 
+TODO: testing already created functionalities
+
+TODO: NER --> wait for Tony to specify definition of this
+Done: make sure that the uri generated can be local, online, etc. 
+Done: creating truth like files
+Done: add altitude for geo location although altitude seems to be 0 most of the time
 
 
 
@@ -80,20 +85,23 @@ class Dataset_Generator:
         self.query_ops = [">=", "<=", "==", "<>",">", "<"]
         self.metadata_json = ""
 
+        # self.selected_md_attributes = {"Posix":{
+        #                                     "file.name": {'pattern':'hi', 'command':'ends'}, 
+        #                                     "file.modified": {'starttime': '2023-12-10','endtime': '2023-12-23', 'command': 'range'},
+        #                                     "file.size":{'target_min': 10, 'target_max': 10000, 'command':'range'}, 
+        #                                     "file.directory": {'location': "google_drive"}},
+        #                                 "Semantic":{
+        #                                     "content": "Summary about the immune response to infections."
+        #                                 }, 
+        #                                 "Activity": {
+        #                                     "weather": "Sun",
+        #                                     "ambient_temp": {'min_temp': 21, 'max_temp':21, 'command':"gt"},
+        #                                     "geo_location": {'location': "1600 Amphitheatre Parkway, Mountain View, CA 94043, USA", 'command': "at"}
+        #                                 }
+        #                             } # in the format {file.size:[min, max], file.name:"fake_name", etc.} 
         self.selected_md_attributes = {"Posix":{
-                                            "file.name": ["hi", "ends", ".pdf"], 
-                                            "file.modified": ['2023-12-10', '2023-12-23', "range"],
-                                            "file.size":[10, 10000, "range"], 
-                                            "file.directory": ["photo", "find"]},
-                                        "Semantic":{
-                                            "content": "Summary about the immune response to infections."
-                                        }, 
-                                        "Activity": {
-                                            "weather": "Sun",
-                                            "ambient_temp": [21, 21, "gt"],
-                                            "geo_location": ["Vancouver", "at"]
-                                        }
-                                    } # in the format {file.size:[min, max], file.name:"fake_name", etc.} 
+                                            "file.name": {'pattern':'hi', 'command':'ends'}, 
+                                            "file.directory": {'location': "google_drive"}}, "Semantic": {}, "Activity": {}}
 
         self.selected_POSIX_md = self.selected_md_attributes["Posix"]
         self.selected_AC_md = self.selected_md_attributes["Activity"]
@@ -129,8 +137,8 @@ class Dataset_Generator:
         rand_digits = ''.join(random.choices('0123456789', k=digits))
         return rand_digits
 
-    #create the UUID for the metadata based on the file_type of metadata they are (filler VS truth metadata)
-    def create_UUID(self, number: int, query_number: int, file_type: bool = True) -> str:
+    # create the UUID for the metadata based on the file_type of metadata they are (filler VS truth metadata)
+    def create_UUID(self, number: int, file_type: bool = True) -> str:
         if file_type:
             uuid = f"c{number}" 
         else:
@@ -142,7 +150,8 @@ class Dataset_Generator:
         return uuid 
 
 
-    #convert query format of date "YYYY-MM-DD" to datetime format
+    # Helper function to convert query format of date "YYYY-MM-DD" to datetime format
+    # used in time generator functions 
     def generate_time(self, time: str) -> datetime:
         splittime = re.split("-", time)
 
@@ -154,7 +163,8 @@ class Dataset_Generator:
         return time
 
     #generate random path to directories within a parent dir based on base_dir, num_direcotries, max_depth and if available, directory_name
-    def generate_random_path(self, base_dir: str, num_directories: int, max_depth: int, directory_name: str = None) -> None:
+    #only runs once 
+    def generate_local_path(self, base_dir: str, num_directories: int, max_depth: int, directory_name: str = None) -> None:
         directory_count = 0  
         # List to store generated paths
         generated_paths = [] 
@@ -179,42 +189,122 @@ class Dataset_Generator:
                     create_dir_recursive(subdir_path, current_depth + 1)
 
         create_dir_recursive(base_dir, 1)
+        
         if directory_name != None:
             self.saved_directory_path["truth.directory"] = random.choice(generated_paths) + "/" + directory_name
         self.saved_directory_path["filler.directory"] = generated_paths
 
-        
-
     
+    # PURPOSE: generate a file_name based on query or randomly
+    # self.selected_POSIX_md{file.name: {"pattern":str, "command":str, "extension":str}}
+    # command includes: "starts", "ends", "contains"
+    #TODO: could control for case-sensitivity
+    def generate_file_name(self, file_type: bool) -> None:
+        n_filler_letters = random.randint(1, 10)
+        file_extension = [".pdf", ".doc",".docx", ".txt", ".rtf", ".xls", ".xlsx", ".csv", ".ppt", ".pptx", ".jpg", ".jpeg", ".png", ".gif", ".tif", ".mov", ".mp4", ".avi", ".mp3", ".wav", ".zip", ".rar"]
 
-    #generates a directory location for the metadata
-    # self.selected_POSIX_md["file.directory"] = [directory_name, command]
-    # self.saved_md_attributes["file.directory"] saves the pathing to files created
-    def generate_dir_location(self, file_name: str, file_type: bool=True) -> str:
-        parent_dir = "/home"
+        #if the file name is part of the query, extract the appropriate attributes and generate title
+        if "file.name" in self.selected_POSIX_md:
+            pattern = self.selected_POSIX_md["file.name"]["pattern"]
+            command = self.selected_POSIX_md["file.name"]["command"]
+            if file_type:
+                #if no extension specified, then randomly select a file extension
+                if "extension" in self.selected_POSIX_md["file.name"]:
+                    true_extension = self.selected_POSIX_md["file.name"]["extension"]
+                    file_extension.remove(true_extension)
+                else: 
+                     true_extension = random.choice(file_extension)
+                if command == "starts": # title that starts with a char pattern
+                    title = pattern + ''.join(random.choices(string.ascii_letters, k=n_filler_letters)) + true_extension 
+                elif command == "ends": # title that ends with specific char pattern
+                    title = ''.join(random.choices(string.ascii_letters, k=n_filler_letters)) + pattern + true_extension 
+                elif command == "contains":  # title that contains a char pattern
+                    title = ''.join(random.choices(string.ascii_letters, k=n_filler_letters)) + pattern + ''.join(random.choices(string.ascii_letters, k=n_filler_letters)) + true_extension 
+            # if a filler metadata, generate random title that excludes all letters specified in the char pattern
+            elif not file_type:
+                extension = random.choice(file_extension)
+                allowed_pattern = list(set(string.ascii_letters) - set(pattern.upper()) - set(pattern.lower()))
+                title = ''.join(random.choices(allowed_pattern, k=n_filler_letters)) + extension 
+        #if no query specified for title, just randomly create a title 
+        else: 
+            title = ''.join(random.choices(string.ascii_letters, k=n_filler_letters)) + random.choice(self.file_extension)
+        return title 
+
+    #generates path to a remote query 
+    def generate_remote_path(self, service_type, file_name: str) -> str:
+        alphanum = string.ascii_letters + string.digits
+        # Randomly choose characters from the combination and join them to form the key
+        file_id = ''.join(random.choices(alphanum, k=random.randint(3,6)))
+        local_file_locations = {
+           "google_drive": "/file/d/{file_id}/view/view?name={file_name}",
+            "dropbox": "/s/{file_id}/{file_name}?dl=0",
+            "icloud": "/iclouddrive/{file_id}/{file_name}"
+        }
+        remote_path = local_file_locations[service_type].format(file_id = file_id, file_name = file_name)
+        return remote_path
+
+    # initializes the fake local directories: 
+    # the truth.directory is only populated iff the self.selected_md specifies
+    # populates the self.saved_directory_path = {"truth.directory": str, "filler.directory": list, "truth.remote_directory"}}
+    def initialize_local_dir(self):
         num_directories = random.randint(3, 8)
         max_depth = random.randint(3,5)
-
+        parent_dir = "/home/user"
+        truth_parent_loc = ""
         # if the there is a query related to the directory and the pathing has not been initialized create the directories 
-        if "file.directory" in self.selected_POSIX_md and "truth.directory" not in self.saved_directory_path:
-            truth_path_name = self.selected_POSIX_md["file.directory"][0]
-            truth_path_command = self.selected_POSIX_md["file.directory"][1]
-            if truth_path_command == "find":
-                self.generate_random_path(parent_dir, num_directories, max_depth, directory_name = truth_path_name)
-        #else if not instantiated
-        elif "filler.directory" not in self.saved_directory_path: 
-            self.generate_random_path(parent_dir, num_directories, max_depth)
+        if "file.directory" in self.selected_POSIX_md:
+            truth_parent_loc = self.selected_POSIX_md["file.directory"]["location"]
+            if truth_parent_loc == "local":
+                truth_path_name = self.selected_POSIX_md["file.directory"]["local_dir_name"]
+                # RUN ONCE: if the file_type is a truth file, initialize the truth file directories
+                self.generate_local_path(parent_dir, num_directories, max_depth, directory_name = truth_path_name)
+            else: # remote so just generate random dir
+                self.generate_local_path(parent_dir, num_directories, max_depth)
+        else: #no queries related to file dir; generate random dir 
+            self.generate_local_path(parent_dir, num_directories, max_depth)
 
+    #generates a directory location for the metadata
+    # self.selected_POSIX_md["file.directory"] = [location, directory_name (optional, for remote only)]
+    # location: where it is stored; local or remote (google drive, drop box, icloud, local)
+    # RETURN: dict consisting of path and URI to remote or local storage
+    # CONSTRAINT: file name has to be determined first before creating file location and URI
+    # ex) a query that specifies file type but not name: find me a file I created in dropbox two days ago: file.directory populated
+    # ex) a query with no  file type and name specified: find me a file that I modified two days ago: (non populated so file name randomly generated and file directory generated randomly remote or local)
+    # ex) a query with name specified without specifying file dir: (file extension randomly generated so file dir would also be randomly generated)
+    def generate_dir_location(self, file_name: str, file_type: bool=True) -> dict:
+        # URIs/URLs to local computer or cloud storage services
+        file_locations = {
+           "google_drive": "https://drive.google.com",
+            "dropbox": "https://www.dropbox.com",
+            "icloud": "https://www.icloud.com",
+            "local": "file:/"
+        }
 
-        #if the directory has been instantiated and there is a path to the truth directory
-        if "truth.directory" in self.saved_directory_path:
-            if file_type:
+        #RUN after initialization:
+        if file_type and "file.directory" in self.selected_POSIX_md:
+            truth_parent_loc = self.selected_POSIX_md["file.directory"]["location"]
+            file_locations
+            if truth_parent_loc == "local": # if file dir specified, create truth file at that dir
                 path = self.saved_directory_path["truth.directory"] + "/" + file_name
-            else:
+                URI = file_locations[truth_parent_loc] + path
+
+            elif file_type and truth_parent_loc in file_locations.keys(): # if remote dir specified, create file at that dir
+                path = self.generate_remote_path(truth_parent_loc, file_name)
+                ic(truth_parent_loc)
+                URI = file_locations[truth_parent_loc] + path
+
+        elif not file_type and  "file.directory" in self.selected_POSIX_md:
+            truth_parent_loc = self.selected_POSIX_md["file.directory"]["location"]
+            del file_locations[truth_parent_loc]
+            # not queried at this point and file type doesn't matter; generate any file path (local or remote)
+            random_location = random.choice(list(file_locations.keys()))
+            if random_location == "local":
                 path = random.choice(self.saved_directory_path["filler.directory"]) + "/" + file_name
-        else: 
-            path = random.choice(self.saved_directory_path["filler.directory"]) + "/" + file_name
-        return path
+                URI = file_locations[random_location] + path
+            else:
+                path = self.generate_remote_path(random_location, file_name)
+                URI = file_locations[random_location] + path
+        return [path, URI]
 
 
     # PURPOSE: creates the modified time based on the start time, endtime and command provided
@@ -230,9 +320,9 @@ class Dataset_Generator:
 
         # if a condition for the modified attribute exists
         if "file.modified" in self.selected_POSIX_md:
-            starttime = self.selected_POSIX_md["file.modified"][0] #this selects the startdate
-            endtime = self.selected_POSIX_md["file.modified"][1] #this selects the enddate
-            command = self.selected_POSIX_md["file.modified"][2] #this specifies command
+            starttime = self.selected_POSIX_md["file.modified"]["starttime"] #this selects the startdate
+            endtime = self.selected_POSIX_md["file.modified"]["endtime"] #this selects the enddate
+            command = self.selected_POSIX_md["file.modified"]["command"] #this specifies command
 
             datetime_st = self.generate_time(starttime)
             datetime_et = self.generate_time(endtime)
@@ -291,15 +381,18 @@ class Dataset_Generator:
             modified_time = fake.date_between(start_date=default_startdate)
         return modified_time
 
+    
+
 
     # PURPOSE: create random file size based on the presence of a query
     # self.selected_POSIX_md{file.size: ["target_min", "target_max", "command"]}
     # setting the default file size to between 1B - 10GB
+    # command includes "equal", "range", "greater_than", "greater_than_equal", "less_than", less_than_equal"
     def generate_file_size(self, min_size: int = 1, max_size: int = 10737418240, file_type: bool=True) -> int:
         if "file.size" in self.selected_POSIX_md:
-            target_min = self.selected_POSIX_md["file.size"][0] #this selects the min size (list or number)
-            target_max = self.selected_POSIX_md["file.size"][1] #this selects the max size (list or number)
-            command = self.selected_POSIX_md["file.size"][2] #this selects the command
+            target_min = self.selected_POSIX_md["file.size"]["target_min"] #this selects the min size (list or number)
+            target_max = self.selected_POSIX_md["file.size"]["target_max"] #this selects the max size (list or number)
+            command = self.selected_POSIX_md["file.size"]["command"] #this selects the command
             # if the target_min/max is a list and is the same as the target_max choose a random size from the list
             if isinstance(target_min, list) and isinstance(target_max, list) and command == "equal":
                 if file_type:
@@ -349,36 +442,7 @@ class Dataset_Generator:
             size = random.randint(min_size, max_size)
         return size
 
-    # PURPOSE: generate a file_name based on query or randomly
-    # self.selected_POSIX_md{file.name: ["pattern", "command", "extension"]}
-    def generate_file_name(self, file_type: bool=True) -> str:
-        n_filler_letters = random.randint(1, 10)
-
-        #if the file name is part of the query, extract the appropriate attributes and generate title
-        if "file.name" in self.selected_POSIX_md:
-            pattern = self.selected_POSIX_md["file.name"][0]
-            command = self.selected_POSIX_md["file.name"][1]
-            extension = self.selected_POSIX_md["file.name"][2]
-
-            #if no extension specified, then randomly select a file extension
-            if extension == "":
-                extension = random.choice(self.file_extension)
-            if file_type:
-                if command == "starts": # title that starts with a char pattern
-                    title = pattern + ''.join(random.choices(string.ascii_letters, k=n_filler_letters)) + extension 
-                elif command == "ends": # title that ends with specific char pattern
-                    title = ''.join(random.choices(string.ascii_letters, k=n_filler_letters)) + pattern + extension 
-                elif command == "contains":  # title that contains a char pattern
-                    title = ''.join(random.choices(string.ascii_letters, k=n_filler_letters)) + pattern + ''.join(random.choices(string.ascii_letters, k=n_filler_letters)) + extension 
-            
-            # if a filler metadata, generate random title that excludes all letters specified in the char pattern
-            else:
-                allowed_pattern = list(set(string.ascii_letters) - set(pattern.upper()) - set(pattern.lower()))
-                title = ''.join(random.choices(allowed_pattern, k=n_filler_letters)) + extension 
-        #if no query specified for title, just randomly create a title 
-        else: 
-            title = ''.join(random.choices(string.ascii_letters, k=n_filler_letters)) + random.choice(self.file_extension)
-        return title 
+   
 
     # -----------------------------------Generate activity context-----------------------------------------------------------------
 
@@ -389,13 +453,15 @@ class Dataset_Generator:
         - geo context
         
     """
+    #generates a geographical activity context based on the location given 
+    # self.selected_AC_md["geo_location"] = {'location': str, 'command': str}
 
     def generate_geo_context(self, file_type: bool = True) -> dict:
         location_dict = {}
         delta = 5
         if "geo_location" in self.selected_AC_md:
-            geo_location = self.selected_AC_md["geo_location"][0]
-            geo_command = self.selected_AC_md["geo_location"][1]
+            geo_location = self.selected_AC_md["geo_location"]["location"]
+            geo_command = self.selected_AC_md["geo_location"]["command"]
             if geo_command == "at":
                 if file_type:
                     #geo location generator that given a city, generates longitude and latitude
@@ -403,42 +469,50 @@ class Dataset_Generator:
                     location = geo_py.geocode(geo_location, timeout=1000)
                     latitude = location.latitude
                     longitude = location.longitude
+                    altitude = location.altitude
                     self.saved_geo_loc["latitude"] = latitude
                     self.saved_geo_loc["longitude"] = longitude
+                    self.saved_geo_loc["elevation"] = altitude
+
                 else:
                     truth_latitude = self.saved_geo_loc["latitude"]
                     truth_longitude = self.saved_geo_loc["longitude"]
+                    truth_altitude = self.saved_geo_loc["altitude"]
 
                     max_lat = 90 if truth_latitude + delta > 90 else truth_latitude + delta
                     min_lat = -90 if truth_latitude - delta < -90 else truth_latitude - delta
                     max_long = 180 if truth_longitude + delta > 180 else truth_longitude + delta
                     min_long = -180 if truth_longitude - delta < -180 else truth_longitude - delta
-
+                    min_alt = -10 if truth_altitude - delta < -10 else truth_latitude - delta
+                    max_alt = 1000 if truth_altitude + delta > 100 else truth_latitude + delta
 
                     latitude = random.choice([random.uniform(-90, min_lat), random.uniform(max_lat, 90)])
                     longitude = random.choice([random.uniform(-180, min_long), random.uniform(max_long, 180)])
+                    altitude = random.choice([random.uniform(-10, min_alt), random.uniform(max_alt, 1000)])
 
         else:
             latitude = random.uniform(-90, 90)
             longitude = random.uniform(-180, 180)
+            altitude = random.uniform(-10, 1000)
 
         location_dict["latitude"] = latitude
         location_dict["longitude"] = longitude
+        location_dict["altitude"] = altitude
         return location_dict
 
     #generates the ambient temperature activity context
+    # self.selected_AC_md["ambient_temp"] = {'min_temp': int, 'max_temp': int, 'command':str},
+    #commands: equal, range, gt, lt 
     def generate_ambient_temp_ac(self, file_type: bool = True) -> int:
         overall_maxtemp = 40
         overall_mintemp = -20
         if "ambient_temp" in self.selected_AC_md:
-            ambient_mintemp = self.selected_AC_md["ambient_temp"][0]
-            ambient_maxtemp = self.selected_AC_md["ambient_temp"][1]
-            ambient_command = self.selected_AC_md["ambient_temp"][2]
-            ic("jere")
+            ambient_mintemp = self.selected_AC_md["ambient_temp"]['min_temp']
+            ambient_maxtemp = self.selected_AC_md["ambient_temp"]['max_temp']
+            ambient_command = self.selected_AC_md["ambient_temp"]['command']
             if ambient_command == 'equal' or ambient_command == 'range':
                 if file_type:
                     ambient_temp = random.randint(ambient_mintemp, ambient_maxtemp)
-                    ic(ambient_temp)
                 else:
                     ambient_temp = random.choice([random.randint(overall_mintemp, ambient_mintemp-1), random.randint(ambient_maxtemp+1, overall_maxtemp)])
             elif ambient_command == "gt":
@@ -452,11 +526,11 @@ class Dataset_Generator:
                 else:
                     ambient_temp = random.randint(ambient_mintemp+1, overall_maxtemp)
         else:
-            ic(file_type)
             ambient_temp = random.randint(overall_mintemp, overall_maxtemp)
         return ambient_temp
 
     #generates the music activity context metdata
+    # self.selected_AC_md["music"] = str (music name)
     def generate_music_ac(self, file_type: bool = True) -> str:
         fake = Faker()
         if "music" in self.selected_AC_md:
@@ -469,6 +543,7 @@ class Dataset_Generator:
         return music
 
     # generates the weather activity context for the metadata 
+    # self.selected_AC_md["weather"] = str (explaining the weather),
     def generate_weather_ac(self, file_type: bool = True) -> str:
         weather_dict = {"Precipitation": ["rainy", "drizzling", "showering", "stormy"], "Sun": ["sunny", "scorching", "warm", "bright", "dry"], "Snow": ["icy", "chilly", "frozen"]}
         if "weather" in self.selected_AC_md:
@@ -479,8 +554,6 @@ class Dataset_Generator:
                 weather_choice_exc = list(weather_dict.keys())
                 weather_choice_exc.remove(weather_ac)
                 random_weather_key = random.choice(weather_choice_exc)
-                print("here")
-                ic(random_weather_key)
                 weather = random.choice(weather_dict[random_weather_key])
 
         else:
@@ -500,6 +573,7 @@ class Dataset_Generator:
             semantic = fake.sentence(nb_words=random.randint(1, 5))
         return semantic
 
+    # generate random data; random number of ascii characters
     def generate_random_data(self):
         ascii_chars = string.ascii_letters + string.digits
         random_data = ''.join(random.choices(ascii_chars, k = random.randint(1,500)))
@@ -508,7 +582,7 @@ class Dataset_Generator:
 
     # GENERATE METADATA based on the data models 
     # create the record data based on record datamodel
-    def create_record_data(self, UUID: str, timestamp: str, file_size: int, modified_time: str, file_name: str, path: str, file_type: bool) -> dict:
+    def create_record_data(self, UUID: str, timestamp: str, file_size: int, modified_time: str, file_name: str, path: str) -> dict:
         record_data = {
                 "SourceIdentifier": {
                     "Identifier": UUID,
@@ -550,35 +624,44 @@ class Dataset_Generator:
         }
         return uuid_data
 
-    #generates the uri for the file, for now all are local files
-    def generate_uri(self, path: str) -> str:
-        return "file://" + path
+    #helper function for setting truth attributes
+    def define_truth_attribute(self, attribute, truth_file, truthlike_file, truth_attributes):
+        if truth_file or (truthlike_file and attribute in truth_attributes):
+            return True
+        elif not truth_file or truthlike_file:
+            return False
 
-    # generates the target metadata with the specified attributes based on the nubmer of matching queries to generate from config:
-    def generate_metadata(self, query_number: int, max_num: int, key: str, file_type: bool = True) -> dict:
-        ic("here")
-        all_metadata = {}
-        ic(max_num)
-        for n in range(1, max_num):
-            ic(max_num)
-            key = f'{key} #{n}'
 
-            general_time = self.generate_file_modified(file_type)
+    # generates the filler file with attributes of target metadata:
+    def generate_truthlike_metadata(self, current_filenum: int, max_num: int, key: str) -> dict:
+        all_metadata = []
+       
+        for n in range(1, max_num): 
+            truth_attributes = list(self.selected_POSIX_md.keys()) + list(self.selected_AC_md.keys()) + list(self.selected_semantic_md.keys())
+            total_truth_attributes = len(truth_attributes)
+            filler_truth_attributes = random.randint(0, total_truth_attributes-1)
+            ic(truth_attributes)
+            truth_attributes = random.sample(truth_attributes, k = filler_truth_attributes)
+
+            key_name = f'{key} #{n}, truth-like attributes: {filler_truth_attributes}'
+
+            
+            general_time = self.generate_file_modified(file_type=self.define_truth_attribute("file.modified", truth_attributes))
             modified_time = general_time.strftime('%Y-%m-%d %H:%M:%S')
             timestamp = general_time.strftime('%Y-%m-%dT%H:%M:%SZ') # for now stating that timestamp is the same time as modified time
             
-            UUID = self.create_UUID(n, query_number, file_type)
-            file_size = self.generate_file_size(file_type)
-            file_name = self.generate_file_name(file_type)
-            path = self.generate_dir_location(file_name, file_type) 
-            record_data = self.create_record_data(UUID, timestamp, file_size, modified_time, file_name, path, file_type)
+            UUID = self.create_UUID(n, file_type = False)
+            file_size = self.generate_file_size(file_type= self.define_truth_attribute("file.size", truth_attributes))
+            file_name = self.generate_file_name(file_type= self.define_truth_attribute("file.name", truth_attributes))
+            path, URI = self.generate_dir_location(file_name, file_type= self.define_truth_attribute("file.directory", truth_attributes)) 
+            
+            record_data = self.create_record_data(UUID, timestamp, file_size, modified_time, file_name, path)
             timestamp_data = self.create_timestamp_data(UUID, timestamp)
             UUID_data = self.create_UUID_data(UUID)
-            semantic_attributes_data = self.create_semantic_attribute(UUID_data, file_type)
-            URI = self.generate_uri(path)
+            semantic_attributes_data = self.create_semantic_attribute(UUID_data, file_type= self.define_truth_attribute("content", truth_attributes))
             
             # Add the new metadata entry to the dictionary
-            all_metadata[key] = {
+            all_metadata.append({
                 "Record": record_data,
                 "URI": URI,
                 "ObjectIdentifier": UUID,
@@ -589,36 +672,108 @@ class Dataset_Generator:
                 "SemanticAttributes": [
                     semantic_attributes_data # could add in more
                 ],
-                "Label": key,
-                "LocalIdentifier": str(n if file_type else self.n_matching_queries + n),
+                "Label": key_name,
+                "LocalIdentifier": current_filenum + n,
                 "Volume": UUID,
                 "PosixFileAttributes": "S_IFREG", #all are regular files
                 "WindowsFileAttributes": "FILE_ATTRIBUTE_ARCHIVE", #setting as default
-            }
+            })
+        return all_metadata
+
+    # generates the target metadata with the specified attributes based on the nubmer of matching queries to generate from config:
+    def generate_metadata(self, current_filenum:int, max_num: int, key: str, file_type: bool, truth_like: bool) -> dict:
+        all_metadata = []
+        truthlike_attributes =[]
+        ic(file_type)
+        
+        for n in range(1, max_num):
+            key_name = f'{key} #{n}'
+
+            if truth_like:
+                total_truth_attributes = len(self.truth_attributes)
+                filler_truth_attributes = random.randint(1, total_truth_attributes-1)
+                truthlike_attributes = random.sample(self.truth_attributes, k = filler_truth_attributes)
+
+                key_name += f', truth-like attributes: {truthlike_attributes}'
+
+            general_time = self.generate_file_modified(file_type=self.define_truth_attribute("file.modified", file_type, truth_like, truthlike_attributes))
+            modified_time = general_time.strftime('%Y-%m-%d %H:%M:%S')
+            timestamp = general_time.strftime('%Y-%m-%dT%H:%M:%SZ') # for now stating that timestamp is the same time as modified time
+            
+            UUID = self.create_UUID(current_filenum + n, file_type = file_type)
+            file_size = self.generate_file_size(file_type= self.define_truth_attribute("file.size", file_type, truth_like, truthlike_attributes))
+            file_name = self.generate_file_name(file_type= self.define_truth_attribute("file.name", file_type, truth_like, truthlike_attributes))
+            path, URI = self.generate_dir_location(file_name, file_type= self.define_truth_attribute("file.directory", file_type, truth_like, truthlike_attributes))
+            
+            record_data = self.create_record_data(UUID, timestamp, file_size, modified_time, file_name, path)
+            timestamp_data = self.create_timestamp_data(UUID, timestamp)
+            UUID_data = self.create_UUID_data(UUID)
+            semantic_attributes_data = self.create_semantic_attribute(UUID_data, file_type= self.define_truth_attribute("content", file_type, truth_like, truthlike_attributes))
+            
+            # Add the new metadata entry to the dictionary
+            all_metadata.append({
+                "Record": record_data,
+                "URI": URI,
+                "ObjectIdentifier": UUID,
+                "Timestamps": [
+                    timestamp_data
+                ],
+                "Size": file_size,
+                "SemanticAttributes": [
+                    semantic_attributes_data # could add in more
+                ],
+                "Label": key_name,
+                "LocalIdentifier": str(current_filenum + n),
+                "Volume": UUID,
+                "PosixFileAttributes": "S_IFREG", #all are regular files
+                "WindowsFileAttributes": "FILE_ATTRIBUTE_ARCHIVE", #setting as default
+            })
         return all_metadata
 
     #writes generated metadata in json file
-    def write_json(self, target: dict, filler: dict, json_path: str) -> None:
-        target.update(filler)
+    def write_json(self, target: dict, truth_like_filler: dict, filler: dict, json_path: str) -> None:
+        dataset = target + truth_like_filler + filler
         with open(json_path, 'w') as json_file:
-            json.dump(target, json_file)
-            json_file.write('\n')
-
+            json.dump(dataset, json_file, indent=4)
+    
     # main function to run the metadata generator
     def generate_metadata_dataset(self) -> None:
         self.parse_config_json()
-        
-        target = self.generate_metadata(1, self.n_matching_queries+1, 'Truth File', True)
+        # intiialize the synthetic dir locations
+        self.initialize_local_dir()
+        ic(self.saved_directory_path)
 
+        self.truth_attributes = list(self.selected_POSIX_md.keys()) + list(self.selected_AC_md.keys()) + list(self.selected_semantic_md.keys())
+        target = self.generate_metadata(0, self.n_matching_queries+1, 'Truth File', True, False)
+
+        total_truth_attributes = len(self.truth_attributes) 
+        remaining_files = self.n_metadata_records - self.n_matching_queries
+        ic(self.n_metadata_records)
+        ic(remaining_files)
+        # only create truth-like files if the number of attributes is greater than one, otherwise, it becomes a truth file
+        if total_truth_attributes > 1:
+            truth_like_num = random.randint(0, remaining_files)
+        else:
+            truth_like_num = 0
+
+        filler_num = remaining_files - truth_like_num
+        ic(truth_like_num)
+        ic(filler_num)
+
+        truth_like_filler = self.generate_metadata(0, truth_like_num +1, 'Filler Truth-Like File', False, True)
+        filler = self.generate_metadata(truth_like_num,  filler_num +1, 'Filler File', False, False)
+        result = self.generate_geo_context(True)
+        self.write_json(target, truth_like_filler, filler, self.metadata_json)
+
+    #test the data model to see if in the right form
+    # test with any of the following variables: target, truth_like_filler, filler
+    def test_data_model(self, model):
         try:
-            user = IndalekoObjecdtDataModel(**target["Truth File #1"])
-            print("Valid input passed:", user)
+            model_test = IndalekoObjecdtDataModel(**model[0])
+            print("Valid input passed:", model_test)
         except ValidationError as e:
             print("Validation error for valid input:", e)
-
-        filler = self.generate_metadata(1, self.n_metadata_records-self.n_matching_queries+1, 'Filler File', False)
-        self.write_json(target, filler, self.metadata_json)
-
+    
 def main():
     config_path = "data_generator/dg_config.json"
     data_generator = Dataset_Generator(config_path)
