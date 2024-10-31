@@ -598,16 +598,8 @@ def main():
                                         suffix='log')
     log_file_name = indaleko_logging.get_log_file_name()
     ic(log_file_name)
-    indexer = IndalekoOneDriveCollector(timestamp=timestamp, recurse=(not pre_args.norecurse), max_workers=pre_args.threads)
-    output_file_name = IndalekoOneDriveCollector.generate_onedrive_indexer_file_name(
-            platform=IndalekoOneDriveCollector.onedrive_platform,
-            user_id=indexer.get_email(),
-            service='indexer',
-            timestamp=timestamp,
-            suffix='jsonl'
-        )
     parser = argparse.ArgumentParser(parents=[pre_parser])
-    parser.add_argument('--output', type=str, default=output_file_name,
+    parser.add_argument('--output', type=str, default=None,
                         help='Name and location of where to save the fetched metadata')
     parser.add_argument('--datadir',
                         '-d',
@@ -618,7 +610,18 @@ def main():
                         type=str,
                         default='')
     args = parser.parse_args()
-    output_file = os.path.join(args.datadir, args.output)
+    indexer = IndalekoOneDriveCollector(timestamp=timestamp, recurse=(not pre_args.norecurse), max_workers=pre_args.threads)
+    if args.output is None:
+        output_file_name = IndalekoOneDriveCollector.generate_onedrive_indexer_file_name(
+                platform=IndalekoOneDriveCollector.onedrive_platform,
+                user_id=indexer.get_email(),
+                service='indexer',
+                timestamp=timestamp,
+                suffix='jsonl'
+            )
+    else:
+        output_file_name = args.output
+    output_file = os.path.join(args.datadir, output_file_name)
     logging.info('Indaleko OneDrive Indexer started.')
     logging.info('Output file: %s', output_file)
     logging.info('Indexing: %s', args.path)
