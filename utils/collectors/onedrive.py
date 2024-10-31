@@ -1,5 +1,5 @@
 '''
-IndalekoGDriveIndexer.py
+This script handles collecting storage metadata from OneDrive via the GraphAPI.
 
 This script is used to index the files in the Google Drive folder of Indaleko.
 It will create a JSONL file with the metadata of the files in the Dropbox
@@ -38,14 +38,25 @@ import socket
 import sys
 import threading
 import time
-from urllib.parse import urlencode, parse_qs, urlparse
 
+init_path = os.path.dirname(os.path.abspath(__file__))
+
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+# pylint: disable=wrong-import-position
 from Indaleko import Indaleko
-from IndalekoIndexer import IndalekoIndexer
 from IndalekoLogging import IndalekoLogging
+from storage import BaseStorageCollector
+# pylint: enable=wrong-import-position
 
 
-class IndalekoOneDriveIndexer(IndalekoIndexer):
+
+class IndalekoOneDriveCollector(BaseStorageCollector):
     '''This is the class for the OneDrive Indexer for Indaleko.'''
 
     onedrive_platform = "OneDrive"
@@ -105,7 +116,7 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
                 self.__chosen_account__ = self.__choose_account__()
             return self.__chosen_account__
 
-        def reset_chosen_account(self) -> 'IndalekoOneDriveIndexer.MicrosoftGraphCredentials':
+        def reset_chosen_account(self) -> 'IndalekoOneDriveCollector.MicrosoftGraphCredentials':
             self.__chosen_account__ = -1
             return self
 
@@ -115,8 +126,8 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
             self.cache = msal.SerializableTokenCache()
             if os.path.exists(self.cache_file):
                 logging.info('Cache file exists, deserializing')
-                self.cache.deserialize(open(self.cache_file, 'r').read())
-                logging.info(f'Loaded cache: {self.cache}')
+                self.cache.deserialize(open(self.cache_file, 'r', encoding='utf-8').read())
+                logging.info('Loaded cache: %s', self.cache)
             return self
 
 
@@ -196,7 +207,7 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
         def get_token(self):
             return self.__get_token__()
 
-        def clear_token(self) -> 'IndalekoOneDriveIndexer.MicrosoftGraphCredentials':
+        def clear_token(self) -> 'IndalekoOneDriveCollector.MicrosoftGraphCredentials':
             '''Use this to clear a stale or invalid token.'''
             self.token = None
             return self
@@ -204,16 +215,16 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
 
     def __init__(self, **kwargs):
         self.config_dir = kwargs.get('configdir', Indaleko.default_config_dir)
-        self.onedrive_config_file = os.path.join(self.config_dir, IndalekoOneDriveIndexer.onedrive_config_file)
-        self.onedrive_token_file = os.path.join(self.config_dir, IndalekoOneDriveIndexer.onedrive_token_file)
-        self.graphcreds = IndalekoOneDriveIndexer.MicrosoftGraphCredentials(
+        self.onedrive_config_file = os.path.join(self.config_dir, IndalekoOneDriveCollector.onedrive_config_file)
+        self.onedrive_token_file = os.path.join(self.config_dir, IndalekoOneDriveCollector.onedrive_token_file)
+        self.graphcreds = IndalekoOneDriveCollector.MicrosoftGraphCredentials(
             config=self.onedrive_config_file,
             cache_file=self.onedrive_token_file
         )
         super().__init__(
             **kwargs,
-            indexer_name=IndalekoOneDriveIndexer.onedrive_indexer_name,
-            **IndalekoOneDriveIndexer.indaleko_onedrive_indexer_service
+            indexer_name=IndalekoOneDriveCollector.onedrive_indexer_name,
+            **IndalekoOneDriveCollector.indaleko_onedrive_indexer_service
         )
         self.queue = Queue()
         self.results = Queue()
@@ -544,15 +555,15 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
     @staticmethod
     def find_indexer_files(
             search_dir : str,
-            prefix : str = IndalekoIndexer.default_file_prefix,
-            suffix : str = IndalekoIndexer.default_file_suffix) -> list:
+            prefix : str = BaseStorageCollector.default_file_prefix,
+            suffix : str = BaseStorageCollector.default_file_suffix) -> list:
         '''This function finds the files to ingest:
             search_dir: path to the search directory
             prefix: prefix of the file to ingest
             suffix: suffix of the file to ingest (default is .json)
         '''
-        prospects = IndalekoIndexer.find_indexer_files(search_dir, prefix, suffix)
-        return [f for f in prospects if IndalekoOneDriveIndexer.dropbox_platform in f]
+        prospects = BaseStorageCollector.find_indexer_files(search_dir, prefix, suffix)
+        return [f for f in prospects if IndalekoOneDriveCollector.dropbox_platform in f]
 
 
 def main():
@@ -579,7 +590,7 @@ def main():
                             default=1,
                             type=int)
     pre_args, _ = pre_parser.parse_known_args()
-    indaleko_logging = IndalekoLogging(platform=IndalekoOneDriveIndexer.onedrive_indexer_name,
+    indaleko_logging = IndalekoLogging(platform=IndalekoOneDriveCollector.onedrive_indexer_name,
                                         service_name='indexer',
                                         log_dir=pre_args.logdir,
                                         log_level=pre_args.loglevel,
@@ -587,9 +598,9 @@ def main():
                                         suffix='log')
     log_file_name = indaleko_logging.get_log_file_name()
     ic(log_file_name)
-    indexer = IndalekoOneDriveIndexer(timestamp=timestamp, recurse=(not pre_args.norecurse), max_workers=pre_args.threads)
-    output_file_name = IndalekoOneDriveIndexer.generate_onedrive_indexer_file_name(
-            platform=IndalekoOneDriveIndexer.onedrive_platform,
+    indexer = IndalekoOneDriveCollector(timestamp=timestamp, recurse=(not pre_args.norecurse), max_workers=pre_args.threads)
+    output_file_name = IndalekoOneDriveCollector.generate_onedrive_indexer_file_name(
+            platform=IndalekoOneDriveCollector.onedrive_platform,
             user_id=indexer.get_email(),
             service='indexer',
             timestamp=timestamp,
