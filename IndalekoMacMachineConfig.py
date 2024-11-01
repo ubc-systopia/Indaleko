@@ -25,13 +25,11 @@ import argparse
 from typing import Union
 from icecream import ic
 
-from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoMachineConfig import IndalekoMachineConfig
 from Indaleko import Indaleko
 from IndalekoRecordDataModel import IndalekoRecordDataModel
 from IndalekoDataModel import IndalekoDataModel
 from IndalekoMachineConfigDataModel import IndalekoMachineConfigDataModel
-from IndalekoRecordDataModel import IndalekoRecordDataModel
 
 
 class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
@@ -66,12 +64,12 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
             source_id = IndalekoMacOSMachineConfig.macos_machine_config_uuid_str
         return IndalekoMachineConfig.find_configs_in_db(source_id)
 
-    
+
     @staticmethod
     def find_config_files(directory : str, prefix : str = None, suffix : str = '.json') -> list:
         '''This looks for configuration files in the given directory.'''
         if prefix is None:
-            prefix = IndalekoMacOSMachineConfig.macos_machine_config_uuid_str
+            prefix = IndalekoMacOSMachineConfig.macos_machine_config_file_prefix
         return IndalekoMachineConfig.find_config_files(
             directory,
             prefix,

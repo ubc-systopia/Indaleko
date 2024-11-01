@@ -23,8 +23,9 @@ import datetime
 import os
 import logging
 import platform
+import sys
 
-from icecream import ic
+# from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -173,7 +174,7 @@ def main():
 
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     indexer = IndalekoMacLocalIndexer(machine_config=machine_config, timestamp=timestamp)
-    output_file = indexer.generate_windows_indexer_file_name()
+    output_file = indexer.generate_mac_indexer_file_name()
     parser= argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--datadir', '-d',
                         help='Path to the data directory',
@@ -195,8 +196,8 @@ def main():
     indexer = IndalekoMacLocalIndexer(timestamp=timestamp,
                                           path=args.path,
                                           machine_config=machine_config)
-    output_file = indexer.generate_windows_indexer_file_name()
-    log_file_name = indexer.generate_windows_indexer_file_name(target_dir=args.logdir, suffix='.log')
+    output_file = indexer.generate_mac_indexer_file_name()
+    log_file_name = indexer.generate_mac_indexer_file_name(target_dir=args.logdir, suffix='.log')
     logging.basicConfig(filename=os.path.join(log_file_name),
                                 level=args.loglevel,
                                 format='%(asctime)s - %(levelname)s - %(message)s',

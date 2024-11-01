@@ -20,16 +20,29 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import argparse
 import datetime
-import os
 import logging
+import os
+import sys
 import uuid
 
+
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+
+# pylint: disable=wrong-import-position
 from Indaleko import Indaleko
-from IndalekoIndexer import IndalekoIndexer
+from storage.collectors.base import BaseStorageCollector
 from IndalekoWindowsMachineConfig import IndalekoWindowsMachineConfig
+# pylint: enable=wrong-import-position
 
 
-class IndalekoWindowsLocalIndexer(IndalekoIndexer):
+
+class IndalekoWindowsLocalIndexer(BaseStorageCollector):
     '''
     This is the class that indexes Windows local file systems.
     '''
@@ -100,7 +113,7 @@ class IndalekoWindowsLocalIndexer(IndalekoIndexer):
             kwargs['indexer_name'] = IndalekoWindowsLocalIndexer.windows_local_indexer_name
         if 'machine_id' not in kwargs:
             kwargs['machine_id'] = uuid.UUID(self.machine_config.machine_id).hex
-        return IndalekoIndexer.generate_indexer_file_name(**kwargs)
+        return BaseStorageCollector.generate_indexer_file_name(**kwargs)
 
     def convert_windows_path_to_guid_uri(self, path : str) -> str:
         '''This method handles converting a Windows path to a volume GUID based URI.'''

@@ -19,15 +19,26 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import argparse
 import datetime
-import os
 import logging
+import os
+import sys
 
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+# pylint: disable=wrong-import-position
 from Indaleko import Indaleko
-from IndalekoIndexer import IndalekoIndexer
+from storage.collectors.base import BaseStorageCollector
 from IndalekoLinuxMachineConfig import IndalekoLinuxMachineConfig
+# pylint: enable=wrong-import-position
 
 
-class IndalekoLinuxLocalIndexer(IndalekoIndexer):
+
+class IndalekoLinuxLocalIndexer(BaseStorageCollector):
     '''
     This is the class that indexes Linux local file systems.
     '''
@@ -67,7 +78,7 @@ class IndalekoLinuxLocalIndexer(IndalekoIndexer):
             kwargs['platform'] = IndalekoLinuxLocalIndexer.linux_platform
         if 'indexer_name' not in kwargs:
             kwargs['indexer_name'] = IndalekoLinuxLocalIndexer.linux_local_indexer_name
-        return IndalekoIndexer.generate_indexer_file_name(**kwargs)
+        return BaseStorageCollector.generate_indexer_file_name(**kwargs)
 
 
 def main():
