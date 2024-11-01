@@ -19,7 +19,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import json
 import os
 import sys
 
@@ -27,7 +26,7 @@ from datetime import datetime
 from typing import List
 from pydantic import Field
 
-from icecream import ic
+# from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
