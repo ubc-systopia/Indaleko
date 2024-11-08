@@ -61,7 +61,7 @@ class IndalekoActivityContextService(IndalekoSingleton):
             self.db_config = kwargs['db_config']
         else:
             self.db_config = IndalekoDBConfig()
-        self.collection = IndalekoCollections.get_collection(Indaleko.Indaleko_ActivityContext)
+        self.collection = IndalekoCollections.get_collection(Indaleko.Indaleko_ActivityContext_Collection)
         assert self.collection is not None, 'Collection must be pre-defined'
         self.handle = uuid.uuid4()
         self.timestamp = datetime.datetime.now(datetime.timezone.utc)
@@ -159,7 +159,7 @@ class IndalekoActivityContextService(IndalekoSingleton):
             RETURN doc
         '''
         bind_vars = {
-            '@collection' : Indaleko.Indaleko_ActivityContext
+            '@collection' : Indaleko.Indaleko_ActivityContext_Collection
         }
         results = IndalekoDBConfig.get_db().aql.execute(query, bind_vars=bind_vars)
         entries = [entry for entry in results]

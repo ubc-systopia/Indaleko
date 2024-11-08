@@ -89,7 +89,7 @@ class IndalekoICloudIngester(IndalekoIngester):
             raise ValueError('Data must contain an ObjectIdentifier')
         if 'user_id' not in data:
             data['user_id'] = self.user_id
-        
+
         timestamps = []
         if 'date_created' in data:
             timestamps.append(
@@ -173,7 +173,7 @@ class IndalekoICloudIngester(IndalekoIngester):
         'user_id' : self.user_id,
         'service' : 'ingest',
         'ingester' : self.ingester,
-        'collection' : 'Objects',
+        'collection' : Indaleko.Indaleko_Object_Collection,
         'timestamp' : self.timestamp,
         'output_dir' : target_dir,
         }
@@ -241,8 +241,8 @@ class IndalekoICloudIngester(IndalekoIngester):
 
                 dir_edge = IndalekoRelationshipContains(
                     relationship=IndalekoRelationshipContains.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR,
-                    object1={'collection': 'Objects', 'object': file_object_id},
-                    object2={'collection': 'Objects', 'object': root_object_id},
+                    object1={'collection': Indaleko.Indaleko_Object_Collection, 'object': file_object_id},
+                    object2={'collection': Indaleko.Indaleko_Object_Collection, 'object': root_object_id},
                     source=source
                 )
                 dir_edges.append(dir_edge)
@@ -250,8 +250,8 @@ class IndalekoICloudIngester(IndalekoIngester):
 
                 dir_edge = IndalekoRelationshipContainedBy(
                     relationship=IndalekoRelationshipContainedBy.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR,
-                    object1={'collection': 'Objects', 'object': root_object_id},
-                    object2={'collection': 'Objects', 'object': file_object_id},
+                    object1={'collection': Indaleko.Indaleko_Object_Collection, 'object': root_object_id},
+                    object2={'collection': Indaleko.Indaleko_Object_Collection, 'object': file_object_id},
                     source=source
                 )
                 dir_edges.append(dir_edge)
@@ -278,8 +278,8 @@ class IndalekoICloudIngester(IndalekoIngester):
 
             dir_edge = IndalekoRelationshipContains(
                 relationship=IndalekoRelationshipContains.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR,
-                object1={'collection': 'Objects', 'object': object_id},
-                object2={'collection': 'Objects', 'object': parent_id},
+                object1={'collection': Indaleko.Indaleko_Object_Collection, 'object': object_id},
+                object2={'collection': Indaleko.Indaleko_Object_Collection, 'object': parent_id},
                 source=source
             )
             dir_edges.append(dir_edge)
@@ -287,27 +287,27 @@ class IndalekoICloudIngester(IndalekoIngester):
 
             dir_edge = IndalekoRelationshipContainedBy(
                 relationship=IndalekoRelationshipContainedBy.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR,
-                object1={'collection': 'Objects', 'object': parent_id},
-                object2={'collection': 'Objects', 'object': object_id},
+                object1={'collection': Indaleko.Indaleko_Object_Collection, 'object': parent_id},
+                object2={'collection': Indaleko.Indaleko_Object_Collection, 'object': object_id},
                 source=source
             )
             dir_edges.append(dir_edge)
             self.edge_count += 1
 
         self.write_data_to_file(dir_data + file_data, self.output_file)
-        load_string = self.build_load_string(collection='Objects', file=self.output_file)
+        load_string = self.build_load_string(collection=Indaleko.Indaleko_Object_Collection, file=self.output_file)
         logging.info('Load string: %s', load_string)
         print('Load string: ', load_string)
 
         edge_file = self.generate_output_file_name(
             platform=self.platform,
             service='ingest',
-            collection='Relationships',
+            collection=Indaleko.Indaleko_Relationship_Collection,
             timestamp=self.timestamp,
             output_dir=self.data_dir,
         )
         self.write_data_to_file(dir_edges, edge_file)
-        load_string = self.build_load_string(collection='Relationships', file=edge_file)
+        load_string = self.build_load_string(collection=Indaleko.Indaleko_Relationship_Collection, file=edge_file)
         logging.info('Load string: %s', load_string)
         print('Load string: ', load_string)
         return
@@ -338,11 +338,11 @@ def main():
         timestamp = timestamp,
         suffix = 'log'
     )
-    
-    
+
+
     indexer = IndalekoICloudIndexer()
     indexer_files = indexer.find_indexer_files(pre_args.datadir)
-    
+
     parser = argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--input',
                         choices=indexer_files,
@@ -350,7 +350,7 @@ def main():
                         help='iCloud index data file to ingest')
     args=parser.parse_args()
     input_metadata = IndalekoICloudIndexer.extract_metadata_from_indexer_file_name(args.input)
-    
+
     input_timestamp = timestamp
     if 'timestamp' in input_metadata:
         input_timestamp = input_metadata['timestamp']

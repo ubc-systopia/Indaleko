@@ -58,7 +58,7 @@ class IndalekoMachineConfig:
                                      kwargs['data']['MachineUUID']
         )
         self.machine_config = IndalekoMachineConfigDataModel.MachineConfig.deserialize(**kwargs)
-        self.collection = IndalekoCollections().get_collection(Indaleko.Indaleko_MachineConfig)
+        self.collection = IndalekoCollections().get_collection(Indaleko.Indaleko_MachineConfig_Collection)
         assert self.collection is not None, 'Failed to get the machine configuration collection'
 
     @staticmethod
@@ -110,7 +110,7 @@ class IndalekoMachineConfig:
     def delete_config_in_db(machine_id : str) -> bool:
         '''Delete the configuration from the database'''
         assert Indaleko.validate_uuid_string(machine_id), 'Invalid machine identifier'
-        IndalekoCollections().get_collection(Indaleko.Indaleko_MachineConfig).delete(machine_id)
+        IndalekoCollections().get_collection(Indaleko.Indaleko_MachineConfig_Collection).delete(machine_id)
 
     @staticmethod
     def lookup_machine_configuration_by_machine_id(machine_id : str) -> 'IndalekoMachineConfig':
@@ -121,7 +121,7 @@ class IndalekoMachineConfig:
         results = collections.db_config.db.aql.execute(
             'FOR doc IN @@collection FILTER doc._key == @machine_id RETURN doc',
             bind_vars = {
-                '@collection' : Indaleko.Indaleko_MachineConfig,
+                '@collection' : Indaleko.Indaleko_MachineConfig_Collection,
                 'machine_id' : machine_id
             }
         )
@@ -132,13 +132,13 @@ class IndalekoMachineConfig:
         '''Lookup all machine configurations'''
         collections = IndalekoCollections()
         query = 'FOR doc IN @@collection RETURN doc'
-        bind_vars = { '@collection' : Indaleko.Indaleko_MachineConfig }
+        bind_vars = { '@collection' : Indaleko.Indaleko_MachineConfig_Collection }
         if source_id is not None:
             assert Indaleko.validate_uuid_string(source_id), 'Invalid source identifier'
             query = 'FOR doc IN @@collection '
             query += 'FILTER doc.Record["SourceIdentifier"].Identifier == '
             query += '@source RETURN doc'
-            bind_vars = { '@collection' : Indaleko.Indaleko_MachineConfig, 'source' : source_id }
+            bind_vars = { '@collection' : Indaleko.Indaleko_MachineConfig_Collection, 'source' : source_id }
         results = collections.db_config.db.aql.execute(query, bind_vars = bind_vars)
         return [IndalekoMachineConfig(data=entry) for entry in results]
 

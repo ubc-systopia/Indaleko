@@ -183,7 +183,7 @@ class IndalekoIngester():
         'service' : 'ingest',
         'ingester' : self.ingester,
         'machine' : str(uuid.UUID(self.machine_id).hex),
-        'collection' : 'Objects',
+        'collection' : Indaleko.Indaleko_Object_Collection,
         'timestamp' : self.timestamp,
         'output_dir' : target_dir,
         }

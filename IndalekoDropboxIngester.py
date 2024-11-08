@@ -214,7 +214,7 @@ class IndalekoDropboxIngester(IndalekoIngester):
         'user_id' : self.user_id,
         'service' : 'ingest',
         'ingester' : self.ingester,
-        'collection' : 'Objects',
+        'collection' : Indaleko.Indaleko_Object_Collection,
         'timestamp' : self.timestamp,
         'output_dir' : target_dir,
         }
@@ -290,11 +290,11 @@ class IndalekoDropboxIngester(IndalekoIngester):
                 relationship = \
                     IndalekoRelationshipContains.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR,
                 object1 = {
-                    'collection' : 'Objects',
+                    'collection' : Indaleko.Indaleko_Object_Collection,
                     'object' : item.args['ObjectIdentifier'],
                 },
                 object2 = {
-                    'collection' : 'Objects',
+                    'collection' : Indaleko.Indaleko_Object_Collection,
                     'object' : parent_id,
                 },
                 source = source
@@ -305,11 +305,11 @@ class IndalekoDropboxIngester(IndalekoIngester):
                 relationship = \
                     IndalekoRelationshipContainedBy.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR,
                 object1 = {
-                    'collection' : 'Objects',
+                    'collection' : Indaleko.Indaleko_Object_Collection,
                     'object' : parent_id,
                 },
                 object2 = {
-                    'collection' : 'Objects',
+                    'collection' : Indaleko.Indaleko_Object_Collection,
                     'object' : item.args['ObjectIdentifier'],
                 },
                 source = source
@@ -340,7 +340,7 @@ class IndalekoDropboxIngester(IndalekoIngester):
             print(e)
             self.output_file = temp_file_name
         load_string = self.build_load_string(
-            collection='Objects',
+            collection=Indaleko.Indaleko_Object_Collection,
             file=self.output_file
         )
         logging.info('Load string: %s', load_string)
@@ -351,7 +351,7 @@ class IndalekoDropboxIngester(IndalekoIngester):
             platform=self.platform,
             service='ingest',
             user_id=self.user_id,
-            collection='Relationships',
+            collection=Indaleko.Indaleko_Relationship_Collection,
             timestamp=self.timestamp,
             output_dir=self.data_dir,
         )
@@ -375,7 +375,7 @@ class IndalekoDropboxIngester(IndalekoIngester):
             print(e)
             edge_file = temp_file
         load_string = self.build_load_string(
-            collection='Relationships',
+            collection=Indaleko.Indaleko_Relationship_Collection,
             file=edge_file
         )
         logging.info('Load string: %s', load_string)

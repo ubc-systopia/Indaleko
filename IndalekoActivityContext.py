@@ -68,7 +68,7 @@ class IndalekoActivityContext(IndalekoSingleton):
             self.db_config = kwargs['db_config']
         else:
             self.db_config = IndalekoDBConfig()
-        self.collection = IndalekoCollections.get_collection(Indaleko.Indaleko_ActivityContext)
+        self.collection = IndalekoCollections.get_collection(Indaleko.Indaleko_ActivityContext_Collection)
         assert self.collection is not None, 'Collection must be pre-defined'
 
     def get_current_activity_context(self) -> uuid.UUID:

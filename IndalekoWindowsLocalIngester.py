@@ -247,11 +247,11 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
                 relationship = \
                     IndalekoRelationshipContains.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR,
                 object1 = {
-                    'collection' : 'Objects',
+                    'collection' : Indaleko.Indaleko_Object_Collection,
                     'object' : item.args['ObjectIdentifier'],
                 },
                 object2 = {
-                    'collection' : 'Objects',
+                    'collection' : Indaleko.Indaleko_Object_Collection,
                     'object' : parent_id,
                 },
                 source = source
@@ -262,11 +262,11 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
                 relationship = \
                     IndalekoRelationshipContainedBy.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR,
                 object1 = {
-                    'collection' : 'Objects',
+                    'collection' : Indaleko.Indaleko_Object_Collection,
                     'object' : parent_id,
                 },
                 object2 = {
-                    'collection' : 'Objects',
+                    'collection' : Indaleko.Indaleko_Object_Collection,
                     'object' : item.args['ObjectIdentifier'],
                 },
                 source = source
@@ -289,15 +289,15 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
             OSError,
         ) as e:
             logging.error(
-                'Unable to rename temp file %s to output file %s', 
-                temp_file_name, 
+                'Unable to rename temp file %s to output file %s',
+                temp_file_name,
                 self.output_file
             )
             print(f'Unable to rename temp file {temp_file_name} to output file {self.output_file}')
             print(e)
             self.output_file = temp_file_name
         load_string = self.build_load_string(
-            collection='Objects',
+            collection=Indaleko.Indaleko_Object_Collection,
             file=self.output_file
         )
         logging.info('Load string: %s', load_string)
@@ -310,7 +310,7 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
             platform=self.platform,
             service='ingest',
             storage=self.storage_description,
-            collection='Relationships',
+            collection=Indaleko.Indaleko_Relationship_Collection,
             timestamp=self.timestamp,
             output_dir=self.data_dir,
         )
@@ -326,8 +326,8 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
             OSError,
         ) as e:
             logging.error(
-                'Unable to rename temp file %s to output file %s', 
-                temp_file_name, 
+                'Unable to rename temp file %s to output file %s',
+                temp_file_name,
                 edge_file
             )
             print(f'Unable to rename temp file {temp_file_name} to output file {edge_file}')
@@ -336,7 +336,7 @@ class IndalekoWindowsLocalIngester(IndalekoIngester):
             print(f'Target file name length is {len(edge_file[len(self.data_dir)+1:])}')
             edge_file=temp_file_name
         load_string = self.build_load_string(
-            collection='Relationships',
+            collection=Indaleko.Indaleko_Relationship_Collection,
             file=edge_file
         )
         logging.info('Load string: %s', load_string)

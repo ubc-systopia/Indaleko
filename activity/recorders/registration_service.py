@@ -65,14 +65,14 @@ class IndalekoActivityDataRegistrationService(IndalekoSingleton):
         if self._initialized:
             return
         self.service = IndalekoServiceManager().register_service(
-            service_name = Indaleko.Indaleko_ActivityDataProviders,
+            service_name = Indaleko.Indaleko_ActivityDataProvider_Collection,
             service_description = self.Description,
             service_version = self.Version,
             service_type = IndalekoServiceManager.service_type_activity_data_registrar,
             service_id = self.service_uuid_str,
         )
         self.activity_provider_collection = IndalekoCollections().get_collection(
-            Indaleko.Indaleko_ActivityDataProviders
+            Indaleko.Indaleko_ActivityDataProvider_Collection
         )
         assert self.activity_provider_collection is not None, 'Activity provider collection must exist'
         self._initialized = True
@@ -126,7 +126,7 @@ class IndalekoActivityDataRegistrationService(IndalekoSingleton):
     def get_provider_list() -> list:
         '''Return a list of providers.'''
         aql_query = f'''
-            FOR provider IN {Indaleko.Indaleko_ActivityDataProviders}
+            FOR provider IN {Indaleko.Indaleko_ActivityDataProvider_Collection}
             RETURN provider
         '''
         cursor = IndalekoDBConfig().db.aql.execute(aql_query)
@@ -198,7 +198,7 @@ class IndalekoActivityDataRegistrationService(IndalekoSingleton):
         if indices is not None:
             config['indices'] = indices
         activity_data_collection = IndalekoCollections\
-            .get_collection(Indaleko.Indaleko_ActivityDataProviders)\
+            .get_collection(Indaleko.Indaleko_ActivityDataProvider_Collection)\
             .create_collection(
                 name = activity_provider_collection_name,
                 config = config,
@@ -288,4 +288,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

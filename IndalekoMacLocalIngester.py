@@ -8,7 +8,7 @@ import json
 import subprocess
 import jsonlines
 import uuid
-from concurrent.futures import ThreadPoolExecutor
+# from concurrent.futures import ThreadPoolExecutor
 
 from IndalekoIngester import IndalekoIngester
 from Indaleko import Indaleko
@@ -232,11 +232,11 @@ class IndalekoMacLocalIngester(IndalekoIngester):
             dir_edge = IndalekoRelationshipContains(
                 relationship=IndalekoRelationshipContains.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR,
                 object1={
-                    'collection': 'Objects',
+                    'collection': Indaleko.Indaleko_Object_Collection,
                     'object': item.args['ObjectIdentifier'],
                 },
                 object2={
-                    'collection': 'Objects',
+                    'collection': Indaleko.Indaleko_Object_Collection,
                     'object': parent_id,
                 },
                 source=source
@@ -246,11 +246,11 @@ class IndalekoMacLocalIngester(IndalekoIngester):
             dir_edge = IndalekoRelationshipContainedBy(
                 relationship=IndalekoRelationshipContainedBy.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR,
                 object1={
-                    'collection': 'Objects',
+                    'collection': Indaleko.Indaleko_Object_Collection,
                     'object': parent_id,
                 },
                 object2={
-                    'collection': 'Objects',
+                    'collection': Indaleko.Indaleko_Object_Collection,
                     'object': item.args['ObjectIdentifier'],
                 },
                 source=source
@@ -264,7 +264,7 @@ class IndalekoMacLocalIngester(IndalekoIngester):
             platform=self.platform,
             service='local_ingest',
             storage=self.storage_description,
-            collection='Relationships',
+            collection=Indaleko.Indaleko_Relationship_Collection,
             timestamp=self.timestamp,
             output_dir=self.data_dir,
         )

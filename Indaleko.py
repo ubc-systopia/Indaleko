@@ -96,19 +96,19 @@ class Indaleko:
 
     default_db_timeout=os.environ.get('INDALEKO_DB_TIMEOUT', 10)
 
-    Indaleko_Object = 'Object'
-    Indaleko_Relationships = 'Relationships'
-    Indaleko_Services = 'Services'
-    Indaleko_MachineConfig = 'MachineConfig'
-    Indaleko_ActivityDataProviders = 'ActivityDataProviders'
-    Indaleko_ActivityContext = 'ActivityContext'
-    Indaleko_Users = 'Users'
-    Indaleko_User_Relationships = 'UserRelationships'
+    Indaleko_Object_Collection = 'Objects'
+    Indaleko_Relationship_Collection = 'Relationships'
+    Indaleko_Service_Collection = 'Services'
+    Indaleko_MachineConfig_Collection = 'MachineConfig'
+    Indaleko_ActivityDataProvider_Collection = 'ActivityDataProviders'
+    Indaleko_ActivityContext_Collection = 'ActivityContext'
+    Indaleko_User_Collection = 'Users'
+    Indaleko_User_Relationship_Collection = 'UserRelationships'
 
     Indaleko_Prefix = 'indaleko'
 
     Collections = {
-        Indaleko_Object: {
+        Indaleko_Object_Collection: {
             'schema' : IndalekoObjectSchema().get_json_schema(),
             'edge' : False,
             'indices' : {
@@ -130,7 +130,7 @@ class Indaleko:
                 },
             },
         },
-        Indaleko_Relationships : {
+        Indaleko_Relationship_Collection : {
             'schema' : IndalekoRelationshipSchema().get_json_schema(),
             'edge' : True,
             'indices' : {
@@ -156,7 +156,7 @@ class Indaleko:
                 },
             }
         },
-        Indaleko_Services : {
+        Indaleko_Service_Collection : {
             'schema' : IndalekoServiceSchema().get_json_schema(),
             'edge' : False,
             'indices' : {
@@ -167,12 +167,12 @@ class Indaleko:
                 },
             },
         },
-        Indaleko_MachineConfig : {
+        Indaleko_MachineConfig_Collection : {
             'schema' : IndalekoMachineConfigSchema().get_json_schema(),
             'edge' : False,
             'indices' : { },
         },
-        Indaleko_ActivityDataProviders : {
+        Indaleko_ActivityDataProvider_Collection : {
             'schema' :  IndalekoActivityDataRegistrationDataModel.get_arangodb_schema(),
             'edge' : False,
             'indices' : {
@@ -183,7 +183,7 @@ class Indaleko:
                 },
             },
         },
-        Indaleko_ActivityContext : {
+        Indaleko_ActivityContext_Collection : {
             'schema' : IndalekoActivityDataModel.get_arangodb_schema(),
             'edge' : False,
             'indices' : {
@@ -194,7 +194,7 @@ class Indaleko:
                 },
             },
         },
-       Indaleko_Users : {
+       Indaleko_User_Collection : {
             'schema' : IndalekoUserSchema().get_json_schema(),
             'edge' : False,
             'indices' : {
@@ -205,7 +205,7 @@ class Indaleko:
                 },
             },
         },
-        Indaleko_User_Relationships : {
+        Indaleko_User_Relationship_Collection : {
             'schema' : IndalekoUserRelationshipSchema().get_json_schema(),
             'edge' : True,
             'indices' : {

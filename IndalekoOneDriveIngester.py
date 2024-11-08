@@ -230,11 +230,11 @@ class IndalekoOneDriveIngester(IndalekoIngester):
                 relationship = \
                     IndalekoRelationshipContains.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR,
                 object1 = {
-                    'collection' : 'Objects',
+                    'collection' : Indaleko.Indaleko_Object_Collection,
                     'object' : item.args['ObjectIdentifier'],
                 },
                 object2 = {
-                    'collection' : 'Objects',
+                    'collection' : Indaleko.Indaleko_Object_Collection,
                     'object' : parent_oid,
                 },
                 source = source
@@ -245,11 +245,11 @@ class IndalekoOneDriveIngester(IndalekoIngester):
                 relationship = \
                     IndalekoRelationshipContainedBy.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR,
                 object1 = {
-                    'collection' : 'Objects',
+                    'collection' : Indaleko.Indaleko_Object_Collection,
                     'object' : parent_oid,
                 },
                 object2 = {
-                    'collection' : 'Objects',
+                    'collection' : Indaleko.Indaleko_Object_Collection,
                     'object' : item.args['ObjectIdentifier'],
                 },
                 source = source
@@ -299,24 +299,24 @@ class IndalekoOneDriveIngester(IndalekoIngester):
             'service' : 'ingester',
             'suffix' : 'jsonl',
             'timestamp' : self.indexer_file_metadata.get('timestamp', self.timestamp),
-            'collection' : 'Objects',
+            'collection' : Indaleko.Indaleko_Object_Collection,
             'user_id' : self.indexer_file_metadata['user_id']
         }
         data_file = os.path.join(self.data_dir, Indaleko.generate_file_name(**kwargs))
-        kwargs['collection'] = 'Relationships'
+        kwargs['collection'] = Indaleko.Indaleko_Relationship_Collection
         edge_file = os.path.join(self.data_dir, Indaleko.generate_file_name(**kwargs))
         ic(data_file, edge_file)
         self.write_data_to_file(dir_data + file_data, data_file)
         self.write_data_to_file(dir_edges, edge_file)
         print(f'size of dir_edges: {len(dir_edges)}')
         load_string = self.build_load_string(
-            collection='Objects',
+            collection=Indaleko.Indaleko_Object_Collection,
             file=data_file
         )
         logging.info('Load string: %s', load_string)
         ic('Object Collection load string is:\n', load_string)
         load_string = self.build_load_string(
-            collection='Relationships',
+            collection=Indaleko.Indaleko_Relationship_Collection,
             file=edge_file
         )
         logging.info('Load string: %s', load_string)

@@ -83,9 +83,9 @@ class IndalekoIngesterManagement(IndalekoSingleton):
         '''
         if collection is None:
             if 'collection=Objects' in file_name:
-                collection='Objects'
+                collection=Indaleko.Indaleko_Object_Collection
             elif 'collection=Relationships' in file_name:
-                collection='Relationships'
+                collection=Indaleko.Indaleko_Relationship_Collection
         if collection is None:
             raise ValueError(f'Unknown collection type for file {file_name}')
         endpoint_prototcol = 'http+tcp'
@@ -116,7 +116,7 @@ class IndalekoIngesterManagement(IndalekoSingleton):
             for file in self.ingester_files['objects']:
                 import_commands.append(self.build_import_command(file))
             for file in self.ingester_files['relationships']:
-                import_commands.append(self.build_import_command(file, collection='Relationships'))
+                import_commands.append(self.build_import_command(file, collection=Indaleko.Indaleko_Relationship_Collection))
         return import_commands
 
     def execute_import_commands(self):
