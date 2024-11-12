@@ -28,13 +28,7 @@ Pipeline workflow:
     - the precision and recall are calculated and outputted in a txt format
 --------------------------------------------------------------------------------------------------------------
 TODOs....
-
-TODO:   1) Create time
-        2) Modify time
-        3) Last read time
-
 TODO: testing already created functionalities
-
 TODO: NER --> wait for Tony to specify definition of this
 Done: make sure that the uri generated can be local, online, etc. 
 Done: creating truth like files
@@ -58,14 +52,14 @@ from data_models.record import IndalekoRecordDataModel
 from data_models.timestamp import IndalekoTimestampDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 
+
 from icecream import ic
 
 from pathlib import Path
 import yaml
 import base64
 
-import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 import time
 
 import random
@@ -87,7 +81,10 @@ class Dataset_Generator:
 
         # self.selected_md_attributes = {"Posix":{
         #                                     "file.name": {'pattern':'hi', 'command':'ends'}, 
-        #                                     "file.modified": {'starttime': '2023-12-10','endtime': '2023-12-23', 'command': 'range'},
+        #                                   "timestamps": {"file.created": {'starttime': '2023-12-10','endtime': '2023-12-10', 'command': 'greater_than'}, 
+                                            # "file.modified": {'starttime': '2023-12-10','endtime': '2023-12-10', 'command': 'greater_than'}, 
+                                            # "file.accessed": {'starttime': '2024-1-2','endtime': '2024-1-2', 'command': 'greater_than'},
+                                            # "file.changed": {'starttime': '2023-12-10','endtime': '2023-12-10', 'command': 'greater_than'}}},
         #                                     "file.size":{'target_min': 10, 'target_max': 10000, 'command':'range'}, 
         #                                     "file.directory": {'location': "google_drive"}},
         #                                 "Semantic":{
@@ -98,10 +95,17 @@ class Dataset_Generator:
         #                                     "ambient_temp": {'min_temp': 21, 'max_temp':21, 'command':"gt"},
         #                                     "geo_location": {'location': "1600 Amphitheatre Parkway, Mountain View, CA 94043, USA", 'command': "at"}
         #                                 }
-        #                             } # in the format {file.size:[min, max], file.name:"fake_name", etc.} 
+        #                             } 
         self.selected_md_attributes = {"Posix":{
-                                            "file.name": {'pattern':'hi', 'command':'ends'}, 
-                                            "file.directory": {'location': "google_drive"}}, "Semantic": {}, "Activity": {}}
+                                            "file.name": {'pattern':'hi', 'command':'exactly', 'extension': ".txt"},
+                                            "file.size": {'target_min': None, 'target_max':5000, 'command':'greater_than'}
+
+                                            },
+
+                                            "Semantic":{
+                                                "semantic_1":{"content": "A summary about the immune response to infections.",
+                                                  "emphasized_text_contexts":["immune", "infections"]}
+                                            }, "Activity": {}}
 
         self.selected_POSIX_md = self.selected_md_attributes["Posix"]
         self.selected_AC_md = self.selected_md_attributes["Activity"]
@@ -110,7 +114,6 @@ class Dataset_Generator:
         self.saved_directory_path = {} 
         self.saved_geo_loc = {}
 
-        self.file_extension = ['.jpg','.txt','.pdf']
         self.total_storage = 0
         self.total_metadata = 0 
         self.aql_query = ""
@@ -131,26 +134,37 @@ class Dataset_Generator:
 
 
     # -----------------------------------Generate POSIX metdata-----------------------------------------------------------------
-    
-    # generate a random number with given number of digits
+
+    # FUNCTION: creates  UUID for the metadata based on the file_type (filler VS truth metadata) of metadata
+    def create_metadata_UUID(self, number: int, file_type: bool = True) -> str:
+        if file_type:
+            starter_uuid = f"c{number}" #truth files are named with a c...
+        else:
+            starter_uuid = f"f{number}" #filler/truth-like filler files with a f...
+
+        digits = 8 - len(starter_uuid)
+        space_filler = '0' * digits
+        starter_uuid += space_filler
+        uuid = self.generate_UUID(starter_uuid)
+
+        return uuid 
+
+    # FUNCTION: generates a random number with given number of digits
     def generate_random_number(self, digits):
         rand_digits = ''.join(random.choices('0123456789', k=digits))
         return rand_digits
 
-    # create the UUID for the metadata based on the file_type of metadata they are (filler VS truth metadata)
-    def create_UUID(self, number: int, file_type: bool = True) -> str:
-        if file_type:
-            uuid = f"c{number}" 
+    # FUNCTION: generates UUID with a given starter if provided 
+    def generate_UUID(self, starter = None):
+        if starter:
+            first_uuid = starter
         else:
-            uuid = f"f{number}"
+            first_uuid = self.generate_random_number(8)
 
-        digits = 8 - len(uuid)
-        space_filler = '0' * digits
-        uuid += space_filler + "-" + self.generate_random_number(4) + "-" + self.generate_random_number(4) + "-" + self.generate_random_number(4) + "-" + self.generate_random_number(12)
-        return uuid 
+        uuid = first_uuid + "-" + self.generate_random_number(4) + "-" + self.generate_random_number(4) + "-" + self.generate_random_number(4) + "-" + self.generate_random_number(12)
+        return uuid
 
-
-    # Helper function to convert query format of date "YYYY-MM-DD" to datetime format
+    # FUNCTION: converts date in "YYYY-MM-DD" to datetime 
     # used in time generator functions 
     def generate_time(self, time: str) -> datetime:
         splittime = re.split("-", time)
@@ -159,11 +173,16 @@ class Dataset_Generator:
         month = int(splittime[1])
         day = int(splittime[2])
 
-        time = datetime.date(year, month, day)
+        time = datetime(year, month, day)
+
+        # if requested time is sooner than today's day, set it to the time right now
+        if time > datetime.now():
+            time = datetime.now()
         return time
 
-    #generate random path to directories within a parent dir based on base_dir, num_direcotries, max_depth and if available, directory_name
-    #only runs once 
+    # FUNCION: generate random path to directories within a parent dir based on base_dir, num_direcotries, max_depth and if available, directory_name
+    # only runs once during intialization
+    # adapted from Tony's code from metadata.py
     def generate_local_path(self, base_dir: str, num_directories: int, max_depth: int, directory_name: str = None) -> None:
         directory_count = 0  
         # List to store generated paths
@@ -198,7 +217,6 @@ class Dataset_Generator:
     # PURPOSE: generate a file_name based on query or randomly
     # self.selected_POSIX_md{file.name: {"pattern":str, "command":str, "extension":str}}
     # command includes: "starts", "ends", "contains"
-    #TODO: could control for case-sensitivity
     def generate_file_name(self, file_type: bool) -> None:
         n_filler_letters = random.randint(1, 10)
         file_extension = [".pdf", ".doc",".docx", ".txt", ".rtf", ".xls", ".xlsx", ".csv", ".ppt", ".pptx", ".jpg", ".jpeg", ".png", ".gif", ".tif", ".mov", ".mp4", ".avi", ".mp3", ".wav", ".zip", ".rar"]
@@ -207,38 +225,39 @@ class Dataset_Generator:
         if "file.name" in self.selected_POSIX_md:
             pattern = self.selected_POSIX_md["file.name"]["pattern"]
             command = self.selected_POSIX_md["file.name"]["command"]
-            if file_type:
-                #if no extension specified, then randomly select a file extension
+            if file_type: # truth file
+                # if no extension specified, then randomly select a file extension
                 if "extension" in self.selected_POSIX_md["file.name"]:
                     true_extension = self.selected_POSIX_md["file.name"]["extension"]
                     file_extension.remove(true_extension)
                 else: 
                      true_extension = random.choice(file_extension)
-                if command == "starts": # title that starts with a char pattern
+                # process commands
+                if command == "exactly":
+                    title = pattern + true_extension
+                elif command == "starts": 
                     title = pattern + ''.join(random.choices(string.ascii_letters, k=n_filler_letters)) + true_extension 
-                elif command == "ends": # title that ends with specific char pattern
+                elif command == "ends":
                     title = ''.join(random.choices(string.ascii_letters, k=n_filler_letters)) + pattern + true_extension 
-                elif command == "contains":  # title that contains a char pattern
+                elif command == "contains":  
                     title = ''.join(random.choices(string.ascii_letters, k=n_filler_letters)) + pattern + ''.join(random.choices(string.ascii_letters, k=n_filler_letters)) + true_extension 
-            # if a filler metadata, generate random title that excludes all letters specified in the char pattern
-            elif not file_type:
+            elif not file_type:  # if a filler metadata, generate random title that excludes all letters specified in the char pattern
                 extension = random.choice(file_extension)
                 allowed_pattern = list(set(string.ascii_letters) - set(pattern.upper()) - set(pattern.lower()))
                 title = ''.join(random.choices(allowed_pattern, k=n_filler_letters)) + extension 
-        #if no query specified for title, just randomly create a title 
-        else: 
+        else: #if no query specified for title, just randomly create a title for any file_type
             title = ''.join(random.choices(string.ascii_letters, k=n_filler_letters)) + random.choice(self.file_extension)
         return title 
 
-    #generates path to a remote query 
+    # FUNCTION: generates path to a remote file location e.g., google drive, dropbox, icloud 
     def generate_remote_path(self, service_type, file_name: str) -> str:
         alphanum = string.ascii_letters + string.digits
-        # Randomly choose characters from the combination and join them to form the key
+        # Randomly choose characters to form the id
         file_id = ''.join(random.choices(alphanum, k=random.randint(3,6)))
         local_file_locations = {
            "google_drive": "/file/d/{file_id}/view/view?name={file_name}",
-            "dropbox": "/s/{file_id}/{file_name}?dl=0",
-            "icloud": "/iclouddrive/{file_id}/{file_name}"
+           "dropbox": "/s/{file_id}/{file_name}?dl=0",
+           "icloud": "/iclouddrive/{file_id}/{file_name}"
         }
         remote_path = local_file_locations[service_type].format(file_id = file_id, file_name = file_name)
         return remote_path
@@ -263,8 +282,8 @@ class Dataset_Generator:
         else: #no queries related to file dir; generate random dir 
             self.generate_local_path(parent_dir, num_directories, max_depth)
 
-    #generates a directory location for the metadata
-    # self.selected_POSIX_md["file.directory"] = [location, directory_name (optional, for remote only)]
+    # FUNCTION: generates a directory location for the metadata
+    # self.selected_POSIX_md["file.directory"] = [location, directory_name (optional, for local only)]
     # location: where it is stored; local or remote (google drive, drop box, icloud, local)
     # RETURN: dict consisting of path and URI to remote or local storage
     # CONSTRAINT: file name has to be determined first before creating file location and URI
@@ -275,12 +294,11 @@ class Dataset_Generator:
         # URIs/URLs to local computer or cloud storage services
         file_locations = {
            "google_drive": "https://drive.google.com",
-            "dropbox": "https://www.dropbox.com",
-            "icloud": "https://www.icloud.com",
-            "local": "file:/"
+           "dropbox": "https://www.dropbox.com",
+           "icloud": "https://www.icloud.com",
+           "local": "file:/"
         }
-
-        #RUN after initialization:
+        # RUN after initialization:
         if file_type and "file.directory" in self.selected_POSIX_md:
             truth_parent_loc = self.selected_POSIX_md["file.directory"]["location"]
             file_locations
@@ -290,22 +308,181 @@ class Dataset_Generator:
 
             elif file_type and truth_parent_loc in file_locations.keys(): # if remote dir specified, create file at that dir
                 path = self.generate_remote_path(truth_parent_loc, file_name)
-                ic(truth_parent_loc)
                 URI = file_locations[truth_parent_loc] + path
 
-        elif not file_type and  "file.directory" in self.selected_POSIX_md:
+        elif not file_type and "file.directory" in self.selected_POSIX_md:
             truth_parent_loc = self.selected_POSIX_md["file.directory"]["location"]
             del file_locations[truth_parent_loc]
-            # not queried at this point and file type doesn't matter; generate any file path (local or remote)
-            random_location = random.choice(list(file_locations.keys()))
-            if random_location == "local":
-                path = random.choice(self.saved_directory_path["filler.directory"]) + "/" + file_name
-                URI = file_locations[random_location] + path
-            else:
-                path = self.generate_remote_path(random_location, file_name)
-                URI = file_locations[random_location] + path
+
+        # not queried at this point and file type doesn't matter; generate any file path (local or remote)
+        random_location = random.choice(list(file_locations.keys()))
+        if random_location == "local":
+            path = random.choice(self.saved_directory_path["filler.directory"]) + "/" + file_name
+            URI = file_locations[random_location] + path
+        else:
+            path = self.generate_remote_path(random_location, file_name)
+            URI = file_locations[random_location] + path
+
         return [path, URI]
 
+    # Helper function for general time stamp queries in generate_timestamps
+    # populates the {birthtime, m_time, a_time and c_time} given list of selected timestamps
+    def populate_timestamps(self, selected_time = list, file_type = bool) -> dict:
+        timestamps = {}
+        all_labels = ["birthtime", "modified", "accessed", "changed"] 
+        if not file_type: # for filler files
+            # generate a random combination of simliar timestamps that is not the same as the queried
+            num_filter_out = random.randint(1,len(selected_time))
+            filler_num = random.randint(0,len(all_labels))
+            selected_time = list(set(random.sample(all_labels, k=filler_num)) - set(random.sample(selected_time, k=num_filter_out)))
+        
+        #if birthtime is a selected attribute in "between", set the birthtime as a random time and set the random timstamp = birthtime
+        if "birthtime" in selected_time:
+            birthtime = self.generate_random_timestamp()
+            random_similar_timestamp = birthtime
+            timestamps["birthtime"] = birthtime # set the birthtime 
+            all_labels.remove("birthtime")
+
+            for timestamp in all_labels: # for each of the other timestamps, set the timestamp based on whether it has been selected in the query or not
+                if timestamp in selected_time:
+                    timestamps[timestamp] = random_similar_timestamp
+                else: # generates a timestamp that is above the birthtime
+                    timestamps[timestamp] = self.generate_timestamp(starttime= birthtime, endtime=birthtime, command="greater_than", file_type= True)
+                
+        else: # else, set the random time bounded above the birthtime, but not the birthtime
+            # subtracting by time delta to make sure that if the upper bound is set to the datetime now, won't enforce all timestamps to be the same
+            birthtime = self.generate_random_timestamp(upper_bound=datetime.now()-timedelta(days=1))
+            # random time is not the birttime but is lower bounded by birthtime
+            random_similar_timestamp = self.generate_timestamp(starttime= birthtime, endtime=birthtime, command="greater_than", file_type= True)
+
+            timestamps["birthtime"] = birthtime # set the birthtime 
+            all_labels.remove("birthtime") # remove from the label to focus on the remaining timestamps
+
+            for timestamp in all_labels: # for each of the other timestamps, set the timestamp based on whether it has been selected in the query or not
+                if timestamp in selected_time:
+                    timestamps[timestamp] = random_similar_timestamp
+                else: # generates a timestamp that is either above or below the random_similar_timestamp and bounded by startdate
+                    timestamps[timestamp] = self.generate_timestamp(starttime= random_similar_timestamp, endtime=random_similar_timestamp, default_startdate=birthtime, command="equal", file_type= False)
+        return timestamps
+    
+
+    ''' 
+    generate the timestamps for the specified file:
+    
+    starttime/endtime are in the string format: "YYYY-MM-DD"
+
+    self.selected_POSIX_md{
+        timestamps:{
+            specific: { CONSTRAINT: the modified, accessed, changed must have a timestamp at least that of the created timestamp date
+                file.created:{"starttime": str, "endtime": str, "command": str},
+                file.modified:{"starttime": str, "endtime": str, "command": str},
+                file.accessed:{"starttime": str, "endtime": str, "command": str},
+                file.changed:{"starttime": str, "endtime": str, "command": str}
+            }
+            general: {"command":str, "between":list[str]}
+        }
+    }
+    CONSTRAINT: a query can only specify one type of timestamp per query either a general or specific not both
+    general: where there is a relationship between at least two timestamps e.g. "file where the create time and modified times are the same"
+           general commands are for  general relationship queries between timestamps like which files have no change in modified, accessed, changed etc. 
+           supported general command: "equal", more specific relationship between timestamps should be in the specific (where the time is specified "file where the create and modified time are specific date...)
+    RETURNS: {birthtime: datetime, :, m_time: datetime, a_time: datetime, c_time: datetime}
+
+    ''' 
+    def generate_timestamps(self, file_type: bool=True) -> dict:
+        birthtime = None
+        modifiedtime = None
+        accesstime = None 
+        changedtime = None
+        latest_timestamp_of_three = None
+
+        # check whether the query is pertaining to a general relationship between queries or asking for specific timestamp queries
+        if "timestamps" in self.selected_POSIX_md:
+            query = self.selected_POSIX_md["timestamps"]
+            if "general" in query:
+                general_query = query["general"]
+                if general_query["command"] == "equal":
+                    times_stamps = self.populate_timestamps(general_query["between"], file_type)
+                    return times_stamps
+
+            elif "specific" in query:
+                specific_query = query["specific"]
+                #todo think about implementing list to check the populated values
+                if "file.created" in specific_query:
+                    birthtime_query = specific_query["file.created"]
+                    birthtime = self.generate_timestamp(birthtime_query["starttime"], birthtime_query["endtime"], birthtime_query["command"], file_type = file_type)
+                    latest_timestamp_of_three = birthtime
+                    if len(specific_query) == 1 and file_type:
+                        return {
+                            "birthtime": birthtime,
+                            "modified":self.generate_random_timestamp(lower_bound = birthtime),
+                            "accessed": self.generate_random_timestamp(lower_bound = birthtime), 
+                            "changed": self.generate_random_timestamp(lower_bound = birthtime)
+                        }
+                if "file.modified" in specific_query:
+                    mtime_query = specific_query["file.modified"]
+                    #constrain all proceeding timestamps by birthtime
+                    modifiedtime = self.generate_timestamp(mtime_query["starttime"], mtime_query["endtime"], mtime_query["command"], birthtime, file_type)
+                    latest_timestamp_of_three = modifiedtime
+                if "file.accessed" in specific_query:
+                    atime_query = specific_query["file.accessed"]
+                    accesstime = self.generate_timestamp(atime_query["starttime"], atime_query["endtime"], atime_query["command"], birthtime, file_type)
+                    latest_timestamp_of_three = min(latest_timestamp_of_three, accesstime)
+                if "file.changed" in specific_query:
+                    ctime_query = specific_query["file.changed"]
+                    changedtime = self.generate_timestamp(ctime_query["starttime"], ctime_query["endtime"], ctime_query["command"], birthtime, file_type)
+                    latest_timestamp_of_three = min(latest_timestamp_of_three, changedtime)
+                
+                # if the query pertains to less than four timestamps:
+                if len(specific_query) < 4: # if queried is exactly 4, then just return those times else:
+                    if file_type:
+                        # constraint to make sure that the birthtime isn't earlier than the latest of the three 
+                        birthtime = self.check_generate_random_timestamp(birthtime, upper_bound = latest_timestamp_of_three)
+                        modifiedtime = self.check_generate_random_timestamp(modifiedtime, lower_bound = birthtime)
+                        accesstime = self.check_generate_random_timestamp(accesstime, lower_bound = birthtime)
+                        changedtime = self.check_generate_random_timestamp(changedtime, lower_bound = birthtime)
+                    else:
+                        #implement when filler file
+                        if birthtime != None:
+                            modifiedtime = self.check_generate_random_timestamp(modifiedtime, lower_bound = birthtime)
+                            accesstime = self.check_generate_random_timestamp(accesstime, lower_bound = birthtime)
+                            changedtime = self.check_generate_random_timestamp(changedtime, lower_bound = birthtime)
+                        else:
+                            modifiedtime = self.check_generate_random_timestamp(modifiedtime)
+                            accesstime = self.check_generate_random_timestamp(accesstime)
+                            changedtime = self.check_generate_random_timestamp(changedtime)
+                            
+                            #get the upper_bound on birthtime 
+                            earliest_timestamp = min(modifiedtime, accesstime, changedtime)
+                            # generate birthtime last 
+                            birthtime = self.generate_random_timestamp(upper_bound = earliest_timestamp)
+        else:
+            modifiedtime = self.generate_random_timestamp()
+            accesstime = random.choice([modifiedtime, self.generate_random_timestamp()])
+            changedtime = random.choice([modifiedtime, accesstime, self.generate_random_timestamp()])
+            earliest_timestamp = min(modifiedtime, accesstime, changedtime)#get the upper_bound on birthtime 
+            # generate birthtime last to make sure birthtime is atleast the earliest timestamp  
+            birthtime = random.choice([earliest_timestamp, self.generate_random_timestamp(upper_bound = earliest_timestamp)])    
+        return {"birthtime": birthtime, "modified": modifiedtime, "accessed": accesstime, "changed": changedtime}
+        
+
+    # Generates a random timestamp given:
+    #     1) lower_bound (birth time for m/a/c timestamps or default "2019-10-25" for birthtime) 
+    #     2) upper_bound (latest timestamp for birthtime or current datetime for m/a/c timestamps)
+    def generate_random_timestamp(self, lower_bound = datetime(2019, 10, 25), upper_bound=datetime.now()) -> datetime:
+        fake = Faker()
+        random_time = fake.date_time_between(start_date = lower_bound, end_date = upper_bound)
+        return random_time
+
+    # FUNCTION: checks if the timestamp already exists if so, just return; 
+    #           if not, generates a timestamp based on the lowerbound (birthtime) given 
+    def check_generate_random_timestamp(self, timestamp, lower_bound = datetime(2019, 10, 25), upper_bound = None) -> datetime:
+        if timestamp != None:
+            return timestamp
+        elif upper_bound != None: # birthtime already defined; generate timestamps for a/c/m 
+            return self.generate_random_timestamp(upper_bound = upper_bound)
+        else: # generate timestamp for birthtime
+            return self.generate_random_timestamp(lower_bound = lower_bound)
 
     # PURPOSE: creates the modified time based on the start time, endtime and command provided
     # self.selected_POSIX_md{file.modified: ["starttime", "endtime", "command"]}
@@ -313,83 +490,86 @@ class Dataset_Generator:
     #   command: includes "equal", "range", "greater_than", "greater_than_equal", "less_than", less_than_equal"
     #   starttime >= the default_startdate
     #   starttime <= endtime <= starttime.now()
-    def generate_file_modified(self, file_type: bool=True) -> datetime:
+    def generate_timestamp(self, starttime, endtime, command, default_startdate = datetime(2004, 10, 25), file_type = True) -> datetime:
         fake = Faker()
-        #setting a random startdate, can change if needed
-        default_startdate = self.generate_time("2019-10-25")
+        filler_delta = 1
 
-        # if a condition for the modified attribute exists
-        if "file.modified" in self.selected_POSIX_md:
-            starttime = self.selected_POSIX_md["file.modified"]["starttime"] #this selects the startdate
-            endtime = self.selected_POSIX_md["file.modified"]["endtime"] #this selects the enddate
-            command = self.selected_POSIX_md["file.modified"]["command"] #this specifies command
+        if isinstance(starttime, str):
+            starttime = self.generate_time(starttime)
+        if isinstance(endtime, str):
+            endtime = self.generate_time(endtime)
+        
+        # if starttime == None and endtime == None:
+        #     timestamp = fake.date_time_between(start_date = default_startdate)
 
-            datetime_st = self.generate_time(starttime)
-            datetime_et = self.generate_time(endtime)
+        # if the starttime is a list and is the same as the endtime choose a random starttime from the list
+        if isinstance(starttime, list) and command == "equal":
+            if file_type:
+                timestamp = self.generate_time(random.choice(starttime))
+            else:
+                reference_time = self.generate_time(starttime[-1])
+                timestamp = random.choice([fake.date_time_between(start_date = default_startdate, end_date = self.generate_time(starttime[0])-timedelta(days=filler_delta)), 
+                fake.date_time_between(start_date = reference_time+timedelta(days=filler_delta))])
 
-            # if the starttime is a list and is the same as the endtime choose a random starttime from the list
-            if isinstance(starttime, list) and command == "equal":
+        elif starttime == endtime and command == "equal":
                 if file_type:
-                    modified_time = random.choice(starttime)
+                    timestamp = starttime
                 else:
-                    modified_time = random.choice([fake.date_between(start_date = default_startdate, end_date = self.generate_time(starttime[0])-timedelta(days=1)), 
-                    fake.date_between(start_date = self.generate_time(starttime[len(datetime-1)]+timedelta(days=1)))])
+                    timestamp = random.choice([fake.date_time_between(start_date = default_startdate, end_date = starttime - timedelta(days=filler_delta)), 
+                    fake.date_time_between(start_date = starttime+timedelta(days=filler_delta))])
 
+        #if the starttime and endtime are not equal and are not lists, then choose a date within that range
+        elif starttime != endtime and command == "range":
+            if file_type:
+                timestamp = fake.date_time_between(start_date=starttime, end_date=endtime)
+            else:
+                timestamp = random.choice([fake.date_time_between(start_date = default_startdate, end_date = starttime - timedelta(days=filler_delta)), fake.date_time_between(start_date = endtime + timedelta(days=filler_delta))])
 
-            # if the starttime is not a list but is the same as the endtime then just choose that starttime
-            elif starttime == endtime and command == "equal":
-                if file_type:
-                    modified_time = starttime
-                else:
-                    modified_time = random.choice([fake.date_between(start_date = default_startdate, end_date = datetime_st - timedelta(days=1)), 
-                    fake.date_between(start_date = datetime_st+timedelta(days=1))])
+        # if command specifies a date greater than or equal to a time 
+        elif "greater_than" in command:  
+            if command == "greater_than":
+                delta = 1
+                filler_delta = 0
+            elif command == "greater_than_equal":
+                delta = 0
+                filler_delta = 1
 
+            if file_type:
+                timestamp = fake.date_time_between(start_date = starttime+timedelta(days=delta))
+            else:
+                timestamp = fake.date_time_between(start_date = default_startdate, end_date = starttime-timedelta(days=filler_delta))
+
+        # if command specifies a date less than or equal to a  time
+        elif "less_than" in command:  
+            if command == "less_than":
+                delta = 1
+                filler_delta = 0
+            elif command == "less_than_equal":
+                delta = 0
+                filler_delta = 1
             
-            #if the starttime and endtime are not equal and are not lists, then choose a date within that range
-            elif starttime != endtime and command == "range":
-                if file_type:
-                    modified_time = fake.date_between(start_date=datetime_st, end_date=datetime_et)
-                else:
-                    modified_time = random.choice([fake.date_between(start_date = default_startdate, end_date = datetime_st - timedelta(days=1)), fake.date_between(start_date = datetime_et + timedelta(days=1))])
+            if file_type:
+                timestamp = fake.date_time_between(start_date = default_startdate, end_date = endtime-timedelta(days=delta))
+            else:
+                timestamp = fake.date_time_between(start_date=endtime+timedelta(days=filler_delta))
 
-            # if command specifies a date greater than or equal to a time 
-            elif isinstance(endtime, string) and starttime == None:  
-                if command == "greater_than":
-                    delta = 1
-                elif command == "greater_than_equal":
-                    delta = 0
-
-                if file_type:
-                    modified_time = fake.date_between(start_date = datetime_st+timedelta(days=delta))
-                else:
-                    modified_time = fake.date_between(start_date = default_startdate, end_date = datetime_st-timedelta(days=delta))
-
-            # if command specifies a date less than or equal to a  time
-            elif isinstance(starttime, string) and endtime == None:  
-                if command == "less_than":
-                    delta = 1
-                elif command == "less_than_equal":
-                    delta = 0
-
-                if file_type:
-                    modified_time = fake.date_between(start_date = default_startdate, end_date = datetime_et-timedelta(days=delta))
-                else:
-                    modified_time = self.calculate_time(start=datetime_et+timedelta(days=delta))
-
-        #if there are no constraints on the modified time, then just gneerate random times
+        #if there are no queries related to the time, then just generate random times
         else:
-            modified_time = fake.date_between(start_date=default_startdate)
-        return modified_time
+            timestamp = fake.date_time_between(start_date=default_startdate)
 
-    
+        return timestamp
 
-
-    # PURPOSE: create random file size based on the presence of a query
-    # self.selected_POSIX_md{file.size: ["target_min", "target_max", "command"]}
-    # setting the default file size to between 1B - 10GB
-    # command includes "equal", "range", "greater_than", "greater_than_equal", "less_than", less_than_equal"
+    '''
+        PURPOSE: create random file size based on the presence of a query
+        self.selected_POSIX_md{file.size: ["target_min", "target_max", "command"]}
+        setting the default file size to between 1B - 10GB
+        command includes "equal", "range", "greater_than", "greater_than_equal", "less_than", less_than_equal"
+    '''
     def generate_file_size(self, min_size: int = 1, max_size: int = 10737418240, file_type: bool=True) -> int:
         if "file.size" in self.selected_POSIX_md:
+            ic("here")
+            filler_delta = 1
+            delta = 0
             target_min = self.selected_POSIX_md["file.size"]["target_min"] #this selects the min size (list or number)
             target_max = self.selected_POSIX_md["file.size"]["target_max"] #this selects the max size (list or number)
             command = self.selected_POSIX_md["file.size"]["command"] #this selects the command
@@ -412,31 +592,35 @@ class Dataset_Generator:
                 if file_type:
                     size = random.randint(target_min, target_max)
                 else:
-                    size = random.randint(random.randint(min_size, target_min-1), random.randint(target_max+1, max_size))
+                    size = random.randint(random.randint(min_size, target_min-filler_delta), random.randint(target_max+filler_delta, max_size))
 
             # if command specifies a file greater than a certain size
             elif isinstance(target_max, int) and target_min == None:  
                 if command == "greater_than":
                     delta = 1
+                    filler_delta = 0
                 elif command == "greater_than_equal":
                     delta = 0
+                    filler_delta = 1
 
                 if file_type:
-                    size = random.randint(target_max, max_size)
+                    size = random.randint(target_max+delta, max_size)
                 else:
-                    size = random.randint(min_size, target_max-delta)
+                    size = random.randint(min_size, target_max-filler_delta)
 
             # if command specifies a file less than a certain size
             elif isinstance(target_min, int) and target_max == None: 
                 if command == "less_than":
                     delta = 1
+                    filler_delta = 0
                 elif command == "less_than_equal":
                     delta = 0
+                    filler_delta = 1
 
                 if file_type:
-                    size = random.randint(min_size, target_min)
+                    size = random.randint(min_size, target_min-delta)
                 else:
-                    size = random.randint(target_min+delta, max_size)
+                    size = random.randint(target_min+filler_delta, max_size)
         #if there are no specified queries, create a random file size
         else:
             size = random.randint(min_size, max_size)
@@ -451,11 +635,9 @@ class Dataset_Generator:
         - The ambient temperature
         - The weather
         - geo context
-        
     """
     #generates a geographical activity context based on the location given 
     # self.selected_AC_md["geo_location"] = {'location': str, 'command': str}
-
     def generate_geo_context(self, file_type: bool = True) -> dict:
         location_dict = {}
         delta = 5
@@ -515,12 +697,12 @@ class Dataset_Generator:
                     ambient_temp = random.randint(ambient_mintemp, ambient_maxtemp)
                 else:
                     ambient_temp = random.choice([random.randint(overall_mintemp, ambient_mintemp-1), random.randint(ambient_maxtemp+1, overall_maxtemp)])
-            elif ambient_command == "gt":
+            elif ambient_command == "greater_than":
                 if file_type:
                     ambient_temp = random.randint(ambient_mintemp, overall_maxtemp)
                 else:
                     ambient_temp = random.randint(overall_mintemp, ambient_mintemp-1)
-            elif ambient_command == "lt":
+            elif ambient_command == "less_than":
                 if file_type:
                     ambient_temp = random.randint(overall_mintemp, ambient_mintemp)
                 else:
@@ -561,19 +743,29 @@ class Dataset_Generator:
         return weather
 
     # -----------------------------------Generate semantic data--------------------------------------------------------------------
-    # generates semantic data 
-    def generate_semantic_data(self, file_type):
-        fake = Faker()
-        if "content" in self.selected_semantic_md:
-            if file_type:
-                semantic = self.selected_semantic_md["content"]
-            else: 
-                semantic = fake.sentence(nb_words=random.randint(1, 5))
-        else:
-            semantic = fake.sentence(nb_words=random.randint(1, 5))
-        return semantic
 
-    # generate random data; random number of ascii characters
+    # generates semantic data 
+    def generate_semantic_content(self, file_type):
+        fake = Faker()
+        text = ""
+        emphasized_text_contents = ""
+        if self.selected_semantic_md != None:
+            semantic_content = self.selected_semantic_md["semantic_1"]
+            if "content" in semantic_content and "emphasized_text_contexts" in semantic_content:
+                ic(file_type)
+                if file_type:
+                    text = semantic_content["content"]
+                    emphasized_text_contents = semantic_content["emphasized_text_contexts"]
+                    ic(text)
+                else: 
+                    text = fake.sentence(nb_words=random.randint(1, 30))
+                    emphasized_text_contents = random.choice(text.split(" "))
+        else:
+            text = fake.sentence(nb_words=random.randint(1, 30))
+            emphasized_text_contents = random.choice(text.split(" "))
+        return [text, emphasized_text_contents]
+
+    # generate random number of ascii characters
     def generate_random_data(self):
         ascii_chars = string.ascii_letters + string.digits
         random_data = ''.join(random.choices(ascii_chars, k = random.randint(1,500)))
@@ -582,39 +774,90 @@ class Dataset_Generator:
 
     # GENERATE METADATA based on the data models 
     # create the record data based on record datamodel
-    def create_record_data(self, UUID: str, timestamp: str, file_size: int, modified_time: str, file_name: str, path: str) -> dict:
+    def create_record_data(self, UUID: str, timestamp: list, file_size: int, timestamps: list, file_name: str, path: str) -> dict:
+        birthtime = timestamps["birthtime"].timestamp()
+        modified_time = timestamps["modified"].timestamp()
+        changed_time = timestamps["changed"].timestamp()
+        access_time = timestamps["accessed"].timestamp()
+
         record_data = {
                 "SourceIdentifier": {
-                    "Identifier": UUID,
+                    "Identifier": UUID, # UUID Of the record data
                     "Version": "1.0",
                 },
                 "Timestamp": timestamp,
                 "Attributes": {
                     "Name": file_name,
                     "Path": path,
-                    "st_mtime": modified_time,
+                    "st_birthtime": str(birthtime),
+                    "st_birthtime_ns": str(birthtime * 10**9),
+                    "st_mtime": str(modified_time),
+                    "st_mtime_ns": str(modified_time * 10**9),
+                    "st_atime": str(access_time),
+                    "st_atime_ns": str(access_time * 10**9),
+                    "st_ctime": str(changed_time),
+                    "st_ctime_ns": str(changed_time * 10**9),
                     "st_size": file_size
                 },
                 "Data": self.generate_random_data()
             }
         return record_data
 
-    # create the timestamp data based on timestamp datamodel
-    def create_timestamp_data(self, UUID: str, timestamp: str, description: str = "Timestamp") -> dict:
-        timestamp_data = {
-                "Label": UUID,
-                "Value": timestamp,
-                "Description": description
-            }
+    # create the timestamp data based on timestamp datamodel (in UTC time)
+    def create_timestamp_data(self, UUID: str, timestamps: dict) -> dict:
+        timestamp_data = []
+        #sort the timestamp by most earliest to latest
+        for timestamp in sorted(timestamps.items(), key=lambda time: time[1]):
+            timestamp_data.append(
+                {
+                    "Label": UUID,
+                    "Value": timestamp[1].strftime('%Y-%m-%d %H:%M:%S'),
+                    "Description": timestamp[0]
+                }
+            )
         return timestamp_data
 
     # create the semantic attribute data based on semantic attribute datamodel
-    def create_semantic_attribute(self, UUID_data: dict, file_type: bool) -> dict:
+    def create_semantic_attribute(self, filename_uuid, extension, last_modified, file_type: bool) -> list:
+        text_based_files = ["pdf", "doc", "docx", "txt", "rtf", "csv", "xls", "xlsx", "ppt", "pptx"] # text based files supported by the metadata generator
+        emphasize_text_tags = ["bold", "italic", "underline", "strikethrough", "superscript", "subscript", "higlight"] 
+        text_tags = ["Title", "Subtitle", "Header", "Footer", "Paragraph", "BulletPoint", "NumberedList", "Caption", "Quote", "Metadata", "UncategorizedText", "SectionHeader", "Footnote", "Abstract", "FigureDescription", "Annotation", "GlossaryTerm"]
+
+        semantic_UUID = self.generate_UUID()
+        metadata_uuid = self.create_UUID_data(semantic_UUID, "semantics_UUID")
+
+        if extension in text_based_files:
+            #choose language:
+            language = ["English"]
+            text, emphasized_text_contents = self.generate_semantic_content(file_type)
+            type = random.choice(text_tags)
+            emphasized_text_tag =random.choice(emphasize_text_tags)
+            page_number = random.randint(1, 200)
+            data = {
+                "element_id": semantic_UUID,
+                "file_name_uuid": filename_uuid,
+                "filetype": extension,
+                "last_modified":last_modified,
+                "page_number": page_number,
+                "languages": language,
+                "emphasized_text_contents": [emphasized_text_contents],
+                "emphasized_text_tags": [emphasized_text_tag],
+                "text": text,
+                "type": type
+            }
+        else:
+            data = {
+                "element_id": semantic_UUID,
+                "file_name_uuid": filename_uuid,
+                "filetype": extension,
+                "last_modified":last_modified,
+            }
+
         semantic_attribute = {
-            "Identifier": UUID_data,
-            "Data": self.generate_semantic_data(file_type)
+            "Identifier": metadata_uuid,
+            "Data": data
         }
-        return semantic_attribute
+        return [semantic_attribute]
 
     # create the UUID data based on the UUID data model
     def create_UUID_data(self, UUID: str, label: str = "IndalekoUUID") -> dict:
@@ -625,67 +868,14 @@ class Dataset_Generator:
         return uuid_data
 
     #helper function for setting truth attributes
+    # returns true if the file is a truth file or the attribute is contained int he truthlike attribute list 
     def define_truth_attribute(self, attribute, truth_file, truthlike_file, truth_attributes):
-        if truth_file or (truthlike_file and attribute in truth_attributes):
-            return True
-        elif not truth_file or truthlike_file:
-            return False
-
-
-    # generates the filler file with attributes of target metadata:
-    def generate_truthlike_metadata(self, current_filenum: int, max_num: int, key: str) -> dict:
-        all_metadata = []
-       
-        for n in range(1, max_num): 
-            truth_attributes = list(self.selected_POSIX_md.keys()) + list(self.selected_AC_md.keys()) + list(self.selected_semantic_md.keys())
-            total_truth_attributes = len(truth_attributes)
-            filler_truth_attributes = random.randint(0, total_truth_attributes-1)
-            ic(truth_attributes)
-            truth_attributes = random.sample(truth_attributes, k = filler_truth_attributes)
-
-            key_name = f'{key} #{n}, truth-like attributes: {filler_truth_attributes}'
-
-            
-            general_time = self.generate_file_modified(file_type=self.define_truth_attribute("file.modified", truth_attributes))
-            modified_time = general_time.strftime('%Y-%m-%d %H:%M:%S')
-            timestamp = general_time.strftime('%Y-%m-%dT%H:%M:%SZ') # for now stating that timestamp is the same time as modified time
-            
-            UUID = self.create_UUID(n, file_type = False)
-            file_size = self.generate_file_size(file_type= self.define_truth_attribute("file.size", truth_attributes))
-            file_name = self.generate_file_name(file_type= self.define_truth_attribute("file.name", truth_attributes))
-            path, URI = self.generate_dir_location(file_name, file_type= self.define_truth_attribute("file.directory", truth_attributes)) 
-            
-            record_data = self.create_record_data(UUID, timestamp, file_size, modified_time, file_name, path)
-            timestamp_data = self.create_timestamp_data(UUID, timestamp)
-            UUID_data = self.create_UUID_data(UUID)
-            semantic_attributes_data = self.create_semantic_attribute(UUID_data, file_type= self.define_truth_attribute("content", truth_attributes))
-            
-            # Add the new metadata entry to the dictionary
-            all_metadata.append({
-                "Record": record_data,
-                "URI": URI,
-                "ObjectIdentifier": UUID,
-                "Timestamps": [
-                    timestamp_data
-                ],
-                "Size": file_size,
-                "SemanticAttributes": [
-                    semantic_attributes_data # could add in more
-                ],
-                "Label": key_name,
-                "LocalIdentifier": current_filenum + n,
-                "Volume": UUID,
-                "PosixFileAttributes": "S_IFREG", #all are regular files
-                "WindowsFileAttributes": "FILE_ATTRIBUTE_ARCHIVE", #setting as default
-            })
-        return all_metadata
+        return truth_file or (truthlike_file and attribute in truth_attributes)
 
     # generates the target metadata with the specified attributes based on the nubmer of matching queries to generate from config:
     def generate_metadata(self, current_filenum:int, max_num: int, key: str, file_type: bool, truth_like: bool) -> dict:
         all_metadata = []
-        truthlike_attributes =[]
-        ic(file_type)
-        
+        truthlike_attributes =[]        
         for n in range(1, max_num):
             key_name = f'{key} #{n}'
 
@@ -696,32 +886,29 @@ class Dataset_Generator:
 
                 key_name += f', truth-like attributes: {truthlike_attributes}'
 
-            general_time = self.generate_file_modified(file_type=self.define_truth_attribute("file.modified", file_type, truth_like, truthlike_attributes))
-            modified_time = general_time.strftime('%Y-%m-%d %H:%M:%S')
-            timestamp = general_time.strftime('%Y-%m-%dT%H:%M:%SZ') # for now stating that timestamp is the same time as modified time
-            
-            UUID = self.create_UUID(current_filenum + n, file_type = file_type)
+            timestamps = self.generate_timestamps(file_type=self.define_truth_attribute("timestamps", file_type, truth_like, truthlike_attributes))
+
+            UUID = self.create_metadata_UUID(current_filenum + n, file_type = file_type)
             file_size = self.generate_file_size(file_type= self.define_truth_attribute("file.size", file_type, truth_like, truthlike_attributes))
             file_name = self.generate_file_name(file_type= self.define_truth_attribute("file.name", file_type, truth_like, truthlike_attributes))
             path, URI = self.generate_dir_location(file_name, file_type= self.define_truth_attribute("file.directory", file_type, truth_like, truthlike_attributes))
-            
-            record_data = self.create_record_data(UUID, timestamp, file_size, modified_time, file_name, path)
-            timestamp_data = self.create_timestamp_data(UUID, timestamp)
-            UUID_data = self.create_UUID_data(UUID)
-            semantic_attributes_data = self.create_semantic_attribute(UUID_data, file_type= self.define_truth_attribute("content", file_type, truth_like, truthlike_attributes))
+            record_timestamp = datetime.now().isoformat()
+
+            record_data = self.create_record_data(UUID, record_timestamp, file_size, timestamps, file_name, path)
+            timestamp_data = self.create_timestamp_data(UUID, timestamps)
+
+            extension = file_name.split(".")[-1]
+            ic(truth_like)
+            semantic_attributes_data = self.create_semantic_attribute(filename_uuid =UUID, extension= extension, last_modified=timestamps["modified"].strftime("%Y-%m-%dT%H:%M:%S"), file_type= self.define_truth_attribute("semantic_1", file_type, truth_like, truthlike_attributes))
             
             # Add the new metadata entry to the dictionary
             all_metadata.append({
                 "Record": record_data,
                 "URI": URI,
                 "ObjectIdentifier": UUID,
-                "Timestamps": [
-                    timestamp_data
-                ],
+                "Timestamps": timestamp_data,
                 "Size": file_size,
-                "SemanticAttributes": [
-                    semantic_attributes_data # could add in more
-                ],
+                "SemanticAttributes": semantic_attributes_data,
                 "Label": key_name,
                 "LocalIdentifier": str(current_filenum + n),
                 "Volume": UUID,
@@ -741,35 +928,30 @@ class Dataset_Generator:
         self.parse_config_json()
         # intiialize the synthetic dir locations
         self.initialize_local_dir()
-        ic(self.saved_directory_path)
 
         self.truth_attributes = list(self.selected_POSIX_md.keys()) + list(self.selected_AC_md.keys()) + list(self.selected_semantic_md.keys())
         target = self.generate_metadata(0, self.n_matching_queries+1, 'Truth File', True, False)
 
         total_truth_attributes = len(self.truth_attributes) 
         remaining_files = self.n_metadata_records - self.n_matching_queries
-        ic(self.n_metadata_records)
-        ic(remaining_files)
+
         # only create truth-like files if the number of attributes is greater than one, otherwise, it becomes a truth file
-        if total_truth_attributes > 1:
+        if total_truth_attributes > 1 and self.n_matching_queries > 0:
             truth_like_num = random.randint(0, remaining_files)
         else:
             truth_like_num = 0
 
         filler_num = remaining_files - truth_like_num
-        ic(truth_like_num)
-        ic(filler_num)
 
         truth_like_filler = self.generate_metadata(0, truth_like_num +1, 'Filler Truth-Like File', False, True)
         filler = self.generate_metadata(truth_like_num,  filler_num +1, 'Filler File', False, False)
-        result = self.generate_geo_context(True)
         self.write_json(target, truth_like_filler, filler, self.metadata_json)
 
     #test the data model to see if in the right form
     # test with any of the following variables: target, truth_like_filler, filler
-    def test_data_model(self, model):
+    def test_data_model(self, model, dataModel):
         try:
-            model_test = IndalekoObjecdtDataModel(**model[0])
+            model_test = dataModel(**model[0])
             print("Valid input passed:", model_test)
         except ValidationError as e:
             print("Validation error for valid input:", e)
@@ -781,5 +963,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
