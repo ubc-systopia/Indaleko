@@ -42,11 +42,12 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 from Indaleko import Indaleko
-from platforms.data_models.machine_platform import MachinePlatform
-from platforms.machine_config import IndalekoMachineConfig
 from data_models.record import IndalekoRecordDataModel
 from data_models.base import IndalekoBaseModel
 from data_models.source_identifer import IndalekoSourceIdentifierDataModel
+from data_models.timestamp import IndalekoTimestampDataModel
+from platforms.data_models.machine_platform import MachinePlatform
+from platforms.machine_config import IndalekoMachineConfig
 from platforms.data_models.hardware import Hardware
 from platforms.data_models.software import Software
 
@@ -146,16 +147,21 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             Data = Indaleko.encode_binary_data(config_data),
             Attributes = config_data
         )
+        captured = IndalekoTimestampDataModel(
+            Label = IndalekoWindowsMachineConfig.windows_machine_config_uuid_str,
+            Value = timestamp
+        )
         machine_config_data = {
             'Hardware' : hardware.serialize(),
             'Software' : software.serialize(),
             'Record' : record.serialize(),
+            'Captured' : captured.serialize()
         }
         if 'MachineUUID' not in machine_config_data:
             machine_config_data['MachineUUID'] = config_data['MachineGuid']
         if 'Hostname' not in machine_config_data:
             machine_config_data['Hostname'] = config_data['Hostname']
-        config = IndalekoWindowsMachineConfig(data=machine_config_data)
+        config = IndalekoWindowsMachineConfig(**machine_config_data)
         ic(MachinePlatform.serialize(config.machine_config))
         config.write_config_to_db()
         if hasattr(config, 'extract_volume_info'):
@@ -211,7 +217,12 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
         WindowsDriveInfo_Version = '1.0'
         WindowsDriveInfo_Description = 'Windows Drive Info'
 
-        def __init__(self, machine_id : str, platform : dict, drive_data : dict, captured: dict) -> None:
+        def __init__(self,
+                     machine_id : str,
+                     software : Software,
+                     hardware : Hardware,
+                     drive_data : dict,
+                     captured: dict) -> None:
             assert 'GUID' not in drive_data, 'GUID should not be in drive_data'
             assert 'UniqueId' in drive_data, 'UniqueId must be in drive_data'
             assert Indaleko.validate_uuid_string(machine_id), 'machine_id must be a valid UUID'
@@ -222,11 +233,13 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
                 self.volume_guid = self.__find_volume_guid__(drive_data['UniqueId'])
             self.attributes['GUID'] = self.volume_guid
             ic(self.attributes)
-            self.machine_config = MachinePlatform.MachineConfig(
-                Platform=MachinePlatform.Platform.deserialize(platform),
-                Captured=MachinePlatform.Captured.deserialize(captured),
-                Record=IndalekoRecordDataModel.IndalekoRecord(
-                    SourceIdentifier=IndalekoBaseModel.SourceIdentifier(
+            self.machine_config = IndalekoWindowsMachineConfig(
+                machine_id=machine_id,
+                Hardware=hardware,
+                Software=software,
+                Captured=captured,
+                Record=IndalekoRecordDataModel(
+                    SourceIdentifier=IndalekoSourceIdentifierDataModel(
                         Identifier=self.WindowsDriveInfo_UUID_str,
                         Version=self.WindowsDriveInfo_Version,
                         Description=self.WindowsDriveInfo_Description
@@ -251,8 +264,9 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
 
         def serialize(self) -> dict:
             '''Serialize the WindowsDriveInfo object.'''
-            assert isinstance(self.machine_config, MachinePlatform.MachineConfig)
-            config_data = MachinePlatform.MachineConfig.serialize(self.machine_config)
+            assert isinstance(self.machine_config, IndalekoMachineConfig),\
+                f'machine_config must be an IndalekoMachineConfig, not {type(self.machine_config)}'
+            config_data = self.machine_config.serialize()
             if hasattr(self, 'machine_id'):
                 config_data['MachineUUID'] = self.machine_id
             config_data['_key'] = self.get_vol_guid()
@@ -272,11 +286,12 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
         config_data = self.serialize()
         volume_info = config_data['Record']['Attributes']['VolumeInfo']
         machine_id = config_data['Record']['Attributes']['MachineUUID']
+        software = config_data['Software']
+        hardware = config_data['Hardware']
         captured = config_data['Captured']
-        platform = config_data['Platform']
         ic(volume_info)
         for volume in volume_info:
-            wdi = self.WindowsDriveInfo(machine_id, platform, volume, captured)
+            wdi = self.WindowsDriveInfo(machine_id, software, hardware, volume, captured)
             ic(volume)
             assert wdi.get_vol_guid() not in self.volume_data,\
                   f'Volume GUID {wdi.get_vol_guid()} already in volume_data'
