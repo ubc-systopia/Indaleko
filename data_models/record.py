@@ -18,15 +18,14 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import json
 import os
 import sys
 
-from typing import Dict, Any, Union
+from typing import Dict, Any
 
 from datetime import datetime, timezone
-from pydantic import Field, field_validator, field_serializer, AwareDatetime
-from icecream import ic
+from pydantic import Field, field_validator, AwareDatetime
+# from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -57,15 +56,16 @@ class IndalekoRecordDataModel(IndalekoBaseModel):
     Data : str = Field(...,
                        title='Data',
                        description='The raw (uninterpreted) data from the source.')
-    
+
     @field_validator('Timestamp', mode='before')
+    @classmethod
     def ensure_timezone(cls, value: datetime):
         if isinstance(value, str):
             value = datetime.fromisoformat(value)
         if value.tzinfo is None:
             value = value.replace(tzinfo=timezone.utc)
         return value
-    
+
     class Config:
         '''Sample configuration data for the data model.'''
         json_schema_extra = {
