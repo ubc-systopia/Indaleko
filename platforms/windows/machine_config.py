@@ -24,17 +24,31 @@ import uuid
 import datetime
 import argparse
 import re
+import sys
+
 import arango
 
 from typing import Union
-
 from icecream import ic
 
+init_path = os.path.dirname(os.path.abspath(__file__))
+
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+
 from Indaleko import Indaleko
-from IndalekoMachineConfigDataModel import IndalekoMachineConfigDataModel
-from IndalekoMachineConfig import IndalekoMachineConfig
-from IndalekoRecordDataModel import IndalekoRecordDataModel
-from IndalekoDataModel import IndalekoDataModel
+from platforms.data_models.machine_platform import MachinePlatform
+from platforms.machine_config import IndalekoMachineConfig
+from data_models.record import IndalekoRecordDataModel
+from data_models.base import IndalekoBaseModel
+from data_models.source_identifer import IndalekoSourceIdentifierDataModel
+from platforms.data_models.hardware import Hardware
+from platforms.data_models.software import Software
 
 class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
     '''
@@ -57,7 +71,6 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
         'service_type' : 'Machine Configuration',
         'service_identifier' : windows_machine_config_uuid_str,
     }
-
 
 
     def __init__(self : 'IndalekoWindowsMachineConfig',
@@ -112,27 +125,19 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             assert str(guid) == config_data['MachineUUID'],\
                   f'GUID mismatch: {guid} != {config_data["MachineUUID"]}'
         ic(config_data)
-        software = IndalekoMachineConfigDataModel.Software(
+        software = Software(
             OS = config_data['OperatingSystem']['Caption'],
             Version = config_data['OperatingSystem']['Version'],
             Architecture = config_data['OperatingSystem']['OSArchitecture'],
             Hostname = config_data['Hostname'],
         )
-        hardware = IndalekoMachineConfigDataModel.Hardware(
+        hardware = Hardware(
             CPU = config_data['CPU']['Name'],
             Version = '',
             Cores = config_data['CPU']['Cores'],
         )
-        captured = IndalekoMachineConfigDataModel.Captured(
-            Label = IndalekoMachineConfig.indaleko_machine_config_captured_label_uuid,
-            Value = timestamp
-        )
-        platform = IndalekoMachineConfigDataModel.Platform(
-            software = software,
-            hardware = hardware,
-        )
-        record = IndalekoRecordDataModel.IndalekoRecord(
-            SourceIdentifier = IndalekoDataModel.SourceIdentifier(
+        record = IndalekoRecordDataModel(
+            SourceIdentifier = IndalekoSourceIdentifierDataModel(
                 Identifier = IndalekoWindowsMachineConfig.windows_machine_config_service['service_identifier'],
                 Version = IndalekoWindowsMachineConfig.windows_machine_config_service['service_version'],
                 Description = IndalekoWindowsMachineConfig.windows_machine_config_service['service_description']
@@ -142,16 +147,16 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             Attributes = config_data
         )
         machine_config_data = {
-            'Platform' : IndalekoMachineConfigDataModel.Platform.serialize(platform),
-            'Captured' : IndalekoMachineConfigDataModel.Captured.serialize(captured),
-            'Record' : IndalekoRecordDataModel.IndalekoRecord.serialize(record),
+            'Hardware' : hardware.serialize(),
+            'Software' : software.serialize(),
+            'Record' : record.serialize(),
         }
         if 'MachineUUID' not in machine_config_data:
             machine_config_data['MachineUUID'] = config_data['MachineGuid']
         if 'Hostname' not in machine_config_data:
             machine_config_data['Hostname'] = config_data['Hostname']
         config = IndalekoWindowsMachineConfig(data=machine_config_data)
-        ic(IndalekoMachineConfigDataModel.MachineConfig.serialize(config.machine_config))
+        ic(MachinePlatform.serialize(config.machine_config))
         config.write_config_to_db()
         if hasattr(config, 'extract_volume_info'):
             getattr(config, 'extract_volume_info')()
@@ -217,11 +222,11 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
                 self.volume_guid = self.__find_volume_guid__(drive_data['UniqueId'])
             self.attributes['GUID'] = self.volume_guid
             ic(self.attributes)
-            self.machine_config = IndalekoMachineConfigDataModel.MachineConfig(
-                Platform=IndalekoMachineConfigDataModel.Platform.deserialize(platform),
-                Captured=IndalekoMachineConfigDataModel.Captured.deserialize(captured),
+            self.machine_config = MachinePlatform.MachineConfig(
+                Platform=MachinePlatform.Platform.deserialize(platform),
+                Captured=MachinePlatform.Captured.deserialize(captured),
                 Record=IndalekoRecordDataModel.IndalekoRecord(
-                    SourceIdentifier=IndalekoDataModel.SourceIdentifier(
+                    SourceIdentifier=IndalekoBaseModel.SourceIdentifier(
                         Identifier=self.WindowsDriveInfo_UUID_str,
                         Version=self.WindowsDriveInfo_Version,
                         Description=self.WindowsDriveInfo_Description
@@ -246,8 +251,8 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
 
         def serialize(self) -> dict:
             '''Serialize the WindowsDriveInfo object.'''
-            assert isinstance(self.machine_config, IndalekoMachineConfigDataModel.MachineConfig)
-            config_data = IndalekoMachineConfigDataModel.MachineConfig.serialize(self.machine_config)
+            assert isinstance(self.machine_config, MachinePlatform.MachineConfig)
+            config_data = MachinePlatform.MachineConfig.serialize(self.machine_config)
             if hasattr(self, 'machine_id'):
                 config_data['MachineUUID'] = self.machine_id
             config_data['_key'] = self.get_vol_guid()

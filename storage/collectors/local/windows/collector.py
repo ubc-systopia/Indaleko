@@ -37,7 +37,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # pylint: disable=wrong-import-position
 from Indaleko import Indaleko
 from storage.collectors.base import BaseStorageCollector
-from IndalekoWindowsMachineConfig import IndalekoWindowsMachineConfig
+from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 # pylint: enable=wrong-import-position
 
 

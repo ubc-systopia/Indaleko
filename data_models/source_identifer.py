@@ -22,10 +22,10 @@ import os
 import sys
 import uuid
 
-from typing import Optional, Dict, Any
+from typing import Optional
 
 from pydantic import Field
-from icecream import ic
+# from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -72,6 +72,6 @@ def main():
     '''This allows testing the data model'''
     IndalekoSourceIdentifierDataModel.test_model_main()
 
-    
+
 if __name__ == '__main__':
     main()

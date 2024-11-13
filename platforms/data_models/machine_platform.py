@@ -33,8 +33,8 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
-import i_platform.data_models.hardware as hardware
-import i_platform.data_models.software as software
+import platforms.data_models.hardware as hardware
+import platforms.data_models.software as software
 # pylint: enable=wrong-import-position
 
 class MachinePlatform(IndalekoBaseModel):

@@ -146,9 +146,6 @@ class IndalekoActivityDataRegistrationService(IndalekoSingleton):
             return None
         assert len(provider) == 1
         return
-        if provider is not None:
-            provider = provider[0]
-        return provider
 
     @staticmethod
     def lookup_activity_provider_collection(identifier : str)\

@@ -26,14 +26,21 @@ import uuid
 import os
 #import logging
 #import re
+import sys
 
 import arango
 
 from typing import Union
-
 from icecream import ic
 
-from IndalekoMachineConfigDataModel import IndalekoMachineConfigDataModel
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+from data_models.machine_config import IndalekoMachineConfigDataModel
 from Indaleko import Indaleko
 from IndalekoServiceManager import IndalekoServiceManager
 from IndalekoCollections import IndalekoCollections
@@ -43,21 +50,22 @@ class IndalekoMachineConfig:
     This class provides the generic base for capturing a machine
     configuration
     '''
-    default_config_dir = "./config"
+    default_config_dir = Indaleko.default_config_dir
     indaleko_machine_config_captured_label_str = "eb7eaeed-6b21-4b6a-a586-dddca6a1d5a4"
     indaleko_machine_config_captured_label_uuid = \
         uuid.UUID(indaleko_machine_config_captured_label_str)
 
-    def __init__(self,
-                 **kwargs):
+    def __init__(self, **kwargs):
         '''Initialize the machine configuration'''
         if not hasattr(self, 'source'): # override in derived classes
             self.source_identifier = None
         ic(kwargs)
-        self.machine_id = kwargs.get('machine_id',
-                                     kwargs['data']['MachineUUID']
-        )
-        self.machine_config = IndalekoMachineConfigDataModel.MachineConfig.deserialize(**kwargs)
+        return
+        record = kwargs['Record']
+        del kwargs['Record']
+        self.machine_id = kwargs['machine_id']
+        del kwargs['machine_id']
+        self.machine_config = IndalekoMachineConfigDataModel.deserialize(**kwargs)
         self.collection = IndalekoCollections().get_collection(Indaleko.Indaleko_MachineConfig_Collection)
         assert self.collection is not None, 'Failed to get the machine configuration collection'
 
@@ -144,7 +152,7 @@ class IndalekoMachineConfig:
 
     def serialize(self) -> dict:
         '''Serialize the machine configuration'''
-        return IndalekoMachineConfigDataModel.MachineConfig.serialize(self.machine_config)
+        return MachinePlatform.serialize(self.machine_config)
 
     @staticmethod
     def deserialize(data : dict) -> 'IndalekoMachineConfig':
@@ -198,22 +206,16 @@ class TestMachineConfig:
             },
             "Data": "xx"
         },
-        "Captured" : {
-            "Label": "eb7eaeed-6b21-4b6a-a586-dddca6a1d5a4",
-            "Value": "2024-08-08T21:26:22.418196+00:00"
+        "Software": {
+            "OS": "Linux",
+            "Version": "5.4.0-104-generic",
+            "Architecture": "x86_64",
+            "Hostname" : "testhost",
         },
-        "Platform" : {
-            "software": {
-                "OS": "Linux",
-                "Version": "5.4.0-104-generic",
-                "Architecture": "x86_64",
-                "Hostname" : "testhost",
-            },
-            "hardware": {
-                "CPU": "Intel(R) Core(TM) i7-7700HQ CPU @ 2.80GHz",
-                "Version": "06_9E_09",
-                "Cores": 8
-            }
+        "Hardware": {
+            "CPU": "Intel(R) Core(TM) i7-7700HQ CPU @ 2.80GHz",
+            "Version": "06_9E_09",
+            "Cores": 8
         }
     }
 
@@ -234,7 +236,7 @@ class TestMachineConfig:
             ic(existing_machine_config)
             return
         machine_config = IndalekoMachineConfig(
-            data=TestMachineConfig.test_machine_config_data)
+            **TestMachineConfig.test_machine_config_data)
         machine_config.write_config_to_db()
         retrieved_config = IndalekoMachineConfig.\
             lookup_machine_configuration_by_machine_id(TestMachineConfig.\

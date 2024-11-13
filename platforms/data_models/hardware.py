@@ -1,5 +1,5 @@
 '''
-This module defines the captured data model used as part of the machine configuration data model.
+This module defines the database schema for the MachineConfig collection.
 
 Project Indaleko
 Copyright (C) 2024 Tony Mason
@@ -21,12 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
-from datetime import datetime, timezone
-from typing import Union
-from uuid import UUID
-
 from icecream import ic
-from pydantic import Field, field_validator, AwareDatetime
+from pydantic import Field
+from typing import Union, Optional
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -39,39 +36,39 @@ if os.environ.get('INDALEKO_ROOT') is None:
 from data_models.base import IndalekoBaseModel
 # pylint: enable=wrong-import-position
 
-class Captured(IndalekoBaseModel):
-    '''Defines the Captured Machine configuration information'''
-    Label : UUID = Field(...,
-                         title='Label',
-                         description='UUID representing the semantic meaning of this timestamp.')
+class Hardware(IndalekoBaseModel):
+    '''Defines the machine Hardware information'''
+    CPU : str = Field(...,
+                        title='CPU',
+                        description='Processor Architecture.')
 
-    Value : AwareDatetime = Field(...,
-                                  title='Value',
-                                  description='The timestamp of when this record was created.')
+    Version : str = Field(...,
+                            title='Version',
+                            description='Version of the processor.')
 
-    @field_validator('Value', mode='before')
-    @classmethod
-    def ensure_timezone(cls, value : Union[datetime, str]) -> datetime:
-        '''Ensure the timezone is set to UTC'''
-        if isinstance(value, str):
-            value = datetime.fromisoformat(value)
-        if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
-        return value
+    Cores : Optional[int] = Field(None,
+                                  title='Cores',
+                                  description='Number of cores on the processor.')
+
+    Threads : Optional[int] = Field(None,
+                                    title='Threads',
+                                    description='Number of threads on the processor.')
 
     class Config:
-        '''Configuration for the captured data model'''
+        '''Configuration for the hardware data model'''
         json_schema_extra = {
             'example': {
-                'Label': '3fa85f64-5717-4562-b3fc-2c963f66afa6',
-                'Value': '2024-01-01T12:00:00Z'
+                'CPU': 'x86_64',
+                'Version': 'Intel(R) Core(TM) i7-7700HQ CPU @ 2.80GHz',
+                'Cores': 4,
+                'Threads': 8
             }
         }
 
 def main():
     '''Main function for the software data model'''
     ic('Testing Software Data Model')
-    Captured.test_model_main()
+    Hardware.test_model_main()
 
 if __name__ == '__main__':
     main()

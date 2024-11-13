@@ -35,8 +35,8 @@ if os.environ.get('INDALEKO_ROOT') is None:
 from data_models.base import IndalekoBaseModel
 from data_models.timestamp import IndalekoTimestampDataModel
 from data_models.record import IndalekoRecordDataModel
-from i_platform.data_models.software import Software as software
-from i_platform.data_models.hardware import Hardware as hardware
+from platforms.data_models.software import Software as software
+from platforms.data_models.hardware import Hardware as hardware
 # pylint: enable=wrong-import-position
 
 class IndalekoMachineConfigDataModel(IndalekoBaseModel):

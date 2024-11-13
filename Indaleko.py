@@ -79,11 +79,12 @@ from data_models.activity_data_registration \
     import IndalekoActivityDataRegistrationDataModel
 from activity.data_model.activity \
     import IndalekoActivityDataModel
+from platforms.data_models.machine_platform import MachinePlatform
 
 from IndalekoObjectSchema import IndalekoObjectSchema
 from IndalekoServiceSchema import IndalekoServiceSchema
 from IndalekoRelationshipSchema import IndalekoRelationshipSchema
-from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
+# from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
 from IndalekoUserSchema import IndalekoUserSchema
 from IndalekoUserRelationshipSchema import IndalekoUserRelationshipSchema
 # pylint: enable=wrong-import-position
@@ -168,7 +169,7 @@ class Indaleko:
             },
         },
         Indaleko_MachineConfig_Collection : {
-            'schema' : IndalekoMachineConfigSchema().get_json_schema(),
+            'schema' : MachinePlatform.get_arangodb_schema(),
             'edge' : False,
             'indices' : { },
         },
