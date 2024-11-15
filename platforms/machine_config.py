@@ -42,12 +42,12 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
-# pylint: enable=wrong-import-position
-
 from data_models.machine_config import IndalekoMachineConfigDataModel
 from Indaleko import Indaleko
 from IndalekoServiceManager import IndalekoServiceManager
-from IndalekoCollections import IndalekoCollections
+from db.i_collections import IndalekoCollections
+# pylint: enable=wrong-import-position
+
 
 class IndalekoMachineConfig:
     '''

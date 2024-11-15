@@ -23,21 +23,37 @@ import argparse
 import json
 import uuid
 #import psutil # see https://psutil.readthedocs.io/en/latest/
-import netifaces # see https://pypi.org/project/netifaces/
+#import netifaces # see https://pypi.org/project/netifaces/
 import datetime
 import logging
 import platform
 import os
 import socket
+import sys
 
 from icecream import ic
 
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+# pylint: disable=wrong-import-position
+# from Indaleko import Indaleko
 from Indaleko import Indaleko
-from IndalekoMachineConfig import IndalekoMachineConfig
-from IndalekoDBConfig import IndalekoDBConfig
-from IndalekoMachineConfigDataModel import IndalekoMachineConfigDataModel
-from IndalekoRecordDataModel import IndalekoRecordDataModel
-from IndalekoDataModel import IndalekoDataModel
+from platforms.machine_config import IndalekoMachineConfig
+from data_models.record import IndalekoRecordDataModel
+from data_models.source_identifer import IndalekoSourceIdentifierDataModel
+from data_models.timestamp import IndalekoTimestampDataModel
+# from IndalekoDataModel import IndalekoDataModel
+from platforms.data_models.hardware import Hardware
+from platforms.data_models.software import Software
+from platforms.data_models.machine_platform import MachinePlatform
+
+# pylint: enable=wrong-import-position
+
 
 class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
     '''
@@ -315,27 +331,23 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
         ic(config_data)
         ic(file_metadata)
         timestamp = datetime.datetime.fromisoformat(file_metadata['timestamp'])
-        software = IndalekoMachineConfigDataModel.Software(
+        software = Software(
             OS=config_data['OSInfo']['operating_system'],
             Version=config_data['OSInfo']['kernel_version'],
             Architecture=config_data['CPU']['Architecture'],
             Hostname=config_data['Hostname'],
         )
-        hardware = IndalekoMachineConfigDataModel.Hardware(
+        hardware = Hardware(
             CPU=config_data['CPU']['Model name'],
             Cores=int(config_data['CPU']['CPU(s)']),
             Version=config_data['CPU']['Model'],
         )
-        captured = IndalekoMachineConfigDataModel.Captured(
+        captured = IndalekoTimestampDataModel(
             Label = IndalekoMachineConfig.indaleko_machine_config_captured_label_uuid,
             Value = timestamp
         )
-        platform_info = IndalekoMachineConfigDataModel.Platform(
-            software=software,
-            hardware=hardware,
-        )
-        record = IndalekoRecordDataModel.IndalekoRecord(
-            SourceIdentifier = IndalekoDataModel.SourceIdentifier(
+        record = IndalekoRecordDataModel(
+            SourceIdentifier = IndalekoSourceIdentifierDataModel(
                 Identifier = IndalekoLinuxMachineConfig.\
                     linux_machine_config_service['service_identifier'],
                 Version = IndalekoLinuxMachineConfig.\
@@ -348,16 +360,17 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
             Attributes = config_data,
         )
         machine_config_data = {
-            'Platform' : IndalekoMachineConfigDataModel.Platform.serialize(platform_info),
-            'Captured' : IndalekoMachineConfigDataModel.Captured.serialize(captured),
-            'Record' : IndalekoRecordDataModel.IndalekoRecord.serialize(record),
+            'Hardware' : hardware.serialize(),
+            'Software' : software.serialize(),
+            'Record' : record.serialize(),
+            'Captured' : captured.serialize(),
         }
         if 'MachineUUID' not in machine_config_data:
             machine_config_data['MachineUUID'] = str(file_uuid)
         if 'Hostname' not in machine_config_data:
             machine_config_data['Hostname'] = config_data['Hostname']
-        config = IndalekoLinuxMachineConfig(data=machine_config_data)
-        ic(IndalekoMachineConfigDataModel.MachineConfig.serialize(config.machine_config))
+        config = IndalekoLinuxMachineConfig(**machine_config_data)
+        ic(MachinePlatform.serialize(config.machine_config))
         config.write_config_to_db()
         if hasattr(config, 'extract_volume_info'):
             getattr(config, 'extract_volume_info')(config_data)
@@ -547,4 +560,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

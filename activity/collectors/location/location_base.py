@@ -39,8 +39,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # overall package/project.  It's a bit of a hack, but it works.
 # pylint: disable=wrong-import-position
 from activity.collectors.base import CollectorBase
-
-from IndalekoLogging import IndalekoLogging
+from utils.i_logging import IndalekoLogging
 # pylint: enable=wrong-import-position
 
 class LocationCollector(CollectorBase):

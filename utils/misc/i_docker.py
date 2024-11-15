@@ -2,13 +2,27 @@
 This module provides an interface to managing the Docker components within
 Indaleko.
 """
+import os
+import sys
 import logging
 import argparse
 import docker
 import json
 
-from Indaleko import Indaleko
-from IndalekoLogging import IndalekoLogging
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+# pylint: disable=wrong-import-position
+# from Indaleko import Indaleko
+from utils.i_logging import IndalekoLogging
+import utils.misc.directory_management
+import utils.misc.file_name_management
+# pylint: enable=wrong-import-position
+
 
 class IndalekoDocker:
     """Indaleko Class for managing Docker components."""
@@ -53,12 +67,12 @@ class IndalekoDocker:
     def list_containers(self, all : bool = False) -> list:
         """List the Indaleko related Docker containers."""
         containers = self.docker_client.containers.list(all=all)
-        return [container.name for container in containers if Indaleko.Indaleko_Prefix in container.name]
+        return [container.name for container in containers if utils.misc.file_name_management.indaleko_file_name_prefix in container.name]
 
     def list_volumes(self) -> list:
         """List the Indaleko related Docker volumes."""
         volumes = self.docker_client.volumes.list()
-        return [volume.name for volume in volumes if Indaleko.Indaleko_Prefix in volume.name]
+        return [volume.name for volume in volumes if utils.misc.file_name_management in volume.name]
 
     def create_container(self, container_name : str = None, volume_name : str = None, password : str = None) -> None:
         """Add a new Indaleko related Docker container."""
@@ -152,7 +166,7 @@ class IndalekoDocker:
         mounts = container.attrs['HostConfig']['Mounts']
         db_mount = None
         for mount in mounts:
-            if mount['Type'] == 'volume' and Indaleko.Indaleko_Prefix in mount['Source']:
+            if mount['Type'] == 'volume' and utils.misc.file_name_management.indaleko_file_name_prefix in mount['Source']:
                 assert db_mount is None, "Found more than one Indaleko volume mount"
                 db_mount = mount['Source']
         assert db_mount is not None, "Could not find Indaleko volume mount"
@@ -208,7 +222,7 @@ class IndalekoDocker:
         mounts = container.attrs['HostConfig']['Mounts']
         db_mount = None
         for mount in mounts:
-            if mount['Type'] == 'volume' and Indaleko.Indaleko_Prefix in mount['Source']:
+            if mount['Type'] == 'volume' and utils.misc.file_name_management.indaleko_file_name_prefix in mount['Source']:
                 assert db_mount is None, "Found more than one Indaleko volume mount"
                 db_mount = mount['Source']
         assert db_mount is not None, "Could not find Indaleko volume mount"
@@ -310,21 +324,21 @@ def main():
     parser.add_argument('--log-file',
                         default=IndalekoLogging.generate_log_file_name(service_name='IndalekoDocker'),
                         help='Set the logging file.')
-    parser.add_argument('--log-dir', default=Indaleko.default_log_dir, help='Set the logging directory.')
+    parser.add_argument('--log-dir', default=utils.misc.directory_management.indaleko_default_log_dir, help='Set the logging directory.')
     subparser = parser.add_subparsers(dest='command', title='command', help='command to execute')
-    list_parser = subparser.add_parser('list', help=f'List all {Indaleko.Indaleko_Prefix} containers.')
+    list_parser = subparser.add_parser('list', help=f'List all {utils.misc.file_name_management.indaleko_file_name_prefix} containers.')
     list_parser.add_argument('--all', default=False, action='store_true', help='List all containers.')
     parser.set_defaults(func=list_containers)
-    listvol_parser = subparser.add_parser('listvol', help=f'List all {Indaleko.Indaleko_Prefix} volumes.')
+    listvol_parser = subparser.add_parser('listvol', help=f'List all {utils.misc.file_name_management.indaleko_file_name_prefix} volumes.')
     listvol_parser.set_defaults(func=list_volumes)
-    start_parser = subparser.add_parser('start', help=f'Start the {Indaleko.Indaleko_Prefix} containers.')
+    start_parser = subparser.add_parser('start', help=f'Start the {utils.misc.file_name_management.indaleko_file_name_prefix} containers.')
     start_parser.set_defaults(func=start_command)
-    stop_parser = subparser.add_parser('stop', help=f'Stop the {Indaleko.Indaleko_Prefix} containers.')
+    stop_parser = subparser.add_parser('stop', help=f'Stop the {utils.misc.file_name_management.indaleko_file_name_prefix} containers.')
     stop_parser.set_defaults(func=stop_command)
-    update_parser = subparser.add_parser('update', help=f'Update the {Indaleko.Indaleko_Prefix} containers.')
+    update_parser = subparser.add_parser('update', help=f'Update the {utils.misc.file_name_management.indaleko_file_name_prefix} containers.')
     update_parser.add_argument('--all', default=False, action='store_true', help='Update all containers.')
     update_parser.set_defaults(func=update_command)
-    reset_parser = subparser.add_parser('reset', help=f'Reset the {Indaleko.Indaleko_Prefix} container volumes.')
+    reset_parser = subparser.add_parser('reset', help=f'Reset the {utils.misc.file_name_management.indaleko_file_name_prefix} container volumes.')
     reset_parser.add_argument('--all', default=False, action='store_true', help='Reset all containers.')
     reset_parser.set_defaults(func=reset_command)
     args = parser.parse_args()
