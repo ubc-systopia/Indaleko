@@ -21,7 +21,7 @@ from IndalekoDBConfig import IndalekoDBConfig
 
 
 # adds each metadata into the specified collection
-def add_records_to_collection(collections, collection_name: str, records: list) -> None:
+def add_records_to_collection(collections: IndalekoCollections, collection_name: str, records: list) -> None:
     for record in records:
         ic(record)
         collections.get_collection(collection_name).insert(record)
@@ -35,11 +35,19 @@ def convert_json_file(json_file: list):
     return dataset
 
 
+#delete the Indaleko objects from the collection:
+def delete_records_from_collection(collections: IndalekoCollections, collection_name: str) -> None:
+    collections.get_collection(collection_name).delete_collection("Object")
+
+
+
 def main():
     collections = IndalekoCollections()
     records = "/Users/pearl/Indaleko_updated/Indaleko/data/data.json"
     dataset = convert_json_file(records)
     add_records_to_collection(collections, "Object", dataset)
+    #delete_records_from_collection(collections, "Object")
+
 
 if __name__ == '__main__':
     main()
