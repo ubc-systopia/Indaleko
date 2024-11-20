@@ -86,7 +86,7 @@ class IndalekoServiceManager(IndalekoSingleton):
         'edge' : False,
         'indices' : {
             'name' : {
-                'fields' : ['name'],
+                'fields' : ['Name'],
                 'unique' : True,
                 'type' : 'persistent'
             },

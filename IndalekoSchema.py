@@ -62,9 +62,9 @@ class IndalekoSchema:
             collection_name = interface[8:-6]
             if collection_name not in Indaleko.Collections:
                 if 'Object' == collection_name:
-                    schema['Objects'] = getattr(module, interface)
+                    schema[Indaleko.Indaleko_Object_Collection] = getattr(module, interface)
                 if 'Relationship' == collection_name:
-                    schema['Relationships'] = getattr(module, interface)
+                    schema[Indaleko.Indaleko_Relationship_Collection] = getattr(module, interface)
                 if 'ActivityDataProvider' == collection_name:
                     schema['ActivityDataProviders'] = getattr(module, interface)
                 if 'UserRelationship' == collection_name:

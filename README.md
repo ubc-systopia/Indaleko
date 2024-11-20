@@ -1,5 +1,23 @@
 # Project Indaleko
 
+## Recent Changes
+
+October 18, 2024
+
+There have been some changes around terminology, and I suspect this will lead to a consolidation around this new terminology.
+
+In general, data gathering pipelines are divided into one component that gathers the information, a _collector_, and a second component that translates the gathered information into a normalized form that can then be inserted into the database, a _recorder_.
+
+For example, the "indexer" for the file system metadata is logically a "collector" of the information, while the ingester is logically a _recorder_.  Sometimes these stages are combined, sometimes they are further subdivided.  For example, in the case of the local file system ingesters ("recorders") they often emit data into a file for bulk uploading.
+
+Some of this is now reflected in the naming system (notably in the _activity_ area of the project.)
+
+I have also removed `requirements.txt` from the project.  There is a `pyproject.toml` file instead, which captures dependencies.  I added a `setup_env.py` script as well.
+
+The `setup_env.py` script will set up a virtual environment for you.  It will restrict you to using Python 3.12 or newer for the project, and it will download and install the "uv" utility for managing dependencies and configuring a virtual environment. Since this is new, it may not work properly in other environments.  Please let me know and I'll work with you to get it working.  So far, I've tested it on Windows and Linux.
+
+## Introduction
+
 Project Indaleko is about creating a _Unified Personal Index_.  The key
 characteristics of the UPI model is:
 
@@ -513,7 +531,7 @@ validators$ extract_validation.sh /path/to/the/index_file
 The script creates a `validations.jsonl` file inside the `data` folder where each line is a rule to be checked. Here are three examples of these rules:
 
 ```json
-{"type":"count","field":"st_mode","value":16859,"count":1} 
+{"type":"count","field":"st_mode","value":16859,"count":1}
 {"type":"contains","parent_uri":"/Users/sinaee/.azuredatastudio","children_uri":["/Users/sinaee/.azuredatastudio/extensions","/Users/sinaee/.azuredatastudio/argv.json"]}
 {"type":"contains","parent_uri":"/Users/sinaee/.azuredatastudio","children_uri":["/Users/sinaee/.azuredatastudio/extensions","/Users/sinaee/.azuredatastudio/argv.json"]}
 {"type":"contained_by","child_uri":"/Users/sinaee/.azuredatastudio/extensions/microsoft.azuredatastudio-postgresql-0.2.7/node_modules/dashdash/package.json","parent_uris":["/Users/sinaee/.azuredatastudio/extensions/microsoft.azuredatastudio-postgresql-0.2.7/node_modules/dashdash"]}
@@ -566,3 +584,11 @@ To view your data, navigate to `http://localhost:8529/` and log in using your us
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ```
+
+# Tooling
+
+Note: as of October 18, 2024.  Adding this as I try to migrate towards modern tooling for the project.
+
+## UV
+
+This is a pip replacement package manager that I've started to use.  You can install it from the [UV](https://docs.astral.sh/uv/) website.  It also handles virtual environments.

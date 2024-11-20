@@ -28,5 +28,5 @@ wam*
 count_files_and_directories_aql.sql
 import_list.cmd
 upload-notes.md
-
-
+.uv*
+.venv*

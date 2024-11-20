@@ -144,11 +144,11 @@ def main():
     }
     vertex1 = {
         'object' : str(uuid.uuid4()),
-        'collection' : Indaleko.Indaleko_Object,
+        'collection' : Indaleko.Indaleko_Object_Collection,
     }
     vertex2 = {
         'object' : str(uuid.uuid4()),
-        'collection' : Indaleko.Indaleko_Object,
+        'collection' : Indaleko.Indaleko_Object_Collection,
     }
     r = IndalekoRelationship(
         source = {
@@ -167,4 +167,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

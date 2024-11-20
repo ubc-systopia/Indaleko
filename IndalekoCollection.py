@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import arango
 import json
 
+import arango.collection
 from icecream import ic
 
 
@@ -36,6 +37,8 @@ class IndalekoCollection():
     def __init__(self, **kwargs):
         if 'ExistingCollection' in kwargs:
             self.collection = kwargs['ExistingCollection']
+            assert isinstance(self.collection, arango.collection.StandardCollection), \
+                f'self.collection is unexpected type {type(self.collection)}'
             self.name = self.collection.name
             self.definition = self.collection.properties()
             self.db_config = kwargs.get('db', IndalekoDBConfig())
@@ -70,8 +73,11 @@ class IndalekoCollection():
         return the existing collection. If reset is True, delete the existing
         collection and create a new one.
         """
-        if self.db_config.db.has_collection(name) and not reset:
-            self.collection = self.db_config.db.collection(name)
+        if self.db_config.db.has_collection(name):
+            if not reset:
+                self.collection = self.db_config.db.collection(name)
+            else:
+                raise NotImplementedError('delete existing collection not implemented')
         else:
             self.collection = self.db_config.db.create_collection(name, edge=config['edge'])
             if 'schema' in config:
@@ -89,7 +95,9 @@ class IndalekoCollection():
                                       config['indices'][index]['type'],
                                       config['indices'][index]['fields'],
                                       config['indices'][index]['unique'])
-        return self.collection
+        assert isinstance(self.collection, arango.collection.StandardCollection), \
+            f'self.collection is unexpected type {type(self.collection)}'
+        return IndalekoCollection(ExistingCollection=self.collection)
 
     def delete_collection(self, name: str) -> bool:
         '''Delete the collection with the given name.'''
@@ -120,7 +128,15 @@ class IndalekoCollection():
 
     def insert(self, document: dict, overwrite : bool = False) -> 'IndalekoCollection':
         """Insert a document into the collection."""
-        return self.collection.insert(document, overwrite=overwrite)
+        try:
+            return self.collection.insert(document, overwrite=overwrite)
+        except arango.exceptions.DocumentInsertError as e:
+            ic(f'Insert failure for document into collection {self.name}')
+            ic(document)
+            print(json.dumps(document, indent=2))
+            ic(e)
+            raise e
+
 
     def add_schema(self, schema: dict) -> 'IndalekoCollection':
         """Add a schema to the collection."""
