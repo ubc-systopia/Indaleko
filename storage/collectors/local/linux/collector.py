@@ -31,9 +31,12 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from Indaleko import Indaleko
+# from Indaleko import Indaleko
 from storage.collectors.base import BaseStorageCollector
-from IndalekoLinuxMachineConfig import IndalekoLinuxMachineConfig
+from platforms.linux.machine_config import IndalekoLinuxMachineConfig
+from utils.i_logging import IndalekoLogging
+import utils.misc.directory_management
+import utils.misc.file_name_management
 # pylint: enable=wrong-import-position
 
 
@@ -84,16 +87,16 @@ class IndalekoLinuxLocalIndexer(BaseStorageCollector):
 def main():
     '''This is the main handler for the Indaleko Linux Local Indexer
     service.'''
-    logging_levels = Indaleko.get_logging_levels()
+    logging_levels = IndalekoLogging.get_logging_levels()
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     # Step 1: find the machine configuration file & set up logging
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument('--configdir',
                             help='Path to the config directory',
-                            default=Indaleko.default_config_dir)
+                            default=utils.misc.directory_management.indaleko_default_config_dir)
     pre_parser.add_argument('--logdir', '-l',
                             help='Path to the log directory',
-                            default=Indaleko.default_log_dir)
+                            default=utils.misc.directory_management.indaleko_default_log_dir)
     pre_parser.add_argument('--loglevel',
                             type=int,
                             default=logging.DEBUG,
@@ -102,7 +105,7 @@ def main():
     pre_args, _ = pre_parser.parse_known_args()
     config_files = IndalekoLinuxMachineConfig.find_config_files(pre_args.configdir)
     default_config_file = IndalekoLinuxMachineConfig.get_most_recent_config_file(pre_args.configdir)
-    config_file_metadata = Indaleko.extract_keys_from_file_name(default_config_file)
+    config_file_metadata = utils.misc.file_name_management.extract_keys_from_file_name(default_config_file)
     config_platform = IndalekoLinuxLocalIndexer.linux_platform
     if 'platform' in config_file_metadata:
         config_platform = config_file_metadata['platform']
@@ -126,7 +129,7 @@ def main():
                             default=os.path.expanduser('~'))
     pre_parser.add_argument('--datadir', '-d',
                             help='Path to the data directory',
-                            default=Indaleko.default_data_dir)
+                            default=utils.misc.directory_management.indaleko_default_data_dir)
     pre_args, _ = pre_parser.parse_known_args()
 
     # Step 3: now we can load the machine configuration

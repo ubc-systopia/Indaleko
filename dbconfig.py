@@ -22,9 +22,9 @@ import argparse
 import datetime
 import logging
 from Indaleko import Indaleko
-from IndalekoDBConfig import IndalekoDBConfig
-from IndalekoCollections import IndalekoCollections
-from IndalekoLogging import IndalekoLogging
+from db.db_config import IndalekoDBConfig
+from db.i_collections import IndalekoCollections
+from utils.i_logging import IndalekoLogging
 
 def check_command(args : argparse.Namespace) -> None:
     """Check the database"""
@@ -41,7 +41,7 @@ def check_command(args : argparse.Namespace) -> None:
     logging.info('Database connection successful.')
     print('Database connection successful.')
     # make sure the collections exist
-    IndalekoCollections(db_config)
+    IndalekoCollections(db=db_config)
 
 def is_arangodb3_running():
     """Determine if ArangoDB is running on the local machine."""

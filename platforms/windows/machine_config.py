@@ -41,15 +41,16 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 
+# pylint: disable=wrong-import-position
 from Indaleko import Indaleko
 from data_models.record import IndalekoRecordDataModel
-from data_models.base import IndalekoBaseModel
 from data_models.source_identifer import IndalekoSourceIdentifierDataModel
 from data_models.timestamp import IndalekoTimestampDataModel
 from platforms.data_models.machine_platform import MachinePlatform
 from platforms.machine_config import IndalekoMachineConfig
 from platforms.data_models.hardware import Hardware
 from platforms.data_models.software import Software
+#pylint: enable=wrong-import-position
 
 class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
     '''
@@ -148,7 +149,7 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             Attributes = config_data
         )
         captured = IndalekoTimestampDataModel(
-            Label = IndalekoWindowsMachineConfig.windows_machine_config_uuid_str,
+            Label = IndalekoMachineConfig.indaleko_machine_config_captured_label_uuid,
             Value = timestamp
         )
         machine_config_data = {

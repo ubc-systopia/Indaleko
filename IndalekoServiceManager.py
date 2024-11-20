@@ -36,17 +36,31 @@ import argparse
 import uuid
 import datetime
 import logging
+import os
+import sys
 
 from icecream import ic
-from IndalekoDBConfig import IndalekoDBConfig
-from IndalekoCollections import IndalekoCollection
+
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+# pylint: disable=wrong-import-position
+from db.db_config import IndalekoDBConfig
+from db.collection import IndalekoCollection
 from Indaleko import Indaleko
-from IndalekoSingleton import IndalekoSingleton
 from IndalekoServiceSchema import IndalekoServiceSchema
 from IndalekoService import IndalekoService
 from IndalekoRecordDataModel import IndalekoRecordDataModel
 from IndalekoDataModel import IndalekoDataModel
-from IndalekoLogging import IndalekoLogging
+from utils.i_logging import IndalekoLogging
+from utils.singleton import IndalekoSingleton
+# pylint: enable=wrong-import-position
+
+
 class IndalekoServiceManager(IndalekoSingleton):
     '''
     This class defines the service model for Indaleko.

@@ -31,13 +31,18 @@ def initialize_project():
     '''Initialize the project'''
     ic('Indaleko project initialization invoked.')
 
-from Indaleko import Indaleko
-from IndalekoDBConfig import IndalekoDBConfig
+# pylint: disable=wrong-import-position
+#from db import IndalekoDBConfig, IndalekoCollection, IndalekoCollectionIndex, IndalekoCollections
+#from utils import IndalekoDocker, IndalekoSingleton
+# pylint: enable=wrong-import-position
 
 __all__ = [
-    'Indaleko',
-    'IndalekoDBConfig',
-    'IndalekoSingleton',
+#    'IndalekoCollection',
+#    'IndalekoCollectionIndex',
+#    'IndalekoCollections',
+#    'IndalekoDBConfig',
+#    'IndalekoDocker',
+#    'IndalekoSingleton',
 ]
 
-__version__ = '2024.09.25.1'
+__version__ = '2024.11.15.1'

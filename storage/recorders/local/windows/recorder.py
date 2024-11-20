@@ -27,18 +27,29 @@ import os
 import platform
 import uuid
 import tempfile
+import sys
 
-from icecream import ic
+# from icecream import ic
 
-from IndalekoIngester import IndalekoIngester
-from IndalekoWindowsMachineConfig import IndalekoWindowsMachineConfig
-from Indaleko import Indaleko
-from IndalekoWindowsLocalIndexer import IndalekoWindowsLocalIndexer
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+
+# pylint: disable=wrong-import-position
+from storage.recorders.base import IndalekoIngester
+from storage.collectors.local.windows.collector import IndalekoWindowsLocalIndexer
+from platforms.windows.machine_config import IndalekoWindowsMachineConfig
+from platforms.unix import UnixFileAttributes
+from platforms.windows_attributes import IndalekoWindows
+import utils.misc.directory_management
 from IndalekoObject import IndalekoObject
-from IndalekoUnix import UnixFileAttributes
-from IndalekoWindows import IndalekoWindows
 from IndalekoRelationshipContains import IndalekoRelationshipContains
 from IndalekoRelationshipContained import IndalekoRelationshipContainedBy
+# pylint: enable=wrong-import-position
 class IndalekoWindowsLocalIngester(IndalekoIngester):
     '''
     This class handles ingestion of metadata from the Indaleko Windows
@@ -372,8 +383,8 @@ def main():
     # step 1: find the machine configuration file
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument('--configdir', '-c',
-                            help=f'Path to the config directory (default is {Indaleko.default_config_dir})',
-                            default=Indaleko.default_config_dir)
+                            help=f'Path to the config directory (default is {utils.misc.directory_management.indaleko_default_config_dir})',
+                            default=utils.misc.directory_management.indaleko_default_config_dir)
     pre_args, _ = pre_parser.parse_known_args()
     config_files = IndalekoWindowsMachineConfig.find_config_files(pre_args.configdir)
     assert isinstance(config_files, list), 'config_files must be a list'
@@ -387,9 +398,9 @@ def main():
                             default=default_config_file,
                             help=f'Configuration file to use. (default: {default_config_file})')
     pre_parser.add_argument('--datadir',
-                            help=f'Path to the data directory (default is {Indaleko.default_data_dir})',
+                            help=f'Path to the data directory (default is {utils.misc.directory_management.indaleko_default_data_dir})',
                             type=str,
-                            default=Indaleko.default_data_dir)
+                            default=utils.misc.directory_management.indaleko_default_data_dir)
     pre_args, _ = pre_parser.parse_known_args()
     machine_config = IndalekoWindowsMachineConfig.load_config_from_file(config_file=default_config_file)
     indexer = IndalekoWindowsLocalIndexer(
@@ -406,8 +417,8 @@ def main():
                         help='Windows Local Indexer file to ingest.')
     parser.add_argument('--reset', action='store_true', help='Reset the service collection.')
     parser.add_argument('--logdir',
-                        help=f'Path to the log directory (default is {Indaleko.default_log_dir})',
-                        default=Indaleko.default_log_dir)
+                        help=f'Path to the log directory (default is {utils.misc.directory_management.indaleko_default_log_dir})',
+                        default=utils.misc.directory_management.indaleko_default_log_dir)
     parser.add_argument('--loglevel',
                         choices=logging_levels,
                         default=logging.DEBUG,

@@ -21,15 +21,24 @@ import configparser
 import secrets
 import string
 import datetime
-from arango import ArangoClient
-import requests
 import time
 import argparse
+import sys
+from arango import ArangoClient
+import requests
 
-from Indaleko import Indaleko
-from IndalekoLogging import IndalekoLogging
-from IndalekoDocker import IndalekoDocker
-from IndalekoSingleton import IndalekoSingleton
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+# pylint: disable=wrong-import-position
+from utils import IndalekoDocker, IndalekoLogging, IndalekoSingleton
+from utils.data_validation import validate_ip_address, validate_hostname
+# pylint: enable=wrong-import-position
+
 
 class IndalekoDBConfig(IndalekoSingleton):
     """

@@ -5,14 +5,30 @@ import os
 import datetime
 import argparse
 import platform
-from IndalekoSingleton import IndalekoSingleton
+import sys
+
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+# This logic is part of what allows me to execute it locally or as part of the
+# overall package/project.  It's a bit of a hack, but it works.
+# pylint: disable=wrong-import-position
+from utils import IndalekoSingleton
+# pylint: enable=wrong-import-position
+
+
+from utils import IndalekoSingleton
 
 class IndalekoLogging(IndalekoSingleton):
     """Class for managing Indaleko logging."""
 
     def __init__(self, **kwargs):
         """Initialize a new instance of the IndalekoLogging class object."""
-        from Indaleko import Indaleko 
+        from Indaleko import Indaleko
         if self._initialized:
             return
         self.log_level = kwargs.get('log_level', logging.DEBUG)
@@ -37,9 +53,28 @@ class IndalekoLogging(IndalekoSingleton):
     @staticmethod
     def get_logging_levels() -> list:
         """Return a list of valid logging levels."""
-        from Indaleko import Indaleko
+        if platform.python_version() < '3.12':
+            logging_levels = []
+            if hasattr(logging, 'CRITICAL'):
+                logging_levels.append('CRITICAL')
+            if hasattr(logging, 'ERROR'):
+                logging_levels.append('ERROR')
+            if hasattr(logging, 'WARNING'):
+                logging_levels.append('WARNING')
+            if hasattr(logging, 'WARN'):
+                logging_levels.append('WARN')
+            if hasattr(logging, 'INFO'):
+                logging_levels.append('INFO')
+            if hasattr(logging, 'DEBUG'):
+                logging_levels.append('DEBUG')
+            if hasattr(logging, 'NOTSET'):
+                logging_levels.append('NOTSET')
+            if hasattr(logging, 'FATAL'):
+                logging_levels.append('FATAL')
+        else:
+            logging_levels = sorted(set(logging.getLevelNamesMapping()))
+        return logging_levels
 
-        return Indaleko.get_logging_levels()
 
     @staticmethod
     def generate_log_file_name(**kwargs) -> str:

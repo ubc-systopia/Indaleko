@@ -25,8 +25,8 @@ import arango.collection
 from icecream import ic
 
 
-from IndalekoDBConfig import IndalekoDBConfig
-from IndalekoCollectionIndex import IndalekoCollectionIndex
+from db.db_config import IndalekoDBConfig
+from db.collection_index import IndalekoCollectionIndex
 
 class IndalekoCollection():
     """

@@ -49,14 +49,22 @@ import jsonlines
 import datetime
 import os
 import uuid
+import sys
 
 from icecream import ic
 
-from IndalekoServiceManager import IndalekoServiceManager
-from IndalekoService import IndalekoService
-from Indaleko import Indaleko
-from IndalekoDBConfig import IndalekoDBConfig
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
 
+# pylint: disable=wrong-import-position
+from IndalekoServiceManager import IndalekoServiceManager
+from Indaleko import Indaleko
+from db.db_config import IndalekoDBConfig
+# pylint: enable=wrong-import-position
 class IndalekoIngester():
     '''
     IndalekoIngest is the generic class that we use for ingesting data from the

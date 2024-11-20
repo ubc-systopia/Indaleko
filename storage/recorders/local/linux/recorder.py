@@ -20,25 +20,37 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import argparse
 import datetime
-import platform
 import logging
 import os
 import json
 import jsonlines
+import sys
 import uuid
 
 from icecream import ic
 
-from IndalekoIngester import IndalekoIngester
-from IndalekoLinuxMachineConfig import IndalekoLinuxMachineConfig
-from Indaleko import Indaleko
-from IndalekoLinuxLocalIndexer import IndalekoLinuxLocalIndexer
-from IndalekoServiceManager import IndalekoServiceManager
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+
+# pylint: disable=wrong-import-position
+from storage.recorders.base import IndalekoIngester
+from storage.collectors.local.linux.collector import IndalekoLinuxLocalIndexer
+from platforms.linux.machine_config import IndalekoLinuxMachineConfig
+from platforms.unix import UnixFileAttributes
+import utils.misc.directory_management
+import utils.misc.file_name_management
+import utils.misc.data_management
+from utils.i_logging import IndalekoLogging
 from IndalekoObject import IndalekoObject
-from IndalekoUnix import UnixFileAttributes
 from IndalekoRelationshipContains import IndalekoRelationshipContains
 from IndalekoRelationshipContained import IndalekoRelationshipContainedBy
-from IndalekoLogging import IndalekoLogging
+# pylint: enable=wrong-import-position
+
 
 class IndalekoLinuxLocalIngester(IndalekoIngester):
     '''
@@ -165,7 +177,7 @@ class IndalekoLinuxLocalIngester(IndalekoIngester):
             })
         kwargs = {
             'source' : self.source,
-            'raw_data' : Indaleko.encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
+            'raw_data' : utils.misc.data_management.encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
             'URI' : data['URI'],
             'ObjectIdentifier' : oid,
             'Timestamps' : timestamps,
@@ -284,7 +296,7 @@ class IndalekoLinuxLocalIngester(IndalekoIngester):
             del kwargs['target_dir']
         if 'suffix' not in kwargs:
             kwargs['suffix'] = 'log'
-        file_name = Indaleko.generate_file_name(**kwargs)
+        file_name = utils.misc.file_name_management.generate_file_name(**kwargs)
         if target_dir is not None:
             file_name = os.path.join(target_dir, file_name)
         return file_name
@@ -295,24 +307,24 @@ def main():
     This is the main handler for the Indaleko Linux Local Ingest
     service.
     '''
-    logging_levels = Indaleko.get_logging_levels()
+    logging_levels = IndalekoLogging.get_logging_levels()
 
     # step 1: find the index file I'm going to use
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument('--configdir',
-                            help=f'Path to the config directory (default is {Indaleko.default_config_dir})',
-                            default=Indaleko.default_config_dir)
+                            help=f'Path to the config directory (default is {utils.misc.directory_management.indaleko_default_config_dir})',
+                            default=utils.misc.directory_management.indaleko_default_config_dir)
     pre_parser.add_argument('--logdir',
-                            help=f'Path to the log directory (default is {Indaleko.default_log_dir})',
-                            default=Indaleko.default_log_dir)
+                            help=f'Path to the log directory (default is {utils.misc.directory_management.indaleko_default_log_dir})',
+                            default=utils.misc.directory_management.indaleko_default_log_dir)
     pre_parser.add_argument('--loglevel',
                         choices=logging_levels,
                         default=logging.DEBUG,
                         help='Logging level to use.')
     pre_parser.add_argument('--datadir',
-                            help=f'Path to the data directory (default is {Indaleko.default_data_dir})',
+                            help=f'Path to the data directory (default is {utils.misc.directory_management.indaleko_default_data_dir})',
                             type=str,
-                            default=Indaleko.default_data_dir)
+                            default=utils.misc.directory_management.indaleko_default_data_dir)
     pre_args, _ = pre_parser.parse_known_args()
     indexer_files = IndalekoLinuxLocalIndexer.find_indexer_files(pre_args.datadir)
     pre_parser.add_argument('--input',
@@ -320,7 +332,7 @@ def main():
                             default=indexer_files[-1],
                             help='Linux Local Indexer file to ingest.')
     pre_args, _ = pre_parser.parse_known_args()
-    indexer_file_metadata = Indaleko.extract_keys_from_file_name(pre_args.input)
+    indexer_file_metadata = utils.misc.file_name_management.extract_keys_from_file_name(pre_args.input)
     timestamp = indexer_file_metadata.get('timestamp',
                                           datetime.datetime.now(datetime.timezone.utc).isoformat())
     log_file_name = IndalekoLinuxLocalIngester.generate_log_file_name(

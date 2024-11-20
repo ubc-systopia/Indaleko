@@ -25,7 +25,6 @@ import os
 import sys
 import uuid
 
-
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
@@ -35,7 +34,10 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 # pylint: disable=wrong-import-position
-from Indaleko import Indaleko
+#from Indaleko import Indaleko
+from utils.i_logging import IndalekoLogging
+import utils.misc.file_name_management
+import utils.misc.directory_management
 from storage.collectors.base import BaseStorageCollector
 from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 # pylint: enable=wrong-import-position
@@ -208,13 +210,13 @@ class IndalekoWindowsLocalIndexer(BaseStorageCollector):
 def main():
     '''This is the main handler for the Indaleko Windows Local Indexer
     service.'''
-    logging_levels = Indaleko.get_logging_levels()
+    logging_levels = IndalekoLogging.get_logging_levels()
 
     # Step 1: find the machine configuration file
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument('--configdir',
                             help='Path to the config directory',
-                            default=Indaleko.default_config_dir)
+                            default=utils.misc.directory_management.indaleko_default_config_dir)
     pre_args, _ = pre_parser.parse_known_args()
     config_files = IndalekoWindowsMachineConfig.find_config_files(pre_args.configdir)
     default_config_file = IndalekoWindowsMachineConfig.get_most_recent_config_file(pre_args.configdir)
@@ -239,13 +241,13 @@ def main():
     parser= argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--datadir', '-d',
                         help='Path to the data directory',
-                        default=Indaleko.default_data_dir)
+                        default=utils.misc.directory_management.indaleko_default_data_dir)
     parser.add_argument('--output', '-o',
                         help='name to assign to output directory',
                         default=output_file)
     parser.add_argument('--logdir', '-l',
                         help='Path to the log directory',
-                        default=Indaleko.default_log_dir)
+                        default=utils.misc.directory_management.indaleko_default_log_dir)
     parser.add_argument('--loglevel',
                         type=int,
                         default=logging.DEBUG,

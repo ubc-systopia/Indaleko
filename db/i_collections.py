@@ -25,15 +25,25 @@ import logging
 import datetime
 import os
 import json
+import sys
 
 import arango
 
-from Indaleko import Indaleko
-from IndalekoDBConfig import IndalekoDBConfig
-from IndalekoSingleton import IndalekoSingleton
-from IndalekoCollectionIndex import IndalekoCollectionIndex
-from IndalekoCollection import IndalekoCollection
 
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+# pylint: disable=wrong-import-position
+from Indaleko import Indaleko
+from db.db_config import IndalekoDBConfig
+from db.collection_index import IndalekoCollectionIndex
+from db.collection import IndalekoCollection
+from utils.singleton import IndalekoSingleton
+# pylint: enable=wrong-import-position
 
 class IndalekoCollections(IndalekoSingleton):
     """
