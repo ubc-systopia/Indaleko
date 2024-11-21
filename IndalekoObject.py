@@ -79,7 +79,7 @@ class IndalekoObject:
         del kwargs['Attributes']
         del kwargs['source']
         if 'timestamp' in kwargs:
-            del kwargs['Timestamps']
+           del kwargs['timestamp']
         assert 'Record' not in kwargs, 'Record is still in kwargs - new style constructor.'
         kwargs['Record'] = IndalekoRecordDataModel.IndalekoRecord.serialize(record)
         #ic(kwargs['Record'])
