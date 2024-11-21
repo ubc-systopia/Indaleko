@@ -133,7 +133,7 @@ class IndalekoIngester():
                                           IndalekoIngester\
                                             .indaleko_generic_ingester_service_version)
         self.service_type = kwargs.get('Type', 'Ingester')
-        self.service_id = kwargs.get('Identifier', kwargs.get('service_id', None))
+        self.service_id = kwargs.get('Identifier', kwargs.get('service_id', kwargs.get('service_identifier', None)))
         assert self.service_id is not None, \
             f'Service identifier must be specified\n{kwargs}'
         self.ingester_service = IndalekoServiceManager().register_service(
