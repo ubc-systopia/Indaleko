@@ -46,6 +46,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
+from data_generator.s3_translate_query import QueryExtractor
 from data_models.i_object import IndalekoObjecdtDataModel
 from data_models.base import IndalekoBaseModel
 from data_models.record import IndalekoRecordDataModel
@@ -60,12 +61,16 @@ from data_models.source_identifer import IndalekoSourceIdentifierDataModel
 from activity.recorders.location.location_data_collector import BaseLocationDataCollector
 import IndalekoActivityDataProviderRegistration
 from activity.recorders.registration_service import IndalekoActivityDataRegistrationService
+from semantic.data_models.base_data_model import BaseSemanticDataModel
+from activity.collectors.location.data_models.windows_gps_satellite_data import WindowsGPSLocationSatelliteDataModel
 
 from icecream import ic
+from uuid import UUID
 
 from pathlib import Path
 import yaml
 import base64
+import uuid
 
 from datetime import datetime, timedelta
 import time
@@ -76,71 +81,25 @@ import json
 import re
 from faker import Faker
 from geopy import geocoders
+from geopy.distance import geodesic 
+
 from geopy.geocoders import Nominatim
 
 #the class for the data generator that creates metadata dataset based on the query given 
 class Dataset_Generator:
-    def __init__(self, config_path):
+    def __init__(self, config):
 
-        self.config_path = config_path
-        self.aql_queries_commands = ["FILTER", "LIKE"]
-        self.query_ops = [">=", "<=", "==", "<>",">", "<"]
-        self.metadata_json = ""
-
-        # self.selected_md_attributes = {"Posix":{
-        #                                     "file.name": {'pattern':'hi', 'command':'ends'}, 
-        #                                   "timestamps": {"file.created": {'starttime': '2023-12-10','endtime': '2023-12-10', 'command': 'greater_than'}, 
-                                            # "file.modified": {'starttime': '2023-12-10','endtime': '2023-12-10', 'command': 'greater_than'}, 
-                                            # "file.accessed": {'starttime': '2024-1-2','endtime': '2024-1-2', 'command': 'greater_than'},
-                                            # "file.changed": {'starttime': '2023-12-10','endtime': '2023-12-10', 'command': 'greater_than'}}},
-        #                                     "file.size":{'target_min': 10, 'target_max': 10000, 'command':'range'}, 
-        #                                     "file.directory": {'location': "google_drive"}},
-        #                                 "Semantic":{
-        #                                     "content": "Summary about the immune response to infections."
-        #                                 }, 
-        #                                 "Activity": {
-        #                                     "weather": "Sun",
-        #                                     "ambient_temp": {'min_temp': 21, 'max_temp':21, 'command':"gt"},
-        #                                     "geo_location": {'location': "1600 Amphitheatre Parkway, Mountain View, CA 94043, USA", 'command': "at"}
-        #                                 }
-        #                             } 
-        self.selected_md_attributes = {"Posix":{
-                                            "file.name": {'pattern':'hi', 'command':'exactly', 'extension': ".txt"}
-                                        #     , 
-                                        #     "timestamps": {
-                                        #         "specific" : {
-                                        #             "birthtime": {'starttime': '2022-12-10','endtime': '2022-12-10', 'command': 'equal'}
-                                        # }
-                                        },
-                                        "Semantic":{
-                                            "semantic_1":{"content": "A summary about the immune response to infections.",
-                                                "emphasized_text_contexts":["immune", "infections"]}
-                                        }, "Activity": {}}
-
-        self.selected_POSIX_md = self.selected_md_attributes["Posix"]
-        self.selected_AC_md = self.selected_md_attributes["Activity"]
-        self.selected_semantic_md = self.selected_md_attributes["Semantic"]
-
+        self.n_metadata_records = config["n_metadata_records"]
+        self.metadata_json = config["output_json"]
+        self.n_matching_queries = config["n_matching_queries"]
         self.saved_directory_path = {} 
         self.saved_geo_loc = {}
 
-        self.total_storage = 0
-        self.total_metadata = 0 
-        self.aql_query = ""
-        
-
-    #parse the json config file and extract appropriate parameters 
-    def parse_config_json(self):
-        print("e")
-        with open(self.config_path, 'r') as file:
-            print("here")
-            config = json.load(file)
-            self.n_metadata_records = config["n_metadata_records"]
-            self.total_storage_size = config["total_storage_size"]
-            self.query = config["query"]
-            self.metadata_json = config["output_json"]
-            self.n_matching_queries = config["n_matching_queries"]
-
+    def set_selected_md_attributes(self, md_attributes) -> None:
+        self.selected_md_attributes = md_attributes
+        self.selected_POSIX_md = md_attributes.get("Posix", None)
+        self.selected_AC_md = md_attributes.get("Activity", None)
+        self.selected_semantic_md = md_attributes.get("Semantic", None)
 
 
     # -----------------------------------Generate POSIX metdata-----------------------------------------------------------------
@@ -172,18 +131,21 @@ class Dataset_Generator:
             first_uuid = self.generate_random_number(8)
 
         uuid = first_uuid + "-" + self.generate_random_number(4) + "-" + self.generate_random_number(4) + "-" + self.generate_random_number(4) + "-" + self.generate_random_number(12)
-        return uuid
+        return UUID(uuid)
 
     # FUNCTION: converts date in "YYYY-MM-DD" to datetime 
     # used in time generator functions 
     def generate_time(self, time: str) -> datetime:
-        splittime = re.split("-", time)
-
+        splittime = re.split("[-T:]", time)
         year = int(splittime[0])
         month = int(splittime[1])
         day = int(splittime[2])
 
-        time = datetime(year, month, day)
+        hour = int(splittime[3])
+        minute = int(splittime[4])
+        second = int(splittime[5])
+
+        time = datetime(year, month, day, hour, minute, second)
 
         # if requested time is sooner than today's day, set it to the time right now
         if time > datetime.now():
@@ -228,19 +190,29 @@ class Dataset_Generator:
     # self.selected_POSIX_md{file.name: {"pattern":str, "command":str, "extension":str}}
     # command includes: "starts", "ends", "contains"
     def generate_file_name(self, file_type: bool) -> None:
+        command = ""
+        pattern = ""
         n_filler_letters = random.randint(1, 10)
         file_extension = [".pdf", ".doc",".docx", ".txt", ".rtf", ".xls", ".xlsx", ".csv", ".ppt", ".pptx", ".jpg", ".jpeg", ".png", ".gif", ".tif", ".mov", ".mp4", ".avi", ".mp3", ".wav", ".zip", ".rar"]
-
+        text_file_extension = ["pdf", "doc", "docx", "txt", "rtf", "csv", "xls", "xlsx", "ppt", "pptx"]
+        
         #if the file name is part of the query, extract the appropriate attributes and generate title
         if "file.name" in self.selected_POSIX_md:
-            pattern = self.selected_POSIX_md["file.name"]["pattern"]
-            command = self.selected_POSIX_md["file.name"]["command"]
+            if "pattern" in self.selected_POSIX_md["file.name"]:
+                pattern = self.selected_POSIX_md["file.name"]["pattern"]
+                command = self.selected_POSIX_md["file.name"]["command"]
             if file_type: # truth file
                 # if no extension specified, then randomly select a file extension
                 if "extension" in self.selected_POSIX_md["file.name"]:
                     true_extension = self.selected_POSIX_md["file.name"]["extension"]
-                    file_extension.remove(true_extension)
-                else: 
+                    if isinstance(true_extension, list):
+                        true_extension = random.choice(true_extension)
+                        file_extension.remove(true_extension)
+                    else:
+                        file_extension = list(set(file_extension) - set(true_extension))
+                elif self.selected_semantic_md: 
+                    true_extension = random.choice(text_file_extension)
+                else:
                      true_extension = random.choice(file_extension)
                 # process commands
                 if command == "exactly":
@@ -251,12 +223,15 @@ class Dataset_Generator:
                     title = ''.join(random.choices(string.ascii_letters, k=n_filler_letters)) + pattern + true_extension 
                 elif command == "contains":  
                     title = ''.join(random.choices(string.ascii_letters, k=n_filler_letters)) + pattern + ''.join(random.choices(string.ascii_letters, k=n_filler_letters)) + true_extension 
+                else:
+                    title = ''.join(random.choices(string.ascii_letters, k=n_filler_letters)) + true_extension 
+
             elif not file_type:  # if a filler metadata, generate random title that excludes all letters specified in the char pattern
                 extension = random.choice(file_extension)
                 allowed_pattern = list(set(string.ascii_letters) - set(pattern.upper()) - set(pattern.lower()))
                 title = ''.join(random.choices(allowed_pattern, k=n_filler_letters)) + extension 
         else: #if no query specified for title, just randomly create a title for any file_type
-            title = ''.join(random.choices(string.ascii_letters, k=n_filler_letters)) + random.choice(self.file_extension)
+            title = ''.join(random.choices(string.ascii_letters, k=n_filler_letters)) + random.choice(file_extension)
         return title 
 
     # FUNCTION: generates path to a remote file location e.g., google drive, dropbox, icloud 
@@ -287,6 +262,7 @@ class Dataset_Generator:
                 truth_path_name = self.selected_POSIX_md["file.directory"]["local_dir_name"]
                 # RUN ONCE: if the file_type is a truth file, initialize the truth file directories
                 self.generate_local_path(parent_dir, num_directories, max_depth, directory_name = truth_path_name)
+                ic(self.saved_directory_path)
             else: # remote so just generate random dir
                 self.generate_local_path(parent_dir, num_directories, max_depth)
         else: #no queries related to file dir; generate random dir 
@@ -311,7 +287,6 @@ class Dataset_Generator:
         # RUN after initialization:
         if file_type and "file.directory" in self.selected_POSIX_md:
             truth_parent_loc = self.selected_POSIX_md["file.directory"]["location"]
-            file_locations
             if truth_parent_loc == "local": # if file dir specified, create truth file at that dir
                 path = self.saved_directory_path["truth.directory"] + "/" + file_name
                 URI = file_locations[truth_parent_loc] + path
@@ -319,11 +294,12 @@ class Dataset_Generator:
             elif file_type and truth_parent_loc in file_locations.keys(): # if remote dir specified, create file at that dir
                 path = self.generate_remote_path(truth_parent_loc, file_name)
                 URI = file_locations[truth_parent_loc] + path
-
+            return [path, URI]    
+            
         elif not file_type and "file.directory" in self.selected_POSIX_md:
             truth_parent_loc = self.selected_POSIX_md["file.directory"]["location"]
             del file_locations[truth_parent_loc]
-
+        
         # not queried at this point and file type doesn't matter; generate any file path (local or remote)
         random_location = random.choice(list(file_locations.keys()))
         if random_location == "local":
@@ -535,8 +511,6 @@ class Dataset_Generator:
         #if there are no queries related to the time, then just generate random times
         else:
             timestamp = fake.date_time_between(start_date=default_startdate)
-        ic(timestamp)
-
         return timestamp
 
     '''
@@ -633,7 +607,7 @@ class Dataset_Generator:
                     altitude = location.altitude
                     self.saved_geo_loc["latitude"] = latitude
                     self.saved_geo_loc["longitude"] = longitude
-                    self.saved_geo_loc["elevation"] = altitude
+                    self.saved_geo_loc["altitude"] = altitude
 
                 else:
                     truth_latitude = self.saved_geo_loc["latitude"]
@@ -644,12 +618,41 @@ class Dataset_Generator:
                     min_lat = -90 if truth_latitude - delta < -90 else truth_latitude - delta
                     max_long = 180 if truth_longitude + delta > 180 else truth_longitude + delta
                     min_long = -180 if truth_longitude - delta < -180 else truth_longitude - delta
-                    min_alt = -10 if truth_altitude - delta < -10 else truth_latitude - delta
-                    max_alt = 1000 if truth_altitude + delta > 100 else truth_latitude + delta
+                    min_alt = -10 if truth_altitude - delta < -10 else truth_altitude - delta
+                    max_alt = 1000 if truth_altitude + delta > 100 else truth_altitude + delta
 
                     latitude = random.choice([random.uniform(-90, min_lat), random.uniform(max_lat, 90)])
                     longitude = random.choice([random.uniform(-180, min_long), random.uniform(max_long, 180)])
                     altitude = random.choice([random.uniform(-10, min_alt), random.uniform(max_alt, 1000)])
+            elif geo_command == "within":
+                geo_py = Nominatim(user_agent="Geo Location Metadata Generator")
+                location = geo_py.geocode(geo_location, timeout=1000)
+                latitude = location.latitude
+                longitude = location.longitude
+                altitude = location.altitude
+                ic(location)
+                kilometer_range = self.selected_AC_md["geo_location"]["km"]
+                north_bound = geodesic(kilometers = kilometer_range).destination((latitude, longitude), bearing=0).latitude
+                south_bound = geodesic(kilometers = kilometer_range).destination((latitude, longitude), bearing=180).latitude
+                east_bound = geodesic(kilometers = kilometer_range).destination((latitude, longitude), bearing=90).longitude
+                west_bound = geodesic(kilometers = kilometer_range).destination((latitude, longitude), bearing=270).longitude
+
+                if file_type:
+                    latitude = random.uniform(north_bound,south_bound)
+                    longitude = random.uniform(east_bound,west_bound)
+
+                else:
+                    max_lat = 90 if latitude + delta > 90 else latitude + delta
+                    min_lat = -90 if latitude - delta < -90 else latitude - delta
+                    max_long = 180 if longitude + delta > 180 else longitude + delta
+                    min_long = -180 if longitude - delta < -180 else longitude - delta
+                    min_alt = -10 if altitude - delta < -10 else altitude - delta
+                    max_alt = 1000 if altitude + delta > 100 else altitude + delta
+
+                    latitude = random.choice([random.uniform(-90, min_lat), random.uniform(max_lat, 90)])
+                    longitude = random.choice([random.uniform(-180, min_long), random.uniform(max_long, 180)])
+                    altitude = random.choice([random.uniform(-10, min_alt), random.uniform(max_alt, 1000)])
+                    
 
         else:
             latitude = random.uniform(-90, 90)
@@ -722,27 +725,36 @@ class Dataset_Generator:
         return weather
 
     # -----------------------------------Generate semantic data--------------------------------------------------------------------
-
-    # generates semantic data 
-    def generate_semantic_content(self, file_type):
+    # generates the semantic metadata with the given:
+    def generate_semantic_content(self, extension, last_modified, file_type) -> dict:
         fake = Faker()
-        text = ""
-        emphasized_text_contents = ""
-        if self.selected_semantic_md != None:
-            semantic_content = self.selected_semantic_md["semantic_1"]
-            if "content" in semantic_content and "emphasized_text_contexts" in semantic_content:
-                ic(file_type)
-                if file_type:
-                    text = semantic_content["content"]
-                    emphasized_text_contents = semantic_content["emphasized_text_contexts"]
-                    ic(text)
-                else: 
-                    text = fake.sentence(nb_words=random.randint(1, 30))
-                    emphasized_text_contents = random.choice(text.split(" "))
+        emphasized_text_tags = ["bold", "italic", "underline", "strikethrough", "highlight"] 
+        text_tags = ["Title", "Subtitle", "Header", "Footer", "Paragraph", "BulletPoint", "NumberedList", "Caption", "Quote", "Metadata", "UncategorizedText", "SectionHeader", "Footnote", "Abstract", "FigureDescription", "Annotation"]
+        data_list = []
+        #if the selected_semantic_md is queried, and it's a truth metadata
+        if self.selected_semantic_md != None and file_type:
+            for content in self.selected_semantic_md.values():
+                data_list.append(content)
+            data_list.append({"LastModified": last_modified, "FileType": extension})
         else:
+            languages = "English"
             text = fake.sentence(nb_words=random.randint(1, 30))
+            type = random.choice(text_tags)
+            text_tag =random.choice(emphasized_text_tags)
+            page_number = random.randint(1, 200)
             emphasized_text_contents = random.choice(text.split(" "))
-        return [text, emphasized_text_contents]
+
+            data_list = [{
+                "Languages": languages,
+                "FileType": extension,
+                "PageNumber": page_number,
+                "LastModified": last_modified,
+                "Text": text,
+                "Type": type,
+                "EmphasizedTextTags": text_tag,
+                "EmphasizedTextContents": emphasized_text_contents
+            }]
+        return data_list
 
     # generate random number of ascii characters
     def generate_random_data(self):
@@ -783,56 +795,27 @@ class Dataset_Generator:
         timestamp_data = []
         #sort the timestamp by most earliest to latest
         for timestamp in sorted(timestamps.items(), key=lambda time: time[1]):
-            timestamp_data.append(
-                {
-                    "Label": UUID,
-                    "Value": timestamp[1].strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    "Description": timestamp[0]
-                }
-            )
+            timestamp_data.append(IndalekoTimestampDataModel(Label=UUID, Value=timestamp[1].strftime("%Y-%m-%dT%H:%M:%SZ"), Description=timestamp[0]))
         return timestamp_data
 
     # create the semantic attribute data based on semantic attribute datamodel
     def create_semantic_attribute(self, extension, last_modified, file_type: bool) -> list:
         text_based_files = ["pdf", "doc", "docx", "txt", "rtf", "csv", "xls", "xlsx", "ppt", "pptx"] # text based files supported by the metadata generator
-        emphasize_text_tags = ["bold", "italic", "underline", "strikethrough", "higlight"] 
-        text_tags = ["Title", "Subtitle", "Header", "Footer", "Paragraph", "BulletPoint", "NumberedList", "Caption", "Quote", "Metadata", "UncategorizedText", "SectionHeader", "Footnote", "Abstract", "FigureDescription", "Annotation"]
-
-        if extension in text_based_files:
-            #choose language:
-            language = "English"
-            text, emphasized_text_contents = self.generate_semantic_content(file_type)
-            type = random.choice(text_tags)
-            text_tag =random.choice(emphasize_text_tags)
-            page_number = random.randint(1, 200)
-            data = {
-                "text_content": [text, type, language, text_tag],
-                "filetype": extension,
-                "last_modified":last_modified,
-                "page_number": str(page_number) + " pages",
-            }
-        else:
-            data = {
-                "filetype": extension,
-                "last_modified":last_modified,
-            }
-
         list_semantic_attribute = []
-        for values in list(data.values()):
+        if extension in text_based_files:
+            data = self.generate_semantic_content(extension, last_modified, file_type)
+        else:
+            data = [extension, last_modified]
+            
+        for content in data:
             semantic_UUID = self.generate_UUID()
-            semantics_metadata_uuid = self.create_UUID_data(semantic_UUID, "semantics_UUID")
-            if isinstance(values, list):
-                for data in values:
-                    ic(data)
-                    list_semantic_attribute.append({
-                        "Identifier": semantics_metadata_uuid,
-                        "Data": data
-                    })
+            if isinstance(content, dict):
+                for label, context in content.items(): 
+                    semantic_attribute = IndalekoSemanticAttributeDataModel(Identifier= self.create_UUID_data(semantic_UUID, label), Data=str(context))
+                    list_semantic_attribute.append(semantic_attribute.dict())
             else:
-                list_semantic_attribute.append({
-                        "Identifier": semantics_metadata_uuid,
-                        "Data": values
-                    })
+                semantic_attribute = IndalekoSemanticAttributeDataModel(Identifier= self.create_UUID_data(semantic_UUID, content), Data=str(content))
+                list_semantic_attribute.append(semantic_attribute.dict())
 
         return list_semantic_attribute
 
@@ -852,8 +835,9 @@ class Dataset_Generator:
     # generates the target metadata with the specified attributes based on the nubmer of matching queries to generate from config:
     def generate_metadata(self, current_filenum:int, max_num: int, key: str, file_type: bool, truth_like: bool) -> dict:
         all_metadata = []
-        truthlike_attributes =[]  
-        geo_data_md = []      
+        truthlike_attributes = []  
+        all_activity = []  
+        all_semantics = []    
         for n in range(1, max_num):
             key_name = f'{key} #{n}'
 
@@ -872,139 +856,111 @@ class Dataset_Generator:
             path, URI = self.generate_dir_location(file_name, file_type= self.define_truth_attribute("file.directory", file_type, truth_like, truthlike_attributes))
             record_timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
 
-            source_identifier = {
-                "Identifier": IO_UUID, # UUID Of the record data
-                "Version": "1.0"
-            }
-
-            record_data = self.create_record_data(source_identifier, IO_UUID, record_timestamp, file_size, timestamps, file_name, path)
+            # record_data = self.create_record_data(source_identifier, IO_UUID, record_timestamp, file_size, timestamps, file_name, path)
             timestamp_data = self.create_timestamp_data(IO_UUID, timestamps)
+            birthtime = timestamps["birthtime"].timestamp()
+            modified_time = timestamps["modified"].timestamp()
+            changed_time = timestamps["changed"].timestamp()
+            access_time = timestamps["accessed"].timestamp()
 
+            attribute = {
+                    "Name": file_name,
+                    "Path": path,
+                    "st_birthtime": str(birthtime),
+                    "st_birthtime_ns": str(birthtime * 10**9),
+                    "st_mtime": str(modified_time),
+                    "st_mtime_ns": str(modified_time * 10**9),
+                    "st_atime": str(access_time),
+                    "st_atime_ns": str(access_time * 10**9),
+                    "st_ctime": str(changed_time),
+                    "st_ctime_ns": str(changed_time * 10**9),
+                    "st_size": file_size
+                }
+            data = self.generate_random_data()
+            
             extension = file_name.split(".")[-1]
-            ic(truth_like)
             semantic_attributes_data = self.create_semantic_attribute(extension= extension, last_modified=timestamps["modified"].strftime("%Y-%m-%dT%H:%M:%S"), file_type= self.define_truth_attribute("semantic_1", file_type, truth_like, truthlike_attributes))
-            record_md = {
-                "Record": record_data,
-                "URI": URI,
-                "ObjectIdentifier": source_uuid,
-                "Timestamps": timestamp_data,
-                "Size": file_size,
-                "SemanticAttributes": semantic_attributes_data,
-                "Label": key_name,
-                "LocalIdentifier": str(current_filenum + n),
-                "Volume": source_uuid,
-                "PosixFileAttributes": "S_IFREG", #default set to regular files
-                "WindowsFileAttributes": "FILE_ATTRIBUTE_ARCHIVE", #setting as default
-            }
 
-            GPS_UUID = self.generate_UUID()
-            record_kwargs = {
-                'Identifier' : GPS_UUID,
-                'Version' : '1.0.0',
-                'Description' : key_name,
-                'Record' : record_data
-            }
-            # Add the new metadata entry to the dictionary
-            all_metadata.append(record_md)
+            id_source_identifier = IndalekoSourceIdentifierDataModel(Identifier = IO_UUID, Version = "1.0", Description ="Record UUID")
+            record_data = IndalekoRecordDataModel(SourceIdentifier = id_source_identifier, Timestamp = record_timestamp, Attributes=attribute, Data = data)
+            i_object_data = IndalekoObjecdtDataModel(Record=record_data, URI = URI, ObjectIdentifier=source_uuid, Timestamps=timestamp_data,Size = file_size, SemanticAttributes=semantic_attributes_data,Label = key_name, LocalIdentifier=str(current_filenum + n),Volume=source_uuid,PosixFileAttributes="S_IFREG",WindowsFileAttributes="FILE_ATTRIBUTE_ARCHIVE")
 
+            semantics_timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+            semantics_md = BaseSemanticDataModel(Record=record_data,Timestamp=semantics_timestamp,RelatedObjects=[IO_UUID],SemanticAttributes=semantic_attributes_data)
+
+            if "timestamp" in self.selected_AC_md:
+                time_query = self.selected_AC_md["timestamp"]
+                geo_timestamp = self.generate_queried_timestamp(time_query["starttime"], time_query["endtime"], time_query["command"], timestamps["birthtime"], file_type).strftime("%Y-%m-%dT%H:%M:%SZ")
+            else:
+                geo_timestamp = self.generate_random_timestamp(datetime(2019, 10, 25), datetime.now()).strftime("%Y-%m-%dT%H:%M:%SZ") 
+            
             activity_geo_loc = self.generate_geo_context(file_type)
-            activity_geo_md = self.generate_WindowsGPSLocation(activity_geo_loc)
-            geo_data_md.append(self.generate_geo_semantics(record_kwargs, activity_geo_md, GPS_UUID))
+            activity_geo_md = self.generate_WindowsGPSLocation(activity_geo_loc, geo_timestamp)
+            activity_provider, activity_context = self.generate_geo_semantics(record_data, activity_geo_md, geo_timestamp)
+            
+            all_metadata.append(json.loads(i_object_data.json()))
+            all_semantics.append(json.loads(semantics_md.json()))
+            all_activity.append(json.loads(activity_context.json()))
 
-        return all_metadata, geo_data_md
+
+        return all_metadata, all_semantics, all_activity
 
     # --------------------------------- GENERATE ACTIVITY CONTEXT METADATA -------------------------------------------------------
 
-    def generate_WindowsGPSLocation(self, geo_activity_context: dict) -> dict:
+
+
+    def generate_WindowsGPSLocation(self, geo_activity_context: dict, timestamp: datetime) -> dict:
         latitude = geo_activity_context["latitude"]
         longitude = geo_activity_context["longitude"]
         altitude = geo_activity_context["altitude"]
-        timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-        #WindowsGPSLocationDataModel
-
-        windowsGPS_satellite_location = {
-            'geometric_dilution_of_precision': random.uniform(1, 10),
-            'horizontal_dilution_of_precision': random.uniform(1, 10),
-            'position_dilution_of_precision': random.uniform(1, 10),
-            'time_dilution_of_precision': random.uniform(1, 10),
-            'vertical_dilution_of_precision': random.uniform(1, 10)
-        }
-
-        no_windowsGPS_satellite_location = {
-            'geometric_dilution_of_precision': None,
-            'horizontal_dilution_of_precision': None,
-            'position_dilution_of_precision': None,
-            'time_dilution_of_precision': None,
-            'vertical_dilution_of_precision': None
-        }
         
-        GPS_location_dict = {
-            "latitude": latitude,
-            "longitude": longitude,
-            "altitude": altitude,
-            "accuracy": random.uniform(1, 10),
-            "altitude_accuracy": random.uniform(0, 10),
-            "heading": random.randint(0, 360),
-            "speed": random.uniform(0, 20),
-            "source": "GPS",
-            "timestamp": timestamp,
-            "is_remote_source": False,
-            "point": f"POINT({longitude} {latitude})",
-            "position_source": "GPS",
-            "position_source_timestamp": timestamp,
-            "satellite_data": random.choice([windowsGPS_satellite_location, no_windowsGPS_satellite_location]),
-            "civic_address" : None,
-            "venue_data": None,
-        }
+        windowsGPS_satellite_location = WindowsGPSLocationSatelliteDataModel(geometric_dilution_of_precision=random.uniform(1, 10), horizontal_dilution_of_precision=random.uniform(1, 10), position_dilution_of_precision=random.uniform(1, 10), time_dilution_of_precision=random.uniform(1, 10), vertical_dilution_of_precision=random.uniform(1, 10))
+        no_windowsGPS_satellite_location = WindowsGPSLocationSatelliteDataModel(geometric_dilution_of_precision=None, horizontal_dilution_of_precision=None, position_dilution_of_precision=None, time_dilution_of_precision=None, vertical_dilution_of_precision=None)
+        
+        GPS_location_dict = WindowsGPSLocationDataModel(latitude =latitude, 
+                                                        longitude=longitude,
+                                                        altitude=altitude,
+                                                        accuracy=random.uniform(1, 10),
+                                                        altitude_accuracy=random.uniform(0, 10),
+                                                        heading= random.randint(0, 360),
+                                                        speed= random.uniform(0, 20),
+                                                        source= "GPS",
+                                                        timestamp= timestamp,
+                                                        is_remote_source= False,
+                                                        point= f"POINT({longitude} {latitude})",
+                                                        position_source= "GPS",
+                                                        position_source_timestamp= timestamp,
+                                                        satellite_data= random.choice([windowsGPS_satellite_location, no_windowsGPS_satellite_location]),
+                                                        civic_address = None,
+                                                        venue_data= None)
+        
 
         return GPS_location_dict
 
-    # def generate_activity_data_registration(self, record_data: dict):
-    #     activity_data_provider_uuid = self.generate_UUID()
-    #     activity_registration_md = {
-    #         "Identifier": activity_data_provider_uuid,
-    #         "Version": "1.0",
-    #         "Description": "Data provider registration",
-    #         "Record": record_data
-    #     }
+    def generate_geo_semantics(self, record_kwargs, activity_geo_md, geo_timestamp) -> list:
 
-    #     return activity_registration_md
+        UUID_longitude = self.generate_UUID()
+        UUID_latitude = self.generate_UUID()
+        UUID_accuracy = self.generate_UUID()
 
-    def generate_source_identifier(self, description, UUID= None):
-        if UUID == None:
-            UUID = self.self.generate_UUID()
-        source_identifier = {
-            "Identifier": UUID,
-            "Version": "1",
-            "Description": description
-        }
-        return source_identifier
-    def generate_activity_semantic(self, description, data):
-        semantic_md = { 
-            "Identifier": self.generate_source_identifier(description),
-            "Data": data
-        }
-        return semantic_md
-
-    def generate_geo_semantics(self, record_md, activity_geo_md, UUID) -> list:
-        activity_service = IndalekoActivityDataRegistrationService()
-        provider_data, collection = activity_service.register_provider(**record_md)
-        ic(provider_data)
-        ic(collection)
-        source_identifier = self.generate_source_identifier("source_identifier", UUID)
-
+        longitude = IndalekoUUIDDataModel(Identifier=UUID_longitude, Label="Longitude")
+        latitude = IndalekoUUIDDataModel(Identifier=UUID_latitude, Label="Latitude")
+        accuracy = IndalekoUUIDDataModel(Identifier=UUID_accuracy, Label="Accuracy")
+       
         semantic_attributes = [
-            self.generate_activity_semantic("Longitude", activity_geo_md["longitude"]), 
-            self.generate_activity_semantic("Latitude", activity_geo_md["latitude"]), 
-            self.generate_activity_semantic("Accuracy", activity_geo_md["accuracy"])
+            IndalekoSemanticAttributeDataModel(Identifier=longitude, Data = activity_geo_md.longitude),
+            IndalekoSemanticAttributeDataModel(Identifier=latitude, Data = activity_geo_md.latitude),
+            IndalekoSemanticAttributeDataModel(Identifier=accuracy, Data = activity_geo_md.accuracy)
         ]
+        activity_context = IndalekoActivityDataModel(Record = record_kwargs, Timestamp=datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"), SemanticAttributes=semantic_attributes)
+        
+        longitude_data_provider = ActivityDataModel(Provider = self.generate_UUID(), ProviderReference=UUID_longitude) 
+        latitude_data_provider = ActivityDataModel(Provider = self.generate_UUID(), ProviderReference=UUID_latitude) 
+        accuracy_data_provider = ActivityDataModel(Provider = self.generate_UUID(), ProviderReference=UUID_accuracy) 
+ 
+        activity_service = IndalekoActivityContextDataModel(Handle=self.generate_UUID(), Timestamp=geo_timestamp, Cursors=[longitude_data_provider, latitude_data_provider,accuracy_data_provider])
 
-        doc = BaseLocationDataCollector.build_location_activity_document(
-            source_data=source_identifier,
-            location_data=activity_geo_md,
-            semantic_attributes=semantic_attributes
-        )
-        return json.loads(doc)
+        return activity_service, activity_context
     
 
     #writes generated metadata in json file
@@ -1012,47 +968,80 @@ class Dataset_Generator:
         with open(json_path, 'w') as json_file:
             json.dump(dataset, json_file, indent=4)
     
+    def check_return_dict(self, dictionary: dict):
+        if dictionary == None:
+            return []
+        else:
+            return list(dictionary.keys())
+    
     # main function to run the metadata generator
-    def generate_metadata_dataset(self) -> None:
-        self.parse_config_json()
-        # intiialize the synthetic dir locations
+    def generate_metadata_dataset(self):
+        # initialize the synthetic dir locations
         self.initialize_local_dir()
 
-        self.truth_attributes = list(self.selected_POSIX_md.keys()) + list(self.selected_AC_md.keys()) + list(self.selected_semantic_md.keys())
-        target_record_md,  target_activity_md = self.generate_metadata(0, self.n_matching_queries+1, 'Truth File', True, False)
-
+        # get the total number of truth metadata attributes 
+        self.truth_attributes = self.check_return_dict(self.selected_POSIX_md) + self.check_return_dict(self.selected_AC_md) + self.check_return_dict(self.selected_semantic_md)
         total_truth_attributes = len(self.truth_attributes) 
-        remaining_files = self.n_metadata_records - self.n_matching_queries
 
-        # only create truth-like files if the number of attributes is greater than one, otherwise, it becomes a truth file
+        # get the total number of truth-like metadata
+        # only create truth-like metadata if the number of attributes is greater than one, otherwise, it becomes a truth file
+        remaining_files = self.n_metadata_records - self.n_matching_queries
         if total_truth_attributes > 1 and self.n_matching_queries > 0:
             truth_like_num = random.randint(0, remaining_files)
         else:
             truth_like_num = 0
-
         filler_num = remaining_files - truth_like_num
 
-        truth_like_filler_record_md,  truth_like_filler_activity_md = self.generate_metadata(0, truth_like_num +1, 'Filler Truth-Like File', False, True)
-        filler_record_md, filler_activity_md = self.generate_metadata(truth_like_num,  filler_num +1, 'Filler File', False, False)
+        target_record_md, target_semantics_md, target_activity_md = self.generate_metadata(0, self.n_matching_queries+1, 'Truth File', True, False)
+        truth_like_filler_record_md, truth_like_filler_semantics_md, truth_like_filler_activity_md = self.generate_metadata(0, truth_like_num +1, 'Filler Truth-Like File', False, True)
+        filler_record_md, filler_semantics_md, filler_activity_md = self.generate_metadata(truth_like_num,  filler_num +1, 'Filler File', False, False)
+        
         all_record_md = target_record_md + truth_like_filler_record_md + filler_record_md
+        all_semantics_md = target_semantics_md + truth_like_filler_semantics_md + filler_semantics_md
         all_activity_md = target_activity_md + truth_like_filler_activity_md + filler_activity_md
+        
         self.write_json(all_record_md, self.metadata_json + "all_records.json")
+        self.write_json(all_semantics_md, self.metadata_json + "all_semantics.json")
         self.write_json(all_activity_md, self.metadata_json + "all_activity.json")
-        # ic(target[0]["Timestamps"][0])
-        # self.test_data_model(target[0]["SemanticAttributes"][0], IndalekoSemanticAttributeDataModel)
 
-    #test the data model to see if in the right form
-    # test with any of the following variables: target, truth_like_filler, filler
-    def test_data_model(self, model, dataModel):
-        try:
-            model_test = dataModel(**model)
-            print("Valid input passed:", model_test)
-        except ValidationError as e:
-            print("Validation error for valid input:", e)
-    
+        return all_record_md, all_activity_md
+
+#parse the json config file and extract appropriate parameters 
+def parse_config_json(config_path):
+    with open(config_path, 'r') as file:
+        print("here")
+        config = json.load(file)
+    return config
+
+
 def main():
+    selected_md_attributes = {
+            "Posix": {
+                "timestamps": {
+                "specific": {
+                    "birthtime": {
+                    "starttime": "2024-11-25T00:00:00",
+                    "endtime": "2024-11-25T23:59:59",
+                    "command": "range"
+                    }
+                }
+                },
+                "file.directory": {
+                "location": "local",
+                "local_dir_name": "Vancouver"
+                }
+            },
+            "Activity": {
+                "geo_location": {
+                "location": "Vancouver",
+                "command": "at"
+                }
+            }
+    }
     config_path = "data_generator/dg_config.json"
-    data_generator = Dataset_Generator(config_path)
+    config = parse_config_json(config_path)
+    data_generator = Dataset_Generator(config)
+    data_generator.set_selected_md_attributes(selected_md_attributes)
     data_generator.generate_metadata_dataset()
 
 if __name__ == '__main__':
