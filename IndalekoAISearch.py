@@ -19,10 +19,11 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from pydantic import BaseModel
 from openai import OpenAI
 
 from enum import Enum
+
+from Indaleko import Indaleko
 
 class IndalekoAISearch:
     '''This class provides the front-end interface for using an AI agent'''
@@ -32,8 +33,8 @@ class IndalekoAISearch:
     default_categories = []
 
     class Collection(str, Enum):
-        Objects = 'Objects'
-        Relationships = 'Relationships'
+        Objects = Indaleko.Indaleko_Object_Collection
+        Relationships = Indaleko.Indaleko_Relationship_Collection
         Machines = 'MachineConfig'
 
     class object_columns(str, Enum):

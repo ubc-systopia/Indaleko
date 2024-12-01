@@ -25,7 +25,7 @@ import uuid
 
 from datetime import datetime
 from typing import List, Optional, Dict
-from pydantic import Field, BaseModel
+from pydantic import Field
 
 from icecream import ic
 
@@ -36,7 +36,9 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
-class ActivityDataModel(BaseModel):
+from data_models.base import IndalekoBaseModel
+
+class ActivityDataModel(IndalekoBaseModel):
     '''
     This class defines the combination of the provider and the provider
     reference (UUID) for the activity data. Note: we don't assume we capture
@@ -71,27 +73,10 @@ class ActivityDataModel(BaseModel):
             }
         }
 
-    def serialize(self):
-        '''Serialize the object to a dictionary.'''
-        return self.model_dump(exclude_unset=True)
-
-    @staticmethod
-    def deserialize(data: dict):
-        '''Deserialize the dictionary to an object.'''
-        return ActivityDataModel(**data)
 
 def main():
     '''Test code for IndalekoActivityDataModel.'''
-    activity_data = ActivityDataModel(
-        **ActivityDataModel.Config.json_schema_extra['example']
-    )
-    ic(activity_data.serialize())
-    ic(activity_data.model_json_schema())
-    doc = json.dumps(activity_data.serialize(), default=str)
-    ic(type(doc))
-    ic(doc)
-    check_data = ActivityDataModel.deserialize(json.loads(doc))
-    ic(check_data.serialize())
+    ActivityDataModel.test_model_main()
 
 if __name__ == '__main__':
     main()

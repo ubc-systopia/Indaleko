@@ -18,13 +18,13 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-import datetime
 import os
 import sys
 import uuid
 
 from typing import List
-from pydantic import Field, BaseModel
+from pydantic import Field, field_validator, AwareDatetime
+from datetime import datetime, timezone
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -34,9 +34,10 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 from activity.context.data_models.activity_data import ActivityDataModel
-from data_models.indaleko_record_data_model import IndalekoRecordDataModel
+from data_models.record import IndalekoRecordDataModel
+from data_models.base import IndalekoBaseModel
 
-class IndalekoActivityContextDataModel(BaseModel):
+class IndalekoActivityContextDataModel(IndalekoBaseModel):
     '''
     This class defines the data model for the activity context in the Indaleko
     Project.
@@ -76,7 +77,7 @@ class IndalekoActivityContextDataModel(BaseModel):
                                title='Handle',
                                description='The activity context handle.')
 
-    Timestamp : datetime.datetime = Field(...,
+    Timestamp : AwareDatetime = Field(...,
                                     title='Timestamp',
                                     description='The timestamp when the activity context was created.'
                                 )
@@ -86,6 +87,15 @@ class IndalekoActivityContextDataModel(BaseModel):
                   title='ActivityData',
                   description='The activity data associated with the activity context.'
             )
+    
+    @field_validator('Timestamp', mode='before')
+    def ensure_timezone(cls, value: datetime):
+        if isinstance(value, str):
+            value = datetime.fromisoformat(value)
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value
+
 
     class Config:
         '''Configuration for the class.'''
@@ -101,27 +111,10 @@ class IndalekoActivityContextDataModel(BaseModel):
             }
         }
 
-    def serialize(self):
-        '''Serialize the object to a dictionary.'''
-        return self.model_dump(exclude_unset=True)
-
-    @staticmethod
-    def deserialize(data: dict):
-        '''Deserialize the data from a dictionary.'''
-        return IndalekoActivityContextDataModel(**data)
 
 def main():
     '''Test code for IndalekoActivityContextDataModel.'''
-    activity_context = IndalekoActivityContextDataModel(
-        **IndalekoActivityContextDataModel.Config.json_schema_extra['example']
-    )
-    print(activity_context.serialize())
-    print(activity_context.model_json_schema())
-    doc = activity_context.serialize()
-    print(type(doc))
-    print(doc)
-    check_data = IndalekoActivityContextDataModel.deserialize(doc)
-    print(check_data.serialize())
+    IndalekoActivityContextDataModel.test_model_main()
 
 if __name__ == '__main__':
     main()

@@ -16,20 +16,19 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from activity.provider_base import ProviderBase
-from activity.provider_characteristics import ProviderCharacteristics
-from Indaleko import Indaleko
+from activity.collectors.base import CollectorBase
+from activity.characteristics import ActivityDataCharacteristics
 # pylint: enable=wrong-import-position
 
-provider_dir = os.path.join(init_path, 'providers')
-providers = [
-    x for x in os.listdir(provider_dir) \
-        if os.path.isdir(os.path.join(provider_dir, x))
+collector_dir = os.path.join(init_path, 'collectors')
+collectors = [
+    x for x in os.listdir(collector_dir) \
+        if os.path.isdir(os.path.join(collector_dir, x))
         and not x.startswith('_')
 ]
-# ic(providers)
+# ic(collectors)
 
 __version__ = '0.1.0'
 
-__all__ = ['ProviderBase', 'ProviderCharacteristics']
+__all__ = ['CollectorBase', 'ActivityDataCharacteristics']
 

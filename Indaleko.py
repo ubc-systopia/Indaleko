@@ -55,47 +55,62 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-import uuid
 import datetime
 import os
-import platform
-import logging
-import socket
-import ipaddress
-import base64
-import msgpack
+import sys
+
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+# pylint: disable=wrong-import-position
+from data_models.activity_data_registration \
+    import IndalekoActivityDataRegistrationDataModel
+from activity.data_model.activity \
+    import IndalekoActivityDataModel
+from platforms.data_models.machine_platform import MachinePlatform
 
 from IndalekoObjectSchema import IndalekoObjectSchema
 from IndalekoServiceSchema import IndalekoServiceSchema
 from IndalekoRelationshipSchema import IndalekoRelationshipSchema
-from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
-from IndalekoActivityDataProviderRegistrationSchema \
-    import IndalekoActivityDataProviderRegistrationSchema
-from IndalekoActivityContextSchema import IndalekoActivityContextSchema
+# from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
 from IndalekoUserSchema import IndalekoUserSchema
 from IndalekoUserRelationshipSchema import IndalekoUserRelationshipSchema
+from utils.misc.directory_management import \
+    indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
+#from utils.misc.file_name_management import indaleko_file_name_prefix
+import utils.data_validation
+from utils.i_logging import IndalekoLogging
+import utils.misc.file_name_management
+import utils.misc.directory_management
+import utils.misc.timestamp_management
+import utils.misc.data_management
+# pylint: enable=wrong-import-position
 
 class Indaleko:
     '''This class defines constants used by Indaleko.'''
-    default_data_dir = os.path.join(os.environ.get('INDALEKO_ROOT', '.'), 'data')
-    default_config_dir = os.path.join(os.environ.get('INDALEKO_ROOT', '.'), 'config')
-    default_log_dir = os.path.join(os.environ.get('INDALEKO_ROOT', '.'), 'logs')
+    default_data_dir = indaleko_default_data_dir
+    default_config_dir = indaleko_default_config_dir
+    default_log_dir = indaleko_default_log_dir
 
     default_db_timeout=os.environ.get('INDALEKO_DB_TIMEOUT', 10)
 
-    Indaleko_Object = 'Object'
-    Indaleko_Relationships = 'Relationships'
-    Indaleko_Services = 'Services'
-    Indaleko_MachineConfig = 'MachineConfig'
-    Indaleko_ActivityDataProviders = 'ActivityDataProviders'
-    Indaleko_ActivityContext = 'ActivityContext'
-    Indaleko_Users = 'Users'
-    Indaleko_User_Relationships = 'UserRelationships'
+    Indaleko_Object_Collection = 'Objects'
+    Indaleko_Relationship_Collection = 'Relationships'
+    Indaleko_Service_Collection = 'Services'
+    Indaleko_MachineConfig_Collection = 'MachineConfig'
+    Indaleko_ActivityDataProvider_Collection = 'ActivityDataProviders'
+    Indaleko_ActivityContext_Collection = 'ActivityContext'
+    Indaleko_User_Collection = 'Users'
+    Indaleko_User_Relationship_Collection = 'UserRelationships'
 
-    Indaleko_Prefix = 'indaleko'
+    Indaleko_Prefix = utils.misc.file_name_management.indaleko_file_name_prefix
 
     Collections = {
-        Indaleko_Object: {
+        Indaleko_Object_Collection: {
             'schema' : IndalekoObjectSchema().get_json_schema(),
             'edge' : False,
             'indices' : {
@@ -117,7 +132,7 @@ class Indaleko:
                 },
             },
         },
-        Indaleko_Relationships : {
+        Indaleko_Relationship_Collection : {
             'schema' : IndalekoRelationshipSchema().get_json_schema(),
             'edge' : True,
             'indices' : {
@@ -143,7 +158,7 @@ class Indaleko:
                 },
             }
         },
-        Indaleko_Services : {
+        Indaleko_Service_Collection : {
             'schema' : IndalekoServiceSchema().get_json_schema(),
             'edge' : False,
             'indices' : {
@@ -154,13 +169,13 @@ class Indaleko:
                 },
             },
         },
-        Indaleko_MachineConfig : {
-            'schema' : IndalekoMachineConfigSchema().get_json_schema(),
+        Indaleko_MachineConfig_Collection : {
+            'schema' : MachinePlatform.get_arangodb_schema(),
             'edge' : False,
             'indices' : { },
         },
-        Indaleko_ActivityDataProviders : {
-            'schema' : IndalekoActivityDataProviderRegistrationSchema().get_json_schema(),
+        Indaleko_ActivityDataProvider_Collection : {
+            'schema' :  IndalekoActivityDataRegistrationDataModel.get_arangodb_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {
@@ -170,8 +185,8 @@ class Indaleko:
                 },
             },
         },
-        Indaleko_ActivityContext : {
-            'schema' : IndalekoActivityContextSchema().get_json_schema(),
+        Indaleko_ActivityContext_Collection : {
+            'schema' : IndalekoActivityDataModel.get_arangodb_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {
@@ -181,7 +196,7 @@ class Indaleko:
                 },
             },
         },
-       Indaleko_Users : {
+       Indaleko_User_Collection : {
             'schema' : IndalekoUserSchema().get_json_schema(),
             'edge' : False,
             'indices' : {
@@ -192,7 +207,7 @@ class Indaleko:
                 },
             },
         },
-        Indaleko_User_Relationships : {
+        Indaleko_User_Relationship_Collection : {
             'schema' : IndalekoUserRelationshipSchema().get_json_schema(),
             'edge' : True,
             'indices' : {
@@ -218,118 +233,47 @@ class Indaleko:
     @staticmethod
     def validate_ip_address(ip : str) -> bool:
         """Given a string, verify that it is in fact a valid IP address."""
-        if not isinstance(ip, str):
-            print(f'ip is not a string it is a {type(ip)}')
-            return False
-        try:
-            ipaddress.ip_address(ip)
-            return True
-        except ValueError:
-            print('ip is not valid')
-            return False
+        return utils.data_validation.validate_ip_address(ip)
 
     @staticmethod
     def validate_hostname(hostname : str) -> bool:
         """Given a string, verify that it is in fact a valid hostname."""
-        if not isinstance(hostname, str):
-            print(f'hostname is not a string it is a {type(hostname)}')
-            return False
-        try:
-            socket.gethostbyname(hostname)
-            return True
-        except socket.error:
-            print('hostname is not valid')
-            return False
+        return utils.data_validation.validate_hostname(hostname)
 
     @staticmethod
     def create_secure_directories(directories : list = None) -> None:
         '''Create secure directories for Indaleko.'''
-        if directories is None:
-            directories = [Indaleko.default_data_dir,
-                           Indaleko.default_config_dir,
-                           Indaleko.default_log_dir]
-        for directory in directories:
-            if not os.path.exists(directory):
-                os.makedirs(directory)
-            os.chmod(directory, 0o700)
+        return utils.misc.directory_management.indaleko_create_secure_directories(directories)
 
-
+    # @deprecated(reason='Use utils.validate_data.validate_uuid_string instead')
     @staticmethod
     def validate_uuid_string(uuid_string : str) -> bool:
         """Given a string, verify that it is in fact a valid uuid."""
-        if not isinstance(uuid_string, str):
-            print(f'uuid is not a string it is a {type(uuid_string)}')
-            return False
-        try:
-            uuid.UUID(uuid_string)
-            return True
-        except ValueError:
-            print('uuid is not valid')
-            return False
+        return utils.data_validation.validate_uuid_string(uuid_string)
 
     @staticmethod
     def validate_iso_timestamp(source : str) -> bool:
         """Given a string, ensure it is a valid ISO timestamp."""
-        valid = True
-        if not isinstance(source, str):
-            valid = False
-        else:
-            try:
-                datetime.datetime.fromisoformat(source)
-            except ValueError:
-                valid = False
-        return valid
+        return utils.data_validation.validate_iso_timestamp(source)
 
     @staticmethod
     def generate_iso_timestamp(ts : datetime = None) -> str:
         """Given a timestamp, convert it to an ISO timestamp."""
-        if ts is None:
-            ts = datetime.datetime.now(datetime.timezone.utc)
-        assert isinstance(ts, datetime.datetime), f'ts must be a datetime, not {type(ts)}'
-        return ts.isoformat()
+        return utils.misc.timestamp_management.generate_iso_timestamp(ts)
 
     @staticmethod
     def generate_iso_timestamp_for_file(ts : str = None) -> str:
         """Create an ISO timestamp for the current time."""
-        if ts is None:
-            ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        ts_check = Indaleko.extract_iso_timestamp_from_file_timestamp(ts)
-        if ts_check != ts: # validate that the timestamp is reversible
-            raise ValueError(f'timestamp mismatch {ts} != {ts_check}')
-        return f"-ts={ts.replace(':','#').replace('-','_')}"
+        return utils.misc.timestamp_management.generate_iso_timestamp_for_file(ts)
 
     @staticmethod
     def extract_iso_timestamp_from_file_timestamp(file_timestamp : str) -> str:
         """Given a file timestamp, convert it to an ISO timestamp."""
-        ts = file_timestamp.replace('_','-').replace('#',':')
-        ts_check = datetime.datetime.fromisoformat(ts)
-        if ts_check is None:
-            raise ValueError('timestamp is not valid')
-        return ts
-
+        return utils.misc.timestamp_management.extract_iso_timestamp_from_file_timestamp(file_timestamp)
     @staticmethod
     def get_logging_levels() -> list:
         """Return a list of valid logging levels."""
-    if platform.python_version() < '3.12':
-        logging_levels = []
-        if hasattr(logging, 'CRITICAL'):
-            logging_levels.append('CRITICAL')
-        if hasattr(logging, 'ERROR'):
-            logging_levels.append('ERROR')
-        if hasattr(logging, 'WARNING'):
-            logging_levels.append('WARNING')
-        if hasattr(logging, 'WARN'):
-            logging_levels.append('WARN')
-        if hasattr(logging, 'INFO'):
-            logging_levels.append('INFO')
-        if hasattr(logging, 'DEBUG'):
-            logging_levels.append('DEBUG')
-        if hasattr(logging, 'NOTSET'):
-            logging_levels.append('NOTSET')
-        if hasattr(logging, 'FATAL'):
-            logging_levels.append('FATAL')
-    else:
-        logging_levels = sorted(set(logging.getLevelNamesMapping()))
+        return IndalekoLogging.get_logging_levels()
 
     @staticmethod
     def generate_final_name(args : list, **kwargs) -> str:
@@ -339,30 +283,8 @@ class Indaleko:
         threw a "too many arguments" error, so this is a compromise - send in a
         list, and then unpack it manually. Why this is better is a mystery of
         the faith.
-        '''
-        prefix = args[0]
-        target_platform = args[1]
-        service = args[2]
-        ts = args[3]
-        suffix = args[4]
-        max_len = args[5]
-        name = prefix
-        if '-' in prefix:
-            raise ValueError('prefix must not contain a hyphen')
-        if '-' in suffix:
-            raise ValueError('suffix must not contain a hyphen')
-        name += f'-plt={target_platform}'
-        name += f'-svc={service}'
-        for key, value in kwargs.items():
-            assert isinstance(value, str), f'value must be a string: {key, value}'
-            if '-' in key or '-' in value:
-                raise ValueError(f'key and value must not contain a hyphen: {key, value}')
-            name += f'-{key}={value}'
-        name += ts
-        name += f'.{suffix}'
-        if len(name) > max_len:
-            raise ValueError('file name is too long' + '\n' + name + '\n' + str(len(name)))
-        return name
+         '''
+        return utils.misc.file_name_management.generate_final_name(args, **kwargs)
 
     @staticmethod
     def generate_file_name(**kwargs) -> str:
@@ -377,153 +299,35 @@ class Indaleko:
             * timestamp: timestamp to use in the file name
             * suffix: string to append to the file name
         '''
-        max_len = 255
-        prefix = Indaleko.Indaleko_Prefix
-        suffix = 'jsonl'
-        if 'max_len' in kwargs:
-            max_len = kwargs['max_len']
-            if isinstance(max_len, str):
-                max_len = int(max_len)
-            if not isinstance(max_len, int):
-                raise ValueError('max_len must be an integer')
-            del kwargs['max_len']
-        if 'platform' not in kwargs:
-            target_platform = platform.system()
-        else:
-            target_platform = kwargs['platform']
-            del kwargs['platform']
-        if 'service' not in kwargs:
-            raise ValueError('service must be specified')
-        service = kwargs['service']
-        del kwargs['service']
-        ts = Indaleko.generate_iso_timestamp_for_file()
-        if 'timestamp' in kwargs:
-            ts = Indaleko.generate_iso_timestamp_for_file(kwargs['timestamp'])
-            del kwargs['timestamp']
-        if 'prefix' in kwargs:
-            prefix = kwargs['prefix']
-            del kwargs['prefix']
-        if 'suffix' in kwargs:
-            suffix = kwargs['suffix']
-            del kwargs['suffix']
-        if suffix.startswith('.'):
-            suffix = suffix[1:] # avoid ".." for suffix
-        if '-' in target_platform:
-            raise ValueError('platform must not contain a hyphen')
-        if '-' in service:
-            raise ValueError('service must not contain a hyphen')
-        return Indaleko.generate_final_name(
-            [prefix,
-            target_platform,
-            service,
-            ts,
-            suffix,
-            max_len],
-            **kwargs)
+        return utils.misc.file_name_management.generate_file_name(**kwargs)
 
     @staticmethod
     def extract_keys_from_file_name(file_name : str) -> dict:
         '''
         Given a file name, extract the keys and values from the file name.
         '''
-        base_file_name, file_suffix = os.path.splitext(os.path.basename(file_name))
-        file_name = base_file_name + file_suffix
-        data = {}
-        if not isinstance(file_name, str):
-            raise ValueError('file_name must be a string')
-        fields = file_name.split('-')
-        prefix = fields.pop(0)
-        data['prefix'] = prefix
-        target_platform = fields.pop(0)
-        if not target_platform.startswith('plt='):
-            raise ValueError('platform field must start with plt=')
-        data['platform'] = target_platform[4:]
-        service = fields.pop(0)
-        if not service.startswith('svc='):
-            raise ValueError('service field must start with svc=')
-        data['service'] = service[4:]
-        trailer = fields.pop(-1)
-        suffix = trailer.split('.')[-1]
-        if not trailer.startswith('ts='):
-            raise ValueError('timestamp field must start with ts=')
-        ts_field = trailer[3:-len(suffix)-1]
-        data['suffix'] = suffix
-        data['timestamp'] = Indaleko.extract_iso_timestamp_from_file_timestamp(ts_field)
-        while len(fields) > 0:
-            field = fields.pop(0)
-            if '=' not in field:
-                raise ValueError('field must be of the form key=value')
-            key, value = field.split('=')
-            data[key] = value
-        return data
+        return utils.misc.file_name_management.extract_keys_from_file_name(file_name)
 
     @staticmethod
     def encode_binary_data(data : bytes) -> str:
         '''Encode binary data as a string.'''
-        return base64.b64encode(msgpack.packb(data, use_bin_type=True)).decode('ascii')
+        return utils.misc.data_management.encode_binary_data(data)
 
     @staticmethod
     def decode_binary_data(data : str) -> bytes:
         '''Decode binary data from a string.'''
-        return msgpack.unpackb(base64.b64decode(data), raw=False)
+        return utils.misc.data_management.decode_binary_data(data)
 
     @staticmethod
     def find_candidate_files(input_strings : list[str], directory : str) -> list[tuple[str,str]]:
         '''Given a directory location, find a list of candidate files that match
         the input strings.'''
-
-        @staticmethod
-        def get_unique_identifier(file_name, all_files):
-            """
-            Generate a unique identifier for a file by finding the shortest
-            unique substring from a list of candidate files.
-            """
-            for i in range(1, len(file_name) + 1):
-                for j in range(len(file_name) - i + 1):
-                    substring = file_name[j:j+i]
-                    if sum(substring in f for f in all_files) == 1:
-                        return substring
-            return file_name
-
-        all_files = os.listdir(directory)
-        matched_files = []
-
-        for file in all_files:
-            matched_files.append((file, get_unique_identifier(file, all_files)))
-
-        if len(input_strings) == 0:
-            return matched_files
-
-        candidates = matched_files[:]
-
-        for input_string in input_strings:
-            updated_candidates = []
-            for candidate, unique_id in candidates:
-                if input_string in candidate:
-                    updated_candidates.append((candidate, unique_id))
-            candidates = updated_candidates
-
-        if len(candidates) > 0:
-            return candidates
-        return []
+        return utils.misc.file_name_management.find_candidate_files(input_strings, directory)
 
     @staticmethod
     def print_candidate_files(candidates : list[tuple[str,str]]) -> None:
         '''Print the candidate files in a nice format.'''
-        print(candidates)
-        if len(candidates) == 0:
-            print('No candidate files found')
-            return
-        unique_id_label = 'Unique identifier'
-        unique_id_label_length = len(unique_id_label)
-        max_unique_id_length = unique_id_label_length
-        for file, unique_id in candidates:
-            if len(unique_id) > max_unique_id_length:
-                max_unique_id_length = len(unique_id)
-        print('Unique identifier', (max_unique_id_length-len('Unique identifier')) * ' ', 'File name')
-        for file, unique_id in candidates:
-            print(f'{unique_id.strip()} {(max_unique_id_length-len(unique_id))*" "} {file}')
-
+        return utils.misc.file_name_management.print_candidate_files(candidates)
 
 def main():
     """Test code for Indaleko.py"""

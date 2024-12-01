@@ -10,7 +10,8 @@ authors = [{name = "Tony Mason", email = "fsgeek@gatech.edu"}]
 dependencies = [
     "apischema==0.18.1",
     "discord.py==2.3.2",
-    "docker_py==1.10.6",
+    "docker==7.1.0",
+    "dropbox==12.0.2",
     "Faker==29.0.0",
     "geopy==2.4.1",
     "google_api_python_client==2.146.0",
@@ -28,8 +29,13 @@ dependencies = [
     "pyicloud==1.0.0",
     "pyngrok==7.2.0",
     "python_arango==7.7.0",
-    "Requests==2.32.3"
+    "Requests==2.32.3",
+    "graphql-core==3.2.4",
+    "pydantic-core==2.23.4",
+    "pytile==2023.12.0",
+    "winsdk==1.0.0b10 ; platform_system == 'Windows'",
 ]
+requires-python = ">=3.12"
 
 [project.optional-dependencies]
 test = ["pytest>=6.0"]
