@@ -42,32 +42,32 @@ from data_models.timestamp import IndalekoTimestampDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 # pylint: enable=wrong-import-position
 
-class IndalekoObjecdtDataModel(IndalekoBaseModel):
+class IndalekoObjectDataModel(IndalekoBaseModel):
     '''
     This class defines the data model for the Indaleko object.
     '''
-    Record : IndalekoRecordDataModel = Field(...,
+    Record : IndalekoRecordDataModel = Field(None,
                                     title='Record',
                                     description='The record associated with the object.')
 
-    URI : str = Field(...,
+    URI : str = Field(None,
                         title='URI',
                         description='The URI for the object.')
 
-    ObjectIdentifier : uuid.UUID = Field(...,
+    ObjectIdentifier : uuid.UUID = Field(None,
                                          title='ObjectIdentifier',
                                          description='The UUID representing this object.')
 
-    Timestamps : List[IndalekoTimestampDataModel] = Field(...,
+    Timestamps : List[IndalekoTimestampDataModel] = Field(None,
                                     title='Timestamps',
                                     description='The timestamps associated with the object.')
 
-    Size : int = Field(...,
+    Size : int = Field(None,
                         title='Size',
                         description='The size of the object in bytes.')
 
     SemanticAttributes : List[IndalekoSemanticAttributeDataModel] \
-        = Field(...,
+        = Field(None,
                 title='SemanticAttributes',
                 description='The semantic attributes related to this object by the storage service.')
 
@@ -114,7 +114,7 @@ class IndalekoObjecdtDataModel(IndalekoBaseModel):
 def main():
     '''This allows testing the data model.'''
     ic('Testing IndalekoObjectDataModel')
-    IndalekoObjecdtDataModel.test_model_main()
+    IndalekoObjectDataModel.test_model_main()
 
 if __name__ == '__main__':
     main()

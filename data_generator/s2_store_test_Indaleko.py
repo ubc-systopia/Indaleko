@@ -1,5 +1,5 @@
 """
-Script to load the generated metadata onto the db and run Indaleko query 
+Script to load the generated metadata onto the db and run Indaleko query
 Author: Pearl Park
 
 """
@@ -16,7 +16,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
-from data_models.i_object import IndalekoObjecdtDataModel
+from data_models.i_object import IndalekoObjectDataModel
 from IndalekoCollections import IndalekoCollections
 from IndalekoDBConfig import IndalekoDBConfig
 
@@ -53,8 +53,8 @@ class MetadataStorer():
             collections.get_collection(collection_name).insert(record)
             print(f'Inserted {record} into {collection_name}')
 
-        
-    # convert the json file to a list of metadata 
+
+    # convert the json file to a list of metadata
     def convert_json_file(self, json_file: list):
         with open(json_file, 'r') as file:
             print("here")

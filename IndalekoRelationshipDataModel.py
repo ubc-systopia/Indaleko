@@ -1,5 +1,5 @@
 '''
-This module defines the common database schema for Activity Data.
+This module defines the common database schema for Relationship Data.
 
 Project Indaleko
 Copyright (C) 2024 Tony Mason

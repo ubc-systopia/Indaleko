@@ -15,17 +15,32 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
+from data_models.activity_data_registration import IndalekoActivityDataRegistrationDataModel
+from data_models.i_object import IndalekoObjectDataModel
+from data_models.identity_domain import IndalekoIdentityDomainDataModel
+from data_models.machine_config import IndalekoMachineConfigDataModel
+from data_models.record import IndalekoRecordDataModel
+from data_models.relationship import IndalekoRelationshipDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
-from data_models.source_identifer import IndalekoSourceIdentifierDataModel
+from data_models.service import IndalekoServiceDataModel
+from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from data_models.timestamp import IndalekoTimestampDataModel
+from data_models.user_identity import IndalekoUserDataModel
 from data_models.i_uuid import IndalekoUUIDDataModel
 
 __version__ = '0.1.0'
 
 __all__ = [
-    IndalekoSemanticAttributeDataModel,
-    IndalekoSourceIdentifierDataModel,
-    IndalekoTimestampDataModel,
-    IndalekoUUIDDataModel
+    'IndalekoActivityDataRegistrationDataModel',
+    'IndalekoIdentityDomainDataModel',
+    'IndalekoObjectDataModel',
+    'IndalekoMachineConfigDataModel',
+    'IndalekoRecordDataModel',
+    'IndalekoRelationshipDataModel',
+    'IndalekoSemanticAttributeDataModel',
+    'IndalekoServiceDataModel',
+    'IndalekoSourceIdentifierDataModel',
+    'IndalekoTimestampDataModel',
+    'IndalekoUserDataModel',
+    'IndalekoUUIDDataModel'
 ]
-

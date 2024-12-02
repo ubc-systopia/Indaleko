@@ -37,6 +37,8 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # pylint: disable=wrong-import-position
 from utils import IndalekoDocker, IndalekoLogging, IndalekoSingleton
 from utils.data_validation import validate_ip_address, validate_hostname
+from utils.misc.directory_management import indaleko_default_log_dir
+import utils.misc.file_name_management
 # pylint: enable=wrong-import-position
 
 
@@ -47,6 +49,8 @@ class IndalekoDBConfig(IndalekoSingleton):
     """
 
     default_db_config_file = os.path.join(os.environ.get('INDALEKO_ROOT', '.'), 'config/indaleko-db-config.ini')
+    default_db_timeout=os.environ.get('INDALEKO_DB_TIMEOUT', 10)
+
 
     def __init__(self,
                  config_file: str = default_db_config_file,
@@ -464,7 +468,7 @@ def main():
     now = datetime.datetime.now(datetime.timezone.utc)
     timestamp=now.isoformat()
     parser = argparse.ArgumentParser(description='Indaleko DB Configuration Management.')
-    parser.add_argument('--logdir' , type=str, default=Indaleko.default_log_dir, help='Log directory')
+    parser.add_argument('--logdir' , type=str, default=indaleko_default_log_dir, help='Log directory')
     parser.add_argument('--log', type=str, default=None, help='Log file name')
     parser.add_argument('--loglevel', type=int, default=logging.DEBUG, choices=IndalekoLogging.get_logging_levels(), help='Log level')
     command_subparser = parser.add_subparsers(dest='command')
@@ -485,7 +489,7 @@ def main():
     parser.set_defaults(func=default_command_handler)
     args=parser.parse_args()
     if args.log is None:
-        args.log=Indaleko.generate_file_name(
+        args.log=utils.misc.file_name_management.generate_file_name(
             suffix='log',
             service='IndalekoDBConfig',
             timestamp=timestamp

@@ -35,7 +35,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from data_models.source_identifer import IndalekoSourceIdentifierDataModel
+from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from data_models.base import IndalekoBaseModel
 # pylint: enable=wrong-import-position
 

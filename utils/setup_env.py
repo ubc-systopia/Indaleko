@@ -28,6 +28,13 @@ import tempfile
 
 from typing import Union
 
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'pyproject.toml')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
 def install_uv_windows() -> bool:
     '''Install the uv package on Windows.'''
     print('Installing uv on Windows')
@@ -183,8 +190,7 @@ def check_or_create_virtualenv(platform : str = None,
                 subprocess.run(
                     [
                         "uv",
-                        "init",
-                        "--venv",
+                        "venv",
                         compute_venv_name(
                             platform=platform,
                             python_version=python_version
@@ -320,6 +326,12 @@ def find_best_lockfile() -> Union[str, None]:
         return lock_files.pop()
     return None
 
+def get_venv_activation_command() -> str:
+    '''Get the command to activate the virtual environment based on the current platform.'''
+    if sys.platform.startswith('win'):
+        return f'{os.getcwd()}\\Scripts\\activate'
+    return f'source {os.getcwd()}/bin/activate'
+
 def main():
     '''Main entry point for the setup environment script.'''
     # First, let's see what lock files already exist.
@@ -384,10 +396,14 @@ def main():
 
     # Final Step: Guide the user on next steps
     print("\nNext steps:")
-    print("1. Activate the virtual environment if it's not already active.")
+    print("1. Activate the virtual environment if it's not already active: " + get_venv_activation_command())
     # TODO: Add instructions for activating the virtual environment, since this is platform-specific
-    print("2. Run 'python IndalekoDBConfig.py' to verify the database is set up properly.")
+    print(f"2. Run 'python {os.getcwd()}/db/db_config.py' to verify the database is set up properly.")
+    print(f'   If it is not set up, you will need to run the setup script: python {os.getcwd()}/db/db_setup.py')
     print("3. Refer to the README for more detailed instructions.")
 
 if __name__ == "__main__":
+    cwd = os.getcwd()
+    os.chdir(os.environ['INDALEKO_ROOT'])
     main()
+    os.chdir(cwd)

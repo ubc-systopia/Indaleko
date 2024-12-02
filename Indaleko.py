@@ -88,6 +88,8 @@ import utils.misc.file_name_management
 import utils.misc.directory_management
 import utils.misc.timestamp_management
 import utils.misc.data_management
+import db.db_config
+import db.db_collections
 # pylint: enable=wrong-import-position
 
 class Indaleko:
@@ -96,128 +98,19 @@ class Indaleko:
     default_config_dir = indaleko_default_config_dir
     default_log_dir = indaleko_default_log_dir
 
-    default_db_timeout=os.environ.get('INDALEKO_DB_TIMEOUT', 10)
 
-    Indaleko_Object_Collection = 'Objects'
-    Indaleko_Relationship_Collection = 'Relationships'
-    Indaleko_Service_Collection = 'Services'
-    Indaleko_MachineConfig_Collection = 'MachineConfig'
-    Indaleko_ActivityDataProvider_Collection = 'ActivityDataProviders'
-    Indaleko_ActivityContext_Collection = 'ActivityContext'
-    Indaleko_User_Collection = 'Users'
-    Indaleko_User_Relationship_Collection = 'UserRelationships'
+    default_db_timeout=db.db_config.default_db_timeout
+
+    Indaleko_Object_Collection = db.db_collections.IndalekoDBCollections.Indaleko_Object_Collection
+    Indaleko_Relationship_Collection = db.db_collections.IndalekoDBCollections.Indaleko_Relationship_Collection
+    Indaleko_Service_Collection = db.db_collections.IndalekoDBCollections.Indaleko_Service_Collection
+    Indaleko_MachineConfig_Collection = db.db_collections.IndalekoDBCollections.Indaleko_MachineConfig_Collection
+    Indaleko_ActivityDataProvider_Collection = db.db_collections.IndalekoDBCollections.Indaleko_ActivityDataProvider_Collection
+    Indaleko_ActivityContext_Collection = db.db_collections.IndalekoDBCollections.Indaleko_ActivityContext_Collection
+    Indaleko_User_Collection = db.db_collections.IndalekoDBCollections.Indaleko_User_Collection
+    Indaleko_User_Relationship_Collection = db.db_collections.IndalekoDBCollections.Indaleko_User_Relationship_Collection
 
     Indaleko_Prefix = utils.misc.file_name_management.indaleko_file_name_prefix
-
-    Collections = {
-        Indaleko_Object_Collection: {
-            'schema' : IndalekoObjectSchema().get_json_schema(),
-            'edge' : False,
-            'indices' : {
-                'URI' : {
-                    'fields' : ['URI'],
-                    'unique' : True,
-                    'type' : 'persistent'
-                },
-                'file identity' : {
-                    'fields' : ['ObjectIdentifier'],
-                    'unique' : True,
-                    'type' : 'persistent'
-                },
-                'local identity' : {
-                    # Question: should this be combined with other info to allow uniqueness?
-                    'fields' : ['LocalIdentifier'],
-                    'unique' : False,
-                    'type' : 'persistent'
-                },
-            },
-        },
-        Indaleko_Relationship_Collection : {
-            'schema' : IndalekoRelationshipSchema().get_json_schema(),
-            'edge' : True,
-            'indices' : {
-                'relationship' : {
-                    'fields' : ['relationship'],
-                    'unique' : False,
-                    'type' : 'persistent'
-                },
-                'vertex1' : {
-                    'fields' : ['object1'],
-                    'unique' : False,
-                    'type' : 'persistent'
-                },
-                'vertex2' : {
-                    'fields' : ['object2'],
-                    'unique' : False,
-                    'type' : 'persistent'
-                },
-                'edge' : {
-                    'fields' : ['object1', 'object2'],
-                    'unique' : False,
-                    'type' : 'persistent'
-                },
-            }
-        },
-        Indaleko_Service_Collection : {
-            'schema' : IndalekoServiceSchema().get_json_schema(),
-            'edge' : False,
-            'indices' : {
-                'identifier' : {
-                    'fields' : ['Name'],
-                    'unique' : True,
-                    'type' : 'persistent'
-                },
-            },
-        },
-        Indaleko_MachineConfig_Collection : {
-            'schema' : MachinePlatform.get_arangodb_schema(),
-            'edge' : False,
-            'indices' : { },
-        },
-        Indaleko_ActivityDataProvider_Collection : {
-            'schema' :  IndalekoActivityDataRegistrationDataModel.get_arangodb_schema(),
-            'edge' : False,
-            'indices' : {
-                'identifier' : {
-                    'fields' : ['ActivityProvider'],
-                    'unique' : True,
-                    'type' : 'persistent'
-                },
-            },
-        },
-        Indaleko_User_Collection : {
-            'schema' : IndalekoUserSchema().get_json_schema(),
-            'edge' : False,
-            'indices' : {
-                'identifier' : {
-                    'fields' : ['Identifier'],
-                    'unique' : True,
-                    'type' : 'persistent'
-                },
-            },
-        },
-        Indaleko_User_Relationship_Collection : {
-            'schema' : IndalekoUserRelationshipSchema().get_json_schema(),
-            'edge' : True,
-            'indices' : {
-                'Identity1' : {
-                    'fields' : ['Identity1'],
-                    'unique' : False,
-                    'type' : 'persistent'
-                },
-                'Identity2' : {
-                    'fields' : ['Identity2'],
-                    'unique' : False,
-                    'type' : 'persistent'
-                },
-                'edge' : {
-                    'fields' : ['Identity1', 'Identity2'],
-                    'unique' : True,
-                    'type' : 'persistent'
-                },
-            }
-        },
-    }
 
     @staticmethod
     def validate_ip_address(ip : str) -> bool:

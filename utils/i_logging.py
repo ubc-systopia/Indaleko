@@ -18,21 +18,21 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # overall package/project.  It's a bit of a hack, but it works.
 # pylint: disable=wrong-import-position
 from utils import IndalekoSingleton
+from utils.misc.directory_management import \
+    indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
+import utils.misc.file_name_management
 # pylint: enable=wrong-import-position
 
-
-from utils import IndalekoSingleton
 
 class IndalekoLogging(IndalekoSingleton):
     """Class for managing Indaleko logging."""
 
     def __init__(self, **kwargs):
         """Initialize a new instance of the IndalekoLogging class object."""
-        from Indaleko import Indaleko
         if self._initialized:
             return
         self.log_level = kwargs.get('log_level', logging.DEBUG)
-        self.log_dir = kwargs.get('log_dir', Indaleko.default_log_dir)
+        self.log_dir = kwargs.get('log_dir', indaleko_default_log_dir)
         self.log_file = kwargs.get('log_file', IndalekoLogging.generate_log_file_name(**kwargs))
         log_name = os.path.join(self.log_dir, self.log_file)
         logging.basicConfig(filename=log_name,
@@ -78,7 +78,6 @@ class IndalekoLogging(IndalekoSingleton):
 
     @staticmethod
     def generate_log_file_name(**kwargs) -> str:
-        from Indaleko import Indaleko
         now = datetime.datetime.now(datetime.timezone.utc)
         timestamp=now.isoformat()
         service_name = kwargs.get('service_name', 'unknown_service')
@@ -89,7 +88,7 @@ class IndalekoLogging(IndalekoSingleton):
         }
         if 'platform' in kwargs:
             fnargs['platform'] = kwargs['platform']
-        fname = Indaleko.generate_file_name(
+        fname = utils.misc.file_name_management.generate_file_name(
             **fnargs
         )
         return fname
@@ -97,9 +96,8 @@ class IndalekoLogging(IndalekoSingleton):
     @staticmethod
     def list_service_logs(service_name : str, logs_dir : str = None) -> list:
         """List the log files for a given service."""
-        from Indaleko import Indaleko
         if logs_dir is None:
-            logs_dir = Indaleko.default_log_dir
+            logs_dir = indaleko_default_log_dir
         return [x for x in os.listdir(logs_dir) if service_name in x]
 
     @staticmethod
@@ -108,7 +106,7 @@ class IndalekoLogging(IndalekoSingleton):
         if 'log_dir' in kwargs:
             log_dir = kwargs['log_dir']
         else:
-            log_dir = Indaleko.default_log_dir
+            log_dir = indaleko_default_log_dir
         logs = os.listdir(log_dir)
         return logs
 
@@ -174,13 +172,11 @@ def prune_logs(args: argparse.Namespace) -> None:
 
 def main():
     """Main function for the IndalekoLogging class."""
-    from Indaleko import Indaleko
-
     print("Welcome to Indaleko Logging Management")
     indaleko_logging = IndalekoLogging(service_name='IndalekoLogging')
     assert indaleko_logging is not None, "IndalekoLogging is None"
     parser = argparse.ArgumentParser(description="Indaleko logging management")
-    parser.add_argument('--log-dir', default=Indaleko.default_log_dir, type=str, help='Directory where logs are stored.')
+    parser.add_argument('--log-dir', default=indaleko_default_log_dir, type=str, help='Directory where logs are stored.')
     parser.add_argument('--service', default=None, type=str, help='Service name to filter logs against.')
     parser.add_argument('--platform', default=platform.system(), type=str, help='Platform to filter logs against.')
     subparsers = parser.add_subparsers(dest='command')

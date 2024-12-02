@@ -29,7 +29,6 @@ import sys
 
 import arango
 
-
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
@@ -38,10 +37,11 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from Indaleko import Indaleko
+# from Indaleko import Indaleko
 from db.db_config import IndalekoDBConfig
 from db.collection_index import IndalekoCollectionIndex
 from db.collection import IndalekoCollection
+from db.db_collections import IndalekoDBCollections
 from utils.singleton import IndalekoSingleton
 # pylint: enable=wrong-import-position
 
@@ -59,21 +59,21 @@ class IndalekoCollections(IndalekoSingleton):
         logging.debug('Starting database')
         self.db_config.start()
         self.collections = {}
-        for name in Indaleko.Collections.items():
+        for name in IndalekoDBCollections.Collections.items():
             name = name[0]
             logging.debug('Processing collection %s', name)
             try:
                 self.collections[name] = IndalekoCollection(name=name,
-                                                            definition=Indaleko.Collections[name],
+                                                            definition=IndalekoDBCollections.Collections[name],
                                                             db=self.db_config,
                                                             reset=self.reset)
             except arango.exceptions.CollectionConfigureError as error: # pylint: disable=no-member
                 logging.error('Failed to configure collection %s', name)
                 print(f'Failed to configure collection {name}')
                 print(error)
-                if Indaleko.Collections[name]['schema'] is not None:
+                if IndalekoDBCollections.Collections[name]['schema'] is not None:
                     print('Schema:')
-                    print(json.dumps(Indaleko.Collections[name]['schema'], indent=2))
+                    print(json.dumps(IndalekoDBCollections.Collections[name]['schema'], indent=2))
                 raise error
 
     @staticmethod

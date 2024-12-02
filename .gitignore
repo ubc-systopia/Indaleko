@@ -30,3 +30,4 @@ import_list.cmd
 upload-notes.md
 .uv*
 .venv*
+uv.lock

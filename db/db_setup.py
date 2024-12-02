@@ -17,15 +17,32 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
-import os
 import argparse
 import datetime
 import logging
-from Indaleko import Indaleko
-from IndalekoDBConfig import IndalekoDBConfig
-from IndalekoCollections import IndalekoCollections
-from IndalekoLogging import IndalekoLogging
-from IndalekoDocker import IndalekoDocker
+import os
+import sys
+
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+# pylint: disable=wrong-import-position
+from db import IndalekoDBConfig, IndalekoCollections, IndalekoDBCollections
+from utils import IndalekoDocker, IndalekoLogging
+from utils.misc.directory_management import indaleko_default_log_dir
+import utils.misc.file_name_management
+# from Indaleko import Indaleko
+# from IndalekoDBConfig import IndalekoDBConfig
+# from IndalekoCollections import IndalekoCollections
+# from IndalekoLogging import IndalekoLogging
+# from IndalekoDocker import IndalekoDocker
+# pylint: enable=wrong-import-position
+
+
 
 def run_container(db_config: IndalekoDBConfig):
     # the configuration
@@ -169,7 +186,7 @@ def main():
     parser = argparse.ArgumentParser(description='Indaleko DB Setup')
     parser.add_argument('--log_dir',
                         help='Log directory to use',
-                        default=Indaleko.default_log_dir)
+                        default=indaleko_default_log_dir)
     parser.add_argument('--log', help='Log file to write')
     parser.add_argument('--loglevel', type=int, default=logging.DEBUG, help='Log level to use')
 
@@ -187,7 +204,7 @@ def main():
 
     args = parser.parse_args()
     if args.log is None:
-        args.log = Indaleko.generate_file_name(
+        args.log = utils.misc.file_name_management.generate_file_name(
                         suffix='log',
                         service='dbsetup',
                         timestamp=timestamp

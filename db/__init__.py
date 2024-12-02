@@ -1,7 +1,6 @@
 '''initializtion logic for the db management models in Indaleko'''
 
 import os
-import importlib
 import sys
 
 # from icecream import ic
@@ -20,6 +19,7 @@ from db.collection import IndalekoCollection
 from db.collection_index import IndalekoCollectionIndex
 from db.i_collections import IndalekoCollections
 from db.db_config import IndalekoDBConfig
+from db.db_collections import IndalekoDBCollections
 # pylint: enable=wrong-import-position
 
 __version__ = '0.1.0'
@@ -28,5 +28,6 @@ __all__ = [
     'IndalekoCollection',
     'IndalekoCollectionIndex',
     'IndalekoCollections',
-    'IndalekoDBConfig'
+    'IndalekoDBConfig',
+    'IndalekoDBCollections',
 ]
