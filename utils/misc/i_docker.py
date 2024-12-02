@@ -72,7 +72,7 @@ class IndalekoDocker:
     def list_volumes(self) -> list:
         """List the Indaleko related Docker volumes."""
         volumes = self.docker_client.volumes.list()
-        return [volume.name for volume in volumes if utils.misc.file_name_management in volume.name]
+        return [volume.name for volume in volumes if utils.misc.file_name_management.indaleko_file_name_prefix in volume.name]
 
     def create_container(self, container_name : str = None, volume_name : str = None, password : str = None) -> None:
         """Add a new Indaleko related Docker container."""
