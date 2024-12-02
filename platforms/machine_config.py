@@ -26,59 +26,46 @@ import uuid
 import os
 #import logging
 #import re
-import sys
 
 import arango
 
-from typing import Union
 from icecream import ic
 
-if os.environ.get('INDALEKO_ROOT') is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
-        current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
-    sys.path.append(current_path)
-
-# pylint: disable=wrong-import-position
-from data_models.base import IndalekoBaseModel
-from data_models.machine_config import IndalekoMachineConfigDataModel
+from IndalekoMachineConfigDataModel import IndalekoMachineConfigDataModel
 from Indaleko import Indaleko
 from IndalekoServiceManager import IndalekoServiceManager
-from db.i_collections import IndalekoCollections
-# pylint: enable=wrong-import-position
-
+from IndalekoCollections import IndalekoCollections
 
 class IndalekoMachineConfig:
     '''
     This class provides the generic base for capturing a machine
     configuration
     '''
-    default_config_dir = Indaleko.default_config_dir
+    default_config_dir = "./config"
     indaleko_machine_config_captured_label_str = "eb7eaeed-6b21-4b6a-a586-dddca6a1d5a4"
     indaleko_machine_config_captured_label_uuid = \
         uuid.UUID(indaleko_machine_config_captured_label_str)
 
-    def __init__(self, **kwargs):
+    def __init__(self,
+                 **kwargs):
         '''Initialize the machine configuration'''
+        if not hasattr(self, 'offline'):
+            if 'offline' in kwargs:
+                self.offline = kwargs['offline']
+            else:
+                self.offline = False
+        if 'offline' in kwargs:
+            del kwargs['offline']
         if not hasattr(self, 'source'): # override in derived classes
             self.source_identifier = None
-        ic(kwargs)
-        self.machine_id = kwargs.get('machine_id', kwargs.get('MachineUUID'))
-        assert self.machine_id is not None, 'machine_id or MachineUUID must be provided'
-        self.machine_config = IndalekoMachineConfigDataModel(**kwargs)
-        self.collection = IndalekoCollections().get_collection(Indaleko.Indaleko_MachineConfig_Collection)
-        assert self.collection is not None, 'Failed to get the machine configuration collection'
-
-    @staticmethod
-    def find_configs_in_db(source_id : Union[str,None]= None) -> list:
-        '''Find the machine configurations in the database.'''
-        assert source_id is not None and Indaleko.validate_uuid_string(source_id), 'Invalid source identifier'
-        return [
-            IndalekoMachineConfig.serialize(config)
-            for config in IndalekoMachineConfig.lookup_machine_configurations(source_id=source_id)
-        ]
-
+        # ic(kwargs)
+        self.machine_id = kwargs.get('machine_id',
+                                     kwargs['data']['MachineUUID']
+        )
+        self.machine_config = IndalekoMachineConfigDataModel.MachineConfig.deserialize(**kwargs)
+        if not self.offline:
+            self.collection = IndalekoCollections().get_collection(Indaleko.Indaleko_MachineConfig)
+            assert self.collection is not None, 'Failed to get the machine configuration collection'
 
     @staticmethod
     def register_machine_configuration_service(**kwargs):
@@ -104,7 +91,7 @@ class IndalekoMachineConfig:
             doc['_key'] = self.machine_id
         if 'MachineUUID' not in doc:
             doc['MachineUUID'] = self.machine_id
-        ic(doc)
+        # ic(doc)
         print(json.dumps(doc, indent=4))
         try:
             self.collection.insert(doc, overwrite=overwrite)
@@ -119,41 +106,41 @@ class IndalekoMachineConfig:
     def delete_config_in_db(machine_id : str) -> bool:
         '''Delete the configuration from the database'''
         assert Indaleko.validate_uuid_string(machine_id), 'Invalid machine identifier'
-        IndalekoCollections().get_collection(Indaleko.Indaleko_MachineConfig_Collection).delete(machine_id)
+        IndalekoCollections().get_collection(Indaleko.Indaleko_MachineConfig).delete(machine_id)
 
     @staticmethod
     def lookup_machine_configuration_by_machine_id(machine_id : str) -> 'IndalekoMachineConfig':
         '''Lookup a machine configuration service'''
-        assert isinstance(machine_id, str), f'Machine ID must be a UUID string, not {type(machine_id)}'
+        assert isinstance(machine_id, str), 'Machine ID must be a UUID string'
         assert Indaleko.validate_uuid_string(machine_id), 'Invalid machine identifier'
         collections = IndalekoCollections()
         results = collections.db_config.db.aql.execute(
             'FOR doc IN @@collection FILTER doc._key == @machine_id RETURN doc',
             bind_vars = {
-                '@collection' : Indaleko.Indaleko_MachineConfig_Collection,
+                '@collection' : Indaleko.Indaleko_MachineConfig,
                 'machine_id' : machine_id
             }
         )
-        return [IndalekoMachineConfig(**entry) for entry in results]
+        return [IndalekoMachineConfig(data=entry) for entry in results]
 
     @staticmethod
     def lookup_machine_configurations(source_id : str = None) -> 'IndalekoMachineConfig':
         '''Lookup all machine configurations'''
         collections = IndalekoCollections()
         query = 'FOR doc IN @@collection RETURN doc'
-        bind_vars = { '@collection' : Indaleko.Indaleko_MachineConfig_Collection }
+        bind_vars = { '@collection' : Indaleko.Indaleko_MachineConfig }
         if source_id is not None:
             assert Indaleko.validate_uuid_string(source_id), 'Invalid source identifier'
             query = 'FOR doc IN @@collection '
             query += 'FILTER doc.Record["SourceIdentifier"].Identifier == '
             query += '@source RETURN doc'
-            bind_vars = { '@collection' : Indaleko.Indaleko_MachineConfig_Collection, 'source' : source_id }
+            bind_vars = { '@collection' : Indaleko.Indaleko_MachineConfig, 'source' : source_id }
         results = collections.db_config.db.aql.execute(query, bind_vars = bind_vars)
         return [IndalekoMachineConfig(data=entry) for entry in results]
 
     def serialize(self) -> dict:
         '''Serialize the machine configuration'''
-        return json.loads(self.machine_config.model_dump_json(exclude_unset=True))
+        return IndalekoMachineConfigDataModel.MachineConfig.serialize(self.machine_config)
 
     @staticmethod
     def deserialize(data : dict) -> 'IndalekoMachineConfig':
@@ -177,15 +164,15 @@ def register_handler(args : argparse.Namespace) -> None:
         service_version = '1.0.2',
         service_identifier='05567376-0f4f-4d40-97f1-3ac5f764fcf3'
     )
-    ic(args)
+    # ic(args)
 
 def list_handler(args : argparse.Namespace) -> None:
     '''List all machine configurations.'''
     ic('List the services')
-    ic(args)
+    #ic(args)
     machine_configs = IndalekoMachineConfig.lookup_machine_configurations()
     for machine_config in machine_configs:
-        ic(machine_config)
+        #ic(machine_config)
         print(json.dumps(machine_config.serialize(), indent=4))
 
 class TestMachineConfig:
@@ -211,16 +198,18 @@ class TestMachineConfig:
             "Label": "eb7eaeed-6b21-4b6a-a586-dddca6a1d5a4",
             "Value": "2024-08-08T21:26:22.418196+00:00"
         },
-        "Software": {
-            "OS": "Linux",
-            "Version": "5.4.0-104-generic",
-            "Architecture": "x86_64",
-            "Hostname" : "testhost",
-        },
-        "Hardware": {
-            "CPU": "Intel(R) Core(TM) i7-7700HQ CPU @ 2.80GHz",
-            "Version": "06_9E_09",
-            "Cores": 8
+        "Platform" : {
+            "software": {
+                "OS": "Linux",
+                "Version": "5.4.0-104-generic",
+                "Architecture": "x86_64",
+                "Hostname" : "testhost",
+            },
+            "hardware": {
+                "CPU": "Intel(R) Core(TM) i7-7700HQ CPU @ 2.80GHz",
+                "Version": "06_9E_09",
+                "Cores": 8
+            }
         }
     }
 
@@ -241,7 +230,7 @@ class TestMachineConfig:
             ic(existing_machine_config)
             return
         machine_config = IndalekoMachineConfig(
-            **TestMachineConfig.test_machine_config_data)
+            data=TestMachineConfig.test_machine_config_data)
         machine_config.write_config_to_db()
         retrieved_config = IndalekoMachineConfig.\
             lookup_machine_configuration_by_machine_id(TestMachineConfig.\
