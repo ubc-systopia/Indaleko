@@ -37,7 +37,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from Indaleko import Indaleko
-from IndalekoDBConfig import IndalekoDBConfig
+from db.db_config import IndalekoDBConfig
 from activity.collectors.known_semantic_attributes import KnownSemanticAttributes
 from activity.registration import IndalekoActivityDataRegistration
 from activity.recorders.registration_service import IndalekoActivityDataRegistrationService
@@ -45,7 +45,7 @@ from activity.collectors.location.windows_gps_location import WindowsGPSLocation
 from activity.collectors.location.data_models.windows_gps_location_data_model\
         import WindowsGPSLocationDataModel
 from data_models.record import IndalekoRecordDataModel
-from data_models.source_identifer import IndalekoSourceIdentifierDataModel
+from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from data_models.i_uuid import IndalekoUUIDDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 from location_data_collector import BaseLocationDataCollector
@@ -169,10 +169,8 @@ class WindowsGPSLocationCollector(BaseLocationDataCollector):
         )
         # doc = current_data.model_dump_json()
         ic(doc)
-        data = json.loads(doc)
-        data['_key'] = str(uuid.uuid4())
-        doc = json.dumps(data)
-        self.collection.insert(doc)
+        data = doc.build_arangodb_doc()
+        self.collection.insert(data)
         return ic(current_data)
 
 

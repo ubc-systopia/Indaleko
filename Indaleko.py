@@ -185,18 +185,7 @@ class Indaleko:
                 },
             },
         },
-        Indaleko_ActivityContext_Collection : {
-            'schema' : IndalekoActivityDataModel.get_arangodb_schema(),
-            'edge' : False,
-            'indices' : {
-                'identifier' : {
-                    'fields' : ['ActivityContextIdentifier'],
-                    'unique' : True,
-                    'type' : 'persistent'
-                },
-            },
-        },
-       Indaleko_User_Collection : {
+        Indaleko_User_Collection : {
             'schema' : IndalekoUserSchema().get_json_schema(),
             'edge' : False,
             'indices' : {

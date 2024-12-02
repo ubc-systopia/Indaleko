@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import json
+import uuid
 
 from typing import Dict, Any, Type, TypeVar
 
@@ -62,6 +63,18 @@ class IndalekoBaseModel(BaseModel):
     @classmethod
     def get_example(cls : Type[T]) -> T:
         return cls(**cls.get_json_example())
+
+    @classmethod
+    def build_arangodb_doc(cls : Type[T], _key : uuid.UUID = uuid.uuid4()) -> dict:
+        '''
+        Builds a dictionary that can be used to insert the data into ArangoDB.
+        If a key is provided, it will be used, otherwise a random UUID is generated.
+        '''
+        data = json.loads(cls.model_dump_json())
+        assert '_key' not in data, f"Key already exists in data: {data}"
+        data['_key'] = str(_key)
+        return json.dumps(data)
+
 
     @classmethod
     def get_json_schema(cls : Type[T]) -> dict:

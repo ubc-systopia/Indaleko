@@ -191,8 +191,9 @@ class IndalekoActivityContextService(IndalekoSingleton):
             Timestamp=self.timestamp,
             Cursors=[cursor for cursor in self.cursors.values()]
         )
-        self.collection.insert(doc.model_dump_json())
         self.handle = uuid.uuid4()
+        data = doc.build_arangodb_doc(_key=self.handle)
+        self.collection.insert(data)
         self.updated = False
         self.referenced = False
         return True
