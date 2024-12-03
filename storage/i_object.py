@@ -93,7 +93,7 @@ class IndalekoObject:
         if 'timestamp' in kwargs:
            del kwargs['timestamp']
         assert 'Record' not in kwargs, 'Record is still in kwargs - new style constructor.'
-        kwargs['Record'] = IndalekoRecordDataModel.IndalekoRecord.serialize(record)
+        kwargs['Record'] = IndalekoRecordDataModel.serialize(record)
         self.indaleko_object = IndalekoObjectDataModel.deserialize(kwargs)
 
     @staticmethod

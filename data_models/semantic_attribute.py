@@ -58,7 +58,7 @@ class IndalekoSemanticAttributeDataModel(IndalekoBaseModel):
                 title='Identifier',
                 description='The UUID specific to this type of semantic attribute.',
                 example='12345678-1234-5678-1234-567812345678')
-    Data : Any = Field(...,
+    Data : Union[Any, None] = Field(None,
                        title='Data',
                        description='The data associated with this semantic attribute.')
 

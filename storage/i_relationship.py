@@ -65,10 +65,14 @@ class IndalekoRelationship:
     '''
     Schema = IndalekoRelationshipDataModel.get_arangodb_schema()
     indaleko_relationship_uuid_str = 'a57f185b-5f6e-4b66-95f9-4e4f3c3b3105'
+
+    # Maybe these should be externally defined?
     CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR = '3d4b772d-b4b0-4203-a410-ecac5dc6dafa'
     CONTAINED_BY_VOLUME_RELATIONSHIP_UUID_STR = 'f38c45ce-e8d8-4c5a-adc6-fc34f5f8b8e9'
     CONTAINED_BY_MACHINE_RELATIONSHIP_UUID_STR = '1ba5935c-8e82-4dd9-92e7-d4b085958487'
-
+    DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR = 'cde81295-f171-45be-8607-8100f4611430'
+    VOLUME_CONTAINS_RELATIONSHIP_UUID_STR = 'db1a48c0-91d9-4f16-bd65-845433e6cba9'
+    MACHINE_CONTAINS_RELATIONSHIP_UUID_STR = 'f3dde8a2-cff5-41b9-bd00-0f41330895e1'
 
 
     class IndalekoRelationshipObject(BaseModel):
@@ -86,6 +90,7 @@ class IndalekoRelationship:
         assert len(objects) == 2, 'objects must be a tuple of two objects.'
         if source_id is not None:
             assert isinstance(source_id, IndalekoSourceIdentifierDataModel), 'source_id must be an IndalekoSourceIdentifierDataModel.'
+            self.source_identifier = source_id
         else:
             self.source_identifier = IndalekoSourceIdentifierDataModel(
                 Identifier=IndalekoRelationship.indaleko_relationship_uuid_str,
@@ -94,7 +99,6 @@ class IndalekoRelationship:
         )
         assert len(objects) == 2, 'objects must be a tuple of two objects.'
         self.object1 = IndalekoRelationship.IndalekoRelationshipObject(**objects[0])
-        ic(self.object1)
         self.object2 = IndalekoRelationship.IndalekoRelationshipObject(**objects[1])
         self.relationships = relationships
         self.record = IndalekoRecordDataModel(
@@ -115,6 +119,7 @@ class IndalekoRelationship:
         '''Add a relationship to the relationship object.'''
         if self.relationships is None:
             self.relationships = {}
+        assert isinstance(self.relationships, dict), 'relationships must be a dictionary.'
         assert key not in self.relationships, 'relationship already exists.'
         self.relationships[key] = value
         return self
@@ -133,8 +138,6 @@ class IndalekoRelationship:
             return IndalekoUUIDDataModel(Identifier=vertex)
         if isinstance(vertex, str) and validate_uuid_string(vertex):
             return IndalekoUUIDDataModel(Identifier=uuid.UUID(vertex))
-        ic(type(vertex))
-        ic(vertex)
         raise ValueError('vertex must be a UUID or IndalekoUUIDDataModel.')
 
     @staticmethod
@@ -151,7 +154,8 @@ class IndalekoRelationship:
     def serialize(self) -> dict:
         '''Serialize the object to a dictionary.'''
         assert self.relationships is not None and len(self.relationships) > 0, 'Must have at least one relationship for serialization.'
-        reldata = [IndalekoSemanticAttributeDataModel(Identifier=key, Data=value) for key, value in self.relationships.items()]
+        assert isinstance(self.relationships, list), 'relationships must be a dictionary.'
+        reldata = [IndalekoSemanticAttributeDataModel(Identifier=item.Identifier, Data=item.Data) for item in self.relationships]
         relationship_data = IndalekoRelationshipDataModel(
             Record=self.record,
             Objects=[self.object1.object, self.object2.object],

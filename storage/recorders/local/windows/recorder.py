@@ -258,7 +258,7 @@ class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
             if parent not in dirmap:
                 continue
             parent_id = dirmap[parent]
-            dir_edges.append(IndalekoStorageRecorder.build_contains_dir_relationship(
+            dir_edges.append(IndalekoStorageRecorder.build_dir_contains_relationship(
                 parent_id, item.args['ObjectIdentifier'], source_id)
             )
             self.edge_count += 1
@@ -268,7 +268,7 @@ class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
             self.edge_count += 1
             volume = item.args.get('Volume')
             if volume:
-                dir_edges.append(IndalekoStorageRecorder.build_contains_volume_relationship(
+                dir_edges.append(IndalekoStorageRecorder.build_volume_contains_relationship(
                     volume, item.args['ObjectIdentifier'], source_id)
                 )
                 self.edge_count += 1
@@ -278,7 +278,7 @@ class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
                 self.edge_count += 1
             machine_id = item.args.get('machine_id')
             if machine_id:
-                dir_edges.append(IndalekoStorageRecorder.build_contains_machine_relationship(
+                dir_edges.append(IndalekoStorageRecorder.build_machine_contains_relationship(
                     machine_id, item.args['ObjectIdentifier'], source_id)
                 )
                 self.edge_count += 1

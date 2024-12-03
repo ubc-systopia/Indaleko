@@ -227,7 +227,7 @@ class IndalekoStorageRecorder():
             with jsonlines.open(file_name, mode='w') as writer:
                 for entry in data:
                     try:
-                        writer.write(entry.to_dict())
+                        writer.write(entry.serialize())
                         self.output_count += 1
                     except TypeError as err:
                         logging.error('Error writing entry to JSONLines file: %s', err)
