@@ -19,8 +19,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
 import os
-import importlib
-import platform
 import sys
 
 from icecream import ic
@@ -35,11 +33,11 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from storage.collectors.base import BaseStorageCollector
+from storage.collectors.base import IndalekoIndexer
 # pylint: enable=wrong-import-position
 
 __version__ = '0.1.0'
 
 __all__ = [
-    'BaseStorageCollector',
+    'IndalekoIndexer',
 ]
