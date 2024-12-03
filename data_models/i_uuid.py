@@ -42,7 +42,7 @@ class IndalekoUUIDDataModel(IndalekoBaseModel):
     '''
     This class defines the UUID data model for Indaleko.
     '''
-    Identifier : uuid.UUID = Field(...,
+    Identifier : uuid.UUID = Field(uuid.uuid4(),
                                    title='Identifier',
                                    description='The UUID for the record.',
                                     example='12345678-1234-5678-1234-567812345678')

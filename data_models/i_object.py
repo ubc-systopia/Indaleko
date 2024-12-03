@@ -54,7 +54,7 @@ class IndalekoObjectDataModel(IndalekoBaseModel):
                         title='URI',
                         description='The URI for the object.')
 
-    ObjectIdentifier : uuid.UUID = Field(None,
+    ObjectIdentifier : uuid.UUID = Field(uuid.uuid4(),
                                          title='ObjectIdentifier',
                                          description='The UUID representing this object.')
 

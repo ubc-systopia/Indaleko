@@ -21,7 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
-from typing import Dict, Any
+from typing import Dict, Any, Union
 
 from datetime import datetime, timezone
 from pydantic import Field, field_validator, AwareDatetime
@@ -37,6 +37,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # pylint: disable=wrong-import-position
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from data_models.base import IndalekoBaseModel
+from utils.misc.data_management import encode_binary_data
 # pylint: enable=wrong-import-position
 
 class IndalekoRecordDataModel(IndalekoBaseModel):
@@ -46,14 +47,14 @@ class IndalekoRecordDataModel(IndalekoBaseModel):
     SourceIdentifier : IndalekoSourceIdentifierDataModel = Field(...,
                                       title='SourceIdentifier',
                                       description='The source identifier for the record.')
-    Timestamp : AwareDatetime = Field(...,
+    Timestamp : AwareDatetime = Field(datetime.now(timezone.utc),
                                  title='Timestamp',
                                  description='The timestamp of when this record was created.')
-    Attributes : Dict[str, Any] = \
-                    Field(...,
+    Attributes : Union[Dict[str, Any], None] = \
+                    Field({},
                           title='Attributes',
-                          description='The attributes extracted from the source data.')
-    Data : str = Field(...,
+                          description='Attributes extracted from the source data. [Optional]')
+    Data : str = Field(default=encode_binary_data(b''),
                        title='Data',
                        description='The raw (uninterpreted) data from the source.')
 

@@ -22,7 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
-from typing import Any
+from typing import Any, Union
 from pydantic import Field
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -53,7 +53,7 @@ class IndalekoSemanticAttributeDataModel(IndalekoBaseModel):
     this way, we allow Indaleko to index these values without understanding the
     meaning of them.
     '''
-    Identifier : IndalekoUUIDDataModel =\
+    Identifier : Union[str, IndalekoUUIDDataModel] =\
           Field(...,
                 title='Identifier',
                 description='The UUID specific to this type of semantic attribute.',

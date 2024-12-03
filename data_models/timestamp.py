@@ -25,7 +25,7 @@ import uuid
 
 from pydantic import Field, AwareDatetime, field_validator
 from typing import Optional, Dict, Any
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -48,7 +48,7 @@ class IndalekoTimestampDataModel(IndalekoBaseModel):
                               title='Label',
                               description='UUID representing the semantic meaning of this timestamp.',
                               example='12345678-1234-5678-1234-567812345678')
-    Value : AwareDatetime = Field(...,
+    Value : AwareDatetime = Field(datetime.now(timezone.utc),
                              title='Value',
                              description='The timestamp value.',
                              example='2024-01-01T00:00:00Z')

@@ -40,16 +40,17 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 # pylint: disable=wrong-import-position
-from storage.recorders.base import IndalekoStorageRecorder
-from storage.collectors.local.windows.collector import IndalekoWindowsLocalIndexer
+from db import IndalekoDBCollections
 from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 from platforms.unix import UnixFileAttributes
 from platforms.windows_attributes import IndalekoWindows
+from storage import IndalekoObject
+from storage.recorders.base import IndalekoStorageRecorder
+from storage.collectors.local.windows.collector import IndalekoWindowsLocalIndexer
 import utils.misc.directory_management
-#from IndalekoObject import IndalekoObject
+from utils.misc.data_management import encode_binary_data
 #from IndalekoRelationshipContains import IndalekoRelationshipContains
 #from IndalekoRelationshipContained import IndalekoRelationshipContainedBy
-from db import IndalekoObject, IndalekoRelationshipContains, IndalekoRelationshipContainedBy
 # pylint: enable=wrong-import-position
 
 class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
@@ -180,7 +181,7 @@ class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
             })
         kwargs = {
             'source' : self.source,
-            'raw_data' : Indaleko.encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
+            'raw_data' : encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
             'URI' : data['URI'],
             'ObjectIdentifier' : oid,
             'Timestamps' : timestamps,
@@ -260,11 +261,11 @@ class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
                 relationship = \
                     IndalekoRelationshipContains.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR,
                 object1 = {
-                    'collection' : Indaleko.Indaleko_Object_Collection,
+                    'collection' : IndalekoDBCollections.Indaleko_Object_Collection,
                     'object' : item.args['ObjectIdentifier'],
                 },
                 object2 = {
-                    'collection' : Indaleko.Indaleko_Object_Collection,
+                    'collection' : IndalekoDBCollections.Indaleko_Object_Collection,
                     'object' : parent_id,
                 },
                 source = source
@@ -275,11 +276,11 @@ class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
                 relationship = \
                     IndalekoRelationshipContainedBy.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR,
                 object1 = {
-                    'collection' : Indaleko.Indaleko_Object_Collection,
+                    'collection' : IndalekoDBCollections.Indaleko_Object_Collection,
                     'object' : parent_id,
                 },
                 object2 = {
-                    'collection' : Indaleko.Indaleko_Object_Collection,
+                    'collection' : IndalekoDBCollections.Indaleko_Object_Collection,
                     'object' : item.args['ObjectIdentifier'],
                 },
                 source = source
@@ -310,7 +311,7 @@ class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
             print(e)
             self.output_file = temp_file_name
         load_string = self.build_load_string(
-            collection=Indaleko.Indaleko_Object_Collection,
+            collection=IndalekoDBCollections.Indaleko_Object_Collection,
             file=self.output_file
         )
         logging.info('Load string: %s', load_string)
