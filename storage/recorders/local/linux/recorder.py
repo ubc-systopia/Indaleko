@@ -38,7 +38,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 # pylint: disable=wrong-import-position
-from storage.recorders.base import IndalekoIngester
+from storage.recorders.base import IndalekoStorageRecorder
 from storage.collectors.local.linux.collector import IndalekoLinuxLocalIndexer
 from platforms.linux.machine_config import IndalekoLinuxMachineConfig
 from platforms.unix import UnixFileAttributes
@@ -52,7 +52,7 @@ from IndalekoRelationshipContained import IndalekoRelationshipContainedBy
 # pylint: enable=wrong-import-position
 
 
-class IndalekoLinuxLocalIngester(IndalekoIngester):
+class IndalekoLinuxLocalIngester(IndalekoStorageRecorder):
     '''
     This class handles ingestion of metadata gathered from
     the local Linux file system.
@@ -70,7 +70,7 @@ class IndalekoLinuxLocalIngester(IndalekoIngester):
     linux_platform = IndalekoLinuxLocalIndexer.linux_platform
     linux_local_ingester = 'local_fs_ingester'
 
-    def __init__(self: IndalekoIngester, **kwargs: dict) -> None:
+    def __init__(self: IndalekoStorageRecorder, **kwargs: dict) -> None:
         if 'input_file' not in kwargs:
             raise ValueError('input_file must be specified')
         if 'machine_config' not in kwargs:
@@ -367,10 +367,10 @@ def main():
     storage = None
     if 'storage' in metadata:
         storage = metadata['storage']
-    file_prefix = IndalekoIngester.default_file_prefix
+    file_prefix = IndalekoStorageRecorder.default_file_prefix
     if 'file_prefix' in metadata:
         file_prefix = metadata['file_prefix']
-    file_suffix = IndalekoIngester.default_file_suffix
+    file_suffix = IndalekoStorageRecorder.default_file_suffix
     if 'file_suffix' in metadata:
         file_suffix = metadata['file_suffix']
     input_file = os.path.join(args.datadir, args.input)

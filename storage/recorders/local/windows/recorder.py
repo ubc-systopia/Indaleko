@@ -40,7 +40,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 # pylint: disable=wrong-import-position
-from storage.recorders.base import IndalekoIngester
+from storage.recorders.base import IndalekoStorageRecorder
 from storage.collectors.local.windows.collector import IndalekoWindowsLocalIndexer
 from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 from platforms.unix import UnixFileAttributes
@@ -50,7 +50,7 @@ from IndalekoObject import IndalekoObject
 from IndalekoRelationshipContains import IndalekoRelationshipContains
 from IndalekoRelationshipContained import IndalekoRelationshipContainedBy
 # pylint: enable=wrong-import-position
-class IndalekoWindowsLocalIngester(IndalekoIngester):
+class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
     '''
     This class handles ingestion of metadata from the Indaleko Windows
     indexing service.
@@ -445,10 +445,10 @@ def main():
     storage = 'unknown'
     if 'storage' in metadata:
         storage = metadata['storage']
-    file_prefix = IndalekoIngester.default_file_prefix
+    file_prefix = IndalekoStorageRecorder.default_file_prefix
     if 'file_prefix' in metadata:
         file_prefix = metadata['file_prefix']
-    file_suffix = IndalekoIngester.default_file_suffix
+    file_suffix = IndalekoStorageRecorder.default_file_suffix
     if 'file_suffix' in metadata:
         file_suffix = metadata['file_suffix']
     input_file = os.path.join(args.datadir, args.input)
