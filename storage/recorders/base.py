@@ -51,6 +51,8 @@ import os
 import uuid
 import sys
 
+from typing import Union
+
 from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -66,6 +68,8 @@ from db.db_collections import IndalekoDBCollections
 from db.service_manager import IndalekoServiceManager
 from utils.misc.directory_management import indaleko_default_data_dir, indaleko_default_config_dir, indaleko_default_log_dir
 from utils.misc.file_name_management import generate_file_name, extract_keys_from_file_name
+from data_models import IndalekoSemanticAttributeDataModel
+from storage.i_relationship import IndalekoRelationship
 # pylint: enable=wrong-import-position
 class IndalekoStorageRecorder():
     '''
@@ -279,6 +283,92 @@ class IndalekoStorageRecorder():
             raise ValueError(f'Input file {self.input_file} is an unknown type')
         if not isinstance(self.indexer_data, list):
             raise ValueError('indexer_data is not a list')
+
+    @staticmethod
+    def build_storage_relationship(
+        id1 : Union[str, uuid.UUID],
+        id2 : Union[str, uuid.UUID],
+        relationship : Union[str, uuid.UUID],
+        source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
+        '''This builds a storage relationship object between two objects.'''
+        return IndalekoRelationship(
+            objects = (
+                {
+                    'collection' : IndalekoDBCollections.Indaleko_Object_Collection,
+                    'object' : id1,
+                },
+                {
+                    'collection' : IndalekoDBCollections.Indaleko_Object_Collection,
+                    'object' : id2,
+                }
+            ),
+            relationships = [
+                IndalekoSemanticAttributeDataModel(
+                    Identifier=relationship
+                )
+            ],
+            source_id=source_id
+        )
+
+    @staticmethod
+    def build_dir_contains_relationship(
+        parent : Union[str, uuid.UUID], # parent
+        child : Union[str, uuid.UUID], # child
+        source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
+        '''This builds a contains relationship object for a directory and a child.'''
+        return IndalekoStorageRecorder.build_storage_relationship(
+            parent, child, IndalekoRelationship.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR, source_id
+        )
+
+    @staticmethod
+    def build_contained_by_dir_relationship(
+        child : Union[str, uuid.UUID], # child
+        parent : Union[str, uuid.UUID], # parent
+        source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
+        '''This builds a contains relationship object for a directory and a child.'''
+        return IndalekoStorageRecorder.build_storage_relationship(
+            child, parent, IndalekoRelationship.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR, source_id
+        )
+
+    @staticmethod
+    def build_volume_contains_relationship(
+        volume : Union[str, uuid.UUID], # volume
+        child : Union[str, uuid.UUID], # child
+        source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
+        '''This builds a contains relationship object for a volume and a child.'''
+        return IndalekoStorageRecorder.build_storage_relationship(
+            volume, child, IndalekoRelationship.VOLUME_CONTAINS_RELATIONSHIP_UUID_STR, source_id
+        )
+
+    @staticmethod
+    def build_contained_by_volume_relationship(
+        child : Union[str, uuid.UUID], # child
+        volume : Union[str, uuid.UUID], # volume
+        source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
+        '''This builds a contains relationship object for a volume and a child.'''
+        return IndalekoStorageRecorder.build_storage_relationship(
+            child, volume, IndalekoRelationship.CONTAINED_BY_VOLUME_RELATIONSHIP_UUID_STR, source_id
+        )
+
+    @staticmethod
+    def build_machine_contains_relationship(
+        machine : Union[str, uuid.UUID], # machine
+        child : Union[str, uuid.UUID], # child
+        source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
+        '''This builds a contains relationship object for a machine and a child.'''
+        return IndalekoStorageRecorder.build_storage_relationship(
+            machine, child, IndalekoRelationship.MACHINE_CONTAINS_RELATIONSHIP_UUID_STR, source_id
+        )
+
+    @staticmethod
+    def build_contained_by_machine_relationship(
+        child : Union[str, uuid.UUID], # child
+        machine : Union[str, uuid.UUID], # machine
+        source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
+        '''This builds a contains relationship object for a machine and a child.'''
+        return IndalekoStorageRecorder.build_storage_relationship(
+            child, machine, IndalekoRelationship.CONTAINED_BY_MACHINE_RELATIONSHIP_UUID_STR, source_id
+        )
 
 
 def main():

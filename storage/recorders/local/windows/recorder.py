@@ -41,6 +41,8 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from db import IndalekoDBCollections
+from data_models import IndalekoSemanticAttributeDataModel, \
+    IndalekoSourceIdentifierDataModel
 from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 from platforms.unix import UnixFileAttributes
 from platforms.windows_attributes import IndalekoWindows
@@ -49,8 +51,6 @@ from storage.recorders.base import IndalekoStorageRecorder
 from storage.collectors.local.windows.collector import IndalekoWindowsLocalIndexer
 import utils.misc.directory_management
 from utils.misc.data_management import encode_binary_data
-#from IndalekoRelationshipContains import IndalekoRelationshipContains
-#from IndalekoRelationshipContained import IndalekoRelationshipContainedBy
 # pylint: enable=wrong-import-position
 
 class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
@@ -252,42 +252,41 @@ class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
             'Identifier' : self.windows_local_ingester_uuid,
             'Version' : '1.0',
         }
+        source_id = IndalekoSourceIdentifierDataModel(**source)
         for item in dir_data + file_data:
             parent = item['Path']
             if parent not in dirmap:
                 continue
             parent_id = dirmap[parent]
-            dir_edge = IndalekoRelationshipContains(
-                relationship = \
-                    IndalekoRelationshipContains.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR,
-                object1 = {
-                    'collection' : IndalekoDBCollections.Indaleko_Object_Collection,
-                    'object' : item.args['ObjectIdentifier'],
-                },
-                object2 = {
-                    'collection' : IndalekoDBCollections.Indaleko_Object_Collection,
-                    'object' : parent_id,
-                },
-                source = source
+            dir_edges.append(IndalekoStorageRecorder.build_contains_dir_relationship(
+                parent_id, item.args['ObjectIdentifier'], source_id)
             )
-            dir_edges.append(dir_edge)
             self.edge_count += 1
-            dir_edge = IndalekoRelationshipContainedBy(
-                relationship = \
-                    IndalekoRelationshipContainedBy.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR,
-                object1 = {
-                    'collection' : IndalekoDBCollections.Indaleko_Object_Collection,
-                    'object' : parent_id,
-                },
-                object2 = {
-                    'collection' : IndalekoDBCollections.Indaleko_Object_Collection,
-                    'object' : item.args['ObjectIdentifier'],
-                },
-                source = source
+            dir_edges.append(IndalekoStorageRecorder.build_contained_by_dir_relationship(
+                item.args['ObjectIdentifier'], parent_id, source_id)
             )
-            dir_edges.append(dir_edge)
             self.edge_count += 1
-        # Save the data to the ingester output file
+            volume = item.args.get('Volume')
+            if volume:
+                dir_edges.append(IndalekoStorageRecorder.build_contains_volume_relationship(
+                    volume, item.args['ObjectIdentifier'], source_id)
+                )
+                self.edge_count += 1
+                dir_edges.append(IndalekoStorageRecorder.build_contained_by_volume_relationship(
+                    item.args['ObjectIdentifier'], volume, source_id)
+                )
+                self.edge_count += 1
+            machine_id = item.args.get('machine_id')
+            if machine_id:
+                dir_edges.append(IndalekoStorageRecorder.build_contains_machine_relationship(
+                    machine_id, item.args['ObjectIdentifier'], source_id)
+                )
+                self.edge_count += 1
+                dir_edges.append(IndalekoStorageRecorder.build_contained_by_machine_relationship(
+                    item.args['ObjectIdentifier'], machine_id, source_id)
+                )
+                self.edge_count += 1
+    # Save the data to the ingester output file
         temp_file_name = ""
         with tempfile.NamedTemporaryFile(dir=self.data_dir, delete=False) as tf:
             temp_file_name = tf.name
@@ -324,7 +323,7 @@ class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
             platform=self.platform,
             service='ingest',
             storage=self.storage_description,
-            collection=Indaleko.Indaleko_Relationship_Collection,
+            collection=IndalekoDBCollections.Indaleko_Relationship_Collection,
             timestamp=self.timestamp,
             output_dir=self.data_dir,
         )
@@ -350,7 +349,7 @@ class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
             print(f'Target file name length is {len(edge_file[len(self.data_dir)+1:])}')
             edge_file=temp_file_name
         load_string = self.build_load_string(
-            collection=Indaleko.Indaleko_Relationship_Collection,
+            collection=IndalekoDBCollections.Indaleko_Relationship_Collection,
             file=edge_file
         )
         logging.info('Load string: %s', load_string)

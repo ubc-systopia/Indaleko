@@ -65,6 +65,10 @@ class IndalekoRelationship:
     '''
     Schema = IndalekoRelationshipDataModel.get_arangodb_schema()
     indaleko_relationship_uuid_str = 'a57f185b-5f6e-4b66-95f9-4e4f3c3b3105'
+    CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR = '3d4b772d-b4b0-4203-a410-ecac5dc6dafa'
+    CONTAINED_BY_VOLUME_RELATIONSHIP_UUID_STR = 'f38c45ce-e8d8-4c5a-adc6-fc34f5f8b8e9'
+    CONTAINED_BY_MACHINE_RELATIONSHIP_UUID_STR = '1ba5935c-8e82-4dd9-92e7-d4b085958487'
+
 
 
     class IndalekoRelationshipObject(BaseModel):
