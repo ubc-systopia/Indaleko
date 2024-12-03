@@ -46,10 +46,12 @@ from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 from platforms.unix import UnixFileAttributes
 from platforms.windows_attributes import IndalekoWindows
 import utils.misc.directory_management
-from IndalekoObject import IndalekoObject
-from IndalekoRelationshipContains import IndalekoRelationshipContains
-from IndalekoRelationshipContained import IndalekoRelationshipContainedBy
+#from IndalekoObject import IndalekoObject
+#from IndalekoRelationshipContains import IndalekoRelationshipContains
+#from IndalekoRelationshipContained import IndalekoRelationshipContainedBy
+from db import IndalekoObject, IndalekoRelationshipContains, IndalekoRelationshipContainedBy
 # pylint: enable=wrong-import-position
+
 class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
     '''
     This class handles ingestion of metadata from the Indaleko Windows

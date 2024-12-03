@@ -36,19 +36,9 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from storage.collectors.base import BaseStorageCollector
+from storage.i_object import IndalekoObject
 # IndalekoIndexer = BaseStorageCollector # Legacy name support (for now)
 
-'''
-match platform.system():
-    case 'Linux':
-        raise NotImplementedError('Linux is not supported yet')
-    case 'Darwin':
-        raise NotImplementedError('Linux is not supported yet')
-    case 'Windows':
-        raise NotImplementedError('Windows is not supported yet')
-    case _:
-        raise NotImplementedError('Unsupported platform')
-'''
 # pylint: enable=wrong-import-position
 
 __version__ = '0.1.0'
@@ -61,7 +51,8 @@ __version__ = '0.1.0'
 # globals().update(discovered_plugins)
 
 __all__ = [
-    'IndalekoIndexer',
+    'BaseStorageCollector',
+    'IndalekoObject',
 ]
 
 
