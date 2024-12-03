@@ -17,23 +17,41 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
-import apischema
+import os
+import sys
 
+from icecream import ic
+
+
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+# pylint: disable=wrong-import-position
 from IndalekoRecordSchema import IndalekoRecordSchema
-from IndalekoMachineConfigDataModel import IndalekoMachineConfigDataModel
+from platforms.machine_config import IndalekoMachineConfigDataModel
+# pylint: enable=wrong-import-position
+
+
+
 
 class IndalekoMachineConfigSchema(IndalekoRecordSchema):
     '''Define the schema for use with the MachineConfig collection.'''
 
     def __init__(self):
+
+
         '''Initialize the schema for the MachineConfig collection.'''
         if not hasattr(self, 'data_mode'):
-            self.data_model = IndalekoMachineConfigDataModel()
+            self.data_model = IndalekoMachineConfigDataModel(
+                **IndalekoMachineConfigDataModel.Config.json_schema_extra['example']
+            )
         if not hasattr(self, 'base_type'):
-            self.base_type = IndalekoMachineConfigDataModel.MachineConfig
-        machine_config_rules = apischema.json_schema.deserialization_schema(
-            IndalekoMachineConfigDataModel.MachineConfig,
-            additional_properties=True)
+            self.base_type = IndalekoMachineConfigDataModel
+        machine_config_rules = self.data_model.model_dump_json()
         if not hasattr(self, 'rules'):
             self.rules = machine_config_rules
         else:
@@ -41,14 +59,6 @@ class IndalekoMachineConfigSchema(IndalekoRecordSchema):
         schema_id = 'https://activitycontext.work/schema/machineconfig.json'
         schema_title = 'Machine Configuration Schema'
         schema_description = 'Describes the machine where the data was indexed.'
-        super().__init__(
-            schema_id = schema_id,
-            schema_title = schema_title,
-            schema_description = schema_description,
-            data_model = self.data_model,
-            base_type = self.base_type,
-            schema_rules = machine_config_rules
-        )
 
     @staticmethod
     def get_old_schema():
@@ -124,10 +134,19 @@ class IndalekoMachineConfigSchema(IndalekoRecordSchema):
         machine_config_schema['rule']['required'].append('Record')
         return machine_config_schema
 
+    def get_json_schema(self):
+        '''Return the JSON schema for the MachineConfig collection.'''
+        return IndalekoMachineConfigDataModel.get_json_schema()
+
+    def get_arangodb_schema(self):
+        '''Return the ArangoDB schema for the MachineConfig collection.'''
+        return IndalekoMachineConfigDataModel.get_arangodb_schema()
+
 def main():
     """Test the IndalekoMachineConfigSchema class."""
-    machine_config_schema = IndalekoMachineConfigSchema()
-    machine_config_schema.schema_detail()
+    machine_config_schema = IndalekoMachineConfigDataModel.get_json_schema()
+    ic(machine_config_schema)
+    ic(IndalekoMachineConfigSchema().get_json_schema())
 
 if __name__ == "__main__":
     main()
