@@ -70,6 +70,7 @@ class IndalekoBaseModel(BaseModel):
         Builds a dictionary that can be used to insert the data into ArangoDB.
         If a key is provided, it will be used, otherwise a random UUID is generated.
         '''
+        ic(type(cls))
         data = json.loads(cls.model_dump_json())
         assert '_key' not in data, f"Key already exists in data: {data}"
         data['_key'] = str(_key)

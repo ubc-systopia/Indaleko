@@ -33,11 +33,11 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from storage.collectors.base import IndalekoIndexer
+from storage.collectors.base import BaseStorageCollector
 # pylint: enable=wrong-import-position
 
 __version__ = '0.1.0'
 
 __all__ = [
-    'IndalekoIndexer',
+    'BaseStorageCollector',
 ]

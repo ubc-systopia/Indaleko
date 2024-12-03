@@ -51,14 +51,16 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # pylint: disable=wrong-import-position
 from db.db_config import IndalekoDBConfig
 from db.collection import IndalekoCollection
-from data_models import IndalekoServiceDataModel
+from data_models import IndalekoServiceDataModel, IndalekoRecordDataModel, IndalekoSourceIdentifierDataModel
 # from Indaleko import Indaleko
 # from IndalekoServiceSchema import IndalekoServiceSchema
 # from IndalekoService import IndalekoService
 # from IndalekoRecordDataModel import IndalekoRecordDataModel
 # from IndalekoDataModel import IndalekoDataModel
 from db import IndalekoDBCollections
+from utils.data_validation import validate_uuid_string
 from utils.i_logging import IndalekoLogging
+from utils.misc.data_management import encode_binary_data
 from utils.misc.directory_management import indaleko_default_log_dir
 from utils.misc.file_name_management import generate_file_name
 from utils.misc.service import IndalekoService
@@ -154,7 +156,7 @@ class IndalekoServiceManager(IndalekoSingleton):
         """
         This method is used to lookup a service by name.
         """
-        if not Indaleko.validate_uuid_string(service_identifier):
+        if not validate_uuid_string(service_identifier):
             raise ValueError(f'{service_identifier} is not a valid UUID.')
         entries = self.service_collection.find_entries(Identifier =  service_identifier)
         assert len(entries) < 2, \
@@ -199,15 +201,15 @@ class IndalekoServiceManager(IndalekoSingleton):
                 service_id = str(uuid.uuid4())
             ic('Creating new service:', service_id)
             new_service = IndalekoService(
-                record = IndalekoRecordDataModel.IndalekoRecord(
-                    SourceIdentifier = IndalekoDataModel.SourceIdentifier(
+                record = IndalekoRecordDataModel(
+                    SourceIdentifier = IndalekoSourceIdentifierDataModel(
                         Identifier = IndalekoServiceManager.service_manager_uuid_str,
                         Version = IndalekoServiceManager.service_manager_version,
                         Description = 'Indaleko Service Manager'
                     ),
                     Timestamp = datetime.datetime.now(datetime.UTC),
                     Attributes = {},
-                    Data = Indaleko.encode_binary_data(b'{}')
+                    Data = encode_binary_data(b'{}')
                 ),
                 service_name=service_name,
                 service_description=service_description,

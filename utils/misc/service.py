@@ -92,7 +92,7 @@ class IndalekoService:
         assert self.service_identifier is not None, 'Identifier is required for IndalekoService'
 
         if type(self.record) is dict:
-            self.record = IndalekoRecordDataModel.deserialize(**self.record)
+            self.record = IndalekoRecordDataModel.deserialize(self.record)
         self.service_object = IndalekoServiceDataModel(
             Record = self.record,
             Identifier = self.service_identifier,
@@ -109,9 +109,10 @@ class IndalekoService:
 
     def serialize(self) -> dict:
         '''Serialize the object to a dictionary.'''
-        serialized_data = IndalekoServiceDataModel.IndalekoService.serialize(self.service_object)
-        serialized_data['_key'] = self.service_identifier
-        return serialized_data
+        data = self.service_object.model_dump_json()
+        doc = json.loads(data)
+        doc['_key'] = self.service_identifier
+        return doc
 
     def get_service_data(self) -> dict:
         """Return the data for this service."""

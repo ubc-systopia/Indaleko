@@ -35,7 +35,8 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from storage.collectors.base import IndalekoIndexer
+from storage.collectors.base import BaseStorageCollector
+# IndalekoIndexer = BaseStorageCollector # Legacy name support (for now)
 
 '''
 match platform.system():

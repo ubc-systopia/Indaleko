@@ -42,14 +42,13 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 # pylint: disable=wrong-import-position
-from Indaleko import Indaleko
-from data_models.record import IndalekoRecordDataModel
-from data_models.source_identifer import IndalekoSourceIdentifierDataModel
-from data_models.timestamp import IndalekoTimestampDataModel
+from data_models import IndalekoRecordDataModel, IndalekoSourceIdentifierDataModel, IndalekoTimestampDataModel
 from platforms.data_models.machine_platform import MachinePlatform
 from platforms.machine_config import IndalekoMachineConfig
 from platforms.data_models.hardware import Hardware
 from platforms.data_models.software import Software
+from utils.misc.data_management import encode_binary_data
+from utils.data_validation import validate_uuid_string
 #pylint: enable=wrong-import-position
 
 class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
@@ -82,6 +81,8 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             **IndalekoWindowsMachineConfig.windows_machine_config_service
         )
         self.db = kwargs.get('db', None)
+        if 'machine_id' not in kwargs:
+            kwargs['machine_id'] = kwargs['MachineUUID']
         super().__init__(**kwargs)
         self.volume_data = {}
 
@@ -145,7 +146,7 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
                 Description = IndalekoWindowsMachineConfig.windows_machine_config_service['service_description']
             ),
             Timestamp = timestamp,
-            Data = Indaleko.encode_binary_data(config_data),
+            Data = encode_binary_data(config_data),
             Attributes = config_data
         )
         captured = IndalekoTimestampDataModel(
@@ -226,7 +227,7 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
                      captured: dict) -> None:
             assert 'GUID' not in drive_data, 'GUID should not be in drive_data'
             assert 'UniqueId' in drive_data, 'UniqueId must be in drive_data'
-            assert Indaleko.validate_uuid_string(machine_id), 'machine_id must be a valid UUID'
+            assert validate_uuid_string(machine_id), 'machine_id must be a valid UUID'
             self.machine_id = machine_id
             self.attributes = drive_data.copy()
             self.volume_guid = str(uuid.uuid4())
@@ -234,6 +235,9 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
                 self.volume_guid = self.__find_volume_guid__(drive_data['UniqueId'])
             self.attributes['GUID'] = self.volume_guid
             ic(self.attributes)
+            timestamp = captured['Value']
+            if isinstance(timestamp, str):
+                timestamp = datetime.datetime.fromisoformat(timestamp)
             self.machine_config = IndalekoWindowsMachineConfig(
                 machine_id=machine_id,
                 Hardware=hardware,
@@ -245,8 +249,8 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
                         Version=self.WindowsDriveInfo_Version,
                         Description=self.WindowsDriveInfo_Description
                     ),
-                    Timestamp=datetime.datetime.fromisoformat(captured['Value']),
-                    Data=Indaleko.encode_binary_data(drive_data),
+                    Timestamp=timestamp,
+                    Data=encode_binary_data(drive_data),
                     Attributes=drive_data
                 ),
             )
@@ -369,7 +373,7 @@ def main():
     if args.delete:
         assert args.uuid is not None, \
             'UUID must be specified when deleting a machine configuration.'
-        assert Indaleko.validate_uuid_string(args.uuid),\
+        assert validate_uuid_string(args.uuid),\
             f'UUID {args.uuid} is not a valid UUID.'
         print(f'Deleting machine configuration with UUID {args.uuid}')
         IndalekoWindowsMachineConfig.delete_config_in_db(args.uuid)

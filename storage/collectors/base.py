@@ -37,8 +37,10 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from data_models import IndalekoServiceDataModel
-from utils.misc.file_name_management import indaleko_file_name_prefix
+# from data_models import IndalekoServiceDataModel
+from db import IndalekoServiceManager
+from utils.misc.directory_management import indaleko_default_log_dir, indaleko_default_data_dir, indaleko_default_config_dir
+from utils.misc.file_name_management import indaleko_file_name_prefix, generate_file_name, extract_keys_from_file_name
 # pylint: enable=wrong-import-position
 
 
@@ -89,11 +91,11 @@ class BaseStorageCollector:
         # ic(self.offline)
         self.file_prefix = kwargs.get('file_prefix', BaseStorageCollector.default_file_prefix).replace('-', '_')
         self.file_suffix = kwargs.get('file_suffix', BaseStorageCollector.default_file_suffix).replace('-', '_')
-        self.data_dir = kwargs.get('data_dir', Indaleko.default_data_dir)
+        self.data_dir = kwargs.get('data_dir', indaleko_default_data_dir)
         assert os.path.isdir(self.data_dir), f'{self.data_dir} must be an existing directory'
-        self.config_dir = kwargs.get('config_dir', Indaleko.default_config_dir)
+        self.config_dir = kwargs.get('config_dir', indaleko_default_config_dir)
         assert os.path.isdir(self.data_dir), f'{self.data_dir} must be an existing directory'
-        self.log_dir = kwargs.get('log_dir', Indaleko.default_log_dir)
+        self.log_dir = kwargs.get('log_dir', indaleko_default_log_dir)
         assert os.path.isdir(self.data_dir), f'{self.data_dir} must be an existing directory'
         self.timestamp = kwargs.get('timestamp', datetime.datetime.now(datetime.timezone.utc).isoformat())
         assert isinstance(self.timestamp, str), 'timestamp must be a string'
@@ -190,7 +192,7 @@ class BaseStorageCollector:
         timestamp = kwargs.get('timestamp',
                                datetime.datetime.now(datetime.timezone.utc).isoformat())
         assert isinstance(timestamp, str), 'timestamp must be a string'
-        target_dir = Indaleko.default_data_dir
+        target_dir = indaleko_default_data_dir
         if 'target_dir' in kwargs:
             target_dir = kwargs['target_dir']
         suffix = kwargs.get('suffix', BaseStorageCollector.default_file_suffix)
@@ -203,7 +205,7 @@ class BaseStorageCollector:
         if storage_description is not None:
             kwargs['storage'] = storage_description
         kwargs['suffix'] = suffix
-        name = Indaleko.generate_file_name(**kwargs)
+        name = generate_file_name(**kwargs)
         return os.path.join(target_dir,name)
 
     @staticmethod
@@ -212,7 +214,7 @@ class BaseStorageCollector:
         This script extracts metadata from an indexer file name, based upon
         the format used by generate_indexer_file_name.
         '''
-        data = Indaleko.extract_keys_from_file_name(file_name)
+        data = extract_keys_from_file_name(file_name)
         if data is None:
             raise ValueError("Filename format not recognized")
         if 'machine' in data:
@@ -323,7 +325,10 @@ class BaseStorageCollector:
 def main():
     """Test code for this module."""
     indexer = BaseStorageCollector()
-    output_file = indexer.generate_indexer_file_name()
+    output_file = indexer.generate_indexer_file_name(
+        platform = 'unknown',
+        indexer_name = 'test_indexer',
+    )
     with open(output_file, 'wt', encoding='utf-8-sig') as output:
         output.write('Hello, world!\n')
         print(f'Wrote {output_file}')

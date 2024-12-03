@@ -73,12 +73,12 @@ from activity.data_model.activity \
     import IndalekoActivityDataModel
 from platforms.data_models.machine_platform import MachinePlatform
 
-from IndalekoObjectSchema import IndalekoObjectSchema
-from IndalekoServiceSchema import IndalekoServiceSchema
-from IndalekoRelationshipSchema import IndalekoRelationshipSchema
+# from IndalekoObjectSchema import IndalekoObjectSchema
+# from IndalekoServiceSchema import IndalekoServiceSchema
+# from IndalekoRelationshipSchema import IndalekoRelationshipSchema
 # from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
-from IndalekoUserSchema import IndalekoUserSchema
-from IndalekoUserRelationshipSchema import IndalekoUserRelationshipSchema
+# from IndalekoUserSchema import IndalekoUserSchema
+# from IndalekoUserRelationshipSchema import IndalekoUserRelationshipSchema
 from utils.misc.directory_management import \
     indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
 #from utils.misc.file_name_management import indaleko_file_name_prefix
@@ -88,8 +88,8 @@ import utils.misc.file_name_management
 import utils.misc.directory_management
 import utils.misc.timestamp_management
 import utils.misc.data_management
-import db.db_config
-import db.db_collections
+from db.db_config import IndalekoDBConfig
+from db.db_collections import IndalekoDBCollections
 # pylint: enable=wrong-import-position
 
 class Indaleko:
@@ -99,16 +99,16 @@ class Indaleko:
     default_log_dir = indaleko_default_log_dir
 
 
-    default_db_timeout=db.db_config.default_db_timeout
+    default_db_timeout=IndalekoDBConfig.default_db_timeout
 
-    Indaleko_Object_Collection = db.db_collections.IndalekoDBCollections.Indaleko_Object_Collection
-    Indaleko_Relationship_Collection = db.db_collections.IndalekoDBCollections.Indaleko_Relationship_Collection
-    Indaleko_Service_Collection = db.db_collections.IndalekoDBCollections.Indaleko_Service_Collection
-    Indaleko_MachineConfig_Collection = db.db_collections.IndalekoDBCollections.Indaleko_MachineConfig_Collection
-    Indaleko_ActivityDataProvider_Collection = db.db_collections.IndalekoDBCollections.Indaleko_ActivityDataProvider_Collection
-    Indaleko_ActivityContext_Collection = db.db_collections.IndalekoDBCollections.Indaleko_ActivityContext_Collection
-    Indaleko_User_Collection = db.db_collections.IndalekoDBCollections.Indaleko_User_Collection
-    Indaleko_User_Relationship_Collection = db.db_collections.IndalekoDBCollections.Indaleko_User_Relationship_Collection
+    Indaleko_Object_Collection = IndalekoDBCollections.Indaleko_Object_Collection
+    Indaleko_Relationship_Collection = IndalekoDBCollections.Indaleko_Relationship_Collection
+    Indaleko_Service_Collection = IndalekoDBCollections.Indaleko_Service_Collection
+    Indaleko_MachineConfig_Collection = IndalekoDBCollections.Indaleko_MachineConfig_Collection
+    Indaleko_ActivityDataProvider_Collection = IndalekoDBCollections.Indaleko_ActivityDataProvider_Collection
+    Indaleko_ActivityContext_Collection = IndalekoDBCollections.Indaleko_ActivityContext_Collection
+    Indaleko_User_Collection = IndalekoDBCollections.Indaleko_User_Collection
+    Indaleko_User_Relationship_Collection = IndalekoDBCollections.Indaleko_User_Relationship_Collection
 
     Indaleko_Prefix = utils.misc.file_name_management.indaleko_file_name_prefix
 

@@ -20,6 +20,7 @@ from db.collection_index import IndalekoCollectionIndex
 from db.i_collections import IndalekoCollections
 from db.db_config import IndalekoDBConfig
 from db.db_collections import IndalekoDBCollections
+from db.service_manager import IndalekoServiceManager
 # pylint: enable=wrong-import-position
 
 __version__ = '0.1.0'
@@ -30,4 +31,5 @@ __all__ = [
     'IndalekoCollections',
     'IndalekoDBConfig',
     'IndalekoDBCollections',
+    'IndalekoServiceManager',
 ]

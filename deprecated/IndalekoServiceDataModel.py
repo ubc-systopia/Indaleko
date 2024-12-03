@@ -84,6 +84,7 @@ class IndalekoServiceDataModel:
                                        exclude_none=True)
             return candidate
 
+
     @staticmethod
     def get_service(service_identifier : UUID) -> 'IndalekoServiceDataModel.IndalekoService':
         '''Return an IndalekoService object.'''
