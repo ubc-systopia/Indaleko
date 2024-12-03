@@ -38,7 +38,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from IndalekoSingleton import IndalekoSingleton
+from utils.singleton import IndalekoSingleton
 from activity.collectors.known_semantic_attributes import KnownSemanticAttributes
 # pylint: enable=wrong-import-position
 
