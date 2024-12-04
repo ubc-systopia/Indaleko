@@ -38,37 +38,37 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 # pylint: disable=wrong-import-position
-from storage.recorders.base import IndalekoStorageRecorder
-from storage.collectors.local.linux.collector import IndalekoLinuxLocalIndexer
+from data_models import IndalekoSourceIdentifierDataModel
+from db import IndalekoDBCollections
 from platforms.linux.machine_config import IndalekoLinuxMachineConfig
 from platforms.unix import UnixFileAttributes
+from storage import IndalekoObject, IndalekoRelationship
+from storage.recorders.base import IndalekoStorageRecorder
+from storage.collectors.local.linux.collector import IndalekoLinuxLocalIndexer
 import utils.misc.directory_management
 import utils.misc.file_name_management
 import utils.misc.data_management
 from utils.i_logging import IndalekoLogging
-from IndalekoObject import IndalekoObject
-from IndalekoRelationshipContains import IndalekoRelationshipContains
-from IndalekoRelationshipContained import IndalekoRelationshipContainedBy
 # pylint: enable=wrong-import-position
 
 
-class IndalekoLinuxLocalIngester(IndalekoStorageRecorder):
+class IndalekoLinuxLocalRecorder(IndalekoStorageRecorder):
     '''
     This class handles ingestion of metadata gathered from
     the local Linux file system.
     '''
 
-    linux_local_ingester_uuid = '14ab60a0-3a5a-456f-8400-07c47a274f4b'
-    linux_local_ingester_service = {
-        'service_name' : 'Linux Local Ingester',
-        'service_description' : 'This service ingests captured index info from the local filesystems of a Linux machine.',
+    linux_local_recorder_uuid = '14ab60a0-3a5a-456f-8400-07c47a274f4b'
+    linux_local_recorder_service = {
+        'service_name' : 'Linux Local Recorder',
+        'service_description' : 'This service records captured index info from the local filesystems of a Linux machine.',
         'service_version' : '1.0',
         'service_type' : 'Ingester',
-        'service_identifier' : linux_local_ingester_uuid,
+        'service_identifier' : linux_local_recorder_uuid,
     }
 
     linux_platform = IndalekoLinuxLocalIndexer.linux_platform
-    linux_local_ingester = 'local_fs_ingester'
+    linux_local_recorder = 'local_fs_recorder'
 
     def __init__(self: IndalekoStorageRecorder, **kwargs: dict) -> None:
         if 'input_file' not in kwargs:
@@ -87,12 +87,12 @@ class IndalekoLinuxLocalIngester(IndalekoStorageRecorder):
         if 'timestamp' not in kwargs:
             kwargs['timestamp'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
         if 'platform' not in kwargs:
-            kwargs['platform'] = IndalekoLinuxLocalIngester.linux_platform
+            kwargs['platform'] = IndalekoLinuxLocalRecorder.linux_platform
         if 'ingester' not in kwargs:
-            kwargs['ingester'] = IndalekoLinuxLocalIngester.linux_local_ingester
+            kwargs['ingester'] = IndalekoLinuxLocalRecorder.linux_local_recorder
         if 'input_file' not in kwargs:
             kwargs['input_file'] = None
-        for key, value in self.linux_local_ingester_service.items():
+        for key, value in self.linux_local_recorder_service.items():
             if key not in kwargs:
                 kwargs[key] = value
         super().__init__(**kwargs)
@@ -103,7 +103,7 @@ class IndalekoLinuxLocalIngester(IndalekoStorageRecorder):
             self.output_file = kwargs['output_file']
         self.indexer_data = []
         self.source = {
-            'Identifier' : self.linux_local_ingester_uuid,
+            'Identifier' : self.linux_local_recorder_uuid,
             'Version' : '1.0'
         }
 
@@ -117,7 +117,7 @@ class IndalekoLinuxLocalIngester(IndalekoStorageRecorder):
                 if IndalekoLinuxLocalIndexer.linux_platform in x and
                 IndalekoLinuxLocalIndexer.linux_local_indexer_name in x]
 
-    def load_indexer_data_from_file(self : 'IndalekoLinuxLocalIngester') -> None:
+    def load_indexer_data_from_file(self : 'IndalekoLinuxLocalRecorder') -> None:
         '''This function loads the indexer data from the file.'''
         if self.input_file is None:
             raise ValueError('input_file must be specified')
@@ -212,7 +212,7 @@ class IndalekoLinuxLocalIngester(IndalekoStorageRecorder):
                 logging.error('Data: %s', item)
                 self.error_count += 1
                 continue
-            if 'S_IFDIR' in obj.args['UnixFileAttributes']:
+            if 'S_IFDIR' in obj.args['PosixFileAttributes']:
                 if 'Path' not in obj:
                     logging.warning('Directory object does not have a path: %s', obj.to_json())
                     self.error_count += 1
@@ -231,44 +231,43 @@ class IndalekoLinuxLocalIngester(IndalekoStorageRecorder):
         # now, let's build a list of the edges, using our map.
         dir_edges = []
         source = {
-            'Identifier' : self.linux_local_ingester_uuid,
+            'Identifier' : self.linux_local_recorder_uuid,
             'Version' : '1.0',
         }
+        source_id = IndalekoSourceIdentifierDataModel(**source)
         for item in dir_data + file_data:
             parent = item['Path']
             if parent not in dirmap:
                 continue
             parent_id = dirmap[parent]
-            dir_edge = IndalekoRelationshipContains(
-                relationship = \
-                    IndalekoRelationshipContains.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR,
-                object1 = {
-                    'collection' : Indaleko.Indaleko_Object_Collection,
-                    'object' : parent_id,
-                },
-                object2 = {
-                    'collection' : Indaleko.Indaleko_Object_Collection,
-                    'object' : item.args['ObjectIdentifier'],
-                },
-                source = source
+            dir_edges.append(IndalekoStorageRecorder.build_dir_contains_relationship(
+                parent_id, item.args['ObjectIdentifier'], source_id)
             )
-            dir_edges.append(dir_edge)
             self.edge_count += 1
-            dir_edge = IndalekoRelationshipContainedBy(
-                relationship = \
-                    IndalekoRelationshipContainedBy.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR,
-                object1 = {
-                    'collection' : Indaleko.Indaleko_Object_Collection,
-                    'object' : item.args['ObjectIdentifier'],
-                },
-                object2 = {
-                    'collection' : Indaleko.Indaleko_Object_Collection,
-                    'object' : parent_id,
-                },
-                source = source
+            dir_edges.append(IndalekoStorageRecorder.build_contained_by_dir_relationship(
+                item.args['ObjectIdentifier'], parent_id, source_id)
             )
-            dir_edges.append(dir_edge)
             self.edge_count += 1
+            volume = item.args.get('Volume')
+            if volume:
+                dir_edges.append(IndalekoStorageRecorder.build_volume_contains_relationship(
+                    volume, item.args['ObjectIdentifier'], source_id)
+                )
+                self.edge_count += 1
+                dir_edges.append(IndalekoStorageRecorder.build_contained_by_volume_relationship(
+                    item.args['ObjectIdentifier'], volume, source_id)
+                )
+                self.edge_count += 1
+            machine_id = item.args.get('machine_id')
+            if machine_id:
+                dir_edges.append(IndalekoStorageRecorder.build_machine_contains_relationship(
+                    machine_id, item.args['ObjectIdentifier'], source_id)
+                )
+                self.edge_count += 1
+                dir_edges.append(IndalekoStorageRecorder.build_contained_by_machine_relationship(
+                    item.args['ObjectIdentifier'], machine_id, source_id)
+                )
+                self.edge_count += 1
         # Save the data to the ingester output file
         ic(self.output_file)
         self.write_data_to_file(dir_data + file_data, self.output_file)
@@ -276,7 +275,7 @@ class IndalekoLinuxLocalIngester(IndalekoStorageRecorder):
             'machine' : self.machine_id,
             'platform' : self.platform,
             'service' : 'local_ingest',
-            'collection' : Indaleko.Indaleko_Relationship_Collection,
+            'collection' : IndalekoDBCollections.Indaleko_Relationship_Collection,
             'timestamp' : self.timestamp,
             'output_dir' : self.data_dir,
         }
@@ -335,9 +334,9 @@ def main():
     indexer_file_metadata = utils.misc.file_name_management.extract_keys_from_file_name(pre_args.input)
     timestamp = indexer_file_metadata.get('timestamp',
                                           datetime.datetime.now(datetime.timezone.utc).isoformat())
-    log_file_name = IndalekoLinuxLocalIngester.generate_log_file_name(
+    log_file_name = IndalekoLinuxLocalRecorder.generate_log_file_name(
         platform=indexer_file_metadata['platform'],
-        ingester=IndalekoLinuxLocalIngester.linux_local_ingester,
+        ingester=IndalekoLinuxLocalRecorder.linux_local_recorder,
         machine_id = indexer_file_metadata['machine'],
         target_dir=pre_args.logdir,
         timestamp=timestamp,
@@ -360,10 +359,10 @@ def main():
     machine_id = metadata['machine']
     if 'platform' in metadata:
         indexer_platform = metadata['platform']
-        if indexer_platform != IndalekoLinuxLocalIngester.linux_platform:
+        if indexer_platform != IndalekoLinuxLocalRecorder.linux_platform:
             print('Warning: platform of indexer file ' +\
                   f'({indexer_platform}) name does not match platform of ingester ' +\
-                    f'({IndalekoLinuxLocalIngester.linux_platform}.)')
+                    f'({IndalekoLinuxLocalRecorder.linux_platform}.)')
     storage = None
     if 'storage' in metadata:
         storage = metadata['storage']
@@ -385,7 +384,7 @@ def main():
         'machine_id' : machine_id,
         'timestamp' : timestamp,
         'platform' : IndalekoLinuxLocalIndexer.linux_platform,
-        'ingester' : IndalekoLinuxLocalIngester.linux_local_ingester,
+        'ingester' : IndalekoLinuxLocalRecorder.linux_local_recorder,
         'file_prefix' : file_prefix,
         'file_suffix' : file_suffix,
         'data_dir' : args.datadir,
@@ -393,7 +392,7 @@ def main():
     }
     if storage is not None:
         ingest_args['storage_description'] = storage
-    ingester = IndalekoLinuxLocalIngester(**ingest_args)
+    ingester = IndalekoLinuxLocalRecorder(**ingest_args)
     logging.info('Ingesting %s ' , args.input)
     ingester.ingest()
     for count_type, count_value in ingester.get_counts().items():
