@@ -1,26 +1,66 @@
+'''
+This module handles data ingestion into Indaleko from the Windows local file
+system indexer.
+
+Indaleko Windows Local Indexer
+Copyright (C) 2024 Tony Mason
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+'''
 import argparse
 import configparser
 import datetime
-import platform
+import json
 import logging
 import os
-import json
+import platform
 import subprocess
-import jsonlines
+import sys
 import uuid
-# from concurrent.futures import ThreadPoolExecutor
 
-from IndalekoIngester import IndalekoIngester
-from Indaleko import Indaleko
-from IndalekoMacLocalIndexer import IndalekoMacLocalIndexer
-from IndalekoMacMachineConfig import IndalekoMacOSMachineConfig
-from IndalekoObject import IndalekoObject
-from IndalekoUnix import UnixFileAttributes
-from IndalekoRelationshipContains import IndalekoRelationshipContains
-from IndalekoRelationshipContained import IndalekoRelationshipContainedBy
+import jsonlines
+
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
 
 
-class IndalekoMacLocalIngester(IndalekoIngester):
+# pylint: disable=wrong-import-position
+from db import IndalekoDBCollections, IndalekoDBConfig
+from data_models import IndalekoSourceIdentifierDataModel
+from platforms.mac.machine_config import IndalekoMacOSMachineConfig
+from platforms.unix import UnixFileAttributes
+from storage import IndalekoObject
+from storage.recorders.base import IndalekoStorageRecorder
+from storage.collectors.local.mac.collector import IndalekoMacLocalIndexer
+from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
+from utils.misc.file_name_management import indaleko_file_name_prefix
+from utils.misc.data_management import encode_binary_data
+#from IndalekoIngester import IndalekoIngester
+#from Indaleko import Indaleko
+#from IndalekoMacLocalIndexer import IndalekoMacLocalIndexer
+#from IndalekoMacMachineConfig import IndalekoMacOSMachineConfig
+#from IndalekoObject import IndalekoObject
+#from IndalekoUnix import UnixFileAttributes
+#from IndalekoRelationshipContains import IndalekoRelationshipContains
+#from IndalekoRelationshipContained import IndalekoRelationshipContainedBy
+# pylint: enable=wrong-import-position
+
+class IndalekoMacLocalIngester(IndalekoStorageRecorder):
     '''
     This class handles the ingestion of metadata from the Indaleko Unix
     indexing service.
@@ -37,12 +77,9 @@ class IndalekoMacLocalIngester(IndalekoIngester):
 
     mac_platform = IndalekoMacLocalIndexer.mac_platform
     mac_local_ingester = 'local_fs_ingester'
-    default_config_file = './config/indaleko-db-config.ini'
 
     def __init__(self, reset_collection=False, objects_file="", relations_file="", **kwargs) -> None:
-        assert os.path.isfile(IndalekoMacLocalIngester.default_config_file), f'expected to have a config file at {
-            IndalekoMacLocalIngester.default_config_file}; got none'
-
+        self.db_config = IndalekoDBConfig()
         if 'input_file' not in kwargs:
             raise ValueError('input_file must be specified')
         if 'machine_config' not in kwargs:
@@ -129,7 +166,7 @@ class IndalekoMacLocalIngester(IndalekoIngester):
             oid = str(uuid.uuid4())
         kwargs = {
             'source': self.source,
-            'raw_data': Indaleko.encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
+            'raw_data': encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
             'URI': data['URI'],
             'ObjectIdentifier': oid,
             'Timestamps': [
@@ -224,47 +261,52 @@ class IndalekoMacLocalIngester(IndalekoIngester):
             'Identifier': self.mac_local_ingester_uuid,
             'Version': '1.0',
         }
+        source_id = IndalekoSourceIdentifierDataModel(**source)
         for item in dir_data + file_data:
             parent = item['Path']
             if parent not in dirmap:
                 continue
             parent_id = dirmap[parent]
-            dir_edge = IndalekoRelationshipContains(
-                relationship=IndalekoRelationshipContains.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR,
-                object1={
-                    'collection': Indaleko.Indaleko_Object_Collection,
-                    'object': item.args['ObjectIdentifier'],
-                },
-                object2={
-                    'collection': Indaleko.Indaleko_Object_Collection,
-                    'object': parent_id,
-                },
-                source=source
+        for item in dir_data + file_data:
+            parent = item['Path']
+            if parent not in dirmap:
+                continue
+            parent_id = dirmap[parent]
+            dir_edges.append(IndalekoStorageRecorder.build_dir_contains_relationship(
+                parent_id, item.args['ObjectIdentifier'], source_id)
             )
-            dir_edges.append(dir_edge)
             self.edge_count += 1
-            dir_edge = IndalekoRelationshipContainedBy(
-                relationship=IndalekoRelationshipContainedBy.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR,
-                object1={
-                    'collection': Indaleko.Indaleko_Object_Collection,
-                    'object': parent_id,
-                },
-                object2={
-                    'collection': Indaleko.Indaleko_Object_Collection,
-                    'object': item.args['ObjectIdentifier'],
-                },
-                source=source
+            dir_edges.append(IndalekoStorageRecorder.build_contained_by_dir_relationship(
+                item.args['ObjectIdentifier'], parent_id, source_id)
             )
-            dir_edges.append(dir_edge)
             self.edge_count += 1
+            volume = item.args.get('Volume')
+            if volume:
+                dir_edges.append(IndalekoStorageRecorder.build_volume_contains_relationship(
+                    volume, item.args['ObjectIdentifier'], source_id)
+                )
+                self.edge_count += 1
+                dir_edges.append(IndalekoStorageRecorder.build_contained_by_volume_relationship(
+                    item.args['ObjectIdentifier'], volume, source_id)
+                )
+                self.edge_count += 1
+            machine_id = item.args.get('machine_id')
+            if machine_id:
+                dir_edges.append(IndalekoStorageRecorder.build_machine_contains_relationship(
+                    machine_id, item.args['ObjectIdentifier'], source_id)
+                )
+                self.edge_count += 1
+                dir_edges.append(IndalekoStorageRecorder.build_contained_by_machine_relationship(
+                    item.args['ObjectIdentifier'], machine_id, source_id)
+                )
+                self.edge_count += 1
         # Save the data to the ingester output file
         self.write_data_to_file(dir_data + file_data, self.output_file)
         edge_file = self.generate_output_file_name(
             machine=self.machine_id,
             platform=self.platform,
             service='local_ingest',
-            storage=self.storage_description,
-            collection=Indaleko.Indaleko_Relationship_Collection,
+            collection=IndalekoDBCollections.Indaleko_Relationship_Collection,
             timestamp=self.timestamp,
             output_dir=self.data_dir,
         )
@@ -285,18 +327,10 @@ class IndalekoMacLocalIngester(IndalekoIngester):
         # check if the docker is up
         self.__run_docker_cmd('docker ps')
 
-        with open(self.default_config_file, 'r', encoding='utf-8-sig') as file:
-            content = file.read()
-
-        with open(self.default_config_file, 'w', encoding='utf-8') as file:
-            file.write(content)
-
         # read the config file
-        config = configparser.ConfigParser()
-        config.read(self.default_config_file, encoding='utf-8-sig')
+        config = self.db_config.config
 
         dest = '/home'  # where in the container we copy the files; we use this for import to the database
-
         container_name = config['database']['container']
         server_username = config['database']['user_name']
         server_password = config['database']['user_password']
@@ -356,8 +390,8 @@ def main():
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument('--configdir', '-c',
                             help=f'Path to the config directory (default is {
-                                Indaleko.default_config_dir})',
-                            default=Indaleko.default_config_dir)
+                                indaleko_default_config_dir})',
+                            default=indaleko_default_config_dir)
     pre_args, _ = pre_parser.parse_known_args()
     config_files = IndalekoMacOSMachineConfig.find_config_files(
         pre_args.configdir)
@@ -374,9 +408,9 @@ def main():
                             help=f'Configuration file to use. (default: {default_config_file})')
     pre_parser.add_argument('--datadir',
                             help=f'Path to the data directory (default is {
-                                Indaleko.default_data_dir})',
+                                indaleko_default_data_dir})',
                             type=str,
-                            default=Indaleko.default_data_dir)
+                            default=indaleko_default_data_dir)
     pre_args, _ = pre_parser.parse_known_args()
     machine_config = IndalekoMacOSMachineConfig.load_config_from_file(
         config_file=default_config_file)
@@ -406,8 +440,8 @@ def main():
                         help='Drop the collections before ingesting new data')
     parser.add_argument('--logdir',
                         help=f'Path to the log directory (default is {
-                            Indaleko.default_log_dir})',
-                        default=Indaleko.default_log_dir)
+                            indaleko_default_log_dir})',
+                        default=indaleko_default_log_dir)
     parser.add_argument('--loglevel',
                         choices=logging_levels,
                         default=logging.DEBUG,
@@ -434,10 +468,10 @@ def main():
     storage = 'unknown'
     if 'storage' in metadata:
         storage = metadata['storage']
-    file_prefix = IndalekoIngester.default_file_prefix
+    file_prefix = indaleko_file_name_prefix
     if 'file_prefix' in metadata:
         file_prefix = metadata['file_prefix']
-    file_suffix = IndalekoIngester.default_file_suffix
+    file_suffix = IndalekoStorageRecorder.default_file_suffix
     if 'file_suffix' in metadata:
         file_suffix = metadata['file_suffix']
     input_file = os.path.join(args.datadir, args.input)

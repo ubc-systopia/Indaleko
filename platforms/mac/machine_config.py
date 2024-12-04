@@ -151,7 +151,7 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
         if 'MachineUUID' not in machine_config_data:
             machine_config_data['MachineUUID'] = config_data['MachineGuid']
         if 'Hostname' not in machine_config_data:
-            machine_config_data['Hostname'] = config_data.get('hostname', 'Unknown')
+            machine_config_data['Hostname'] = config_data.get('Hostname', 'Unknown')
         ic(machine_config_data)
         config = IndalekoMacOSMachineConfig(**machine_config_data)
         return config

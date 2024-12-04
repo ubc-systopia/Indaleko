@@ -34,7 +34,6 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 # pylint: disable=wrong-import-position
-#from Indaleko import Indaleko
 from utils.i_logging import IndalekoLogging
 import utils.misc.file_name_management
 import utils.misc.directory_management
