@@ -1,11 +1,26 @@
 import json
+import os
+import sys
 
 from icecream import ic
 
-from IndalekoDBConfig import IndalekoDBConfig
-from IndalekoObject import IndalekoObject
-from IndalekoRelationshipSchema import IndalekoRelationshipSchema
-from IndalekoSourceSchema import IndalekoSourceSchema
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+# pylint: disable=wrong-import-position
+# from IndalekoDBConfig import IndalekoDBConfig
+# from IndalekoObject import IndalekoObject
+# from IndalekoRelationshipSchema import IndalekoRelationshipSchema
+# from IndalekoSourceSchema import IndalekoSourceSchema
+from db import IndalekoDBConfig
+from storage import IndalekoObject, IndalekoRelationship
+from data_models import IndalekoSourceIdentifierDataModel
+# pylint: enable=wrong-import-position
+
 
 test_schema =  {
     "$schema": "https://json-schema.org/draft/2020-12/schema#",

@@ -33,16 +33,15 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # pylint: disable=wrong-import-position
 from db import IndalekoDBConfig, IndalekoCollections, IndalekoDBCollections
 from utils import IndalekoDocker, IndalekoLogging
-from utils.misc.directory_management import indaleko_default_log_dir
+from utils.misc.directory_management import indaleko_default_log_dir, indaleko_create_secure_directories
 import utils.misc.file_name_management
+
 # from Indaleko import Indaleko
 # from IndalekoDBConfig import IndalekoDBConfig
 # from IndalekoCollections import IndalekoCollections
 # from IndalekoLogging import IndalekoLogging
 # from IndalekoDocker import IndalekoDocker
 # pylint: enable=wrong-import-position
-
-
 
 def run_container(db_config: IndalekoDBConfig):
     # the configuration
@@ -181,6 +180,8 @@ def default_command(args : argparse.Namespace) -> None:
 
 def main():
     """Main entry point for the program"""
+    # Make sure our data/log/config directories exist.
+    indaleko_create_secure_directories()
     now = datetime.datetime.now(datetime.timezone.utc)
     timestamp=now.isoformat()
     parser = argparse.ArgumentParser(description='Indaleko DB Setup')

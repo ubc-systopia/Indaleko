@@ -37,6 +37,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # pylint: disable=wrong-import-position
 from storage.collectors.base import BaseStorageCollector
 from storage.i_object import IndalekoObject
+from storage.i_relationship import IndalekoRelationship
 # IndalekoIndexer = BaseStorageCollector # Legacy name support (for now)
 
 # pylint: enable=wrong-import-position
@@ -53,6 +54,7 @@ __version__ = '0.1.0'
 __all__ = [
     'BaseStorageCollector',
     'IndalekoObject',
+    'IndalekoRelationship',
 ]
 
 
