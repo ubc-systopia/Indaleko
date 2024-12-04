@@ -25,29 +25,44 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import argparse
 import datetime
 import dropbox
-from icecream import ic
 import json
 import logging
 import os
 import requests
+import sys
 import time
 from urllib.parse import urlencode, parse_qs, urlparse
 import uuid
 
-from Indaleko import Indaleko
-from IndalekoIndexer import IndalekoIndexer
-import IndalekoLogging as IndalekoLogging
+from icecream import ic
 
-class IndalekoDropboxIndexer(IndalekoIndexer):
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+
+# pylint: disable=wrong-import-position
+from utils.i_logging import IndalekoLogging
+from utils.misc.file_name_management import generate_file_name
+from utils.misc.directory_management import indaleko_default_data_dir, indaleko_default_config_dir, indaleko_default_log_dir
+from storage.collectors.base import BaseStorageCollector
+from platforms.windows.machine_config import IndalekoWindowsMachineConfig
+# pylint: enable=wrong-import-position
+
+
+class IndalekoDropboxIndexer(BaseStorageCollector):
 
     dropbox_platform='Dropbox'
-    dropbox_indexer_name='dropbox_indexer'
+    dropbox_collector_name='dropbox_collector'
 
-    indaleko_dropbox_indexer_uuid = '7c18f9c7-9153-427a-967a-55d942ac1f10'
-    indaleko_dropbox_indexer_service_name = 'Dropbox Indexer'
-    indaleko_dropbox_indexer_service_description = 'This service indexes the Dropbox folder of the user.'
-    indaleko_dropbox_indexer_service_version = '1.0'
-    indaleko_dropbox_indexer_service_type = 'Indexer'
+    indaleko_dropbox_collector_uuid = '7c18f9c7-9153-427a-967a-55d942ac1f10'
+    indaleko_dropbox_collector_service_name = 'Dropbox Collector'
+    indaleko_dropbox_collector_service_description = 'This service indexes the Dropbox of the user.'
+    indaleko_dropbox_collector_service_version = '1.0'
+    indaleko_dropbox_collector_service_type = 'Indexer'
 
     dropbox_config_file='dropbox_config.json'
     dropbox_token_file='dropbox_token.json'
@@ -55,16 +70,16 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
     dropbox_auth_url = 'https://www.dropbox.com/oauth2/authorize'
     dropbox_token_url = 'https://api.dropboxapi.com/oauth2/token'
 
-    indaleko_dropbox_indexer_service = {
-        'service_name': indaleko_dropbox_indexer_service_name,
-        'service_description': indaleko_dropbox_indexer_service_description,
-        'service_version': indaleko_dropbox_indexer_service_version,
-        'service_type': indaleko_dropbox_indexer_service_type,
-        'service_identifier': indaleko_dropbox_indexer_uuid,
+    indaleko_dropbox_collector_service = {
+        'service_name': indaleko_dropbox_collector_service_name,
+        'service_description': indaleko_dropbox_collector_service_description,
+        'service_version': indaleko_dropbox_collector_service_version,
+        'service_type': indaleko_dropbox_collector_service_type,
+        'service_identifier': indaleko_dropbox_collector_uuid,
     }
 
     def __init__(self, **kwargs):
-        self.config_dir = kwargs.get('config_dir', Indaleko.default_config_dir)
+        self.config_dir = kwargs.get('config_dir', indaleko_default_config_dir)
         self.dropbox_config_file = os.path.join(self.config_dir, IndalekoDropboxIndexer.dropbox_config_file)
         self.dropbox_token_file = os.path.join(self.config_dir, IndalekoDropboxIndexer.dropbox_token_file)
         self.dropbox_config = None
@@ -82,8 +97,8 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
         if 'platform' not in kwargs:
             kwargs['platform'] = IndalekoDropboxIndexer.dropbox_platform
         super().__init__(**kwargs,
-                         indexer_name=IndalekoDropboxIndexer.dropbox_indexer_name,
-                         **IndalekoDropboxIndexer.indaleko_dropbox_indexer_service
+                         indexer_name=IndalekoDropboxIndexer.dropbox_collector_name,
+                         **IndalekoDropboxIndexer.indaleko_dropbox_collector_service
         )
 
     def get_user_id(self):
@@ -245,7 +260,7 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
         of the files in the Dropbox folder.
         '''
         assert 'user_id' in kwargs, 'No user_id found in kwargs'
-        return Indaleko.generate_file_name(**kwargs)
+        return generate_file_name(**kwargs)
 
     def build_stat_dict(self,  obj : dropbox.files) -> dict:
         '''
@@ -266,7 +281,7 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
             'VideoMetadata',
         )
         metadata = {
-            'Indexer' : IndalekoDropboxIndexer.indaleko_dropbox_indexer_uuid,
+            'Indexer' : IndalekoDropboxIndexer.indaleko_dropbox_collector_uuid,
             'ObjectIdentifier' : str(uuid.uuid4())
         }
         fields = []
@@ -336,40 +351,40 @@ class IndalekoDropboxIndexer(IndalekoIndexer):
     @staticmethod
     def find_indexer_files(
             search_dir : str,
-            prefix : str = IndalekoIndexer.default_file_prefix,
-            suffix : str = IndalekoIndexer.default_file_suffix) -> list:
+            prefix : str = BaseStorageCollector.default_file_prefix,
+            suffix : str = BaseStorageCollector.default_file_suffix) -> list:
         '''This function finds the files to ingest:
             search_dir: path to the search directory
             prefix: prefix of the file to ingest
             suffix: suffix of the file to ingest (default is .json)
         '''
-        prospects = IndalekoIndexer.find_indexer_files(search_dir, prefix, suffix)
+        prospects = BaseStorageCollector.find_indexer_files(search_dir, prefix, suffix)
         return [f for f in prospects if IndalekoDropboxIndexer.dropbox_platform in f]
 
 
 def main():
     '''This is the entry point for using the Dropbox indexer.'''
-    logging_levels = Indaleko.get_logging_levels()
+    logging_levels = IndalekoLogging.get_logging_levels()
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument('--configdir',
                             help='Path to the config directory',
-                            default=Indaleko.default_config_dir)
+                            default=indaleko_default_config_dir)
     pre_parser.add_argument('--logdir', '-l',
                             help='Path to the log directory',
-                            default=Indaleko.default_log_dir)
+                            default=indaleko_default_log_dir)
     pre_parser.add_argument('--loglevel',
                             type=int,
                             default=logging.DEBUG,
                             choices=logging_levels,
                             help='Logging level to use (lower number = more logging)')
     pre_args, _ = pre_parser.parse_known_args()
-    indaleko_logging = IndalekoLogging.IndalekoLogging(platform=IndalekoDropboxIndexer.dropbox_platform,
-                                                       service_name='indexer',
-                                                       log_dir=pre_args.logdir,
-                                                       log_level=pre_args.loglevel,
-                                                       timestamp=timestamp,
-                                                       suffix='log')
+    indaleko_logging = IndalekoLogging(platform=IndalekoDropboxIndexer.dropbox_platform,
+                                       service_name='indexer',
+                                       log_dir=pre_args.logdir,
+                                       log_level=pre_args.loglevel,
+                                       timestamp=timestamp,
+                                       suffix='log')
     log_file_name = indaleko_logging.get_log_file_name()
     ic(log_file_name)
     indexer = IndalekoDropboxIndexer(timestamp=timestamp)
@@ -387,7 +402,7 @@ def main():
     parser.add_argument('--datadir',
                         '-d',
                         help='Path to the data directory',
-                        default=Indaleko.default_data_dir)
+                        default=indaleko_default_data_dir)
     parser.add_argument('--path',
                         help='Path to the directory to index',
                         type=str,

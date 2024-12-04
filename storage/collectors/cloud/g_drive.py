@@ -33,14 +33,27 @@ from icecream import ic
 import json
 import logging
 import os
+import sys
 from urllib.parse import urlencode, parse_qs, urlparse
 
-from Indaleko import Indaleko
-from IndalekoIndexer import IndalekoIndexer
-import IndalekoLogging as IndalekoLogging
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
 
 
-class IndalekoGDriveIndexer(IndalekoIndexer):
+# pylint: disable=wrong-import-position
+from utils.i_logging import IndalekoLogging
+from utils.misc.file_name_management import generate_file_name
+from utils.misc.directory_management import indaleko_default_data_dir, indaleko_default_config_dir, indaleko_default_log_dir
+from storage.collectors.base import BaseStorageCollector
+from platforms.windows.machine_config import IndalekoWindowsMachineConfig
+# pylint: enable=wrong-import-position
+
+
+class IndalekoGDriveIndexer(BaseStorageCollector):
     gdrive_platform = "GoogleDrive"
     gdrive_indexer_name = "gdrive_indexer"
 
@@ -119,7 +132,7 @@ class IndalekoGDriveIndexer(IndalekoIndexer):
 
     def __init__(self, **kwargs):
         self.email = None
-        self.config_dir = kwargs.get('config_dir', Indaleko.default_config_dir)
+        self.config_dir = kwargs.get('config_dir', indaleko_default_config_dir)
         self.gdrive_config_file = os.path.join(self.config_dir, IndalekoGDriveIndexer.gdrive_config_file)
         assert os.path.exists(self.gdrive_config_file), \
             f'No GDrive config file found at {self.gdrive_config_file}'
@@ -188,7 +201,7 @@ class IndalekoGDriveIndexer(IndalekoIndexer):
         of the files in the Dropbox folder.
         '''
         assert 'user_id' in kwargs, 'No user_id found in kwargs'
-        return Indaleko.generate_file_name(**kwargs)
+        return generate_file_name(**kwargs)
 
     def build_stat_dict(self, entry: dict) -> dict:
         '''This builds the stat dict for the entry'''
@@ -231,39 +244,39 @@ class IndalekoGDriveIndexer(IndalekoIndexer):
     @staticmethod
     def find_indexer_files(
             search_dir : str,
-            prefix : str = IndalekoIndexer.default_file_prefix,
-            suffix : str = IndalekoIndexer.default_file_suffix) -> list:
+            prefix : str = BaseStorageCollector.default_file_prefix,
+            suffix : str = BaseStorageCollector.default_file_suffix) -> list:
         '''This function finds the files to ingest:
             search_dir: path to the search directory
             prefix: prefix of the file to ingest
             suffix: suffix of the file to ingest (default is .json)
         '''
-        prospects = IndalekoIndexer.find_indexer_files(search_dir, prefix, suffix)
+        prospects = BaseStorageCollector.find_indexer_files(search_dir, prefix, suffix)
         return [f for f in prospects if IndalekoGDriveIndexer.gdrive_platform in f]
 
 
 def main():
-    logging_levels = Indaleko.get_logging_levels()
+    logging_levels = IndalekoLogging.get_logging_levels()
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument('--configdir',
                             help='Path to the config directory',
-                            default=Indaleko.default_config_dir)
+                            default=indaleko_default_config_dir)
     pre_parser.add_argument('--logdir', '-l',
                             help='Path to the log directory',
-                            default=Indaleko.default_log_dir)
+                            default=indaleko_default_log_dir)
     pre_parser.add_argument('--loglevel',
                             type=int,
                             default=logging.DEBUG,
                             choices=logging_levels,
                             help='Logging level to use (lower number = more logging)')
     pre_args, _ = pre_parser.parse_known_args()
-    indaleko_logging = IndalekoLogging.IndalekoLogging(platform=IndalekoGDriveIndexer.gdrive_platform,
-                                                       service_name='indexer',
-                                                       log_dir=pre_args.logdir,
-                                                       log_level=pre_args.loglevel,
-                                                       timestamp=timestamp,
-                                                       suffix='log')
+    indaleko_logging = IndalekoLogging(platform=IndalekoGDriveIndexer.gdrive_platform,
+                                        service_name='indexer',
+                                        log_dir=pre_args.logdir,
+                                        log_level=pre_args.loglevel,
+                                        timestamp=timestamp,
+                                        suffix='log')
     log_file_name = indaleko_logging.get_log_file_name()
     ic(log_file_name)
     indexer = IndalekoGDriveIndexer(timestamp=timestamp)
@@ -280,7 +293,7 @@ def main():
     parser.add_argument('--datadir',
                         '-d',
                         help='Path to the data directory',
-                        default=Indaleko.default_data_dir)
+                        default=indaleko_default_data_dir)
     parser.add_argument('--path',
                         help='Path to the directory to index',
                         type=str,
