@@ -3,7 +3,6 @@
 import asyncio
 import datetime
 import os
-import platform
 import sys
 import uuid
 import winsdk.windows.devices.geolocation as wdg
@@ -153,21 +152,4 @@ def main():
     '''This is the interface for testing the foo.py module.'''
 
 if __name__ == '__main__':
-    def __get_project_root() -> str:
-        '''Get the root of the project'''
-        current_path = os.path.dirname(os.path.abspath(__file__))
-        while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
-            current_path = os.path.dirname(current_path)
-        return current_path
-
-    if 'INDALEKO_ROOT' not in os.environ:
-        project_root = __get_project_root()
-        os.environ['INDALEKO_ROOT'] = project_root
-        sys.path.append(project_root)
-
-    # now we can import modules from the project root
-    from Indaleko import Indaleko
-    from IndalekoLogging import IndalekoLogging
-
-    from activity.provider_base import ProviderBase
     main()
