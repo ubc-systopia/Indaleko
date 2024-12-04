@@ -41,17 +41,16 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-# from Indaleko import Indaleko
-from Indaleko import Indaleko
-from platforms.machine_config import IndalekoMachineConfig
-from data_models.record import IndalekoRecordDataModel
-from data_models.source_identifer import IndalekoSourceIdentifierDataModel
-from data_models.timestamp import IndalekoTimestampDataModel
-# from IndalekoDataModel import IndalekoDataModel
+#from Indaleko import Indaleko
+from data_models import IndalekoRecordDataModel, IndalekoSourceIdentifierDataModel, IndalekoTimestampDataModel
+from db import IndalekoDBConfig
 from platforms.data_models.hardware import Hardware
 from platforms.data_models.software import Software
-from platforms.data_models.machine_platform import MachinePlatform
-
+from platforms.machine_config import IndalekoMachineConfig
+from utils.data_validation import validate_uuid_string, validate_iso_timestamp
+from utils.misc.data_management import encode_binary_data
+from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_log_dir, indaleko_default_data_dir
+from utils.misc.file_name_management import generate_file_name, extract_keys_from_file_name
 # pylint: enable=wrong-import-position
 
 
@@ -90,6 +89,9 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
         else:
             self.service_registration = None
             self.db = None
+        if 'machine_id' not in kwargs:
+            ic(kwargs)
+            kwargs['machine_id'] = kwargs['MachineUUID']
         super().__init__(**kwargs)
 
     @staticmethod
@@ -265,7 +267,7 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
         Given a configuration directory, timestamp, platform, and service,
         generate a configuration file name.
         '''
-        config_dir = Indaleko.default_config_dir
+        config_dir = indaleko_default_config_dir
         if 'config_dir' in kwargs:
             config_dir = kwargs['config_dir']
             del kwargs['config_dir']
@@ -284,7 +286,7 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
             prefix = kwargs['prefix']
             del kwargs['prefix']
 
-        fname = Indaleko.generate_file_name(
+        fname = generate_file_name(
             suffix=suffix,
             platform=platform_name,
             service=service,
@@ -319,12 +321,12 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
         config_data = {}
         if config_dir is None and config_file is None:
             # nothing specified, so let's search and find
-            config_dir = Indaleko.default_config_dir
+            config_dir = indaleko_default_config_dir
         if config_file is None:
             assert config_dir is not None, 'config_dir must be specified'
             config_file = IndalekoLinuxMachineConfig.get_most_recent_config_file(config_dir)
         if config_file is not None:
-            file_metadata = Indaleko.extract_keys_from_file_name(config_file)
+            file_metadata = extract_keys_from_file_name(config_file)
             file_uuid = uuid.UUID(file_metadata['machine'])
             with open(config_file, 'rt', encoding='utf-8-sig') as config_fd:
                 config_data = json.load(config_fd)
@@ -364,7 +366,7 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
                     linux_machine_config_service['service_description'],
             ),
             Timestamp = timestamp,
-            Data = Indaleko.encode_binary_data(config_data),
+            Data = encode_binary_data(config_data),
             Attributes = config_data,
         )
         machine_config_data = {
@@ -377,7 +379,7 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
             machine_config_data['MachineUUID'] = str(file_uuid)
         if 'Hostname' not in machine_config_data:
             machine_config_data['Hostname'] = config_data['Hostname']
-        config = IndalekoLinuxMachineConfig(data=machine_config_data, offline=offline)
+        config = IndalekoLinuxMachineConfig(**machine_config_data, offline=offline)
         # ic(IndalekoMachineConfigDataModel.MachineConfig.serialize(config.machine_config))
         if not offline:
             config.write_config_to_db()
@@ -388,12 +390,12 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
     def write_config_to_db(self, overwrite : bool = True) -> None:
         # ic(self.machine_id)
         assert self.machine_id is not None, 'Machine ID must be specified'
-        assert Indaleko.validate_uuid_string(self.machine_id), 'Machine ID must be a valid UUID'
+        assert validate_uuid_string(self.machine_id), 'Machine ID must be a valid UUID'
         super().write_config_to_db(overwrite=overwrite)
         # Should we add storage data here?
 
     @staticmethod
-    def capture_machine_data(config_dir : str = Indaleko.default_config_dir,
+    def capture_machine_data(config_dir : str = indaleko_default_config_dir,
                              timestamp : str = datetime.datetime.now(datetime.timezone.utc).isoformat(),
                              platform: str = None) -> str:
         '''Capture the machine data and write it to the specified file.'''
@@ -500,7 +502,7 @@ def main():
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument('--log', type=str, default=None, help='Log file name to use')
     pre_parser.add_argument('--configdir',
-                            default=Indaleko.default_config_dir,
+                            default=indaleko_default_config_dir,
                             type=str,
                             help='Configuration directory to use')
     pre_parser.add_argument('--timestamp',
@@ -513,7 +515,7 @@ def main():
         timestamp=pre_args.timestamp
         Indaleko.validate_timestamp(timestamp)
     if pre_args.configdir is None:
-        config_dir = Indaleko.default_config_dir
+        config_dir = indaleko_default_config_dir
     else:
         config_dir = pre_args.configdir
     if not os.path.isdir(config_dir):
@@ -522,12 +524,12 @@ def main():
         ic('Warning: foreign import of Linux configuration.')
     log_file_name = None
     if pre_args.log is None:
-        file_name = Indaleko.generate_file_name(
+        file_name = generate_file_name(
             suffix='log',
             platform='Linux', # Note: this is the platform of the machine where the config came from.
             service='machine_config',
             timestamp=timestamp)
-        log_file_name = os.path.join(Indaleko.default_log_dir, file_name)
+        log_file_name = os.path.join(indaleko_default_log_dir, file_name)
     else:
         log_file_name = pre_args.log
     parser = argparse.ArgumentParser(parents=[pre_parser], description='Indaleko Linux Machine Config')
