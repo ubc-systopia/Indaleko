@@ -62,6 +62,7 @@ import json
 import os
 import psutil
 import re
+import socket
 import uuid
 import sys
 
@@ -100,14 +101,14 @@ class MacHardwareInfoGenerator:
             "Cores": psutil.cpu_count(logical=False)
         }
         volume_info = self.get_volume_info()
-
+        hostname = socket.gethostname()
         config_data = {
             "MachineGuid": machine_guid,
             "OperatingSystem": os_info,
             "CPU": cpu_info,
-            "VolumeInfo": volume_info
+            "VolumeInfo": volume_info,
+            "Hostname" : hostname
         }
-
         return config_data
 
     def get_cpu_name(self):

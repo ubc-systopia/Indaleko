@@ -14,6 +14,14 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 __version__ = '0.1.0'
 
+#from platforms.machine_config import IndalekoMachineConfig
+#from platforms.mac.machine_config import IndalekoMacOSMachineConfig
+#from platforms.linux.machine_config import IndalekoLinuxMachineConfig
+#from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 
 __all__ = [
+#    IndalekoLinuxMachineConfig,
+#    IndalekoMachineConfig,
+#    IndalekoMacOSMachineConfig,
+#    IndalekoWindowsMachineConfig
 ]

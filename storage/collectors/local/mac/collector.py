@@ -24,6 +24,7 @@ import os
 import logging
 import platform
 import sys
+import uuid
 
 # from icecream import ic
 
@@ -35,9 +36,11 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from Indaleko import Indaleko
+# from Indaleko import Indaleko
 from storage.collectors.base import BaseStorageCollector
-from IndalekoMacMachineConfig import IndalekoMacOSMachineConfig
+from platforms.mac.machine_config import IndalekoMacOSMachineConfig
+from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
+# from IndalekoMacMachineConfig import IndalekoMacOSMachineConfig
 # pylint: enable=wrong-import-position
 
 
@@ -75,6 +78,16 @@ class IndalekoMacLocalIndexer(BaseStorageCollector):
 
         self.dir_count=0
         self.file_count=0
+
+    def generate_mac_indexer_file_name(self, **kwargs) -> str:
+        if 'platform' not in kwargs:
+            kwargs['platform'] = IndalekoMacLocalIndexer.mac_platform
+        if 'indexer_name' not in kwargs:
+            kwargs['indexer_name'] = IndalekoMacLocalIndexer.mac_local_indexer_name
+        if 'machine_id' not in kwargs:
+            kwargs['machine_id'] = uuid.UUID(self.machine_config.machine_id).hex
+        return BaseStorageCollector.generate_indexer_file_name(**kwargs)
+
 
     def build_stat_dict(self, name: str, root : str, last_uri = None) -> tuple:
         '''
@@ -155,7 +168,7 @@ def main():
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument('--configdir',
                             help='Path to the config directory',
-                            default=Indaleko.default_config_dir)
+                            default=indaleko_default_config_dir)
     pre_args, _ = pre_parser.parse_known_args()
 
     config_files = IndalekoMacOSMachineConfig.find_config_files(pre_args.configdir)
@@ -178,13 +191,13 @@ def main():
     parser= argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--datadir', '-d',
                         help='Path to the data directory',
-                        default=Indaleko.default_data_dir)
+                        default=indaleko_default_data_dir)
     parser.add_argument('--output', '-o',
                         help='name to assign to output directory',
                         default=output_file)
     parser.add_argument('--logdir', '-l',
                         help='Path to the log directory',
-                        default=Indaleko.default_log_dir)
+                        default=indaleko_default_log_dir)
     parser.add_argument('--loglevel',
                         type=int,
                         default=logging.DEBUG,

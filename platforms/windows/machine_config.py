@@ -127,7 +127,6 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
                 config_data['MachineUUID'] = config_data['MachineGuid']
             assert str(guid) == config_data['MachineUUID'],\
                   f'GUID mismatch: {guid} != {config_data["MachineUUID"]}'
-        ic(config_data)
         software = Software(
             OS = config_data['OperatingSystem']['Caption'],
             Version = config_data['OperatingSystem']['Version'],
