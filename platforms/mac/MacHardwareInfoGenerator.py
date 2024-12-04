@@ -1,11 +1,81 @@
+"""
+The purpose of this package is to define the core data types used in Indaleko.
+
+Indaleko is a Unified Private Index (UPI) service that enables the indexing of
+storage content (e.g., files, databases, etc.) in a way that extracts useful
+metadata and then uses it for creating a rich index service that can be used in
+a variety of ways, including improving search results, enabling development of
+non-traditional data visualizations, and mining relationships between objects to
+enable new insights.
+
+Indaleko is not a storage engine.  Rather, it is a metadata service that relies
+upon storage engines to provide the data to be indexed.  The storage engines can
+be local (e.g., a local file system,) remote (e.g., a cloud storage service,) or
+even non-traditional (e.g., applications that provide access to data in some
+way, such as Discord, Teams, Slack, etc.)
+
+Indaleko uses three distinct classes of metadata to enable its functionality:
+
+* Storage metadata - this is the metadata that is provided by the storage
+  services
+* Semantic metadata - this is the metadata that is extracted from the objects,
+  either by the storage service or by semantic transducers that act on the files
+  when it is available on the local device(s).
+* Activity context - this is metadata that captures information about how the
+  file was used, such as when it was accessed, by what application, as well as
+  ambient information, such as the location of the device, the person with whom
+  the user was interacting, ambient conditions (e.g., temperature, humidity, the
+  music the user is listening to, etc.) and even external events (e.g., current
+  news, weather, etc.)
+
+To do this, Indaleko stores information of various types in databases.  One of
+the purposes of this package is to encapsulate the data types used in the system
+as well as the schemas used to validate the data.
+
+The general architecture of Indaleko attempts to be flexible, while still
+capturing essential metadata that is used as part of the indexing functionality.
+Thus, to that end, we define both a generic schema and in some cases a flexible
+set of properties that can be extracted and stored.  Since this is a prototype
+system, we have strived to "keep it simple" yet focus on allowing us to explore
+a broad range of storage systems, semantic transducers, and activity data sources.
+
+Project Indaleko
+Copyright (C) 2024 Tony Mason
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+"""
+import argparse
+import datetime
 import glob
-import os
 import json
+import os
+import psutil
 import re
 import uuid
-import datetime
-import psutil
-import argparse
+import sys
+
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+# pylint: disable=wrong-import-position
+from utils.misc.directory_management import \
+    indaleko_default_config_dir, indaleko_create_secure_directories
+# pylint: enable=wrong-import-position
 
 
 class MacHardwareInfoGenerator:
@@ -106,11 +176,16 @@ def save_config_to_file(config_data, file_path):
 
 
 def main():
+    indaleko_create_secure_directories() # make sure they exist.
     parser = argparse.ArgumentParser('Generating Mac Hardware Info Generator', 'python MacHardwareInfoGenerator.py --dir save_at_path')
-    parser.add_argument('--save-to-dir', '-d', default='./config/',  help='path to the directory we want to save the directory')
+    parser.add_argument('--save-to-dir',
+                        '-d',
+                        default=indaleko_default_config_dir,
+                        type=str,
+                        help=f'path to the directory we want to save the directory (default={indaleko_default_config_dir})')
     args = parser.parse_args()
 
-    if not os.path.isdir(args.save_to_dir): 
+    if not os.path.isdir(args.save_to_dir):
         print(f'Given dir path is not valid, got: {args.save_to_dir}')
         return
 
