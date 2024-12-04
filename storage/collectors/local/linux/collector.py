@@ -77,7 +77,7 @@ class IndalekoLinuxLocalIndexer(BaseStorageCollector):
                          indexer_name=IndalekoLinuxLocalIndexer.linux_local_indexer_name,
                          **IndalekoLinuxLocalIndexer.indaleko_linux_local_indexer_service
         )
-        
+
     @staticmethod
     def generate_linux_indexer_file_name(**kwargs) -> str:
         '''Generate a file name for the Linux local indexer'''
@@ -85,9 +85,8 @@ class IndalekoLinuxLocalIndexer(BaseStorageCollector):
             kwargs['platform'] = IndalekoLinuxLocalIndexer.linux_platform
         if 'indexer_name' not in kwargs:
             kwargs['indexer_name'] = IndalekoLinuxLocalIndexer.linux_local_indexer_name
-        if 'machine_id' not in kwargs:
-            kwargs['machine_id'] = uuid.UUID(self.machine_config.machine_id).hex
-        return IndalekoIndexer.generate_indexer_file_name(**kwargs)
+        assert 'machine_id' in kwargs, 'machine_id must be specified'
+        return BaseStorageCollector.generate_indexer_file_name(**kwargs)
 
 
 def main():
@@ -135,10 +134,10 @@ def main():
                             default=os.path.expanduser('~'))
     pre_parser.add_argument('--datadir', '-d',
                             help='Path to the data directory',
-                            default=Indaleko.default_data_dir)
-    pre_parser.add_argument('--offline', 
-                        help='Do not require live database access', 
-                        default=False, 
+                            default=utils.misc.directory_management.indaleko_default_data_dir)
+    pre_parser.add_argument('--offline',
+                        help='Do not require live database access',
+                        default=False,
                         action='store_true')
     pre_args, _ = pre_parser.parse_known_args()
 
