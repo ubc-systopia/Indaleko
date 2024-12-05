@@ -16,17 +16,11 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
-import logging
+import json
 import os
-import configparser
-import secrets
-import string
-import datetime
-import time
-import argparse
 import sys
-from arango import ArangoClient
-import requests
+
+from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -44,6 +38,7 @@ from data_models import \
     IndalekoRelationshipDataModel, \
     IndalekoServiceDataModel, \
     IndalekoUserDataModel
+from activity import IndalekoActivityDataModel
 # pylint: enable=wrong-import-position
 
 class IndalekoDBCollections:
@@ -135,6 +130,17 @@ class IndalekoDBCollections:
                 },
             },
         },
+        Indaleko_ActivityContext_Collection : {
+            'schema' : IndalekoActivityDataModel.get_arangodb_schema(),
+            'edge' : False,
+            'indices' : {
+                'identifier' : {
+                    'fields' : ['ActivityContextIdentifier'],
+                    'unique' : True,
+                    'type' : 'persistent'
+                },
+            },
+        },
         Indaleko_Identity_Domain_Collection : {
             'schema' : IndalekoIdentityDomainDataModel().get_arangodb_schema(),
             'edge' : False,
@@ -153,3 +159,19 @@ class IndalekoDBCollections:
         },
         # Indaleko_User_Relationship_Collection : 'This needs to be tied into NER work'
     }
+
+def main():
+    '''Main entry point for the script.'''
+    ic('Indaleko Database Collections')
+    for collection in IndalekoDBCollections.Collections:
+        ic(f'Collection: {collection}')
+        for key, value in IndalekoDBCollections.Collections[collection].items():
+            if 'schema' == key:
+                schema = json.dumps(value, indent=4)
+                print(f'Schema: {schema}')
+            else:
+                ic(f'  {key}: {value}')
+        print('\n')
+
+if __name__ == '__main__':
+    main()

@@ -16,6 +16,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+from activity.data_model.activity import IndalekoActivityDataModel
 from activity.collectors.base import CollectorBase
 from activity.characteristics import ActivityDataCharacteristics
 # pylint: enable=wrong-import-position
@@ -30,5 +31,8 @@ collectors = [
 
 __version__ = '0.1.0'
 
-__all__ = ['CollectorBase', 'ActivityDataCharacteristics']
-
+__all__ = [
+    'IndalekoActivityDataModel',
+    'CollectorBase',
+    'ActivityDataCharacteristics'
+]
