@@ -2,17 +2,31 @@ import argparse
 import keyring
 import logging
 import os
+import sys
 import uuid
 
 from datetime import datetime, timezone
 from getpass import getpass
 from icecream import ic
-from Indaleko import Indaleko
-from IndalekoIndexer import IndalekoIndexer
-import IndalekoLogging as IndalekoLogging
 from pyicloud import PyiCloudService
 
-class IndalekoICloudIndexer(IndalekoIndexer):
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+# pylint: disable=wrong-import-position
+from utils.i_logging import IndalekoLogging
+from utils.misc.file_name_management import generate_file_name
+from utils.misc.directory_management import indaleko_default_data_dir, indaleko_default_config_dir, indaleko_default_log_dir
+from storage.collectors.base import BaseStorageCollector
+from platforms.windows.machine_config import IndalekoWindowsMachineConfig
+# pylint: enable=wrong-import-position
+
+
+class IndalekoICloudIndexer(BaseStorageCollector):
 
     icloud_platform = 'iCloud'
     icloud_indexer_name = 'icloud_indexer'
@@ -123,7 +137,7 @@ class IndalekoICloudIndexer(IndalekoIndexer):
 
     def _store_credentials(self, username, password):
         keyring.set_password('iCloud', username, password)
-        self.auth_logger.debug(f"Stored credentials for {username}")
+        # self.auth_logger.debug(f"Stored credentials for {username}")
 
     def get_stored_usernames(self):
         usernames = keyring.get_password('iCloud', 'usernames')
@@ -137,10 +151,10 @@ class IndalekoICloudIndexer(IndalekoIndexer):
         return usernames
 
     def list_all_entries(self, service_name):
-        self.auth_logger.debug(f"Listing all entries for service '{service_name}':")
+        # self.auth_logger.debug(f"Listing all entries for service '{service_name}':")
         stored_usernames = self.get_stored_usernames()
-        for stored_username in stored_usernames:
-            self.auth_logger.debug(f"Username: {stored_username}")
+        # for stored_username in stored_usernames:
+        #     self.auth_logger.debug(f"Username: {stored_username}")
 
     def authenticate(self):
         user_id, password = self.get_icloud_credentials()
@@ -156,11 +170,11 @@ class IndalekoICloudIndexer(IndalekoIndexer):
         return api
 
     @staticmethod
-    def generate_windows_indexer_file_name(**kwargs):
+    def generate_icloud_collector_file_name(**kwargs):
         '''This method generates the name of the file that wiil contain the metadata
         of the files in the iCloud folder.'''
         assert 'user_id' in kwargs, 'No user_id found in kwargs'
-        return Indaleko.generate_file_name(**kwargs)
+        return generate_file_name(**kwargs)
 
     @staticmethod
     def convert_to_serializable(data):
@@ -247,40 +261,40 @@ class IndalekoICloudIndexer(IndalekoIndexer):
     @staticmethod
     def find_indexer_files(
         search_dir : str,
-        prefix : str = IndalekoIndexer.default_file_prefix,
-        suffix : str = IndalekoIndexer.default_file_suffix) -> list:
+        prefix : str = BaseStorageCollector.default_file_prefix,
+        suffix : str = BaseStorageCollector.default_file_suffix) -> list:
         '''This function finds the files to ingest:
             search_dir: path to the search directory
             prefix: prefix of the file to ingest
             suffix: suffix of the file to ingest (default is .json)
         '''
-        prospects = IndalekoIndexer.find_indexer_files(search_dir, prefix, suffix)
+        prospects = BaseStorageCollector.find_indexer_files(search_dir, prefix, suffix)
         return [f for f in prospects if IndalekoICloudIndexer.icloud_platform in f]
 
 def main():
-    logging_levels = Indaleko.get_logging_levels()
+    logging_levels = IndalekoLogging.get_logging_levels()
     timestamp = datetime.now(timezone.utc).isoformat()
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument('--logdir', '-l',
                             help='Path to the log directory',
-                            default=Indaleko.default_log_dir)
+                            default=indaleko_default_log_dir)
     pre_parser.add_argument('--loglevel',
                             type=int,
                             default=logging.DEBUG,
                             choices=logging_levels,
                             help='Logging level to use (lower number = more logging)')
     pre_args, _ = pre_parser.parse_known_args()
-    indaleko_logging = IndalekoLogging.IndalekoLogging(platform=IndalekoICloudIndexer.icloud_platform,
-                                                       service_name='indexer',
-                                                       log_dir=pre_args.logdir,
-                                                       log_level=pre_args.loglevel,
-                                                       timestamp=timestamp,
-                                                       suffix='log')
+    indaleko_logging = IndalekoLogging(platform=IndalekoICloudIndexer.icloud_platform,
+                                        service_name='indexer',
+                                        log_dir=pre_args.logdir,
+                                        log_level=pre_args.loglevel,
+                                        timestamp=timestamp,
+                                        suffix='log')
     log_file_name = indaleko_logging.get_log_file_name()
     ic(log_file_name)
     indexer = IndalekoICloudIndexer(timestamp=timestamp)
 
-    output_file_name = IndalekoICloudIndexer.generate_windows_indexer_file_name(
+    output_file_name = IndalekoICloudIndexer.generate_icloud_collector_file_name(
         platform=IndalekoICloudIndexer.icloud_platform,
         user_id = indexer.get_user_id(),
         service = 'indexer',
@@ -294,7 +308,7 @@ def main():
                         help='Name and location of where to save the fetched metadata')
     parser.add_argument('--datadir', '-d',
                         help='Path to dhe data directory',
-                        default=Indaleko.default_data_dir)
+                        default=indaleko_default_data_dir)
     parser.add_argument('--path',
                         help='Path to the directory to index',
                         type=str,

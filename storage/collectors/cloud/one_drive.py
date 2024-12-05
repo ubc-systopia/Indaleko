@@ -40,19 +40,29 @@ import threading
 import time
 from urllib.parse import urlencode, parse_qs, urlparse
 
-from Indaleko import Indaleko
-from IndalekoIndexer import IndalekoIndexer
-from IndalekoLogging import IndalekoLogging
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
 
+# pylint: disable=wrong-import-position
+from utils.i_logging import IndalekoLogging
+from utils.misc.file_name_management import generate_file_name
+from utils.misc.directory_management import indaleko_default_data_dir, indaleko_default_config_dir, indaleko_default_log_dir
+from storage.collectors.base import BaseStorageCollector
+from platforms.windows.machine_config import IndalekoWindowsMachineConfig
+# pylint: enable=wrong-import-position
 
-class IndalekoOneDriveIndexer(IndalekoIndexer):
+class IndalekoOneDriveIndexer(BaseStorageCollector):
     '''This is the class for the OneDrive Indexer for Indaleko.'''
 
     onedrive_platform = "OneDrive"
-    onedrive_indexer_name = "onedrive_indexer"
+    onedrive_indexer_name = "onedrive_collector"
 
     indaleko_onedrive_indexer_uuid = '4b0bdc5e-646e-4023-96c0-400281a03e54'
-    indaleko_onedrive_indexer_service_name = 'OneDrive Indexer'
+    indaleko_onedrive_indexer_service_name = 'OneDrive Collector'
     indaleko_onedrive_indexer_service_description = 'Indexes the OneDrive contents for Indaleko.'
     indaleko_onedrive_indexer_service_version = '1.0'
     indaleko_onedrive_indexer_service_type = 'Indexer'
@@ -203,7 +213,7 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
 
 
     def __init__(self, **kwargs):
-        self.config_dir = kwargs.get('configdir', Indaleko.default_config_dir)
+        self.config_dir = kwargs.get('configdir', indaleko_default_config_dir)
         self.onedrive_config_file = os.path.join(self.config_dir, IndalekoOneDriveIndexer.onedrive_config_file)
         self.onedrive_token_file = os.path.join(self.config_dir, IndalekoOneDriveIndexer.onedrive_token_file)
         self.graphcreds = IndalekoOneDriveIndexer.MicrosoftGraphCredentials(
@@ -230,7 +240,7 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
         of the files in the Dropbox folder.
         '''
         assert 'user_id' in kwargs, 'No user_id found in kwargs'
-        return Indaleko.generate_file_name(**kwargs)
+        return generate_file_name(**kwargs)
 
     def build_stat_dict(self, entry: dict) -> dict:
         '''This builds the stat dict for the entry'''
@@ -544,27 +554,27 @@ class IndalekoOneDriveIndexer(IndalekoIndexer):
     @staticmethod
     def find_indexer_files(
             search_dir : str,
-            prefix : str = IndalekoIndexer.default_file_prefix,
-            suffix : str = IndalekoIndexer.default_file_suffix) -> list:
+            prefix : str = BaseStorageCollector.default_file_prefix,
+            suffix : str = BaseStorageCollector.default_file_suffix) -> list:
         '''This function finds the files to ingest:
             search_dir: path to the search directory
             prefix: prefix of the file to ingest
             suffix: suffix of the file to ingest (default is .json)
         '''
-        prospects = IndalekoIndexer.find_indexer_files(search_dir, prefix, suffix)
+        prospects = BaseStorageCollector.find_indexer_files(search_dir, prefix, suffix)
         return [f for f in prospects if IndalekoOneDriveIndexer.dropbox_platform in f]
 
 
 def main():
-    logging_levels = Indaleko.get_logging_levels()
+    logging_levels = IndalekoLogging.get_logging_levels()
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument('--configdir',
                             help='Path to the config directory',
-                            default=Indaleko.default_config_dir)
+                            default=indaleko_default_config_dir)
     pre_parser.add_argument('--logdir', '-l',
                             help='Path to the log directory',
-                            default=Indaleko.default_log_dir)
+                            default=indaleko_default_log_dir)
     pre_parser.add_argument('--loglevel',
                             type=int,
                             default=logging.DEBUG,
@@ -601,7 +611,7 @@ def main():
     parser.add_argument('--datadir',
                         '-d',
                         help='Path to the data directory',
-                        default=Indaleko.default_data_dir)
+                        default=indaleko_default_data_dir)
     parser.add_argument('--path',
                         help='Path to the directory to index',
                         type=str,
