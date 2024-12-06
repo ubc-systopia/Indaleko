@@ -6,20 +6,26 @@ from icecream import ic
 
 class ResultCalculator():
     def __init__(self) -> None:
-        pass
+        self.selected_uuid = []
+        self.selected_metadata = []
     
     # calculate the number of truth metadata given the raw_results based on UUID
     def calculate_n_truth_metadata(self, raw_results:list[str]) -> int:
         n_actual_truth = 0
         for result in raw_results:
             uuid = result['result']['Record']['SourceIdentifier']['Identifier']
-            uuid.startswith("c")
-            n_actual_truth += 1
+            self.selected_uuid.append(uuid)
+            self.selected_metadata.append(result['result'])
+
+            if uuid.startswith("c"):
+                n_actual_truth += 1
         self.n_truth_metadata = n_actual_truth
         return n_actual_truth
     
     # calculate the precision 
     def calculate_precision(self, total_n_truth, total_n_results):
+        if total_n_results == 0:
+            return "precision NA: total number of retrieved results is 0"
         return total_n_truth / total_n_results
 
     #calculate the recall
@@ -31,8 +37,8 @@ class ResultCalculator():
         n_truth_number = self.calculate_n_truth_metadata(raw_results)
         total_returned_n = len(raw_results)
         
-        recall = self.calculate_recall(n_truth_number, total_returned_n)
-        precision = self.calculate_precision(n_truth_number, theoretical_truth_n)
+        recall = self.calculate_recall(n_truth_number, theoretical_truth_n)
+        precision = self.calculate_precision(n_truth_number, total_returned_n)
         return recall, precision
         
 def main():
@@ -91,7 +97,7 @@ def main():
             "_rev": "_i1RndnO---",
             "Record": {
                 "SourceIdentifier": {
-                    "Identifier": "c2000000-9682-1165-6769-137883870872",
+                    "Identifier": "f2000000-9682-1165-6769-137883870872",
                     "Version": "1.0",
                     "Description": "Record UUID"
                 },

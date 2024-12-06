@@ -16,9 +16,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
-from data_models.i_object import IndalekoObjectDataModel
-from IndalekoCollections import IndalekoCollections
-from IndalekoDBConfig import IndalekoDBConfig
+from db.i_collections import IndalekoCollections
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -46,15 +44,14 @@ class MetadataStorer():
             print(f'Inserted {record} into {collection_name}')
 
     # add each activity context to the specified collection
-    def add_ac_to_collection(self, collections: IndalekoCollections, collection_name: str, records: list) -> None:
+    def add_to_collection_key(self, collections: IndalekoCollections, collection_name: str, records: list) -> None:
         for record in records:
             record['_key'] = str(uuid.uuid4())
             ic(record)
             collections.get_collection(collection_name).insert(record)
             print(f'Inserted {record} into {collection_name}')
-
-
-    # convert the json file to a list of metadata
+    
+    # convert the json file to a list of metadata 
     def convert_json_file(self, json_file: list):
         with open(json_file, 'r') as file:
             print("here")
@@ -74,17 +71,18 @@ class MetadataStorer():
 def main():
     collections = IndalekoCollections()
     storer = MetadataStorer()
-    # records = "/Users/pearl/Indaleko_updated/Indaleko/data/all_records.json"
-    # record_dataset = storer.convert_json_file(records)
-    # storer.add_records_to_collection(collections, "Object", record_dataset)
+
+    records = "/Users/pearl/Indaleko_updated/Indaleko/data/all_records.json"
+    record_dataset = storer.convert_json_file(records)
+    storer.add_records_to_collection(collections, "Objects", record_dataset)
 
     activities = "/Users/pearl/Indaleko_updated/Indaleko/data/all_activity.json"
     activity_dataset = storer.convert_json_file(activities)
     storer.add_ac_to_collection(collections, "ActivityContext", activity_dataset)
-    #delete_records_from_collection(collections, "ActivityContext")
-    # machine_config = "/Users/pearl/Indaleko_updated/Indaleko/config/macos-hardware-info-47582870-5694-0536-0078-6547569242582024-11-11T16:47:18.350318.json"
-    # machine_config_dg = convert_json_file(machine_config)
-    # add_records_to_collection(collections, "MachineConfig", machine_config_dg)
+
+    machine_config = "/Users/pearl/Indaleko_updated/Indaleko/data/all_machine_config.json"
+    machine_config_dg = storer.convert_json_file(machine_config)
+    storer.add_ac_to_collection(collections, "MachineConfig", machine_config_dg)
 
 
     #delete_records_from_collection(collections, "Object")
