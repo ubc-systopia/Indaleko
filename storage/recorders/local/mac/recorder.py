@@ -46,7 +46,7 @@ from platforms.mac.machine_config import IndalekoMacOSMachineConfig
 from platforms.unix import UnixFileAttributes
 from storage import IndalekoObject
 from storage.recorders.base import IndalekoStorageRecorder
-from storage.collectors.local.mac.collector import IndalekoMacLocalIndexer
+from storage.collectors.local.mac.collector import IndalekoMacLocalCollector
 from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
 from utils.misc.file_name_management import indaleko_file_name_prefix
 from utils.misc.data_management import encode_binary_data
@@ -75,7 +75,7 @@ class IndalekoMacLocalIngester(IndalekoStorageRecorder):
         'service_identifier' : mac_local_ingester_uuid,
     }
 
-    mac_platform = IndalekoMacLocalIndexer.mac_platform
+    mac_platform = IndalekoMacLocalCollector.mac_platform
     mac_local_ingester = 'local_fs_ingester'
 
     def __init__(self, reset_collection=False, objects_file="", relations_file="", **kwargs) -> None:
@@ -131,8 +131,8 @@ class IndalekoMacLocalIngester(IndalekoStorageRecorder):
         if self.data_dir is None:
             raise ValueError('data_dir must be specified')
         return [x for x in super().find_indexer_files(self.data_dir)
-                if IndalekoMacLocalIndexer.mac_platform in x and
-                IndalekoMacLocalIndexer.mac_local_indexer_name in x]
+                if IndalekoMacLocalCollector.mac_platform in x and
+                IndalekoMacLocalCollector.mac_local_collector_name in x]
 
     def load_indexer_data_from_file(self: 'IndalekoMacLocalIngester') -> None:
         '''This function loads the indexer data from the file.'''
@@ -414,10 +414,10 @@ def main():
     pre_args, _ = pre_parser.parse_known_args()
     machine_config = IndalekoMacOSMachineConfig.load_config_from_file(
         config_file=default_config_file)
-    indexer = IndalekoMacLocalIndexer(
+    indexer = IndalekoMacLocalCollector(
         search_dir=pre_args.datadir,
-        prefix=IndalekoMacLocalIndexer.mac_platform,
-        suffix=IndalekoMacLocalIndexer.mac_local_indexer_name,
+        prefix=IndalekoMacLocalCollector.mac_platform,
+        suffix=IndalekoMacLocalCollector.mac_local_collector_name,
         machine_config=machine_config
     )
     indexer_files = indexer.find_collector_files(pre_args.datadir)
@@ -447,7 +447,7 @@ def main():
                         default=logging.DEBUG,
                         help='Logging level to use.')
     args = parser.parse_args()
-    metadata = IndalekoMacLocalIndexer.extract_metadata_from_indexer_file_name(
+    metadata = IndalekoMacLocalCollector.extract_metadata_from_indexer_file_name(
         args.input)
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     machine_id = 'unknown'
@@ -482,7 +482,7 @@ def main():
         machine_config=machine_config,
         machine_id=machine_id,
         timestamp=timestamp,
-        platform=IndalekoMacLocalIndexer.mac_platform,
+        platform=IndalekoMacLocalCollector.mac_platform,
         ingester=IndalekoMacLocalIngester.mac_local_ingester,
         storage_description=storage,
         file_prefix=file_prefix,

@@ -171,7 +171,7 @@ class IndalekoServiceManager(IndalekoSingleton):
                          service_name: str,
                          service_description: str,
                          service_version: str,
-                         service_type : str = 'Indexer',
+                         service_type : str,
                          service_id : str  = None) -> dict:
         """
         This method registers a service with the given name, description, and
