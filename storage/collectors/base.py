@@ -288,7 +288,7 @@ class BaseStorageCollector:
 
 
 
-    def index(self) -> list:
+    def collect(self) -> list:
         '''
         This is the main indexing function for the collector.  Can be overriden
         for platforms that require additional processing.

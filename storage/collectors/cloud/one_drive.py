@@ -247,7 +247,7 @@ class IndalekoOneDriveIndexer(BaseStorageCollector):
         return entry
 
 
-    def index(self) -> list:
+    def collect(self) -> list:
         '''
         This method indexes OneDrive Drive.
         '''
@@ -622,7 +622,7 @@ def main():
     logging.info('Output file: %s', output_file)
     logging.info('Indexing: %s', args.path)
     logging.info(args)
-    data = indexer.index()
+    data = indexer.collect()
     if len(data) > 0:
         indexer.write_data_to_file(data, output_file)
     else:
