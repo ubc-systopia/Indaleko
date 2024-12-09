@@ -43,25 +43,25 @@ from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 
 
 
-class IndalekoWindowsLocalIndexer(BaseStorageCollector):
+class IndalekoWindowsLocalCollector(BaseStorageCollector):
     '''
     This is the class that indexes Windows local file systems.
     '''
     windows_platform = 'Windows'
-    windows_local_indexer_name = 'fs-indexer'
+    windows_local_collector_name = 'fs-collector'
 
-    indaleko_windows_local_indexer_uuid = '0793b4d5-e549-4cb6-8177-020a738b66b7'
-    indaleko_windows_local_indexer_service_name = 'Windows Local Indexer'
-    indaleko_windows_local_indexer_service_description = 'This service indexes the local filesystems of a Windows machine.'
-    indaleko_windows_local_indexer_service_version = '1.0'
-    indaleko_windows_local_indexer_service_type = 'Indexer'
+    indaleko_windows_local_collector_uuid = '0793b4d5-e549-4cb6-8177-020a738b66b7'
+    indaleko_windows_local_collector_service_name = 'Windows Local collector'
+    indaleko_windows_local_collector_service_description = 'This service collects metadata from the local filesystems of a Windows machine.'
+    indaleko_windows_local_collector_service_version = '1.0'
+    indaleko_windows_local_collector_service_type = 'Collector'
 
-    indaleko_windows_local_indexer_service ={
-        'service_name' : indaleko_windows_local_indexer_service_name,
-        'service_description' : indaleko_windows_local_indexer_service_description,
-        'service_version' : indaleko_windows_local_indexer_service_version,
-        'service_type' : indaleko_windows_local_indexer_service_type,
-        'service_identifier' : indaleko_windows_local_indexer_uuid,
+    indaleko_windows_local_collector_service ={
+        'service_name' : indaleko_windows_local_collector_service_name,
+        'service_description' : indaleko_windows_local_collector_service_description,
+        'service_version' : indaleko_windows_local_collector_service_version,
+        'service_type' : indaleko_windows_local_collector_service_type,
+        'service_identifier' : indaleko_windows_local_collector_uuid,
     }
 
     @staticmethod
@@ -98,23 +98,23 @@ class IndalekoWindowsLocalIndexer(BaseStorageCollector):
         self.machine_config = kwargs['machine_config']
         if 'machine_id' not in kwargs:
             kwargs['machine_id'] = self.machine_config.machine_id
-        for key, value in self.indaleko_windows_local_indexer_service.items():
+        for key, value in self.indaleko_windows_local_collector_service.items():
             if key not in kwargs:
                 kwargs[key] = value
         if 'platform' not in kwargs:
-            kwargs['platform'] = IndalekoWindowsLocalIndexer.windows_platform
-        if 'indexer_name' not in kwargs:
-            kwargs['indexer_name'] = IndalekoWindowsLocalIndexer.windows_local_indexer_name
+            kwargs['platform'] = IndalekoWindowsLocalCollector.windows_platform
+        if 'collector_name' not in kwargs:
+            kwargs['collector_name'] = IndalekoWindowsLocalCollector.windows_local_collector_name
         super().__init__(**kwargs)
 
-    def generate_windows_indexer_file_name(self, **kwargs) -> str:
+    def generate_windows_collector_file_name(self, **kwargs) -> str:
         if 'platform' not in kwargs:
-            kwargs['platform'] = IndalekoWindowsLocalIndexer.windows_platform
-        if 'indexer_name' not in kwargs:
-            kwargs['indexer_name'] = IndalekoWindowsLocalIndexer.windows_local_indexer_name
+            kwargs['platform'] = IndalekoWindowsLocalCollector.windows_platform
+        if 'collector_name' not in kwargs:
+            kwargs['collector_name'] = IndalekoWindowsLocalCollector.windows_local_collector_name
         if 'machine_id' not in kwargs:
             kwargs['machine_id'] = uuid.UUID(self.machine_config.machine_id).hex
-        return BaseStorageCollector.generate_indexer_file_name(**kwargs)
+        return BaseStorageCollector.generate_collector_file_name(**kwargs)
 
     def convert_windows_path_to_guid_uri(self, path : str) -> str:
         '''This method handles converting a Windows path to a volume GUID based URI.'''
@@ -234,9 +234,9 @@ def main():
     if drive_guid is None:
         drive_guid = uuid.uuid4().hex
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    indexer = IndalekoWindowsLocalIndexer(machine_config=machine_config,
+    indexer = IndalekoWindowsLocalCollector(machine_config=machine_config,
                                           timestamp=timestamp)
-    output_file = indexer.generate_windows_indexer_file_name(storage_description=drive_guid)
+    output_file = indexer.generate_windows_collector_file_name(storage_description=drive_guid)
     parser= argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--datadir', '-d',
                         help='Path to the data directory',
@@ -254,12 +254,12 @@ def main():
                         help='Logging level to use (lower number = more logging)')
 
     args = parser.parse_args()
-    indexer = IndalekoWindowsLocalIndexer(timestamp=timestamp,
+    indexer = IndalekoWindowsLocalCollector(timestamp=timestamp,
                                           path=args.path,
                                           machine_config=machine_config,
                                           storage_description=drive_guid)
     output_file = args.output
-    log_file_name = indexer.generate_windows_indexer_file_name(target_dir=args.logdir, suffix='log')
+    log_file_name = indexer.generate_windows_collector_file_name(target_dir=args.logdir, suffix='log')
     logging.basicConfig(filename=os.path.join(log_file_name),
                                 level=args.loglevel,
                                 format='%(asctime)s - %(levelname)s - %(message)s',

@@ -420,7 +420,7 @@ def main():
         suffix=IndalekoMacLocalIndexer.mac_local_indexer_name,
         machine_config=machine_config
     )
-    indexer_files = indexer.find_indexer_files(pre_args.datadir)
+    indexer_files = indexer.find_collector_files(pre_args.datadir)
     parser = argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--input',
                         choices=indexer_files,

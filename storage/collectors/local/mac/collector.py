@@ -86,7 +86,7 @@ class IndalekoMacLocalIndexer(BaseStorageCollector):
             kwargs['indexer_name'] = IndalekoMacLocalIndexer.mac_local_indexer_name
         if 'machine_id' not in kwargs:
             kwargs['machine_id'] = uuid.UUID(self.machine_config.machine_id).hex
-        return BaseStorageCollector.generate_indexer_file_name(**kwargs)
+        return BaseStorageCollector.generate_collector_file_name(**kwargs)
 
 
     def build_stat_dict(self, name: str, root : str, last_uri = None) -> tuple:

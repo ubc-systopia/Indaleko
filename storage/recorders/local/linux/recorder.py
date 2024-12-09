@@ -325,7 +325,7 @@ def main():
                             type=str,
                             default=utils.misc.directory_management.indaleko_default_data_dir)
     pre_args, _ = pre_parser.parse_known_args()
-    indexer_files = IndalekoLinuxLocalIndexer.find_indexer_files(pre_args.datadir)
+    indexer_files = IndalekoLinuxLocalIndexer.find_collector_files(pre_args.datadir)
     pre_parser.add_argument('--input',
                             choices=indexer_files,
                             default=indexer_files[-1],

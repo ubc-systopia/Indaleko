@@ -158,6 +158,7 @@ class IndalekoICloudIndexer(BaseStorageCollector):
 
     def authenticate(self):
         user_id, password = self.get_icloud_credentials()
+        ic(user_id, password)
         api = PyiCloudService(user_id, password)
 
         if api.requires_2fa:
@@ -259,7 +260,7 @@ class IndalekoICloudIndexer(BaseStorageCollector):
         return indexed_data
 
     @staticmethod
-    def find_indexer_files(
+    def find_collector_files(
         search_dir : str,
         prefix : str = BaseStorageCollector.default_file_prefix,
         suffix : str = BaseStorageCollector.default_file_suffix) -> list:
@@ -268,7 +269,7 @@ class IndalekoICloudIndexer(BaseStorageCollector):
             prefix: prefix of the file to ingest
             suffix: suffix of the file to ingest (default is .json)
         '''
-        prospects = BaseStorageCollector.find_indexer_files(search_dir, prefix, suffix)
+        prospects = BaseStorageCollector.find_collector_files(search_dir, prefix, suffix)
         return [f for f in prospects if IndalekoICloudIndexer.icloud_platform in f]
 
 def main():

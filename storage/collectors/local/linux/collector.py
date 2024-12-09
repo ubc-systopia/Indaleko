@@ -86,7 +86,7 @@ class IndalekoLinuxLocalIndexer(BaseStorageCollector):
         if 'indexer_name' not in kwargs:
             kwargs['indexer_name'] = IndalekoLinuxLocalIndexer.linux_local_indexer_name
         assert 'machine_id' in kwargs, 'machine_id must be specified'
-        return BaseStorageCollector.generate_indexer_file_name(**kwargs)
+        return BaseStorageCollector.generate_collector_file_name(**kwargs)
 
 
 def main():

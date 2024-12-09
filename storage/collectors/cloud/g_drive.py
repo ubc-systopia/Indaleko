@@ -242,7 +242,7 @@ class IndalekoGDriveIndexer(BaseStorageCollector):
         return self.metadata
 
     @staticmethod
-    def find_indexer_files(
+    def find_collector_files(
             search_dir : str,
             prefix : str = BaseStorageCollector.default_file_prefix,
             suffix : str = BaseStorageCollector.default_file_suffix) -> list:
@@ -251,7 +251,7 @@ class IndalekoGDriveIndexer(BaseStorageCollector):
             prefix: prefix of the file to ingest
             suffix: suffix of the file to ingest (default is .json)
         '''
-        prospects = BaseStorageCollector.find_indexer_files(search_dir, prefix, suffix)
+        prospects = BaseStorageCollector.find_collector_files(search_dir, prefix, suffix)
         return [f for f in prospects if IndalekoGDriveIndexer.gdrive_platform in f]
 
 

@@ -48,7 +48,7 @@ from platforms.unix import UnixFileAttributes
 from platforms.windows_attributes import IndalekoWindows
 from storage import IndalekoObject
 from storage.recorders.base import IndalekoStorageRecorder
-from storage.collectors.local.windows.collector import IndalekoWindowsLocalIndexer
+from storage.collectors.local.windows.collector import IndalekoWindowsLocalCollector
 import utils.misc.directory_management
 from utils.misc.data_management import encode_binary_data
 # pylint: enable=wrong-import-position
@@ -68,7 +68,7 @@ class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
         'service_identifier' : windows_local_ingester_uuid,
     }
 
-    windows_platform = IndalekoWindowsLocalIndexer.windows_platform
+    windows_platform = IndalekoWindowsLocalCollector.windows_platform
     windows_local_ingester = 'local_fs_ingester'
 
     def __init__(self, **kwargs) -> None:
@@ -118,8 +118,8 @@ class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
         if self.data_dir is None:
             raise ValueError('data_dir must be specified')
         return [x for x in super().find_indexer_files(self.data_dir)
-                if IndalekoWindowsLocalIndexer.windows_platform in x and
-                IndalekoWindowsLocalIndexer.windows_local_indexer_name in x]
+                if IndalekoWindowsLocalCollector.windows_platform in x and
+                IndalekoWindowsLocalCollector.windows_local_indexer_name in x]
 
     def load_indexer_data_from_file(self : 'IndalekoWindowsLocalIngester') -> None:
         '''This function loads the indexer data from the file.'''
@@ -405,13 +405,13 @@ def main():
                             default=utils.misc.directory_management.indaleko_default_data_dir)
     pre_args, _ = pre_parser.parse_known_args()
     machine_config = IndalekoWindowsMachineConfig.load_config_from_file(config_file=default_config_file)
-    indexer = IndalekoWindowsLocalIndexer(
+    indexer = IndalekoWindowsLocalCollector(
         search_dir=pre_args.datadir,
-        prefix=IndalekoWindowsLocalIndexer.windows_platform,
-        suffix=IndalekoWindowsLocalIndexer.windows_local_indexer_name,
+        prefix=IndalekoWindowsLocalCollector.windows_platform,
+        suffix=IndalekoWindowsLocalCollector.windows_local_indexer_name,
         machine_config=machine_config
     )
-    indexer_files = indexer.find_indexer_files(pre_args.datadir)
+    indexer_files = indexer.find_collector_files(pre_args.datadir)
     parser = argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--input',
                         choices=indexer_files,
@@ -426,7 +426,7 @@ def main():
                         default=logging.DEBUG,
                         help='Logging level to use.')
     args = parser.parse_args()
-    metadata = IndalekoWindowsLocalIndexer.extract_metadata_from_indexer_file_name(args.input)
+    metadata = IndalekoWindowsLocalCollector.extract_metadata_from_indexer_file_name(args.input)
     timestamp = metadata.get('timestamp',
                              datetime.datetime.now(datetime.timezone.utc).isoformat())
     machine_id = 'unknown'
@@ -458,7 +458,7 @@ def main():
         machine_config=machine_config,
         machine_id = machine_id,
         timestamp=timestamp,
-        platform=IndalekoWindowsLocalIndexer.windows_platform,
+        platform=IndalekoWindowsLocalCollector.windows_platform,
         ingester = IndalekoWindowsLocalIngester.windows_local_ingester,
         storage_description = storage,
         file_prefix = file_prefix,

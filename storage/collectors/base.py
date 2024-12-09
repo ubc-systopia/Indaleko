@@ -50,19 +50,19 @@ class BaseStorageCollector:
     mechanisms for managing the data and configuration files that are used by
     the indexers.
     '''
-    indaleko_generic_indexer_uuid = '4a80a080-9cc9-4856-bf43-7b646557ac2d'
-    indaleko_generic_indexer_service_name = "Indaleko Generic Indexer"
-    indaleko_generic_indexer_service_description = "This is the base (non-specialized) Indaleko storage collector. You should not see it in the database."
-    indaleko_generic_indexer_service_version = '1.0'
+    indaleko_generic_collector_uuid = '4a80a080-9cc9-4856-bf43-7b646557ac2d'
+    indaleko_generic_collector_service_name = "Indaleko Generic Collector"
+    indaleko_generic_collector_service_description = "This is the base (non-specialized) Indaleko storage collector. You should not see it in the database."
+    indaleko_generic_collector_service_version = '1.0'
 
-    # define the parameters for the generic indexer service.  These should be
+    # define the parameters for the generic collector service.  These should be
     # overridden by the derived classes.
-    indaleko_generic_indexer_service = {
-        'service_name' : indaleko_generic_indexer_service_name,
-        'service_description' : indaleko_generic_indexer_service_description,
-        'service_version' : indaleko_generic_indexer_service_version,
-        'service_type' : 'Indexer',
-        'service_identifier' : indaleko_generic_indexer_uuid,
+    indaleko_generic_collector_service = {
+        'service_name' : indaleko_generic_collector_service_name,
+        'service_description' : indaleko_generic_collector_service_description,
+        'service_version' : indaleko_generic_collector_service_version,
+        'service_type' : 'Collector',
+        'service_identifier' : indaleko_generic_collector_uuid,
     }
 
     # we use a common file naming mechanism.  These are overridable defaults.
@@ -101,9 +101,9 @@ class BaseStorageCollector:
         assert isinstance(self.timestamp, str), 'timestamp must be a string'
         if 'platform' in kwargs:
             self.platform = kwargs['platform']
-        if 'indexer_name' in kwargs:
-            assert isinstance(kwargs['indexer_name'], str), 'indexer_name must be a string'
-            self.indexer_name = kwargs['indexer_name']
+        if 'collector_name' in kwargs:
+            assert isinstance(kwargs['collector_name'], str), 'collector_name must be a string'
+            self.collector_name = kwargs['collector_name']
         if 'machine_id' in kwargs:
             self.machine_id = kwargs['machine_id']
         if 'storage_description' in kwargs:
@@ -114,28 +114,28 @@ class BaseStorageCollector:
             self.path = kwargs['path']
         else:
             self.path = os.path.expanduser('~')
-        self.service_name = BaseStorageCollector.indaleko_generic_indexer_service_name
+        self.service_name = BaseStorageCollector.indaleko_generic_collector_service_name
         if 'service_name' in kwargs:
             self.service_name = kwargs['service_name']
         self.service_description = \
-            self.indaleko_generic_indexer_service_description
+            self.indaleko_generic_collector_service_description
         if 'service_description' in kwargs:
             self.service_description = kwargs['service_description']
-        self.service_version = self.indaleko_generic_indexer_service_version
+        self.service_version = self.indaleko_generic_collector_service_version
         if 'service_version' in kwargs:
             self.service_version = kwargs['service_version']
-        self.service_type = 'Indexer'
+        self.service_type = 'Collector'
         if 'service_type' in kwargs:
             self.service_type = kwargs['service_type']
-        self.service_identifier = self.indaleko_generic_indexer_uuid
+        self.service_identifier = self.indaleko_generic_collector_uuid
         if 'service_identifier' in kwargs:
             self.service_identifier = kwargs['service_identifier']
-        self.indexer_service = None
+        self.collector_service = None
         if not self.offline:
-            self.indexer_service = IndalekoServiceManager()\
+            self.collector_service = IndalekoServiceManager()\
                 .lookup_service_by_identifier(self.service_identifier)
-            if self.indexer_service is None:
-                self.indexer_service = IndalekoServiceManager()\
+            if self.collector_service is None:
+                self.collector_service = IndalekoServiceManager()\
                     .register_service(
                     service_name=self.service_name,
                     service_id=self.service_identifier,
@@ -143,20 +143,20 @@ class BaseStorageCollector:
                     service_version=self.service_version,
                     service_type=self.service_type
                 )
-        assert self.indexer_service is not None or self.offline,\
-            "Indexer service does not exist, not in offline mode"
+        assert self.collector_service is not None or self.offline,\
+            "Collector service does not exist, not in offline mode"
         for count in BaseStorageCollector.counter_values:
             setattr(self, count, 0)
 
     @staticmethod
-    def find_indexer_files(
+    def find_collector_files(
             search_dir : str,
             prefix : str = default_file_prefix,
             suffix : str = default_file_suffix) -> list:
         '''This function finds the files to ingest:
             search_dir: path to the search directory
-            prefix: prefix of the file to ingest
-            suffix: suffix of the file to ingest (default is .json)
+            prefix: prefix of the collector file
+            suffix: suffix of the collector file (default is .json)
         '''
         assert search_dir is not None, 'search_dir must be a valid path'
         assert os.path.isdir(search_dir), 'search_dir must be a valid directory'
@@ -164,26 +164,26 @@ class BaseStorageCollector:
         assert suffix is not None, 'suffix must be a valid string'
         return [x for x in os.listdir(search_dir)
                 if x.startswith(prefix)
-                and x.endswith(suffix) and 'indexer' in x]
+                and x.endswith(suffix) and 'collector' in x]
 
     def get_counts(self):
         '''
-        Retrieves counters about the indexer.
+        Retrieves counters about the collector.
         '''
         return {x : getattr(self, x) for x in BaseStorageCollector.counter_values}
 
     @staticmethod
-    def generate_indexer_file_name(**kwargs) -> str:
-        '''This will generate a file name for the indexer output file.'''
+    def generate_collector_file_name(**kwargs) -> str:
+        '''This will generate a file name for the collector output file.'''
         # platform : str, target_dir : str = None, suffix : str = None) -> str:
         assert 'platform' in kwargs, 'platform must be specified'
-        assert 'indexer_name' in kwargs, 'indexer_name must be specified'
+        assert 'collector_name' in kwargs, 'collector_name must be specified'
         platform = kwargs.get('platform', 'unknown_platform').replace('-', '_')
         if not isinstance(platform, str):
             raise ValueError('platform must be a string')
-        indexer_name = kwargs.get('indexer_name', 'unknown_indexer').replace('-', '_')
-        if not isinstance(indexer_name, str):
-            raise ValueError('indexer_name must be a string')
+        collector_name = kwargs.get('collector_name', 'unknown_indexer').replace('-', '_')
+        if not isinstance(collector_name, str):
+            raise ValueError('collector_name must be a string')
         machine_id = kwargs.get('machine_id',
                                 str(uuid.UUID('00000000-0000-0000-0000-000000000000').hex))
         storage_description = None
@@ -198,7 +198,7 @@ class BaseStorageCollector:
         suffix = kwargs.get('suffix', BaseStorageCollector.default_file_suffix)
         kwargs = {
             'platform' : platform,
-            'service' : indexer_name,
+            'service' : collector_name,
             'machine' : machine_id,
             'timestamp' : timestamp,
         }
@@ -211,7 +211,7 @@ class BaseStorageCollector:
     @staticmethod
     def extract_metadata_from_indexer_file_name(file_name : str) -> dict:
         '''
-        This script extracts metadata from an indexer file name, based upon
+        This script extracts metadata from a collector file name, based upon
         the format used by generate_indexer_file_name.
         '''
         data = extract_keys_from_file_name(file_name)
@@ -269,7 +269,7 @@ class BaseStorageCollector:
         stat_dict['Name'] = name
         stat_dict['Path'] = root
         stat_dict['URI'] = os.path.join(root, name)
-        stat_dict['Indexer'] = self.service_identifier
+        stat_dict['Collector'] = self.service_identifier
         stat_dict['ObjectIdentifier'] = str(uuid.uuid4())
         return stat_dict
 
@@ -288,10 +288,9 @@ class BaseStorageCollector:
 
 
 
-
     def index(self) -> list:
         '''
-        This is the main indexing function for the indexer.  Can be overriden
+        This is the main indexing function for the collector.  Can be overriden
         for platforms that require additional processing.
         '''
         data = []
@@ -324,15 +323,15 @@ class BaseStorageCollector:
 
 def main():
     """Test code for this module."""
-    indexer = BaseStorageCollector()
-    output_file = indexer.generate_indexer_file_name(
+    collector = BaseStorageCollector()
+    output_file = collector.generate_collector_file_name(
         platform = 'unknown',
-        indexer_name = 'test_indexer',
+        collector_name = 'test_collector',
     )
     with open(output_file, 'wt', encoding='utf-8-sig') as output:
         output.write('Hello, world!\n')
         print(f'Wrote {output_file}')
-    metadata = indexer.extract_metadata_from_indexer_file_name(output_file)
+    metadata = collector.extract_metadata_from_indexer_file_name(output_file)
     print(json.dumps(metadata, indent=4))
 
 if __name__ == "__main__":
