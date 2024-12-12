@@ -30,6 +30,8 @@ import sys
 
 import arango
 
+from typing import List
+
 from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -70,9 +72,11 @@ class IndalekoMachineConfig:
         if not hasattr(self, 'source'): # override in derived classes
             self.source_identifier = None
         ic(kwargs)
-        assert 'machine_id' in kwargs, 'Machine ID is required'
-        self.machine_id = kwargs['machine_id']
-        self.machine_config = IndalekoMachineConfigDataModel.deserialize(data=kwargs)
+        self.machine_id = kwargs.get('machine_id', kwargs.get('MachineUUID', None))
+        assert 'machine_id' is not None, 'Machine ID must be specified'
+        if 'machine_id' in kwargs:
+            del kwargs['machine_id']
+        self.machine_config = IndalekoMachineConfigDataModel(**ic(kwargs))
         if not self.offline:
             self.collection = IndalekoCollections().get_collection(IndalekoDBCollections.Indaleko_MachineConfig_Collection)
             assert self.collection is not None, 'Failed to get the machine configuration collection'
@@ -131,10 +135,10 @@ class IndalekoMachineConfig:
                 'machine_id' : machine_id
             }
         )
-        return [IndalekoMachineConfig(data=entry) for entry in results]
+        return [IndalekoMachineConfig(**entry) for entry in results]
 
     @staticmethod
-    def lookup_machine_configurations(source_id : str = None) -> 'IndalekoMachineConfig':
+    def lookup_machine_configurations(source_id : str = None) -> List['IndalekoMachineConfig']:
         '''Lookup all machine configurations'''
         collections = IndalekoCollections()
         query = 'FOR doc IN @@collection RETURN doc'
@@ -146,16 +150,16 @@ class IndalekoMachineConfig:
             query += '@source RETURN doc'
             bind_vars = { '@collection' : IndalekoDBCollections.Indaleko_MachineConfig_Collection, 'source' : source_id }
         results = collections.db_config.db.aql.execute(query, bind_vars = bind_vars)
-        return [IndalekoMachineConfig(data=entry) for entry in results]
+        return [IndalekoMachineConfig(**entry) for entry in results]
 
     def serialize(self) -> dict:
         '''Serialize the machine configuration'''
-        return IndalekoMachineConfigDataModel.serialize(self.machine_config)
+        return ic(json.loads(self.machine_config.model_dump_json()))
 
     @staticmethod
     def deserialize(data : dict) -> 'IndalekoMachineConfig':
         '''Deserialize the machine configuration'''
-        return IndalekoMachineConfig(machine_config = data)
+        return IndalekoMachineConfig(**data)
 
     @staticmethod
     def find_config_files(directory : str, prefix : str, suffix : str = '.json') ->list:
@@ -208,18 +212,16 @@ class TestMachineConfig:
             "Label": "eb7eaeed-6b21-4b6a-a586-dddca6a1d5a4",
             "Value": "2024-08-08T21:26:22.418196+00:00"
         },
-        "Platform" : {
-            "software": {
+        "Software": {
                 "OS": "Linux",
                 "Version": "5.4.0-104-generic",
                 "Architecture": "x86_64",
                 "Hostname" : "testhost",
-            },
-            "hardware": {
+        },
+        "Hardware": {
                 "CPU": "Intel(R) Core(TM) i7-7700HQ CPU @ 2.80GHz",
                 "Version": "06_9E_09",
                 "Cores": 8
-            }
         }
     }
 
@@ -240,7 +242,7 @@ class TestMachineConfig:
             ic(existing_machine_config)
             return
         machine_config = IndalekoMachineConfig(
-            data=TestMachineConfig.test_machine_config_data)
+            **TestMachineConfig.test_machine_config_data)
         machine_config.write_config_to_db()
         retrieved_config = IndalekoMachineConfig.\
             lookup_machine_configuration_by_machine_id(TestMachineConfig.\
@@ -309,18 +311,16 @@ def test_handler(args : argparse.Namespace) -> None:
             "Label": "eb7eaeed-6b21-4b6a-a586-dddca6a1d5a4",
             "Value": "2024-08-08T21:26:22.418196+00:00"
         },
-        "Platform" : {
-            "software": {
-                "OS": "Linux",
-                "Version": "5.4.0-104-generic",
-                "Architecture": "x86_64",
-                "Hostname" : "testhost",
-            },
-            "hardware": {
-                "CPU": "Intel(R) Core(TM) i7-7700HQ CPU @ 2.80GHz",
-                "Version": "06_9E_09",
-                "Cores": 8
-            }
+        "Hardware" : {
+            "CPU" : "Intel(R) Core(TM) i7-7700HQ CPU @ 2.80GHz",
+            "Version" : "06_9E_09",
+            "Cores" : 8
+        },
+        "Software" : {
+            "OS" : "Linux",
+            "Version" : "5.4.0-104-generic",
+            "Architecture" : "x86_64",
+            "Hostname" : "testhost"
         }
     }
     existing_machine_config = IndalekoMachineConfig.lookup_machine_configuration_by_machine_id(test_machine_config_data['machine_id'])

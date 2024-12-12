@@ -1,12 +1,12 @@
 """
-This is the generic class for an Indaleko Ingester.
+This is the generic class for an Indaleko Storage Recorder.
 
-An ingester takes information about some (or all) of the data that is stored in
+An Indaleko storage recorder takes information about some (or all) of the data that is stored in
 various storage repositories available to this machine.  It processes the output
 from indexers and then generates additional metadata to associate with the
 storage object (s) in the database.
 
-Examples of ingesters include:
+Examples of recorders include:
 
 * A file system specific metadata normalizer, which takes indexing information
   collected about one or more files and then converts that into a normalized
@@ -73,9 +73,9 @@ from storage.i_relationship import IndalekoRelationship
 # pylint: enable=wrong-import-position
 class IndalekoStorageRecorder():
     '''
-    IndalekoIngest is the generic class that we use for ingesting data from the
-    various indexers that we have. Platform specific ingesters are built on top
-    of this class to handle platform-specific ingestion.
+    IndalekoStorageRecorder is the generic class that we use for recording data from the
+    various collectors that we have. Platform specific recorders are built on top
+    of this class to handle platform-specific recording.
     '''
 
     default_file_prefix = 'indaleko'
@@ -101,9 +101,9 @@ class IndalekoStorageRecorder():
 
     def __init__(self : 'IndalekoStorageRecorder', **kwargs : dict) -> None:
         '''
-        Constructor for the IndalekoIngest class. Takes a configuration object
+        Constructor for the IndalekoStorageRecorder class. Takes a configuration object
         as a parameter. The configuration object is a dictionary that contains
-        all the configuration parameters for the ingester.
+        all the configuration parameters for the recorder.
         '''
         self.file_prefix = IndalekoStorageRecorder.default_file_prefix
         if 'file_prefix' in kwargs:
@@ -122,9 +122,9 @@ class IndalekoStorageRecorder():
         self.platform = 'unknown'
         if 'platform' in kwargs:
             self.platform = kwargs['platform']
-        self.ingester = 'unknown'
-        if 'ingester' in kwargs:
-            self.ingester = kwargs['ingester']
+        self.recorder = 'unknown'
+        if 'recorder' in kwargs:
+            self.recorder = kwargs['recorder']
         self.storage_description = None
         if 'storage_description' in kwargs:
             if kwargs['storage_description'] is None or \
@@ -146,24 +146,24 @@ class IndalekoStorageRecorder():
         self.service_version = kwargs.get('Version',
                                           IndalekoStorageRecorder\
                                             .indaleko_generic_storage_recorder_service_version)
-        self.service_type = kwargs.get('Type', 'Ingester')
+        self.service_type = kwargs.get('Type', IndalekoServiceManager.service_type_storage_recorder)
         self.service_id = kwargs.get('Identifier', kwargs.get('service_id', kwargs.get('service_identifier', None)))
         assert self.service_id is not None, \
             f'Service identifier must be specified\n{kwargs}'
-        self.ingester_service = IndalekoServiceManager().register_service(
+        self.recorder_service = IndalekoServiceManager().register_service(
             service_name = self.service_name,
             service_description = self.service_description,
             service_version = self.service_version,
             service_type = self.service_type,
             service_id = self.service_id,
         )
-        assert self.ingester_service is not None, 'Ingester service does not exist'
+        assert self.recorder_service is not None, 'Recorder service does not exist'
         for count in IndalekoStorageRecorder.counter_values:
             setattr(self, count, 0)
 
     def get_counts(self) -> dict:
         '''
-        Retrieves counters about the ingester.
+        Retrieves counters about the recorder.
         '''
         return {x : getattr(self, x) for x in IndalekoStorageRecorder.counter_values}
 
@@ -178,7 +178,7 @@ class IndalekoStorageRecorder():
             del kwargs['output_dir']
         if output_dir is None:
             output_dir = self.data_dir
-        kwargs['ingester'] = self.ingester
+        kwargs['recorder'] = self.recorder
         kwargs['machine'] = str(uuid.UUID(self.machine_id).hex)
         if self.storage_description is not None and \
             kwargs['storage'] != 'unknown':
@@ -187,15 +187,15 @@ class IndalekoStorageRecorder():
         return os.path.join(output_dir, name)
 
     def generate_file_name(self, target_dir : str = None, suffix = None) -> str:
-        '''This will generate a file name for the ingester output file.'''
+        '''This will generate a file name for the recorder output file.'''
         if suffix is None:
             suffix = self.file_suffix
         kwargs = {
         'prefix' : self.file_prefix,
         'suffix' : suffix,
         'platform' : self.platform,
-        'service' : 'ingest',
-        'ingester' : self.ingester,
+        'service' : 'record',
+        'recorder' : self.recorder,
         'machine' : str(uuid.UUID(self.machine_id).hex),
         'collection' : IndalekoDBCollections.Indaleko_Object_Collection,
         'timestamp' : self.timestamp,
@@ -206,7 +206,7 @@ class IndalekoStorageRecorder():
         return self.generate_output_file_name(**kwargs)
 
     @staticmethod
-    def extract_metadata_from_ingester_file_name(file_name : str) -> dict:
+    def extract_metadata_from_recorder_file_name(file_name : str) -> dict:
         '''
         This will extract the metadata from the given file name.
         '''
@@ -261,9 +261,6 @@ class IndalekoStorageRecorder():
         if 'file' in kwargs:
             load_string += ' ' + kwargs['file']
         return load_string
-    ## arangoimport -collection Objects --server.username uiRXxRxF --server.password jDrcwy9VcAhhSmt --ssl.protocol 5
-    ## .\indaleko-plt=Windows-svc=ingest-ingester=local_fs_ingester-machine=2e169bb700244dc193dc18b7d2d28190-storage=3397d97b2ca511edb2fcb40ede9a5a3c-collection=Objects-ts=2024_01_19T01#12#01.057294+00#00.jsonl
-    ## --server.endpoint http+ssl://activitycontext.work:8529 --server.database Indaleko
 
     def load_indexer_data_from_file(self : 'IndalekoStorageRecorder') -> None:
         '''This function loads the indexer data from the file.'''
@@ -372,17 +369,17 @@ class IndalekoStorageRecorder():
 
 
 def main():
-    """Test code for IndalekoIngest.py"""
+    """Test code for IndalekoStorageRecorder.py"""
     # Now parse the arguments
-    ingester = IndalekoStorageRecorder(
+    recorder = IndalekoStorageRecorder(
         service_name=IndalekoStorageRecorder.indaleko_generic_storage_recorder_service_name,
         service_id=IndalekoStorageRecorder.indaleko_generic_storage_recorder_uuid_str,
         test=True
     )
-    assert ingester is not None, "Could not create ingester."
-    fname = ingester.generate_file_name()
+    assert recorder is not None, "Could not create recorder."
+    fname = recorder.generate_file_name()
     print(fname)
-    metadata = ingester.extract_metadata_from_ingester_file_name(fname)
+    metadata = recorder.extract_metadata_from_recorder_file_name(fname)
     print(json.dumps(metadata, indent=4))
 
 
