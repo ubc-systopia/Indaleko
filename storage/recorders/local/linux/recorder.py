@@ -43,7 +43,7 @@ from db import IndalekoDBCollections
 from platforms.linux.machine_config import IndalekoLinuxMachineConfig
 from platforms.unix import UnixFileAttributes
 from storage import IndalekoObject, IndalekoRelationship
-from storage.recorders.base import IndalekoStorageRecorder
+from storage.recorders.base import BaseStorageRecorder
 from storage.collectors.local.linux.collector import IndalekoLinuxLocalCollector
 import utils.misc.directory_management
 import utils.misc.file_name_management
@@ -52,7 +52,7 @@ from utils.i_logging import IndalekoLogging
 # pylint: enable=wrong-import-position
 
 
-class IndalekoLinuxLocalRecorder(IndalekoStorageRecorder):
+class IndalekoLinuxLocalRecorder(BaseStorageRecorder):
     '''
     This class handles ingestion of metadata gathered from
     the local Linux file system.
@@ -70,7 +70,7 @@ class IndalekoLinuxLocalRecorder(IndalekoStorageRecorder):
     linux_platform = IndalekoLinuxLocalCollector.linux_platform
     linux_local_recorder = 'local_fs_recorder'
 
-    def __init__(self: IndalekoStorageRecorder, **kwargs: dict) -> None:
+    def __init__(self: BaseStorageRecorder, **kwargs: dict) -> None:
         if 'input_file' not in kwargs:
             raise ValueError('input_file must be specified')
         if 'machine_config' not in kwargs:
@@ -240,31 +240,31 @@ class IndalekoLinuxLocalRecorder(IndalekoStorageRecorder):
             if parent not in dirmap:
                 continue
             parent_id = dirmap[parent]
-            dir_edges.append(IndalekoStorageRecorder.build_dir_contains_relationship(
+            dir_edges.append(BaseStorageRecorder.build_dir_contains_relationship(
                 parent_id, item.args['ObjectIdentifier'], source_id)
             )
             self.edge_count += 1
-            dir_edges.append(IndalekoStorageRecorder.build_contained_by_dir_relationship(
+            dir_edges.append(BaseStorageRecorder.build_contained_by_dir_relationship(
                 item.args['ObjectIdentifier'], parent_id, source_id)
             )
             self.edge_count += 1
             volume = item.args.get('Volume')
             if volume:
-                dir_edges.append(IndalekoStorageRecorder.build_volume_contains_relationship(
+                dir_edges.append(BaseStorageRecorder.build_volume_contains_relationship(
                     volume, item.args['ObjectIdentifier'], source_id)
                 )
                 self.edge_count += 1
-                dir_edges.append(IndalekoStorageRecorder.build_contained_by_volume_relationship(
+                dir_edges.append(BaseStorageRecorder.build_contained_by_volume_relationship(
                     item.args['ObjectIdentifier'], volume, source_id)
                 )
                 self.edge_count += 1
             machine_id = item.args.get('machine_id')
             if machine_id:
-                dir_edges.append(IndalekoStorageRecorder.build_machine_contains_relationship(
+                dir_edges.append(BaseStorageRecorder.build_machine_contains_relationship(
                     machine_id, item.args['ObjectIdentifier'], source_id)
                 )
                 self.edge_count += 1
-                dir_edges.append(IndalekoStorageRecorder.build_contained_by_machine_relationship(
+                dir_edges.append(BaseStorageRecorder.build_contained_by_machine_relationship(
                     item.args['ObjectIdentifier'], machine_id, source_id)
                 )
                 self.edge_count += 1
@@ -366,10 +366,10 @@ def main():
     storage = None
     if 'storage' in metadata:
         storage = metadata['storage']
-    file_prefix = IndalekoStorageRecorder.default_file_prefix
+    file_prefix = BaseStorageRecorder.default_file_prefix
     if 'file_prefix' in metadata:
         file_prefix = metadata['file_prefix']
-    file_suffix = IndalekoStorageRecorder.default_file_suffix
+    file_suffix = BaseStorageRecorder.default_file_suffix
     if 'file_suffix' in metadata:
         file_suffix = metadata['file_suffix']
     input_file = os.path.join(args.datadir, args.input)
