@@ -1,6 +1,5 @@
 '''
-This module handles processing data from the Indaleko local storage
-metadata collector and prepares it for loading into the database.
+This module handles recording metadata collected from the Mac local file system.
 
 Indaleko Mac Local Storage Metadata Collector
 Copyright (C) 2024 Tony Mason
@@ -19,7 +18,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import argparse
-import configparser
 import datetime
 import json
 import logging
@@ -60,8 +58,8 @@ class IndalekoMacLocalStorageRecorder(IndalekoStorageRecorder):
 
     mac_local_recorder_uuid = '07670255-1e82-4079-ad6f-f2bb39f44f8f'
     mac_local_recorder_service = {
-        'service_name' : 'Mac Local Storage Collector',
-        'service_description' : 'This service records metadata about the local filesystems of a Mac machine.',
+        'service_name' : 'Mac Local Storage Recorder',
+        'service_description' : 'This service records metadata collected from local filesystems of a Mac machine.',
         'service_version' : '1.0',
         'service_type' : IndalekoServiceManager.service_type_storage_recorder,
         'service_identifier' : mac_local_recorder_uuid,
@@ -126,7 +124,7 @@ class IndalekoMacLocalStorageRecorder(IndalekoStorageRecorder):
         '''
         if self.data_dir is None:
             raise ValueError('data_dir must be specified')
-        return [x for x in super().find_recorder_files(self.data_dir)
+        return [x for x in super().find_collector_files(self.data_dir)
                 if IndalekoMacLocalCollector.mac_platform in x and
                 IndalekoMacLocalCollector.mac_local_collector_name in x]
 
