@@ -262,7 +262,7 @@ class IndalekoStorageRecorder():
             load_string += ' ' + kwargs['file']
         return load_string
 
-    def load_indexer_data_from_file(self : 'IndalekoStorageRecorder') -> None:
+    def load_collector_data_from_file(self : 'IndalekoStorageRecorder') -> None:
         '''This function loads the indexer data from the file.'''
         if self.input_file is None:
             raise ValueError('input_file must be specified')

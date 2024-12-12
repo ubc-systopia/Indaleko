@@ -209,7 +209,7 @@ class BaseStorageCollector:
         return os.path.join(target_dir,name)
 
     @staticmethod
-    def extract_metadata_from_indexer_file_name(file_name : str) -> dict:
+    def extract_metadata_from_collector_file_name(file_name : str) -> dict:
         '''
         This script extracts metadata from a collector file name, based upon
         the format used by generate_indexer_file_name.
@@ -331,7 +331,7 @@ def main():
     with open(output_file, 'wt', encoding='utf-8-sig') as output:
         output.write('Hello, world!\n')
         print(f'Wrote {output_file}')
-    metadata = collector.extract_metadata_from_indexer_file_name(output_file)
+    metadata = collector.extract_metadata_from_collector_file_name(output_file)
     print(json.dumps(metadata, indent=4))
 
 if __name__ == "__main__":
