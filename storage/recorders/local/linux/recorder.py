@@ -101,7 +101,7 @@ class IndalekoLinuxLocalRecorder(IndalekoStorageRecorder):
             self.output_file = self.generate_file_name()
         else:
             self.output_file = kwargs['output_file']
-        self.indexer_data = []
+        self.collector_data = []
         self.source = {
             'Identifier' : self.linux_local_recorder_uuid,
             'Version' : '1.0'
@@ -117,7 +117,7 @@ class IndalekoLinuxLocalRecorder(IndalekoStorageRecorder):
                 if IndalekoLinuxLocalCollector.linux_platform in x and
                 IndalekoLinuxLocalCollector.linux_local_indexer_name in x]
 
-    def load_indexer_data_from_file(self : 'IndalekoLinuxLocalRecorder') -> None:
+    def load_collector_data_from_file(self : 'IndalekoLinuxLocalRecorder') -> None:
         '''This function loads the indexer data from the file.'''
         if self.input_file is None:
             raise ValueError('input_file must be specified')
@@ -199,7 +199,7 @@ class IndalekoLinuxLocalRecorder(IndalekoStorageRecorder):
         This function ingests the indexer file and emits the data needed to
         upload to the database.
         '''
-        self.load_indexer_data_from_file()
+        self.load_collector_data_from_file()
         dir_data = []
         file_data = []
         # Step 1: build the normalized data
@@ -355,7 +355,7 @@ def main():
     parser = argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--reset', action='store_true', help='Reset the service collection.')
     args = parser.parse_args()
-    metadata = IndalekoLinuxLocalCollector.extract_metadata_from_indexer_file_name(args.input)
+    metadata = IndalekoLinuxLocalCollector.extract_metadata_from_collector_file_name(args.input)
     machine_id = metadata['machine']
     if 'platform' in metadata:
         indexer_platform = metadata['platform']

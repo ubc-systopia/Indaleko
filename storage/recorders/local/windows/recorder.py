@@ -121,7 +121,7 @@ class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
                 if IndalekoWindowsLocalCollector.windows_platform in x and
                 IndalekoWindowsLocalCollector.windows_local_indexer_name in x]
 
-    def load_indexer_data_from_file(self : 'IndalekoWindowsLocalIngester') -> None:
+    def load_collector_data_from_file(self : 'IndalekoWindowsLocalIngester') -> None:
         '''This function loads the indexer data from the file.'''
         if self.input_file is None:
             raise ValueError('input_file must be specified')
@@ -216,7 +216,7 @@ class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
         This function ingests the indexer file and emits the data needed to
         upload to the database.
         '''
-        self.load_indexer_data_from_file()
+        self.load_collector_data_from_file()
         dir_data_by_path = {}
         dir_data = []
         file_data = []
@@ -426,7 +426,7 @@ def main():
                         default=logging.DEBUG,
                         help='Logging level to use.')
     args = parser.parse_args()
-    metadata = IndalekoWindowsLocalCollector.extract_metadata_from_indexer_file_name(args.input)
+    metadata = IndalekoWindowsLocalCollector.extract_metadata_from_collector_file_name(args.input)
     timestamp = metadata.get('timestamp',
                              datetime.datetime.now(datetime.timezone.utc).isoformat())
     machine_id = 'unknown'

@@ -209,7 +209,7 @@ class BaseStorageCollector:
         return os.path.join(target_dir,name)
 
     @staticmethod
-    def extract_metadata_from_indexer_file_name(file_name : str) -> dict:
+    def extract_metadata_from_collector_file_name(file_name : str) -> dict:
         '''
         This script extracts metadata from a collector file name, based upon
         the format used by generate_indexer_file_name.
@@ -305,6 +305,7 @@ class BaseStorageCollector:
     def write_data_to_file(self, data : list, output_file : str, jsonlines_output : bool = True) -> None:
         '''This function writes the data to the output file.'''
         assert data is not None, 'data must be a valid list'
+        assert 'unknown' not in output_file, f'unknown should not be present in the file name {output_file}'
         assert output_file is not None, 'output_file must be a valid string'
         if jsonlines_output:
             with jsonlines.open(output_file, 'w') as output:
@@ -331,7 +332,7 @@ def main():
     with open(output_file, 'wt', encoding='utf-8-sig') as output:
         output.write('Hello, world!\n')
         print(f'Wrote {output_file}')
-    metadata = collector.extract_metadata_from_indexer_file_name(output_file)
+    metadata = collector.extract_metadata_from_collector_file_name(output_file)
     print(json.dumps(metadata, indent=4))
 
 if __name__ == "__main__":

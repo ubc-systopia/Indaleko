@@ -3,18 +3,18 @@ This is the generic class for an Indaleko Storage Recorder.
 
 An Indaleko storage recorder takes information about some (or all) of the data that is stored in
 various storage repositories available to this machine.  It processes the output
-from indexers and then generates additional metadata to associate with the
+from storage recorders and then generates additional metadata to associate with the
 storage object (s) in the database.
 
 Examples of recorders include:
 
-* A file system specific metadata normalizer, which takes indexing information
+* A file system specific metadata normalizer, which takes metadata information
   collected about one or more files and then converts that into a normalized
   form to be stored in the database. This includes common metadata such as
   length, label (the "name" of the file), timestamps, and so on.
 
-* A semantic metadata generator, which takes the input from the indexer and then
-  performs operations on one or more files described by the indexer to extract
+* A semantic metadata generator, which takes the input from collectors and then
+  performs operations on one or more files described by the collector to extract
   or compute metadata based upon the content of the file.  For example, this
   might include a "bag of words" from a text file, EXIF data from a JPEG
   file, or even commonly used checksums (e.g., MD5, SHA1, SHA256, etc.) that are
@@ -262,24 +262,24 @@ class IndalekoStorageRecorder():
             load_string += ' ' + kwargs['file']
         return load_string
 
-    def load_indexer_data_from_file(self : 'IndalekoStorageRecorder') -> None:
-        '''This function loads the indexer data from the file.'''
+    def load_collector_data_from_file(self : 'IndalekoStorageRecorder') -> None:
+        '''This function loads the collector data from the file.'''
         if self.input_file is None:
             raise ValueError('input_file must be specified')
         if self.input_file.endswith('.jsonl'):
-            self.indexer_data = []
+            self.collector_data = []
             with jsonlines.open(self.input_file) as reader:
                 for entry in reader:
-                    self.indexer_data.append(entry)
-            ic(len(self.indexer_data))
+                    self.collector_data.append(entry)
+            ic(len(self.collector_data))
         elif self.input_file.endswith('.json'):
             with open(self.input_file, 'r', encoding='utf-8-sig') as file:
-                self.indexer_data = json.load(file)
-                ic(len(self.indexer_data))
+                self.collector_data = json.load(file)
+                ic(len(self.collector_data))
         else:
             raise ValueError(f'Input file {self.input_file} is an unknown type')
-        if not isinstance(self.indexer_data, list):
-            raise ValueError('indexer_data is not a list')
+        if not isinstance(self.collector_data, list):
+            raise ValueError('collector_data is not a list')
 
     @staticmethod
     def build_storage_relationship(

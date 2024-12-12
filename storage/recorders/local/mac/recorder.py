@@ -1,8 +1,8 @@
 '''
-This module handles data ingestion into Indaleko from the Windows local file
-system indexer.
+This module handles processing data from the Indaleko local storage
+metadata collector and prepares it for loading into the database.
 
-Indaleko Windows Local Indexer
+Indaleko Mac Local Storage Metadata Collector
 Copyright (C) 2024 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
@@ -40,7 +40,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 # pylint: disable=wrong-import-position
-from db import IndalekoDBCollections, IndalekoDBConfig
+from db import IndalekoDBCollections, IndalekoDBConfig, IndalekoServiceManager
 from data_models import IndalekoSourceIdentifierDataModel
 from platforms.mac.machine_config import IndalekoMacOSMachineConfig
 from platforms.unix import UnixFileAttributes
@@ -50,33 +50,25 @@ from storage.collectors.local.mac.collector import IndalekoMacLocalCollector
 from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
 from utils.misc.file_name_management import indaleko_file_name_prefix
 from utils.misc.data_management import encode_binary_data
-#from IndalekoIngester import IndalekoIngester
-#from Indaleko import Indaleko
-#from IndalekoMacLocalIndexer import IndalekoMacLocalIndexer
-#from IndalekoMacMachineConfig import IndalekoMacOSMachineConfig
-#from IndalekoObject import IndalekoObject
-#from IndalekoUnix import UnixFileAttributes
-#from IndalekoRelationshipContains import IndalekoRelationshipContains
-#from IndalekoRelationshipContained import IndalekoRelationshipContainedBy
+from utils import IndalekoLogging
 # pylint: enable=wrong-import-position
 
-class IndalekoMacLocalIngester(IndalekoStorageRecorder):
+class IndalekoMacLocalStorageRecorder(IndalekoStorageRecorder):
     '''
-    This class handles the ingestion of metadata from the Indaleko Unix
-    indexing service.
+    This class handles the processing of metadata from the Indaleko Mac local storage recorder service.
     '''
 
-    mac_local_ingester_uuid = '07670255-1e82-4079-ad6f-f2bb39f44f8f'
-    mac_local_ingester_service = {
-        'service_name' : 'Mac Local Ingester',
-        'service_description' : 'This service ingests captured index info from the local filesystems of a Mac machine.',
+    mac_local_recorder_uuid = '07670255-1e82-4079-ad6f-f2bb39f44f8f'
+    mac_local_recorder_service = {
+        'service_name' : 'Mac Local Storage Collector',
+        'service_description' : 'This service records metadata about the local filesystems of a Mac machine.',
         'service_version' : '1.0',
-        'service_type' : 'Ingester',
-        'service_identifier' : mac_local_ingester_uuid,
+        'service_type' : IndalekoServiceManager.service_type_storage_recorder,
+        'service_identifier' : mac_local_recorder_uuid,
     }
 
     mac_platform = IndalekoMacLocalCollector.mac_platform
-    mac_local_ingester = 'local_fs_ingester'
+    mac_local_recorder = 'mac_local_recorder'
 
     def __init__(self, reset_collection=False, objects_file="", relations_file="", **kwargs) -> None:
         self.db_config = IndalekoDBConfig()
@@ -90,68 +82,72 @@ class IndalekoMacLocalIngester(IndalekoStorageRecorder):
         else:
             kwargs['machine_id'] = self.machine_config.machine_id
             if kwargs['machine_id'] != self.machine_config.machine_id:
-                logging.warning('Warning: machine ID of indexer file ' +
-                                f'({kwargs["machine"]}) does not match machine ID of ingester ' +
+                logging.warning('Warning: machine ID of collector file ' +
+                                f'({kwargs["machine"]}) does not match machine ID of recorder ' +
                                 f'({self.machine_config.machine_id}.)')
         if 'timestamp' not in kwargs:
             kwargs['timestamp'] = datetime.datetime.now(
                 datetime.timezone.utc).isoformat()
         if 'platform' not in kwargs:
-            kwargs['platform'] = IndalekoMacLocalIngester.mac_platform
-        if 'ingester' not in kwargs:
-            kwargs['ingester'] = IndalekoMacLocalIngester.mac_local_ingester
+            kwargs['platform'] = IndalekoMacLocalStorageRecorder.mac_platform
+        if 'recorder' not in kwargs:
+            kwargs['recorder'] = IndalekoMacLocalStorageRecorder.mac_local_recorder
         if 'input_file' not in kwargs:
             kwargs['input_file'] = None
-        for key, value in self.mac_local_ingester_service.items():
+        for key, value in self.mac_local_recorder_service.items():
             if key not in kwargs:
                 kwargs[key] = value
         if 'Identifier' not in kwargs and 'service_id' not in kwargs:
-            kwargs['Identifier'] = self.mac_local_ingester_uuid
+            kwargs['Identifier'] = self.mac_local_recorder_uuid
         super().__init__(**kwargs)
         self.input_file = kwargs['input_file']
         if 'output_file' not in kwargs:
             self.output_file = self.generate_file_name()
+            assert 'unknown' not in self.output_file, f'Output file should not have unknown in its name {self.output_file}'
         else:
             self.output_file = kwargs['output_file']
-        self.indexer_data = []
+        self.collector_data = []
         self.source = {
-            'Identifier': self.mac_local_ingester_uuid,
+            'Identifier': self.mac_local_recorder_uuid,
             'Version': '1.0'
         }
+        self.docker_upload = kwargs.get('docker_upload', False)
+        if not isinstance(self.docker_upload, bool):
+            self.docker_upload = False
         self.reset_collection = reset_collection
         self.objects_file = objects_file
         self.relations_file = relations_file
 
-    def find_indexer_files(self) -> list:
-        '''This function finds the files to ingest:
+    def find_recorder_files(self) -> list:
+        '''This function finds the files to process:
             search_dir: path to the search directory
-            prefix: prefix of the file to ingest
-            suffix: suffix of the file to ingest (default is .json)
+            prefix: prefix of the file to process
+            suffix: suffix of the file to process (default is .json)
         '''
         if self.data_dir is None:
             raise ValueError('data_dir must be specified')
-        return [x for x in super().find_indexer_files(self.data_dir)
+        return [x for x in super().find_recorder_files(self.data_dir)
                 if IndalekoMacLocalCollector.mac_platform in x and
                 IndalekoMacLocalCollector.mac_local_collector_name in x]
 
-    def load_indexer_data_from_file(self: 'IndalekoMacLocalIngester') -> None:
-        '''This function loads the indexer data from the file.'''
+    def load_collector_data_from_file(self: 'IndalekoMacLocalStorageRecorder') -> None:
+        '''This function loads the collector metadata from the file.'''
         if self.input_file is None:
             raise ValueError('input_file must be specified')
         if self.input_file.endswith('.jsonl'):
             with jsonlines.open(self.input_file) as reader:
                 for entry in reader:
-                    self.indexer_data.append(entry)
+                    self.collector_data.append(entry)
         elif self.input_file.endswith('.json'):
             with open(self.input_file, 'r', encoding='utf-8-sig') as file:
-                self.indexer_data = json.load(file)
+                self.collector_data = json.load(file)
         else:
             raise ValueError(
                 f'Input file {self.input_file} is of an unknown type')
-        if not isinstance(self.indexer_data, list):
-            raise ValueError('indexer_data is not a list')
+        if not isinstance(self.collector_data, list):
+            raise ValueError('collector_data is not a list')
 
-    def normalize_index_data(self, data: dict) -> IndalekoObject:
+    def normalize_collector_data(self, data: dict) -> IndalekoObject:
         '''
         Given some metadata, this will create a record that can be inserted into the
         Object collection.
@@ -206,10 +202,10 @@ class IndalekoMacLocalIngester(IndalekoStorageRecorder):
 
         return IndalekoObject(**kwargs)
 
-    def ingest(self) -> None:
+    def record(self) -> None:
         '''
-        This function ingests the indexer file and emits the data needed to
-        upload to the database.
+        This function processes the mac local storage collector metadata file
+        and emits the data needed to upload to the database.
         '''
 
         # if the Objects and Relationships are provided, use them
@@ -225,14 +221,14 @@ class IndalekoMacLocalIngester(IndalekoStorageRecorder):
             self.arangoimport()
             return
 
-        self.load_indexer_data_from_file()
+        self.load_collector_data_from_file()
         dir_data_by_path = {}
         dir_data = []
         file_data = []
         # Step 1: build the normalized data
-        for item in self.indexer_data:
+        for item in self.collector_data:
             try:
-                obj = self.normalize_index_data(item)
+                obj = self.normalize_collector_data(item)
             except OSError as e:
                 logging.error('Error normalizing data: %s', e)
                 logging.error('Data: %s', item)
@@ -258,7 +254,7 @@ class IndalekoMacLocalIngester(IndalekoStorageRecorder):
         # now, let's build a list of the edges, using our map.
         dir_edges = []
         source = {
-            'Identifier': self.mac_local_ingester_uuid,
+            'Identifier': self.mac_local_recorder_uuid,
             'Version': '1.0',
         }
         source_id = IndalekoSourceIdentifierDataModel(**source)
@@ -300,12 +296,12 @@ class IndalekoMacLocalIngester(IndalekoStorageRecorder):
                     item.args['ObjectIdentifier'], machine_id, source_id)
                 )
                 self.edge_count += 1
-        # Save the data to the ingester output file
+        # Save the data to the recorder output file
         self.write_data_to_file(dir_data + file_data, self.output_file)
         edge_file = self.generate_output_file_name(
             machine=self.machine_id,
             platform=self.platform,
-            service='local_ingest',
+            service='recorder',
             collection=IndalekoDBCollections.Indaleko_Relationship_Collection,
             timestamp=self.timestamp,
             output_dir=self.data_dir,
@@ -317,7 +313,8 @@ class IndalekoMacLocalIngester(IndalekoStorageRecorder):
         self.relations_file = edge_file
 
         # import these using arangoimport tool
-        self.arangoimport()
+        if self.docker_upload:
+            self.arangoimport()
 
 
     def arangoimport(self):
@@ -362,29 +359,9 @@ class IndalekoMacLocalIngester(IndalekoStorageRecorder):
 
 def main():
     '''
-    This is the main handler for the Indaleko Mac Local Ingest service.
+    This is the main handler for the Indaleko Mac Local Storage Recorder service.
     '''
-    if platform.python_version() < '3.12':
-        logging_levels = []
-        if hasattr(logging, 'CRITICAL'):
-            logging_levels.append('CRITICAL')
-        if hasattr(logging, 'ERROR'):
-            logging_levels.append('ERROR')
-        if hasattr(logging, 'WARNING'):
-            logging_levels.append('WARNING')
-        if hasattr(logging, 'WARN'):
-            logging_levels.append('WARN')
-        if hasattr(logging, 'INFO'):
-            logging_levels.append('INFO')
-        if hasattr(logging, 'DEBUG'):
-            logging_levels.append('DEBUG')
-        if hasattr(logging, 'NOTSET'):
-            logging_levels.append('NOTSET')
-        if hasattr(logging, 'FATAL'):
-            logging_levels.append('FATAL')
-    else:
-        logging_levels = sorted(
-            set([level for level in logging.getLevelNamesMapping()]))
+    logging_levels = IndalekoLogging.get_logging_levels()
 
     # step 1: find the machine configuration file
     pre_parser = argparse.ArgumentParser(add_help=False)
@@ -414,18 +391,18 @@ def main():
     pre_args, _ = pre_parser.parse_known_args()
     machine_config = IndalekoMacOSMachineConfig.load_config_from_file(
         config_file=default_config_file)
-    indexer = IndalekoMacLocalCollector(
+    collector = IndalekoMacLocalCollector(
         search_dir=pre_args.datadir,
         prefix=IndalekoMacLocalCollector.mac_platform,
         suffix=IndalekoMacLocalCollector.mac_local_collector_name,
         machine_config=machine_config
     )
-    indexer_files = indexer.find_collector_files(pre_args.datadir)
+    collector_files = collector.find_collector_files(pre_args.datadir)
     parser = argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--input',
-                        choices=indexer_files,
-                        default=indexer_files[0],
-                        help='Mac Local Indexer file to ingest.')
+                        choices=collector_files,
+                        default=collector_files[0],
+                        help='Mac Local Storage Collector file to process.')
     parser.add_argument('--objects-file',
                         default="",
                         dest='objects_file',
@@ -446,25 +423,30 @@ def main():
                         choices=logging_levels,
                         default=logging.DEBUG,
                         help='Logging level to use.')
+    parser.add_argument('--docker_upload',
+                        '-du',
+                        default=False,
+                        action='store_true',
+                        help='copy into local docker container with arangodb for bulk uploading')
     args = parser.parse_args()
-    metadata = IndalekoMacLocalCollector.extract_metadata_from_indexer_file_name(
+    metadata = IndalekoMacLocalCollector.extract_metadata_from_collector_file_name(
         args.input)
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     machine_id = 'unknown'
     if 'machine' in metadata:
         if metadata['machine'] != machine_config.machine_id:
-            print('Warning: machine ID of indexer file ' +
-                  f'({metadata["machine"]}) does not match machine ID of ingester ' +
+            print('Warning: machine ID of collector file ' +
+                  f'({metadata["machine"]}) does not match machine ID of recorder ' +
                   f'({machine_config.machine_id})')
         machine_id = metadata['machine']
     if 'timestamp' in metadata:
         timestamp = metadata['timestamp']
     if 'platform' in metadata:
-        indexer_platform = metadata['platform']
-        if indexer_platform != IndalekoMacLocalIngester.mac_platform:
-            print('Warning: platform of indexer file ' +
-                  f'({indexer_platform}) name does not match platform of ingester ' +
-                  f'({IndalekoMacLocalIngester.mac_platform}.)')
+        collector_platform = metadata['platform']
+        if collector_platform != IndalekoMacLocalStorageRecorder.mac_platform:
+            print('Warning: platform of collector file ' +
+                  f'({collector_platform}) name does not match platform of recorder ' +
+                  f'({IndalekoMacLocalStorageRecorder.mac_platform}.)')
     storage = 'unknown'
     if 'storage' in metadata:
         storage = metadata['storage']
@@ -475,7 +457,7 @@ def main():
     if 'file_suffix' in metadata:
         file_suffix = metadata['file_suffix']
     input_file = os.path.join(args.datadir, args.input)
-    ingester = IndalekoMacLocalIngester(
+    collector = IndalekoMacLocalStorageRecorder(
         reset_collection=args.reset,
         objects_file=args.objects_file,
         relations_file=args.relations_file,
@@ -483,27 +465,28 @@ def main():
         machine_id=machine_id,
         timestamp=timestamp,
         platform=IndalekoMacLocalCollector.mac_platform,
-        ingester=IndalekoMacLocalIngester.mac_local_ingester,
+        collector=IndalekoMacLocalStorageRecorder.mac_local_recorder,
         storage_description=storage,
         file_prefix=file_prefix,
         file_suffix=file_suffix,
         data_dir=args.datadir,
         input_file=input_file,
-        log_dir=args.logdir
+        log_dir=args.logdir,
+        docker_upload=args.docker_upload,
     )
-    output_file = ingester.generate_file_name()
-    log_file_name = ingester.generate_file_name(
+    output_file = collector.generate_file_name()
+    log_file_name = collector.generate_file_name(
         target_dir=args.logdir, suffix='.log')
     print(f"logging into {log_file_name}")
     logging.basicConfig(filename=os.path.join(log_file_name),
                         level=logging.DEBUG,
                         format='%(asctime)s - %(levelname)s - %(message)s',
                         force=True)
-    logging.info('Found these indexes: %s', indexer_files)
-    logging.info('Ingesting %s ', input_file)
+    logging.info('Found these collected metadata files: %s', collector_files)
+    logging.info('Input file %s ', input_file)
     logging.info('Output file %s ', output_file)
-    ingester.ingest()
-    counts = ingester.get_counts()
+    collector.record()
+    counts = collector.get_counts()
     for count_type, count_value in counts.items():
         logging.info('%s: %d', count_type, count_value)
     logging.info('Done')
