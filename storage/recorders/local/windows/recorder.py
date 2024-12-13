@@ -46,14 +46,14 @@ from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 from platforms.unix import UnixFileAttributes
 from platforms.windows_attributes import IndalekoWindows
 from storage import IndalekoObject
-from storage.recorders.base import IndalekoStorageRecorder
+from storage.recorders.base import BaseStorageRecorder
 from storage.collectors.local.windows.collector import IndalekoWindowsLocalCollector
 import utils.misc.directory_management
 from utils.misc.file_name_management import find_candidate_files
 from utils.misc.data_management import encode_binary_data
 # pylint: enable=wrong-import-position
 
-class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
+class IndalekoWindowsLocalIngester(BaseStorageRecorder):
     '''
     This class handles ingestion of metadata from the Indaleko Windows
     collector service.
@@ -261,31 +261,31 @@ class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
             if parent not in dirmap:
                 continue
             parent_id = dirmap[parent]
-            dir_edges.append(IndalekoStorageRecorder.build_dir_contains_relationship(
+            dir_edges.append(BaseStorageRecorder.build_dir_contains_relationship(
                 parent_id, item.args['ObjectIdentifier'], source_id)
             )
             self.edge_count += 1
-            dir_edges.append(IndalekoStorageRecorder.build_contained_by_dir_relationship(
+            dir_edges.append(BaseStorageRecorder.build_contained_by_dir_relationship(
                 item.args['ObjectIdentifier'], parent_id, source_id)
             )
             self.edge_count += 1
             volume = item.args.get('Volume')
             if volume:
-                dir_edges.append(IndalekoStorageRecorder.build_volume_contains_relationship(
+                dir_edges.append(BaseStorageRecorder.build_volume_contains_relationship(
                     volume, item.args['ObjectIdentifier'], source_id)
                 )
                 self.edge_count += 1
-                dir_edges.append(IndalekoStorageRecorder.build_contained_by_volume_relationship(
+                dir_edges.append(BaseStorageRecorder.build_contained_by_volume_relationship(
                     item.args['ObjectIdentifier'], volume, source_id)
                 )
                 self.edge_count += 1
             machine_id = item.args.get('machine_id')
             if machine_id:
-                dir_edges.append(IndalekoStorageRecorder.build_machine_contains_relationship(
+                dir_edges.append(BaseStorageRecorder.build_machine_contains_relationship(
                     machine_id, item.args['ObjectIdentifier'], source_id)
                 )
                 self.edge_count += 1
-                dir_edges.append(IndalekoStorageRecorder.build_contained_by_machine_relationship(
+                dir_edges.append(BaseStorageRecorder.build_contained_by_machine_relationship(
                     item.args['ObjectIdentifier'], machine_id, source_id)
                 )
                 self.edge_count += 1
@@ -450,10 +450,10 @@ def main():
     storage = 'unknown'
     if 'storage' in metadata:
         storage = metadata['storage']
-    file_prefix = IndalekoStorageRecorder.default_file_prefix
+    file_prefix = BaseStorageRecorder.default_file_prefix
     if 'file_prefix' in metadata:
         file_prefix = metadata['file_prefix']
-    file_suffix = IndalekoStorageRecorder.default_file_suffix
+    file_suffix = BaseStorageRecorder.default_file_suffix
     if 'file_suffix' in metadata:
         file_suffix = metadata['file_suffix']
     input_file = os.path.join(args.datadir, args.input)

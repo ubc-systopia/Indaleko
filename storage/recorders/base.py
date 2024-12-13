@@ -43,10 +43,10 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import datetime
 import logging
 import json
 import jsonlines
-import datetime
 import os
 import uuid
 import sys
@@ -71,7 +71,7 @@ from utils.misc.file_name_management import generate_file_name, extract_keys_fro
 from data_models import IndalekoSemanticAttributeDataModel
 from storage.i_relationship import IndalekoRelationship
 # pylint: enable=wrong-import-position
-class IndalekoStorageRecorder():
+class BaseStorageRecorder():
     '''
     IndalekoStorageRecorder is the generic class that we use for recording data from the
     various collectors that we have. Platform specific recorders are built on top
@@ -99,17 +99,17 @@ class IndalekoStorageRecorder():
 
 
 
-    def __init__(self : 'IndalekoStorageRecorder', **kwargs : dict) -> None:
+    def __init__(self : 'BaseStorageRecorder', **kwargs : dict) -> None:
         '''
         Constructor for the IndalekoStorageRecorder class. Takes a configuration object
         as a parameter. The configuration object is a dictionary that contains
         all the configuration parameters for the recorder.
         '''
-        self.file_prefix = IndalekoStorageRecorder.default_file_prefix
+        self.file_prefix = BaseStorageRecorder.default_file_prefix
         if 'file_prefix' in kwargs:
             self.file_prefix = kwargs['file_prefix']
         self.file_prefix = self.file_prefix.replace('-', '_')
-        self.file_suffix = IndalekoStorageRecorder.default_file_suffix
+        self.file_suffix = BaseStorageRecorder.default_file_suffix
         if 'file_suffix' in kwargs:
             self.file_suffix = kwargs['file_suffix']
         self.file_suffix = self.file_suffix.replace('-', '_')
@@ -141,10 +141,10 @@ class IndalekoStorageRecorder():
         assert self.service_name is not None, \
             f'Service name must be specified, kwargs={kwargs}'
         self.service_description = kwargs.get('Description',
-                                              IndalekoStorageRecorder\
+                                              BaseStorageRecorder\
                                                 .indaleko_generic_storage_recorder_service_description)
         self.service_version = kwargs.get('Version',
-                                          IndalekoStorageRecorder\
+                                          BaseStorageRecorder\
                                             .indaleko_generic_storage_recorder_service_version)
         self.service_type = kwargs.get('Type', IndalekoServiceManager.service_type_storage_recorder)
         self.service_id = kwargs.get('Identifier', kwargs.get('service_id', kwargs.get('service_identifier', None)))
@@ -158,14 +158,14 @@ class IndalekoStorageRecorder():
             service_id = self.service_id,
         )
         assert self.recorder_service is not None, 'Recorder service does not exist'
-        for count in IndalekoStorageRecorder.counter_values:
+        for count in BaseStorageRecorder.counter_values:
             setattr(self, count, 0)
 
     def get_counts(self) -> dict:
         '''
         Retrieves counters about the recorder.
         '''
-        return {x : getattr(self, x) for x in IndalekoStorageRecorder.counter_values}
+        return {x : getattr(self, x) for x in BaseStorageRecorder.counter_values}
 
     def generate_output_file_name(self, **kwargs) -> str:
         '''
@@ -262,7 +262,7 @@ class IndalekoStorageRecorder():
             load_string += ' ' + kwargs['file']
         return load_string
 
-    def load_collector_data_from_file(self : 'IndalekoStorageRecorder') -> None:
+    def load_collector_data_from_file(self : 'BaseStorageRecorder') -> None:
         '''This function loads the collector data from the file.'''
         if self.input_file is None:
             raise ValueError('input_file must be specified')
@@ -313,7 +313,7 @@ class IndalekoStorageRecorder():
         child : Union[str, uuid.UUID], # child
         source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
         '''This builds a contains relationship object for a directory and a child.'''
-        return IndalekoStorageRecorder.build_storage_relationship(
+        return BaseStorageRecorder.build_storage_relationship(
             parent, child, IndalekoRelationship.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR, source_id
         )
 
@@ -323,7 +323,7 @@ class IndalekoStorageRecorder():
         parent : Union[str, uuid.UUID], # parent
         source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
         '''This builds a contains relationship object for a directory and a child.'''
-        return IndalekoStorageRecorder.build_storage_relationship(
+        return BaseStorageRecorder.build_storage_relationship(
             child, parent, IndalekoRelationship.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR, source_id
         )
 
@@ -333,7 +333,7 @@ class IndalekoStorageRecorder():
         child : Union[str, uuid.UUID], # child
         source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
         '''This builds a contains relationship object for a volume and a child.'''
-        return IndalekoStorageRecorder.build_storage_relationship(
+        return BaseStorageRecorder.build_storage_relationship(
             volume, child, IndalekoRelationship.VOLUME_CONTAINS_RELATIONSHIP_UUID_STR, source_id
         )
 
@@ -343,7 +343,7 @@ class IndalekoStorageRecorder():
         volume : Union[str, uuid.UUID], # volume
         source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
         '''This builds a contains relationship object for a volume and a child.'''
-        return IndalekoStorageRecorder.build_storage_relationship(
+        return BaseStorageRecorder.build_storage_relationship(
             child, volume, IndalekoRelationship.CONTAINED_BY_VOLUME_RELATIONSHIP_UUID_STR, source_id
         )
 
@@ -353,7 +353,7 @@ class IndalekoStorageRecorder():
         child : Union[str, uuid.UUID], # child
         source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
         '''This builds a contains relationship object for a machine and a child.'''
-        return IndalekoStorageRecorder.build_storage_relationship(
+        return BaseStorageRecorder.build_storage_relationship(
             machine, child, IndalekoRelationship.MACHINE_CONTAINS_RELATIONSHIP_UUID_STR, source_id
         )
 
@@ -363,7 +363,7 @@ class IndalekoStorageRecorder():
         machine : Union[str, uuid.UUID], # machine
         source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
         '''This builds a contains relationship object for a machine and a child.'''
-        return IndalekoStorageRecorder.build_storage_relationship(
+        return BaseStorageRecorder.build_storage_relationship(
             child, machine, IndalekoRelationship.CONTAINED_BY_MACHINE_RELATIONSHIP_UUID_STR, source_id
         )
 
@@ -371,9 +371,9 @@ class IndalekoStorageRecorder():
 def main():
     """Test code for IndalekoStorageRecorder.py"""
     # Now parse the arguments
-    recorder = IndalekoStorageRecorder(
-        service_name=IndalekoStorageRecorder.indaleko_generic_storage_recorder_service_name,
-        service_id=IndalekoStorageRecorder.indaleko_generic_storage_recorder_uuid_str,
+    recorder = BaseStorageRecorder(
+        service_name=BaseStorageRecorder.indaleko_generic_storage_recorder_service_name,
+        service_id=BaseStorageRecorder.indaleko_generic_storage_recorder_uuid_str,
         test=True
     )
     assert recorder is not None, "Could not create recorder."

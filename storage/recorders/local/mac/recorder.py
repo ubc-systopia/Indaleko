@@ -43,7 +43,7 @@ from data_models import IndalekoSourceIdentifierDataModel
 from platforms.mac.machine_config import IndalekoMacOSMachineConfig
 from platforms.unix import UnixFileAttributes
 from storage import IndalekoObject
-from storage.recorders.base import IndalekoStorageRecorder
+from storage.recorders.base import BaseStorageRecorder
 from storage.collectors.local.mac.collector import IndalekoMacLocalCollector
 from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
 from utils.misc.file_name_management import indaleko_file_name_prefix
@@ -51,7 +51,7 @@ from utils.misc.data_management import encode_binary_data
 from utils import IndalekoLogging
 # pylint: enable=wrong-import-position
 
-class IndalekoMacLocalStorageRecorder(IndalekoStorageRecorder):
+class IndalekoMacLocalStorageRecorder(BaseStorageRecorder):
     '''
     This class handles the processing of metadata from the Indaleko Mac local storage recorder service.
     '''
@@ -266,31 +266,31 @@ class IndalekoMacLocalStorageRecorder(IndalekoStorageRecorder):
             if parent not in dirmap:
                 continue
             parent_id = dirmap[parent]
-            dir_edges.append(IndalekoStorageRecorder.build_dir_contains_relationship(
+            dir_edges.append(BaseStorageRecorder.build_dir_contains_relationship(
                 parent_id, item.args['ObjectIdentifier'], source_id)
             )
             self.edge_count += 1
-            dir_edges.append(IndalekoStorageRecorder.build_contained_by_dir_relationship(
+            dir_edges.append(BaseStorageRecorder.build_contained_by_dir_relationship(
                 item.args['ObjectIdentifier'], parent_id, source_id)
             )
             self.edge_count += 1
             volume = item.args.get('Volume')
             if volume:
-                dir_edges.append(IndalekoStorageRecorder.build_volume_contains_relationship(
+                dir_edges.append(BaseStorageRecorder.build_volume_contains_relationship(
                     volume, item.args['ObjectIdentifier'], source_id)
                 )
                 self.edge_count += 1
-                dir_edges.append(IndalekoStorageRecorder.build_contained_by_volume_relationship(
+                dir_edges.append(BaseStorageRecorder.build_contained_by_volume_relationship(
                     item.args['ObjectIdentifier'], volume, source_id)
                 )
                 self.edge_count += 1
             machine_id = item.args.get('machine_id')
             if machine_id:
-                dir_edges.append(IndalekoStorageRecorder.build_machine_contains_relationship(
+                dir_edges.append(BaseStorageRecorder.build_machine_contains_relationship(
                     machine_id, item.args['ObjectIdentifier'], source_id)
                 )
                 self.edge_count += 1
-                dir_edges.append(IndalekoStorageRecorder.build_contained_by_machine_relationship(
+                dir_edges.append(BaseStorageRecorder.build_contained_by_machine_relationship(
                     item.args['ObjectIdentifier'], machine_id, source_id)
                 )
                 self.edge_count += 1
@@ -451,7 +451,7 @@ def main():
     file_prefix = indaleko_file_name_prefix
     if 'file_prefix' in metadata:
         file_prefix = metadata['file_prefix']
-    file_suffix = IndalekoStorageRecorder.default_file_suffix
+    file_suffix = BaseStorageRecorder.default_file_suffix
     if 'file_suffix' in metadata:
         file_suffix = metadata['file_suffix']
     input_file = os.path.join(args.datadir, args.input)
