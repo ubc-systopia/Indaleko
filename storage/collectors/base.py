@@ -305,6 +305,7 @@ class BaseStorageCollector:
     def write_data_to_file(self, data : list, output_file : str, jsonlines_output : bool = True) -> None:
         '''This function writes the data to the output file.'''
         assert data is not None, 'data must be a valid list'
+        assert 'unknown' not in output_file, f'unknown should not be present in the file name {output_file}'
         assert output_file is not None, 'output_file must be a valid string'
         if jsonlines_output:
             with jsonlines.open(output_file, 'w') as output:

@@ -44,7 +44,7 @@ from platforms.linux.machine_config import IndalekoLinuxMachineConfig
 from platforms.unix import UnixFileAttributes
 from storage import IndalekoObject, IndalekoRelationship
 from storage.recorders.base import IndalekoStorageRecorder
-from storage.collectors.local.linux.collector import IndalekoLinuxLocalIndexer
+from storage.collectors.local.linux.collector import IndalekoLinuxLocalCollector
 import utils.misc.directory_management
 import utils.misc.file_name_management
 import utils.misc.data_management
@@ -67,7 +67,7 @@ class IndalekoLinuxLocalRecorder(IndalekoStorageRecorder):
         'service_identifier' : linux_local_recorder_uuid,
     }
 
-    linux_platform = IndalekoLinuxLocalIndexer.linux_platform
+    linux_platform = IndalekoLinuxLocalCollector.linux_platform
     linux_local_recorder = 'local_fs_recorder'
 
     def __init__(self: IndalekoStorageRecorder, **kwargs: dict) -> None:
@@ -101,7 +101,7 @@ class IndalekoLinuxLocalRecorder(IndalekoStorageRecorder):
             self.output_file = self.generate_file_name()
         else:
             self.output_file = kwargs['output_file']
-        self.indexer_data = []
+        self.collector_data = []
         self.source = {
             'Identifier' : self.linux_local_recorder_uuid,
             'Version' : '1.0'
@@ -114,8 +114,8 @@ class IndalekoLinuxLocalRecorder(IndalekoStorageRecorder):
         if self.data_dir is None:
             raise ValueError('data_dir must be specified')
         return [x for x in super().find_indexer_files(self.data_dir)
-                if IndalekoLinuxLocalIndexer.linux_platform in x and
-                IndalekoLinuxLocalIndexer.linux_local_indexer_name in x]
+                if IndalekoLinuxLocalCollector.linux_platform in x and
+                IndalekoLinuxLocalCollector.linux_local_indexer_name in x]
 
     def load_collector_data_from_file(self : 'IndalekoLinuxLocalRecorder') -> None:
         '''This function loads the indexer data from the file.'''
@@ -325,7 +325,7 @@ def main():
                             type=str,
                             default=utils.misc.directory_management.indaleko_default_data_dir)
     pre_args, _ = pre_parser.parse_known_args()
-    indexer_files = IndalekoLinuxLocalIndexer.find_collector_files(pre_args.datadir)
+    indexer_files = IndalekoLinuxLocalCollector.find_collector_files(pre_args.datadir)
     pre_parser.add_argument('--input',
                             choices=indexer_files,
                             default=indexer_files[-1],
@@ -355,7 +355,7 @@ def main():
     parser = argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--reset', action='store_true', help='Reset the service collection.')
     args = parser.parse_args()
-    metadata = IndalekoLinuxLocalIndexer.extract_metadata_from_collector_file_name(args.input)
+    metadata = IndalekoLinuxLocalCollector.extract_metadata_from_collector_file_name(args.input)
     machine_id = metadata['machine']
     if 'platform' in metadata:
         indexer_platform = metadata['platform']
@@ -383,7 +383,7 @@ def main():
         'machine_config' : machine_config,
         'machine_id' : machine_id,
         'timestamp' : timestamp,
-        'platform' : IndalekoLinuxLocalIndexer.linux_platform,
+        'platform' : IndalekoLinuxLocalCollector.linux_platform,
         'ingester' : IndalekoLinuxLocalRecorder.linux_local_recorder,
         'file_prefix' : file_prefix,
         'file_suffix' : file_suffix,
