@@ -265,7 +265,7 @@ class IndalekoStorageRecorder():
     ## .\indaleko-plt=Windows-svc=ingest-ingester=local_fs_ingester-machine=2e169bb700244dc193dc18b7d2d28190-storage=3397d97b2ca511edb2fcb40ede9a5a3c-collection=Objects-ts=2024_01_19T01#12#01.057294+00#00.jsonl
     ## --server.endpoint http+ssl://activitycontext.work:8529 --server.database Indaleko
 
-    def load_indexer_data_from_file(self : 'IndalekoStorageRecorder') -> None:
+    def load_collector_data_from_file(self : 'IndalekoStorageRecorder') -> None:
         '''This function loads the indexer data from the file.'''
         if self.input_file is None:
             raise ValueError('input_file must be specified')

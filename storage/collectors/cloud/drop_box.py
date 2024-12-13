@@ -306,7 +306,7 @@ class IndalekoDropboxIndexer(BaseStorageCollector):
             metadata[field] = value
         return metadata
 
-    def index(self, recursive=True):
+    def collect(self, recursive=True):
         '''This is the indexer for Dropbox'''
         try:
             metadata_list = []
@@ -417,7 +417,7 @@ def main():
     logging.info('Output file: %s', output_file)
     logging.info('Indexing: %s', args.path)
     logging.info(args)
-    data = indexer.index(recursive= (not args.norecurse))
+    data = indexer.collect(recursive= (not args.norecurse))
     indexer.write_data_to_file(data, output_file)
     for count_type, count_value in indexer.get_counts().items():
         logging.info('Count %s: %s', count_type, count_value)

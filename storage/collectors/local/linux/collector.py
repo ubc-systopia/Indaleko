@@ -165,7 +165,7 @@ def main():
     output_file = args.output
     logging.info('Indexing %s ' , pre_args.path)
     logging.info('Output file %s ' , output_file)
-    data = indexer.index()
+    data = indexer.collect()
     indexer.write_data_to_file(data, output_file)
     for count_type, count_value in indexer.get_counts().items():
         logging.info('%s: %d', count_type, count_value)

@@ -1,6 +1,6 @@
 '''
 This module handles data ingestion into Indaleko from the Windows local data
-indexer.
+collector.
 
 Indaleko Windows Local Ingester
 Copyright (C) 2024 Tony Mason
@@ -41,8 +41,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from db import IndalekoDBCollections
-from data_models import IndalekoSemanticAttributeDataModel, \
-    IndalekoSourceIdentifierDataModel
+from data_models import IndalekoSourceIdentifierDataModel
 from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 from platforms.unix import UnixFileAttributes
 from platforms.windows_attributes import IndalekoWindows
@@ -50,19 +49,20 @@ from storage import IndalekoObject
 from storage.recorders.base import IndalekoStorageRecorder
 from storage.collectors.local.windows.collector import IndalekoWindowsLocalCollector
 import utils.misc.directory_management
+from utils.misc.file_name_management import find_candidate_files
 from utils.misc.data_management import encode_binary_data
 # pylint: enable=wrong-import-position
 
 class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
     '''
     This class handles ingestion of metadata from the Indaleko Windows
-    indexing service.
+    collector service.
     '''
 
     windows_local_ingester_uuid = '429f1f3c-7a21-463f-b7aa-cd731bb202b1'
     windows_local_ingester_service = {
         'service_name' : 'Windows Local Ingester',
-        'service_description' : 'This service ingests captured index info from the local filesystems of a Windows machine.',
+        'service_description' : 'This service ingest metadata collected from the local filesystems of a Windows machine.',
         'service_version' : '1.0',
         'service_type' : 'Ingester',
         'service_identifier' : windows_local_ingester_uuid,
@@ -82,7 +82,7 @@ class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
         else:
             kwargs['machine_id'] = self.machine_config.machine_id
             if kwargs['machine_id'] != self.machine_config.machine_id:
-                logging.warning('Warning: machine ID of indexer file ' +\
+                logging.warning('Warning: machine ID of collector file ' +\
                       f'({kwargs["machine"]}) does not match machine ID of ingester ' +\
                         f'({self.machine_config.machine_id}.)')
         if 'timestamp' not in kwargs:
@@ -102,14 +102,14 @@ class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
             self.output_file = self.generate_file_name()
         else:
             self.output_file = kwargs['output_file']
-        self.indexer_data = []
+        self.collector_data = []
         self.source = {
             'Identifier' : self.windows_local_ingester_uuid,
             'Version' : '1.0'
         }
 
 
-    def find_indexer_files(self) -> list:
+    def find_collector_files(self) -> list:
         '''This function finds the files to ingest:
             search_dir: path to the search directory
             prefix: prefix of the file to ingest
@@ -117,27 +117,30 @@ class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
         '''
         if self.data_dir is None:
             raise ValueError('data_dir must be specified')
-        return [x for x in super().find_indexer_files(self.data_dir)
-                if IndalekoWindowsLocalCollector.windows_platform in x and
-                IndalekoWindowsLocalCollector.windows_local_indexer_name in x]
-
-    def load_indexer_data_from_file(self : 'IndalekoWindowsLocalIngester') -> None:
-        '''This function loads the indexer data from the file.'''
+        return [x for x in find_candidate_files(
+            [
+                IndalekoWindowsLocalCollector.windows_platform,
+                IndalekoWindowsLocalCollector.windows_local_collector_name
+            ],
+            self.data_dir)
+]
+    def load_collector_data_from_file(self : 'IndalekoWindowsLocalIngester') -> None:
+        '''This function loads the collector data from the file.'''
         if self.input_file is None:
             raise ValueError('input_file must be specified')
         if self.input_file.endswith('.jsonl'):
             with jsonlines.open(self.input_file) as reader:
                 for entry in reader:
-                    self.indexer_data.append(entry)
+                    self.collector_data.append(entry)
         elif self.input_file.endswith('.json'):
             with open(self.input_file, 'r', encoding='utf-8-sig') as file:
-                self.indexer_data = json.load(file)
+                self.collector_data = json.load(file)
         else:
             raise ValueError(f'Input file {self.input_file} is an unknown type')
-        if not isinstance(self.indexer_data, list):
-            raise ValueError('indexer_data is not a list')
+        if not isinstance(self.collector_data, list):
+            raise ValueError('collector_data is not a list')
 
-    def normalize_index_data(self, data: dict) -> IndalekoObject:
+    def normalize_collector_data(self, data: dict) -> IndalekoObject:
         '''
         Given some metadata, this will create a record that can be inserted into the
         Object collection.
@@ -213,17 +216,17 @@ class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
 
     def ingest(self) -> None:
         '''
-        This function ingests the indexer file and emits the data needed to
+        This function ingests the collector file and emits the data needed to
         upload to the database.
         '''
-        self.load_indexer_data_from_file()
+        self.load_collector_data_from_file()
         dir_data_by_path = {}
         dir_data = []
         file_data = []
         # Step 1: build the normalized data
-        for item in self.indexer_data:
+        for item in self.collector_data:
             try:
-                obj = self.normalize_index_data(item)
+                obj = self.normalize_collector_data(item)
             except OSError as e:
                 logging.error('Error normalizing data: %s', e)
                 logging.error('Data: %s', item)
@@ -405,18 +408,18 @@ def main():
                             default=utils.misc.directory_management.indaleko_default_data_dir)
     pre_args, _ = pre_parser.parse_known_args()
     machine_config = IndalekoWindowsMachineConfig.load_config_from_file(config_file=default_config_file)
-    indexer = IndalekoWindowsLocalCollector(
+    collector = IndalekoWindowsLocalCollector(
         search_dir=pre_args.datadir,
         prefix=IndalekoWindowsLocalCollector.windows_platform,
-        suffix=IndalekoWindowsLocalCollector.windows_local_indexer_name,
+        suffix=IndalekoWindowsLocalCollector.windows_local_collector_name,
         machine_config=machine_config
     )
-    indexer_files = indexer.find_collector_files(pre_args.datadir)
+    collector_files = collector.find_collector_files(pre_args.datadir)
     parser = argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--input',
-                        choices=indexer_files,
-                        default=indexer_files[-1],
-                        help='Windows Local Indexer file to ingest.')
+                        choices=collector_files,
+                        default=collector_files[-1],
+                        help='Windows Local Collector file to ingest.')
     parser.add_argument('--reset', action='store_true', help='Reset the service collection.')
     parser.add_argument('--logdir',
                         help=f'Path to the log directory (default is {utils.misc.directory_management.indaleko_default_log_dir})',
@@ -426,23 +429,23 @@ def main():
                         default=logging.DEBUG,
                         help='Logging level to use.')
     args = parser.parse_args()
-    metadata = IndalekoWindowsLocalCollector.extract_metadata_from_indexer_file_name(args.input)
+    metadata = IndalekoWindowsLocalCollector.extract_metadata_from_collector_file_name(args.input)
     timestamp = metadata.get('timestamp',
                              datetime.datetime.now(datetime.timezone.utc).isoformat())
     machine_id = 'unknown'
     if 'machine' in metadata:
         if metadata['machine'] != machine_config.machine_id:
-            print('Warning: machine ID of indexer file ' +\
+            print('Warning: machine ID of collector file ' +\
                   f'({metadata["machine"]}) does not match machine ID of ingester ' +\
                     f'({machine_config.machine_id})')
         machine_id = metadata['machine']
     if 'timestamp' in metadata:
         timestamp = metadata['timestamp']
     if 'platform' in metadata:
-        indexer_platform = metadata['platform']
-        if indexer_platform != IndalekoWindowsLocalIngester.windows_platform:
-            print('Warning: platform of indexer file ' +\
-                  f'({indexer_platform}) name does not match platform of ingester ' +\
+        collector_platform = metadata['platform']
+        if collector_platform != IndalekoWindowsLocalIngester.windows_platform:
+            print('Warning: platform of collector file ' +\
+                  f'({collector_platform}) name does not match platform of ingester ' +\
                     f'({IndalekoWindowsLocalIngester.windows_platform}.)')
     storage = 'unknown'
     if 'storage' in metadata:

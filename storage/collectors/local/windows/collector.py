@@ -182,7 +182,7 @@ class IndalekoWindowsLocalCollector(BaseStorageCollector):
         return (stat_dict, last_uri, last_drive)
 
 
-    def index(self) -> list:
+    def collect(self) -> list:
         data = []
         last_drive = None
         last_uri = None
@@ -266,7 +266,7 @@ def main():
                                 force=True)
     logging.info('Indexing %s ' , pre_args.path)
     logging.info('Output file %s ' , output_file)
-    data = indexer.index()
+    data = indexer.collect()
     indexer.write_data_to_file(data, output_file)
     counts = indexer.get_counts()
     for count_type, count_value in counts.items():

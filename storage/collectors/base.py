@@ -1,6 +1,6 @@
 '''
 This is the common class library for Indaleko storage collectors (that is, agents that
-index data from storage locations into an intermediate format for further processing).
+collect data from storage locations into an intermediate format for further processing).
 
 Project Indaleko
 Copyright (C) 2024 Tony Mason
@@ -48,7 +48,7 @@ class BaseStorageCollector:
     '''
     This is the base class for Indaleko storage collectors.  It provides fundamental
     mechanisms for managing the data and configuration files that are used by
-    the indexers.
+    the collectors.
     '''
     indaleko_generic_collector_uuid = '4a80a080-9cc9-4856-bf43-7b646557ac2d'
     indaleko_generic_collector_service_name = "Indaleko Generic Collector"
@@ -181,7 +181,7 @@ class BaseStorageCollector:
         platform = kwargs.get('platform', 'unknown_platform').replace('-', '_')
         if not isinstance(platform, str):
             raise ValueError('platform must be a string')
-        collector_name = kwargs.get('collector_name', 'unknown_indexer').replace('-', '_')
+        collector_name = kwargs.get('collector_name', 'unknown_collector').replace('-', '_')
         if not isinstance(collector_name, str):
             raise ValueError('collector_name must be a string')
         machine_id = kwargs.get('machine_id',
@@ -209,10 +209,10 @@ class BaseStorageCollector:
         return os.path.join(target_dir,name)
 
     @staticmethod
-    def extract_metadata_from_indexer_file_name(file_name : str) -> dict:
+    def extract_metadata_from_collector_file_name(file_name : str) -> dict:
         '''
         This script extracts metadata from a collector file name, based upon
-        the format used by generate_indexer_file_name.
+        the format used by generate_collector_file_name.
         '''
         data = extract_keys_from_file_name(file_name)
         if data is None:
@@ -251,7 +251,7 @@ class BaseStorageCollector:
                 self.error_count += 1
             return None
         if stat_data.st_ino != lstat_data.st_ino:
-            logging.info('File %s is a symlink, indexing symlink data', file_path)
+            logging.info('File %s is a symlink, collecting symlink data', file_path)
             self.good_symlink_count += 1
             stat_data = lstat_data
         elif stat.S_ISDIR(stat_data.st_mode):
@@ -262,7 +262,7 @@ class BaseStorageCollector:
             raise ValueError('Symlinks should have been handled above')
         else:
             self.special_count += 1
-            return None # don't index special files
+            return None # don't process special files
 
         stat_dict = {key : getattr(stat_data, key) \
                     for key in dir(stat_data) if key.startswith('st_')}
@@ -288,9 +288,9 @@ class BaseStorageCollector:
 
 
 
-    def index(self) -> list:
+    def collect(self) -> list:
         '''
-        This is the main indexing function for the collector.  Can be overriden
+        This is the main function for the collector.  Can be overridden
         for platforms that require additional processing.
         '''
         data = []
@@ -331,7 +331,7 @@ def main():
     with open(output_file, 'wt', encoding='utf-8-sig') as output:
         output.write('Hello, world!\n')
         print(f'Wrote {output_file}')
-    metadata = collector.extract_metadata_from_indexer_file_name(output_file)
+    metadata = collector.extract_metadata_from_collector_file_name(output_file)
     print(json.dumps(metadata, indent=4))
 
 if __name__ == "__main__":

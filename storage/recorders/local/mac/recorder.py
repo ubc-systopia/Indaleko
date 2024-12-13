@@ -134,7 +134,7 @@ class IndalekoMacLocalIngester(IndalekoStorageRecorder):
                 if IndalekoMacLocalIndexer.mac_platform in x and
                 IndalekoMacLocalIndexer.mac_local_indexer_name in x]
 
-    def load_indexer_data_from_file(self: 'IndalekoMacLocalIngester') -> None:
+    def load_collector_data_from_file(self: 'IndalekoMacLocalIngester') -> None:
         '''This function loads the indexer data from the file.'''
         if self.input_file is None:
             raise ValueError('input_file must be specified')
@@ -225,7 +225,7 @@ class IndalekoMacLocalIngester(IndalekoStorageRecorder):
             self.arangoimport()
             return
 
-        self.load_indexer_data_from_file()
+        self.load_collector_data_from_file()
         dir_data_by_path = {}
         dir_data = []
         file_data = []
@@ -447,7 +447,7 @@ def main():
                         default=logging.DEBUG,
                         help='Logging level to use.')
     args = parser.parse_args()
-    metadata = IndalekoMacLocalIndexer.extract_metadata_from_indexer_file_name(
+    metadata = IndalekoMacLocalIndexer.extract_metadata_from_collector_file_name(
         args.input)
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     machine_id = 'unknown'
