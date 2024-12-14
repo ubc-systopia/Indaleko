@@ -51,10 +51,6 @@ class IndalekoPerformanceDataModel(IndalekoBaseModel):
                                     title='Record',
                                     description='The record associated with the performance data.')
 
-    Description : str = Field(...,
-                              title='Description',
-                              description='A description of what this performance data describes.')
-
     StartTimestamp : AwareDatetime = Field(datetime.now(timezone.utc),
                                       title='StartTimestamp',
                                       description='The timestamp of when collection of this performance data was started.')
@@ -141,7 +137,6 @@ class IndalekoPerformanceDataModel(IndalekoBaseModel):
                     },
                     "Data": "Base64EncodedData"
                 },
-                "Description": "This is a sample performance data record.",
                 "StartTimestamp": "2024-07-30T23:38:48.319654+00:00",
                 "EndTimestamp": "2024-07-30T23:38:48.319654+00:00",
                 "ElapsedTime": 0.0,
