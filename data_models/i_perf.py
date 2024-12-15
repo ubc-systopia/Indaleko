@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+import uuid
 
 from datetime import datetime, timezone
 from typing import Dict, Any, Type, TypeVar, Union, Optional
@@ -34,7 +35,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
-T = TypeVar('T', bound='IndalekoBaseModel')
+T = TypeVar('T', bound='IndalekoPerformanceDataModel')
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
@@ -51,15 +52,19 @@ class IndalekoPerformanceDataModel(IndalekoBaseModel):
                                     title='Record',
                                     description='The record associated with the performance data.')
 
-    StartTimestamp : AwareDatetime = Field(datetime.now(timezone.utc),
+    MachineConfigurationId: uuid.UUID = Field(None,
+                                    title='MachineConfigurationId',
+                                    description='The UUID for the machine configuration (e.g. a reference to the relevant record in the MachineConfig collection).')
+
+    StartTimestamp : AwareDatetime = Field(default_factory=lambda: datetime.now(timezone.utc),
                                       title='StartTimestamp',
                                       description='The timestamp of when collection of this performance data was started.')
 
-    EndTimestamp : AwareDatetime = Field(datetime.now(timezone.utc),
+    EndTimestamp : AwareDatetime = Field(default_factory=lambda: datetime.now(timezone.utc),
                                     title='EndTimestamp',
                                     description='The timestamp of when collection of this performance data was ended.')
 
-    ElapsedTime : float = Field(...,
+    ElapsedTime : Optional[float] = Field(None,
                                 title='ElapsedTime',
                                 description='The elapsed time in seconds.')
 
@@ -122,6 +127,19 @@ class IndalekoPerformanceDataModel(IndalekoBaseModel):
     def ensure_endtime(cls, value: datetime):
         return cls.validate_timestamp(value)
 
+    @field_validator('ElapsedTime', mode='before')
+    @classmethod
+    def calculate_elapsed_time(
+        cls : Type[T],
+        value: Union[float, None] = None,
+        values: Union[Dict[str, Any], None] = None) -> float:
+        '''Calculate the elapsed time if it is not provided.'''
+        if value is None:
+            start = values.get('StartTimestamp', datetime.now(timezone.utc))
+            end = values.get('EndTimestamp', datetime.now(timezone.utc))
+            value = (end - start).total_seconds()
+        return value
+
     class Config:
         '''Sample configuration data for the data model.'''
         json_schema_extra = {
@@ -137,6 +155,7 @@ class IndalekoPerformanceDataModel(IndalekoBaseModel):
                     },
                     "Data": "Base64EncodedData"
                 },
+                "MachineConfigurationId": "a8343055-7d85-4424-b83e-9fa413a7ebf7",
                 "StartTimestamp": "2024-07-30T23:38:48.319654+00:00",
                 "EndTimestamp": "2024-07-30T23:38:48.319654+00:00",
                 "ElapsedTime": 0.0,

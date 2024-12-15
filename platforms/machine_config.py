@@ -43,9 +43,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 #pylint: disable=wrong-import-position
 from data_models import IndalekoMachineConfigDataModel
-from db import IndalekoCollections
-from db.db_collections import IndalekoDBCollections
-from db.service_manager import IndalekoServiceManager
+from db import IndalekoCollections, IndalekoDBCollections, IndalekoServiceManager
 from utils.data_validation import validate_uuid_string
 #pylint: enable=wrong-import-position
 
