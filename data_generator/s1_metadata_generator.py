@@ -46,9 +46,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
-from data_generator.s3_translate_query import QueryExtractor
 from data_models.i_object import IndalekoObjectDataModel
-from data_models.base import IndalekoBaseModel
 from data_models.record import IndalekoRecordDataModel
 from data_models.timestamp import IndalekoTimestampDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
@@ -57,10 +55,7 @@ from activity.context.data_models.context_data_model import IndalekoActivityCont
 from activity.context.data_models.activity_data import ActivityDataModel
 from activity.data_model.activity import IndalekoActivityDataModel
 from activity.collectors.location.data_models.windows_gps_location_data_model import WindowsGPSLocationDataModel
-from data_models.source_identifer import IndalekoSourceIdentifierDataModel
-from activity.recorders.location.location_data_collector import BaseLocationDataCollector
-import IndalekoActivityDataProviderRegistration
-from activity.recorders.registration_service import IndalekoActivityDataRegistrationService
+from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from semantic.data_models.base_data_model import BaseSemanticDataModel
 from activity.collectors.location.data_models.windows_gps_satellite_data import WindowsGPSLocationSatelliteDataModel
 
@@ -68,12 +63,8 @@ from icecream import ic
 from uuid import UUID
 
 from pathlib import Path
-import yaml
-import base64
-import uuid
 
 from datetime import datetime, timedelta
-import time
 
 import random
 import string

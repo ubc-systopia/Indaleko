@@ -36,10 +36,9 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from Indaleko import Indaleko
-from IndalekoDBConfig import IndalekoDBConfig
-from IndalekoCollection import IndalekoCollection
+from db import IndalekoDBConfig, IndalekoCollection
 from data_models.record import IndalekoRecordDataModel
-from data_models.source_identifer import IndalekoSourceIdentifierDataModel
+from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from activity.collectors.location.data_models.location_data_model import BaseLocationDataModel
 from activity.data_model.activity import IndalekoActivityDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel

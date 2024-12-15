@@ -53,6 +53,8 @@ class IndalekoDBCollections:
     Indaleko_Identity_Domain_Collection = 'IdentityDomains'
     Indaleko_User_Collection = 'Users'
     Indaleko_User_Relationship_Collection = 'UserRelationships'
+    Indaleko_Performance_Data_Collection = 'PerformanceData'
+    Indaleko_Query_History_collection = "QueryHistory"
 
     Collections = {
         Indaleko_Object_Collection: {
@@ -158,6 +160,18 @@ class IndalekoDBCollections:
             },
         },
         # Indaleko_User_Relationship_Collection : 'This needs to be tied into NER work'
+        Indaleko_Performance_Data_Collection : {
+            'schema' : None,
+            'edge' : False,
+            'indices' : {
+            }
+        },
+        Indaleko_Query_History_collection : {
+            'schema' : None,
+            'edge' : False,
+            'indices' : {
+            }
+        }
     }
 
 def main():
