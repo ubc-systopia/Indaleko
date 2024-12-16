@@ -1,8 +1,7 @@
 '''
-This module handles data ingestion into Indaleko from the Windows local file
-system indexer.
+This module handles gathering metadata from Windows local file systems.
 
-Indaleko Windows Local Indexer
+Indaleko Windows Local Collector
 Copyright (C) 2024 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
@@ -50,10 +49,10 @@ from perf.perf_recorder import IndalekoPerformanceDataRecorder
 
 class IndalekoWindowsLocalCollector(BaseStorageCollector):
     '''
-    This is the class that indexes Windows local file systems.
+    This is the class that collects metadata from Windows local file systems.
     '''
     windows_platform = 'Windows'
-    windows_local_collector_name = 'fs-collector'
+    windows_local_collector_name = 'fs_collector'
 
     indaleko_windows_local_collector_uuid = '0793b4d5-e549-4cb6-8177-020a738b66b7'
     indaleko_windows_local_collector_service_name = 'Windows Local collector'
@@ -166,7 +165,7 @@ class IndalekoWindowsLocalCollector(BaseStorageCollector):
             return None
 
         if stat_data.st_ino != lstat_data.st_ino:
-            logging.info('File %s is a symlink, indexing symlink data', file_path)
+            logging.info('File %s is a symlink, collecting symlink metadata', file_path)
             self.good_symlink_count += 1
             stat_data = lstat_data
         stat_dict = {key : getattr(stat_data, key) \
@@ -179,7 +178,7 @@ class IndalekoWindowsLocalCollector(BaseStorageCollector):
             assert last_uri.startswith('\\\\?\\Volume{'), \
                 f'last_uri {last_uri} does not start with \\\\?\\Volume{{'
         stat_dict['URI'] = os.path.join(last_uri, os.path.splitdrive(root)[1], name)
-        stat_dict['Indexer'] = self.service_identifier
+        stat_dict['Collector'] = self.service_identifier
         assert last_uri.startswith('\\\\?\\Volume{')
         if last_uri.startswith('\\\\?\\Volume{'):
             stat_dict['Volume GUID'] = last_uri[11:-2]
@@ -212,7 +211,7 @@ class IndalekoWindowsLocalCollector(BaseStorageCollector):
 
 
 def main():
-    '''This is the main handler for the Indaleko Windows Local Indexer
+    '''This is the main handler for the Indaleko Windows Local Collector
     service.'''
     logging_levels = IndalekoLogging.get_logging_levels()
 
@@ -227,7 +226,7 @@ def main():
     # Step 2: figure out the default config file
     pre_parser = argparse.ArgumentParser(add_help=False, parents=[pre_parser])
     pre_parser.add_argument('--config', choices=config_files, default=default_config_file)
-    pre_parser.add_argument('--path', help='Path to the directory to index', type=str,
+    pre_parser.add_argument('--path', help='Path to the directory to scan', type=str,
                             default=os.path.expanduser('~'))
     pre_args, _ = pre_parser.parse_known_args()
 
@@ -239,9 +238,9 @@ def main():
     if drive_guid is None:
         drive_guid = uuid.uuid4().hex
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    indexer = IndalekoWindowsLocalCollector(machine_config=machine_config,
+    collector = IndalekoWindowsLocalCollector(machine_config=machine_config,
                                           timestamp=timestamp)
-    output_file = indexer.generate_windows_collector_file_name(storage_description=drive_guid)
+    output_file = collector.generate_windows_collector_file_name(storage_description=drive_guid)
     parser= argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--datadir', '-d',
                         help='Path to the data directory',
@@ -266,12 +265,12 @@ def main():
                         action='store_true',
                         help='Record performance data to the database')
     args = parser.parse_args()
-    indexer = IndalekoWindowsLocalCollector(timestamp=timestamp,
+    collector = IndalekoWindowsLocalCollector(timestamp=timestamp,
                                           path=args.path,
                                           machine_config=machine_config,
                                           storage_description=drive_guid)
     output_file = args.output
-    log_file_name = indexer.generate_windows_collector_file_name(target_dir=args.logdir, suffix='log')
+    log_file_name = collector.generate_windows_collector_file_name(target_dir=args.logdir, suffix='log')
     logging.basicConfig(filename=os.path.join(log_file_name),
                                 level=args.loglevel,
                                 format='%(asctime)s - %(levelname)s - %(message)s',
@@ -281,25 +280,25 @@ def main():
     perf_file_name = os.path.join(
         args.datadir,
         IndalekoPerformanceDataRecorder().generate_perf_file_name(
-            platform=indexer.platform,
-            service=indexer.collector_name,
+            platform=collector.platform,
+            service=collector.collector_name,
             machine=uuid.UUID(machine_config.machine_id)
         )
     )
-    def collect(indexer):
-        data = indexer.collect()
-        indexer.write_data_to_file(data, output_file)
+    def collect(collector):
+        data = collector.collect()
+        collector.write_data_to_file(data, output_file)
     perf_data = IndalekoPerformanceDataCollector.measure_performance(
         collect,
         source=IndalekoSourceIdentifierDataModel(
-            Identifier=indexer.service_identifier,
-            Version = indexer.service_version,
-            Description=indexer.service_description),
-        description=indexer.service_description,
+            Identifier=collector.service_identifier,
+            Version = collector.service_version,
+            Description=collector.service_description),
+        description=collector.service_description,
         MachineIdentifier=uuid.UUID(machine_config.machine_id),
         input_file_name=None,
         output_file_name=output_file,
-        indexer=indexer
+        collector=collector
     )
     if args.performance_db or args.performance_file:
         perf_recorder = IndalekoPerformanceDataRecorder()
@@ -309,7 +308,7 @@ def main():
         if args.performance_db:
             perf_recorder.add_data_to_db(perf_data)
             ic('Performance data written to the database')
-    counts = indexer.get_counts()
+    counts = collector.get_counts()
     for count_type, count_value in counts.items():
         logging.info('%s: %d', count_type, count_value)
     logging.info('Done')

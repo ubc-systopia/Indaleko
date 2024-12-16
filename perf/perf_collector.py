@@ -70,7 +70,10 @@ class IndalekoPerformanceDataCollector:
         start_time = datetime.now(timezone.utc).isoformat()
         start_user_time = process.cpu_times().user
         start_system_time = process.cpu_times().system
-        start_io_counters = process.io_counters()
+        if hasattr(process, 'io_counters'):
+            start_io_counters = process.io_counters()
+        else:
+            start_io_counters = None
         start_memory = process.memory_info().rss  # Resident Set Size (RSS) memory
         start_thread_count = process.num_threads()
         input_file_size = None
@@ -91,7 +94,10 @@ class IndalekoPerformanceDataCollector:
         end_time = datetime.now(timezone.utc).isoformat()
         end_user_time = process.cpu_times().user
         end_system_time = process.cpu_times().system
-        end_io_counters = process.io_counters()
+        if hasattr(process, 'io_counters'):
+            end_io_counters = process.io_counters()
+        else:
+            end_io_counters = None
         end_memory = process.memory_info().rss  # Resident Set Size (RSS) memory
         end_thread_count = process.num_threads()
         output_file_size = None
@@ -116,8 +122,12 @@ class IndalekoPerformanceDataCollector:
         data['input_file_size'] = input_file_size
         data['output_file_name'] = output_file_name
         data['output_file_size'] = output_file_size
-        data['io_read_bytes'] = end_io_counters.read_bytes - start_io_counters.read_bytes
-        data['io_write_bytes'] = end_io_counters.write_bytes - start_io_counters.write_bytes
+        if start_io_counters and end_io_counters:
+            data['io_read_bytes'] = end_io_counters.read_bytes - start_io_counters.read_bytes
+            data['io_write_bytes'] = end_io_counters.write_bytes - start_io_counters.write_bytes
+        else:
+            data['io_read_bytes'] = 0
+            data['io_write_bytes'] = 0
         data['thread_count'] = max(start_thread_count, end_thread_count)
         data['result'] = result
 
