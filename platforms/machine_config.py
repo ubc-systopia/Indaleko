@@ -71,7 +71,7 @@ class IndalekoMachineConfig:
             self.source_identifier = None
         # ic(kwargs)
         self.machine_id = kwargs.get('machine_id', kwargs.get('MachineUUID', None))
-        assert 'machine_id' is not None, 'Machine ID must be specified'
+        assert self.machine_id is not None, 'Machine ID must be specified'
         if 'machine_id' in kwargs:
             del kwargs['machine_id']
         self.machine_config = IndalekoMachineConfigDataModel(**kwargs)

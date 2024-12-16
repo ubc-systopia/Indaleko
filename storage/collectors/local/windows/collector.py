@@ -46,7 +46,6 @@ from perf.perf_recorder import IndalekoPerformanceDataRecorder
 # pylint: enable=wrong-import-position
 
 
-
 class IndalekoWindowsLocalCollector(BaseStorageCollector):
     '''
     This is the class that collects metadata from Windows local file systems.
