@@ -69,12 +69,12 @@ class IndalekoMachineConfig:
             del kwargs['offline']
         if not hasattr(self, 'source'): # override in derived classes
             self.source_identifier = None
-        ic(kwargs)
+        # ic(kwargs)
         self.machine_id = kwargs.get('machine_id', kwargs.get('MachineUUID', None))
         assert 'machine_id' is not None, 'Machine ID must be specified'
         if 'machine_id' in kwargs:
             del kwargs['machine_id']
-        self.machine_config = IndalekoMachineConfigDataModel(**ic(kwargs))
+        self.machine_config = IndalekoMachineConfigDataModel(**kwargs)
         if not self.offline:
             self.collection = IndalekoCollections().get_collection(IndalekoDBCollections.Indaleko_MachineConfig_Collection)
             assert self.collection is not None, 'Failed to get the machine configuration collection'

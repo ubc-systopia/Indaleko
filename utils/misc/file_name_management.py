@@ -59,7 +59,8 @@ def generate_final_name(args : list, **kwargs) -> str:
         if '-' in key or '-' in value:
             raise ValueError(f'key and value must not contain a hyphen: {key, value}')
         name += f'-{key}={value}'
-    name += ts
+    if ts is not None:
+        name += ts
     name += f'.{suffix}'
     if len(name) > max_len:
         raise ValueError('file name is too long' + '\n' + name + '\n' + str(len(name)))
@@ -98,7 +99,10 @@ def generate_file_name(**kwargs) -> str:
     del kwargs['service']
     ts = utils.misc.timestamp_management.generate_iso_timestamp_for_file()
     if 'timestamp' in kwargs:
-        ts = utils.misc.timestamp_management.generate_iso_timestamp_for_file(kwargs['timestamp'])
+        if kwargs['timestamp'] is not None:
+            ts = utils.misc.timestamp_management.generate_iso_timestamp_for_file(kwargs['timestamp'])
+        else:
+            ts = None
         del kwargs['timestamp']
     if 'prefix' in kwargs:
         prefix = kwargs['prefix']
@@ -109,9 +113,10 @@ def generate_file_name(**kwargs) -> str:
     if suffix.startswith('.'):
         suffix = suffix[1:] # avoid ".." for suffix
     if '-' in target_platform:
-        raise ValueError('platform must not contain a hyphen')
+        raise ValueError(f'platform must not contain a hyphen {target_platform}')
     if '-' in service:
-        raise ValueError('service must not contain a hyphen')
+        raise ValueError(f'service must not contain a hyphen {service}')
+
     return generate_final_name(
         [prefix,
         target_platform,

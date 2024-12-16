@@ -103,6 +103,7 @@ class IndalekoPerformanceDataModel(IndalekoBaseModel):
     ErrorCount : Optional[int] = Field(None,
                                         title='ErrorCount',
                                         description='The number of errors encountered.')
+
     AdditionalData : Optional[Dict[str, Any]] = Field(default_factory=dict,
                                                         title='AdditionalData',
                                                         description='Additional performance data.')

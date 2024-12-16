@@ -52,8 +52,6 @@ class IndalekoPerformanceDataCollector:
 
     def __init__(self, *args, **kwargs):
         '''Initialize the object.'''
-        ic(args)
-        ic(kwargs)
         self.perf_data : IndalekoPerformanceDataModel = IndalekoPerformanceDataModel(**kwargs)
 
     @staticmethod
@@ -69,7 +67,7 @@ class IndalekoPerformanceDataCollector:
     ) -> 'IndalekoPerformanceDataCollector':
         '''Measure the performance of a function.'''
         process = psutil.Process(os.getpid())
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(timezone.utc).isoformat()
         start_user_time = process.cpu_times().user
         start_system_time = process.cpu_times().system
         start_io_counters = process.io_counters()
@@ -88,8 +86,9 @@ class IndalekoPerformanceDataCollector:
             ic(e)
             result = None
             end_clock = time.perf_counter()
+            elapsed_time = end_clock - start_clock
 
-        end_time = datetime.now(timezone.utc)
+        end_time = datetime.now(timezone.utc).isoformat()
         end_user_time = process.cpu_times().user
         end_system_time = process.cpu_times().system
         end_io_counters = process.io_counters()
@@ -99,11 +98,14 @@ class IndalekoPerformanceDataCollector:
         if output_file_name is not None and os.path.exists(output_file_name):
             output_file_size = os.stat(output_file_name).st_size
 
+        kwargs_data = {}
+        for key, value in kwargs.items():
+            kwargs_data[str(key)] = str(value)
         data = {}
         data['description'] = description
         data['machine_id'] = str(MachineIdentifier)
         data['args'] = args
-        data['kwargs'] = kwargs
+        data['kwargs'] = kwargs_data,
         data['start_time'] = start_time
         data['end_time'] = end_time
         data['elapsed_time'] = elapsed_time
@@ -128,6 +130,7 @@ class IndalekoPerformanceDataCollector:
 
         return IndalekoPerformanceDataCollector(
             Record = record,
+            SourceIdentifier = source,
             MachineConfigurationId = MachineIdentifier,
             StartTimestamp = start_time,
             EndTimestamp = end_time,

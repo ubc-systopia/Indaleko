@@ -25,6 +25,8 @@ import os
 import sys
 import uuid
 
+from icecream import ic
+
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
@@ -34,11 +36,14 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 # pylint: disable=wrong-import-position
+from data_models import IndalekoSourceIdentifierDataModel
 from utils.i_logging import IndalekoLogging
 import utils.misc.file_name_management
 import utils.misc.directory_management
 from storage.collectors.base import BaseStorageCollector
 from platforms.windows.machine_config import IndalekoWindowsMachineConfig
+from perf.perf_collector import IndalekoPerformanceDataCollector
+from perf.perf_recorder import IndalekoPerformanceDataRecorder
 # pylint: enable=wrong-import-position
 
 
@@ -252,7 +257,14 @@ def main():
                         default=logging.DEBUG,
                         choices=logging_levels,
                         help='Logging level to use (lower number = more logging)')
-
+    parser.add_argument('--performance_file',
+                        default=False,
+                        action='store_true',
+                        help='Record performance data to a file')
+    parser.add_argument('--performance_db',
+                        default=False,
+                        action='store_true',
+                        help='Record performance data to the database')
     args = parser.parse_args()
     indexer = IndalekoWindowsLocalCollector(timestamp=timestamp,
                                           path=args.path,
@@ -266,8 +278,37 @@ def main():
                                 force=True)
     logging.info('Indexing %s ' , pre_args.path)
     logging.info('Output file %s ' , output_file)
-    data = indexer.collect()
-    indexer.write_data_to_file(data, output_file)
+    perf_file_name = os.path.join(
+        args.datadir,
+        IndalekoPerformanceDataRecorder().generate_perf_file_name(
+            platform=indexer.platform,
+            service=indexer.collector_name,
+            machine=uuid.UUID(machine_config.machine_id)
+        )
+    )
+    def collect(indexer):
+        data = indexer.collect()
+        indexer.write_data_to_file(data, output_file)
+    perf_data = IndalekoPerformanceDataCollector.measure_performance(
+        collect,
+        source=IndalekoSourceIdentifierDataModel(
+            Identifier=indexer.service_identifier,
+            Version = indexer.service_version,
+            Description=indexer.service_description),
+        description=indexer.service_description,
+        MachineIdentifier=uuid.UUID(machine_config.machine_id),
+        input_file_name=None,
+        output_file_name=output_file,
+        indexer=indexer
+    )
+    if args.performance_db or args.performance_file:
+        perf_recorder = IndalekoPerformanceDataRecorder()
+        if args.performance_file:
+            perf_recorder.add_data_to_file(perf_file_name, perf_data)
+            ic('Performance data written to ', perf_file_name)
+        if args.performance_db:
+            perf_recorder.add_data_to_db(perf_data)
+            ic('Performance data written to the database')
     counts = indexer.get_counts()
     for count_type, count_value in counts.items():
         logging.info('%s: %d', count_type, count_value)
