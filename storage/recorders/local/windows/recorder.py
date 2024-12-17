@@ -29,7 +29,7 @@ import uuid
 import tempfile
 import sys
 
-# from icecream import ic
+from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -40,7 +40,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 # pylint: disable=wrong-import-position
-from db import IndalekoDBCollections
+from db import IndalekoDBCollections, IndalekoServiceManager
 from data_models import IndalekoSourceIdentifierDataModel
 from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 from platforms.unix import UnixFileAttributes
@@ -51,25 +51,28 @@ from storage.collectors.local.windows.collector import IndalekoWindowsLocalColle
 import utils.misc.directory_management
 from utils.misc.file_name_management import find_candidate_files
 from utils.misc.data_management import encode_binary_data
+from utils import IndalekoLogging
+from perf.perf_collector import IndalekoPerformanceDataCollector
+from perf.perf_recorder import IndalekoPerformanceDataRecorder
 # pylint: enable=wrong-import-position
 
-class IndalekoWindowsLocalIngester(BaseStorageRecorder):
+class IndalekoWindowsLocalStorageRecorder(BaseStorageRecorder):
     '''
     This class handles ingestion of metadata from the Indaleko Windows
     collector service.
     '''
 
-    windows_local_ingester_uuid = '429f1f3c-7a21-463f-b7aa-cd731bb202b1'
-    windows_local_ingester_service = {
+    windows_local_recorder_uuid = '429f1f3c-7a21-463f-b7aa-cd731bb202b1'
+    windows_local_recorder_service = {
         'service_name' : 'Windows Local Ingester',
         'service_description' : 'This service ingest metadata collected from the local filesystems of a Windows machine.',
         'service_version' : '1.0',
-        'service_type' : 'Ingester',
-        'service_identifier' : windows_local_ingester_uuid,
+        'service_type' : IndalekoServiceManager.service_type_storage_recorder,
+        'service_identifier' : windows_local_recorder_uuid,
     }
 
     windows_platform = IndalekoWindowsLocalCollector.windows_platform
-    windows_local_ingester = 'local_fs_ingester'
+    windows_local_ingester = 'local_fs_recorder'
 
     def __init__(self, **kwargs) -> None:
         if 'input_file' not in kwargs:
@@ -88,12 +91,12 @@ class IndalekoWindowsLocalIngester(BaseStorageRecorder):
         if 'timestamp' not in kwargs:
             kwargs['timestamp'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
         if 'platform' not in kwargs:
-            kwargs['platform'] = IndalekoWindowsLocalIngester.windows_platform
+            kwargs['platform'] = IndalekoWindowsLocalStorageRecorder.windows_platform
         if 'ingester' not in kwargs:
-            kwargs['ingester'] = IndalekoWindowsLocalIngester.windows_local_ingester
+            kwargs['ingester'] = IndalekoWindowsLocalStorageRecorder.windows_local_ingester
         if 'input_file' not in kwargs:
             kwargs['input_file'] = None
-        for key, value in self.windows_local_ingester_service.items():
+        for key, value in self.windows_local_recorder_service.items():
             if key not in kwargs:
                 kwargs[key] = value
         super().__init__(**kwargs)
@@ -104,7 +107,7 @@ class IndalekoWindowsLocalIngester(BaseStorageRecorder):
             self.output_file = kwargs['output_file']
         self.collector_data = []
         self.source = {
-            'Identifier' : self.windows_local_ingester_uuid,
+            'Identifier' : self.windows_local_recorder_uuid,
             'Version' : '1.0'
         }
 
@@ -124,7 +127,7 @@ class IndalekoWindowsLocalIngester(BaseStorageRecorder):
             ],
             self.data_dir)
 ]
-    def load_collector_data_from_file(self : 'IndalekoWindowsLocalIngester') -> None:
+    def load_collector_data_from_file(self : 'IndalekoWindowsLocalStorageRecorder') -> None:
         '''This function loads the collector data from the file.'''
         if self.input_file is None:
             raise ValueError('input_file must be specified')
@@ -214,7 +217,7 @@ class IndalekoWindowsLocalIngester(BaseStorageRecorder):
         return indaleko_object
 
 
-    def ingest(self) -> None:
+    def record(self) -> None:
         '''
         This function ingests the collector file and emits the data needed to
         upload to the database.
@@ -252,7 +255,7 @@ class IndalekoWindowsLocalIngester(BaseStorageRecorder):
         # now, let's build a list of the edges, using our map.
         dir_edges = []
         source = {
-            'Identifier' : self.windows_local_ingester_uuid,
+            'Identifier' : self.windows_local_recorder_uuid,
             'Version' : '1.0',
         }
         source_id = IndalekoSourceIdentifierDataModel(**source)
@@ -364,26 +367,7 @@ def main():
     This is the main handler for the Indaleko Windows Local Ingest
     service.
     '''
-    if platform.python_version() < '3.12':
-        logging_levels = []
-        if hasattr(logging, 'CRITICAL'):
-            logging_levels.append('CRITICAL')
-        if hasattr(logging, 'ERROR'):
-            logging_levels.append('ERROR')
-        if hasattr(logging, 'WARNING'):
-            logging_levels.append('WARNING')
-        if hasattr(logging, 'WARN'):
-            logging_levels.append('WARN')
-        if hasattr(logging, 'INFO'):
-            logging_levels.append('INFO')
-        if hasattr(logging, 'DEBUG'):
-            logging_levels.append('DEBUG')
-        if hasattr(logging, 'NOTSET'):
-            logging_levels.append('NOTSET')
-        if hasattr(logging, 'FATAL'):
-            logging_levels.append('FATAL')
-    else:
-        logging_levels = sorted(set([level for level in logging.getLevelNamesMapping()]))
+    logging_levels = IndalekoLogging.get_logging_levels()
 
     # step 1: find the machine configuration file
     pre_parser = argparse.ArgumentParser(add_help=False)
@@ -428,6 +412,14 @@ def main():
                         choices=logging_levels,
                         default=logging.DEBUG,
                         help='Logging level to use.')
+    parser.add_argument('--performance_file',
+                        default=False,
+                        action='store_true',
+                        help='Record performance data to a file')
+    parser.add_argument('--performance_db',
+                        default=False,
+                        action='store_true',
+                        help='Record performance data to the database')
     args = parser.parse_args()
     metadata = IndalekoWindowsLocalCollector.extract_metadata_from_collector_file_name(args.input)
     timestamp = metadata.get('timestamp',
@@ -443,10 +435,10 @@ def main():
         timestamp = metadata['timestamp']
     if 'platform' in metadata:
         collector_platform = metadata['platform']
-        if collector_platform != IndalekoWindowsLocalIngester.windows_platform:
+        if collector_platform != IndalekoWindowsLocalStorageRecorder.windows_platform:
             print('Warning: platform of collector file ' +\
                   f'({collector_platform}) name does not match platform of ingester ' +\
-                    f'({IndalekoWindowsLocalIngester.windows_platform}.)')
+                    f'({IndalekoWindowsLocalStorageRecorder.windows_platform}.)')
     storage = 'unknown'
     if 'storage' in metadata:
         storage = metadata['storage']
@@ -457,12 +449,12 @@ def main():
     if 'file_suffix' in metadata:
         file_suffix = metadata['file_suffix']
     input_file = os.path.join(args.datadir, args.input)
-    ingester = IndalekoWindowsLocalIngester(
+    recorder = IndalekoWindowsLocalStorageRecorder(
         machine_config=machine_config,
         machine_id = machine_id,
         timestamp=timestamp,
         platform=IndalekoWindowsLocalCollector.windows_platform,
-        ingester = IndalekoWindowsLocalIngester.windows_local_ingester,
+        ingester = IndalekoWindowsLocalStorageRecorder.windows_local_ingester,
         storage_description = storage,
         file_prefix = file_prefix,
         file_suffix = file_suffix,
@@ -470,8 +462,8 @@ def main():
         input_file=input_file,
         log_dir=args.logdir
     )
-    output_file = ingester.generate_file_name()
-    log_file_name = ingester.generate_file_name(
+    output_file = recorder.generate_file_name()
+    log_file_name = recorder.generate_file_name(
         target_dir=args.logdir, suffix='.log')
     logging.basicConfig(filename=os.path.join(log_file_name),
                                 level=logging.DEBUG,
@@ -479,9 +471,48 @@ def main():
                                 force=True)
     logging.info('Ingesting %s ' , args.input)
     logging.info('Output file %s ' , output_file)
-    ingester.ingest()
-    total=0
-    for count_type, count_value in ingester.get_counts().items():
+    logging.info(args)
+    perf_file_name = os.path.join(
+        args.datadir,
+        IndalekoPerformanceDataRecorder().generate_perf_file_name(
+            platform=collector.windows_platform,
+            service=collector.windows_local_collector_name,
+            machine=machine_id.replace('-', ''),
+        )
+    )
+    def extract_counters(**kwargs):
+        ic(kwargs)
+        recorder = kwargs.get('recorder')
+        if recorder:
+            return ic(recorder.get_counts())
+        else:
+            return {}
+    def record_data(recorder : IndalekoWindowsLocalStorageRecorder):
+        data = recorder.record()
+        recorder.write_data_to_file(data, output_file)
+    perf_data = IndalekoPerformanceDataCollector.measure_performance(
+        record_data,
+        source=IndalekoSourceIdentifierDataModel(
+            Identifier=collector.service_identifier,
+            Version = collector.service_version,
+            Description=collector.service_description),
+        description=collector.service_description,
+        MachineIdentifier=None,
+        process_results_func=extract_counters,
+        input_file_name=None,
+        output_file_name=output_file,
+        recorder=recorder
+    )
+    if args.performance_db or args.performance_file:
+        perf_recorder = IndalekoPerformanceDataRecorder()
+        if args.performance_file:
+            perf_recorder.add_data_to_file(perf_file_name, perf_data)
+            ic('Performance data written to ', perf_file_name)
+        if args.performance_db:
+            perf_recorder.add_data_to_db(perf_data)
+            ic('Performance data written to the database')
+    total = 0
+    for count_type, count_value in recorder.get_counts().items():
         logging.info('%s: %d', count_type, count_value)
         total += count_value
     logging.info('Total: %d', total)

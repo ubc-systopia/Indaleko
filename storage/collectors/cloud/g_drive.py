@@ -316,7 +316,6 @@ def main():
                         action='store_true',
                         help='Record performance data to the database')
     args = parser.parse_args()
-    ic(args)
     output_file = os.path.join(args.datadir, args.output)
     logging.info('Indaleko GDrive Collector started.')
     logging.info('Output file: %s', output_file)

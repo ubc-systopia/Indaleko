@@ -149,7 +149,7 @@ def extract_keys_from_file_name(file_name : str) -> dict:
     trailer = fields.pop(-1)
     suffix = trailer.split('.')[-1]
     if not trailer.startswith('ts='):
-        raise ValueError('timestamp field must start with ts=')
+        raise ValueError(f'timestamp field must start with ts= ({file_name})')
     ts_field = trailer[3:-len(suffix)-1]
     data['suffix'] = suffix
     data['timestamp'] = utils.misc.timestamp_management.extract_iso_timestamp_from_file_timestamp(ts_field)

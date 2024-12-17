@@ -80,12 +80,12 @@ class IndalekoPerformanceDataCollector:
         input_file_size = None
         if input_file_name is not None and os.path.exists(input_file_name):
             input_file_size = os.stat(input_file_name).st_size
+        results_data = {}
         try:
             '''Run the task.'''
             start_clock = time.perf_counter()
             result = task_func(*args, **kwargs)
             end_clock = time.perf_counter()
-            results_data = {}
             if process_results_func is not None:
                 try:
                     results_data = process_results_func(*args, **kwargs, result=result)

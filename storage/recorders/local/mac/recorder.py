@@ -1,7 +1,8 @@
 '''
 This module handles recording metadata collected from the Mac local file system.
 
-Indaleko Mac Local Storage Metadata Collector
+Indaleko Mac Local Storage Metadata Recorder
+
 Copyright (C) 2024 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
@@ -22,12 +23,13 @@ import datetime
 import json
 import logging
 import os
-import platform
 import subprocess
 import sys
 import uuid
 
 import jsonlines
+
+from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -49,6 +51,8 @@ from utils.misc.directory_management import indaleko_default_config_dir, indalek
 from utils.misc.file_name_management import indaleko_file_name_prefix
 from utils.misc.data_management import encode_binary_data
 from utils import IndalekoLogging
+from perf.perf_collector import IndalekoPerformanceDataCollector
+from perf.perf_recorder import IndalekoPerformanceDataRecorder
 # pylint: enable=wrong-import-position
 
 class IndalekoMacLocalStorageRecorder(BaseStorageRecorder):
@@ -116,7 +120,7 @@ class IndalekoMacLocalStorageRecorder(BaseStorageRecorder):
         self.objects_file = objects_file
         self.relations_file = relations_file
 
-    def find_recorder_files(self) -> list:
+    def find_collector_files(self) -> list:
         '''This function finds the files to process:
             search_dir: path to the search directory
             prefix: prefix of the file to process
@@ -426,6 +430,14 @@ def main():
                         default=False,
                         action='store_true',
                         help='copy into local docker container with arangodb for bulk uploading')
+    parser.add_argument('--performance_file',
+                        default=False,
+                        action='store_true',
+                        help='Record performance data to a file')
+    parser.add_argument('--performance_db',
+                        default=False,
+                        action='store_true',
+                        help='Record performance data to the database')
     args = parser.parse_args()
     metadata = IndalekoMacLocalCollector.extract_metadata_from_collector_file_name(
         args.input)
@@ -455,7 +467,7 @@ def main():
     if 'file_suffix' in metadata:
         file_suffix = metadata['file_suffix']
     input_file = os.path.join(args.datadir, args.input)
-    collector = IndalekoMacLocalStorageRecorder(
+    recorder = IndalekoMacLocalStorageRecorder(
         reset_collection=args.reset,
         objects_file=args.objects_file,
         relations_file=args.relations_file,
@@ -472,8 +484,8 @@ def main():
         log_dir=args.logdir,
         docker_upload=args.docker_upload,
     )
-    output_file = collector.generate_file_name()
-    log_file_name = collector.generate_file_name(
+    output_file = recorder.generate_file_name()
+    log_file_name = recorder.generate_file_name(
         target_dir=args.logdir, suffix='.log')
     print(f"logging into {log_file_name}")
     logging.basicConfig(filename=os.path.join(log_file_name),
@@ -483,10 +495,58 @@ def main():
     logging.info('Found these collected metadata files: %s', collector_files)
     logging.info('Input file %s ', input_file)
     logging.info('Output file %s ', output_file)
-    collector.record()
-    counts = collector.get_counts()
-    for count_type, count_value in counts.items():
+    perf_file_name = os.path.join(
+        args.datadir,
+        IndalekoPerformanceDataRecorder().generate_perf_file_name(
+            platform=recorder.windows_platform,
+            service=recorder.windows_local_collector_name,
+            machine=machine_id.replace('-', ''),
+        )
+    )
+    perf_file_name = os.path.join(
+        args.datadir,
+        IndalekoPerformanceDataRecorder().generate_perf_file_name(
+            platform=recorder.windows_platform,
+            service=recorder.windows_local_collector_name,
+            machine=machine_id.replace('-', ''),
+        )
+    )
+    def extract_counters(**kwargs):
+        ic(kwargs)
+        recorder = kwargs.get('recorder')
+        if recorder:
+            return ic(recorder.get_counts())
+        else:
+            return {}
+    def record_data(recorder : IndalekoMacLocalStorageRecorder):
+        data = recorder.record()
+        recorder.write_data_to_file(data, output_file)
+    perf_data = IndalekoPerformanceDataCollector.measure_performance(
+        record_data,
+        source=IndalekoSourceIdentifierDataModel(
+            Identifier=collector.service_identifier,
+            Version = collector.service_version,
+            Description=collector.service_description),
+        description=collector.service_description,
+        MachineIdentifier=None,
+        process_results_func=extract_counters,
+        input_file_name=None,
+        output_file_name=output_file,
+        recorder=recorder
+    )
+    if args.performance_db or args.performance_file:
+        perf_recorder = IndalekoPerformanceDataRecorder()
+        if args.performance_file:
+            perf_recorder.add_data_to_file(perf_file_name, perf_data)
+            ic('Performance data written to ', perf_file_name)
+        if args.performance_db:
+            perf_recorder.add_data_to_db(perf_data)
+            ic('Performance data written to the database')
+    total = 0
+    for count_type, count_value in recorder.get_counts().items():
         logging.info('%s: %d', count_type, count_value)
+        total += count_value
+    logging.info('Total: %d', total)
     logging.info('Done')
 
 

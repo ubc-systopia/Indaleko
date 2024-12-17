@@ -58,7 +58,7 @@ class IndalekoWindowsLocalCollector(BaseStorageCollector):
     indaleko_windows_local_collector_service_name = 'Windows Local collector'
     indaleko_windows_local_collector_service_description = 'This service collects metadata from the local filesystems of a Windows machine.'
     indaleko_windows_local_collector_service_version = '1.0'
-    indaleko_windows_local_collector_service_type = IndalekoServiceManager.ServiceType.Collector
+    indaleko_windows_local_collector_service_type = IndalekoServiceManager.service_type_storage_collector
 
     indaleko_windows_local_collector_service ={
         'service_name' : indaleko_windows_local_collector_service_name,

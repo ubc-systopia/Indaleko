@@ -164,7 +164,7 @@ class BaseStorageCollector:
         assert suffix is not None, 'suffix must be a valid string'
         return [x for x in os.listdir(search_dir)
                 if x.startswith(prefix)
-                and x.endswith(suffix) and 'collector' in x]
+                and x.endswith(suffix) and 'collector-' in x]
 
     def get_counts(self):
         '''
