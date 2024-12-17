@@ -416,7 +416,7 @@ def main():
                         help='path to the jsonl file that contains the documents for the Relationships collection'
                         )
     parser.add_argument('--reset', action='store_true',
-                        help='Drop the collections before ingesting new data')
+                        help='Drop the collections before recording new data')
     parser.add_argument('--logdir',
                         help=f'Path to the log directory (default is {
                             indaleko_default_log_dir})',
@@ -498,16 +498,16 @@ def main():
     perf_file_name = os.path.join(
         args.datadir,
         IndalekoPerformanceDataRecorder().generate_perf_file_name(
-            platform=recorder.windows_platform,
-            service=recorder.windows_local_collector_name,
+            platform=recorder.mac_platform,
+            service=recorder.mac_local_recorder,
             machine=machine_id.replace('-', ''),
         )
     )
     perf_file_name = os.path.join(
         args.datadir,
         IndalekoPerformanceDataRecorder().generate_perf_file_name(
-            platform=recorder.windows_platform,
-            service=recorder.windows_local_collector_name,
+            platform=recorder.mac_platform,
+            service=recorder.mac_local_recorder,
             machine=machine_id.replace('-', ''),
         )
     )
@@ -519,8 +519,7 @@ def main():
         else:
             return {}
     def record_data(recorder : IndalekoMacLocalStorageRecorder):
-        data = recorder.record()
-        recorder.write_data_to_file(data, output_file)
+        recorder.record()
     perf_data = IndalekoPerformanceDataCollector.measure_performance(
         record_data,
         source=IndalekoSourceIdentifierDataModel(
