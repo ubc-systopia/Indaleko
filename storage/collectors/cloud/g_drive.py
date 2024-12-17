@@ -45,23 +45,26 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 # pylint: disable=wrong-import-position
+from data_models import IndalekoSourceIdentifierDataModel
+from db import IndalekoServiceManager
 from utils.i_logging import IndalekoLogging
 from utils.misc.file_name_management import generate_file_name
 from utils.misc.directory_management import indaleko_default_data_dir, indaleko_default_config_dir, indaleko_default_log_dir
 from storage.collectors.base import BaseStorageCollector
-from platforms.windows.machine_config import IndalekoWindowsMachineConfig
+from perf.perf_collector import IndalekoPerformanceDataCollector
+from perf.perf_recorder import IndalekoPerformanceDataRecorder
 # pylint: enable=wrong-import-position
 
 
-class IndalekoGDriveIndexer(BaseStorageCollector):
+class IndalekoGDriveCollector(BaseStorageCollector):
     gdrive_platform = "GoogleDrive"
-    gdrive_indexer_name = "gdrive_indexer"
+    gdrive_collector_name = "gdrive_collector"
 
-    indaleko_gdrive_indexer_uuid = '74c82969-6bbb-4450-97f5-44d65c65e133'
-    indaleko_gdrive_indexer_service_name = 'Google Drive Indexer'
-    indaleko_gdrive_indexer_service_description = 'Indexes the Google Drive folder for Indaleko.'
-    indaleko_gdrive_indexer_service_version = '1.0'
-    indaleko_gdrive_indexer_service_type = 'Indexer'
+    indaleko_gdrive_collector_uuid = '74c82969-6bbb-4450-97f5-44d65c65e133'
+    indaleko_gdrive_collector_service_name = 'Google Drive Indexer'
+    indaleko_gdrive_collector_service_description = 'Indexes the Google Drive folder for Indaleko.'
+    indaleko_gdrive_collector_service_version = '1.0'
+    indaleko_gdrive_collector_service_type = IndalekoServiceManager.service_type_storage_collector
 
     SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly',
               'https://www.googleapis.com/auth/userinfo.profile',
@@ -122,41 +125,41 @@ class IndalekoGDriveIndexer(BaseStorageCollector):
     gdrive_token_file = 'gdrive_token.json'
 
 
-    indaleko_gdrive_indexer_service = {
-        'uuid': indaleko_gdrive_indexer_uuid,
-        'name': indaleko_gdrive_indexer_service_name,
-        'description': indaleko_gdrive_indexer_service_description,
-        'version': indaleko_gdrive_indexer_service_version,
-        'type': indaleko_gdrive_indexer_service_type
+    indaleko_gdrive_collector_service = {
+        'uuid': indaleko_gdrive_collector_uuid,
+        'name': indaleko_gdrive_collector_service_name,
+        'description': indaleko_gdrive_collector_service_description,
+        'version': indaleko_gdrive_collector_service_version,
+        'type': indaleko_gdrive_collector_service_type
     }
 
     def __init__(self, **kwargs):
         self.email = None
         self.config_dir = kwargs.get('config_dir', indaleko_default_config_dir)
-        self.gdrive_config_file = os.path.join(self.config_dir, IndalekoGDriveIndexer.gdrive_config_file)
+        self.gdrive_config_file = os.path.join(self.config_dir, IndalekoGDriveCollector.gdrive_config_file)
         assert os.path.exists(self.gdrive_config_file), \
             f'No GDrive config file found at {self.gdrive_config_file}'
         self.gdrive_token_file = \
-            os.path.join(self.config_dir, IndalekoGDriveIndexer.gdrive_token_file)
+            os.path.join(self.config_dir, IndalekoGDriveCollector.gdrive_token_file)
         self.gdrive_config = None
         self.load_gdrive_config()
         self.gdrive_credentials = None
         self.load_gdrive_credentials()
         super().__init__(**kwargs,
-                         indexer_name=IndalekoGDriveIndexer.gdrive_indexer_name,
-                         **IndalekoGDriveIndexer.indaleko_gdrive_indexer_service)
+                         collector_name=IndalekoGDriveCollector.gdrive_collector_name,
+                         **IndalekoGDriveCollector.indaleko_gdrive_collector_service)
 
-    def load_gdrive_config(self) -> 'IndalekoGDriveIndexer':
+    def load_gdrive_config(self) -> 'IndalekoGDriveCollector':
         '''This method loads the GDrive configuration'''
         with open(self.gdrive_config_file, 'rt') as f:
             self.gdrive_config = json.load(f)
         return self
 
-    def load_gdrive_credentials(self) -> 'IndalekoGDriveIndexer':
+    def load_gdrive_credentials(self) -> 'IndalekoGDriveCollector':
         '''This method gets the GDrive credentials'''
         if os.path.exists(self.gdrive_token_file):
             logging.debug('Loading GDrive credentials from %s', self.gdrive_token_file)
-            self.gdrive_credentials = Credentials.from_authorized_user_file(self.gdrive_token_file, IndalekoGDriveIndexer.SCOPES)
+            self.gdrive_credentials = Credentials.from_authorized_user_file(self.gdrive_token_file, IndalekoGDriveCollector.SCOPES)
         if not self.gdrive_credentials or not self.gdrive_credentials.valid:
             if self.gdrive_credentials and self.gdrive_credentials.expired and self.gdrive_credentials.refresh_token:
                 self.gdrive_credentials.refresh(Request())
@@ -165,16 +168,16 @@ class IndalekoGDriveIndexer(BaseStorageCollector):
             self.store_gdrive_credentials()
         return self
 
-    def store_gdrive_credentials(self) -> 'IndalekoGDriveIndexer':
+    def store_gdrive_credentials(self) -> 'IndalekoGDriveCollector':
         '''This method stores the credentials'''
         assert self.gdrive_credentials is not None, 'No credentials to store'
         with open(self.gdrive_token_file, 'wt') as f:
             f.write(self.gdrive_credentials.to_json())
         return self
 
-    def query_user_for_credentials(self) -> 'IndalekoGDriveIndexer':
+    def query_user_for_credentials(self) -> 'IndalekoGDriveCollector':
         '''This method queries the user for credentials'''
-        flow = InstalledAppFlow.from_client_config(self.gdrive_config, IndalekoGDriveIndexer.SCOPES)
+        flow = InstalledAppFlow.from_client_config(self.gdrive_config, IndalekoGDriveCollector.SCOPES)
         self.gdrive_credentials = flow.run_local_server(port=0)
         return self
 
@@ -195,7 +198,7 @@ class IndalekoGDriveIndexer(BaseStorageCollector):
         return self.email
 
     @staticmethod
-    def generate_windows_indexer_file_name(**kwargs):
+    def generate_gdrive_collector_file_name(**kwargs):
         '''
         This method generates the name of the file that will contain the metadata
         of the files in the Dropbox folder.
@@ -216,7 +219,7 @@ class IndalekoGDriveIndexer(BaseStorageCollector):
             self.load_gdrive_credentials()
         page_token = None
         field_to_use = 'nextPageToken, files({})'.format(
-            ', '.join(IndalekoGDriveIndexer.FILE_METADATA_FIELDS))
+            ', '.join(IndalekoGDriveCollector.FILE_METADATA_FIELDS))
         metadata_list = []
         service = None
 
@@ -229,12 +232,18 @@ class IndalekoGDriveIndexer(BaseStorageCollector):
                 # this should handle a token expiration by refreshing it
                 if error.resp.status == 401:
                     self.load_gdrive_credentials()
+                    self.error_count += 1
                     continue
                 else:
                     raise error
             for entry in results.get('files', []):
                 metadata = self.build_stat_dict(entry)
                 metadata_list.append(metadata)
+                mimetype = metadata.get('mimeType')
+                if mimetype == 'application/vnd.google-apps.folder':
+                    self.dir_count += 1
+                else:
+                    self.file_count += 1
             page_token = results.get('nextPageToken', None)
             if not page_token:
                 break
@@ -252,7 +261,7 @@ class IndalekoGDriveIndexer(BaseStorageCollector):
             suffix: suffix of the file to ingest (default is .json)
         '''
         prospects = BaseStorageCollector.find_collector_files(search_dir, prefix, suffix)
-        return [f for f in prospects if IndalekoGDriveIndexer.gdrive_platform in f]
+        return [f for f in prospects if IndalekoGDriveCollector.gdrive_platform in f]
 
 
 def main():
@@ -271,19 +280,19 @@ def main():
                             choices=logging_levels,
                             help='Logging level to use (lower number = more logging)')
     pre_args, _ = pre_parser.parse_known_args()
-    indaleko_logging = IndalekoLogging(platform=IndalekoGDriveIndexer.gdrive_platform,
-                                        service_name='indexer',
+    indaleko_logging = IndalekoLogging(platform=IndalekoGDriveCollector.gdrive_platform,
+                                        service_name='collector',
                                         log_dir=pre_args.logdir,
                                         log_level=pre_args.loglevel,
                                         timestamp=timestamp,
                                         suffix='log')
     log_file_name = indaleko_logging.get_log_file_name()
     ic(log_file_name)
-    indexer = IndalekoGDriveIndexer(timestamp=timestamp)
-    output_file_name = IndalekoGDriveIndexer.generate_windows_indexer_file_name(
-            platform=IndalekoGDriveIndexer.gdrive_platform,
-            user_id=indexer.get_email(),
-            service='indexer',
+    collector = IndalekoGDriveCollector(timestamp=timestamp)
+    output_file_name = IndalekoGDriveCollector.generate_gdrive_collector_file_name(
+            platform=IndalekoGDriveCollector.gdrive_platform,
+            user_id=collector.get_email(),
+            service='collector',
             timestamp=timestamp,
             suffix='jsonl'
         )
@@ -294,26 +303,66 @@ def main():
                         '-d',
                         help='Path to the data directory',
                         default=indaleko_default_data_dir)
-    parser.add_argument('--path',
-                        help='Path to the directory to index',
-                        type=str,
-                        default='')
     parser.add_argument('--norecurse',
                         help='Disable recursive directory indexing (for testing).',
                         default=False,
                         action='store_true')
+    parser.add_argument('--performance_file',
+                        default=False,
+                        action='store_true',
+                        help='Record performance data to a file')
+    parser.add_argument('--performance_db',
+                        default=False,
+                        action='store_true',
+                        help='Record performance data to the database')
     args = parser.parse_args()
     ic(args)
     output_file = os.path.join(args.datadir, args.output)
-    logging.info('Indaleko GDrive Indexer started.')
+    logging.info('Indaleko GDrive Collector started.')
     logging.info('Output file: %s', output_file)
-    logging.info('Indexing: %s', args.path)
     logging.info(args)
-    data = indexer.collect(recursive= (not args.norecurse))
-    indexer.write_data_to_file(data, output_file)
-    for count_type, count_value in indexer.get_counts().items():
+    perf_file_name = os.path.join(
+        args.datadir,
+        IndalekoPerformanceDataRecorder().generate_perf_file_name(
+            platform=collector.gdrive_platform,
+            service=collector.gdrive_collector_name,
+            machine=None,
+        )
+    )
+    def extract_counters(**kwargs):
+        ic(kwargs)
+        collector = kwargs.get('collector')
+        if collector:
+            return ic(collector.get_counts())
+        else:
+            return {}
+    def collect(collector):
+        data = collector.collect()
+        collector.write_data_to_file(data, output_file)
+    perf_data = IndalekoPerformanceDataCollector.measure_performance(
+        collect,
+        source=IndalekoSourceIdentifierDataModel(
+            Identifier=collector.service_identifier,
+            Version = collector.service_version,
+            Description=collector.service_description),
+        description=collector.service_description,
+        MachineIdentifier=None,
+        process_results_func=extract_counters,
+        input_file_name=None,
+        output_file_name=output_file,
+        collector=collector
+    )
+    if args.performance_db or args.performance_file:
+        perf_recorder = IndalekoPerformanceDataRecorder()
+        if args.performance_file:
+            perf_recorder.add_data_to_file(perf_file_name, perf_data)
+            ic('Performance data written to ', perf_file_name)
+        if args.performance_db:
+            perf_recorder.add_data_to_db(perf_data)
+            ic('Performance data written to the database')
+    for count_type, count_value in collector.get_counts().items():
         logging.info('Count %s: %s', count_type, count_value)
-    logging.info('Indaleko GDrive Indexer finished.')
+    logging.info('Indaleko GDrive Collector finished.')
 
 if __name__ == '__main__':
     main()

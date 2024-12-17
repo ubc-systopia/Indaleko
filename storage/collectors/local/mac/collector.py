@@ -215,6 +215,13 @@ def main():
             machine=uuid.UUID(machine_config.machine_id)
         )
     )
+    def extract_counters(**kwargs):
+        ic(kwargs)
+        collector = kwargs.get('collector')
+        if collector:
+            return ic(collector.get_counts())
+        else:
+            return {}
     def collect(collector):
         data = collector.collect()
         collector.write_data_to_file(data, output_file)
@@ -226,6 +233,7 @@ def main():
             Description=collector.service_description),
         description=collector.service_description,
         MachineIdentifier=uuid.UUID(machine_config.machine_id),
+        process_results_func=extract_counters,
         input_file_name=None,
         output_file_name=output_file,
         collector=collector

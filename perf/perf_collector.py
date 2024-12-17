@@ -59,7 +59,8 @@ class IndalekoPerformanceDataCollector:
         task_func : Callable[..., Any],
         source: IndalekoSourceIdentifierDataModel,
         description: str,
-        MachineIdentifier: uuid.UUID,
+        MachineIdentifier: Union[uuid.UUID, None],
+        process_results_func : Callable[..., Dict[str, Union[int, float, str]]] = None,
         input_file_name: Union[str, None] = None,
         output_file_name: Union[str, None] = None,
         *args: Union[Any, None],
@@ -84,6 +85,12 @@ class IndalekoPerformanceDataCollector:
             start_clock = time.perf_counter()
             result = task_func(*args, **kwargs)
             end_clock = time.perf_counter()
+            results_data = {}
+            if process_results_func is not None:
+                try:
+                    results_data = process_results_func(*args, **kwargs, result=result)
+                except TypeError as e:
+                    ic(f'{process_results_func} is not a callable type: {e} ')
             elapsed_time = end_clock - start_clock
         except Exception as e:
             ic(e)
@@ -109,7 +116,10 @@ class IndalekoPerformanceDataCollector:
             kwargs_data[str(key)] = str(value)
         data = {}
         data['description'] = description
-        data['machine_id'] = str(MachineIdentifier)
+        if MachineIdentifier:
+            data['machine_id'] = str(MachineIdentifier)
+        else:
+            data['machine_id'] = None
         data['args'] = args
         data['kwargs'] = kwargs_data,
         data['start_time'] = start_time
@@ -130,6 +140,11 @@ class IndalekoPerformanceDataCollector:
             data['io_write_bytes'] = 0
         data['thread_count'] = max(start_thread_count, end_thread_count)
         data['result'] = result
+        data['additional_data'] = {
+            **results_data,
+            'InputFileName': input_file_name,
+            'OutputFileName': output_file_name
+        }
 
         record = IndalekoRecordDataModel(
             SourceIdentifier = source,
@@ -137,6 +152,7 @@ class IndalekoPerformanceDataCollector:
             Attributes = data,
             Data = encode_binary_data(json.dumps(data))
         )
+
 
         return IndalekoPerformanceDataCollector(
             Record = record,
@@ -153,10 +169,7 @@ class IndalekoPerformanceDataCollector:
             IOReadBytes = data['io_read_bytes'],
             IOWriteBytes = data['io_write_bytes'],
             ThreadCount = data['thread_count'],
-            AdditionalData = {
-                'InputFileName': input_file_name,
-                'OutputFileName': output_file_name,
-            }
+            AdditionalData = data['additional_data']
         )
 
     @staticmethod

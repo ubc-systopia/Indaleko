@@ -18,24 +18,27 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+from data_models import IndalekoSourceIdentifierDataModel
+from db import IndalekoServiceManager
 from utils.i_logging import IndalekoLogging
 from utils.misc.file_name_management import generate_file_name
 from utils.misc.directory_management import indaleko_default_data_dir, indaleko_default_config_dir, indaleko_default_log_dir
 from storage.collectors.base import BaseStorageCollector
-from platforms.windows.machine_config import IndalekoWindowsMachineConfig
+from perf.perf_collector import IndalekoPerformanceDataCollector
+from perf.perf_recorder import IndalekoPerformanceDataRecorder
 # pylint: enable=wrong-import-position
 
 
-class IndalekoICloudIndexer(BaseStorageCollector):
+class IndalekoICloudCollector(BaseStorageCollector):
 
     icloud_platform = 'iCloud'
-    icloud_indexer_name = 'icloud_indexer'
+    icloud_collector_name = 'icloud_collector'
 
-    indaleko_icloud_indexer_uuid = 'cf8694ff-6cfe-4801-9842-4315fc7a02e6'
-    indaleko_icloud_indexer_service_name = 'iCloud Indexer'
-    indaleko_icloud_indexer_service_description = 'This service indexes the iCloud folder of the user.'
-    indaleko_icloud_indexer_service_version = '1.0'
-    indaleko_icloud_indexer_service_type = 'Indexer'
+    indaleko_icloud_collector_uuid = 'cf8694ff-6cfe-4801-9842-4315fc7a02e6'
+    indaleko_icloud_collector_service_name = 'iCloud Collector'
+    indaleko_icloud_collector_service_description = 'This service indexes the iCloud folder of the user.'
+    indaleko_icloud_collector_service_version = '1.0'
+    indaleko_icloud_collector_service_type_identifier = IndalekoServiceManager.service_type_storage_collector
 
     icloud_root_folder = {
         'ObjectIdentifier': 'd0dac621-4de3-44df-a2c9-49841b86b508',
@@ -48,12 +51,12 @@ class IndalekoICloudIndexer(BaseStorageCollector):
         'last_opened': datetime.now(timezone.utc),
     }
 
-    indaleko_icloud_local_indexer_service = {
-        'service_name': indaleko_icloud_indexer_service_name,
-        'service_description': indaleko_icloud_indexer_service_description,
-        'service_version': indaleko_icloud_indexer_service_version,
-        'service_type': indaleko_icloud_indexer_service_type,
-        'service_identifier': indaleko_icloud_indexer_uuid,
+    indaleko_icloud_local_collector_service = {
+        'service_name': indaleko_icloud_collector_service_name,
+        'service_description': indaleko_icloud_collector_service_description,
+        'service_version': indaleko_icloud_collector_service_version,
+        'service_type': indaleko_icloud_collector_service_type_identifier,
+        'service_identifier': indaleko_icloud_collector_uuid,
     }
 
     def __init__(self, **kwargs):
@@ -74,11 +77,11 @@ class IndalekoICloudIndexer(BaseStorageCollector):
             except Exception as e:
                 logging.error(f"Error initializing iCloud service: {e}")
         if 'platform' not in kwargs:
-            kwargs['platform'] = IndalekoICloudIndexer.icloud_platform
+            kwargs['platform'] = IndalekoICloudCollector.icloud_platform
         super().__init__(
             **kwargs,
-            indexer_name=IndalekoICloudIndexer.icloud_indexer_name,
-            **IndalekoICloudIndexer.indaleko_icloud_local_indexer_service
+            collector_name=IndalekoICloudCollector.icloud_collector_name,
+            **IndalekoICloudCollector.indaleko_icloud_local_collector_service
         )
 
     def get_user_id(self):
@@ -105,7 +108,7 @@ class IndalekoICloudIndexer(BaseStorageCollector):
             logging.info(f"Loaded credentials for username: {username}")
         return self
 
-    def store_icloud_credentials(self) -> 'IndalekoICloudIndexer':
+    def store_icloud_credentials(self) -> 'IndalekoICloudCollector':
         '''This method stores the credentials.'''
         user_id = self.get_user_id()
         password = getpass("Enter your iCloud password: ")
@@ -113,7 +116,7 @@ class IndalekoICloudIndexer(BaseStorageCollector):
         self.update_stored_usernames(user_id)
         return self
 
-    def set_icloud_credentials(self, credentials: dict) -> 'IndalekoICloudIndexer':
+    def set_icloud_credentials(self, credentials: dict) -> 'IndalekoICloudCollector':
         '''This method sets the credentials.'''
         user_id = credentials.get("username")
         password = credentials.get("password")
@@ -121,7 +124,7 @@ class IndalekoICloudIndexer(BaseStorageCollector):
         self.update_stored_usernames(user_id)
         return self
 
-    def query_user_for_credentials(self) -> 'IndalekoICloudIndexer':
+    def query_user_for_credentials(self) -> 'IndalekoICloudCollector':
         '''This method queries the user for credentials.'''
         user_id = self.get_user_id()
         password = keyring.get_password('iCloud', user_id)
@@ -183,12 +186,12 @@ class IndalekoICloudIndexer(BaseStorageCollector):
         if isinstance(data, (int, float, str, bool, type(None))):
             return data
         elif isinstance(data, list):
-            return [IndalekoICloudIndexer.convert_to_serializable(item) for item in data]
+            return [IndalekoICloudCollector.convert_to_serializable(item) for item in data]
         elif isinstance(data, dict):
-            return {key: IndalekoICloudIndexer.convert_to_serializable(value) for key, value in data.items()}
+            return {key: IndalekoICloudCollector.convert_to_serializable(value) for key, value in data.items()}
         else:
             if hasattr(data, '__dict__'):
-                return IndalekoICloudIndexer.convert_to_serializable(data.__dict__)
+                return IndalekoICloudCollector.convert_to_serializable(data.__dict__)
             return None
 
     def collect_metadata(self, item, item_path):
@@ -202,7 +205,7 @@ class IndalekoICloudIndexer(BaseStorageCollector):
 
         metadata = {
             'name': item.name,
-            'path_display': IndalekoICloudIndexer.icloud_root_folder['path_display'] + '/' + item_path,
+            'path_display': IndalekoICloudCollector.icloud_root_folder['path_display'] + '/' + item_path,
             'size': getattr(item, 'size', 0) or 0, # Default to 0 if size is None or 0
             'date_created': to_utc_iso(getattr(item, 'date_created', None)),
             'date_modified': to_utc_iso(getattr(item, 'date_modified', None)),
@@ -270,7 +273,7 @@ class IndalekoICloudIndexer(BaseStorageCollector):
             suffix: suffix of the file to ingest (default is .json)
         '''
         prospects = BaseStorageCollector.find_collector_files(search_dir, prefix, suffix)
-        return [f for f in prospects if IndalekoICloudIndexer.icloud_platform in f]
+        return [f for f in prospects if IndalekoICloudCollector.icloud_platform in f]
 
 def main():
     logging_levels = IndalekoLogging.get_logging_levels()
@@ -285,20 +288,20 @@ def main():
                             choices=logging_levels,
                             help='Logging level to use (lower number = more logging)')
     pre_args, _ = pre_parser.parse_known_args()
-    indaleko_logging = IndalekoLogging(platform=IndalekoICloudIndexer.icloud_platform,
-                                        service_name='indexer',
+    indaleko_logging = IndalekoLogging(platform=IndalekoICloudCollector.icloud_platform,
+                                        service_name='Collector',
                                         log_dir=pre_args.logdir,
                                         log_level=pre_args.loglevel,
                                         timestamp=timestamp,
                                         suffix='log')
     log_file_name = indaleko_logging.get_log_file_name()
     ic(log_file_name)
-    indexer = IndalekoICloudIndexer(timestamp=timestamp)
+    collector = IndalekoICloudCollector(timestamp=timestamp)
 
-    output_file_name = IndalekoICloudIndexer.generate_icloud_collector_file_name(
-        platform=IndalekoICloudIndexer.icloud_platform,
-        user_id = indexer.get_user_id(),
-        service = 'indexer',
+    output_file_name = IndalekoICloudCollector.generate_icloud_collector_file_name(
+        platform=IndalekoICloudCollector.icloud_platform,
+        user_id = collector.get_user_id(),
+        service = 'Collector',
         timestamp=timestamp,
         suffix='jsonl'
     )
@@ -318,17 +321,62 @@ def main():
                         help='Disable recursive directory indexing (for testing).',
                         default=False,
                         action='store_true')
+    parser.add_argument('--performance_file',
+                        default=False,
+                        action='store_true',
+                        help='Record performance data to a file')
+    parser.add_argument('--performance_db',
+                        default=False,
+                        action='store_true',
+                        help='Record performance data to the database')
     args = parser.parse_args()
     output_file = os.path.join(args.datadir, args.output)
-    logging.info('Indaleko iCloud Indexer started.')
+    logging.info('Indaleko iCloud Collector started.')
     logging.info('Output file: %s', output_file)
     logging.info('Indexing: %s', args.path)
     logging.info(args)
-    data = indexer.collect(recursive= (not args.norecurse))
-    indexer.write_data_to_file(data, output_file)
-    for count_type, count_value in indexer.get_counts().items():
+    perf_file_name = os.path.join(
+        args.datadir,
+        IndalekoPerformanceDataRecorder().generate_perf_file_name(
+            platform=collector.icloud_platform,
+            service=collector.icloud_collector_name,
+            machine=None,
+        )
+    )
+    def extract_counters(**kwargs):
+        ic(kwargs)
+        collector = kwargs.get('collector')
+        if collector:
+            return ic(collector.get_counts())
+        else:
+            return {}
+    def collect(collector):
+        data = collector.collect()
+        collector.write_data_to_file(data, output_file)
+    perf_data = IndalekoPerformanceDataCollector.measure_performance(
+        collect,
+        source=IndalekoSourceIdentifierDataModel(
+            Identifier=collector.service_identifier,
+            Version = collector.service_version,
+            Description=collector.service_description),
+        description=collector.service_description,
+        MachineIdentifier=None,
+        process_results_func=extract_counters,
+        input_file_name=None,
+        output_file_name=output_file,
+        collector=collector
+    )
+    if args.performance_db or args.performance_file:
+        perf_recorder = IndalekoPerformanceDataRecorder()
+        if args.performance_file:
+            perf_recorder.add_data_to_file(perf_file_name, perf_data)
+            ic('Performance data written to ', perf_file_name)
+        if args.performance_db:
+            perf_recorder.add_data_to_db(perf_data)
+            ic('Performance data written to the database')
+    for count_type, count_value in collector.get_counts().items():
         logging.info('Count %s: %s', count_type, count_value)
-    logging.info('Indaleko iCloud Indexer finished.')
+    logging.info('Indaleko iCloud Collector finished.')
 
 if __name__ == '__main__':
     main()

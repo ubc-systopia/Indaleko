@@ -42,8 +42,8 @@ if os.environ.get('INDALEKO_ROOT') is None:
 from data_models import IndalekoPerformanceDataModel
 from db import IndalekoCollections, IndalekoDBCollections
 from utils.misc.data_management import encode_binary_data
-from utils.misc.file_name_management import generate_file_name
 from utils.misc.directory_management import indaleko_default_data_dir
+from utils.misc.file_name_management import indaleko_file_name_prefix, generate_file_name
 from perf.perf_collector import IndalekoPerformanceDataCollector
 # pylint: enable=wrong-import-position
 
@@ -61,17 +61,19 @@ class IndalekoPerformanceDataRecorder:
     def generate_perf_file_name(self,
                                 platform : str,
                                 service : str,
-                                machine : Union[str, uuid.UUID]) -> str:
+                                machine : Union[str, uuid.UUID, None] = None) -> str:
         '''Generate a performance data file name.'''
         if isinstance(machine, uuid.UUID):
             machine = machine.hex
-        return generate_file_name(
-            prefix = 'indaleko',
-            platform = platform,
-            service = service.replace('-','_') + '_perf',
-            machine = machine,
-            timestamp = None,
-        )
+        kwargs = {
+            'prefix' : indaleko_file_name_prefix,
+            'platform': platform,
+            'service': service + '_perf',
+            'timestamp' : None
+        }
+        if machine is not None:
+            kwargs['machine'] = machine
+        return generate_file_name(**kwargs)
 
     def create_data(self, **kwargs) -> IndalekoPerformanceDataModel:
         '''Create a new performance data object.'''

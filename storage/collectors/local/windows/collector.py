@@ -36,6 +36,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from data_models import IndalekoSourceIdentifierDataModel
+from db import IndalekoServiceManager
 from utils.i_logging import IndalekoLogging
 import utils.misc.file_name_management
 import utils.misc.directory_management
@@ -57,7 +58,7 @@ class IndalekoWindowsLocalCollector(BaseStorageCollector):
     indaleko_windows_local_collector_service_name = 'Windows Local collector'
     indaleko_windows_local_collector_service_description = 'This service collects metadata from the local filesystems of a Windows machine.'
     indaleko_windows_local_collector_service_version = '1.0'
-    indaleko_windows_local_collector_service_type = 'Collector'
+    indaleko_windows_local_collector_service_type = IndalekoServiceManager.ServiceType.Collector
 
     indaleko_windows_local_collector_service ={
         'service_name' : indaleko_windows_local_collector_service_name,
@@ -284,6 +285,13 @@ def main():
             machine=uuid.UUID(machine_config.machine_id)
         )
     )
+    def extract_counters(**kwargs):
+        ic(kwargs)
+        collector = kwargs.get('collector')
+        if collector:
+            return ic(collector.get_counts())
+        else:
+            return {}
     def collect(collector):
         data = collector.collect()
         collector.write_data_to_file(data, output_file)
@@ -295,6 +303,7 @@ def main():
             Description=collector.service_description),
         description=collector.service_description,
         MachineIdentifier=uuid.UUID(machine_config.machine_id),
+        process_results_func=extract_counters,
         input_file_name=None,
         output_file_name=output_file,
         collector=collector

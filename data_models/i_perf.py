@@ -52,7 +52,7 @@ class IndalekoPerformanceDataModel(IndalekoBaseModel):
                                     title='Record',
                                     description='The record associated with the performance data.')
 
-    MachineConfigurationId: uuid.UUID = Field(None,
+    MachineConfigurationId: Union[uuid.UUID, None] = Field(None,
                                     title='MachineConfigurationId',
                                     description='The UUID for the machine configuration (e.g. a reference to the relevant record in the MachineConfig collection).')
 
