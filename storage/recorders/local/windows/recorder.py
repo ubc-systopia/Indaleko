@@ -126,22 +126,7 @@ class IndalekoWindowsLocalStorageRecorder(BaseStorageRecorder):
                 IndalekoWindowsLocalCollector.windows_local_collector_name
             ],
             self.data_dir)
-]
-    def load_collector_data_from_file(self : 'IndalekoWindowsLocalStorageRecorder') -> None:
-        '''This function loads the collector data from the file.'''
-        if self.input_file is None:
-            raise ValueError('input_file must be specified')
-        if self.input_file.endswith('.jsonl'):
-            with jsonlines.open(self.input_file) as reader:
-                for entry in reader:
-                    self.collector_data.append(entry)
-        elif self.input_file.endswith('.json'):
-            with open(self.input_file, 'r', encoding='utf-8-sig') as file:
-                self.collector_data = json.load(file)
-        else:
-            raise ValueError(f'Input file {self.input_file} is an unknown type')
-        if not isinstance(self.collector_data, list):
-            raise ValueError('collector_data is not a list')
+        ]
 
     def normalize_collector_data(self, data: dict) -> IndalekoObject:
         '''
@@ -488,8 +473,7 @@ def main():
         else:
             return {}
     def record_data(recorder : IndalekoWindowsLocalStorageRecorder):
-        data = recorder.record()
-        recorder.write_data_to_file(data, output_file)
+        recorder.record()
     perf_data = IndalekoPerformanceDataCollector.measure_performance(
         record_data,
         source=IndalekoSourceIdentifierDataModel(

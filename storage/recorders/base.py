@@ -271,15 +271,14 @@ class BaseStorageRecorder():
             with jsonlines.open(self.input_file) as reader:
                 for entry in reader:
                     self.collector_data.append(entry)
-            ic(len(self.collector_data))
         elif self.input_file.endswith('.json'):
             with open(self.input_file, 'r', encoding='utf-8-sig') as file:
                 self.collector_data = json.load(file)
-                ic(len(self.collector_data))
         else:
             raise ValueError(f'Input file {self.input_file} is an unknown type')
         if not isinstance(self.collector_data, list):
             raise ValueError('collector_data is not a list')
+        self.input_count = len(self.collector_data)
 
     @staticmethod
     def build_storage_relationship(
