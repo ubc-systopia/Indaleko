@@ -108,7 +108,6 @@ class IndalekoMacLocalStorageRecorder(BaseStorageRecorder):
             assert 'unknown' not in self.output_file, f'Output file should not have unknown in its name {self.output_file}'
         else:
             self.output_file = kwargs['output_file']
-        self.collector_data = []
         self.source = {
             'Identifier': self.mac_local_recorder_uuid,
             'Version': '1.0'
@@ -131,23 +130,6 @@ class IndalekoMacLocalStorageRecorder(BaseStorageRecorder):
         return [x for x in super().find_collector_files(self.data_dir)
                 if IndalekoMacLocalCollector.mac_platform in x and
                 IndalekoMacLocalCollector.mac_local_collector_name in x]
-
-    def load_collector_data_from_file(self: 'IndalekoMacLocalStorageRecorder') -> None:
-        '''This function loads the collector metadata from the file.'''
-        if self.input_file is None:
-            raise ValueError('input_file must be specified')
-        if self.input_file.endswith('.jsonl'):
-            with jsonlines.open(self.input_file) as reader:
-                for entry in reader:
-                    self.collector_data.append(entry)
-        elif self.input_file.endswith('.json'):
-            with open(self.input_file, 'r', encoding='utf-8-sig') as file:
-                self.collector_data = json.load(file)
-        else:
-            raise ValueError(
-                f'Input file {self.input_file} is of an unknown type')
-        if not isinstance(self.collector_data, list):
-            raise ValueError('collector_data is not a list')
 
     def normalize_collector_data(self, data: dict) -> IndalekoObject:
         '''
