@@ -366,7 +366,6 @@ class BaseStorageRecorder():
             child, machine, IndalekoRelationship.CONTAINED_BY_MACHINE_RELATIONSHIP_UUID_STR, source_id
         )
 
-
 def main():
     """Test code for IndalekoStorageRecorder.py"""
     # Now parse the arguments

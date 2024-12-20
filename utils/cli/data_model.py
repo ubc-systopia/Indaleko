@@ -53,15 +53,30 @@ class IndalekoBaseCliDataModel(IndalekoBaseModel):
         title='Platform',
         description='The platform for the machine.'
     )
-    MachineId: UUID = Field(
-        default_factory=lambda: UUID(int=0),
-        title='MachineId',
-        description='The unique identifier for the machine.'
+    MachineConfigChoices : List[str] = Field(
+        default_factory=list,
+        title='MachineConfigChoices',
+        description='Available machine configuration files.'
+    )
+    MachineConfigFile : Optional[Union[str, None]] = Field(
+        None,
+        title='MachineConfigFile',
+        description='The selected machine configuration file.'
+    )
+    MachineConfigFileKeys : Optional[Dict[str, Any]] = Field(
+        default_factory=dict,
+        title='MachineConfigFileKeys',
+        description='Keys for the machine configuration file.'
     )
     StorageId: Optional[UUID] = None
     ConfigDirectory : str = indaleko_default_config_dir
     DataDirectory : str = indaleko_default_data_dir
     LogDirectory : str = indaleko_default_log_dir
+    InputFileKeys : Optional[Dict[str, Any]] = Field(
+        default_factory=dict,
+        title='InputFileKeys',
+        description='Keys for the input file.'
+    )
     InputFileChoices: Optional[List[str]] = Field(
         default_factory=list,
         title='InputFileChoices',

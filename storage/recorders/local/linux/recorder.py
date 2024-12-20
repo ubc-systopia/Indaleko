@@ -54,7 +54,7 @@ from utils.i_logging import IndalekoLogging
 
 class IndalekoLinuxLocalRecorder(BaseStorageRecorder):
     '''
-    This class handles ingestion of metadata gathered from
+    This class handles recording of metadata gathered from
     the local Linux file system.
     '''
 
@@ -326,6 +326,12 @@ def main():
                             default=utils.misc.directory_management.indaleko_default_data_dir)
     pre_args, _ = pre_parser.parse_known_args()
     # restrict to linux collector files.
+    collector = IndalekoLinuxLocalCollector(
+        search_dir = pre_args.datadir,
+        prefix=IndalekoLinuxLocalCollector.linux_platform,
+        suffix=IndalekoLinuxLocalCollector.linux_local_collector_name,
+        machine_config=machine_config,
+    )
     collector_files = [f for f in IndalekoLinuxLocalCollector.find_collector_files(pre_args.datadir) if IndalekoLinuxLocalRecorder.linux_platform in f]
     pre_parser.add_argument('--input',
                             choices=collector_files,
@@ -337,7 +343,7 @@ def main():
                                           datetime.datetime.now(datetime.timezone.utc).isoformat())
     log_file_name = IndalekoLinuxLocalRecorder.generate_log_file_name(
         platform=collector_file_metadata['platform'],
-        ingester=IndalekoLinuxLocalRecorder.linux_local_recorder,
+        recorder=IndalekoLinuxLocalRecorder.linux_local_recorder,
         machine_id = collector_file_metadata['machine'],
         target_dir=pre_args.logdir,
         timestamp=timestamp,
@@ -350,9 +356,9 @@ def main():
         format='%(asctime)s - %(levelname)s - %(message)s',
         force=True
     )
-    logging.critical('Start logging')
-    if not os.path.exists(log_file_name):
-        print(f'Failed to create log file {log_file_name} - logging disabled.')
+    logging.info('Processing %s ' , args.input)
+    logging.info('Output file %s ' , output_file)
+    logging.info(args)
     parser = argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--reset', action='store_true', help='Reset the service collection.')
     args = parser.parse_args()
@@ -380,23 +386,64 @@ def main():
         raise ValueError(f'No configuration files found for machine {machine_id}')
     config_file = os.path.join(args.configdir, config_files[-1])
     machine_config = IndalekoLinuxMachineConfig.load_config_from_file(config_file=config_file)
-    ingest_args = {
+    recorder_args = {
         'machine_config' : machine_config,
         'machine_id' : machine_id,
         'timestamp' : timestamp,
         'platform' : IndalekoLinuxLocalCollector.linux_platform,
-        'ingester' : IndalekoLinuxLocalRecorder.linux_local_recorder,
+        'recorder' : IndalekoLinuxLocalRecorder.linux_local_recorder,
         'file_prefix' : file_prefix,
         'file_suffix' : file_suffix,
         'data_dir' : args.datadir,
         'input_file' : input_file,
     }
     if storage is not None:
-        ingest_args['storage_description'] = storage
-    ingester = IndalekoLinuxLocalRecorder(**ingest_args)
+        recorder_args['storage_description'] = storage
+    recorder = IndalekoLinuxLocalRecorder(**recorder_args)
     logging.info('Ingesting %s ' , args.input)
-    ingester.record()
-    for count_type, count_value in ingester.get_counts().items():
+    recorder.record()
+
+    perf_file_name = os.path.join(
+        args.datadir,
+        IndalekoPerformanceDataRecorder().generate_perf_file_name(
+            platform=collector.windows_platform,
+            service=collector.windows_local_collector_name,
+            machine=machine_id.replace('-', ''),
+        )
+    )
+    def extract_counters(**kwargs):
+        ic(kwargs)
+        recorder = kwargs.get('recorder')
+        if recorder:
+            return ic(recorder.get_counts())
+        else:
+            return {}
+    def record_data(recorder : IndalekoWindowsLocalStorageRecorder):
+        recorder.record()
+    perf_data = IndalekoPerformanceDataCollector.measure_performance(
+        record_data,
+        source=IndalekoSourceIdentifierDataModel(
+            Identifier=collector.service_identifier,
+            Version = collector.service_version,
+            Description=collector.service_description),
+        description=collector.service_description,
+        MachineIdentifier=None,
+        process_results_func=extract_counters,
+        input_file_name=None,
+        output_file_name=output_file,
+        recorder=recorder
+    )
+    if args.performance_db or args.performance_file:
+        perf_recorder = IndalekoPerformanceDataRecorder()
+        if args.performance_file:
+            perf_recorder.add_data_to_file(perf_file_name, perf_data)
+            ic('Performance data written to ', perf_file_name)
+        if args.performance_db:
+            perf_recorder.add_data_to_db(perf_data)
+            ic('Performance data written to the database')
+
+
+    for count_type, count_value in recorder.get_counts().items():
         logging.info('%s: %d', count_type, count_value)
     logging.info('Done')
 

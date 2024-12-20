@@ -27,9 +27,14 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
-indaleko_default_data_dir = os.path.join(os.environ.get('INDALEKO_ROOT', '.'), 'data')
-indaleko_default_config_dir = os.path.join(os.environ.get('INDALEKO_ROOT', '.'), 'config')
-indaleko_default_log_dir = os.path.join(os.environ.get('INDALEKO_ROOT', '.'), 'logs')
+# pylint: disable=wrong-import-position
+import utils.misc.timestamp_management
+from constants.values import IndalekoConstants
+# pylint: enable=wrong-import-position
+
+indaleko_default_data_dir = IndalekoConstants.default_data_dir
+indaleko_default_config_dir = IndalekoConstants.default_config_dir
+indaleko_default_log_dir = IndalekoConstants.default_log_dir
 
 def indaleko_create_secure_directories(directories : list = None) -> None:
     '''Create secure directories for Indaleko.'''

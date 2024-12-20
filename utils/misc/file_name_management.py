@@ -29,9 +29,10 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 import utils.misc.timestamp_management
+from constants.values import IndalekoConstants
 # pylint: enable=wrong-import-position
 
-indaleko_file_name_prefix = 'indaleko'
+indaleko_file_name_prefix = IndalekoConstants.default_prefix
 
 def generate_final_name(args : list, **kwargs) -> str:
     '''

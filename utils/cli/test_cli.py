@@ -23,6 +23,7 @@ import logging
 import os
 from pathlib import Path
 import sys
+from uuid import UUID
 
 from typing import Type, Union, TypeVar, Any
 from abc import ABC
@@ -41,9 +42,8 @@ if os.environ.get('INDALEKO_ROOT') is None:
 from constants import IndalekoConstants
 from utils.cli.data_model import IndalekoBaseCliDataModel
 from utils.cli.handlermixin import IndalekoHandlermixin
-from utils.misc.file_name_management import find_candidate_files, generate_file_name
+from utils.misc.file_name_management import find_candidate_files, generate_file_name, extract_keys_from_file_name
 from utils import IndalekoLogging
-from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
 # pylint: enable=wrong-import-position
 
 class IndalekoBaseCLI:
@@ -126,19 +126,60 @@ class IndalekoBaseCLI:
         ic(pre_args.platform)
         ic(self.config_data['ConfigDirectory'])
         self.config_data['MachineConfigChoices'] = self.handler_mixin.find_machine_config_files(self.config_data['ConfigDirectory'], pre_args.platform)
-        default_machine_config = self.handler_mixin.get_default_file(
+        self.config_data['MachineConfigFile'] = self.handler_mixin.get_default_file(
             self.config_data['ConfigDirectory'],
             self.config_data['MachineConfigChoices']
         )
         self.pre_parser.add_argument('--machine_config',
                                 choices=self.config_data['MachineConfigChoices'],
-                                default=default_machine_config,
+                                default=self.config_data['MachineConfigFile'],
                                 help='Machine configuration to use')
+        pre_args, _ = self.pre_parser.parse_known_args()
+        if pre_args.machine_config:
+            self.config_data['MachineConfigFileKeys'] = extract_keys_from_file_name(pre_args.machine_config)
+        self.config_data['InputFilePrefix'] = IndalekoConstants.default_prefix
+        self.config_data['InputFileSuffix'] = 'jsonl'
+        input_file_keys = self.config_data['InputFileKeys']
+        if self.config_data['InputFileKeys']:
+            if 'prefix' in input_file_keys:
+                self.config_data['InputFilePrefix'] = input_file_keys['prefix']
+                del input_file_keys['prefix']
+            if 'suffix' in input_file_keys:
+                self.config_data['InputFileSuffix'] = input_file_keys['suffix']
+                del input_file_keys['suffix']
+        if not input_file_keys:
+            input_file_keys = {}
+            if 'Platform' in self.config_data:
+                input_file_keys = {'plt': self.config_data['Platform'] }
+            ic(self.config_data)
+            if 'MachineConfigFileKeys' in self.config_data and 'machine' in self.config_data['MachineConfigFileKeys']:
+                input_file_keys['machine'] = self.config_data['MachineConfigFileKeys']['machine']
+            if 'ts' not in input_file_keys: # this logic only works for files with timestamps
+                input_file_keys['ts'] = ''
+        self.config_data['InputFileChoices'] = self.handler_mixin.find_data_files(
+            self.config_data['DataDirectory'],
+            input_file_keys,
+            self.config_data['InputFilePrefix'],
+            self.config_data['InputFileSuffix']
+        )
+        if self.config_data['InputFileChoices']:
+            self.config_data['InputFile'] = self.handler_mixin.get_default_file(
+                self.config_data['DataDirectory'],
+                self.config_data['InputFileChoices']
+            )
+            self.pre_parser.add_argument('--inputfile',
+                                    choices=self.config_data['InputFileChoices'],
+                                    default=self.config_data['InputFile'],
+                                    help='Input file to use')
+        pre_args, _ = self.pre_parser.parse_known_args()
+        self.config_data['InputFileKeys'] = extract_keys_from_file_name(pre_args.inputfile)
         return self
 
     def setup_output_files(self : 'IndalekoBaseCLI') -> 'IndalekoBaseCLI':
         '''This method is used to set up the output files'''
         pre_args, _ = self.pre_parser.parse_known_args()
+
+
         cli_data = IndalekoBaseCliDataModel(**self.config_data)
         IndalekoBaseCLI.generate_output_file_name()
         if pre_args.outputfile:
@@ -161,7 +202,8 @@ class IndalekoBaseCLI:
             if not data_directory.exists():
                 raise FileNotFoundError(f'Data directory does not exist: {data_directory}')
             valid_files = [data_directory / fname for fname in candidates if (data_directory / fname).is_file()]
-            return str(max(valid_files, key=lambda f: f.stat().st_mtime))
+            ic(valid_files)
+            return str(max(valid_files, key=lambda f: f.stat().st_mtime).name)
 
         @staticmethod
         def find_db_config_files(config_dir : Union[str, Path]) -> Union[list[str], None]:
@@ -177,12 +219,10 @@ class IndalekoBaseCLI:
         def find_machine_config_files(config_dir : Union[str, Path], platform : str) -> Union[list[str], None]:
             ic(config_dir)
             if not Path(config_dir).exists():
-                ic(f'{config_dir} does not exist')
                 return None
             if platform is None:
                 return []
             ic(find_candidate_files([platform, '_machine_config'], str(config_dir)))
-            ic('foo')
             return [
                 fname for fname, _ in find_candidate_files([platform, '_machine_config'], str(config_dir))
                 if fname.endswith('.json')
@@ -197,9 +237,10 @@ class IndalekoBaseCLI:
             if not Path(data_dir).exists():
                 return None
             selection_keys = [f'{key}={value}' for key, value in keys.items()]
+            ic(selection_keys)
             return [
                 fname for fname, _ in find_candidate_files(selection_keys, str(data_dir))
-                if fname.startswith(prefix) and fname.endswith(suffix)
+                if fname.startswith(prefix) and fname.endswith(suffix) and all([key in fname for key in selection_keys])
             ]
 
         @staticmethod
@@ -226,10 +267,10 @@ class IndalekoBaseCLI:
 def main():
     '''Test the main handler'''
     cli = IndalekoBaseCLI()
+    ic(cli.config_data)
     # pre_parser = handler.setup_argument_parser()
     # pre_args, unknown = pre_parser.parse_known_args()
     # ic(pre_args)
-    ic(cli)
 
 if __name__ == '__main__':
     main()
