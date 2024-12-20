@@ -34,54 +34,32 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from data_models.base import IndalekoBaseModel
 from data_models import IndalekoRecordDataModel
+from data_models.service_identifier import IndalekoServiceIdentifierDataModel
 
 # pylint: enable=wrong-import-position
 
-class IndalekoServiceDataModel(IndalekoBaseModel):
+class IndalekoServiceDataModel(IndalekoServiceIdentifierDataModel):
     '''This is the data model for the Indaleko service definition.'''
 
     Record : IndalekoRecordDataModel = Field(None,
                                     title='Record',
                                     description='The record associated with the object.')
 
-    Identifier : uuid.UUID = Field(None,
-                                    title='Identifier',
-                                    description='This is the UUID of the service provider.')
-
-    Version : str = Field(None,
-                          title='Version',
-                          description='This is the version of the service provider.')
-
-    Name : str = Field(None,
-                       title='Name',
-                       description='This is the name of the service provider.')
-
-    Type : str = Field(None,
-                       title='Type',
-                       description='This is the type of service provider.')
-
-    Description : str = Field(None,
-                              title='Description',
-                              description='This is the description of the service provider.')
 
     class Config:
         json_schema_extra = {
             "example": {
                 "Record": IndalekoRecordDataModel.Config.json_schema_extra['example'],
-                "Identifier": "123e4567-e89b-12d3-a456-426614174000",
-                "Version": "1.0.0",
-                "Name": "Indaleko",
-                "Type": "Service",
-                "Description": "This is the Indaleko service."
+                **IndalekoServiceIdentifierDataModel.Config.json_schema_extra['example']
             }
         }
 
 def main():
     '''This allows testing the service data model'''
     ic('Testing Service Data Model')
-    IndalekoServiceDataModel.test_model_main()
+    ic(IndalekoServiceDataModel.Config.json_schema_extra['example'])
+    # IndalekoServiceDataModel.test_model_main()
 
 if __name__ == '__main__':
     main()

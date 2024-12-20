@@ -22,11 +22,11 @@ import logging
 import os
 import platform
 import sys
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from uuid import UUID
 
 from icecream import ic
-from pydantic import Field
+from pydantic import Field, ConfigDict, field_validator, model_validator
 
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -38,38 +38,116 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 # pylint: disable=wrong-import-position
+from constants import IndalekoConstants
 from data_models.base import IndalekoBaseModel
 from db import IndalekoDBConfig
 from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
 from utils.misc.file_name_management import indaleko_file_name_prefix
+from utils.misc.file_name_management import find_candidate_files
 # pylint: enable=wrong-import-position
 
 class IndalekoBaseCliDataModel(IndalekoBaseModel):
     '''Defines the base data model for the CLI'''
-    Platform : str = Field(platform.system(), title='Platform', description='The platform for the machine.')
-    MachineId : UUID = Field(UUID(int=0), title='MachineId', description='The unique identifier for the machine.')
-    StorageId : Optional[UUID] = None
+    Platform: Optional[Union[str, None]] = Field(
+        default_factory=lambda: platform.system(),
+        title='Platform',
+        description='The platform for the machine.'
+    )
+    MachineId: UUID = Field(
+        default_factory=lambda: UUID(int=0),
+        title='MachineId',
+        description='The unique identifier for the machine.'
+    )
+    StorageId: Optional[UUID] = None
     ConfigDirectory : str = indaleko_default_config_dir
     DataDirectory : str = indaleko_default_data_dir
     LogDirectory : str = indaleko_default_log_dir
-    InputFileChoices : Optional[List[str]] = []
-    InputFile : Optional[str] = None
-    InputFileKeys : Optional[Dict[str, str]] = {}
-    OutputFile : Optional[str] = None
-    LogFile : Optional[str] = None
-    LogLevel : int = logging.DEBUG
-    Offline : bool = False
-    DBConfigChoices : Optional[List[str]] = []
-    DBConfigFile : str = IndalekoDBConfig.default_db_config_file
-    FilePrefix : str = indaleko_file_name_prefix
-    FileSuffix : str = ''
-    AdditionalOptions : Dict[str, Any] = Field({} , title='AdditionalOptions', description='Additional options for the CLI.')
+    InputFileChoices: Optional[List[str]] = Field(
+        default_factory=list,
+        title='InputFileChoices',
+        description='Available input files.'
+    )
+    InputFile: Optional[str] = Field(
+        None,
+        title='InputFile',
+        description='The selected input file.'
+    )
+    InputFileKeys: Optional[Dict[str, str]] = Field(
+        default_factory=dict,
+        title='InputFileKeys',
+        description='Keys for input files.'
+    )
+    OutputFile: Optional[str] = Field(
+        None,
+        title='OutputFile',
+        description='The output file.'
+    )
+    OutputFileKeys: Optional[List[str]] = Field(
+        default_factory=list,
+        title='OutputFileKeys',
+        description='Keys for output files.'
+    )
+    LogFile: Optional[str] = Field(
+        None,
+        title='LogFile',
+        description='The log file.'
+    )
+    LogLevel: int = Field(
+        logging.DEBUG,
+        title='LogLevel',
+        description='Logging level.'
+    )
+    Offline: Optional[Union[bool, None]] = Field(
+        None,
+        title='Offline',
+        description='Run in offline mode.'
+    )
+    DBConfigChoices: Optional[List[str]] = Field(
+        default_factory=list,
+        title='DBConfigChoices',
+        description='Available database configuration files.'
+    )
+    DBConfigFile: str = Field(
+        IndalekoConstants.default_db_config_file_name,
+        title='DBConfigFile',
+        description='Database configuration file.'
+    )
+    FilePrefix: str = Field(
+        indaleko_file_name_prefix,
+        title='FilePrefix',
+        description='Prefix for file names.'
+    )
+    FileSuffix: str = Field(
+        "",
+        title='FileSuffix',
+        description='Suffix for file names.'
+    )
+    FileKeys : Dict[str, str] = Field(
+        default_factory=dict,
+        title='FileKeys',
+        description='These are keys and their values for identifying relevant files.'
+    )
+    PerformanceDataFile : Optional[Union[str, None]] = Field(
+        None,
+        title='PerformanceDataFile',
+        description='The file to which performance data is written.'
+    )
+    RecordPerformanceInDB: Optional[Union[bool, None]] = Field(
+        None,
+        title='RecordPerformanceInDB',
+        description='Record performance data in the database.'
+    )
+    AdditionalOptions: Dict[str, Any] = Field(
+        default_factory=dict,
+        title='AdditionalOptions',
+        description='Additional CLI options.'
+    )
 
     class Config:
         '''Configuration for the base CLI data model'''
         json_schema_extra = {
             'example': {
-                'Platform': 'Windows',
+                'Platform': platform.system(),
                 'MachineId': '3d49ea9c-e527-4e29-99b5-9715bbde1148',
                 'StorageId': 'e45e2942-cced-486e-8800-43e75bfad8b1',
                 'ConfigDirectory': indaleko_default_config_dir,
@@ -79,6 +157,7 @@ class IndalekoBaseCliDataModel(IndalekoBaseModel):
                 'InputFile': 'file1',
                 'InputFileKeys': {'key1': 'value1', 'key2': 'value2'},
                 'OutputFile': 'output.txt',
+                'OutputFileKeys' : ['key1', 'key2'],
                 'LogFile': 'log.txt',
                 'Offline': False,
                 'DBConfigChoices': ['db1', 'db2'],
@@ -91,7 +170,9 @@ class IndalekoBaseCliDataModel(IndalekoBaseModel):
 def main():
     '''Test code for the base CLI data model'''
     ic('Testing Base CLI Data Model')
-    IndalekoBaseCliDataModel.test_model_main()
+    cli_data = IndalekoBaseCliDataModel()
+    ic(cli_data)
+    cli_data.test_model_main()
 
 if __name__ == '__main__':
     main()

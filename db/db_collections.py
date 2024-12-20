@@ -57,7 +57,7 @@ class IndalekoDBCollections:
 
     Collections = {
         Indaleko_Object_Collection: {
-            'schema' : IndalekoObjectDataModel().get_arangodb_schema(),
+            'schema' : IndalekoObjectDataModel.get_arangodb_schema(),
             'edge' : False,
             'indices' : {
                 'URI' : {
@@ -79,7 +79,7 @@ class IndalekoDBCollections:
             },
         },
         Indaleko_Relationship_Collection : {
-            'schema' : IndalekoRelationshipDataModel().get_arangodb_schema(),
+            'schema' : IndalekoRelationshipDataModel.get_arangodb_schema(),
             'edge' : True,
             'indices' : {
                 'relationship' : {
@@ -105,7 +105,7 @@ class IndalekoDBCollections:
             }
         },
         Indaleko_Service_Collection : {
-            'schema' : IndalekoServiceDataModel().get_arangodb_schema(),
+            'schema' : IndalekoServiceDataModel.get_arangodb_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {
@@ -143,12 +143,12 @@ class IndalekoDBCollections:
             },
         },
         Indaleko_Identity_Domain_Collection : {
-            'schema' : IndalekoIdentityDomainDataModel().get_arangodb_schema(),
+            'schema' : IndalekoIdentityDomainDataModel.get_arangodb_schema(),
             'edge' : False,
             'indices' : { }
         },
         Indaleko_User_Collection : {
-            'schema' : IndalekoUserDataModel().get_arangodb_schema(),
+            'schema' : IndalekoUserDataModel.get_arangodb_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {
