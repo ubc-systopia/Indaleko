@@ -86,6 +86,7 @@ class IndalekoBaseCLI:
             self.features = IndalekoBaseCLI.cli_features() # default features
         self.pre_parser = argparse.ArgumentParser(add_help=False)
         self.config_data = json.loads(cli_data.model_dump_json())
+        ic(self.config_data)
         self.handler_mixin = handler_mixin
         if not self.handler_mixin:
             self.handler_mixin = IndalekoBaseCLI.default_handler_mixin
@@ -223,7 +224,7 @@ class IndalekoBaseCLI:
         output_file = self.handler_mixin.generate_output_file_name(self.config_data)
         self.pre_parser.add_argument('--outputfile',
                         default=output_file,
-                        help=f'Output file to use {output_file}')
+                        help=f'Output file to use (default = {output_file})')
         pre_args, _ = self.pre_parser.parse_known_args()
         self.config_data['OutputFile'] = pre_args.outputfile
         return self
@@ -380,7 +381,12 @@ class IndalekoBaseCLI:
 
         @staticmethod
         def generate_output_file_name(keys : dict[str,str]) -> str:
-            '''This method is used to generate an output file name'''
+            '''This method is used to generate an output file name.  Note
+            that it assumes the keys are in the desired format. Don't just
+            pass in configuration data.'''
+            if 'service' not in keys and 'Service' in keys:
+                keys['service'] = keys['Service']
+                del keys['Service']
             if 'suffix' not in keys:
                 keys['suffix'] = 'jsonl'
             return generate_file_name(**keys)

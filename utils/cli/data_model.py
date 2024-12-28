@@ -18,6 +18,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 from abc import ABC, abstractmethod
+from datetime import datetime, timezone
 import logging
 import os
 import platform
@@ -25,8 +26,7 @@ import sys
 from typing import Optional, List, Dict, Any, Union
 from uuid import UUID
 
-from icecream import ic
-from pydantic import Field, ConfigDict, field_validator, model_validator
+from pydantic import Field, AwareDatetime
 
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -48,6 +48,9 @@ from utils.misc.file_name_management import find_candidate_files
 
 class IndalekoBaseCliDataModel(IndalekoBaseModel):
     '''Defines the base data model for the CLI'''
+    Timestamp: AwareDatetime = Field(default_factory = lambda: datetime.now(timezone.utc),
+                                     title='Timestamp',
+                                     description='The timestamp for the data.')
     Service: Union[str, None] = Field(None,
                          title='Service',
                          description='The service being run.')

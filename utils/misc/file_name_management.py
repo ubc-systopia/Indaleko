@@ -68,16 +68,16 @@ def generate_final_name(args : list, **kwargs) -> str:
     return name
 
 def generate_file_name(**kwargs) -> str:
-    '''
+    f'''
     Given a key/value store of labels and values, this generates a file
     name in a common format.
     Special labels:
-        * prefix: string to prepend to the file name
-        * platform: identifies the platform from which the data originated
-        * service: identifies the service that generated the data (indexer,
-            ingester, etc.)
-        * timestamp: timestamp to use in the file name
-        * suffix: string to append to the file name
+        * prefix: string to prepend to the file name (default is {indaleko_file_name_prefix})
+        * platform: identifies the platform from which the data originated (default is {platform.system()})
+        * service: identifies the service that generated the data (collector,
+            recorder, etc.) (no default)
+        * timestamp: timestamp to use in the file name (default is the current time)
+        * suffix: string to append to the file name (default is jsonl)
     '''
     max_len = 255
     prefix = indaleko_file_name_prefix
