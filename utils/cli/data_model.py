@@ -48,6 +48,9 @@ from utils.misc.file_name_management import find_candidate_files
 
 class IndalekoBaseCliDataModel(IndalekoBaseModel):
     '''Defines the base data model for the CLI'''
+    Service: Union[str, None] = Field(None,
+                         title='Service',
+                         description='The service being run.')
     Platform: Optional[Union[str, None]] = Field(
         default_factory=lambda: platform.system(),
         title='Platform',

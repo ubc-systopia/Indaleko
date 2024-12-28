@@ -80,6 +80,12 @@ class IndalekoLogging(IndalekoSingleton):
         return logging.getLevelNamesMapping()[logging_type]
 
     @staticmethod
+    def map_logging_level_to_type(logging_level : int) -> str:
+        """Map a logging level to a logging type."""
+        assert isinstance(logging_level, int), f"logging_level must be an integer, not {type(logging_level)}"
+        return logging.getLevelName(logging_level)
+
+    @staticmethod
     def generate_log_file_name(**kwargs) -> str:
         now = datetime.datetime.now(datetime.timezone.utc)
         timestamp=now.isoformat()

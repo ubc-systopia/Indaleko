@@ -49,9 +49,31 @@ from utils import IndalekoLogging
 class IndalekoBaseCLI:
     """Base class for handling main function logic in collectors and recorders"""
 
+    class cli_features:
+        '''This class provides a set of features requested for the CLI'''
+        debug = True
+        db_config = True
+        machine_config = True
+        configdir = db_config or machine_config
+        input = True
+        output = True
+        datadir = input or output
+        logging = True
+        performance = True
+        platform = True
+
+        def __init__(self, **kwargs):
+            for key, value in kwargs.items():
+                if hasattr(self, key):
+                    assert isinstance(value, bool), f'Value must be a boolean: {key, value}'
+                    setattr(self, key, value)
+                else:
+                    raise AttributeError(f'Unknown attribute: {key}')
+
     def __init__(self,
                  cli_data : IndalekoBaseCliDataModel = IndalekoBaseCliDataModel(),
-                 handler_mixin : IndalekoHandlermixin = None) -> None:
+                 handler_mixin : Union[IndalekoHandlermixin, None] = None,
+                 cli_features : Union['IndalekoBaseCLI.cli_features', None] = None) -> None:
         """
             Initialize the main handler with specific service and config classes
 
@@ -59,84 +81,211 @@ class IndalekoBaseCLI:
                 service_class: Type of the service (BaseStorageCollector or BaseStorageRecorder subclass)
                 machine_config_class: Type of machine configuration (IndalekoMachineConfig subclass)
         """
+        self.features = cli_features
+        if not self.features:
+            self.features = IndalekoBaseCLI.cli_features() # default features
         self.pre_parser = argparse.ArgumentParser(add_help=False)
         self.config_data = json.loads(cli_data.model_dump_json())
         self.handler_mixin = handler_mixin
         if not self.handler_mixin:
             self.handler_mixin = IndalekoBaseCLI.default_handler_mixin
-        # set up the initial parser
-        self.setup_baseline_pre_parser()
-        self.setup_input_files_parser()
+        for feature in dir(self.cli_features):
+            if feature.startswith('__'):
+                continue
+            setup_func_name = f'setup_{feature}_parser'
+            ic(feature, setup_func_name)
+            setup_func = getattr(self, setup_func_name, None)
+            ic(setup_func)
+            if not setup_func:
+                ic(f'Unknown feature: {feature}')
+                exit(0)
+                continue
+            setup_func()
+        self.args = None
 
-    def setup_baseline_pre_parser(self) -> 'IndalekoBaseCLI':
-        '''This method is used to set up the baseline parser'''
-        self.pre_parser.add_argument('--configdir',
-                          default=self.config_data['ConfigDirectory'],
-                          help='Path to the config directory')
-        self.pre_parser.add_argument('--datadir',
-                          default=self.config_data['DataDirectory'],
-                          help='Path to the data directory')
-        self.pre_parser.add_argument('--logdir',
-                          default=self.config_data['LogDirectory'],
-                          help='Path to the log directory')
-        self.pre_parser.add_argument('--loglevel',
-                          type=int,
-                          default=self.config_data['LogLevel'],
-                          choices=IndalekoLogging.get_logging_levels(),
-                          help='Logging level to use')
-        if self.config_data['PerformanceDataFile']:
-            self.pre_parser.add_argument('--performance_file',
-                            default=False,
-                            action='store_true',
-                            help='Record performance data to a file')
-        if self.config_data['RecordPerformanceInDB']:
-            self.pre_parser.add_argument('--performance_db',
-                            default=False,
-                            action='store_true',
-                            help='Record performance data to the database')
-        if self.config_data['Platform']:
-            self.pre_parser.add_argument('--platform',
-                                    default=self.config_data['Platform'],
-                                    help='Platform to use')
-        if self.config_data['Offline']:
+    def get_args(self) -> argparse.Namespace:
+        '''This method is used to get the arguments'''
+        if not self.args:
+            parser = argparse.ArgumentParser(parents=[self.pre_parser], add_help=True)
+            self.args = parser.parse_args()
+        return self.args
+
+    def setup_debug_parser(self) -> 'IndalekoBaseCLI':
+        '''This method is used to set up the debug parser'''
+        pre_args, _ = self.pre_parser.parse_known_args()
+        if hasattr(pre_args, 'debug'): # only process it once
+            return
+        if not hasattr(pre_args, 'debug'):
+            self.pre_parser.add_argument('--debug',
+                                default=False,
+                                action='store_true',
+                                help='Debug mode (default=False)')
+        return self
+
+    def setup_configdir_parser(self) -> 'IndalekoBaseCLI':
+        '''This method is used to set up the config directory parser'''
+        pre_args, _ = self.pre_parser.parse_known_args()
+        if hasattr(pre_args, 'configdir'): # only process it once
+            return
+        if not hasattr(pre_args, 'configdir'):
+            self.pre_parser.add_argument('--configdir',
+                                default=self.config_data['ConfigDirectory'],
+                                help=f'Path to the config directory (default={self.config_data["ConfigDirectory"]})')
+        return self
+
+    def setup_datadir_parser(self) -> 'IndalekoBaseCLI':
+        '''This method is used to set up the data directory parser'''
+        pre_args, _ = self.pre_parser.parse_known_args()
+        if hasattr(pre_args, 'datadir'): # only process it once
+            return
+        if not hasattr(pre_args, 'datadir'):
+            self.pre_parser.add_argument('--datadir',
+                                default=self.config_data['DataDirectory'],
+                                help=f'Path to the data directory (default={self.config_data["DataDirectory"]})')
+        return self
+
+    def setup_logging_parser(self) -> 'IndalekoBaseCLI':
+        '''This method is used to set up the logging parser'''
+        pre_args, _ = self.pre_parser.parse_known_args()
+        if not hasattr(pre_args, 'logdir'):
+            self.pre_parser.add_argument('--logdir',
+                                default=self.config_data['LogDirectory'],
+                                help=f'Path to the log directory (default={self.config_data["LogDirectory"]})')
+            self.pre_parser.add_argument('--loglevel',
+                                type=int,
+                                default=self.config_data['LogLevel'],
+                                choices=IndalekoLogging.get_logging_levels(),
+                                help=f'Logging level to use (default={IndalekoLogging.map_logging_level_to_type(self.config_data["LogLevel"])})')
+        return self
+
+    def setup_db_config_parser(self) -> 'IndalekoBaseCLI':
+        '''This method is used to set up the database configuration parser'''
+        pre_args, _ = self.pre_parser.parse_known_args()
+        if hasattr(pre_args, 'db_config'): # only process it once
+            return
+        if not hasattr(pre_args, 'db_config'):
+            self.config_data['DBConfigChoices'] = self.handler_mixin.find_db_config_files(self.config_data['ConfigDirectory'])
+            default_db_config = self.handler_mixin.get_default_file(
+                self.config_data['ConfigDirectory'],
+                self.config_data['DBConfigChoices']
+            )
+            self.pre_parser.add_argument('--db_config',
+                                    choices=self.config_data['DBConfigChoices'],
+                                    default=default_db_config,
+                                    help='Database configuration to use')
             self.pre_parser.add_argument('--offline',
                                     default=self.config_data['Offline'],
                                     action='store_true',
-                                    help='Offline mode')
-        return self
+                                    help='Offline mode (default=False)')
+            return self
 
-    def setup_input_files_parser(self : 'IndalekoBaseCLI') -> 'IndalekoBaseCLI':
-        '''This method is used to set up the input files parser'''
+    def setup_machine_config_parser(self) -> 'IndalekoBaseCLI':
+        '''This method is used to set up the machine configuration parser'''
         pre_args, _ = self.pre_parser.parse_known_args()
-        if pre_args.configdir != self.config_data.get('ConfigDirectory'):
-            self.config_data['ConfigDirectory'] = pre_args.configdir
-        if pre_args.datadir != self.config_data.get('DataDirectory'):
-            self.config_data['DataDirectory'] = pre_args.datadir
-        if pre_args.logdir != self.config_data.get('LogDirectory'):
-            self.config_data['LogDirectory'] = pre_args.logdir
-        self.config_data['DBConfigChoices'] = self.handler_mixin.find_db_config_files(self.config_data['ConfigDirectory'])
-        default_db_config = self.handler_mixin.get_default_file(
-            self.config_data['ConfigDirectory'],
-            self.config_data['DBConfigChoices']
-        )
-        self.pre_parser.add_argument('--db_config',
-                                choices=self.config_data['DBConfigChoices'],
-                                default=default_db_config,
-                                help='Database configuration to use')
-        ic(pre_args.platform)
-        ic(self.config_data['ConfigDirectory'])
+        if hasattr(pre_args, 'machine_config'):
+            return
+        if not hasattr(pre_args, 'platform'):
+            self.setup_platform_parser() # ordering dependency.
+            pre_args, _ = self.pre_parser.parse_known_args()
         self.config_data['MachineConfigChoices'] = self.handler_mixin.find_machine_config_files(self.config_data['ConfigDirectory'], pre_args.platform)
-        self.config_data['MachineConfigFile'] = self.handler_mixin.get_default_file(
+        default_machine_config_file = self.handler_mixin.get_default_file(
             self.config_data['ConfigDirectory'],
             self.config_data['MachineConfigChoices']
         )
         self.pre_parser.add_argument('--machine_config',
                                 choices=self.config_data['MachineConfigChoices'],
-                                default=self.config_data['MachineConfigFile'],
+                                default=default_machine_config_file,
                                 help='Machine configuration to use')
         pre_args, _ = self.pre_parser.parse_known_args()
-        if pre_args.machine_config:
-            self.config_data['MachineConfigFileKeys'] = extract_keys_from_file_name(pre_args.machine_config)
+        self.config_data['MachineConfigFile'] = pre_args.machine_config
+        self.config_data['MachineConfigFileKeys'] = extract_keys_from_file_name(pre_args.machine_config)
+        return self
+
+    def setup_platform_parser(self) -> 'IndalekoBaseCLI':
+        '''This method is used to set up the platform parser'''
+        pre_args, _ = self.pre_parser.parse_known_args()
+        if hasattr(pre_args, 'platform'): # only process it once
+            return # already added
+        self.pre_parser.add_argument('--platform',
+                                default=self.config_data['Platform'],
+                                help=f'Platform to use (default={self.config_data["Platform"]})')
+        pre_args, _ = self.pre_parser.parse_known_args()
+        self.config_data['Platform'] = pre_args.platform
+        return self
+
+    def setup_output_parser(self) -> 'IndalekoBaseCLI':
+        '''This method is used to set up the output parser'''
+        if not self.config_data.get('Service'):
+            return # there can be no output file without a service name
+        pre_args, _ = self.pre_parser.parse_known_args()
+        if hasattr(pre_args, 'outputfile'): # only process it once
+            return
+        output_file = self.handler_mixin.generate_output_file_name(self.config_data)
+        self.pre_parser.add_argument('--outputfile',
+                        default=output_file,
+                        help=f'Output file to use {output_file}')
+        pre_args, _ = self.pre_parser.parse_known_args()
+        self.config_data['OutputFile'] = pre_args.outputfile
+        return self
+
+    def setup_performance_parser(self) -> 'IndalekoBaseCLI':
+        '''This method is used to set up the performance parser'''
+        if not self.config_data.get('Service'):
+            return # there can be no perf data without a service name
+        self.pre_parser.add_argument('--performance_file',
+                            default=False,
+                            action='store_true',
+                            help='Record performance data to a file (default=False)')
+        self.pre_parser.add_argument('--performance_db',
+                            default=False,
+                            action='store_true',
+                            help='Record performance data to the database (default=False)')
+        pre_args, _ = self.pre_parser.parse_known_args()
+        if pre_args.performance_file:
+            self.config_data['PerformanceFile'] = self.handler_mixin.generate_perf_file_name(self.config_data)
+        if pre_args.performance_db:
+            self.config_data['PerformanceDB'] = True
+        return self
+
+    def xx_setup_baseline_pre_parser(self) -> 'IndalekoBaseCLI':
+        '''This method is used to set up the baseline parser'''
+        if self.cli_features.configdir:
+            self.pre_parser.add_argument('--configdir',
+                            default=self.config_data['ConfigDirectory'],
+                            help=f'Path to the config directory (default={self.config_data["ConfigDirectory"]})')
+        if self.cli_features.datadir:
+            self.pre_parser.add_argument('--datadir',
+                            default=self.config_data['DataDirectory'],
+                            help=f'Path to the data directory (default={self.config_data["DataDirectory"]})')
+        if self.cli_features.logging:
+            self.pre_parser.add_argument('--logdir',
+                            default=self.config_data['LogDirectory'],
+                            help=f'Path to the log directory (default={self.config_data["LogDirectory"]})')
+            self.pre_parser.add_argument('--loglevel',
+                            type=int,
+                            default=self.config_data['LogLevel'],
+                            choices=IndalekoLogging.get_logging_levels(),
+                            help=f'Logging level to use (default={IndalekoLogging.map_logging_level_to_type(self.config_data["LogLevel"])})')
+        if self.cli_features.performance:
+            self.pre_parser.add_argument('--performance_file',
+                            default=False,
+                            action='store_true',
+                            help='Record performance data to a file (default=False)')
+            self.pre_parser.add_argument('--performance_db',
+                            default=False,
+                            action='store_true',
+                            help='Record performance data to the database (default=False)')
+        if self.cli_features.platform:
+            self.pre_parser.add_argument('--platform',
+                                    default=self.config_data['Platform'],
+                                    help=f'Platform to use (default={self.config_data["Platform"]})')
+        return self
+
+    def setup_input_parser(self) -> 'IndalekoBaseCLI':
+        '''This method is used to set up the input parser'''
+        pre_args, _ = self.pre_parser.parse_known_args()
+        if hasattr(pre_args, 'inputfile'): # only process it once
+            return
         self.config_data['InputFilePrefix'] = IndalekoConstants.default_prefix
         self.config_data['InputFileSuffix'] = 'jsonl'
         input_file_keys = self.config_data['InputFileKeys']
@@ -173,20 +322,6 @@ class IndalekoBaseCLI:
                                     help='Input file to use')
         pre_args, _ = self.pre_parser.parse_known_args()
         self.config_data['InputFileKeys'] = extract_keys_from_file_name(pre_args.inputfile)
-        return self
-
-    def setup_output_files(self : 'IndalekoBaseCLI') -> 'IndalekoBaseCLI':
-        '''This method is used to set up the output files'''
-        pre_args, _ = self.pre_parser.parse_known_args()
-
-
-        cli_data = IndalekoBaseCliDataModel(**self.config_data)
-        IndalekoBaseCLI.generate_output_file_name()
-        if pre_args.outputfile:
-            self.config_data['OutputFile'] = pre_args.outputfile
-        else:
-            self.config_data['OutputFile'] = self.handler_mixin.generate_output_file_name(self.config_data)
-        return self
 
     class default_handler_mixin(IndalekoHandlermixin):
         '''Default handler mixin for the CLI'''
@@ -248,7 +383,7 @@ class IndalekoBaseCLI:
             '''This method is used to generate an output file name'''
             if 'suffix' not in keys:
                 keys['suffix'] = 'jsonl'
-            return generate_file_name(keys)
+            return generate_file_name(**keys)
 
         @staticmethod
         def generate_log_file_name(keys : dict[str,str]) -> str:
@@ -268,6 +403,7 @@ def main():
     '''Test the main handler'''
     cli = IndalekoBaseCLI()
     ic(cli.config_data)
+    args = cli.get_args()
     # pre_parser = handler.setup_argument_parser()
     # pre_args, unknown = pre_parser.parse_known_args()
     # ic(pre_args)
