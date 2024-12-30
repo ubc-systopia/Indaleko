@@ -16,10 +16,10 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from storage.recorders.base import IndalekoStorageRecorder
+from storage.recorders.base import BaseStorageRecorder
 # pylint: enable=wrong-import-position
 
 
 __version__ = '0.1.0'
 
-__all__ = ['IndalekoStorageRecorder']
+__all__ = ['BaseStorageRecorder']

@@ -1,20 +1,20 @@
 """
-This is the generic class for an Indaleko Ingester.
+This is the generic class for an Indaleko Storage Recorder.
 
-An ingester takes information about some (or all) of the data that is stored in
+An Indaleko storage recorder takes information about some (or all) of the data that is stored in
 various storage repositories available to this machine.  It processes the output
-from indexers and then generates additional metadata to associate with the
+from storage recorders and then generates additional metadata to associate with the
 storage object (s) in the database.
 
-Examples of ingesters include:
+Examples of recorders include:
 
-* A file system specific metadata normalizer, which takes indexing information
+* A file system specific metadata normalizer, which takes metadata information
   collected about one or more files and then converts that into a normalized
   form to be stored in the database. This includes common metadata such as
   length, label (the "name" of the file), timestamps, and so on.
 
-* A semantic metadata generator, which takes the input from the indexer and then
-  performs operations on one or more files described by the indexer to extract
+* A semantic metadata generator, which takes the input from collectors and then
+  performs operations on one or more files described by the collector to extract
   or compute metadata based upon the content of the file.  For example, this
   might include a "bag of words" from a text file, EXIF data from a JPEG
   file, or even commonly used checksums (e.g., MD5, SHA1, SHA256, etc.) that are
@@ -43,10 +43,10 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import datetime
 import logging
 import json
 import jsonlines
-import datetime
 import os
 import uuid
 import sys
@@ -71,11 +71,11 @@ from utils.misc.file_name_management import generate_file_name, extract_keys_fro
 from data_models import IndalekoSemanticAttributeDataModel
 from storage.i_relationship import IndalekoRelationship
 # pylint: enable=wrong-import-position
-class IndalekoStorageRecorder():
+class BaseStorageRecorder():
     '''
-    IndalekoIngest is the generic class that we use for ingesting data from the
-    various indexers that we have. Platform specific ingesters are built on top
-    of this class to handle platform-specific ingestion.
+    IndalekoStorageRecorder is the generic class that we use for recording data from the
+    various collectors that we have. Platform specific recorders are built on top
+    of this class to handle platform-specific recording.
     '''
 
     default_file_prefix = 'indaleko'
@@ -99,17 +99,17 @@ class IndalekoStorageRecorder():
 
 
 
-    def __init__(self : 'IndalekoStorageRecorder', **kwargs : dict) -> None:
+    def __init__(self : 'BaseStorageRecorder', **kwargs : dict) -> None:
         '''
-        Constructor for the IndalekoIngest class. Takes a configuration object
+        Constructor for the IndalekoStorageRecorder class. Takes a configuration object
         as a parameter. The configuration object is a dictionary that contains
-        all the configuration parameters for the ingester.
+        all the configuration parameters for the recorder.
         '''
-        self.file_prefix = IndalekoStorageRecorder.default_file_prefix
+        self.file_prefix = BaseStorageRecorder.default_file_prefix
         if 'file_prefix' in kwargs:
             self.file_prefix = kwargs['file_prefix']
         self.file_prefix = self.file_prefix.replace('-', '_')
-        self.file_suffix = IndalekoStorageRecorder.default_file_suffix
+        self.file_suffix = BaseStorageRecorder.default_file_suffix
         if 'file_suffix' in kwargs:
             self.file_suffix = kwargs['file_suffix']
         self.file_suffix = self.file_suffix.replace('-', '_')
@@ -122,9 +122,9 @@ class IndalekoStorageRecorder():
         self.platform = 'unknown'
         if 'platform' in kwargs:
             self.platform = kwargs['platform']
-        self.ingester = 'unknown'
-        if 'ingester' in kwargs:
-            self.ingester = kwargs['ingester']
+        self.recorder = 'unknown'
+        if 'recorder' in kwargs:
+            self.recorder = kwargs['recorder']
         self.storage_description = None
         if 'storage_description' in kwargs:
             if kwargs['storage_description'] is None or \
@@ -141,31 +141,31 @@ class IndalekoStorageRecorder():
         assert self.service_name is not None, \
             f'Service name must be specified, kwargs={kwargs}'
         self.service_description = kwargs.get('Description',
-                                              IndalekoStorageRecorder\
+                                              BaseStorageRecorder\
                                                 .indaleko_generic_storage_recorder_service_description)
         self.service_version = kwargs.get('Version',
-                                          IndalekoStorageRecorder\
+                                          BaseStorageRecorder\
                                             .indaleko_generic_storage_recorder_service_version)
-        self.service_type = kwargs.get('Type', 'Ingester')
+        self.service_type = kwargs.get('Type', IndalekoServiceManager.service_type_storage_recorder)
         self.service_id = kwargs.get('Identifier', kwargs.get('service_id', kwargs.get('service_identifier', None)))
         assert self.service_id is not None, \
             f'Service identifier must be specified\n{kwargs}'
-        self.ingester_service = IndalekoServiceManager().register_service(
+        self.recorder_service = IndalekoServiceManager().register_service(
             service_name = self.service_name,
             service_description = self.service_description,
             service_version = self.service_version,
             service_type = self.service_type,
             service_id = self.service_id,
         )
-        assert self.ingester_service is not None, 'Ingester service does not exist'
-        for count in IndalekoStorageRecorder.counter_values:
+        assert self.recorder_service is not None, 'Recorder service does not exist'
+        for count in BaseStorageRecorder.counter_values:
             setattr(self, count, 0)
 
     def get_counts(self) -> dict:
         '''
-        Retrieves counters about the ingester.
+        Retrieves counters about the recorder.
         '''
-        return {x : getattr(self, x) for x in IndalekoStorageRecorder.counter_values}
+        return {x : getattr(self, x) for x in BaseStorageRecorder.counter_values}
 
     def generate_output_file_name(self, **kwargs) -> str:
         '''
@@ -178,7 +178,7 @@ class IndalekoStorageRecorder():
             del kwargs['output_dir']
         if output_dir is None:
             output_dir = self.data_dir
-        kwargs['ingester'] = self.ingester
+        kwargs['recorder'] = self.recorder
         kwargs['machine'] = str(uuid.UUID(self.machine_id).hex)
         if self.storage_description is not None and \
             kwargs['storage'] != 'unknown':
@@ -187,15 +187,15 @@ class IndalekoStorageRecorder():
         return os.path.join(output_dir, name)
 
     def generate_file_name(self, target_dir : str = None, suffix = None) -> str:
-        '''This will generate a file name for the ingester output file.'''
+        '''This will generate a file name for the recorder output file.'''
         if suffix is None:
             suffix = self.file_suffix
         kwargs = {
         'prefix' : self.file_prefix,
         'suffix' : suffix,
         'platform' : self.platform,
-        'service' : 'ingest',
-        'ingester' : self.ingester,
+        'service' : 'record',
+        'recorder' : self.recorder,
         'machine' : str(uuid.UUID(self.machine_id).hex),
         'collection' : IndalekoDBCollections.Indaleko_Object_Collection,
         'timestamp' : self.timestamp,
@@ -206,7 +206,7 @@ class IndalekoStorageRecorder():
         return self.generate_output_file_name(**kwargs)
 
     @staticmethod
-    def extract_metadata_from_ingester_file_name(file_name : str) -> dict:
+    def extract_metadata_from_recorder_file_name(file_name : str) -> dict:
         '''
         This will extract the metadata from the given file name.
         '''
@@ -261,28 +261,25 @@ class IndalekoStorageRecorder():
         if 'file' in kwargs:
             load_string += ' ' + kwargs['file']
         return load_string
-    ## arangoimport -collection Objects --server.username uiRXxRxF --server.password jDrcwy9VcAhhSmt --ssl.protocol 5
-    ## .\indaleko-plt=Windows-svc=ingest-ingester=local_fs_ingester-machine=2e169bb700244dc193dc18b7d2d28190-storage=3397d97b2ca511edb2fcb40ede9a5a3c-collection=Objects-ts=2024_01_19T01#12#01.057294+00#00.jsonl
-    ## --server.endpoint http+ssl://activitycontext.work:8529 --server.database Indaleko
 
-    def load_indexer_data_from_file(self : 'IndalekoStorageRecorder') -> None:
-        '''This function loads the indexer data from the file.'''
+    def load_collector_data_from_file(self : 'BaseStorageRecorder') -> None:
+        '''This function loads the collector data from the file.'''
         if self.input_file is None:
             raise ValueError('input_file must be specified')
         if self.input_file.endswith('.jsonl'):
-            self.indexer_data = []
+            self.collector_data = []
             with jsonlines.open(self.input_file) as reader:
                 for entry in reader:
-                    self.indexer_data.append(entry)
-            ic(len(self.indexer_data))
+                    self.collector_data.append(entry)
+            ic(len(self.collector_data))
         elif self.input_file.endswith('.json'):
             with open(self.input_file, 'r', encoding='utf-8-sig') as file:
-                self.indexer_data = json.load(file)
-                ic(len(self.indexer_data))
+                self.collector_data = json.load(file)
+                ic(len(self.collector_data))
         else:
             raise ValueError(f'Input file {self.input_file} is an unknown type')
-        if not isinstance(self.indexer_data, list):
-            raise ValueError('indexer_data is not a list')
+        if not isinstance(self.collector_data, list):
+            raise ValueError('collector_data is not a list')
 
     @staticmethod
     def build_storage_relationship(
@@ -316,7 +313,7 @@ class IndalekoStorageRecorder():
         child : Union[str, uuid.UUID], # child
         source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
         '''This builds a contains relationship object for a directory and a child.'''
-        return IndalekoStorageRecorder.build_storage_relationship(
+        return BaseStorageRecorder.build_storage_relationship(
             parent, child, IndalekoRelationship.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR, source_id
         )
 
@@ -326,7 +323,7 @@ class IndalekoStorageRecorder():
         parent : Union[str, uuid.UUID], # parent
         source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
         '''This builds a contains relationship object for a directory and a child.'''
-        return IndalekoStorageRecorder.build_storage_relationship(
+        return BaseStorageRecorder.build_storage_relationship(
             child, parent, IndalekoRelationship.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR, source_id
         )
 
@@ -336,7 +333,7 @@ class IndalekoStorageRecorder():
         child : Union[str, uuid.UUID], # child
         source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
         '''This builds a contains relationship object for a volume and a child.'''
-        return IndalekoStorageRecorder.build_storage_relationship(
+        return BaseStorageRecorder.build_storage_relationship(
             volume, child, IndalekoRelationship.VOLUME_CONTAINS_RELATIONSHIP_UUID_STR, source_id
         )
 
@@ -346,7 +343,7 @@ class IndalekoStorageRecorder():
         volume : Union[str, uuid.UUID], # volume
         source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
         '''This builds a contains relationship object for a volume and a child.'''
-        return IndalekoStorageRecorder.build_storage_relationship(
+        return BaseStorageRecorder.build_storage_relationship(
             child, volume, IndalekoRelationship.CONTAINED_BY_VOLUME_RELATIONSHIP_UUID_STR, source_id
         )
 
@@ -356,7 +353,7 @@ class IndalekoStorageRecorder():
         child : Union[str, uuid.UUID], # child
         source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
         '''This builds a contains relationship object for a machine and a child.'''
-        return IndalekoStorageRecorder.build_storage_relationship(
+        return BaseStorageRecorder.build_storage_relationship(
             machine, child, IndalekoRelationship.MACHINE_CONTAINS_RELATIONSHIP_UUID_STR, source_id
         )
 
@@ -366,23 +363,23 @@ class IndalekoStorageRecorder():
         machine : Union[str, uuid.UUID], # machine
         source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
         '''This builds a contains relationship object for a machine and a child.'''
-        return IndalekoStorageRecorder.build_storage_relationship(
+        return BaseStorageRecorder.build_storage_relationship(
             child, machine, IndalekoRelationship.CONTAINED_BY_MACHINE_RELATIONSHIP_UUID_STR, source_id
         )
 
 
 def main():
-    """Test code for IndalekoIngest.py"""
+    """Test code for IndalekoStorageRecorder.py"""
     # Now parse the arguments
-    ingester = IndalekoStorageRecorder(
-        service_name=IndalekoStorageRecorder.indaleko_generic_storage_recorder_service_name,
-        service_id=IndalekoStorageRecorder.indaleko_generic_storage_recorder_uuid_str,
+    recorder = BaseStorageRecorder(
+        service_name=BaseStorageRecorder.indaleko_generic_storage_recorder_service_name,
+        service_id=BaseStorageRecorder.indaleko_generic_storage_recorder_uuid_str,
         test=True
     )
-    assert ingester is not None, "Could not create ingester."
-    fname = ingester.generate_file_name()
+    assert recorder is not None, "Could not create recorder."
+    fname = recorder.generate_file_name()
     print(fname)
-    metadata = ingester.extract_metadata_from_ingester_file_name(fname)
+    metadata = recorder.extract_metadata_from_recorder_file_name(fname)
     print(json.dumps(metadata, indent=4))
 
 

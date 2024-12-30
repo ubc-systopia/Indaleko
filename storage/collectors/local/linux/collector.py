@@ -1,7 +1,7 @@
 '''
-This module handles indexing of the local Linux file systems.
+This module handles metadata collection from local Linux file systems.
 
-Indaleko Linux Local Indexer
+Indaleko Linux Local Collector
 Copyright (C) 2024 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
@@ -36,31 +36,32 @@ if os.environ.get('INDALEKO_ROOT') is None:
 from storage.collectors.base import BaseStorageCollector
 from platforms.linux.machine_config import IndalekoLinuxMachineConfig
 from utils.i_logging import IndalekoLogging
+from db.service_manager import IndalekoServiceManager
 import utils.misc.directory_management
 import utils.misc.file_name_management
 # pylint: enable=wrong-import-position
 
 
 
-class IndalekoLinuxLocalIndexer(BaseStorageCollector):
+class IndalekoLinuxLocalCollector(BaseStorageCollector):
     '''
-    This is the class that indexes Linux local file systems.
+    This is the class that collects metadata from Linux local file systems.
     '''
     linux_platform = 'Linux'
-    linux_local_indexer_name = 'fs_indexer'
+    linux_local_collector_name = 'fs_collector'
 
-    indaleko_linux_local_indexer_uuid = 'bef019bf-b762-4297-bbe2-bf79a65027ae'
-    indaleko_linux_local_indexer_service_name = 'Linux Local Indexer'
-    indaleko_linux_local_indexer_service_description = 'This service indexes the local filesystems of a Mac machine.'
-    indaleko_linux_local_indexer_service_version = '1.0'
-    indaleko_linux_local_indexer_service_type = 'Indexer'
+    indaleko_linux_local_collector_uuid = 'bef019bf-b762-4297-bbe2-bf79a65027ae'
+    indaleko_linux_local_collector_service_name = 'Linux Local Collector'
+    indaleko_linux_local_collector_service_description = 'This service collects local filesystem metadata of a Linux machine.'
+    indaleko_linux_local_collector_service_version = '1.0'
+    indaleko_linux_local_collector_service_type = IndalekoServiceManager.service_type_storage_collector
 
-    indaleko_linux_local_indexer_service ={
-        'service_name' : indaleko_linux_local_indexer_service_name,
-        'service_description' : indaleko_linux_local_indexer_service_description,
-        'service_version' : indaleko_linux_local_indexer_service_version,
-        'service_type' : indaleko_linux_local_indexer_service_type,
-        'service_identifier' : indaleko_linux_local_indexer_uuid,
+    indaleko_linux_local_collector_service ={
+        'service_name' : indaleko_linux_local_collector_service_name,
+        'service_description' : indaleko_linux_local_collector_service_description,
+        'service_version' : indaleko_linux_local_collector_service_version,
+        'service_type' : indaleko_linux_local_collector_service_type,
+        'service_identifier' : indaleko_linux_local_collector_uuid,
     }
 
     def __init__(self, **kwargs):
@@ -73,24 +74,24 @@ class IndalekoLinuxLocalIndexer(BaseStorageCollector):
             self.offline = kwargs['offline']
             del self.offline
         super().__init__(**kwargs,
-                         platform=IndalekoLinuxLocalIndexer.linux_platform,
-                         indexer_name=IndalekoLinuxLocalIndexer.linux_local_indexer_name,
-                         **IndalekoLinuxLocalIndexer.indaleko_linux_local_indexer_service
+                         platform=IndalekoLinuxLocalCollector.linux_platform,
+                         collector_name=IndalekoLinuxLocalCollector.linux_local_collector_name,
+                         **IndalekoLinuxLocalCollector.indaleko_linux_local_collector_service
         )
 
     @staticmethod
-    def generate_linux_indexer_file_name(**kwargs) -> str:
-        '''Generate a file name for the Linux local indexer'''
+    def generate_linux_collector_file_name(**kwargs) -> str:
+        '''Generate a file name for the Linux local collector'''
         if 'platform' not in kwargs:
-            kwargs['platform'] = IndalekoLinuxLocalIndexer.linux_platform
-        if 'indexer_name' not in kwargs:
-            kwargs['indexer_name'] = IndalekoLinuxLocalIndexer.linux_local_indexer_name
+            kwargs['platform'] = IndalekoLinuxLocalCollector.linux_platform
+        if 'collector_name' not in kwargs:
+            kwargs['collector_name'] = IndalekoLinuxLocalCollector.linux_local_collector_name
         assert 'machine_id' in kwargs, 'machine_id must be specified'
-        return BaseStorageCollector.generate_indexer_file_name(**kwargs)
+        return BaseStorageCollector.generate_collector_file_name(**kwargs)
 
 
 def main():
-    '''This is the main handler for the Indaleko Linux Local Indexer
+    '''This is the main handler for the Indaleko Linux Local Collector
     service.'''
     logging_levels = IndalekoLogging.get_logging_levels()
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
@@ -111,12 +112,12 @@ def main():
     config_files = IndalekoLinuxMachineConfig.find_config_files(pre_args.configdir)
     default_config_file = IndalekoLinuxMachineConfig.get_most_recent_config_file(pre_args.configdir)
     config_file_metadata = utils.misc.file_name_management.extract_keys_from_file_name(default_config_file)
-    config_platform = IndalekoLinuxLocalIndexer.linux_platform
+    config_platform = IndalekoLinuxLocalCollector.linux_platform
     if 'platform' in config_file_metadata:
         config_platform = config_file_metadata['platform']
-    log_file_name = IndalekoLinuxLocalIndexer.generate_linux_indexer_file_name(
+    log_file_name = IndalekoLinuxLocalCollector.generate_linux_collector_file_name(
         platform=config_platform,
-        indexer_name=IndalekoLinuxLocalIndexer.linux_local_indexer_name,
+        collector_name=IndalekoLinuxLocalCollector.linux_local_collector_name,
         machine_id = config_file_metadata['machine'],
         target_dir=pre_args.logdir,
         timestamp=timestamp,
@@ -130,7 +131,7 @@ def main():
     # Step 2: figure out the default config file
     pre_parser = argparse.ArgumentParser(add_help=False, parents=[pre_parser])
     pre_parser.add_argument('--config', choices=config_files, default=default_config_file)
-    pre_parser.add_argument('--path', help='Path to the directory to index', type=str,
+    pre_parser.add_argument('--path', help='Path to the directory from which to collect metadata', type=str,
                             default=os.path.expanduser('~'))
     pre_parser.add_argument('--datadir', '-d',
                             help='Path to the data directory',
@@ -145,15 +146,15 @@ def main():
     machine_config = IndalekoLinuxMachineConfig.load_config_from_file(config_file=pre_args.config, offline=pre_args.offline)
 
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    indexer = IndalekoLinuxLocalIndexer(
+    collector = IndalekoLinuxLocalCollector(
         machine_config=machine_config,
         timestamp=timestamp,
         path=pre_args.path,
         offline=pre_args.offline
     )
-    output_file = IndalekoLinuxLocalIndexer.generate_linux_indexer_file_name(
+    output_file = IndalekoLinuxLocalCollector.generate_linux_collector_file_name(
         platform=config_platform,
-        indexer_name=IndalekoLinuxLocalIndexer.linux_local_indexer_name,
+        collector_name=IndalekoLinuxLocalCollector.linux_local_collector_name,
         machine_id = config_file_metadata['machine'],
         target_dir=pre_args.datadir,
         suffix='jsonl')
@@ -163,11 +164,11 @@ def main():
                         default=output_file)
     args = parser.parse_args()
     output_file = args.output
-    logging.info('Indexing %s ' , pre_args.path)
+    logging.info('Collecting metadata from %s ' , pre_args.path)
     logging.info('Output file %s ' , output_file)
-    data = indexer.index()
-    indexer.write_data_to_file(data, output_file)
-    for count_type, count_value in indexer.get_counts().items():
+    data = collector.collect()
+    collector.write_data_to_file(data, output_file)
+    for count_type, count_value in collector.get_counts().items():
         logging.info('%s: %d', count_type, count_value)
     logging.info('Done')
 

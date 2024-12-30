@@ -37,16 +37,12 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from data_models import IndalekoRecordDataModel, IndalekoSourceIdentifierDataModel, IndalekoTimestampDataModel
+from db.service_manager import IndalekoServiceManager
 from utils.misc.data_management import encode_binary_data
 from utils.misc.directory_management import indaleko_default_config_dir, indaleko_create_secure_directories
 from platforms.data_models.hardware import Hardware
 from platforms.data_models.software import Software
 from platforms.machine_config import IndalekoMachineConfig
-# from IndalekoMachineConfig import IndalekoMachineConfig
-# from Indaleko import Indaleko
-# from IndalekoRecordDataModel import IndalekoRecordDataModel
-# from IndalekoDataModel import IndalekoDataModel
-# from IndalekoMachineConfigDataModel import IndalekoMachineConfigDataModel
 # pylint: enable=wrong-import-position
 
 
@@ -67,7 +63,7 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
         'service_description': 'This service provides the configuration information for a macOS machine.',
         'service_version': '1.0',
         'service_identifier': macos_machine_config_uuid_str,
-        'service_type': 'Indexer',
+        'service_type': IndalekoServiceManager.service_type_machine_configuration,
     }
 
     def __init__(self : 'IndalekoMacOSMachineConfig', **kwargs):

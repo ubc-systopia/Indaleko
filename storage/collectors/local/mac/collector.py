@@ -1,8 +1,8 @@
 '''
-This module handles data ingestion into Indaleko from the Mac local file
-system indexer.
+This module collects local file system metadata from the Mac local file
+system.
 
-Indaleko Mac Local Indexer
+Indaleko Mac Local Collector
 Copyright (C) 2024 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
@@ -36,33 +36,33 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-# from Indaleko import Indaleko
+from utils.i_logging import IndalekoLogging
 from storage.collectors.base import BaseStorageCollector
 from platforms.mac.machine_config import IndalekoMacOSMachineConfig
 from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
-# from IndalekoMacMachineConfig import IndalekoMacOSMachineConfig
+from db.service_manager import IndalekoServiceManager
 # pylint: enable=wrong-import-position
 
 
-class IndalekoMacLocalIndexer(BaseStorageCollector):
+class IndalekoMacLocalCollector(BaseStorageCollector):
     '''
     This is the class that indexes Mac local file systems.
     '''
     mac_platform = 'Mac'
-    mac_local_indexer_name = 'fs-indexer'
+    mac_local_collector_name = 'fs-collector'
 
-    indaleko_mac_local_indexer_uuid = '14d6c989-0d1e-4ccc-8aea-a75688a6bb5f'
-    indaleko_mac_local_indexer_service_name = 'Mac Local Indexer'
-    indaleko_mac_local_indexer_service_description = 'This service indexes the local filesystems of a Mac machine.'
-    indaleko_mac_local_indexer_service_version = '1.0'
-    indaleko_mac_local_indexer_service_type = 'Indexer'
+    indaleko_mac_local_collector_uuid = '14d6c989-0d1e-4ccc-8aea-a75688a6bb5f'
+    indaleko_mac_local_collector_service_name = 'Mac Local Storage Collector'
+    indaleko_mac_local_collector_service_description = 'This service collects metadata from the local filesystems of a Mac machine.'
+    indaleko_mac_local_collector_service_version = '1.0'
+    indaleko_mac_local_collector_service_type = IndalekoServiceManager.service_type_storage_collector
 
-    indaleko_mac_local_indexer_service ={
-        'service_name' : indaleko_mac_local_indexer_service_name,
-        'service_description' : indaleko_mac_local_indexer_service_description,
-        'service_version' : indaleko_mac_local_indexer_service_version,
-        'service_type' : indaleko_mac_local_indexer_service_type,
-        'service_identifier' : indaleko_mac_local_indexer_uuid,
+    indaleko_mac_local_collector_service ={
+        'service_name' : indaleko_mac_local_collector_service_name,
+        'service_description' : indaleko_mac_local_collector_service_description,
+        'service_version' : indaleko_mac_local_collector_service_version,
+        'service_type' : indaleko_mac_local_collector_service_type,
+        'service_identifier' : indaleko_mac_local_collector_uuid,
     }
 
     def __init__(self, **kwargs):
@@ -71,22 +71,22 @@ class IndalekoMacLocalIndexer(BaseStorageCollector):
         if 'machine_id' not in kwargs:
             kwargs['machine_id'] = self.machine_config.machine_id
         super().__init__(**kwargs,
-                         platform=IndalekoMacLocalIndexer.mac_platform,
-                         indexer_name=IndalekoMacLocalIndexer.mac_local_indexer_name,
-                         **IndalekoMacLocalIndexer.indaleko_mac_local_indexer_service
+                         platform=IndalekoMacLocalCollector.mac_platform,
+                         collector_name=IndalekoMacLocalCollector.mac_local_collector_name,
+                         **IndalekoMacLocalCollector.indaleko_mac_local_collector_service
         )
 
         self.dir_count=0
         self.file_count=0
 
-    def generate_mac_indexer_file_name(self, **kwargs) -> str:
+    def generate_mac_collector_file_name(self, **kwargs) -> str:
         if 'platform' not in kwargs:
-            kwargs['platform'] = IndalekoMacLocalIndexer.mac_platform
-        if 'indexer_name' not in kwargs:
-            kwargs['indexer_name'] = IndalekoMacLocalIndexer.mac_local_indexer_name
+            kwargs['platform'] = IndalekoMacLocalCollector.mac_platform
+        if 'collector_name' not in kwargs:
+            kwargs['collector_name'] = IndalekoMacLocalCollector.mac_local_collector_name
         if 'machine_id' not in kwargs:
             kwargs['machine_id'] = uuid.UUID(self.machine_config.machine_id).hex
-        return BaseStorageCollector.generate_indexer_file_name(**kwargs)
+        return BaseStorageCollector.generate_collector_file_name(**kwargs)
 
 
     def build_stat_dict(self, name: str, root : str, last_uri = None) -> tuple:
@@ -113,12 +113,12 @@ class IndalekoMacLocalIndexer(BaseStorageCollector):
         stat_dict['Name'] = name
         stat_dict['Path'] = root
         stat_dict['URI'] = os.path.join(root, name)
-        stat_dict['Indexer'] = self.service_identifier
+        stat_dict['Collector'] = self.service_identifier
 
         return (stat_dict, last_uri)
 
 
-    def index(self) -> list:
+    def collect(self) -> list:
         data = []
         last_uri = None
 
@@ -141,28 +141,9 @@ class IndalekoMacLocalIndexer(BaseStorageCollector):
         return data
 
 def main():
-    '''This is the main handler for the Indaleko Mac Local Indexer
-    service.'''
-    if platform.python_version() < '3.12':
-        logging_levels = []
-        if hasattr(logging, 'CRITICAL'):
-            logging_levels.append('CRITICAL')
-        if hasattr(logging, 'ERROR'):
-            logging_levels.append('ERROR')
-        if hasattr(logging, 'WARNING'):
-            logging_levels.append('WARNING')
-        if hasattr(logging, 'WARN'):
-            logging_levels.append('WARN')
-        if hasattr(logging, 'INFO'):
-            logging_levels.append('INFO')
-        if hasattr(logging, 'DEBUG'):
-            logging_levels.append('DEBUG')
-        if hasattr(logging, 'NOTSET'):
-            logging_levels.append('NOTSET')
-        if hasattr(logging, 'FATAL'):
-            logging_levels.append('FATAL')
-    else:
-        logging_levels = sorted(set([level for level in logging.getLevelNamesMapping()]))
+    '''This is the main handler for the Indaleko Mac Local Storage
+    Metadata Collector service.'''
+    logging_levels = IndalekoLogging.get_logging_levels()
 
      # Step 1: find the machine configuration file
     pre_parser = argparse.ArgumentParser(add_help=False)
@@ -186,8 +167,8 @@ def main():
     machine_config = IndalekoMacOSMachineConfig.load_config_from_file(config_file=pre_args.config)
 
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    indexer = IndalekoMacLocalIndexer(machine_config=machine_config, timestamp=timestamp)
-    output_file = indexer.generate_mac_indexer_file_name()
+    collector = IndalekoMacLocalCollector(machine_config=machine_config, timestamp=timestamp)
+    output_file = collector.generate_mac_collector_file_name()
     parser= argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--datadir', '-d',
                         help='Path to the data directory',
@@ -206,20 +187,20 @@ def main():
 
     args = parser.parse_args()
     args.path=os.path.abspath(args.path)
-    indexer = IndalekoMacLocalIndexer(timestamp=timestamp,
+    collector = IndalekoMacLocalCollector(timestamp=timestamp,
                                           path=args.path,
                                           machine_config=machine_config)
-    output_file = indexer.generate_mac_indexer_file_name()
-    log_file_name = indexer.generate_mac_indexer_file_name(target_dir=args.logdir, suffix='.log')
+    output_file = collector.generate_mac_collector_file_name()
+    log_file_name = collector.generate_mac_collector_file_name(target_dir=args.logdir, suffix='.log')
     logging.basicConfig(filename=os.path.join(log_file_name),
                                 level=args.loglevel,
                                 format='%(asctime)s - %(levelname)s - %(message)s',
                                 force=True)
     logging.info('Indexing %s ' , pre_args.path)
     logging.info('Output file %s ' , output_file)
-    data = indexer.index()
-    indexer.write_data_to_file(data, output_file)
-    counts = indexer.get_counts()
+    data = collector.collect()
+    collector.write_data_to_file(data, output_file)
+    counts = collector.get_counts()
     for count_type, count_value in counts.items():
         logging.info('%s: %d', count_type, count_value)
     logging.info('Done')

@@ -247,7 +247,7 @@ class IndalekoOneDriveIndexer(BaseStorageCollector):
         return entry
 
 
-    def index(self) -> list:
+    def collect(self) -> list:
         '''
         This method indexes OneDrive Drive.
         '''
@@ -552,7 +552,7 @@ class IndalekoOneDriveIndexer(BaseStorageCollector):
 
 
     @staticmethod
-    def find_indexer_files(
+    def find_collector_files(
             search_dir : str,
             prefix : str = BaseStorageCollector.default_file_prefix,
             suffix : str = BaseStorageCollector.default_file_suffix) -> list:
@@ -561,7 +561,7 @@ class IndalekoOneDriveIndexer(BaseStorageCollector):
             prefix: prefix of the file to ingest
             suffix: suffix of the file to ingest (default is .json)
         '''
-        prospects = BaseStorageCollector.find_indexer_files(search_dir, prefix, suffix)
+        prospects = BaseStorageCollector.find_collector_files(search_dir, prefix, suffix)
         return [f for f in prospects if IndalekoOneDriveIndexer.dropbox_platform in f]
 
 
@@ -622,7 +622,7 @@ def main():
     logging.info('Output file: %s', output_file)
     logging.info('Indexing: %s', args.path)
     logging.info(args)
-    data = indexer.index()
+    data = indexer.collect()
     if len(data) > 0:
         indexer.write_data_to_file(data, output_file)
     else:

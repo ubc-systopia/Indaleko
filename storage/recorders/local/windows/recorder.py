@@ -47,13 +47,13 @@ from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 from platforms.unix import UnixFileAttributes
 from platforms.windows_attributes import IndalekoWindows
 from storage import IndalekoObject
-from storage.recorders.base import IndalekoStorageRecorder
-from storage.collectors.local.windows.collector import IndalekoWindowsLocalIndexer
+from storage.recorders.base import BaseStorageRecorder
+from storage.collectors.local.windows.collector import IndalekoWindowsLocalCollector
 import utils.misc.directory_management
 from utils.misc.data_management import encode_binary_data
 # pylint: enable=wrong-import-position
 
-class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
+class IndalekoWindowsLocalIngester(BaseStorageRecorder):
     '''
     This class handles ingestion of metadata from the Indaleko Windows
     indexing service.
@@ -68,7 +68,7 @@ class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
         'service_identifier' : windows_local_ingester_uuid,
     }
 
-    windows_platform = IndalekoWindowsLocalIndexer.windows_platform
+    windows_platform = IndalekoWindowsLocalCollector.windows_platform
     windows_local_ingester = 'local_fs_ingester'
 
     def __init__(self, **kwargs) -> None:
@@ -118,10 +118,10 @@ class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
         if self.data_dir is None:
             raise ValueError('data_dir must be specified')
         return [x for x in super().find_indexer_files(self.data_dir)
-                if IndalekoWindowsLocalIndexer.windows_platform in x and
-                IndalekoWindowsLocalIndexer.windows_local_indexer_name in x]
+                if IndalekoWindowsLocalCollector.windows_platform in x and
+                IndalekoWindowsLocalCollector.windows_local_indexer_name in x]
 
-    def load_indexer_data_from_file(self : 'IndalekoWindowsLocalIngester') -> None:
+    def load_collector_data_from_file(self : 'IndalekoWindowsLocalIngester') -> None:
         '''This function loads the indexer data from the file.'''
         if self.input_file is None:
             raise ValueError('input_file must be specified')
@@ -216,7 +216,7 @@ class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
         This function ingests the indexer file and emits the data needed to
         upload to the database.
         '''
-        self.load_indexer_data_from_file()
+        self.load_collector_data_from_file()
         dir_data_by_path = {}
         dir_data = []
         file_data = []
@@ -258,31 +258,31 @@ class IndalekoWindowsLocalIngester(IndalekoStorageRecorder):
             if parent not in dirmap:
                 continue
             parent_id = dirmap[parent]
-            dir_edges.append(IndalekoStorageRecorder.build_dir_contains_relationship(
+            dir_edges.append(BaseStorageRecorder.build_dir_contains_relationship(
                 parent_id, item.args['ObjectIdentifier'], source_id)
             )
             self.edge_count += 1
-            dir_edges.append(IndalekoStorageRecorder.build_contained_by_dir_relationship(
+            dir_edges.append(BaseStorageRecorder.build_contained_by_dir_relationship(
                 item.args['ObjectIdentifier'], parent_id, source_id)
             )
             self.edge_count += 1
             volume = item.args.get('Volume')
             if volume:
-                dir_edges.append(IndalekoStorageRecorder.build_volume_contains_relationship(
+                dir_edges.append(BaseStorageRecorder.build_volume_contains_relationship(
                     volume, item.args['ObjectIdentifier'], source_id)
                 )
                 self.edge_count += 1
-                dir_edges.append(IndalekoStorageRecorder.build_contained_by_volume_relationship(
+                dir_edges.append(BaseStorageRecorder.build_contained_by_volume_relationship(
                     item.args['ObjectIdentifier'], volume, source_id)
                 )
                 self.edge_count += 1
             machine_id = item.args.get('machine_id')
             if machine_id:
-                dir_edges.append(IndalekoStorageRecorder.build_machine_contains_relationship(
+                dir_edges.append(BaseStorageRecorder.build_machine_contains_relationship(
                     machine_id, item.args['ObjectIdentifier'], source_id)
                 )
                 self.edge_count += 1
-                dir_edges.append(IndalekoStorageRecorder.build_contained_by_machine_relationship(
+                dir_edges.append(BaseStorageRecorder.build_contained_by_machine_relationship(
                     item.args['ObjectIdentifier'], machine_id, source_id)
                 )
                 self.edge_count += 1
@@ -405,13 +405,13 @@ def main():
                             default=utils.misc.directory_management.indaleko_default_data_dir)
     pre_args, _ = pre_parser.parse_known_args()
     machine_config = IndalekoWindowsMachineConfig.load_config_from_file(config_file=default_config_file)
-    indexer = IndalekoWindowsLocalIndexer(
+    indexer = IndalekoWindowsLocalCollector(
         search_dir=pre_args.datadir,
-        prefix=IndalekoWindowsLocalIndexer.windows_platform,
-        suffix=IndalekoWindowsLocalIndexer.windows_local_indexer_name,
+        prefix=IndalekoWindowsLocalCollector.windows_platform,
+        suffix=IndalekoWindowsLocalCollector.windows_local_indexer_name,
         machine_config=machine_config
     )
-    indexer_files = indexer.find_indexer_files(pre_args.datadir)
+    indexer_files = indexer.find_collector_files(pre_args.datadir)
     parser = argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--input',
                         choices=indexer_files,
@@ -426,7 +426,7 @@ def main():
                         default=logging.DEBUG,
                         help='Logging level to use.')
     args = parser.parse_args()
-    metadata = IndalekoWindowsLocalIndexer.extract_metadata_from_indexer_file_name(args.input)
+    metadata = IndalekoWindowsLocalCollector.extract_metadata_from_collector_file_name(args.input)
     timestamp = metadata.get('timestamp',
                              datetime.datetime.now(datetime.timezone.utc).isoformat())
     machine_id = 'unknown'
@@ -447,10 +447,10 @@ def main():
     storage = 'unknown'
     if 'storage' in metadata:
         storage = metadata['storage']
-    file_prefix = IndalekoStorageRecorder.default_file_prefix
+    file_prefix = BaseStorageRecorder.default_file_prefix
     if 'file_prefix' in metadata:
         file_prefix = metadata['file_prefix']
-    file_suffix = IndalekoStorageRecorder.default_file_suffix
+    file_suffix = BaseStorageRecorder.default_file_suffix
     if 'file_suffix' in metadata:
         file_suffix = metadata['file_suffix']
     input_file = os.path.join(args.datadir, args.input)
@@ -458,7 +458,7 @@ def main():
         machine_config=machine_config,
         machine_id = machine_id,
         timestamp=timestamp,
-        platform=IndalekoWindowsLocalIndexer.windows_platform,
+        platform=IndalekoWindowsLocalCollector.windows_platform,
         ingester = IndalekoWindowsLocalIngester.windows_local_ingester,
         storage_description = storage,
         file_prefix = file_prefix,

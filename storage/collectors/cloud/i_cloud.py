@@ -158,6 +158,7 @@ class IndalekoICloudIndexer(BaseStorageCollector):
 
     def authenticate(self):
         user_id, password = self.get_icloud_credentials()
+        ic(user_id, password)
         api = PyiCloudService(user_id, password)
 
         if api.requires_2fa:
@@ -243,7 +244,7 @@ class IndalekoICloudIndexer(BaseStorageCollector):
             logging.error(f"Failed to process folder: {path}, Error: {e}")
         return metadata_list
 
-    def index(self, recursive=True):
+    def collect(self, recursive=True):
         api = self.authenticate()
         files = api.drive.root
 
@@ -259,7 +260,7 @@ class IndalekoICloudIndexer(BaseStorageCollector):
         return indexed_data
 
     @staticmethod
-    def find_indexer_files(
+    def find_collector_files(
         search_dir : str,
         prefix : str = BaseStorageCollector.default_file_prefix,
         suffix : str = BaseStorageCollector.default_file_suffix) -> list:
@@ -268,7 +269,7 @@ class IndalekoICloudIndexer(BaseStorageCollector):
             prefix: prefix of the file to ingest
             suffix: suffix of the file to ingest (default is .json)
         '''
-        prospects = BaseStorageCollector.find_indexer_files(search_dir, prefix, suffix)
+        prospects = BaseStorageCollector.find_collector_files(search_dir, prefix, suffix)
         return [f for f in prospects if IndalekoICloudIndexer.icloud_platform in f]
 
 def main():
@@ -323,7 +324,7 @@ def main():
     logging.info('Output file: %s', output_file)
     logging.info('Indexing: %s', args.path)
     logging.info(args)
-    data = indexer.index(recursive= (not args.norecurse))
+    data = indexer.collect(recursive= (not args.norecurse))
     indexer.write_data_to_file(data, output_file)
     for count_type, count_value in indexer.get_counts().items():
         logging.info('Count %s: %s', count_type, count_value)

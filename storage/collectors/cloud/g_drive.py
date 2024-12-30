@@ -208,7 +208,7 @@ class IndalekoGDriveIndexer(BaseStorageCollector):
         return entry
 
 
-    def index(self, recursive=True) -> list:
+    def collect(self, recursive=True) -> list:
         '''
         This method indexes Google Drive.
         '''
@@ -242,7 +242,7 @@ class IndalekoGDriveIndexer(BaseStorageCollector):
         return self.metadata
 
     @staticmethod
-    def find_indexer_files(
+    def find_collector_files(
             search_dir : str,
             prefix : str = BaseStorageCollector.default_file_prefix,
             suffix : str = BaseStorageCollector.default_file_suffix) -> list:
@@ -251,7 +251,7 @@ class IndalekoGDriveIndexer(BaseStorageCollector):
             prefix: prefix of the file to ingest
             suffix: suffix of the file to ingest (default is .json)
         '''
-        prospects = BaseStorageCollector.find_indexer_files(search_dir, prefix, suffix)
+        prospects = BaseStorageCollector.find_collector_files(search_dir, prefix, suffix)
         return [f for f in prospects if IndalekoGDriveIndexer.gdrive_platform in f]
 
 
@@ -309,7 +309,7 @@ def main():
     logging.info('Output file: %s', output_file)
     logging.info('Indexing: %s', args.path)
     logging.info(args)
-    data = indexer.index(recursive= (not args.norecurse))
+    data = indexer.collect(recursive= (not args.norecurse))
     indexer.write_data_to_file(data, output_file)
     for count_type, count_value in indexer.get_counts().items():
         logging.info('Count %s: %s', count_type, count_value)

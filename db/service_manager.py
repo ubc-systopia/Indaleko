@@ -9,8 +9,8 @@ with its service information.
 
 The types of services envisioned here are:
 
-* Indexers - these are component that gather data from storage locations.
-* Ingesters - these are components that convert raw indexed information into a
+* Collectors - these are component that gather data from storage locations.
+* Recorders - these are components that convert raw indexed information into a
   common format that is used when storing the actual data.
 
 I expect there will be other kinds of services in the future, but that's the
@@ -84,8 +84,8 @@ class IndalekoServiceManager(IndalekoSingleton):
 
     service_type_test = 'Test'
     service_type_machine_configuration = "Machine Configuration"
-    service_type_indexer = 'Indexer'
-    service_type_ingester = 'Ingester'
+    service_type_storage_collector = 'Storage Collector'
+    service_type_storage_recorder = 'Storage Recorder'
     service_type_semantic_transducer = 'Semantic Transducer'
     service_type_activity_context_generator = 'Activity Context Generator'
     service_type_activity_data_collector = 'Activity Data Collector'
@@ -94,8 +94,8 @@ class IndalekoServiceManager(IndalekoSingleton):
     service_types = (
         service_type_test,
         service_type_machine_configuration,
-        service_type_indexer,
-        service_type_ingester,
+        service_type_storage_collector,
+        service_type_storage_recorder,
         service_type_semantic_transducer,
         service_type_activity_context_generator,
         service_type_activity_data_collector,
@@ -171,7 +171,7 @@ class IndalekoServiceManager(IndalekoSingleton):
                          service_name: str,
                          service_description: str,
                          service_version: str,
-                         service_type : str = 'Indexer',
+                         service_type : str,
                          service_id : str  = None) -> dict:
         """
         This method registers a service with the given name, description, and

@@ -37,7 +37,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # pylint: disable=wrong-import-position
 from utils import IndalekoDocker, IndalekoLogging, IndalekoSingleton
 from utils.data_validation import validate_ip_address, validate_hostname
-from utils.misc.directory_management import indaleko_default_log_dir
+from utils.misc.directory_management import indaleko_default_log_dir, indaleko_default_config_dir
 import utils.misc.file_name_management
 # pylint: enable=wrong-import-position
 
@@ -47,8 +47,8 @@ class IndalekoDBConfig(IndalekoSingleton):
     Class used to read a configuration file, connect to, and set-up (if
     needed) the database.
     """
-
-    default_db_config_file = os.path.join(os.environ.get('INDALEKO_ROOT', '.'), 'config/indaleko-db-config.ini')
+    default_db_config_file_name = 'indaleko-db-config.ini'
+    default_db_config_file = os.path.join(indaleko_default_config_dir, default_db_config_file_name)
     default_db_timeout=os.environ.get('INDALEKO_DB_TIMEOUT', 10)
 
 
@@ -299,7 +299,7 @@ class IndalekoDBConfig(IndalekoSingleton):
         assert self.config is not None, 'No config found'
         assert self.config['database'] is not None, 'No database config found'
         assert ipaddr is not None, 'No IP address provided'
-        assert Indaleko.validate_hostname(ipaddr) or Indaleko.validate_ip_address(ipaddr), \
+        assert validate_hostname(ipaddr) or validate_ip_address(ipaddr), \
             f'Invalid IP address or host name: {ipaddr}'
         self.config['database']['host'] = ipaddr
         self.__save_config__()
@@ -420,7 +420,6 @@ def reset_command(args : argparse.Namespace) -> None:
                   IndalekoDBConfig.default_db_config_file + '.bak')
         config = IndalekoDBConfig()
     setup_command(args)
-
 
 
 def show_command(args : argparse.Namespace) -> None:

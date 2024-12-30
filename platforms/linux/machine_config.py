@@ -482,10 +482,8 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
             if 'hostname' in config:
                 hostname = config['hostname']
             print(json.dumps(config, indent=4))
-            print('Configuration for machine:', hostname)
-            print(f'\t    UUID: {config["_key"]}')
-            print(f'\tCaptured: {config["Captured"]["Value"]}')
-            print(f'\tPlatform: {config["Platform"]["software"]["OS"]}')
+            print(f'Configuration for machine {hostname}:')
+            print(json.dumps(config, indent=4))
             return
 
 
