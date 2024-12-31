@@ -35,7 +35,8 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 # pylint: disable=wrong-import-position
-from utils.cli.data_model import IndalekoBaseCliDataModel
+from platforms.machine_config import IndalekoMachineConfig
+from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 # pylint: enable=wrong-import-position
 
 class IndalekoHandlermixin(ABC):
@@ -72,3 +73,7 @@ class IndalekoHandlermixin(ABC):
     @abstractmethod
     def generate_perf_file_name(keys : dict[str,str]) -> str:
         '''This method is used to generate a performance file name'''
+
+    @abstractmethod
+    def load_machine_config(keys : dict[str,str]) -> IndalekoMachineConfig:
+        '''This method is used to load a machine configuration'''

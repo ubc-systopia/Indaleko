@@ -41,7 +41,7 @@ from platforms.machine_config import IndalekoMachineConfig
 from storage.recorders.base import BaseStorageRecorder
 from storage.collectors.base import BaseStorageCollector
 import utils.misc.directory_management
-from utils.cli.data_model import IndalekoBaseCliDataModel
+from utils.cli.data_models.data_model import IndalekoBaseCliDataModel
 from utils.misc.file_name_management import find_candidate_files
 from utils.misc.data_management import encode_binary_data
 from utils import IndalekoLogging
