@@ -18,8 +18,8 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import argparse
+from datetime import datetime, timezone
 import json
-import logging
 import os
 from pathlib import Path
 import sys
@@ -99,7 +99,6 @@ class IndalekoBaseCLI:
             ic(setup_func)
             if not setup_func:
                 ic(f'Unknown feature: {feature}')
-                exit(0)
                 continue
             setup_func()
         self.args = None
@@ -248,40 +247,6 @@ class IndalekoBaseCLI:
             self.config_data['PerformanceDB'] = True
         return self
 
-    def xx_setup_baseline_pre_parser(self) -> 'IndalekoBaseCLI':
-        '''This method is used to set up the baseline parser'''
-        if self.cli_features.configdir:
-            self.pre_parser.add_argument('--configdir',
-                            default=self.config_data['ConfigDirectory'],
-                            help=f'Path to the config directory (default={self.config_data["ConfigDirectory"]})')
-        if self.cli_features.datadir:
-            self.pre_parser.add_argument('--datadir',
-                            default=self.config_data['DataDirectory'],
-                            help=f'Path to the data directory (default={self.config_data["DataDirectory"]})')
-        if self.cli_features.logging:
-            self.pre_parser.add_argument('--logdir',
-                            default=self.config_data['LogDirectory'],
-                            help=f'Path to the log directory (default={self.config_data["LogDirectory"]})')
-            self.pre_parser.add_argument('--loglevel',
-                            type=int,
-                            default=self.config_data['LogLevel'],
-                            choices=IndalekoLogging.get_logging_levels(),
-                            help=f'Logging level to use (default={IndalekoLogging.map_logging_level_to_type(self.config_data["LogLevel"])})')
-        if self.cli_features.performance:
-            self.pre_parser.add_argument('--performance_file',
-                            default=False,
-                            action='store_true',
-                            help='Record performance data to a file (default=False)')
-            self.pre_parser.add_argument('--performance_db',
-                            default=False,
-                            action='store_true',
-                            help='Record performance data to the database (default=False)')
-        if self.cli_features.platform:
-            self.pre_parser.add_argument('--platform',
-                                    default=self.config_data['Platform'],
-                                    help=f'Platform to use (default={self.config_data["Platform"]})')
-        return self
-
     def setup_input_parser(self) -> 'IndalekoBaseCLI':
         '''This method is used to set up the input parser'''
         pre_args, _ = self.pre_parser.parse_known_args()
@@ -323,6 +288,30 @@ class IndalekoBaseCLI:
                                     help='Input file to use')
         pre_args, _ = self.pre_parser.parse_known_args()
         self.config_data['InputFileKeys'] = extract_keys_from_file_name(pre_args.inputfile)
+        # default timestamp is: 1) from the file, 2) from the config, 3) current time
+        ic(input_file_keys)
+        timestamp = self.config_data['InputFileKeys'].get('timestamp', None)
+        if not timestamp:
+            timestamp = datetime.now(timezone.utc).isoformat()
+        self.pre_parser.add_argument(
+            '--timestamp',
+            type=str,
+            default=timestamp,
+            help='Timestamp to use')
+        pre_args, _ = self.pre_parser.parse_known_args()
+        try:
+            timestamp = datetime.fromisoformat(self.config_data['Timestamp'])
+            if timestamp.tzinfo is None:
+                timestamp = timestamp.replace(tzinfo=timezone.utc)
+        except ValueError:
+            ic(f'Invalid timestamp: {pre_args.timestamp}')
+            raise ValueError(f'Invalid timestamp: {pre_args.timestamp}')
+        self.config_data['Timestamp'] = pre_args.timestamp
+
+    def get_config_data(self : 'IndalekoBaseCLI') -> dict[str, Any]:
+        '''This method is used to get the configuration data'''
+        return self.config_data
+
 
     class default_handler_mixin(IndalekoHandlermixin):
         '''Default handler mixin for the CLI'''
@@ -410,9 +399,8 @@ def main():
     cli = IndalekoBaseCLI()
     ic(cli.config_data)
     args = cli.get_args()
-    # pre_parser = handler.setup_argument_parser()
-    # pre_args, unknown = pre_parser.parse_known_args()
-    # ic(pre_args)
+    ic(args)
+    ic(cli.get_config_data())
 
 if __name__ == '__main__':
     main()

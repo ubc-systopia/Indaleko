@@ -24,6 +24,8 @@ import uuid
 import os
 import sys
 
+from pathlib import Path
+
 from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -36,14 +38,16 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # pylint: disable=wrong-import-position
 # from Indaleko import Indaleko
 from data_models import IndalekoSourceIdentifierDataModel
-from storage.collectors.base import BaseStorageCollector
-from platforms.linux.machine_config import IndalekoLinuxMachineConfig
-from utils.i_logging import IndalekoLogging
 from db.service_manager import IndalekoServiceManager
-import utils.misc.directory_management
-import utils.misc.file_name_management
 from perf.perf_collector import IndalekoPerformanceDataCollector
 from perf.perf_recorder import IndalekoPerformanceDataRecorder
+from platforms.linux.machine_config import IndalekoLinuxMachineConfig
+from storage.collectors.base import BaseStorageCollector
+from utils.i_logging import IndalekoLogging
+from utils.cli.data_model import IndalekoBaseCliDataModel
+from utils.cli.test_cli import IndalekoBaseCLI
+import utils.misc.directory_management
+from utils.misc.file_name_management import generate_file_name, extract_keys_from_file_name
 # pylint: enable=wrong-import-position
 
 
@@ -95,7 +99,7 @@ class IndalekoLinuxLocalCollector(BaseStorageCollector):
         return BaseStorageCollector.generate_collector_file_name(**kwargs)
 
 
-def main():
+def old_main():
     '''This is the main handler for the Indaleko Linux Local Collector
     service.'''
     logging_levels = IndalekoLogging.get_logging_levels()
@@ -116,7 +120,7 @@ def main():
     pre_args, _ = pre_parser.parse_known_args()
     config_files = IndalekoLinuxMachineConfig.find_config_files(pre_args.configdir)
     default_config_file = IndalekoLinuxMachineConfig.get_most_recent_config_file(pre_args.configdir)
-    config_file_metadata = utils.misc.file_name_management.extract_keys_from_file_name(default_config_file)
+    config_file_metadata = extract_keys_from_file_name(default_config_file)
     config_platform = IndalekoLinuxLocalCollector.linux_platform
     if 'platform' in config_file_metadata:
         config_platform = config_file_metadata['platform']
@@ -222,5 +226,40 @@ def main():
         logging.info('%s: %d', count_type, count_value)
     logging.info('Done')
 
+def main():
+    '''This is the new CLI based utility for executing local Linux metadata collection.'''
+    class linux_local_collector_mixin(IndalekoBaseCLI.default_handler_mixin):
+        '''This is the mixin for the Linux Local Collector'''
+
+        @staticmethod
+        def generate_output_file_name(config_data : dict[str,str]) -> str:
+            '''This generates a collector specific output file name'''
+            ic(config_data)
+            return generate_file_name(
+                platform=IndalekoLinuxLocalCollector.linux_platform,
+                machine=config_data['MachineConfigFileKeys']['machine'],
+                service=IndalekoLinuxLocalCollector.linux_local_collector_name,
+                # timestamp=utils.misc.timestamp_management.get_timestamp(),
+            )
+    cli = IndalekoBaseCLI(
+        cli_data = IndalekoBaseCliDataModel(
+            Service=IndalekoLinuxLocalCollector.linux_local_collector_name
+        ),
+        handler_mixin=linux_local_collector_mixin()
+    )
+    parser = argparse.ArgumentParser(parents=[cli.pre_parser])
+    # this is where we'd add any additional parameters
+    args = parser.parse_args()
+    ic(args)
+    kwargs = {}
+    if hasattr(args, 'machine_config'):
+        kwargs['machine_config'] = IndalekoLinuxMachineConfig.load_config_from_file(
+            config_file=str(Path(args.configdir) / args.machine_config),
+            offline=args.offline)
+    kwargs['timestamp'] = args.timestamp
+    kwargs['path'] = args.datadir
+    kwargs['offline'] = args.offline
+    collector = IndalekoLinuxLocalCollector(**kwargs)
+    ic(collector)
 if __name__ == '__main__':
     main()

@@ -27,6 +27,7 @@ from typing import Optional, List, Dict, Any, Union
 from uuid import UUID
 
 from pydantic import Field, AwareDatetime
+from icecream import ic
 
 
 if os.environ.get('INDALEKO_ROOT') is None:
