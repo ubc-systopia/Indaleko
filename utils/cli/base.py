@@ -26,8 +26,7 @@ from pathlib import Path
 import sys
 from uuid import UUID
 
-from typing import Type, Union, TypeVar, Any
-from abc import ABC
+from typing import Union, Any, Callable
 
 from icecream import ic
 
@@ -41,6 +40,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from constants import IndalekoConstants
+from perf.perf_collector import IndalekoPerformanceDataCollector
 from platforms.machine_config import IndalekoMachineConfig
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.handlermixin import IndalekoHandlermixin
@@ -238,6 +238,7 @@ class IndalekoBaseCLI:
                         help=f'Output file to use (default = {output_file})')
         pre_args, _ = self.pre_parser.parse_known_args()
         self.config_data['OutputFile'] = pre_args.outputfile
+        self.config_data['OutputFileKeys'] = extract_keys_from_file_name(output_file)
         return self
 
     def setup_performance_parser(self) -> 'IndalekoBaseCLI':
@@ -254,7 +255,7 @@ class IndalekoBaseCLI:
                             help='Record performance data to the database (default=False)')
         pre_args, _ = self.pre_parser.parse_known_args()
         if pre_args.performance_file:
-            self.config_data['PerformanceFile'] = self.handler_mixin.generate_perf_file_name(self.config_data)
+            self.config_data['PerformanceDataFile'] = self.handler_mixin.generate_perf_file_name(self.config_data)
         if pre_args.performance_db:
             self.config_data['PerformanceDB'] = True
         return self
@@ -408,10 +409,19 @@ class IndalekoBaseCLI:
 
         @staticmethod
         def generate_perf_file_name(keys: dict[str,str]) -> str:
-            '''This method is used to generate a performance file name'''
-            if 'svc' in keys:
-                keys['svc'] = keys['svc'] +'_perf'
-            return generate_file_name(keys)
+            '''
+            This method is used to generate a performance file name.
+            '''
+            kwargs = {
+                'platform': keys['Platform'] + '_perf',
+                'service': keys['Service'],
+                'timestamp' : keys['Timestamp'],
+            }
+            if 'MachineConfigFileKeys' in keys and 'machine' in keys['MachineConfigFileKeys']:
+                kwargs['machine'] = keys['MachineConfigFileKeys']['machine']
+            else:
+                ic(f'No machine config file keys {keys}')
+            return generate_file_name(**kwargs)
 
         @staticmethod
         def load_machine_config(keys : dict[str,str]) -> IndalekoMachineConfig:

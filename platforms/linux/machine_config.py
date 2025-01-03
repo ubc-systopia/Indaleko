@@ -90,7 +90,6 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
             self.service_registration = None
             self.db = None
         if 'machine_id' not in kwargs:
-            ic(kwargs)
             kwargs['machine_id'] = kwargs['MachineUUID']
         super().__init__(**kwargs)
 

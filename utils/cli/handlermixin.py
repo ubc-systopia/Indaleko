@@ -21,7 +21,7 @@ from pathlib import Path
 import os
 import sys
 
-from typing import Type, Union, TypeVar, Any
+from typing import Union, Any, Callable
 from abc import ABC, abstractmethod
 
 from icecream import ic
@@ -36,7 +36,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from platforms.machine_config import IndalekoMachineConfig
-from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
+from perf.perf_collector import IndalekoPerformanceDataCollector
 # pylint: enable=wrong-import-position
 
 class IndalekoHandlermixin(ABC):

@@ -57,6 +57,7 @@ class IndalekoCLIRunner:
             cli_data : Union[IndalekoBaseCliDataModel, None] = None,
             handler_mixin : Union[IndalekoHandlermixin, None] = None,
             features : Union[IndalekoBaseCLI.cli_features, None] = None,
+            additional_parameters : Union[Callable[[argparse.ArgumentParser], argparse.ArgumentParser], None] = None,
             **kwargs : dict[str, Any]) -> None:
         keys = {}
         keys['SetupLogging'] = kwargs.get('SetupLogging', IndalekoCLIRunner.default_runner_mixin.setup_logging)
@@ -74,6 +75,8 @@ class IndalekoCLIRunner:
             features = IndalekoBaseCLI.cli_features()
         setattr(self, 'cli', IndalekoBaseCLI(cli_data=cli_data, handler_mixin=handler_mixin, features=features))
         # could add more command line args here, if useful
+        if additional_parameters:
+            self.cli.pre_parser = additional_parameters(self.cli.pre_parser)
         self.parser = argparse.ArgumentParser(parents=[self.cli.pre_parser])
         self.args = self.parser.parse_args()
         if self.args.debug:

@@ -104,7 +104,7 @@ class IndalekoMachineConfig:
         if 'MachineUUID' not in doc:
             doc['MachineUUID'] = self.machine_id
         # ic(doc)
-        print(json.dumps(doc, indent=4))
+        # print(json.dumps(doc, indent=4))
         try:
             self.collection.insert(doc, overwrite=overwrite)
             status = True
