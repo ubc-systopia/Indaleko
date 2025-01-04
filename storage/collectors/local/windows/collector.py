@@ -19,15 +19,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import argparse
 import datetime
+import inspect
 import logging
 import os
+import platform
 import sys
 import uuid
 
-from icecream import ic
 from pathlib import Path
 from typing import Union
 
+from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -40,13 +42,17 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # pylint: disable=wrong-import-position
 from data_models import IndalekoSourceIdentifierDataModel
 from db import IndalekoServiceManager
-from utils.i_logging import IndalekoLogging
-import utils.misc.file_name_management
-import utils.misc.directory_management
-from storage.collectors.base import BaseStorageCollector
 from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 from perf.perf_collector import IndalekoPerformanceDataCollector
 from perf.perf_recorder import IndalekoPerformanceDataRecorder
+from utils.i_logging import IndalekoLogging
+from storage.collectors.base import BaseStorageCollector
+from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
+from utils.cli.base import IndalekoBaseCLI
+from utils.cli.runner import IndalekoCLIRunner
+from utils.i_logging import IndalekoLogging
+from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
+from utils.misc.file_name_management import find_candidate_files
 # pylint: enable=wrong-import-position
 
 
@@ -222,7 +228,7 @@ def old_main():
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument('--configdir',
                             help='Path to the config directory',
-                            default=utils.misc.directory_management.indaleko_default_config_dir)
+                            default=indaleko_default_config_dir)
     pre_args, _ = pre_parser.parse_known_args()
     config_files = IndalekoWindowsMachineConfig.find_config_files(pre_args.configdir)
     default_config_file = IndalekoWindowsMachineConfig.get_most_recent_config_file(pre_args.configdir)
@@ -247,13 +253,13 @@ def old_main():
     parser= argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--datadir', '-d',
                         help='Path to the data directory',
-                        default=utils.misc.directory_management.indaleko_default_data_dir)
+                        default=indaleko_default_data_dir)
     parser.add_argument('--output', '-o',
                         help='name to assign to output directory',
                         default=output_file)
     parser.add_argument('--logdir', '-l',
                         help='Path to the log directory',
-                        default=utils.misc.directory_management.indaleko_default_log_dir)
+                        default=indaleko_default_log_dir)
     parser.add_argument('--loglevel',
                         type=int,
                         default=logging.DEBUG,
@@ -326,14 +332,14 @@ def old_main():
 
 class local_collector_mixin(IndalekoBaseCLI.default_handler_mixin):
     @staticmethod
-    def load_machine_config(keys: dict[str, str]) -> IndalekoMacOSMachineConfig:
+    def load_machine_config(keys: dict[str, str]) -> IndalekoWindowsMachineConfig:
         '''Load the machine configuration'''
         if keys.get('debug'):
             ic(f'local_collector_mixin.load_machine_config: {keys}')
         if 'machine_config_file' not in keys:
             raise ValueError(f'{inspect.currentframe().f_code.co_name}: machine_config_file must be specified')
         offline = keys.get('offline', False)
-        return IndalekoMacOSMachineConfig.load_config_from_file(
+        return IndalekoWindowsMachineConfig.load_config_from_file(
             config_file=str(keys['machine_config_file']),
             offline=offline)
 
@@ -345,6 +351,8 @@ class local_collector_mixin(IndalekoBaseCLI.default_handler_mixin):
             return None
         if platform is None:
             return []
+        if platform == 'Windows':
+            platform='windows'
         return [
             fname for fname, _ in find_candidate_files([platform, '-hardware-info'], str(config_dir))
             if fname.endswith('.json')
@@ -352,139 +360,83 @@ class local_collector_mixin(IndalekoBaseCLI.default_handler_mixin):
 
     @staticmethod
     def extract_filename_metadata(file_name):
-        # the mac uses non-standard naming for machine config files, so we have to handle that here.
-        if not file_name.startswith(IndalekoMacOSMachineConfig.macos_machine_config_file_prefix):
+        # windows uses non-standard naming for machine config files, so we have to handle that here.
+        if not file_name.startswith(IndalekoWindowsMachineConfig.windows_machine_config_file_prefix):
             return IndalekoBaseCLI.default_handler_mixin.extract_filename_metadata(file_name)
-        # macos-hardware-info-f6ff7c7f-b4d7-484f-9b58-1ad2820a8d85-2024-12-04T00-44-25.583891Z.json
+        # windows-hardware-info-840640bc-63dd-4c1f-be0e-feb0bc785356-2024-08-29T21-46-04.0416317Z.json
         assert file_name.endswith('.json') # if not, generalize this
-        prefix_length = len(IndalekoMacOSMachineConfig.macos_machine_config_file_prefix)
+        prefix_length = len(IndalekoWindowsMachineConfig.windows_machine_config_file_prefix)
         machine_id = uuid.UUID(file_name[prefix_length+1:prefix_length+37]).hex
         timestamp = file_name[prefix_length+38:-5]
         keys = {
             'platform' : platform.system(),
-            'service' : 'macos_machine_config',
+            'service' : 'windows_machine_config',
             'machine' : machine_id,
             'timestamp' : timestamp,
             'suffix' : '.json',
         }
         return keys
 
-    @staticmethod
-    def linux_local_run(keys: dict[str, str]) -> Union[dict, None]:
-        '''Run the collector'''
-        args = keys['args'] # must be there.
-        cli = keys['cli'] # must be there.
-        config_data = cli.get_config_data()
-        debug = hasattr(args, 'debug') and args.debug
-        if debug:
-            ic(config_data)
-        kwargs = {
-            'machine_config': cli.handler_mixin.load_machine_config(
-                {
-                    'machine_config_file' : str(Path(args.configdir) / args.machine_config),
-                    'offline' : args.offline
-                }
-            ),
-            'timestamp': config_data['Timestamp'],
-            'path': args.path,
-            'offline': args.offline
-        }
-        def collect(collector : IndalekoLinuxLocalCollector):
-            data = collector.collect()
-            output_file = Path(args.datadir) / args.outputfile
-            collector.write_data_to_file(data, str(output_file))
-        def extract_counters(**kwargs):
-            collector = kwargs.get('collector')
-            if collector:
-                return ic(collector.get_counts())
-            else:
-                return {}
-        collector = IndalekoLinuxLocalCollector(**kwargs)
-        perf_data = IndalekoPerformanceDataCollector.measure_performance(
-            collect,
-            source=IndalekoSourceIdentifierDataModel(
-                Identifier=collector.service_identifier,
-                Version = collector.service_version,
-                Description=collector.service_description),
-            description=collector.service_description,
-            MachineIdentifier=uuid.UUID(kwargs['machine_config'].machine_id),
-            process_results_func=extract_counters,
-            input_file_name=None,
-            output_file_name=str(Path(args.datadir) / args.outputfile),
-            collector=collector
-        )
-        if args.performance_db or args.performance_file:
-            perf_recorder = IndalekoPerformanceDataRecorder()
-            if args.performance_file:
-                perf_file = str(Path(args.datadir) / config_data['PerformanceDataFile'])
-                perf_recorder.add_data_to_file(perf_file, perf_data)
-                if (debug):
-                    ic('Performance data written to ', config_data['PerformanceDataFile'])
-            if args.performance_db:
-                perf_recorder.add_data_to_db(perf_data)
-                if (debug):
-                    ic('Performance data written to the database')
 
-    @staticmethod
-    def linux_local_run(keys: dict[str, str]) -> Union[dict, None]:
-        '''Run the collector'''
-        args = keys['args'] # must be there.
-        cli = keys['cli'] # must be there.
-        config_data = cli.get_config_data()
-        debug = hasattr(args, 'debug') and args.debug
-        if debug:
-            ic(config_data)
-        kwargs = {
-            'machine_config': cli.handler_mixin.load_machine_config(
-                {
-                    'machine_config_file' : str(Path(args.configdir) / args.machine_config),
-                    'offline' : args.offline
-                }
-            ),
-            'timestamp': config_data['Timestamp'],
-            'path': args.path,
-            'offline': args.offline
-        }
-        def collect(collector : IndalekoLinuxLocalCollector):
-            data = collector.collect()
-            output_file = Path(args.datadir) / args.outputfile
-            collector.write_data_to_file(data, str(output_file))
-        def extract_counters(**kwargs):
-            collector = kwargs.get('collector')
-            if collector:
-                return ic(collector.get_counts())
-            else:
-                return {}
-        collector = IndalekoLinuxLocalCollector(**kwargs)
-        perf_data = IndalekoPerformanceDataCollector.measure_performance(
-            collect,
-            source=IndalekoSourceIdentifierDataModel(
-                Identifier=collector.service_identifier,
-                Version = collector.service_version,
-                Description=collector.service_description),
-            description=collector.service_description,
-            MachineIdentifier=uuid.UUID(kwargs['machine_config'].machine_id),
-            process_results_func=extract_counters,
-            input_file_name=None,
-            output_file_name=str(Path(args.datadir) / args.outputfile),
-            collector=collector
-        )
-        if args.performance_db or args.performance_file:
-            perf_recorder = IndalekoPerformanceDataRecorder()
-            if args.performance_file:
-                perf_file = str(Path(args.datadir) / config_data['PerformanceDataFile'])
-                perf_recorder.add_data_to_file(perf_file, perf_data)
-                if (debug):
-                    ic('Performance data written to ', config_data['PerformanceDataFile'])
-            if args.performance_db:
-                perf_recorder.add_data_to_db(perf_data)
-                if (debug):
-                    ic('Performance data written to the database')
-
+@staticmethod
+def local_run(keys: dict[str, str]) -> Union[dict, None]:
+    '''Run the collector'''
+    args = keys['args'] # must be there.
+    cli = keys['cli'] # must be there.
+    config_data = cli.get_config_data()
+    debug = hasattr(args, 'debug') and args.debug
+    if debug:
+        ic(config_data)
+    kwargs = {
+        'machine_config': cli.handler_mixin.load_machine_config(
+            {
+                'machine_config_file' : str(Path(args.configdir) / args.machine_config),
+                'offline' : args.offline
+            }
+        ),
+        'timestamp': config_data['Timestamp'],
+        'path': args.path,
+        'offline': args.offline
+    }
+    def collect(collector : IndalekoWindowsLocalCollector):
+        data = collector.collect()
+        output_file = Path(args.datadir) / args.outputfile
+        collector.write_data_to_file(data, str(output_file))
+    def extract_counters(**kwargs):
+        collector = kwargs.get('collector')
+        if collector:
+            return ic(collector.get_counts())
+        else:
+            return {}
+    collector = IndalekoWindowsLocalCollector(**kwargs)
+    perf_data = IndalekoPerformanceDataCollector.measure_performance(
+        collect,
+        source=IndalekoSourceIdentifierDataModel(
+            Identifier=collector.service_identifier,
+            Version = collector.service_version,
+            Description=collector.service_description),
+        description=collector.service_description,
+        MachineIdentifier=uuid.UUID(kwargs['machine_config'].machine_id),
+        process_results_func=extract_counters,
+        input_file_name=None,
+        output_file_name=str(Path(args.datadir) / args.outputfile),
+        collector=collector
+    )
+    if args.performance_db or args.performance_file:
+        perf_recorder = IndalekoPerformanceDataRecorder()
+        if args.performance_file:
+            perf_file = str(Path(args.datadir) / config_data['PerformanceDataFile'])
+            perf_recorder.add_data_to_file(perf_file, perf_data)
+            if (debug):
+                ic('Performance data written to ', config_data['PerformanceDataFile'])
+        if args.performance_db:
+            perf_recorder.add_data_to_db(perf_data)
+            if (debug):
+                ic('Performance data written to the database')
 
 @staticmethod
 def add_storage_local_parameters(parser : argparse.ArgumentParser) -> argparse.ArgumentParser:
-    '''Add the paramters for the local Mac collector.'''
+    '''Add the parameters for the local collector path to use.'''
     default_path = os.path.expanduser('~')
     if default_path == '~':
         default_path = os.path.abspath(os.sep)
@@ -497,15 +449,13 @@ def add_storage_local_parameters(parser : argparse.ArgumentParser) -> argparse.A
 
 def main():
     '''This is the CLI handler for the Mac local storage collector.'''
-
     runner = IndalekoCLIRunner(
         cli_data=IndalekoBaseCliDataModel(
-            Service=IndalekoMacLocalCollector.mac_local_collector_name,
-            Platform='macos'
+            Service=IndalekoWindowsLocalCollector.windows_local_collector_name,
         ),
         handler_mixin=local_collector_mixin,
         features=IndalekoBaseCLI.cli_features(input=False),
-        additional_parameters=add_mac_local_parameters,
+        additional_parameters=add_storage_local_parameters,
         Run=local_run,
     )
     runner.run()
