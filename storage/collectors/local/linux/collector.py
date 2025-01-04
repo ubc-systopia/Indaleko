@@ -18,12 +18,10 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import argparse
-import datetime
 import inspect
-import logging
-import uuid
 import os
 import sys
+import uuid
 
 from pathlib import Path
 from typing import Union
@@ -48,7 +46,6 @@ from utils.i_logging import IndalekoLogging
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.runner import IndalekoCLIRunner
-import utils.misc.directory_management
 from utils.misc.file_name_management import generate_file_name, extract_keys_from_file_name
 # pylint: enable=wrong-import-position
 
@@ -190,55 +187,6 @@ def main():
         Run=linux_local_run
     )
     runner.run()
-    return
 
-    # Sketch out what the runner should do here:
-    # 1. Start logging
-    # 2. Load the machine configuration
-    # 3. Setup performance data collection
-    # 4. Run the collector inside the performance collector
-    # 5. Save performance data (if requested)
-    cli_runner = IndalekoCLIRunner()
-    ic(cli_runner)
-    return
-    # start temp code
-    config_files = IndalekoLinuxMachineConfig.find_config_files(pre_args.configdir)
-    default_config_file = IndalekoLinuxMachineConfig.get_most_recent_config_file(pre_args.configdir)
-    config_file_metadata = extract_keys_from_file_name(default_config_file)
-    config_platform = IndalekoLinuxLocalCollector.linux_platform
-    if 'platform' in config_file_metadata:
-        config_platform = config_file_metadata['platform']
-    log_file_name = IndalekoLinuxLocalCollector.generate_linux_collector_file_name(
-        platform=config_platform,
-        collector_name=IndalekoLinuxLocalCollector.linux_local_collector_name,
-        machine_id = config_file_metadata['machine'],
-        target_dir=pre_args.logdir,
-        timestamp=timestamp,
-        suffix='log')
-    # end temp code
-    logging.basicConfig(
-        filename=Path(args.logdir) / args.logfile,
-        level=args.loglevel,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        force=True
-    )
-    machine_config_file = str(Path(args.configdir) / args.machine_config)
-    output_file = str(Path(args.datadir) / args.outputfile)
-    logging.info('Starting %s', IndalekoLinuxLocalCollector.linux_local_collector_name)
-    logging.info('Using configuration file %s', machine_config_file)
-    logging.info('Output file is %s', output_file)
-    # mac
-
-    kwargs = {}
-    if hasattr(args, 'machine_config'):
-        kwargs['machine_config'] = IndalekoLinuxMachineConfig.load_config_from_file(
-            config_file=str(Path(args.configdir) / args.machine_config),
-            offline=args.offline)
-    kwargs['timestamp'] = args.timestamp
-    kwargs['path'] = args.datadir
-    kwargs['offline'] = args.offline
-    collector = IndalekoLinuxLocalCollector(**kwargs)
-    output_file = str(Path(args.datadir) / args.outputfile)
-    ic(output_file)
 if __name__ == '__main__':
     main()

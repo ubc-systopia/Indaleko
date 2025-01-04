@@ -39,6 +39,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # pylint: disable=wrong-import-position
 # from data_models import IndalekoServiceDataModel
 from db import IndalekoServiceManager
+from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from utils.misc.directory_management import indaleko_default_log_dir, indaleko_default_data_dir, indaleko_default_config_dir
 from utils.misc.file_name_management import indaleko_file_name_prefix, generate_file_name, extract_keys_from_file_name
 # pylint: enable=wrong-import-position
@@ -50,20 +51,16 @@ class BaseStorageCollector:
     mechanisms for managing the data and configuration files that are used by
     the collectors.
     '''
-    indaleko_generic_collector_uuid = '4a80a080-9cc9-4856-bf43-7b646557ac2d'
-    indaleko_generic_collector_service_name = "Indaleko Generic Collector"
-    indaleko_generic_collector_service_description = "This is the base (non-specialized) Indaleko storage collector. You should not see it in the database."
-    indaleko_generic_collector_service_version = '1.0'
+    collector_data = IndalekoStorageCollectorDataModel(
+        CollectorPlatformName = None,
+        CollectorServiceName = 'Indaleko Generic Collector',
+        CollectorServiceUUID = uuid.UUID('4a80a080-9cc9-4856-bf43-7b646557ac2d'),
+        CollectorServiceVersion = '1.0',
+        CollectorServiceDescription = 'This is the base (non-specialized) Indaleko storage collector. You should not see it in the database.'
+    )
 
     # define the parameters for the generic collector service.  These should be
     # overridden by the derived classes.
-    indaleko_generic_collector_service = {
-        'service_name' : indaleko_generic_collector_service_name,
-        'service_description' : indaleko_generic_collector_service_description,
-        'service_version' : indaleko_generic_collector_service_version,
-        'service_type' : 'Collector',
-        'service_identifier' : indaleko_generic_collector_uuid,
-    }
 
     # we use a common file naming mechanism.  These are overridable defaults.
     default_file_prefix = indaleko_file_name_prefix
@@ -99,11 +96,22 @@ class BaseStorageCollector:
         assert os.path.isdir(self.data_dir), f'{self.data_dir} must be an existing directory'
         self.timestamp = kwargs.get('timestamp', datetime.datetime.now(datetime.timezone.utc).isoformat())
         assert isinstance(self.timestamp, str), 'timestamp must be a string'
-        if 'platform' in kwargs:
-            self.platform = kwargs['platform']
-        if 'collector_name' in kwargs:
-            assert isinstance(kwargs['collector_name'], str), 'collector_name must be a string'
-            self.collector_name = kwargs['collector_name']
+        self.collector_data = kwargs.get('collector_data', BaseStorageCollector.collector_data)
+        self.collector_service = {
+            'service_name' : self.collector_data.CollectorServiceName,
+            'service_description' : self.collector_data.CollectorServiceDescription,
+            'service_version' : self.collector_data.CollectorServiceVersion,
+            'service_type' : self.collector_data.CollectorServiceType,
+            'service_identifier' : self.collector_data.CollectorServiceUUID,
+        }
+        if self.collector_data.CollectorPlatformName is not None:
+            self.platform = self.collector_data.CollectorPlatformName
+        self.collector_name = self.collector_data.CollectorServiceName
+        self.service_name = self.collector_data.CollectorServiceName
+        self.service_description = self.collector_data.CollectorServiceDescription
+        self.service_version = self.collector_data.CollectorServiceVersion
+        self.service_type = self.collector_data.CollectorServiceType
+        self.service_identifier = self.collector_data.CollectorServiceUUID
         if 'machine_id' in kwargs:
             self.machine_id = kwargs['machine_id']
         if 'storage_description' in kwargs:
@@ -114,31 +122,15 @@ class BaseStorageCollector:
             self.path = kwargs['path']
         else:
             self.path = os.path.expanduser('~')
-        self.service_name = BaseStorageCollector.indaleko_generic_collector_service_name
-        if 'service_name' in kwargs:
-            self.service_name = kwargs['service_name']
-        self.service_description = \
-            self.indaleko_generic_collector_service_description
-        if 'service_description' in kwargs:
-            self.service_description = kwargs['service_description']
-        self.service_version = self.indaleko_generic_collector_service_version
-        if 'service_version' in kwargs:
-            self.service_version = kwargs['service_version']
-        self.service_type = 'Collector'
-        if 'service_type' in kwargs:
-            self.service_type = kwargs['service_type']
-        self.service_identifier = self.indaleko_generic_collector_uuid
-        if 'service_identifier' in kwargs:
-            self.service_identifier = kwargs['service_identifier']
         self.collector_service = None
         if not self.offline:
             self.collector_service = IndalekoServiceManager()\
-                .lookup_service_by_identifier(self.service_identifier)
+                .lookup_service_by_identifier(str(self.service_identifier))
             if self.collector_service is None:
                 self.collector_service = IndalekoServiceManager()\
                     .register_service(
                     service_name=self.service_name,
-                    service_id=self.service_identifier,
+                    service_id=str(self.service_identifier),
                     service_description=self.service_description,
                     service_version=self.service_version,
                     service_type=self.service_type
@@ -176,16 +168,17 @@ class BaseStorageCollector:
     def generate_collector_file_name(**kwargs) -> str:
         '''This will generate a file name for the collector output file.'''
         # platform : str, target_dir : str = None, suffix : str = None) -> str:
-        assert 'platform' in kwargs, 'platform must be specified'
+        ic(f'generate_collector_file_name: {kwargs}')
         assert 'collector_name' in kwargs, 'collector_name must be specified'
-        platform = kwargs.get('platform', 'unknown_platform').replace('-', '_')
-        if not isinstance(platform, str):
-            raise ValueError('platform must be a string')
+        platform = None
+        if 'platform' in kwargs:
+            if not isinstance(kwargs['platform'], str):
+                raise ValueError('platform must be a string')
+            platform = kwargs['platform'].replace('-', '_')
         collector_name = kwargs.get('collector_name', 'unknown_collector').replace('-', '_')
         if not isinstance(collector_name, str):
             raise ValueError('collector_name must be a string')
-        machine_id = kwargs.get('machine_id',
-                                str(uuid.UUID('00000000-0000-0000-0000-000000000000').hex))
+        machine_id = kwargs.get('machine_id', None)
         storage_description = None
         if 'storage_description' in kwargs:
             storage_description = str(uuid.UUID(kwargs['storage_description']).hex)
@@ -197,14 +190,17 @@ class BaseStorageCollector:
             target_dir = kwargs['target_dir']
         suffix = kwargs.get('suffix', BaseStorageCollector.default_file_suffix)
         kwargs = {
-            'platform' : platform,
             'service' : collector_name,
-            'machine' : machine_id,
             'timestamp' : timestamp,
         }
+        if platform:
+            kwargs['platform'] = platform
         if storage_description is not None:
             kwargs['storage'] = storage_description
+        if machine_id is not None:
+            kwargs['machine'] = machine_id
         kwargs['suffix'] = suffix
+        ic(f'calling generate_file_name with {kwargs}')
         name = generate_file_name(**kwargs)
         return os.path.join(target_dir,name)
 
@@ -326,9 +322,9 @@ def main():
     """Test code for this module."""
     collector = BaseStorageCollector()
     output_file = collector.generate_collector_file_name(
-        platform = 'unknown',
         collector_name = 'test_collector',
     )
+    ic(output_file)
     with open(output_file, 'wt', encoding='utf-8-sig') as output:
         output.write('Hello, world!\n')
         print(f'Wrote {output_file}')

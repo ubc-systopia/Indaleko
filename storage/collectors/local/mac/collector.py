@@ -312,6 +312,7 @@ def local_run(keys: dict[str, str]) -> Union[dict, None]:
     args = keys['args']
     cli = keys['cli']
     config_data = cli.get_config_data()
+    return config_data
 
 @staticmethod
 def add_mac_local_parameters(parser : argparse.ArgumentParser) -> argparse.ArgumentParser:
