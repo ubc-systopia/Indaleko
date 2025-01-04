@@ -96,7 +96,8 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
 
     @staticmethod
     def load_config_from_file(config_dir : str = None,
-                              config_file : str = None) -> 'IndalekoMacOSMachineConfig':
+                              config_file : str = None,
+                              offline : bool = False) -> 'IndalekoMacOSMachineConfig':
         config_data = {}
         if config_dir is None and config_file is None:
             config_dir = Indaleko.default_config_dir
@@ -150,6 +151,10 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
             machine_config_data['Hostname'] = config_data.get('Hostname', 'Unknown')
         ic(machine_config_data)
         config = IndalekoMacOSMachineConfig(**machine_config_data)
+        if not offline:
+            config.write_config_to_db()
+        if hasattr(config, 'extract_volume_info'):
+            getattr(config, 'extract_volume_info')(config_data)
         return config
 
     @staticmethod

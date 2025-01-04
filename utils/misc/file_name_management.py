@@ -114,9 +114,9 @@ def generate_file_name(**kwargs) -> str:
     if suffix.startswith('.'):
         suffix = suffix[1:] # avoid ".." for suffix
     if '-' in target_platform:
-        raise ValueError(f'platform must not contain a hyphen {target_platform}')
+        raise ValueError(f'platform must not contain a hyphen (platform={target_platform})')
     if '-' in service:
-        raise ValueError(f'service must not contain a hyphen {service}')
+        raise ValueError(f'service must not contain a hyphen (service={service})')
 
     return generate_final_name(
         [prefix,

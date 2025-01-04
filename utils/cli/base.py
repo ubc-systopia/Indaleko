@@ -207,8 +207,13 @@ class IndalekoBaseCLI:
                                 default=default_machine_config_file,
                                 help=f'Machine configuration to use (default={default_machine_config_file})')
         pre_args, _ = self.pre_parser.parse_known_args()
-        self.config_data['MachineConfigFile'] = pre_args.machine_config
-        self.config_data['MachineConfigFileKeys'] = extract_keys_from_file_name(pre_args.machine_config)
+        if pre_args.machine_config:
+            self.config_data['MachineConfigFile'] = pre_args.machine_config
+            self.config_data['MachineConfigFileKeys'] = self.handler_mixin.extract_filename_metadata(pre_args.machine_config)
+        else:
+            ic('Warning: no machine configuration file found')
+            self.config_data['MachineConfigFile'] = None
+            self.config_data['MachineConfigFileKeys'] = None
         return self
 
     def setup_platform_parser(self) -> 'IndalekoBaseCLI':
@@ -238,7 +243,7 @@ class IndalekoBaseCLI:
                         help=f'Output file to use (default = {output_file})')
         pre_args, _ = self.pre_parser.parse_known_args()
         self.config_data['OutputFile'] = pre_args.outputfile
-        self.config_data['OutputFileKeys'] = extract_keys_from_file_name(output_file)
+        self.config_data['OutputFileKeys'] = self.handler_mixin.extract_filename_metadata(output_file)
         return self
 
     def setup_performance_parser(self) -> 'IndalekoBaseCLI':
@@ -299,7 +304,7 @@ class IndalekoBaseCLI:
                                     default=self.config_data['InputFile'],
                                     help='Input file to use')
         pre_args, _ = self.pre_parser.parse_known_args()
-        self.config_data['InputFileKeys'] = extract_keys_from_file_name(pre_args.inputfile)
+        self.config_data['InputFileKeys'] = self.handler_mixin.extract_filename_metadata(pre_args.inputfile)
         # default timestamp is: 1) from the file, 2) from the config, 3) current time
         timestamp = self.config_data['InputFileKeys'].get('timestamp', None)
         if not timestamp:
@@ -328,16 +333,18 @@ class IndalekoBaseCLI:
         '''Default handler mixin for the CLI'''
 
         @staticmethod
-        def get_default_file(data_directory: Union[str, Path], candidates : list[Union[str, Path]]) -> str:
+        def get_default_file(data_directory: Union[str, Path], candidates : list[Union[str, Path]]) -> Union[str, None]:
             '''
             This method is used to get the most recently modified file.  Default implementation is to
-            return the most recently modified file.
+            return the most recently modified file (or None if the candidate list is empty).
             '''
             if isinstance(data_directory, str):
                 data_directory = Path(data_directory)
             if not data_directory.exists():
                 raise FileNotFoundError(f'Data directory does not exist: {data_directory}')
             valid_files = [data_directory / fname for fname in candidates if (data_directory / fname).is_file()]
+            if not valid_files:
+                return None
             return str(max(valid_files, key=lambda f: f.stat().st_mtime).name)
 
         @staticmethod
@@ -399,10 +406,13 @@ class IndalekoBaseCLI:
                 'service': keys['Service'],
                 'timestamp' : keys['Timestamp'],
             }
-            if 'MachineConfigFileKeys' in keys and 'machine' in keys['MachineConfigFileKeys']:
-                kwargs['machine'] = keys['MachineConfigFileKeys']['machine']
+            if 'MachineConfigFileKeys' in keys and\
+                  keys['MachineConfigFileKeys'] and\
+                  'machine' in keys['MachineConfigFileKeys']:
+                    kwargs['machine'] = keys['MachineConfigFileKeys']['machine']
             else:
-                ic(f'No machine config file keys {keys}')
+                ic(f'Issues with machine config files, exiting.')
+                exit(-1)
             if 'suffix' not in keys:
                 kwargs['suffix'] = 'log'
             return generate_file_name(**kwargs)
@@ -427,6 +437,12 @@ class IndalekoBaseCLI:
         def load_machine_config(keys : dict[str,str]) -> IndalekoMachineConfig:
             '''This method is used to load a machine configuration'''
             raise NotImplementedError(f'The method {inspect.currentframe().f_code.co_name} must be implemented by the subclass')
+
+        @staticmethod
+        def extract_filename_metadata(file_name : str) -> dict:
+            '''This method is used to parse the file name.'''
+            return extract_keys_from_file_name(file_name=file_name)
+
 
 def main():
     '''Test the main handler'''

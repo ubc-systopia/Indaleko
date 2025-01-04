@@ -43,8 +43,8 @@ class IndalekoHandlermixin(ABC):
     """Class for providing callback processing for the main handler"""
 
     @abstractmethod
-    def get_default_file(data_directory: Union[str, Path], candidates : list[Union[str, Path]]) -> str:
-        '''Pick the preferred/default file from a list of candidates'''
+    def get_default_file(data_directory: Union[str, Path], candidates : list[Union[str, Path]]) -> Union[str, None]:
+        '''Pick the preferred/default file from a list of candidates (None if the list is empty)'''
 
     @abstractmethod
     def find_db_config_files(config_dir: Union[str, Path]) -> Union[list[str], None]:
@@ -77,3 +77,7 @@ class IndalekoHandlermixin(ABC):
     @abstractmethod
     def load_machine_config(keys : dict[str,str]) -> IndalekoMachineConfig:
         '''This method is used to load a machine configuration'''
+
+    @abstractmethod
+    def extract_filename_metadata(file_name : str) -> dict:
+        '''This method is used to parse the file name.'''

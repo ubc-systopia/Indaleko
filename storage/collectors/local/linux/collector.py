@@ -38,7 +38,6 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-# from Indaleko import Indaleko
 from data_models import IndalekoSourceIdentifierDataModel
 from db.service_manager import IndalekoServiceManager
 from perf.perf_collector import IndalekoPerformanceDataCollector
@@ -101,134 +100,6 @@ class IndalekoLinuxLocalCollector(BaseStorageCollector):
         assert 'machine_id' in kwargs, 'machine_id must be specified'
         return BaseStorageCollector.generate_collector_file_name(**kwargs)
 
-
-def old_main():
-    '''This is the main handler for the Indaleko Linux Local Collector
-    service.'''
-    logging_levels = IndalekoLogging.get_logging_levels()
-    timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    # Step 1: find the machine configuration file & set up logging
-    pre_parser = argparse.ArgumentParser(add_help=False)
-    pre_parser.add_argument('--configdir',
-                            help='Path to the config directory',
-                            default=utils.misc.directory_management.indaleko_default_config_dir)
-    pre_parser.add_argument('--logdir', '-l',
-                            help='Path to the log directory',
-                            default=utils.misc.directory_management.indaleko_default_log_dir)
-    pre_parser.add_argument('--loglevel',
-                            type=int,
-                            default=logging.DEBUG,
-                            choices=logging_levels,
-                            help='Logging level to use (lower number = more logging)')
-    pre_args, _ = pre_parser.parse_known_args()
-    config_files = IndalekoLinuxMachineConfig.find_config_files(pre_args.configdir)
-    default_config_file = IndalekoLinuxMachineConfig.get_most_recent_config_file(pre_args.configdir)
-    config_file_metadata = extract_keys_from_file_name(default_config_file)
-    config_platform = IndalekoLinuxLocalCollector.linux_platform
-    if 'platform' in config_file_metadata:
-        config_platform = config_file_metadata['platform']
-    log_file_name = IndalekoLinuxLocalCollector.generate_linux_collector_file_name(
-        platform=config_platform,
-        collector_name=IndalekoLinuxLocalCollector.linux_local_collector_name,
-        machine_id = config_file_metadata['machine'],
-        target_dir=pre_args.logdir,
-        timestamp=timestamp,
-        suffix='log')
-    logging.basicConfig(
-        filename=log_file_name,
-        level=pre_args.loglevel,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        force=True
-    )
-    # Step 2: figure out the default config file
-    pre_parser = argparse.ArgumentParser(add_help=False, parents=[pre_parser])
-    pre_parser.add_argument('--config', choices=config_files, default=default_config_file)
-    pre_parser.add_argument('--path', help='Path to the directory from which to collect metadata', type=str,
-                            default=os.path.expanduser('~'))
-    pre_parser.add_argument('--datadir', '-d',
-                            help='Path to the data directory',
-                            default=utils.misc.directory_management.indaleko_default_data_dir)
-    pre_parser.add_argument('--offline',
-                        help='Do not require live database access',
-                        default=False,
-                        action='store_true')
-    pre_args, _ = pre_parser.parse_known_args()
-
-    # Step 3: now we can load the machine configuration
-    machine_config = IndalekoLinuxMachineConfig.load_config_from_file(config_file=pre_args.config, offline=pre_args.offline)
-
-    timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    collector = IndalekoLinuxLocalCollector(
-        machine_config=machine_config,
-        timestamp=timestamp,
-        path=pre_args.path,
-        offline=pre_args.offline
-    )
-    output_file = IndalekoLinuxLocalCollector.generate_linux_collector_file_name(
-        platform=config_platform,
-        collector_name=IndalekoLinuxLocalCollector.linux_local_collector_name,
-        machine_id = config_file_metadata['machine'],
-        target_dir=pre_args.datadir,
-        suffix='jsonl')
-    parser= argparse.ArgumentParser(parents=[pre_parser])
-    parser.add_argument('--output', '-o',
-                        help='name to assign to output file',
-                        default=output_file)
-    parser.add_argument('--performance_file',
-                        default=False,
-                        action='store_true',
-                        help='Record performance data to a file')
-    parser.add_argument('--performance_db',
-                        default=False,
-                        action='store_true',
-                        help='Record performance data to the database')
-    args = parser.parse_args()
-    output_file = args.output
-    logging.info('Collecting metadata from %s ' , pre_args.path)
-    logging.info('Output file %s ' , output_file)
-    perf_file_name = os.path.join(
-        args.datadir,
-        IndalekoPerformanceDataRecorder().generate_perf_file_name(
-            platform=collector.platform,
-            service=collector.collector_name,
-            machine=uuid.UUID(machine_config.machine_id)
-        )
-    )
-    def extract_counters(**kwargs):
-        ic(kwargs)
-        collector = kwargs.get('collector')
-        if collector:
-            return ic(collector.get_counts())
-        else:
-            return {}
-    def collect(collector):
-        data = collector.collect()
-        collector.write_data_to_file(data, output_file)
-    perf_data = IndalekoPerformanceDataCollector.measure_performance(
-        collect,
-        source=IndalekoSourceIdentifierDataModel(
-            Identifier=collector.service_identifier,
-            Version = collector.service_version,
-            Description=collector.service_description),
-        description=collector.service_description,
-        MachineIdentifier=uuid.UUID(machine_config.machine_id),
-        process_results_func=extract_counters,
-        input_file_name=None,
-        output_file_name=output_file,
-        collector=collector
-    )
-    if args.performance_db or args.performance_file:
-        perf_recorder = IndalekoPerformanceDataRecorder()
-        if args.performance_file:
-            perf_recorder.add_data_to_file(perf_file_name, perf_data)
-            ic('Performance data written to ', perf_file_name)
-        if args.performance_db:
-            perf_recorder.add_data_to_db(perf_data)
-            ic('Performance data written to the database')
-    for count_type, count_value in collector.get_counts().items():
-        logging.info('%s: %d', count_type, count_value)
-    logging.info('Done')
-
 def main():
     '''This is the new CLI based utility for executing local Linux metadata collection.'''
     class linux_local_collector_mixin(IndalekoBaseCLI.default_handler_mixin):
@@ -249,7 +120,9 @@ def main():
         args = keys['args'] # must be there.
         cli = keys['cli'] # must be there.
         config_data = cli.get_config_data()
-        ic(config_data)
+        debug = hasattr(args, 'debug') and args.debug
+        if debug:
+            ic(config_data)
         kwargs = {
             'machine_config': cli.handler_mixin.load_machine_config(
                 {
@@ -290,10 +163,12 @@ def main():
             if args.performance_file:
                 perf_file = str(Path(args.datadir) / config_data['PerformanceDataFile'])
                 perf_recorder.add_data_to_file(perf_file, perf_data)
-                ic('Performance data written to ', config_data['PerformanceDataFile'])
+                if (debug):
+                    ic('Performance data written to ', config_data['PerformanceDataFile'])
             if args.performance_db:
                 perf_recorder.add_data_to_db(perf_data)
-                ic('Performance data written to the database')
+                if (debug):
+                    ic('Performance data written to the database')
 
     @staticmethod
     def add_linux_local_parameters(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:

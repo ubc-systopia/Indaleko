@@ -20,10 +20,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import argparse
 import datetime
+import inspect
 import os
 import logging
+import platform
 import sys
 import uuid
+
+from pathlib import Path
+from typing import Union
 
 from icecream import ic
 
@@ -36,13 +41,17 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from data_models import IndalekoSourceIdentifierDataModel
-from utils.i_logging import IndalekoLogging
-from storage.collectors.base import BaseStorageCollector
-from platforms.mac.machine_config import IndalekoMacOSMachineConfig
-from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
 from db.service_manager import IndalekoServiceManager
 from perf.perf_collector import IndalekoPerformanceDataCollector
 from perf.perf_recorder import IndalekoPerformanceDataRecorder
+from platforms.mac.machine_config import IndalekoMacOSMachineConfig
+from storage.collectors.base import BaseStorageCollector
+from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
+from utils.cli.base import IndalekoBaseCLI
+from utils.cli.runner import IndalekoCLIRunner
+from utils.i_logging import IndalekoLogging
+from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
+from utils.misc.file_name_management import find_candidate_files
 # pylint: enable=wrong-import-position
 
 
@@ -51,7 +60,7 @@ class IndalekoMacLocalCollector(BaseStorageCollector):
     This is the class that indexes Mac local file systems.
     '''
     mac_platform = 'Mac'
-    mac_local_collector_name = 'fs-collector'
+    mac_local_collector_name = 'fs_collector'
 
     indaleko_mac_local_collector_uuid = '14d6c989-0d1e-4ccc-8aea-a75688a6bb5f'
     indaleko_mac_local_collector_service_name = 'Mac Local Storage Collector'
@@ -142,7 +151,7 @@ class IndalekoMacLocalCollector(BaseStorageCollector):
                     last_uri = entry[1]
         return data
 
-def main():
+def old_main():
     '''This is the main handler for the Indaleko Mac Local Storage
     Metadata Collector service.'''
     logging_levels = IndalekoLogging.get_logging_levels()
@@ -250,6 +259,87 @@ def main():
     for count_type, count_value in counts.items():
         logging.info('%s: %d', count_type, count_value)
     logging.info('Done')
+
+class local_collector_mixin(IndalekoBaseCLI.default_handler_mixin):
+    @staticmethod
+    def load_machine_config(keys: dict[str, str]) -> IndalekoMacOSMachineConfig:
+        '''Load the machine configuration'''
+        if keys.get('debug'):
+            ic(f'local_collector_mixin.load_machine_config: {keys}')
+        if 'machine_config_file' not in keys:
+            raise ValueError(f'{inspect.currentframe().f_code.co_name}: machine_config_file must be specified')
+        offline = keys.get('offline', False)
+        return IndalekoMacOSMachineConfig.load_config_from_file(
+            config_file=str(keys['machine_config_file']),
+            offline=offline)
+
+    @staticmethod
+    def find_machine_config_files(config_dir : Union[str, Path], platform : str) -> Union[list[str], None]:
+        ic(f'find_machine_config_files: config_dir = {config_dir}')
+        ic(f'find_machine_config_files:   platform = {platform}')
+        if not Path(config_dir).exists():
+            return None
+        if platform is None:
+            return []
+        return [
+            fname for fname, _ in find_candidate_files([platform, '-hardware-info'], str(config_dir))
+            if fname.endswith('.json')
+        ]
+
+    @staticmethod
+    def extract_filename_metadata(file_name):
+        # the mac uses non-standard naming for machine config files, so we have to handle that here.
+        if not file_name.startswith(IndalekoMacOSMachineConfig.macos_machine_config_file_prefix):
+            return IndalekoBaseCLI.default_handler_mixin.extract_filename_metadata(file_name)
+        # macos-hardware-info-f6ff7c7f-b4d7-484f-9b58-1ad2820a8d85-2024-12-04T00-44-25.583891Z.json
+        assert file_name.endswith('.json') # if not, generalize this
+        prefix_length = len(IndalekoMacOSMachineConfig.macos_machine_config_file_prefix)
+        machine_id = uuid.UUID(file_name[prefix_length+1:prefix_length+37]).hex
+        timestamp = file_name[prefix_length+38:-5]
+        keys = {
+            'platform' : platform.system(),
+            'service' : 'macos_machine_config',
+            'machine' : machine_id,
+            'timestamp' : timestamp,
+            'suffix' : '.json',
+        }
+        return keys
+
+
+@staticmethod
+def local_run(keys: dict[str, str]) -> Union[dict, None]:
+    '''Run the mac local collector'''
+    args = keys['args']
+    cli = keys['cli']
+    config_data = cli.get_config_data()
+
+@staticmethod
+def add_mac_local_parameters(parser : argparse.ArgumentParser) -> argparse.ArgumentParser:
+    '''Add the paramters for the local Mac collector.'''
+    default_path = os.path.expanduser('~')
+    if default_path == '~':
+        default_path = os.path.abspath(os.sep)
+    parser.add_argument('--path',
+                        help=f'Path to the directory from which to collect metadata {default_path}',
+                        type=str,
+                        default=default_path)
+    return parser
+
+
+def main():
+    '''This is the CLI handler for the Mac local storage collector.'''
+
+    runner = IndalekoCLIRunner(
+        cli_data=IndalekoBaseCliDataModel(
+            Service=IndalekoMacLocalCollector.mac_local_collector_name,
+            Platform='macos'
+        ),
+        handler_mixin=local_collector_mixin,
+        features=IndalekoBaseCLI.cli_features(input=False),
+        additional_parameters=add_mac_local_parameters,
+        Run=local_run,
+    )
+    runner.run()
 
 if __name__ == '__main__':
     main()
