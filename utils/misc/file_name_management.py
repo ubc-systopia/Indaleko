@@ -53,7 +53,8 @@ def generate_final_name(args : list, **kwargs) -> str:
         raise ValueError('prefix must not contain a hyphen')
     if '-' in suffix:
         raise ValueError('suffix must not contain a hyphen')
-    name += f'-plt={target_platform}'
+    if target_platform: # platform is optional
+        name += f'-plt={target_platform}'
     name += f'-svc={service}'
     for key, value in kwargs.items():
         assert isinstance(value, str), f'value must be a string: {key, value}'
@@ -90,7 +91,7 @@ def generate_file_name(**kwargs) -> str:
             raise ValueError('max_len must be an integer')
         del kwargs['max_len']
     if 'platform' not in kwargs:
-        target_platform = platform.system()
+        target_platform = None
     else:
         target_platform = kwargs['platform']
         del kwargs['platform']
@@ -113,7 +114,7 @@ def generate_file_name(**kwargs) -> str:
         del kwargs['suffix']
     if suffix.startswith('.'):
         suffix = suffix[1:] # avoid ".." for suffix
-    if '-' in target_platform:
+    if target_platform and '-' in target_platform:
         raise ValueError(f'platform must not contain a hyphen (platform={target_platform})')
     if '-' in service:
         raise ValueError(f'service must not contain a hyphen (service={service})')
@@ -140,9 +141,10 @@ def extract_keys_from_file_name(file_name : str) -> dict:
     prefix = fields.pop(0)
     data['prefix'] = prefix
     target_platform = fields.pop(0)
-    if not target_platform.startswith('plt='):
-        raise ValueError('platform field must start with plt=')
-    data['platform'] = target_platform[4:]
+    if target_platform.startswith('plt='):
+        data['platform'] = target_platform[4:]
+    else:
+        fields.insert(0, target_platform) # no platform for this file
     service = fields.pop(0)
     if not service.startswith('svc='):
         raise ValueError('service field must start with svc=')
