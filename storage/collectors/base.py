@@ -265,7 +265,7 @@ class BaseStorageCollector:
         stat_dict['Name'] = name
         stat_dict['Path'] = root
         stat_dict['URI'] = os.path.join(root, name)
-        stat_dict['Collector'] = self.service_identifier
+        stat_dict['Collector'] = str(self.service_identifier)
         stat_dict['ObjectIdentifier'] = str(uuid.uuid4())
         return stat_dict
 

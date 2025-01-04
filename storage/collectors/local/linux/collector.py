@@ -103,7 +103,9 @@ def main():
         @staticmethod
         def load_machine_config(keys: dict[str, str]) -> IndalekoLinuxMachineConfig:
             '''Load the machine configuration'''
-            ic(f'linux_local_collector_mixin.load_machine_config: {keys}')
+            debug = keys.get('debug', False)
+            if (debug):
+                ic(f'linux_local_collector_mixin.load_machine_config: {keys}')
             if 'machine_config_file' not in keys:
                 raise ValueError(f'{inspect.currentframe().f_code.co_name}: machine_config_file must be specified')
             offline = keys.get('offline', False)

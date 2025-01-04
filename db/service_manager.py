@@ -168,7 +168,8 @@ class IndalekoServiceManager(IndalekoSingleton):
                          service_description: str,
                          service_version: str,
                          service_type : str,
-                         service_id : str  = None) -> dict:
+                         service_id : str  = None,
+                         debug : bool = False) -> dict:
         """
         This method registers a service with the given name, description, and
         version in the database.
@@ -195,7 +196,8 @@ class IndalekoServiceManager(IndalekoSingleton):
         if existing_service is None:
             if service_id is None:
                 service_id = str(uuid.uuid4())
-            ic('Creating new service:', service_id)
+            if debug:
+                ic('Creating new service:', service_id)
             new_service = IndalekoService(
                 record = IndalekoRecordDataModel(
                     SourceIdentifier = IndalekoSourceIdentifierDataModel(
