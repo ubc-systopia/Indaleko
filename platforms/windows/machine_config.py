@@ -76,7 +76,9 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
 
     def __init__(self : 'IndalekoWindowsMachineConfig',
                  **kwargs):
-        ic(kwargs)
+        self.debug = kwargs.get('debug', False)
+        if self.debug:
+            ic(kwargs)
         self.service_registration = IndalekoMachineConfig.register_machine_configuration_service(
             **IndalekoWindowsMachineConfig.windows_machine_config_service
         )
@@ -106,7 +108,9 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
 
     @staticmethod
     def load_config_from_file(config_dir : str = None,
-                              config_file : str = None) -> 'IndalekoWindowsMachineConfig':
+                              config_file : str = None,
+                              offline : bool = False,
+                              debug : bool = False) -> 'IndalekoWindowsMachineConfig':
         '''Given the directory and name of a configuration file, load the configuration.'''
         config_data ={}
         if config_dir is None and config_file is None:
@@ -163,8 +167,10 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
         if 'Hostname' not in machine_config_data:
             machine_config_data['Hostname'] = config_data['Hostname']
         config = IndalekoWindowsMachineConfig(**machine_config_data)
-        ic(MachinePlatform.serialize(config.machine_config))
-        config.write_config_to_db()
+        if (debug):
+            ic(MachinePlatform.serialize(config.machine_config))
+        if not offline:
+            config.write_config_to_db()
         if hasattr(config, 'extract_volume_info'):
             getattr(config, 'extract_volume_info')()
         return config
@@ -223,7 +229,8 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
                      software : Software,
                      hardware : Hardware,
                      drive_data : dict,
-                     captured: dict) -> None:
+                     captured: dict,
+                     debug : bool = False) -> None:
             assert 'GUID' not in drive_data, 'GUID should not be in drive_data'
             assert 'UniqueId' in drive_data, 'UniqueId must be in drive_data'
             assert validate_uuid_string(machine_id), 'machine_id must be a valid UUID'
@@ -233,7 +240,8 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             if self.attributes['UniqueId'].startswith('\\\\?\\Volume{'):
                 self.volume_guid = self.__find_volume_guid__(drive_data['UniqueId'])
             self.attributes['GUID'] = self.volume_guid
-            ic(self.attributes)
+            if debug:
+                ic(self.attributes)
             timestamp = captured['Value']
             if isinstance(timestamp, str):
                 timestamp = datetime.datetime.fromisoformat(timestamp)
@@ -284,19 +292,22 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             '''Return the item from the dictionary.'''
             return self.attributes[key]
 
-    def extract_volume_info(self: 'IndalekoWindowsMachineConfig') -> None:
+    def extract_volume_info(self: 'IndalekoWindowsMachineConfig', debug : bool = False) -> None:
         '''Extract the volume information from the machine configuration.'''
-        ic('Extracting volume information')
+        if debug:
+            ic('Extracting volume information')
         config_data = self.serialize()
         volume_info = config_data['Record']['Attributes']['VolumeInfo']
         machine_id = config_data['Record']['Attributes']['MachineUUID']
         software = config_data['Software']
         hardware = config_data['Hardware']
         captured = config_data['Captured']
-        ic(volume_info)
+        if debug:
+            ic(volume_info)
         for volume in volume_info:
             wdi = self.WindowsDriveInfo(machine_id, software, hardware, volume, captured)
-            ic(volume)
+            if debug:
+                ic(volume)
             assert wdi.get_vol_guid() not in self.volume_data,\
                   f'Volume GUID {wdi.get_vol_guid()} already in volume_data'
             self.volume_data[wdi.get_vol_guid()] = wdi

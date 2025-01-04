@@ -187,7 +187,7 @@ class IndalekoWindowsLocalCollector(BaseStorageCollector):
             assert last_uri.startswith('\\\\?\\Volume{'), \
                 f'last_uri {last_uri} does not start with \\\\?\\Volume{{'
         stat_dict['URI'] = os.path.join(last_uri, os.path.splitdrive(root)[1], name)
-        stat_dict['Collector'] = self.service_identifier
+        stat_dict['Collector'] = str(self.service_identifier)
         assert last_uri.startswith('\\\\?\\Volume{')
         if last_uri.startswith('\\\\?\\Volume{'):
             stat_dict['Volume GUID'] = last_uri[11:-2]
@@ -295,12 +295,15 @@ def old_main():
         )
     )
     def extract_counters(**kwargs):
-        ic(kwargs)
+        debug = 'debug' in kwargs and kwargs['debug']
+        if debug:
+            ic(kwargs)
         collector = kwargs.get('collector')
         if collector:
             return ic(collector.get_counts())
         else:
             return {}
+
     def collect(collector):
         data = collector.collect()
         collector.write_data_to_file(data, output_file)
@@ -344,9 +347,14 @@ class local_collector_mixin(IndalekoBaseCLI.default_handler_mixin):
             offline=offline)
 
     @staticmethod
-    def find_machine_config_files(config_dir : Union[str, Path], platform : str) -> Union[list[str], None]:
-        ic(f'find_machine_config_files: config_dir = {config_dir}')
-        ic(f'find_machine_config_files:   platform = {platform}')
+    def find_machine_config_files(
+            config_dir : Union[str, Path],
+            platform : str,
+            debug : bool = False
+        ) -> Union[list[str], None]:
+        if debug:
+            ic(f'find_machine_config_files: config_dir = {config_dir}')
+            ic(f'find_machine_config_files:   platform = {platform}')
         if not Path(config_dir).exists():
             return None
         if platform is None:
@@ -405,7 +413,7 @@ def local_run(keys: dict[str, str]) -> Union[dict, None]:
     def extract_counters(**kwargs):
         collector = kwargs.get('collector')
         if collector:
-            return ic(collector.get_counts())
+            return collector.get_counts()
         else:
             return {}
     collector = IndalekoWindowsLocalCollector(**kwargs)
@@ -448,7 +456,7 @@ def add_storage_local_parameters(parser : argparse.ArgumentParser) -> argparse.A
 
 
 def main():
-    '''This is the CLI handler for the Mac local storage collector.'''
+    '''This is the CLI handler for the Windows local storage collector.'''
     runner = IndalekoCLIRunner(
         cli_data=IndalekoBaseCliDataModel(
             Service=IndalekoWindowsLocalCollector.windows_local_collector_name,

@@ -307,11 +307,16 @@ class BaseStorageCollector:
             with jsonlines.open(output_file, 'w') as output:
                 for entry in data:
                     try:
-                        output.write(entry)
+                        try:
+                            output.write(entry)
+                        except Exception as e:
+                            ic(f'Writing entry {entry} failed due to {e}', entry)
+                            raise e
                         logging.debug('Wrote entry %s.', entry)
                         self.output_count += 1
                     except UnicodeEncodeError as e:
                         logging.error('Writing entry %s to %s failed due to encoding issues', entry, output_file)
+                        ic('Writing entry %s to %s failed due to encoding issues', entry, output_file)
                         self.encoding_count += 1
             logging.info('Wrote jsonlines file %s.', output_file)
         else:

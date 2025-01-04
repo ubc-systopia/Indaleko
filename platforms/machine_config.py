@@ -60,6 +60,7 @@ class IndalekoMachineConfig:
 
     def __init__(self, **kwargs):
         '''Initialize the machine configuration'''
+        self.debug = kwargs.get('debug', False)
         if not hasattr(self, 'offline'):
             if 'offline' in kwargs:
                 self.offline = kwargs['offline']
@@ -152,7 +153,9 @@ class IndalekoMachineConfig:
 
     def serialize(self) -> dict:
         '''Serialize the machine configuration'''
-        return ic(json.loads(self.machine_config.model_dump_json()))
+        if self.debug:
+            return ic(json.loads(self.machine_config.model_dump_json()))
+        return json.loads(self.machine_config.model_dump_json())
 
     @staticmethod
     def deserialize(data : dict) -> 'IndalekoMachineConfig':

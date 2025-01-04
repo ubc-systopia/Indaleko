@@ -54,6 +54,7 @@ class IndalekoMainHandler:
 
     def __init__(self,
                  handler_config : IndalekoBaseCliDataModel = IndalekoBaseCliDataModel(),
+                 debug : bool = False
                 ) -> None:
         """
             Initialize the main handler with specific service and config classes
@@ -62,10 +63,12 @@ class IndalekoMainHandler:
                 service_class: Type of the service (BaseStorageCollector or BaseStorageRecorder subclass)
                 machine_config_class: Type of machine configuration (IndalekoMachineConfig subclass)
         """
+        self.debug = debug
         ic(handler_config)
         self.handler_config = handler_config
         self.config_data = json.loads(self.handler_config.model_dump_json())
-        ic(self.config_data)
+        if self.debug:
+            ic(self.config_data)
 
     def find_machine_config_files(self,
                                   config_dir: str,
@@ -133,8 +136,9 @@ class IndalekoMainHandler:
                                 help='Platform to use')
         pre_args, unknown = pre_parser.parse_known_args()
         # Now we know the platform, we can find the potential data file(s)
-        ic(self.config_data)
-        ic(unknown)
+        if self.debug:
+            ic(self.config_data)
+            ic(unknown)
 
         return pre_parser
 

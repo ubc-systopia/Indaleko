@@ -274,9 +274,15 @@ class local_collector_mixin(IndalekoBaseCLI.default_handler_mixin):
             offline=offline)
 
     @staticmethod
-    def find_machine_config_files(config_dir : Union[str, Path], platform : str) -> Union[list[str], None]:
-        ic(f'find_machine_config_files: config_dir = {config_dir}')
-        ic(f'find_machine_config_files:   platform = {platform}')
+    def find_machine_config_files(
+            config_dir : Union[str, Path],
+            platform : str,
+            debug : bool = False
+        ) -> Union[list[str], None]:
+        '''Find the machine configuration files'''
+        if debug:
+            ic(f'find_machine_config_files: config_dir = {config_dir}')
+            ic(f'find_machine_config_files:   platform = {platform}')
         if not Path(config_dir).exists():
             return None
         if platform is None:

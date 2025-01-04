@@ -162,7 +162,7 @@ class IndalekoBaseCLI:
                             default=self.config_data['LogLevel'],
                             choices=IndalekoLogging.get_logging_levels(),
                             help=f'Logging level to use (default={IndalekoLogging.map_logging_level_to_type(self.config_data["LogLevel"])})')
-        default_log_file = self.handler_mixin.generate_log_file_name(ic(self.config_data))
+        default_log_file = self.handler_mixin.generate_log_file_name(self.config_data)
         self.pre_parser.add_argument('--logfile',
                                      default=default_log_file,
                                      help=f'Log file to use (default={default_log_file})')

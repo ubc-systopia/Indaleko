@@ -379,7 +379,6 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
         if 'Hostname' not in machine_config_data:
             machine_config_data['Hostname'] = config_data['Hostname']
         config = IndalekoLinuxMachineConfig(**machine_config_data, offline=offline)
-        # ic(IndalekoMachineConfigDataModel.MachineConfig.serialize(config.machine_config))
         if not offline:
             config.write_config_to_db()
         if hasattr(config, 'extract_volume_info'):

@@ -85,12 +85,10 @@ class IndalekoCLIRunner:
 
     def setup(self) -> None:
         '''This method is used to setup the CLI runner'''
-        ic('*')
         if self.runner_data.SetupLogging:
             if self.args.debug:
                 ic('Setup Logging')
             self.runner_data.SetupLogging(self.args)
-        ic('**')
         if self.runner_data.LoadConfiguration:
             if self.args.debug:
                 ic('Load Configuration')
@@ -98,7 +96,6 @@ class IndalekoCLIRunner:
                 'args':self.args,
                 'cli':self.cli
             })
-        ic('***')
         if self.runner_data.PerformanceConfiguration:
             if self.args.debug:
                 ic('Performance Configuration')
@@ -114,7 +111,8 @@ class IndalekoCLIRunner:
             if self.args.debug:
                 ic('Cleanup')
             self.runner_data.Cleanup()
-        ic('cleanup called')
+        if self.args.debug:
+            ic('cleanup called')
 
     def run(self) -> None:
         self.setup()
