@@ -1,5 +1,5 @@
 '''
-This module handles gathering metadata from Windows local file systems.
+This module defines the base data model used in the CLI components of Indaleko.
 
 Indaleko Windows Local Collector
 Copyright (C) 2024 Tony Mason
