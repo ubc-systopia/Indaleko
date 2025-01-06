@@ -283,7 +283,6 @@ class BaseStorageCollector:
             return None
 
 
-
     def collect(self) -> list:
         '''
         This is the main function for the collector.  Can be overridden
@@ -322,6 +321,9 @@ class BaseStorageCollector:
         else:
             json.dump(data, output_file, indent=4)
             logging.info('Wrote json %s.', output_file)
+
+
+
 
 def main():
     """Test code for this module."""
