@@ -42,6 +42,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 #pylint: disable=wrong-import-position
+from constants import IndalekoConstants
 from data_models import IndalekoMachineConfigDataModel
 from db import IndalekoCollections, IndalekoDBCollections, IndalekoServiceManager
 from utils.data_validation import validate_uuid_string
@@ -53,7 +54,7 @@ class IndalekoMachineConfig:
     This class provides the generic base for capturing a machine
     configuration
     '''
-    default_config_dir = "./config"
+    default_config_dir = IndalekoConstants.default_config_dir
     indaleko_machine_config_captured_label_str = "eb7eaeed-6b21-4b6a-a586-dddca6a1d5a4"
     indaleko_machine_config_captured_label_uuid = \
         uuid.UUID(indaleko_machine_config_captured_label_str)

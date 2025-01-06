@@ -18,13 +18,15 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-import os
-import json
-import uuid
-import datetime
 import argparse
+import datetime
+import json
+import os
+import platform
 import re
+import subprocess
 import sys
+import uuid
 
 import arango
 
@@ -42,6 +44,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 # pylint: disable=wrong-import-position
+from constants import IndalekoConstants
 from data_models import IndalekoRecordDataModel, IndalekoSourceIdentifierDataModel, IndalekoTimestampDataModel
 from platforms.data_models.machine_platform import MachinePlatform
 from platforms.machine_config import IndalekoMachineConfig
@@ -58,7 +61,7 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
     class, which is shared across all platforms.
     '''
 
-    windows_machine_config_file_prefix = 'windows-hardware-info'
+    windows_machine_config_file_prefix = 'windows_hardware_info'
     windows_machine_config_uuid_str = '3360a328-a6e9-41d7-8168-45518f85d73e'
     windows_machine_config_service_name = "Windows Machine Configuration"
     windows_machine_config_service_description = \
@@ -350,6 +353,62 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
                 print('DB write failed, aborting')
                 break
 
+def get_execution_policy():
+    try:
+        result = subprocess.run(
+            ["powershell.exe", "-Command", "Get-ExecutionPolicy"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        print(f"Error checking ExecutionPolicy: {e}")
+        return None
+
+
+def ensure_execution_policy():
+    policy = get_execution_policy()
+    if policy in {"Restricted", "AllSigned"}:
+        print(f"Current ExecutionPolicy is '{policy}', which might block script execution.")
+        print("You can change it temporarily by running:")
+        print("  Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass")
+        print("or use an administrator to set a less restrictive policy permanently.")
+        return False
+    return True
+
+def collect_machine_configuration(
+        output_dir : str = IndalekoConstants.default_config_dir,
+        script_name : str = 'windows-hardware-info.ps1') -> bool:
+    '''This executes the external powershell script to capture the machine configuration.'''
+    if not ensure_execution_policy():
+        return False
+    script_path = os.path.abspath(script_name)
+    output_dir = os.path.abspath(output_dir)
+    powershell_command = (
+        f"$process = Start-Process -FilePath 'powershell.exe' "
+        f"-ArgumentList @('-ExecutionPolicy', 'Bypass', '-File', '{script_path}', '-outputDir', '{output_dir}') "
+        f"-Verb RunAs -PassThru; "
+        f"if ($process) {{ $process.WaitForExit() }} else {{ Write-Error 'Failed to start process'; exit 1 }}"
+    )
+    command = [
+        'powershell.exe',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-Command',
+        powershell_command
+    ]
+    success = False
+    try:
+        result = subprocess.run(command, shell=True, text=True)
+        if result.returncode == 0:
+            success = True
+        else:
+            ic(f"Command failed with return code {result.returncode}")
+            ic(result)
+    except Exception as e:
+        ic(f"An error occurred: {e}")
+    return success
 
 def main():
     '''This is the main handler for the Indaleko Windows Machine Config
@@ -366,7 +425,34 @@ def main():
                         help='List the machine configuration files in the default directory.')
     parser.add_argument('--add', '-a', action='store_true',
                         help='Add a machine configuration (from the file) to the database.')
+    if platform.system() == 'Windows':
+        # can only capture windows machine state on a Windows machine
+        parser.add_argument('--capture', '-c', action='store_true',
+                            help='Capture the current machine configuration.')
     args = parser.parse_args()
+    if args.capture:
+        if not ensure_execution_policy():
+            return
+        existing_config_files = set(IndalekoWindowsMachineConfig.find_config_files(
+            IndalekoWindowsMachineConfig.default_config_dir))
+        print('Starting data collection.  Note that:')
+        print('\t(1) this script will run as administrator so you will be asked for permission;')
+        print('\t(2) this takes 30-60 seconds, so be patient;')
+        print('\t(3) the file is not added to the database automatically. Use --add to do that.')
+        if collect_machine_configuration():
+            new_config_files = set(IndalekoWindowsMachineConfig.find_config_files(
+                IndalekoWindowsMachineConfig.default_config_dir))
+            added_files = list[new_config_files - existing_config_files]
+            if added_files:
+                ic(f'Added new file(s): {added_files}')
+            else:
+                ic('No new files added (not sure why)')
+                ic(existing_config_files)
+                ic(new_config_files)
+        else:
+            print('Error collecting machine configuration (recommendation: run script as administrator directly.)')
+        print('data collection complete.')
+        return
     if args.list:
         print('Listing machine configurations in the database.')
         configs = IndalekoWindowsMachineConfig.find_configs_in_db(None)
