@@ -20,6 +20,8 @@ import os
 import platform
 import sys
 
+from icecream import ic
+
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
@@ -130,38 +132,43 @@ def generate_file_name(**kwargs) -> str:
 
 def extract_keys_from_file_name(file_name : str) -> dict:
     '''
-    Given a file name, extract the keys and values from the file name.
+    Given a file name, extract the keys and values from the file name,
+    then validate that fields we expect are present.
     '''
-    base_file_name, file_suffix = os.path.splitext(os.path.basename(file_name))
-    file_name = base_file_name + file_suffix
-    data = {}
-    if not isinstance(file_name, str):
-        raise ValueError('file_name must be a string')
-    fields = file_name.split('-')
-    prefix = fields.pop(0)
-    data['prefix'] = prefix
-    target_platform = fields.pop(0)
-    if target_platform.startswith('plt='):
-        data['platform'] = target_platform[4:]
-    else:
-        fields.insert(0, target_platform) # no platform for this file
-    service = fields.pop(0)
-    if not service.startswith('svc='):
-        raise ValueError('service field must start with svc=')
-    data['service'] = service[4:]
-    trailer = fields.pop(-1)
-    suffix = trailer.split('.')[-1]
-    if not trailer.startswith('ts='):
-        raise ValueError(f'timestamp field must start with ts= ({file_name})')
-    ts_field = trailer[3:-len(suffix)-1]
-    data['suffix'] = suffix
-    data['timestamp'] = utils.misc.timestamp_management.extract_iso_timestamp_from_file_timestamp(ts_field)
-    while len(fields) > 0:
-        field = fields.pop(0)
-        if '=' not in field:
-            raise ValueError('field must be of the form key=value')
-        key, value = field.split('=')
-        data[key] = value
+    def parse_file_name(file_name: str) -> dict:
+        """
+        Helper function to parse a file name into a dictionary of keys and values.
+        """
+        # Extract the base file name (without extension) and split by '-'
+        base_file_name, file_suffix = os.path.splitext(os.path.basename(file_name))
+        fields = base_file_name.split('-')
+        data = {
+            'suffix': file_suffix.lstrip('.')
+        }
+
+        # Parse prefix
+        prefix = fields.pop(0)
+        next = None
+        while fields and '=' not in fields[0]:
+            next = fields.pop(0)
+            prefix += '-' + next
+        data['prefix'] = prefix
+        # now let's parse through the key/value pairs
+        while fields:
+            next = fields.pop(0)
+            if '=' not in next:
+                raise ValueError(f"Invalid key-value pair format: {next}")
+            key, value = next.split('=', 1)
+            # now let's see if there's more to append to the value
+            while fields and not '=' in fields[0]:
+                value += '-' + fields.pop(0)
+            data[key] = value
+        return data
+    data = parse_file_name(file_name)
+    assert 'svc' in data, f'service field must be present in file name ({file_name})'
+    if 'ts' in data:
+        data['timestamp'] = utils.misc.timestamp_management.extract_iso_timestamp_from_file_timestamp(data['ts'])
+        del data['ts']
     return data
 
 def find_candidate_files(input_strings : list[str], directory : str) -> list[tuple[str,str]]:

@@ -52,6 +52,7 @@ from platforms.data_models.hardware import Hardware
 from platforms.data_models.software import Software
 from utils.misc.data_management import encode_binary_data
 from utils.data_validation import validate_uuid_string
+from utils.misc.file_name_management import extract_keys_from_file_name
 #pylint: enable=wrong-import-position
 
 class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
@@ -124,8 +125,9 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             assert config_dir is not None, 'config_dir must be specified'
             config_file = IndalekoWindowsMachineConfig.get_most_recent_config_file(config_dir)
         if config_file is not None:
-            _, guid, timestamp = IndalekoWindowsMachineConfig.get_guid_timestamp_from_file_name(
-                config_file)
+            keys = extract_keys_from_file_name(config_file)
+            timestamp = keys['timestamp']
+            guid = keys['machine']
             assert os.path.exists(config_file), f'Config file {config_file} does not exist'
             assert os.path.isfile(config_file), f'Config file {config_file} is not a file'
             with open(config_file, 'rt', encoding='utf-8-sig') as fd:
@@ -179,46 +181,25 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
         return config
 
     @staticmethod
-    def get_guid_timestamp_from_file_name(file_name : str) -> tuple:
+    def get_most_recent_config_file(config_dir):
         '''
-        Get the machine configuration captured by powershell.
-        Note that this PS script requires admin privileges so it might
-        be easier to do this in an application that elevates on Windows so it
-        can be done dynamically.  For now, we assume it has been captured.
+        Given a configuration directory and a prefix, find the most recent
+        configuration file.
         '''
-        # Regular expression to match the GUID and timestamp
-        pattern = r"(?:.*[/\\])?windows-hardware-info-(?P<guid>[a-fA-F0-9\-]+)-(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d+Z)\.json"
-        match = re.match(pattern, file_name)
-
-        assert match, f'Filename format not recognized for {file_name}.'
-        guid = uuid.UUID(match.group("guid"))
-        timestamp = match.group("timestamp").replace("-", ":")
-        assert timestamp[-1] == 'Z', 'Timestamp must end with Z'
-        # %f can only handle up to 6 digits and it seems Windows gives back
-        # more sometimes. Note this truncates, it doesn't round.  I doubt
-        # it matters.
-        timestamp_parts = timestamp.split('.')
-        fractional_part = timestamp_parts[1][:6] # truncate to 6 digits
-        ymd, hms = timestamp_parts[0].split('T')
-        timestamp = ymd.replace(':', '-') + 'T' + hms + '.' + fractional_part + '+00:00'
-        timestamp = datetime.datetime.fromisoformat(timestamp)
-        return (file_name, guid, timestamp)
-
-    @staticmethod
-    def get_most_recent_config_file(config_dir : str) -> str:
-        '''Get the most recent machine configuration file.'''
-        candidates = [x for x in os.listdir(config_dir) if
-                      x.startswith('windows-hardware-info') and x.endswith('.json')]
-        assert len(candidates) > 0, 'At least one windows-hardware-info file should exist'
-        candidate_files = [(timestamp, filename)
-                           for filename, guid, timestamp in
-                           [IndalekoWindowsMachineConfig.get_guid_timestamp_from_file_name(x)
-                            for x in candidates]]
+        files = IndalekoWindowsMachineConfig.find_config_files(config_dir)
+        if len(files) == 0:
+            return None
+        candidate_files = []
+        for file in files:
+            keys = extract_keys_from_file_name(file)
+            candidate_files.append((keys['timestamp'], file))
+        # ic (extract_keys_from_file_name(files[0]))
         candidate_files.sort(key=lambda x: x[0])
         candidate = candidate_files[0][1]
         if config_dir is not None:
             candidate = os.path.join(config_dir, candidate)
         return candidate
+
 
     class WindowsDriveInfo:
         '''This class is used to capture information about a Windows drive.'''
