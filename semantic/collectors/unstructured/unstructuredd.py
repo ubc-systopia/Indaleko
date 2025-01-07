@@ -42,8 +42,10 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # Indaleko imports
 # pylint: disable=wrong-import-position
 from Indaleko import Indaleko
-from IndalekoObject import IndalekoObject
-from IndalekoLogging import IndalekoLogging
+from storage.i_object import IndalekoObject
+from utils.i_logging import IndalekoLogging
+from lookup import UnstructuredLookup
+from retrieve import UnstructuredRetrieval
 
 from semantic.collectors.semantic_collector import SemanticCollector
 # pylint: enable=wrong-import-position
@@ -63,13 +65,23 @@ class IndalekoUnstructured(SemanticCollector):
 
     config_file_layout = {
         'DATA': {
-            'ScriptsDir': '/path/to/scripts',
+            'ScriptsDir': 'semantic\\collectors\\unstructured\\docker_script.py',
             'BatchSize': 5000,
             'SupportedFormats': '.txt,.pdf,.docx,.html,.pptx',
+            'UnstructuredDataDir': f'{Indaleko.default_data_dir}\\semantic',
+            'InputFileName': 'unstructured_inputs.jsonl',
+            'OutputFileName': 'unstructured_outputs.jsonl'
         },
         'DOCKER': {
             'DockerImage': 'downloads.unstructured.io/unstructured-io/unstructured',
             'DockerTag': 'latest',
+        },
+        'VOLUMES': {
+            'HostDrive': 'c:\\',
+            'HostDriveMount': '/mnt/drive',
+            'ProjectDir': os.environ.get('INDALEKO_ROOT'),
+            'ProjectDirMount': '/mnt/Indaleko',
+            'UnstructuredDataDirMount': '/mnt/semantic'
         },
         'BATCH_SIZES': {
             '.jpg': 20,
@@ -109,6 +121,7 @@ class IndalekoUnstructured(SemanticCollector):
             self.config_file = os.path.join(Indaleko.default_config_dir, self.config_file_name)
         config = configparser.ConfigParser()
         config.read(self.config_file, encoding='utf-8-sig')
+        ic("loading config")
         config.write(sys.stdout)
         return config
 
@@ -126,7 +139,9 @@ class IndalekoUnstructured(SemanticCollector):
 
     def retrieve_data(self, data_id: str) -> dict:
         '''Retrieve the data for the unstructured data collector'''
-        raise NotImplementedError('retrieve_data must be implemented by the subclass')
+        unstructured_retrieve = UnstructuredRetrieval()
+        print("Processing files through unstructured")
+        unstructured_retrieve.retrieve("unstructured_1")
 
     def get_collector_description(self) -> str:
         '''Get the description of the unstructured data collector'''
@@ -136,9 +151,12 @@ class IndalekoUnstructured(SemanticCollector):
         '''Get the JSON schema for the unstructured data collector'''
         return {}
 
-    def lookup_file(self) -> Union[IndalekoObject, None]:
-        '''Lookup the file object for the unstructured data collector'''
-        raise NotImplementedError('lookup_file must be implemented by the subclass')
+    def lookup_files(self, args) -> None:
+        '''Lookup the file objects for the unstructured data collector'''
+        lookup = UnstructuredLookup()
+        print("Looking up files")
+        lookup.generate_input()
+        
 
 
 def main():
@@ -175,8 +193,23 @@ def main():
                         default=logging.DEBUG,
                         type=str,
                         help='Logging level')
+    
+    command_subparser = parser.add_subparsers(dest='command', help='Command to execute')
+
+    ## Subparser to generate input file for unstructured
+    parser_lookup = command_subparser.add_parser('lookup',
+                                                help='Creates a jsonl file that contains a list of files to be processed by Unstructured')
+    parser_lookup.set_defaults(func = unstructured.lookup_files)
+
+    ## Subparser to run Unstructured on Inputs
+    parser_retrieve = command_subparser.add_parser('retrieve',
+                                                help='Creates a jsonl file that contains a list of files processed by Unstructured')
+    parser_retrieve.set_defaults(func = unstructured.retrieve_data)
+
+    parser.set_defaults(func = None)
     args = parser.parse_args()
     ic(args)
+    args.func(args)
 
 if __name__ == '__main__':
     main()
