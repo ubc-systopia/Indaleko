@@ -346,45 +346,6 @@ class local_collector_mixin(IndalekoBaseCLI.default_handler_mixin):
             config_file=str(keys['machine_config_file']),
             offline=offline)
 
-    @staticmethod
-    def find_machine_config_files(
-            config_dir : Union[str, Path],
-            platform : str,
-            debug : bool = False
-        ) -> Union[list[str], None]:
-        if debug:
-            ic(f'find_machine_config_files: config_dir = {config_dir}')
-            ic(f'find_machine_config_files:   platform = {platform}')
-        if not Path(config_dir).exists():
-            return None
-        if platform is None:
-            return []
-        if platform == 'Windows':
-            platform='windows'
-        return [
-            fname for fname, _ in find_candidate_files([platform, '-hardware-info'], str(config_dir))
-            if fname.endswith('.json')
-        ]
-
-    @staticmethod
-    def extract_filename_metadata(file_name):
-        # windows uses non-standard naming for machine config files, so we have to handle that here.
-        if not file_name.startswith(IndalekoWindowsMachineConfig.windows_machine_config_file_prefix):
-            return IndalekoBaseCLI.default_handler_mixin.extract_filename_metadata(file_name)
-        # windows-hardware-info-840640bc-63dd-4c1f-be0e-feb0bc785356-2024-08-29T21-46-04.0416317Z.json
-        assert file_name.endswith('.json') # if not, generalize this
-        prefix_length = len(IndalekoWindowsMachineConfig.windows_machine_config_file_prefix)
-        machine_id = uuid.UUID(file_name[prefix_length+1:prefix_length+37]).hex
-        timestamp = file_name[prefix_length+38:-5]
-        keys = {
-            'platform' : platform.system(),
-            'service' : 'windows_machine_config',
-            'machine' : machine_id,
-            'timestamp' : timestamp,
-            'suffix' : '.json',
-        }
-        return keys
-
 
 @staticmethod
 def local_run(keys: dict[str, str]) -> Union[dict, None]:

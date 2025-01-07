@@ -60,8 +60,8 @@ def generate_final_name(args : list, **kwargs) -> str:
     name += f'-svc={service}'
     for key, value in kwargs.items():
         assert isinstance(value, str), f'value must be a string: {key, value}'
-        if '-' in key or '-' in value:
-            raise ValueError(f'key and value must not contain a hyphen: {key, value}')
+        if '-' in key:
+            raise ValueError(f'key must not contain a hyphen: {key, value}')
         name += f'-{key}={value}'
     if ts is not None:
         name += ts
