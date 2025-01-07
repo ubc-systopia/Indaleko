@@ -22,7 +22,6 @@ import datetime
 import inspect
 import logging
 import os
-import platform
 import sys
 import uuid
 
@@ -47,6 +46,7 @@ from perf.perf_collector import IndalekoPerformanceDataCollector
 from perf.perf_recorder import IndalekoPerformanceDataRecorder
 from utils.i_logging import IndalekoLogging
 from storage.collectors.base import BaseStorageCollector
+from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.runner import IndalekoCLIRunner
@@ -68,6 +68,14 @@ class IndalekoWindowsLocalCollector(BaseStorageCollector):
     indaleko_windows_local_collector_service_description = 'This service collects metadata from the local filesystems of a Windows machine.'
     indaleko_windows_local_collector_service_version = '1.0'
     indaleko_windows_local_collector_service_type = IndalekoServiceManager.service_type_storage_collector
+
+    windows_collector_data = IndalekoStorageCollectorDataModel(
+        CollectorPlatformName = windows_platform,
+        CollectorServiceName = indaleko_windows_local_collector_service_name,
+        CollectorServiceUUID = uuid.UUID(indaleko_windows_local_collector_uuid),
+        CollectorServiceVersion = indaleko_windows_local_collector_service_version,
+        CollectorServiceDescription = indaleko_windows_local_collector_service_description
+    )
 
     indaleko_windows_local_collector_service ={
         'service_name' : indaleko_windows_local_collector_service_name,
@@ -116,8 +124,8 @@ class IndalekoWindowsLocalCollector(BaseStorageCollector):
                 kwargs[key] = value
         if 'platform' not in kwargs:
             kwargs['platform'] = IndalekoWindowsLocalCollector.windows_platform
-        if 'collector_name' not in kwargs:
-            kwargs['collector_name'] = IndalekoWindowsLocalCollector.windows_local_collector_name
+        if 'collector_data' not in kwargs:
+            kwargs['collector_data'] =  IndalekoWindowsLocalCollector.windows_collector_data
         super().__init__(**kwargs)
 
     def generate_windows_collector_file_name(self, **kwargs) -> str:
@@ -378,6 +386,9 @@ def local_run(keys: dict[str, str]) -> Union[dict, None]:
         else:
             return {}
     collector = IndalekoWindowsLocalCollector(**kwargs)
+    ic(collector.service_identifier)
+    ic(collector.service_version)
+    ic(collector.service_description)
     perf_data = IndalekoPerformanceDataCollector.measure_performance(
         collect,
         source=IndalekoSourceIdentifierDataModel(

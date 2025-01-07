@@ -96,14 +96,10 @@ class BaseStorageCollector:
         assert os.path.isdir(self.data_dir), f'{self.data_dir} must be an existing directory'
         self.timestamp = kwargs.get('timestamp', datetime.datetime.now(datetime.timezone.utc).isoformat())
         assert isinstance(self.timestamp, str), 'timestamp must be a string'
-        self.collector_data = kwargs.get('collector_data', BaseStorageCollector.collector_data)
-        self.collector_service = {
-            'service_name' : self.collector_data.CollectorServiceName,
-            'service_description' : self.collector_data.CollectorServiceDescription,
-            'service_version' : self.collector_data.CollectorServiceVersion,
-            'service_type' : self.collector_data.CollectorServiceType,
-            'service_identifier' : self.collector_data.CollectorServiceUUID,
-        }
+        self.collector_data = kwargs.get('collector_data')
+        if self.collector_data is None:
+            ic(f'Warning: {type(self)}.__init__: collector_data not provided, using default')
+            self.collector_data = BaseStorageCollector.collector_data
         if self.collector_data.CollectorPlatformName is not None:
             self.platform = self.collector_data.CollectorPlatformName
         self.collector_name = self.collector_data.CollectorServiceName

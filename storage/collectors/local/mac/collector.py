@@ -46,6 +46,7 @@ from perf.perf_collector import IndalekoPerformanceDataCollector
 from perf.perf_recorder import IndalekoPerformanceDataRecorder
 from platforms.mac.machine_config import IndalekoMacOSMachineConfig
 from storage.collectors.base import BaseStorageCollector
+from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.runner import IndalekoCLIRunner
@@ -75,6 +76,14 @@ class IndalekoMacLocalCollector(BaseStorageCollector):
         'service_type' : indaleko_mac_local_collector_service_type,
         'service_identifier' : indaleko_mac_local_collector_uuid,
     }
+
+    mac_local_collector_data = IndalekoStorageCollectorDataModel(
+        CollectorPlatformName = mac_platform,
+        CollectorServiceName = indaleko_mac_local_collector_service_name,
+        CollectorServiceDescription = indaleko_mac_local_collector_service_description,
+        CollectorServiceUUID = uuid.UUID(indaleko_mac_local_collector_uuid),
+        CollectorServiceVersion = indaleko_mac_local_collector_service_version,
+    )
 
     def __init__(self, **kwargs):
         assert 'machine_config' in kwargs, 'machine_config must be specified'

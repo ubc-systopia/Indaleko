@@ -42,6 +42,7 @@ from perf.perf_collector import IndalekoPerformanceDataCollector
 from perf.perf_recorder import IndalekoPerformanceDataRecorder
 from platforms.linux.machine_config import IndalekoLinuxMachineConfig
 from storage.collectors.base import BaseStorageCollector
+from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from utils.i_logging import IndalekoLogging
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.base import IndalekoBaseCLI
@@ -72,6 +73,15 @@ class IndalekoLinuxLocalCollector(BaseStorageCollector):
         'service_identifier' : indaleko_linux_local_collector_uuid,
     }
 
+    linux_collector_data = IndalekoStorageCollectorDataModel(
+        CollectorPlatformName = linux_platform,
+        CollectorServiceName = indaleko_linux_local_collector_service_name,
+        CollectorServiceUUID = uuid.UUID(indaleko_linux_local_collector_uuid),
+        CollectorServiceVersion = indaleko_linux_local_collector_service_version,
+        CollectorServiceDescription = indaleko_linux_local_collector_service_description
+    )
+
+
     def __init__(self, **kwargs):
         assert 'machine_config' in kwargs, 'machine_config must be specified'
         self.machine_config = kwargs['machine_config']
@@ -81,6 +91,8 @@ class IndalekoLinuxLocalCollector(BaseStorageCollector):
         if 'offline' in kwargs:
             self.offline = kwargs['offline']
             del self.offline
+        if 'collector_data' not in kwargs:
+            kwargs['collector_data'] =  IndalekoLinuxLocalCollector.linux_collector_data
         super().__init__(**kwargs,
                          platform=IndalekoLinuxLocalCollector.linux_platform,
                          collector_name=IndalekoLinuxLocalCollector.linux_local_collector_name,
