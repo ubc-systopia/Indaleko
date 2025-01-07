@@ -410,7 +410,7 @@ def add_storage_local_parameters(parser : argparse.ArgumentParser) -> argparse.A
     if default_path == '~':
         default_path = os.path.abspath(os.sep)
     parser.add_argument('--path',
-                        help=f'Path to the directory from which to collect metadata {default_path}',
+                        help=f'Path to the directory from which to collect metadata (default={default_path})',
                         type=str,
                         default=default_path)
     return parser
