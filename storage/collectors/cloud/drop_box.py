@@ -28,6 +28,7 @@ import dropbox
 import json
 import logging
 import os
+from pathlib import Path
 import requests
 import sys
 import time
@@ -35,6 +36,7 @@ from urllib.parse import urlencode, parse_qs, urlparse
 import uuid
 
 from icecream import ic
+from typing import Union
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -47,10 +49,14 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # pylint: disable=wrong-import-position
 from data_models import IndalekoSourceIdentifierDataModel
 from db import IndalekoServiceManager
+from utils.cli.base import IndalekoBaseCLI
+from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
+from utils.cli.runner import IndalekoCLIRunner
 from utils.i_logging import IndalekoLogging
 from utils.misc.file_name_management import generate_file_name
 from utils.misc.directory_management import indaleko_default_data_dir, indaleko_default_config_dir, indaleko_default_log_dir
 from storage.collectors.base import BaseStorageCollector
+from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from perf.perf_collector import IndalekoPerformanceDataCollector
 from perf.perf_recorder import IndalekoPerformanceDataRecorder
 # pylint: enable=wrong-import-position
@@ -81,6 +87,14 @@ class IndalekoDropboxCollector(BaseStorageCollector):
         'service_identifier': indaleko_dropbox_collector_uuid,
     }
 
+    dropbox_collector_data = IndalekoStorageCollectorDataModel(
+        CollectorPlatformName=dropbox_platform,
+        CollectorServiceName=indaleko_dropbox_collector_service_name,
+        CollectorServiceUUID=uuid.UUID(indaleko_dropbox_collector_uuid),
+        CollectorServiceVersion=indaleko_dropbox_collector_service_version,
+        CollectorServiceDescription=indaleko_dropbox_collector_service_description,
+    )
+
     def __init__(self, **kwargs):
         self.config_dir = kwargs.get('config_dir', indaleko_default_config_dir)
         self.dropbox_config_file = os.path.join(self.config_dir, IndalekoDropboxCollector.dropbox_config_file)
@@ -99,6 +113,8 @@ class IndalekoDropboxCollector(BaseStorageCollector):
         self.user_info = self.dbx.users_get_current_account()
         if 'platform' not in kwargs:
             kwargs['platform'] = IndalekoDropboxCollector.dropbox_platform
+        if 'collector_data' not in kwargs:
+            kwargs['collector_data'] = IndalekoDropboxCollector.dropbox_collector_data
         super().__init__(**kwargs,
                          indexer_name=IndalekoDropboxCollector.dropbox_collector_name,
                          **IndalekoDropboxCollector.indaleko_dropbox_collector_service
@@ -263,6 +279,8 @@ class IndalekoDropboxCollector(BaseStorageCollector):
         of the files in the Dropbox folder.
         '''
         assert 'user_id' in kwargs, 'No user_id found in kwargs'
+        if 'collector_name' not in kwargs:
+            kwargs['collector_name'] = IndalekoDropboxCollector.dropbox_collector_name
         return generate_file_name(**kwargs)
 
     def build_stat_dict(self,  obj : dropbox.files) -> dict:
@@ -365,7 +383,7 @@ class IndalekoDropboxCollector(BaseStorageCollector):
         return [f for f in prospects if IndalekoDropboxCollector.dropbox_platform in f]
 
 
-def main():
+def old_main():
     '''This is the entry point for using the Dropbox indexer.'''
     logging_levels = IndalekoLogging.get_logging_levels()
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
@@ -439,7 +457,7 @@ def main():
         else:
             return {}
     def collect(collector):
-        data = collector.collect()
+        data = collector.collect(recursive=not args.norecurse)
         collector.write_data_to_file(data, output_file)
     perf_data = IndalekoPerformanceDataCollector.measure_performance(
         collect,
@@ -465,6 +483,108 @@ def main():
     for count_type, count_value in collector.get_counts().items():
         logging.info('Count %s: %s', count_type, count_value)
     logging.info('Indaleko Dropbox Indexer finished.')
+
+class dropbox_collector_mixin(IndalekoBaseCLI.default_handler_mixin):
+    '''This is the mixin for the Dropbox collector.'''
+
+
+@staticmethod
+def local_run(keys: dict[str, str]) -> Union[dict,None]:
+    '''Run the collector'''
+    args = keys['args']
+    cli = keys['cli']
+    config_data = cli.get_config_data()
+    debug = hasattr(args, 'debug') and args.debug
+    if debug:
+        ic(config_data)
+    kwargs = {
+        'timestamp': config_data['Timestamp'],
+        'offline': args.offline
+    }
+    def collect(collector: IndalekoDropboxCollector):
+        '''local implementation of collect'''
+        data = collector.collect(not args.norecurse)
+        output_file = os.path.join(args.datadir, args.outputfile)
+        collector.write_data_to_file(data, output_file)
+    def extract_counters(**kwargs):
+        '''local implementation of extract_counters'''
+        collector = kwargs.get('collector')
+        if collector:
+            return ic(collector.get_counts())
+        else:
+            return {}
+    collector = IndalekoDropboxCollector(**kwargs)
+    perf_data = IndalekoPerformanceDataCollector.measure_performance(
+        collect,
+        source=IndalekoSourceIdentifierDataModel(
+            Identifier=collector.service_identifier,
+            Version = collector.service_version,
+            Description=collector.service_description),
+        description=collector.service_description,
+        MachineIdentifier=None,
+        process_results_func=extract_counters,
+        input_file_name=None,
+        output_file_name=str(Path(args.datadir) / args.outputfile),
+        collector=collector
+    )
+    if args.performance_db or args.performance_file:
+        perf_recorder = IndalekoPerformanceDataRecorder()
+        if args.performance_file:
+            perf_file = str(Path(args.datadir) / config_data['PerformanceDataFile'])
+            perf_recorder.add_data_to_file(perf_file, perf_data)
+            if (debug):
+                ic('Performance data written to ', config_data['PerformanceDataFile'])
+        if args.performance_db:
+            perf_recorder.add_data_to_db(perf_data)
+            if (debug):
+                ic('Performance data written to the database')
+
+@staticmethod
+def add_storage_local_parameters(parser : argparse.ArgumentParser) -> argparse.ArgumentParser:
+    '''Add the parameters for the local storage collector'''
+    parser.add_argument('--norecurse',
+                        help='Disable recursive directory indexing (for testing).',
+                        default=False,
+                        action='store_true')
+    return parser
+
+existing_cli = '''
+    usage: drop_box.py [-h] [--configdir CONFIGDIR] [--logdir LOGDIR] [--loglevel {CRITICAL,DEBUG,ERROR,FATAL,INFO,NOTSET,WARN,WARNING}] [--output OUTPUT] [--datadir DATADIR] [--norecurse] [--performance_file] [--performance_db]
+
+    options:
+    -h, --help            show this help message and exit
+    --configdir CONFIGDIR
+                            Path to the config directory
+    --logdir LOGDIR, -l LOGDIR
+                            Path to the log directory
+    --loglevel {CRITICAL,DEBUG,ERROR,FATAL,INFO,NOTSET,WARN,WARNING}
+                            Logging level to use (lower number = more logging)
+    --output OUTPUT       Name and location of where to save the fetched metadata
+    --datadir DATADIR, -d DATADIR
+                            Path to the data directory
+    --norecurse           Disable recursive directory indexing (for testing).
+    --performance_file    Record performance data to a file
+    --performance_db      Record performance data to the database
+
+'''
+
+def main():
+    '''This is the entry point for using the Dropbox collector.'''
+    runner = IndalekoCLIRunner(
+        cli_data=IndalekoBaseCliDataModel(
+            Platform=None,
+            Service=IndalekoDropboxCollector.dropbox_collector_name,
+        ),
+        handler_mixin=dropbox_collector_mixin,
+        features=IndalekoBaseCLI.cli_features(
+            machine_config=False,
+            input=False,
+            platform=False,
+        ),
+        additional_parameters=add_storage_local_parameters,
+        Run=local_run,
+    )
+    runner.run()
 
 if __name__ == '__main__':
     main()

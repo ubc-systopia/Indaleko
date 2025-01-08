@@ -86,6 +86,7 @@ class IndalekoBaseCLI:
         self.features = features
         if not self.features:
             self.features = IndalekoBaseCLI.cli_features() # default features
+        ic(self.features.machine_config)
         self.pre_parser = argparse.ArgumentParser(add_help=False)
         self.config_data = json.loads(cli_data.model_dump_json())
         self.handler_mixin = handler_mixin
@@ -94,7 +95,11 @@ class IndalekoBaseCLI:
         for feature in dir(self.cli_features):
             if feature.startswith('__'):
                 continue
-            if not getattr(self.features, feature, False):
+            if not getattr(self.features, feature, self.cli_features.__dict__[feature]):
+                # this feature is disabled
+                continue
+            if not getattr(self.cli_features, feature, False):
+                ic(f'Feature: {feature} disabled')
                 continue
             setup_func_name = f'setup_{feature}_parser'
             setup_func = getattr(self, setup_func_name, None)
@@ -191,6 +196,8 @@ class IndalekoBaseCLI:
 
     def setup_machine_config_parser(self) -> 'IndalekoBaseCLI':
         '''This method is used to set up the machine configuration parser'''
+        if not self.features.machine_config:
+            return
         pre_args, _ = self.pre_parser.parse_known_args()
         if hasattr(pre_args, 'machine_config'):
             return
@@ -218,6 +225,8 @@ class IndalekoBaseCLI:
 
     def setup_platform_parser(self) -> 'IndalekoBaseCLI':
         '''This method is used to set up the platform parser'''
+        if not self.features.platform:
+            return
         pre_args, _ = self.pre_parser.parse_known_args()
         if hasattr(pre_args, 'platform'): # only process it once
             return # already added
@@ -402,17 +411,15 @@ class IndalekoBaseCLI:
         def generate_log_file_name(keys : dict[str,str]) -> str:
             '''This method is used to generate a log file name'''
             kwargs = {
-                'platform': keys['Platform'],
                 'service': keys['Service'],
                 'timestamp' : keys['Timestamp'],
             }
+            if 'Platform' in keys:
+                kwargs['platform'] = keys['Platform']
             if 'MachineConfigFileKeys' in keys and\
                   keys['MachineConfigFileKeys'] and\
                   'machine' in keys['MachineConfigFileKeys']:
                     kwargs['machine'] = keys['MachineConfigFileKeys']['machine']
-            else:
-                ic(f'Issues with machine config files, exiting.')
-                exit(-1)
             if 'suffix' not in keys:
                 kwargs['suffix'] = 'log'
             return generate_file_name(**kwargs)
@@ -423,10 +430,11 @@ class IndalekoBaseCLI:
             This method is used to generate a performance file name.
             '''
             kwargs = {
-                'platform': keys['Platform'] + '_perf',
-                'service': keys['Service'],
+                'service': keys['Service'] + '_perf',
                 'timestamp' : keys['Timestamp'],
             }
+            if 'Platform' in keys:
+                kwargs['platform'] = keys['Platform']
             if 'MachineConfigFileKeys' in keys and 'machine' in keys['MachineConfigFileKeys']:
                 kwargs['machine'] = keys['MachineConfigFileKeys']['machine']
             else:

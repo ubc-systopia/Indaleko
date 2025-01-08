@@ -47,8 +47,8 @@ from perf.perf_recorder import IndalekoPerformanceDataRecorder
 from utils.i_logging import IndalekoLogging
 from storage.collectors.base import BaseStorageCollector
 from storage.collectors.data_model import IndalekoStorageCollectorDataModel
-from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.base import IndalekoBaseCLI
+from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.runner import IndalekoCLIRunner
 from utils.i_logging import IndalekoLogging
 from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
@@ -225,122 +225,6 @@ class IndalekoWindowsLocalCollector(BaseStorageCollector):
                 last_drive = entry[2]
         return data
 
-
-
-def old_main():
-    '''This is the old (deprecated) main handler for the Indaleko Windows Local Collector
-    service.'''
-    logging_levels = IndalekoLogging.get_logging_levels()
-
-    # Step 1: find the machine configuration file
-    pre_parser = argparse.ArgumentParser(add_help=False)
-    pre_parser.add_argument('--configdir',
-                            help='Path to the config directory',
-                            default=indaleko_default_config_dir)
-    pre_args, _ = pre_parser.parse_known_args()
-    config_files = IndalekoWindowsMachineConfig.find_config_files(pre_args.configdir)
-    default_config_file = IndalekoWindowsMachineConfig.get_most_recent_config_file(pre_args.configdir)
-    # Step 2: figure out the default config file
-    pre_parser = argparse.ArgumentParser(add_help=False, parents=[pre_parser])
-    pre_parser.add_argument('--config', choices=config_files, default=default_config_file)
-    pre_parser.add_argument('--path', help='Path to the directory to scan', type=str,
-                            default=os.path.expanduser('~'))
-    pre_args, _ = pre_parser.parse_known_args()
-
-    # Step 3: now we can compute the machine config and drive GUID
-    machine_config = IndalekoWindowsMachineConfig.load_config_from_file(config_file=pre_args.config)
-
-    drive = os.path.splitdrive(pre_args.path)[0][0].upper()
-    drive_guid = machine_config.map_drive_letter_to_volume_guid(drive)
-    if drive_guid is None:
-        drive_guid = uuid.uuid4().hex
-    timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    collector = IndalekoWindowsLocalCollector(machine_config=machine_config,
-                                          timestamp=timestamp)
-    output_file = collector.generate_windows_collector_file_name(storage_description=drive_guid)
-    parser= argparse.ArgumentParser(parents=[pre_parser])
-    parser.add_argument('--datadir', '-d',
-                        help='Path to the data directory',
-                        default=indaleko_default_data_dir)
-    parser.add_argument('--output', '-o',
-                        help='name to assign to output directory',
-                        default=output_file)
-    parser.add_argument('--logdir', '-l',
-                        help='Path to the log directory',
-                        default=indaleko_default_log_dir)
-    parser.add_argument('--loglevel',
-                        type=int,
-                        default=logging.DEBUG,
-                        choices=logging_levels,
-                        help='Logging level to use (lower number = more logging)')
-    parser.add_argument('--performance_file',
-                        default=False,
-                        action='store_true',
-                        help='Record performance data to a file')
-    parser.add_argument('--performance_db',
-                        default=False,
-                        action='store_true',
-                        help='Record performance data to the database')
-    args = parser.parse_args()
-    collector = IndalekoWindowsLocalCollector(timestamp=timestamp,
-                                          path=args.path,
-                                          machine_config=machine_config,
-                                          storage_description=drive_guid)
-    output_file = args.output
-    log_file_name = collector.generate_windows_collector_file_name(target_dir=args.logdir, suffix='log')
-    logging.basicConfig(filename=os.path.join(log_file_name),
-                                level=args.loglevel,
-                                format='%(asctime)s - %(levelname)s - %(message)s',
-                                force=True)
-    logging.info('Indexing %s ' , pre_args.path)
-    logging.info('Output file %s ' , output_file)
-    perf_file_name = os.path.join(
-        args.datadir,
-        IndalekoPerformanceDataRecorder().generate_perf_file_name(
-            platform=collector.platform,
-            service=collector.collector_name,
-            machine=uuid.UUID(machine_config.machine_id)
-        )
-    )
-    def extract_counters(**kwargs):
-        debug = 'debug' in kwargs and kwargs['debug']
-        if debug:
-            ic(kwargs)
-        collector = kwargs.get('collector')
-        if collector:
-            return ic(collector.get_counts())
-        else:
-            return {}
-
-    def collect(collector):
-        data = collector.collect()
-        collector.write_data_to_file(data, output_file)
-    perf_data = IndalekoPerformanceDataCollector.measure_performance(
-        collect,
-        source=IndalekoSourceIdentifierDataModel(
-            Identifier=collector.service_identifier,
-            Version = collector.service_version,
-            Description=collector.service_description),
-        description=collector.service_description,
-        MachineIdentifier=uuid.UUID(machine_config.machine_id),
-        process_results_func=extract_counters,
-        input_file_name=None,
-        output_file_name=output_file,
-        collector=collector
-    )
-    if args.performance_db or args.performance_file:
-        perf_recorder = IndalekoPerformanceDataRecorder()
-        if args.performance_file:
-            perf_recorder.add_data_to_file(perf_file_name, perf_data)
-            ic('Performance data written to ', perf_file_name)
-        if args.performance_db:
-            perf_recorder.add_data_to_db(perf_data)
-            ic('Performance data written to the database')
-    counts = collector.get_counts()
-    for count_type, count_value in counts.items():
-        logging.info('%s: %d', count_type, count_value)
-    logging.info('Done')
-
 class local_collector_mixin(IndalekoBaseCLI.default_handler_mixin):
     @staticmethod
     def load_machine_config(keys: dict[str, str]) -> IndalekoWindowsMachineConfig:
@@ -386,9 +270,6 @@ def local_run(keys: dict[str, str]) -> Union[dict, None]:
         else:
             return {}
     collector = IndalekoWindowsLocalCollector(**kwargs)
-    ic(collector.service_identifier)
-    ic(collector.service_version)
-    ic(collector.service_description)
     perf_data = IndalekoPerformanceDataCollector.measure_performance(
         collect,
         source=IndalekoSourceIdentifierDataModel(
