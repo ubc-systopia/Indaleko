@@ -116,7 +116,7 @@ class IndalekoDropboxCollector(BaseStorageCollector):
         if 'collector_data' not in kwargs:
             kwargs['collector_data'] = IndalekoDropboxCollector.dropbox_collector_data
         super().__init__(**kwargs,
-                         indexer_name=IndalekoDropboxCollector.dropbox_collector_name,
+                         collector_name=IndalekoDropboxCollector.dropbox_collector_name,
                          **IndalekoDropboxCollector.indaleko_dropbox_collector_service
         )
 
@@ -437,7 +437,7 @@ def old_main():
                         action='store_true',
                         help='Record performance data to the database')
     args = parser.parse_args()
-    output_file = os.path.join(args.datadir, args.output)
+    output_file = str(Path(args.datadir) / args.outputfile)
     logging.info('Indaleko Dropbox Indexer started.')
     logging.info('Output file: %s', output_file)
     logging.info(args)

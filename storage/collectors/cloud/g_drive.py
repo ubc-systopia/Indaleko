@@ -33,8 +33,12 @@ from icecream import ic
 import json
 import logging
 import os
+from pathlib import Path
 import sys
 from urllib.parse import urlencode, parse_qs, urlparse
+from uuid import UUID
+
+from typing import Union
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -47,10 +51,14 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # pylint: disable=wrong-import-position
 from data_models import IndalekoSourceIdentifierDataModel
 from db import IndalekoServiceManager
+from utils.cli.base import IndalekoBaseCLI
+from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
+from utils.cli.runner import IndalekoCLIRunner
 from utils.i_logging import IndalekoLogging
 from utils.misc.file_name_management import generate_file_name
 from utils.misc.directory_management import indaleko_default_data_dir, indaleko_default_config_dir, indaleko_default_log_dir
 from storage.collectors.base import BaseStorageCollector
+from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from perf.perf_collector import IndalekoPerformanceDataCollector
 from perf.perf_recorder import IndalekoPerformanceDataRecorder
 # pylint: enable=wrong-import-position
@@ -65,6 +73,14 @@ class IndalekoGDriveCollector(BaseStorageCollector):
     indaleko_gdrive_collector_service_description = 'Indexes the Google Drive folder for Indaleko.'
     indaleko_gdrive_collector_service_version = '1.0'
     indaleko_gdrive_collector_service_type = IndalekoServiceManager.service_type_storage_collector
+
+    gdrive_collector_data = IndalekoStorageCollectorDataModel(
+        CollectorPlatformName=gdrive_platform,
+        CollectorServiceName=indaleko_gdrive_collector_service_name,
+        CollectorServiceUUID=UUID(indaleko_gdrive_collector_uuid),
+        CollectorServiceVersion=indaleko_gdrive_collector_service_version,
+        CollectorServiceDescription=indaleko_gdrive_collector_service_description,
+    )
 
     SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly',
               'https://www.googleapis.com/auth/userinfo.profile',
@@ -145,6 +161,10 @@ class IndalekoGDriveCollector(BaseStorageCollector):
         self.load_gdrive_config()
         self.gdrive_credentials = None
         self.load_gdrive_credentials()
+        if 'platform' not in kwargs:
+            kwargs['platform'] = IndalekoGDriveCollector.gdrive_platform
+        if 'collector_data' not in kwargs:
+            kwargs['collector_data'] = IndalekoGDriveCollector.gdrive_collector_data
         super().__init__(**kwargs,
                          collector_name=IndalekoGDriveCollector.gdrive_collector_name,
                          **IndalekoGDriveCollector.indaleko_gdrive_collector_service)
@@ -204,6 +224,8 @@ class IndalekoGDriveCollector(BaseStorageCollector):
         of the files in the Dropbox folder.
         '''
         assert 'user_id' in kwargs, 'No user_id found in kwargs'
+        if 'collector_name' not in kwargs:
+            kwargs['collector_name'] = IndalekoGDriveCollector.gdrive_collector_name
         return generate_file_name(**kwargs)
 
     def build_stat_dict(self, entry: dict) -> dict:
@@ -264,7 +286,7 @@ class IndalekoGDriveCollector(BaseStorageCollector):
         return [f for f in prospects if IndalekoGDriveCollector.gdrive_platform in f]
 
 
-def main():
+def old_main():
     logging_levels = IndalekoLogging.get_logging_levels()
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     pre_parser = argparse.ArgumentParser(add_help=False)
@@ -362,6 +384,109 @@ def main():
     for count_type, count_value in collector.get_counts().items():
         logging.info('Count %s: %s', count_type, count_value)
     logging.info('Indaleko GDrive Collector finished.')
+
+old_command_help = '''
+usage: g_drive.py [-h] [--configdir CONFIGDIR] [--logdir LOGDIR] [--loglevel {CRITICAL,DEBUG,ERROR,FATAL,INFO,NOTSET,WARN,WARNING}] [--output OUTPUT] [--datadir DATADIR] [--norecurse] [--performance_file] [--performance_db]
+
+options:
+  -h, --help            show this help message and exit
+  --configdir CONFIGDIR
+                        Path to the config directory
+  --logdir LOGDIR, -l LOGDIR
+                        Path to the log directory
+  --loglevel {CRITICAL,DEBUG,ERROR,FATAL,INFO,NOTSET,WARN,WARNING}
+                        Logging level to use (lower number = more logging)
+  --output OUTPUT       Name and location of where to save the fetched metadata
+  --datadir DATADIR, -d DATADIR
+                        Path to the data directory
+  --norecurse           Disable recursive directory indexing (for testing).
+  --performance_file    Record performance data to a file
+  --performance_db      Record performance data to the database
+'''
+
+@staticmethod
+def add_storage_local_parameters(parser : argparse.ArgumentParser) -> argparse.ArgumentParser:
+    '''Add the parameters for the local storage collector'''
+    parser.add_argument('--norecurse',
+                        help='Disable recursive directory indexing (for testing).',
+                        default=False,
+                        action='store_true')
+    return parser
+
+class gdrive_collector_mixin(IndalekoBaseCLI.default_handler_mixin):
+    '''This is the mixin for the Google Drive collector'''
+
+@staticmethod
+def local_run(keys: dict[str, str]) -> Union[dict,None]:
+    '''Run the collector'''
+    args = keys['args']
+    cli = keys['cli']
+    config_data = cli.get_config_data()
+    debug = hasattr(args, 'debug') and args.debug
+    if debug:
+        ic(args)
+        ic(config_data)
+    kwargs = {
+        'timestamp': config_data['Timestamp'],
+        'offline': args.offline
+    }
+    output_file_name=str(Path(args.datadir) / args.outputfile)
+    def collect(collector: IndalekoGDriveCollector):
+        '''local implementation of collect'''
+        data = collector.collect(not args.norecurse)
+        output_file = output_file_name
+        collector.write_data_to_file(data, output_file)
+    def extract_counters(**kwargs):
+        '''local implementation of extract_counters'''
+        collector = kwargs.get('collector')
+        if collector:
+            return ic(collector.get_counts())
+        else:
+            return {}
+    collector = IndalekoGDriveCollector(**kwargs)
+    perf_data = IndalekoPerformanceDataCollector.measure_performance(
+        collect,
+        source=IndalekoSourceIdentifierDataModel(
+            Identifier=collector.service_identifier,
+            Version = collector.service_version,
+            Description=collector.service_description),
+        description=collector.service_description,
+        MachineIdentifier=None,
+        process_results_func=extract_counters,
+        input_file_name=None,
+        output_file_name=output_file_name,
+        collector=collector
+    )
+    if args.performance_db or args.performance_file:
+        perf_recorder = IndalekoPerformanceDataRecorder()
+        if args.performance_file:
+            perf_file = str(Path(args.datadir) / config_data['PerformanceDataFile'])
+            perf_recorder.add_data_to_file(perf_file, perf_data)
+            if (debug):
+                ic('Performance data written to ', config_data['PerformanceDataFile'])
+        if args.performance_db:
+            perf_recorder.add_data_to_db(perf_data)
+            if (debug):
+                ic('Performance data written to the database')
+
+
+def main():
+    '''Google Drive collector main'''
+    runner = IndalekoCLIRunner(
+        cli_data=IndalekoBaseCliDataModel(
+            Platform=None,
+            Service=IndalekoGDriveCollector.gdrive_collector_name,
+        ),
+        handler_mixin=gdrive_collector_mixin,
+        features=IndalekoBaseCLI.cli_features(
+            machine_config=False,
+            input=False,
+            platform=False,
+        ),
+        additional_parameters=add_storage_local_parameters,
+        Run=local_run,
+    )
+    runner.run()
 
 if __name__ == '__main__':
     main()

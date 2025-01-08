@@ -437,8 +437,6 @@ class IndalekoBaseCLI:
                 kwargs['platform'] = keys['Platform']
             if 'MachineConfigFileKeys' in keys and 'machine' in keys['MachineConfigFileKeys']:
                 kwargs['machine'] = keys['MachineConfigFileKeys']['machine']
-            else:
-                ic(f'No machine config file keys {keys}')
             return generate_file_name(**kwargs)
 
         @staticmethod
