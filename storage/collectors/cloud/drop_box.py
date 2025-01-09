@@ -1,13 +1,13 @@
 '''
-IndalekoDropboxIndexer.py
+drop_box.py
 
-This script is used to index the files in the Dropbox folder of the user. It
+This script is used to scan the files in the Dropbox folder of the user. It
 will create a JSONL file with the metadata of the files in the Dropbox folder.
-The JSOLN file will be used by the IndalekoDropboxIngester.py to load data into
+The JSOLN file will be used by the dropbox recorder to load data into
 the database.
 
 Project Indaleko
-Copyright (C) 2024 Tony Mason
+Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -381,108 +381,6 @@ class IndalekoDropboxCollector(BaseStorageCollector):
         '''
         prospects = BaseStorageCollector.find_collector_files(search_dir, prefix, suffix)
         return [f for f in prospects if IndalekoDropboxCollector.dropbox_platform in f]
-
-
-def old_main():
-    '''This is the entry point for using the Dropbox indexer.'''
-    logging_levels = IndalekoLogging.get_logging_levels()
-    timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    pre_parser = argparse.ArgumentParser(add_help=False)
-    pre_parser.add_argument('--configdir',
-                            help='Path to the config directory',
-                            default=indaleko_default_config_dir)
-    pre_parser.add_argument('--logdir', '-l',
-                            help='Path to the log directory',
-                            default=indaleko_default_log_dir)
-    pre_parser.add_argument('--loglevel',
-                            type=int,
-                            default=logging.DEBUG,
-                            choices=logging_levels,
-                            help='Logging level to use (lower number = more logging)')
-    pre_args, _ = pre_parser.parse_known_args()
-    indaleko_logging = IndalekoLogging(platform=IndalekoDropboxCollector.dropbox_platform,
-                                       service_name='indexer',
-                                       log_dir=pre_args.logdir,
-                                       log_level=pre_args.loglevel,
-                                       timestamp=timestamp,
-                                       suffix='log')
-    log_file_name = indaleko_logging.get_log_file_name()
-    ic(log_file_name)
-    collector = IndalekoDropboxCollector(timestamp=timestamp)
-
-    output_file_name = IndalekoDropboxCollector.generate_dropbox_indexer_file_name(
-            platform=IndalekoDropboxCollector.dropbox_platform,
-            user_id=collector.get_user_id(),
-            service='indexer',
-            timestamp=timestamp,
-            suffix='jsonl'
-        )
-    parser = argparse.ArgumentParser(parents=[pre_parser])
-    parser.add_argument('--output', type=str, default=output_file_name,
-                        help='Name and location of where to save the fetched metadata')
-    parser.add_argument('--datadir',
-                        '-d',
-                        help='Path to the data directory',
-                        default=indaleko_default_data_dir)
-    parser.add_argument('--norecurse',
-                        help='Disable recursive directory indexing (for testing).',
-                        default=False,
-                        action='store_true')
-    parser.add_argument('--performance_file',
-                        default=False,
-                        action='store_true',
-                        help='Record performance data to a file')
-    parser.add_argument('--performance_db',
-                        default=False,
-                        action='store_true',
-                        help='Record performance data to the database')
-    args = parser.parse_args()
-    output_file = str(Path(args.datadir) / args.outputfile)
-    logging.info('Indaleko Dropbox Indexer started.')
-    logging.info('Output file: %s', output_file)
-    logging.info(args)
-    perf_file_name = os.path.join(
-        args.datadir,
-        IndalekoPerformanceDataRecorder().generate_perf_file_name(
-            platform=collector.dropbox_platform,
-            service=collector.dropbox_collector_name,
-            machine=None,
-        )
-    )
-    def extract_counters(**kwargs):
-        ic(kwargs)
-        collector = kwargs.get('collector')
-        if collector:
-            return ic(collector.get_counts())
-        else:
-            return {}
-    def collect(collector):
-        data = collector.collect(recursive=not args.norecurse)
-        collector.write_data_to_file(data, output_file)
-    perf_data = IndalekoPerformanceDataCollector.measure_performance(
-        collect,
-        source=IndalekoSourceIdentifierDataModel(
-            Identifier=collector.service_identifier,
-            Version = collector.service_version,
-            Description=collector.service_description),
-        description=collector.service_description,
-        MachineIdentifier=None,
-        process_results_func=extract_counters,
-        input_file_name=None,
-        output_file_name=output_file,
-        collector=collector
-    )
-    if args.performance_db or args.performance_file:
-        perf_recorder = IndalekoPerformanceDataRecorder()
-        if args.performance_file:
-            perf_recorder.add_data_to_file(perf_file_name, perf_data)
-            ic('Performance data written to ', perf_file_name)
-        if args.performance_db:
-            perf_recorder.add_data_to_db(perf_data)
-            ic('Performance data written to the database')
-    for count_type, count_value in collector.get_counts().items():
-        logging.info('Count %s: %s', count_type, count_value)
-    logging.info('Indaleko Dropbox Indexer finished.')
 
 class dropbox_collector_mixin(IndalekoBaseCLI.default_handler_mixin):
     '''This is the mixin for the Dropbox collector.'''
