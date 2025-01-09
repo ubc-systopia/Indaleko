@@ -1,11 +1,11 @@
 '''
-This script is used to index the files in a One Drive folder of Indaleko.
+This script is used to scan the files in a One Drive folder of Indaleko.
 It will create a JSONL file with the metadata of the files in the Dropbox
 folder. The JSONL file will be used by the Recorder to load data into
 the database.
 
 Project Indaleko
-Copyright (C) 2024 Tony Mason
+Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -29,6 +29,7 @@ import logging
 import msal
 from pyngrok import ngrok
 import os
+from pathlib import Path
 from queue import Queue
 import requests
 import socket
@@ -36,6 +37,9 @@ import sys
 import threading
 import time
 from urllib.parse import urlencode, parse_qs, urlparse
+from uuid import UUID
+
+from typing import Union
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -47,10 +51,14 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # pylint: disable=wrong-import-position
 from data_models import IndalekoSourceIdentifierDataModel
 from db import IndalekoServiceManager
+from utils.cli.base import IndalekoBaseCLI
+from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
+from utils.cli.runner import IndalekoCLIRunner
 from utils.i_logging import IndalekoLogging
 from utils.misc.file_name_management import generate_file_name
 from utils.misc.directory_management import indaleko_default_data_dir, indaleko_default_config_dir, indaleko_default_log_dir
 from storage.collectors.base import BaseStorageCollector
+from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from perf.perf_collector import IndalekoPerformanceDataCollector
 from perf.perf_recorder import IndalekoPerformanceDataRecorder
 # pylint: enable=wrong-import-position
@@ -78,6 +86,14 @@ class IndalekoOneDriveCollector(BaseStorageCollector):
         'version': indaleko_onedrive_collector_service_version,
         'type': indaleko_onedrive_collector_service_type
     }
+
+    onedrive_collector_data = IndalekoStorageCollectorDataModel(
+        CollectorPlatformName=onedrive_platform,
+        CollectorServiceName=indaleko_onedrive_collector_service_name,
+        CollectorServiceUUID=UUID(indaleko_onedrive_collector_uuid),
+        CollectorServiceVersion=indaleko_onedrive_collector_service_version,
+        CollectorServiceDescription=indaleko_onedrive_collector_service_description,
+    )
 
     class MicrosoftGraphCredentials:
         '''This encapsulates the credential management for the Microsoft Graph API.'''
@@ -220,6 +236,10 @@ class IndalekoOneDriveCollector(BaseStorageCollector):
             config=self.onedrive_config_file,
             cache_file=self.onedrive_token_file
         )
+        if 'platform' not in kwargs:
+            kwargs['platform'] = IndalekoOneDriveCollector.onedrive_platform
+        if 'collector_data' not in kwargs:
+            kwargs['collector_data'] = IndalekoOneDriveCollector.onedrive_collector_data
         super().__init__(
             **kwargs,
             collector_name=IndalekoOneDriveCollector.onedrive_collector_name,
@@ -229,7 +249,6 @@ class IndalekoOneDriveCollector(BaseStorageCollector):
         self.results = Queue()
         self.max_workers = kwargs.get('max_workers', 1)
         self.recurse = kwargs.get('recurse', True)
-        ic(self.recurse)
         self.drives = self.get_drives()
         self.root_processed = False
 
@@ -240,6 +259,8 @@ class IndalekoOneDriveCollector(BaseStorageCollector):
         of the files in the Dropbox folder.
         '''
         assert 'user_id' in kwargs, 'No user_id found in kwargs'
+        if 'collector_name' not in kwargs:
+            kwargs['collector_name'] = IndalekoOneDriveCollector.onedrive_collector_name
         return generate_file_name(**kwargs)
 
     def build_stat_dict(self, entry: dict) -> dict:
@@ -565,7 +586,7 @@ class IndalekoOneDriveCollector(BaseStorageCollector):
         return [f for f in prospects if IndalekoOneDriveCollector.dropbox_platform in f]
 
 
-def main():
+def old_main():
     logging_levels = IndalekoLogging.get_logging_levels()
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     pre_parser = argparse.ArgumentParser(add_help=False)
@@ -597,7 +618,11 @@ def main():
                                         suffix='log')
     log_file_name = indaleko_logging.get_log_file_name()
     ic(log_file_name)
-    collector = IndalekoOneDriveCollector(timestamp=timestamp, recurse=(not pre_args.norecurse), max_workers=pre_args.threads)
+    collector = IndalekoOneDriveCollector(
+        timestamp=timestamp,
+        recurse=(not pre_args.norecurse),
+        max_workers=pre_args.threads
+    )
     output_file_name = IndalekoOneDriveCollector.generate_onedrive_collector_file_name(
             platform=IndalekoOneDriveCollector.onedrive_platform,
             user_id=collector.get_email(),
@@ -671,6 +696,113 @@ def main():
     for count_type, count_value in collector.get_counts().items():
         logging.info('Count %s: %s', count_type, count_value)
     logging.info('Indaleko OneDrive Collector finished.')
+
+old_cli_help='''
+    usage: one_drive.py [-h] [--configdir CONFIGDIR] [--logdir LOGDIR] [--loglevel {CRITICAL,DEBUG,ERROR,FATAL,INFO,NOTSET,WARN,WARNING}] [--norecurse] [--threads THREADS] [--output OUTPUT] [--datadir DATADIR] [--performance_file] [--performance_db]
+
+    options:
+    -h, --help            show this help message and exit
+    --configdir CONFIGDIR
+                            Path to the config directory
+    --logdir LOGDIR, -l LOGDIR
+                            Path to the log directory
+    --loglevel {CRITICAL,DEBUG,ERROR,FATAL,INFO,NOTSET,WARN,WARNING}
+                            Logging level to use (lower number = more logging)
+    --norecurse           Disable recursive directory indexing (for testing).
+    --threads THREADS, -t THREADS
+                            Number of threads to use for indexing
+    --output OUTPUT       Name and location of where to save the fetched metadata
+    --datadir DATADIR, -d DATADIR
+                            Path to the data directory
+    --performance_file    Record performance data to a file
+    --performance_db      Record performance data to the database
+'''
+
+@staticmethod
+def add_storage_local_parameters(parser : argparse.ArgumentParser) -> argparse.ArgumentParser:
+    '''Add the parameters for the local storage collector'''
+    parser.add_argument('--norecurse',
+                        help='Disable recursive directory indexing (for testing).',
+                        default=False,
+                        action='store_true')
+    parser.add_argument('--threads', '-t',
+                        help='Number of threads to use for indexing',
+                        default=1,
+                        type=int)
+    return parser
+
+class onedirive_collector_mixin(IndalekoBaseCLI.default_handler_mixin):
+    '''This is the mixin for the OneDrive collector.'''
+
+
+@staticmethod
+def local_run(keys: dict[str, str]) -> Union[dict,None]:
+    '''Run the collector'''
+    args = keys['args']
+    cli = keys['cli']
+    config_data = cli.get_config_data()
+    debug = hasattr(args, 'debug') and args.debug
+    if debug:
+        ic(args)
+        ic(config_data)
+    kwargs = {
+        'timestamp': config_data['Timestamp'],
+        'offline': args.offline
+    }
+    output_file_name=str(Path(args.datadir) / args.outputfile)
+    def collect(collector: IndalekoOneDriveCollector):
+        data = collector.collect()
+        output_file = output_file_name
+        collector.write_data_to_file(data, output_file)
+    def extract_counters(**kwargs):
+        '''local implementation of extract_counters'''
+        collector = kwargs.get('collector')
+        if collector:
+            return ic(collector.get_counts())
+        else:
+            return {}
+    kwargs['recurse'] = not args.norecurse
+    kwargs['threads'] = int(args.threads)
+    collector = IndalekoOneDriveCollector(**kwargs)
+    perf_data = IndalekoPerformanceDataCollector.measure_performance(
+        collect,
+        source=IndalekoSourceIdentifierDataModel(
+            Identifier=collector.service_identifier,
+            Version = collector.service_version,
+            Description=collector.service_description),
+        description=collector.service_description,
+        MachineIdentifier=None,
+        process_results_func=extract_counters,
+        input_file_name=None,
+        output_file_name=output_file_name,
+        collector=collector
+    )
+    if args.performance_db or args.performance_file:
+        perf_recorder = IndalekoPerformanceDataRecorder()
+        if args.performance_file:
+            perf_recorder.add_data_to_file(perf_file_name, perf_data)
+            ic('Performance data written to ', perf_file_name)
+        if args.performance_db:
+            perf_recorder.add_data_to_db(perf_data)
+            ic('Performance data written to the database')
+
+def main():
+    '''OneDrive collector main'''
+    runner = IndalekoCLIRunner(
+        cli_data=IndalekoBaseCliDataModel(
+            Platform=None,
+            Service=IndalekoOneDriveCollector.onedrive_collector_name,
+        ),
+        handler_mixin=onedirive_collector_mixin,
+        features=IndalekoBaseCLI.cli_features(
+            machine_config=False,
+            input=False,
+            platform=False,
+        ),
+        additional_parameters=add_storage_local_parameters,
+        Run=local_run
+    )
+    runner.run()
 
 if __name__ == '__main__':
     main()

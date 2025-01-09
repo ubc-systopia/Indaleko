@@ -316,109 +316,6 @@ class IndalekoICloudCollector(BaseStorageCollector):
         prospects = BaseStorageCollector.find_collector_files(search_dir, prefix, suffix)
         return [f for f in prospects if IndalekoICloudCollector.icloud_platform in f]
 
-def old_main():
-    logging_levels = IndalekoLogging.get_logging_levels()
-    timestamp = datetime.now(timezone.utc).isoformat()
-    pre_parser = argparse.ArgumentParser(add_help=False)
-    pre_parser.add_argument('--logdir', '-l',
-                            help='Path to the log directory',
-                            default=indaleko_default_log_dir)
-    pre_parser.add_argument('--loglevel',
-                            type=int,
-                            default=logging.DEBUG,
-                            choices=logging_levels,
-                            help='Logging level to use (lower number = more logging)')
-    pre_args, _ = pre_parser.parse_known_args()
-    indaleko_logging = IndalekoLogging(platform=IndalekoICloudCollector.icloud_platform,
-                                        service_name='Collector',
-                                        log_dir=pre_args.logdir,
-                                        log_level=pre_args.loglevel,
-                                        timestamp=timestamp,
-                                        suffix='log')
-    log_file_name = indaleko_logging.get_log_file_name()
-    ic(log_file_name)
-    collector = IndalekoICloudCollector(timestamp=timestamp)
-
-    output_file_name = IndalekoICloudCollector.generate_icloud_collector_file_name(
-        platform=IndalekoICloudCollector.icloud_platform,
-        user_id = collector.get_user_id(),
-        service = 'Collector',
-        timestamp=timestamp,
-        suffix='jsonl'
-    )
-    parser = argparse.ArgumentParser(parents=[pre_parser])
-    parser.add_argument('--output',
-                        type=str,
-                        default=output_file_name,
-                        help='Name and location of where to save the fetched metadata')
-    parser.add_argument('--datadir', '-d',
-                        help='Path to dhe data directory',
-                        default=indaleko_default_data_dir)
-    parser.add_argument('--path',
-                        help='Path to the directory to index',
-                        type=str,
-                        default='')
-    parser.add_argument('--norecurse',
-                        help='Disable recursive directory indexing (for testing).',
-                        default=False,
-                        action='store_true')
-    parser.add_argument('--performance_file',
-                        default=False,
-                        action='store_true',
-                        help='Record performance data to a file')
-    parser.add_argument('--performance_db',
-                        default=False,
-                        action='store_true',
-                        help='Record performance data to the database')
-    args = parser.parse_args()
-    output_file = os.path.join(args.datadir, args.output)
-    logging.info('Indaleko iCloud Collector started.')
-    logging.info('Output file: %s', output_file)
-    logging.info('Indexing: %s', args.path)
-    logging.info(args)
-    perf_file_name = os.path.join(
-        args.datadir,
-        IndalekoPerformanceDataRecorder().generate_perf_file_name(
-            platform=collector.icloud_platform,
-            service=collector.icloud_collector_name,
-            machine=None,
-        )
-    )
-    def extract_counters(**kwargs):
-        ic(kwargs)
-        collector = kwargs.get('collector')
-        if collector:
-            return ic(collector.get_counts())
-        else:
-            return {}
-    def collect(collector):
-        data = collector.collect()
-        collector.write_data_to_file(data, output_file)
-    perf_data = IndalekoPerformanceDataCollector.measure_performance(
-        collect,
-        source=IndalekoSourceIdentifierDataModel(
-            Identifier=collector.service_identifier,
-            Version = collector.service_version,
-            Description=collector.service_description),
-        description=collector.service_description,
-        MachineIdentifier=None,
-        process_results_func=extract_counters,
-        input_file_name=None,
-        output_file_name=output_file,
-        collector=collector
-    )
-    if args.performance_db or args.performance_file:
-        perf_recorder = IndalekoPerformanceDataRecorder()
-        if args.performance_file:
-            perf_recorder.add_data_to_file(perf_file_name, perf_data)
-            ic('Performance data written to ', perf_file_name)
-        if args.performance_db:
-            perf_recorder.add_data_to_db(perf_data)
-            ic('Performance data written to the database')
-    for count_type, count_value in collector.get_counts().items():
-        logging.info('Count %s: %s', count_type, count_value)
-    logging.info('Indaleko iCloud Collector finished.')
-
 class icloud_collector_mixin(IndalekoBaseCLI.default_handler_mixin):
     '''This is the mixin for the Google Drive collector'''
 
@@ -495,24 +392,6 @@ def add_storage_local_parameters(parser : argparse.ArgumentParser) -> argparse.A
                         default=False,
                         action='store_true')
     return parser
-
-old_cli_help= '''
-    usage: i_cloud.py [-h] [--logdir LOGDIR] [--loglevel {CRITICAL,DEBUG,ERROR,FATAL,INFO,NOTSET,WARN,WARNING}] [--output OUTPUT] [--datadir DATADIR] [--path PATH] [--norecurse] [--performance_file] [--performance_db]
-
-    options:
-    -h, --help            show this help message and exit
-    --logdir LOGDIR, -l LOGDIR
-                            Path to the log directory
-    --loglevel {CRITICAL,DEBUG,ERROR,FATAL,INFO,NOTSET,WARN,WARNING}
-                            Logging level to use (lower number = more logging)
-    --output OUTPUT       Name and location of where to save the fetched metadata
-    --datadir DATADIR, -d DATADIR
-                            Path to dhe data directory
-    --path PATH           Path to the directory to index
-    --norecurse           Disable recursive directory indexing (for testing).
-    --performance_file    Record performance data to a file
-    --performance_db      Record performance data to the database
-'''
 
 def main() -> None:
     '''iCloud collector main'''
