@@ -1,7 +1,7 @@
 '''
-This module defines the base data model used by the Indaleko storage collectors.
+This module defines the base data model used by the Indaleko storage recorders.
 
-Indaleko Storage Collector Data Model
+Indaleko Storage Recorder Data Model
 Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
@@ -46,44 +46,44 @@ from utils.misc.file_name_management import indaleko_file_name_prefix
 from utils.misc.file_name_management import find_candidate_files
 # pylint: enable=wrong-import-position
 
-class IndalekoStorageCollectorDataModel(BaseModel):
-    '''Defines the base data model for the storage collectors'''
-    CollectorPlatformName : Optional[Union[str, None]] = \
+class IndalekoStorageRecorderDataModel(BaseModel):
+    '''Defines the base data model for the storage recorders'''
+    RecorderPlatformName : Optional[Union[str, None]] = \
         Field(None,
               title='PlatformName',
               description='The name of the platform (e.g., Linux, Windows, etc.) if any (default=None).'
               )
-    CollectorServiceName : str = Field(..., title='CollectorName', description='The service name of the collector.')
-    CollectorServiceUUID : UUID = Field(..., title='CollectorUUID', description='The UUID of the collector.')
-    CollectorServiceVersion : str = Field(..., title='CollectorVersion', description='The version of the collector.')
-    CollectorServiceDescription : str = Field(..., title='CollectorDescription', description='The description of the collector.')
-    CollectorServiceType : str = Field(IndalekoConstants.service_type_storage_collector,
-                                       title='CollectorType',
-                                       description=f'The type of the collector. (default is {IndalekoConstants.service_type_storage_collector})')
+    RecorderServiceName : str = Field(..., title='RecorderName', description='The service name of the recorder.')
+    RecorderServiceUUID : UUID = Field(..., title='RecorderUUID', description='The UUID of the recorder.')
+    RecorderServiceVersion : str = Field(..., title='RecorderVersion', description='The version of the recorder.')
+    RecorderServiceDescription : str = Field(..., title='RecorderDescription', description='The description of the recorder.')
+    RecorderServiceType : str = Field(IndalekoConstants.service_type_storage_recorder,
+                                       title='RecorderType',
+                                       description=f'The type of the recorder. (default is {IndalekoConstants.service_type_storage_recorder})')
 
     class Config:
         '''Configuration for the base CLI data model'''
         json_schema_extra = {
             'example': {
-                'CollectorPlatformName': 'Linux',
-                'CollectorServiceName': 'Linux Local Collector',
-                'CollectorServiceUUID': uuid4(),
-                'CollectorServiceVersion': '1.0',
-                'CollectorServiceDescription': 'This service collects local filesystem metadata of a Linux machine.',
-                'CollectorServiceType': IndalekoConstants.service_type_storage_collector # same as default
+                'RecorderPlatformName': 'Linux',
+                'RecorderServiceName': 'Linux Local Recorder',
+                'RecorderServiceUUID': uuid4(),
+                'RecorderServiceVersion': '1.0',
+                'RecorderServiceDescription': 'This service record local filesystem metadata of a Linux machine.',
+                'RecorderServiceType': IndalekoConstants.service_type_storage_recorder # same as default
             }
         }
 
 def main():
     '''Test code for the base CLI data model'''
-    ic('Testing Storage Collector Data Model')
-    storage_collector_data = IndalekoStorageCollectorDataModel(
-        **IndalekoStorageCollectorDataModel.Config.json_schema_extra['example']
+    ic('Testing Storage Recorder Data Model')
+    storage_recorder_data = IndalekoStorageRecorderDataModel(
+        **IndalekoStorageRecorderDataModel.Config.json_schema_extra['example']
     )
-    ic(storage_collector_data)
+    ic(storage_recorder_data)
     ic(platform.system())
-    print(storage_collector_data.model_dump(exclude_unset=True))
-    print(storage_collector_data.model_dump_json(indent=2))
+    print(storage_recorder_data.model_dump(exclude_unset=True))
+    print(storage_recorder_data.model_dump_json(indent=2))
 
 if __name__ == '__main__':
     main()

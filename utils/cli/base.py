@@ -198,17 +198,23 @@ class IndalekoBaseCLI:
         '''This method is used to set up the machine configuration parser'''
         if not self.features.machine_config:
             return
+        if self.features.input and not hasattr(self.pre_parser, 'inputfile'):
+            self.setup_input_parser()
         pre_args, _ = self.pre_parser.parse_known_args()
         if hasattr(pre_args, 'machine_config'):
             return
         if not hasattr(pre_args, 'platform'):
             self.setup_platform_parser() # ordering dependency.
             pre_args, _ = self.pre_parser.parse_known_args()
+        if hasattr(pre_args, 'inputfile'):
+            machine_id = self.config_data['InputFileKeys'].get('machine', None)
+            ic(f'setup_machine_config_parser: Machine ID: {machine_id}')
         self.config_data['MachineConfigChoices'] = self.handler_mixin.find_machine_config_files(self.config_data['ConfigDirectory'], pre_args.platform)
         default_machine_config_file = self.handler_mixin.get_default_file(
             self.config_data['ConfigDirectory'],
             self.config_data['MachineConfigChoices']
         )
+        ic(default_machine_config_file)
         self.pre_parser.add_argument('--machine_config',
                                 choices=self.config_data['MachineConfigChoices'],
                                 default=default_machine_config_file,
@@ -276,32 +282,33 @@ class IndalekoBaseCLI:
 
     def setup_input_parser(self) -> 'IndalekoBaseCLI':
         '''This method is used to set up the input parser'''
+        if not self.cli_features.input:
+            return
         pre_args, _ = self.pre_parser.parse_known_args()
         if hasattr(pre_args, 'inputfile'): # only process it once
             return
-        self.config_data['InputFilePrefix'] = IndalekoConstants.default_prefix
-        self.config_data['InputFileSuffix'] = 'jsonl'
-        input_file_keys = self.config_data['InputFileKeys']
-        if self.config_data['InputFileKeys']:
-            if 'prefix' in input_file_keys:
-                self.config_data['InputFilePrefix'] = input_file_keys['prefix']
-                del input_file_keys['prefix']
-            if 'suffix' in input_file_keys:
-                self.config_data['InputFileSuffix'] = input_file_keys['suffix']
-                del input_file_keys['suffix']
-        if not input_file_keys:
-            input_file_keys = {}
-            if 'Platform' in self.config_data:
-                input_file_keys = {'plt': self.config_data['Platform'] }
-            if 'MachineConfigFileKeys' in self.config_data and 'machine' in self.config_data['MachineConfigFileKeys']:
-                input_file_keys['machine'] = self.config_data['MachineConfigFileKeys']['machine']
-            if 'ts' not in input_file_keys: # this logic only works for files with timestamps
-                input_file_keys['ts'] = ''
+        ic(self.config_data)
+        assert 'InputFileKeys' in self.config_data, 'InputFileKeys not found in configuration data'
+        prefix = self.config_data['InputFileKeys'].get(
+            'prefix',
+            self.config_data.get('FilePrefix', IndalekoConstants.default_prefix)
+        )
+        suffix = self.config_data['InputFileKeys'].get(
+            'suffix',
+            self.config_data.get('FileSuffix', '.jsonl')
+        )
+        self.config_data['InputFilePrefix'] = prefix
+        self.config_data['InputFileSuffix'] = suffix
+        input_file_keys = self.config_data.get('InputFileKeys', {})
+        if 'plt' not in input_file_keys and 'Platform' in self.config_data:
+            input_file_keys['plt'] = self.config_data['Platform']
+        # this needs to be  provided
+        assert 'svc' in input_file_keys, 'Service not found in input file keys'
         self.config_data['InputFileChoices'] = self.handler_mixin.find_data_files(
             self.config_data['DataDirectory'],
             input_file_keys,
-            self.config_data['InputFilePrefix'],
-            self.config_data['InputFileSuffix']
+            prefix,
+            suffix
         )
         if self.config_data['InputFileChoices']:
             self.config_data['InputFile'] = self.handler_mixin.get_default_file(
@@ -311,7 +318,7 @@ class IndalekoBaseCLI:
             self.pre_parser.add_argument('--inputfile',
                                     choices=self.config_data['InputFileChoices'],
                                     default=self.config_data['InputFile'],
-                                    help='Input file to use')
+                                    help=f'Input file to use (default={self.config_data["InputFile"]})')
         pre_args, _ = self.pre_parser.parse_known_args()
         self.config_data['InputFileKeys'] = self.handler_mixin.extract_filename_metadata(pre_args.inputfile)
         # default timestamp is: 1) from the file, 2) from the config, 3) current time
@@ -322,7 +329,7 @@ class IndalekoBaseCLI:
             '--timestamp',
             type=str,
             default=timestamp,
-            help='Timestamp to use')
+            help=f'Timestamp to use (default={timestamp})')
         pre_args, _ = self.pre_parser.parse_known_args()
         try:
             timestamp = datetime.fromisoformat(self.config_data['Timestamp'])
@@ -366,14 +373,36 @@ class IndalekoBaseCLI:
             ]
 
         @staticmethod
-        def find_machine_config_files(config_dir : Union[str, Path], platform : str) -> Union[list[str], None]:
+        def find_machine_config_files(
+            config_dir : Union[str, Path],
+            platform : str = None,
+            machine_id : str = None) -> Union[list[str], None]:
+            '''
+            This method is used to find machine configuration files
+
+            Inputs:
+                - config_dir: The directory where the configuration files are stored
+                - platform: The platform of the machine
+                - machine_id: The machine ID
+
+            Returns:
+                - A list of file names
+
+            Notes: If the platform is not provided, it may be inferred from the machine ID
+            or the current platform.  If the machine ID is provided and a platform is
+            provided, both must match for the file to be considered a candidate.
+            '''
             if not Path(config_dir).exists():
                 return None
             if platform is None:
                 return []
-            find_candidate_files([platform, '_machine_config'], str(config_dir))
+            filters = ['_machine_config']
+            if machine_id:
+                filters.append(machine_id)
+            if platform:
+                filters.append(platform)
             return [
-                fname for fname, _ in find_candidate_files([platform, '_machine_config'], str(config_dir))
+                fname for fname, _ in find_candidate_files(filters, str(config_dir))
                 if fname.endswith('.json')
             ]
 
@@ -385,7 +414,8 @@ class IndalekoBaseCLI:
             '''This method is used to find data files'''
             if not Path(data_dir).exists():
                 return None
-            selection_keys = [f'{key}={value}' for key, value in keys.items()]
+            # the hyphen at the end ensures we don't pick up partial matches
+            selection_keys = [f'{key}={value}-' for key, value in keys.items()]
             return [
                 fname for fname, _ in find_candidate_files(selection_keys, str(data_dir))
                 if fname.startswith(prefix) and fname.endswith(suffix) and all([key in fname for key in selection_keys])

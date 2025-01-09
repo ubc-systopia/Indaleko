@@ -3,7 +3,7 @@ drop_box.py
 
 This script is used to scan the files in the Dropbox folder of the user. It
 will create a JSONL file with the metadata of the files in the Dropbox folder.
-The JSOLN file will be used by the dropbox recorder to load data into
+The JSONL file will be used by the dropbox recorder to load data into
 the database.
 
 Project Indaleko

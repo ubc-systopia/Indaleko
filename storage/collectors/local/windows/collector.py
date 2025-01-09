@@ -18,7 +18,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import argparse
-import datetime
 import inspect
 import logging
 import os
@@ -44,13 +43,11 @@ from db import IndalekoServiceManager
 from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 from perf.perf_collector import IndalekoPerformanceDataCollector
 from perf.perf_recorder import IndalekoPerformanceDataRecorder
-from utils.i_logging import IndalekoLogging
 from storage.collectors.base import BaseStorageCollector
 from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.runner import IndalekoCLIRunner
-from utils.i_logging import IndalekoLogging
 from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
 from utils.misc.file_name_management import find_candidate_files
 # pylint: enable=wrong-import-position

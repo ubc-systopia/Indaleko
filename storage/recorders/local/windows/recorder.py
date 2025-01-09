@@ -20,16 +20,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import argparse
 import datetime
+import inspect
 import json
-import jsonlines
 import logging
+from pathlib import Path
 import os
-import platform
 import uuid
 import tempfile
 import sys
 
 from icecream import ic
+from typing import Any, Union
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -42,12 +43,18 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # pylint: disable=wrong-import-position
 from db import IndalekoDBCollections, IndalekoServiceManager
 from data_models import IndalekoSourceIdentifierDataModel
+from perf.perf_collector import IndalekoPerformanceDataCollector
+from perf.perf_recorder import IndalekoPerformanceDataRecorder
 from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 from platforms.unix import UnixFileAttributes
 from platforms.windows_attributes import IndalekoWindows
 from storage import IndalekoObject
 from storage.recorders.base import BaseStorageRecorder
+from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from storage.collectors.local.windows.collector import IndalekoWindowsLocalCollector
+from utils.cli.base import IndalekoBaseCLI
+from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
+from utils.cli.runner import IndalekoCLIRunner
 import utils.misc.directory_management
 from utils.misc.file_name_management import find_candidate_files
 from utils.misc.data_management import encode_binary_data
@@ -72,44 +79,29 @@ class IndalekoWindowsLocalStorageRecorder(BaseStorageRecorder):
     }
 
     windows_platform = IndalekoWindowsLocalCollector.windows_platform
-    windows_local_recorder = 'local_fs_recorder'
+    windows_local_recorder_name = 'fs_recorder'
+
+    windows_recorder_data = IndalekoStorageRecorderDataModel(
+        RecorderPlatformName=windows_platform,
+        RecorderServiceName=windows_local_recorder_service['service_name'],
+        RecorderServiceUUID=uuid.UUID(windows_local_recorder_uuid),
+        RecorderServiceVersion=windows_local_recorder_service['service_version'],
+        RecorderServiceDescription=windows_local_recorder_service['service_description'],
+    )
 
     def __init__(self, **kwargs) -> None:
-        if 'input_file' not in kwargs:
-            raise ValueError('input_file must be specified')
-        if 'machine_config' not in kwargs:
-            raise ValueError('machine_config must be specified')
+        assert 'machine_config' in kwargs, 'machine_config must be specified'
         self.machine_config = kwargs['machine_config']
         if 'machine_id' not in kwargs:
             kwargs['machine_id'] = self.machine_config.machine_id
-        else:
-            kwargs['machine_id'] = self.machine_config.machine_id
-            if kwargs['machine_id'] != self.machine_config.machine_id:
-                logging.warning('Warning: machine ID of collector file ' +\
-                      f'({kwargs["machine"]}) does not match machine ID of recorder ' +\
-                        f'({self.machine_config.machine_id}.)')
-        if 'timestamp' not in kwargs:
-            kwargs['timestamp'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        if 'platform' not in kwargs:
-            kwargs['platform'] = IndalekoWindowsLocalStorageRecorder.windows_platform
-        if 'recorder' not in kwargs:
-            kwargs['recorder'] = IndalekoWindowsLocalStorageRecorder.windows_local_recorder
-        if 'input_file' not in kwargs:
-            kwargs['input_file'] = None
         for key, value in self.windows_local_recorder_service.items():
             if key not in kwargs:
                 kwargs[key] = value
+        if 'platform' not in kwargs:
+            kwargs['platform'] = IndalekoWindowsLocalStorageRecorder.windows_platform
+        if 'recorder_data' not in kwargs:
+            kwargs['recorder_data'] = IndalekoWindowsLocalStorageRecorder.windows_recorder_data
         super().__init__(**kwargs)
-        self.input_file = kwargs['input_file']
-        if 'output_file' not in kwargs:
-            self.output_file = self.generate_file_name()
-        else:
-            self.output_file = kwargs['output_file']
-        self.collector_data = []
-        self.source = {
-            'Identifier' : self.windows_local_recorder_uuid,
-            'Version' : '1.0'
-        }
 
 
     def find_collector_files(self) -> list:
@@ -312,7 +304,7 @@ class IndalekoWindowsLocalStorageRecorder(BaseStorageRecorder):
         kwargs={
             'machine' : self.machine_id,
             'platform' : self.platform,
-            'service' : IndalekoWindowsLocalStorageRecorder.windows_local_recorder,
+            'service' : IndalekoWindowsLocalStorageRecorder.windows_local_recorder_name,
             'storage' : self.storage_description,
             'collection' : IndalekoDBCollections.Indaleko_Relationship_Collection,
             'timestamp' : self.timestamp,
@@ -348,7 +340,7 @@ class IndalekoWindowsLocalStorageRecorder(BaseStorageRecorder):
         print('Load string: ', load_string)
 
 
-def main():
+def old_main():
     '''
     This is the main handler for the Indaleko Windows Local Recorder
     service.
@@ -440,7 +432,7 @@ def main():
         machine_id = machine_id,
         timestamp=timestamp,
         platform=IndalekoWindowsLocalCollector.windows_platform,
-        recorder = IndalekoWindowsLocalStorageRecorder.windows_local_recorder,
+        recorder = IndalekoWindowsLocalStorageRecorder.windows_local_recorder_name,
         storage_description = storage,
         file_prefix = file_prefix,
         file_suffix = file_suffix,
@@ -451,7 +443,7 @@ def main():
     output_file = recorder.generate_file_name()
     log_file_name = recorder.generate_file_name(
         platform=collector_file_metadata['platform'],
-        recorder=IndalekoWindowsLocalStorageRecorder.windows_local_recorder,
+        recorder=IndalekoWindowsLocalStorageRecorder.windows_local_recorder_name,
         machine_id=collector_file_metadata['machine'],
         target_dir=args.logdir,
         timestamp=timestamp,
@@ -507,6 +499,94 @@ def main():
         total += count_value
     logging.info('Total: %d', total)
     logging.info('Done')
+
+class local_recorder_mixin(IndalekoBaseCLI.default_handler_mixin):
+    '''This is the mixin for the local recorder'''
+    @staticmethod
+    def load_machine_config(keys: dict[str, str]) -> IndalekoWindowsMachineConfig:
+        '''Load the machine configuration'''
+        ic(f'local_collector_mixin.load_machine_config: {keys}')
+        if keys.get('debug'):
+            ic(f'local_collector_mixin.load_machine_config: {keys}')
+        if 'machine_config_file' not in keys:
+            raise ValueError(f'{inspect.currentframe().f_code.co_name}: machine_config_file must be specified')
+        offline = keys.get('offline', False)
+        return IndalekoWindowsMachineConfig.load_config_from_file(
+            config_file=str(keys['machine_config_file']),
+            offline=offline)
+
+@staticmethod
+def local_run(keys: dict[str, str]) -> Union[dict, None]:
+    '''Run the collector'''
+    args = keys['args'] # must be there.
+    cli = keys['cli'] # must be there.
+    config_data = cli.get_config_data()
+    debug = hasattr(args, 'debug') and args.debug
+    if debug:
+        ic(config_data)
+    # recorders have the machine_id so they need to find the
+    # matching machine configuration file.
+    kwargs = {
+        'machine_config': cli.handler_mixin.load_machine_config(
+            {
+                'machine_config_file' : str(Path(args.configdir) / args.machine_config),
+                'offline' : args.offline
+            }
+        ),
+        'timestamp': config_data['Timestamp'],
+        'path': args.path,
+        'offline': args.offline
+    }
+    def record(recorder : IndalekoWindowsLocalStorageRecorder):
+        data = recorder.collect()
+        output_file = Path(args.datadir) / args.outputfile
+        recorder.write_data_to_file(data, str(output_file))
+    def extract_counters(**kwargs):
+        recorder = kwargs.get('recorder')
+        if recorder:
+            return recorder.get_counts()
+        else:
+            return {}
+    recorder = IndalekoWindowsLocalStorageRecorder(**kwargs)
+    perf_data = IndalekoPerformanceDataCollector.measure_performance(
+        record,
+        source=IndalekoSourceIdentifierDataModel(
+            Identifier=recorder.service_identifier,
+            Version = recorder.service_version,
+            Description=recorder.service_description),
+        description=recorder.service_description,
+        MachineIdentifier=uuid.UUID(kwargs['machine_config'].machine_id),
+        process_results_func=extract_counters,
+        input_file_name=None,
+        output_file_name=str(Path(args.datadir) / args.outputfile),
+        recorder=recorder
+    )
+    if args.performance_db or args.performance_file:
+        perf_recorder = IndalekoPerformanceDataRecorder()
+        if args.performance_file:
+            perf_file = str(Path(args.datadir) / config_data['PerformanceDataFile'])
+            perf_recorder.add_data_to_file(perf_file, perf_data)
+            if (debug):
+                ic('Performance data written to ', config_data['PerformanceDataFile'])
+        if args.performance_db:
+            perf_recorder.add_data_to_db(perf_data)
+            if (debug):
+                ic('Performance data written to the database')
+
+def main():
+    '''This is the CLI handler for the Windows local storage collector.'''
+    runner = IndalekoCLIRunner(
+        cli_data=IndalekoBaseCliDataModel(
+            Service=IndalekoWindowsLocalStorageRecorder.windows_local_recorder_name,
+            InputFileKeys={
+                'plt' : IndalekoWindowsLocalCollector.windows_platform,
+                'svc' : IndalekoWindowsLocalCollector.windows_local_collector_name,
+            }
+        ),
+        handler_mixin=local_recorder_mixin,
+        Run=local_run,
+    )
+    runner.run()
 
 
 if __name__ == '__main__':

@@ -51,8 +51,25 @@ class IndalekoHandlermixin(ABC):
         '''This method is used to find database configuration files'''
 
     @abstractmethod
-    def find_machine_config_files(config_dir : Union[str, Path], platform : str) -> Union[list[str], None]:
-        '''This method is used to find machine configuration files'''
+    def find_machine_config_files(
+        config_dir : Union[str, Path],
+        platform : str = None,
+        machine_id : str = None) -> Union[list[str], None]:
+        '''
+        This method is used to find machine configuration files
+
+        Inputs:
+            - config_dir: The directory where the configuration files are stored
+            - platform: The platform of the machine
+            - machine_id: The machine ID
+
+        Returns:
+            - A list of file names
+
+        Notes: If the platform is not provided, it may be inferred from the machine ID
+        or the current platform.  If the machine ID is provided and a platform is
+        provided, both must match for the file to be considered a candidate.
+        '''
 
     @abstractmethod
     def find_data_files(data_dir: Union[str, Path],

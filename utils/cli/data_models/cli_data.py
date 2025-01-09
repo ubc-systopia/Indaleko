@@ -94,7 +94,7 @@ class IndalekoBaseCliDataModel(IndalekoBaseModel):
         title='InputFile',
         description='The selected input file.'
     )
-    InputFileKeys: Optional[Dict[str, str]] = Field(
+    InputFileKeys: Optional[dict[str, str]] = Field(
         default_factory=dict,
         title='InputFileKeys',
         description='Keys for input files.'
@@ -104,7 +104,7 @@ class IndalekoBaseCliDataModel(IndalekoBaseModel):
         title='OutputFile',
         description='The output file.'
     )
-    OutputFileKeys: Optional[List[str]] = Field(
+    OutputFileKeys: Optional[list[str]] = Field(
         default_factory=list,
         title='OutputFileKeys',
         description='Keys for output files.'
