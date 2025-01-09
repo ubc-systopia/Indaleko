@@ -3,7 +3,7 @@ This module provides functionality to link external components with
 the functionality of the performance classes.
 
 Indaleko Windows Local Recorder
-Copyright (C) 2024 Tony Mason
+Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published

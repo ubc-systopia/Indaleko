@@ -2,7 +2,7 @@
 This module defines the base data model used in the CLI components of Indaleko.
 
 Indaleko Windows Local Collector
-Copyright (C) 2024 Tony Mason
+Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published

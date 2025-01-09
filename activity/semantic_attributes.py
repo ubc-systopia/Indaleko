@@ -8,7 +8,7 @@ Ideally, an activity data provider will use a known semantic attribute if one
 exists.  This simplifies reasoning across activity data providers.
 
 Project Indaleko
-Copyright (C) 2024 Tony Mason
+Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published

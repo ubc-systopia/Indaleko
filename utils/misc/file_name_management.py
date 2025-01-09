@@ -1,7 +1,7 @@
 '''
 This module provides utility functions for managing file names in Indaleko.
 
-Copyright (C) 2024 Tony Mason
+Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
