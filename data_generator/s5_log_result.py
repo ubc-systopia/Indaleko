@@ -1,19 +1,17 @@
 import logging
-from typing import Dict, Any
 import json
 from datetime import datetime
-
+from logging import Logger
 
 class ResultLogger:
     """
     A service for logging the result of the metadata generator.
-    adapted from LoggingServicce from logging_service.py
+    Adapted from LoggingService from logging_service.py
     """
 
-    def __init__(self, result_path: str):
+    def __init__(self, result_path: str) -> None:
         """
         Initialize the logging service.
-
         Args:
             result_path (str): The path to the results
             level (int): loging level set to info as default
@@ -24,12 +22,15 @@ class ResultLogger:
         self.progress_logger = self.create_logger(result_path + "validator_progress.log", "ProgressLogger", progress_formatting)
         self.result_logger = self.create_logger(result_path + "validator_result.log", "ResultLogger", result_formatting)
         
-       
-        
-        # console_handler = logging.StreamHandler()
-        # console_handler.setFormatter(query_formatter)
-        # self.logger.addHandler(console_handler)
-    def create_logger(self, log_file, logger_name, formatting):
+    def create_logger(self, log_file, logger_name, formatting) -> Logger:
+        '''
+        Creates a new logger instance
+        Args: 
+            log_file (str): the name of the logger file
+            logger_name (str): the name of the logger
+            formatting (str): the formatting type for the specific logger
+        Returns: Logger: logger object 
+        '''
         logger = logging.getLogger(logger_name)
         logger.setLevel(logging.INFO)
 
@@ -42,11 +43,11 @@ class ResultLogger:
 
         return logger
 
-    def log_config(self, config: dict):
+    def log_config(self, config: dict) -> None:
         '''
-        log a config file 
-        Args: config(dict) : the config file received
-
+        Progress Logger: Logs the contents of a given config file 
+        Args: 
+            config(dict) : the given config file 
         '''
         log_data = {
             "event": "user_config",
@@ -56,19 +57,41 @@ class ResultLogger:
         }
         self.progress_logger.info(json.dumps(log_data))
 
-    def log_process(self, description: str):
+    def log_process(self, description: str) -> None:
+        '''
+        Progress Logger: Logs current process in validator_progress.log
+        Args: 
+            description(str) : the description of the process that is occurring
+        '''
         self.progress_logger.info(description)
+    
+    def log_process_result(self, description:str, epoch:str, results=None) -> None:
+        '''
+        Progress Logger: Logs general processes occuring 
+        Args: 
+            description(str) : the description of the process
+            epoch(str) : the epoch time for the process
+        '''
+        log_data = {
+            "event": description,
+            "epoch": epoch
+        }
+
+        if results != None:
+            log_data["results"] = results
+
+        self.progress_logger.info(json.dumps(log_data))
 
     def log_final_result(self, total_epoch:str, results: dict):
         '''
-        logs final results including the query, 
-            extracted features, aql query, total epoch, 
-            number of truth files queried, 
-            total number of metadata queried, 
-            number of total files returned by Indaleko, 
-            actual number of truth files from the number returned 
-
-        Args: config(dict) : total epoch (str), results (dict)
+        Result Logger: Logs a summary results including 
+        the query, extracted features, aql query, total epoch, number of truth files queried, total number of metadata queried,
+        total files returned by Indaleko
+        and precision and recall calculations
+        Args: 
+            config(dict) : 
+                total epoch (str) : the total epoch taken for the entire validation process
+                results (dict) : a dictionary consisting of all requires elements to create the summary
         '''
         self.result_logger.info("SUMMARY OF RESULT:")
         self.result_logger.info(f" Total Metadata Queried: {results['n_metadata']}")
@@ -76,8 +99,9 @@ class ResultLogger:
         self.result_logger.info("--------------------------------------------------------------------------------------------")
         self.result_logger.info("LLM Results:")
         self.result_logger.info(f" Original Query: {results['query']}")
-        self.result_logger.info(f" Extracted Features: {results['selected_md_attributes']}")
-        self.result_logger.info(f" AQL Query: {results['aql_query']}")
+        self.result_logger.info(f" Truth File Attributes:\n{results['selected_md_attributes']}")
+        self.result_logger.info(f" Geographical Coordinates: {results['geo_coord']}")
+        self.result_logger.info(f" AQL Query:\n{results['aql_query']}")
         self.result_logger.info("--------------------------------------------------------------------------------------------")
         self.result_logger.info("Metadata Generation:")
         self.result_logger.info(f" Truth Files Made: {results['metadata_stats']['truth']}")
@@ -94,57 +118,3 @@ class ResultLogger:
         self.result_logger.info(f" Precision: {results['precision']}")
         self.result_logger.info(f" Recall: {results['recall']}")
         
-
-        
-    def log_process_result(self, description:str, epoch:str, results=None):
-        '''
-        log general processes occuring 
-        Args: config(dict) : the config file received
-
-        '''
-
-        log_data = {
-            "event": description,
-            "epoch": epoch
-        }
-
-        if results != None:
-            log_data["results"] = results
-
-        self.progress_logger.info(json.dumps(log_data))
-
-
-    def log_query(self, query: str, metadata: Dict[str, Any] = None):
-        """
-        Log a user query.
-
-        Args:
-            query (str): The user's query
-            metadata (Dict[str, Any], optional): Additional metadata about the query
-        """
-        log_data = {
-            "event": "user_query",
-            "query": query,
-            "timestamp": datetime.now().isoformat()
-        }
-        if metadata:
-            log_data.update(metadata)
-        self.progress_logger.info(json.dumps(log_data))
-
-    def log_result(self, query: str, num_results: int, execution_time: float):
-        """
-        Log the results of a query.
-
-        Args:
-            query (str): The query that was executed
-            num_results (int): The number of results returned
-            execution_time (float): The time taken to execute the query
-        """
-        log_data = {
-            "event": "query_result",
-            "query": query,
-            "num_results": num_results,
-            "execution_time": execution_time,
-            "timestamp": datetime.now().isoformat()
-        }
-        self.progress_logger.info(json.dumps(log_data))
