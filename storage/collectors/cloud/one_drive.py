@@ -780,11 +780,14 @@ def local_run(keys: dict[str, str]) -> Union[dict,None]:
     if args.performance_db or args.performance_file:
         perf_recorder = IndalekoPerformanceDataRecorder()
         if args.performance_file:
-            perf_recorder.add_data_to_file(perf_file_name, perf_data)
-            ic('Performance data written to ', perf_file_name)
+            perf_file = str(Path(args.datadir) / config_data['PerformanceDataFile'])
+            perf_recorder.add_data_to_file(perf_file, perf_data)
+            if (debug):
+                ic('Performance data written to ', config_data['PerformanceDataFile'])
         if args.performance_db:
             perf_recorder.add_data_to_db(perf_data)
-            ic('Performance data written to the database')
+            if (debug):
+                ic('Performance data written to the database')
 
 def main():
     '''OneDrive collector main'''
