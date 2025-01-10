@@ -446,7 +446,7 @@ class IndalekoBaseCLI:
             }
             if 'MachineConfigFileKeys' in keys and 'machine' in keys['MachineConfigFileKeys']:
                 kwargs['machine'] = keys['MachineConfigFileKeys']['machine']
-            if 'StorageId' in keys:
+            if 'StorageId' in keys and keys['StorageId']:
                 kwargs['storage'] = keys['StorageId']
             if 'suffix' not in keys:
                 kwargs['suffix'] = 'jsonl'
@@ -496,8 +496,8 @@ class IndalekoBaseCLI:
 
         @staticmethod
         def get_storage_identifier(
-            collector : BaseStorageCollector,
-            path_name : str) -> Union[str,None]:
+            args : argparse.Namespace
+        ) -> Union[str,None]:
             '''Default is no storage identifier'''
             return None
 
