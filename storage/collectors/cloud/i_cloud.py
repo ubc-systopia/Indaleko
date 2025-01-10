@@ -317,7 +317,17 @@ class IndalekoICloudCollector(BaseStorageCollector):
         return [f for f in prospects if IndalekoICloudCollector.icloud_platform in f]
 
 class icloud_collector_mixin(IndalekoBaseCLI.default_handler_mixin):
-    '''This is the mixin for the Google Drive collector'''
+    '''This is the mixin for the iCloud collector'''
+
+    @staticmethod
+    def get_pre_parser() -> Union[argparse.Namespace, None]:
+        '''Add the parameters for the local storage collector'''
+        parser = argparse.ArgumentParser(add_help=False)
+        parser.add_argument('--norecurse',
+                            help='Disable recursive directory indexing (for testing).',
+                            default=False,
+                            action='store_true')
+        return parser
 
 
 @staticmethod
@@ -384,14 +394,6 @@ def local_run(keys: dict[str, str]) -> Union[dict,None]:
             perf_recorder.add_data_to_db(perf_data)
             ic('Performance data written to the database')
 
-@staticmethod
-def add_storage_local_parameters(parser : argparse.ArgumentParser) -> argparse.ArgumentParser:
-    '''Add the parameters for the local storage collector'''
-    parser.add_argument('--norecurse',
-                        help='Disable recursive directory indexing (for testing).',
-                        default=False,
-                        action='store_true')
-    return parser
 
 def main() -> None:
     '''iCloud collector main'''
@@ -406,7 +408,6 @@ def main() -> None:
             input=False,
             platform=False,
         ),
-        additional_post_parameters=add_storage_local_parameters,
         Run=local_run,
     )
     ic(runner)
