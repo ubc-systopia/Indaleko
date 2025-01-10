@@ -86,7 +86,6 @@ class IndalekoBaseCLI:
         self.features = features
         if not self.features:
             self.features = IndalekoBaseCLI.cli_features() # default features
-        ic(self.features.machine_config)
         self.config_data = json.loads(cli_data.model_dump_json())
         self.handler_mixin = handler_mixin
         if not self.handler_mixin:
@@ -215,7 +214,6 @@ class IndalekoBaseCLI:
             self.config_data['ConfigDirectory'],
             self.config_data['MachineConfigChoices']
         )
-        ic(default_machine_config_file)
         self.pre_parser.add_argument('--machine_config',
                                 choices=self.config_data['MachineConfigChoices'],
                                 default=default_machine_config_file,
@@ -252,7 +250,6 @@ class IndalekoBaseCLI:
             ic(f'Output file name not generated due to no service name {self.config_data}')
             return # there can be no output file without a service name
         pre_args, _ = self.pre_parser.parse_known_args()
-        ic(pre_args)
         if hasattr(pre_args, 'outputfile'): # only process it once
             ic(f'setup_output_parser: outputfile already processed: {pre_args.outputfile}')
             return
@@ -294,7 +291,6 @@ class IndalekoBaseCLI:
         pre_args, _ = self.pre_parser.parse_known_args()
         if hasattr(pre_args, 'inputfile'): # only process it once
             return
-        ic(self.config_data)
         assert 'InputFileKeys' in self.config_data, 'InputFileKeys not found in configuration data'
         prefix = self.config_data['InputFileKeys'].get(
             'prefix',
@@ -450,7 +446,8 @@ class IndalekoBaseCLI:
             }
             if 'MachineConfigFileKeys' in keys and 'machine' in keys['MachineConfigFileKeys']:
                 kwargs['machine'] = keys['MachineConfigFileKeys']['machine']
-            kwargs['storage'] = keys['StorageId']
+            if 'StorageId' in keys:
+                kwargs['storage'] = keys['StorageId']
             if 'suffix' not in keys:
                 kwargs['suffix'] = 'jsonl'
             return generate_file_name(**kwargs)
