@@ -385,6 +385,16 @@ class IndalekoDropboxCollector(BaseStorageCollector):
 class dropbox_collector_mixin(IndalekoBaseCLI.default_handler_mixin):
     '''This is the mixin for the Dropbox collector.'''
 
+    @staticmethod
+    def get_pre_parser() -> Union[argparse.Namespace, None]:
+        '''Add the parameters for the local storage collector'''
+        parser = argparse.ArgumentParser(add_help=False)
+        parser.add_argument('--norecurse',
+                            help='Disable recursive directory indexing (for testing).',
+                            default=False,
+                            action='store_true')
+        return parser
+
 
 @staticmethod
 def local_run(keys: dict[str, str]) -> Union[dict,None]:
@@ -437,34 +447,6 @@ def local_run(keys: dict[str, str]) -> Union[dict,None]:
             if (debug):
                 ic('Performance data written to the database')
 
-@staticmethod
-def add_storage_local_parameters(parser : argparse.ArgumentParser) -> argparse.ArgumentParser:
-    '''Add the parameters for the local storage collector'''
-    parser.add_argument('--norecurse',
-                        help='Disable recursive directory indexing (for testing).',
-                        default=False,
-                        action='store_true')
-    return parser
-
-existing_cli = '''
-    usage: drop_box.py [-h] [--configdir CONFIGDIR] [--logdir LOGDIR] [--loglevel {CRITICAL,DEBUG,ERROR,FATAL,INFO,NOTSET,WARN,WARNING}] [--output OUTPUT] [--datadir DATADIR] [--norecurse] [--performance_file] [--performance_db]
-
-    options:
-    -h, --help            show this help message and exit
-    --configdir CONFIGDIR
-                            Path to the config directory
-    --logdir LOGDIR, -l LOGDIR
-                            Path to the log directory
-    --loglevel {CRITICAL,DEBUG,ERROR,FATAL,INFO,NOTSET,WARN,WARNING}
-                            Logging level to use (lower number = more logging)
-    --output OUTPUT       Name and location of where to save the fetched metadata
-    --datadir DATADIR, -d DATADIR
-                            Path to the data directory
-    --norecurse           Disable recursive directory indexing (for testing).
-    --performance_file    Record performance data to a file
-    --performance_db      Record performance data to the database
-
-'''
 
 def main():
     '''This is the entry point for using the Dropbox collector.'''
@@ -479,7 +461,6 @@ def main():
             input=False,
             platform=False,
         ),
-        additional_post_parameters=add_storage_local_parameters,
         Run=local_run,
     )
     runner.run()
