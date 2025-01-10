@@ -58,6 +58,7 @@ def generate_final_name(args : list, **kwargs) -> str:
     if target_platform: # platform is optional
         name += f'-plt={target_platform}'
     name += f'-svc={service}'
+    ic(kwargs)
     for key, value in kwargs.items():
         assert isinstance(value, str), f'value must be a string: {key, value}'
         if '-' in key:

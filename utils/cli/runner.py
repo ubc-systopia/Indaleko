@@ -57,7 +57,6 @@ class IndalekoCLIRunner:
             cli_data : Union[IndalekoBaseCliDataModel, None] = None,
             handler_mixin : Union[IndalekoHandlermixin, None] = None,
             features : Union[IndalekoBaseCLI.cli_features, None] = None,
-            additional_parameters : Union[Callable[[argparse.ArgumentParser], argparse.ArgumentParser], None] = None,
             **kwargs : dict[str, Any]) -> None:
         keys = {}
         keys['SetupLogging'] = kwargs.get('SetupLogging', IndalekoCLIRunner.default_runner_mixin.setup_logging)
@@ -70,15 +69,15 @@ class IndalekoCLIRunner:
         if not cli_data:
             cli_data = IndalekoBaseCliDataModel()
         if not handler_mixin:
-            handler_mixin = IndalekoBaseCLI.default_handler_mixin
+            handler_mixin = IndalekoBaseCLI.default_handler_mixin()
         if not features:
             features = IndalekoBaseCLI.cli_features()
-        setattr(self, 'cli', IndalekoBaseCLI(cli_data=cli_data, handler_mixin=handler_mixin, features=features))
-        # could add more command line args here, if useful
-        if additional_parameters:
-            self.cli.pre_parser = additional_parameters(self.cli.pre_parser)
-        self.parser = argparse.ArgumentParser(parents=[self.cli.pre_parser])
-        self.args = self.parser.parse_args()
+        self.cli = IndalekoBaseCLI(
+            cli_data=cli_data,
+            handler_mixin=handler_mixin,
+            features=features
+        )
+        self.args = self.cli.get_args()
         if self.args.debug:
             ic(self.args)
             ic(self.cli.get_config_data())
@@ -131,12 +130,20 @@ class IndalekoCLIRunner:
         '''This class provides a mixin for the CLI runner'''
 
         @abstractmethod
+        def get_pre_parser() -> Union[argparse.ArgumentParser, None]:
+            '''This method is used to get the pre-parser'''
+
+        @abstractmethod
         def setup_logging(kwargs : dict[str, Any] = {}) -> None:
             '''This method is used to setup logging'''
 
         @abstractmethod
         def load_configuration(kwargs : dict[str, Any] = {}) -> IndalekoMachineConfig:
             '''This method is used to load configuration'''
+
+        @abstractmethod
+        def add_parameters(parser : argparse.ArgumentParser) -> argparse.ArgumentParser:
+            '''This method is used to add parameters to an existing parser'''
 
         @abstractmethod
         def performance_configuration(kwargs : dict[str, Any] = {}) -> bool:
@@ -159,6 +166,16 @@ class IndalekoCLIRunner:
 
     class default_runner_mixin(CLIRunnerMixin):
         '''This class provides a default runner mixin'''
+
+        @staticmethod
+        def get_pre_parser() -> Union[argparse.ArgumentParser, None]:
+            '''
+            This method is used to get the pre-parser.  This implementation
+            does not add any initial arguments to the parser.
+            '''
+            pre_parser = argparse.ArgumentParser(add_help=False)
+            return pre_parser
+
 
         @staticmethod
         def setup_logging(
@@ -207,6 +224,15 @@ class IndalekoCLIRunner:
             return machine_config
 
             return True
+
+        @staticmethod
+        def add_parameters(parser : argparse.ArgumentParser) -> argparse.ArgumentParser:
+            '''
+            This method is used to add parameters to an existing parser.
+
+            The default implementation does not add any additional parameters.
+            '''
+            return parser
 
         @staticmethod
         def performance_configuration():

@@ -40,8 +40,8 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from constants import IndalekoConstants
-from perf.perf_collector import IndalekoPerformanceDataCollector
 from platforms.machine_config import IndalekoMachineConfig
+from storage.collectors.base import BaseStorageCollector
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.handlermixin import IndalekoHandlermixin
 from utils.misc.file_name_management import find_candidate_files, generate_file_name, extract_keys_from_file_name
@@ -87,11 +87,11 @@ class IndalekoBaseCLI:
         if not self.features:
             self.features = IndalekoBaseCLI.cli_features() # default features
         ic(self.features.machine_config)
-        self.pre_parser = argparse.ArgumentParser(add_help=False)
         self.config_data = json.loads(cli_data.model_dump_json())
         self.handler_mixin = handler_mixin
         if not self.handler_mixin:
             self.handler_mixin = IndalekoBaseCLI.default_handler_mixin
+        self.pre_parser = self.handler_mixin.get_pre_parser()
         for feature in dir(self.cli_features):
             if feature.startswith('__'):
                 continue
@@ -107,6 +107,7 @@ class IndalekoBaseCLI:
                 ic(f'Unknown feature: {feature}')
                 continue
             setup_func()
+        self.pre_parser = self.handler_mixin.get_additional_parameters(self.pre_parser)
         self.args = None
 
     def get_args(self) -> argparse.Namespace:
@@ -245,13 +246,19 @@ class IndalekoBaseCLI:
 
     def setup_output_parser(self) -> 'IndalekoBaseCLI':
         '''This method is used to set up the output parser'''
+        if self.features.machine_config and not hasattr(self.pre_parser, 'machine_config'):
+            self.setup_machine_config_parser()
         if not self.config_data.get('Service'):
             ic(f'Output file name not generated due to no service name {self.config_data}')
             return # there can be no output file without a service name
         pre_args, _ = self.pre_parser.parse_known_args()
+        ic(pre_args)
         if hasattr(pre_args, 'outputfile'): # only process it once
             ic(f'setup_output_parser: outputfile already processed: {pre_args.outputfile}')
             return
+        storage_id = self.handler_mixin.get_storage_identifier(pre_args)
+        if storage_id:
+            self.config_data['StorageId'] = storage_id
         output_file = self.handler_mixin.generate_output_file_name(self.config_data)
         self.pre_parser.add_argument('--outputfile',
                         default=output_file,
@@ -349,6 +356,16 @@ class IndalekoBaseCLI:
         '''Default handler mixin for the CLI'''
 
         @staticmethod
+        def get_pre_parser() -> Union[argparse.Namespace, None]:
+            '''
+            This method is used to get the pre-parser.  Callers can
+            set up switches/parameters before we add the common ones.
+
+            Note the default implementation here does not add any additional parameters.
+            '''
+            return argparse.ArgumentParser(add_help=False)
+
+        @staticmethod
         def get_default_file(data_directory: Union[str, Path], candidates : list[Union[str, Path]]) -> Union[str, None]:
             '''
             This method is used to get the most recently modified file.  Default implementation is to
@@ -433,6 +450,7 @@ class IndalekoBaseCLI:
             }
             if 'MachineConfigFileKeys' in keys and 'machine' in keys['MachineConfigFileKeys']:
                 kwargs['machine'] = keys['MachineConfigFileKeys']['machine']
+            kwargs['storage'] = keys['StorageId']
             if 'suffix' not in keys:
                 kwargs['suffix'] = 'jsonl'
             return generate_file_name(**kwargs)
@@ -478,6 +496,23 @@ class IndalekoBaseCLI:
         def extract_filename_metadata(file_name : str) -> dict:
             '''This method is used to parse the file name.'''
             return extract_keys_from_file_name(file_name=file_name)
+
+        @staticmethod
+        def get_storage_identifier(
+            collector : BaseStorageCollector,
+            path_name : str) -> Union[str,None]:
+            '''Default is no storage identifier'''
+            return None
+
+        @staticmethod
+        def get_additional_parameters(pre_parser : argparse.Namespace) -> Union[argparse.Namespace, None]:
+            '''
+            This method is used to add additional parameters to the parser.
+
+            Default is to not add any parameters.
+            '''
+            return pre_parser
+
 
 
 def main():

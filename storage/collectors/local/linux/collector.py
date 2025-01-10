@@ -197,7 +197,7 @@ def main():
         cli_data=IndalekoBaseCliDataModel(Service=IndalekoLinuxLocalCollector.linux_local_collector_name),
         handler_mixin=linux_local_collector_mixin,
         features=IndalekoBaseCLI.cli_features(input=False),
-        additional_parameters=add_linux_local_parameters,
+        additional_post_parameters=add_linux_local_parameters,
         Run=linux_local_run
     )
     runner.run()

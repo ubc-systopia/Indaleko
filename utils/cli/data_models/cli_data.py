@@ -159,10 +159,15 @@ class IndalekoBaseCliDataModel(IndalekoBaseModel):
         title='RecordPerformanceInDB',
         description='Record performance data in the database.'
     )
-    AdditionalOptions: Dict[str, Any] = Field(
+    AdditionalPreOptions: Dict[str, Any] = Field(
         default_factory=dict,
         title='AdditionalOptions',
-        description='Additional CLI options.'
+        description='Additional CLI options (added first)'
+    )
+    AdditionalPostOptions: Dict[str, Any] = Field(
+        default_factory=dict,
+        title='AdditionalOptions',
+        description='Additional CLI options (added last)'
     )
 
     class Config:

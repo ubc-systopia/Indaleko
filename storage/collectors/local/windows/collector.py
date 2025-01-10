@@ -235,6 +235,43 @@ class local_collector_mixin(IndalekoBaseCLI.default_handler_mixin):
             config_file=str(keys['machine_config_file']),
             offline=offline)
 
+    @staticmethod
+    def get_storage_identifier(args : argparse.Namespace) -> Union[str,None]:
+        '''This method is used to get the storage identifier for a path'''
+        if not hasattr(args, 'path'):
+            return
+        if not os.path.exists(args.path):
+            ic(f'Path {args.path} does not exist')
+            return None
+        config = IndalekoWindowsMachineConfig.load_config_from_file(
+            config_file = str(Path(args.configdir) / args.machine_config),
+            offline=args.offline,
+            debug=args.debug
+        )
+        drive = os.path.splitdrive(args.path)[0][0].upper()
+        uri = '\\\\?\\' + drive + ':' # default format for lettered drives without GUIDs
+        mapped_guid = config.map_drive_letter_to_volume_guid(drive)
+        if mapped_guid is not None:
+            return uuid.UUID(mapped_guid).hex
+        return None
+
+    @staticmethod
+    def get_pre_parser() -> Union[argparse.Namespace, None]:
+        '''This method is used to get the pre-parser'''
+        default_path = os.path.expanduser('~')
+        if default_path == '~':
+            default_path = os.path.abspath(os.sep)
+        parser = argparse.ArgumentParser(add_help=False)
+        parser.add_argument('--path',
+                            help=f'Path to the directory from which to collect metadata (default={default_path})',
+                            type=str,
+                            default=default_path)
+        return parser
+
+    @staticmethod
+    def generate_output_file_name(keys):
+        '''Generate the output file name'''
+        return IndalekoBaseCLI.default_handler_mixin.generate_output_file_name(keys)
 
 @staticmethod
 def local_run(keys: dict[str, str]) -> Union[dict, None]:
@@ -313,7 +350,7 @@ def main():
         ),
         handler_mixin=local_collector_mixin,
         features=IndalekoBaseCLI.cli_features(input=False),
-        additional_parameters=add_storage_local_parameters,
+        additional_post_parameters=add_storage_local_parameters,
         Run=local_run,
     )
     runner.run()

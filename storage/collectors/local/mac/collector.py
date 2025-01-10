@@ -297,7 +297,7 @@ def main():
         ),
         handler_mixin=local_collector_mixin,
         features=IndalekoBaseCLI.cli_features(input=False),
-        additional_parameters=add_mac_local_parameters,
+        additional_post_parameters=add_mac_local_parameters,
         Run=local_run,
     )
     runner.run()

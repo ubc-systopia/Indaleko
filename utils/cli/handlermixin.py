@@ -17,6 +17,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
+import argparse
 from pathlib import Path
 import os
 import sys
@@ -36,11 +37,19 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from platforms.machine_config import IndalekoMachineConfig
-from perf.perf_collector import IndalekoPerformanceDataCollector
+from storage.collectors.base import BaseStorageCollector
 # pylint: enable=wrong-import-position
 
 class IndalekoHandlermixin(ABC):
     """Class for providing callback processing for the main handler"""
+
+    @abstractmethod
+    def get_pre_parser() -> Union[argparse.Namespace, None]:
+        '''This method is used to get the pre-parser'''
+
+    @abstractmethod
+    def get_additional_parameters(pre_parser : argparse.Namespace) -> Union[argparse.Namespace, None]:
+        '''This method is used to add additional parameters to the parser.'''
 
     @abstractmethod
     def get_default_file(data_directory: Union[str, Path], candidates : list[Union[str, Path]]) -> Union[str, None]:
@@ -98,3 +107,7 @@ class IndalekoHandlermixin(ABC):
     @abstractmethod
     def extract_filename_metadata(file_name : str) -> dict:
         '''This method is used to parse the file name.'''
+
+    @abstractmethod
+    def get_storage_identifier(parser : argparse.Namespace) -> Union[str,None]:
+        '''This method is used to get the storage identifier (if any) for a path'''

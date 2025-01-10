@@ -97,8 +97,6 @@ class BaseStorageRecorder():
         'edge_count',
     )
 
-
-
     def __init__(self : 'BaseStorageRecorder', **kwargs : dict) -> None:
         '''
         Constructor for the IndalekoStorageRecorder class. Takes a configuration object
@@ -135,6 +133,7 @@ class BaseStorageRecorder():
         self.data_dir = kwargs.get('data_dir', indaleko_default_data_dir)
         self.output_dir = kwargs.get('output_dir', self.data_dir)
         self.input_dir = kwargs.get('input_dir', self.data_dir)
+        self.input_file = kwargs.get('input_file', None)
         self.config_dir = kwargs.get('config_dir', indaleko_default_config_dir)
         self.log_dir = kwargs.get('log_dir', indaleko_default_log_dir)
         self.service_name = kwargs.get('Name', kwargs.get('service_name', None))
@@ -147,15 +146,15 @@ class BaseStorageRecorder():
                                           BaseStorageRecorder\
                                             .indaleko_generic_storage_recorder_service_version)
         self.service_type = kwargs.get('Type', IndalekoServiceManager.service_type_storage_recorder)
-        self.service_id = kwargs.get('Identifier', kwargs.get('service_id', kwargs.get('service_identifier', None)))
-        assert self.service_id is not None, \
+        self.service_identifier = kwargs.get('Identifier', kwargs.get('service_id', kwargs.get('service_identifier', None)))
+        assert self.service_identifier is not None, \
             f'Service identifier must be specified\n{kwargs}'
         self.recorder_service = IndalekoServiceManager().register_service(
             service_name = self.service_name,
             service_description = self.service_description,
             service_version = self.service_version,
             service_type = self.service_type,
-            service_id = self.service_id,
+            service_id = self.service_identifier,
         )
         assert self.recorder_service is not None, 'Recorder service does not exist'
         for count in BaseStorageRecorder.counter_values:

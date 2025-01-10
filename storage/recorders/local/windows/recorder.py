@@ -102,6 +102,12 @@ class IndalekoWindowsLocalStorageRecorder(BaseStorageRecorder):
         if 'recorder_data' not in kwargs:
             kwargs['recorder_data'] = IndalekoWindowsLocalStorageRecorder.windows_recorder_data
         super().__init__(**kwargs)
+        self.output_file = kwargs.get('output_file', self.generate_file_name())
+        self.source = {
+            'Identifier' : self.windows_local_recorder_uuid,
+            'Version' : self.windows_local_recorder_service['service_version'],
+        }
+
 
 
     def find_collector_files(self) -> list:
@@ -426,7 +432,9 @@ def old_main():
     file_suffix = BaseStorageRecorder.default_file_suffix
     if 'file_suffix' in collector_file_metadata:
         file_suffix = collector_file_metadata['file_suffix']
-    input_file = os.path.join(args.datadir, args.input)
+    input_file = str(Path(args.datadir) / args.inputfile)
+    output_file = str(Path(args.datadir) / args.outputfile)
+    output_file = os.path.join(args.datadir, args.output_file)
     recorder = IndalekoWindowsLocalStorageRecorder(
         machine_config=machine_config,
         machine_id = machine_id,
@@ -438,6 +446,7 @@ def old_main():
         file_suffix = file_suffix,
         data_dir=args.datadir,
         input_file=input_file,
+        output_file=output_file,
         log_dir=args.logdir
     )
     output_file = recorder.generate_file_name()
@@ -453,7 +462,7 @@ def old_main():
                                 format='%(asctime)s - %(levelname)s - %(message)s',
                                 force=True)
     logging.info('Processing %s ' , args.input)
-    logging.info('Output file %s ' , output_file)
+    logging.info('Output file %s ' , args.output_file)
     logging.info(args)
     perf_file_name = os.path.join(
         args.datadir,
@@ -502,18 +511,28 @@ def old_main():
 
 class local_recorder_mixin(IndalekoBaseCLI.default_handler_mixin):
     '''This is the mixin for the local recorder'''
+
     @staticmethod
     def load_machine_config(keys: dict[str, str]) -> IndalekoWindowsMachineConfig:
         '''Load the machine configuration'''
-        ic(f'local_collector_mixin.load_machine_config: {keys}')
         if keys.get('debug'):
-            ic(f'local_collector_mixin.load_machine_config: {keys}')
+            ic(f'local_recorder_mixin.load_machine_config: {keys}')
         if 'machine_config_file' not in keys:
             raise ValueError(f'{inspect.currentframe().f_code.co_name}: machine_config_file must be specified')
         offline = keys.get('offline', False)
         return IndalekoWindowsMachineConfig.load_config_from_file(
             config_file=str(keys['machine_config_file']),
             offline=offline)
+
+    @staticmethod
+    def get_additional_parameters(pre_parser):
+        '''This method is used to add additional parameters to the parser.'''
+        storage = 'unknown'
+        pre_parser.add_argument('--storage',
+                                help=f'The storage description. (default = {storage})',
+                                default=storage,
+                                required=True)
+        return pre_parser
 
 @staticmethod
 def local_run(keys: dict[str, str]) -> Union[dict, None]:
@@ -524,6 +543,7 @@ def local_run(keys: dict[str, str]) -> Union[dict, None]:
     debug = hasattr(args, 'debug') and args.debug
     if debug:
         ic(config_data)
+        exit(1)
     # recorders have the machine_id so they need to find the
     # matching machine configuration file.
     kwargs = {
@@ -534,11 +554,11 @@ def local_run(keys: dict[str, str]) -> Union[dict, None]:
             }
         ),
         'timestamp': config_data['Timestamp'],
-        'path': args.path,
+        'input_file' : str(Path(args.datadir) / args.inputfile),
         'offline': args.offline
     }
     def record(recorder : IndalekoWindowsLocalStorageRecorder):
-        data = recorder.collect()
+        data = recorder.record()
         output_file = Path(args.datadir) / args.outputfile
         recorder.write_data_to_file(data, str(output_file))
     def extract_counters(**kwargs):
@@ -557,7 +577,7 @@ def local_run(keys: dict[str, str]) -> Union[dict, None]:
         description=recorder.service_description,
         MachineIdentifier=uuid.UUID(kwargs['machine_config'].machine_id),
         process_results_func=extract_counters,
-        input_file_name=None,
+        input_file_name=str(Path(args.datadir) / args.inputfile),
         output_file_name=str(Path(args.datadir) / args.outputfile),
         recorder=recorder
     )

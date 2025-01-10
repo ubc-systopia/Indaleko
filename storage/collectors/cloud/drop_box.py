@@ -479,7 +479,7 @@ def main():
             input=False,
             platform=False,
         ),
-        additional_parameters=add_storage_local_parameters,
+        additional_post_parameters=add_storage_local_parameters,
         Run=local_run,
     )
     runner.run()
