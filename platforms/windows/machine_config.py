@@ -441,11 +441,14 @@ def main():
             hostname = 'unknown'
             if 'hostname' in config:
                 hostname = config['hostname']
-            print(json.dumps(config, indent=4))
+            # print(json.dumps(config, indent=4))
             print('Configuration for machine:', hostname)
-            print(f'\t    UUID: {config["_key"]}')
+            if '_key' in config:
+                print(f'\t    UUID: {config["_key"]}')
+            else:
+                print(f'\t    UUID: {config['Record']['Attributes']['MachineUUID']}')
             print(f'\tCaptured: {config["Captured"]["Value"]}')
-            print(f'\tPlatform: {config["Platform"]["software"]["OS"]}')
+            print(f'\tPlatform: {config["Software"]["OS"]}')
             return
     if args.delete:
         assert args.uuid is not None, \

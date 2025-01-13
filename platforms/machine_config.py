@@ -30,7 +30,7 @@ import sys
 
 import arango
 
-from typing import List
+from typing import List, Union
 
 from icecream import ic
 
@@ -80,6 +80,15 @@ class IndalekoMachineConfig:
         if not self.offline:
             self.collection = IndalekoCollections().get_collection(IndalekoDBCollections.Indaleko_MachineConfig_Collection)
             assert self.collection is not None, 'Failed to get the machine configuration collection'
+
+    @staticmethod
+    def find_configs_in_db(source_id : Union[str,None]= None) -> list:
+        '''Find the machine configurations in the database.'''
+        assert source_id is not None and validate_uuid_string(source_id), 'Invalid source identifier'
+        return [
+            IndalekoMachineConfig.serialize(config)
+            for config in IndalekoMachineConfig.lookup_machine_configurations(source_id=source_id)
+        ]
 
     @staticmethod
     def register_machine_configuration_service(**kwargs):
