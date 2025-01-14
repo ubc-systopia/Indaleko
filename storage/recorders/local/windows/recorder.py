@@ -335,12 +335,12 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
             'platform' : self.platform,
             'service' : IndalekoWindowsLocalStorageRecorder.windows_local_recorder_name,
             'storage' : self.storage_description,
-            'collection' : IndalekoDBCollections.Indaleko_Relationship_Collection,
+            'collection' : IndalekoDBCollections.Indaleko_Object_Collection,
             'timestamp' : self.timestamp,
             'output_dir' : self.data_dir,
         }
         self.output_object_file = self.generate_output_file_name(**kwargs)
-        kwargs['collection'] = IndalekoDBCollections.Indaleko_Object_Collection
+        kwargs['collection'] = IndalekoDBCollections.Indaleko_Relationship_Collection
         self.output_edge_file = self.generate_output_file_name(**kwargs)
 
     @staticmethod
@@ -398,7 +398,7 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
         raise NotImplementedError('bulk_upload_relationship_data must be implemented')
 
 
-class local_recorder_mixin(IndalekoBaseCLI.default_handler_mixin):
+class old_local_recorder_mixin(IndalekoBaseCLI.default_handler_mixin):
     '''This is the mixin for the local recorder'''
 
     @staticmethod
@@ -413,7 +413,7 @@ class local_recorder_mixin(IndalekoBaseCLI.default_handler_mixin):
         return BaseLocalStorageRecorder.get_additional_parameters(pre_parser)
 
 @staticmethod
-def local_run(keys: dict[str, str]) -> Union[dict, None]:
+def old_local_run(keys: dict[str, str]) -> Union[dict, None]:
     '''Run the collector'''
     args = keys['args'] # must be there.
     cli = keys['cli'] # must be there.
@@ -511,7 +511,7 @@ def local_run(keys: dict[str, str]) -> Union[dict, None]:
         capture_performance(recorder.bulk_upload_relationship_data)
 
 @staticmethod
-def local_recorder_runner(
+def old_local_recorder_runner(
     collector_class: BaseStorageCollector,
     recorder_class : BaseStorageRecorder,
     machine_config_class : IndalekoMachineConfig) -> None:
@@ -536,7 +536,7 @@ def local_recorder_runner(
 
 def main():
     '''This is the CLI handler for the Windows local storage collector.'''
-    local_recorder_runner(
+    BaseLocalStorageRecorder.local_recorder_runner(
         IndalekoWindowsLocalCollector,
         IndalekoWindowsLocalStorageRecorder,
         IndalekoWindowsMachineConfig

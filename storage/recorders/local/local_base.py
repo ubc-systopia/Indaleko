@@ -30,7 +30,7 @@ from pathlib import Path
 import sys
 import uuid
 
-from typing import Union
+from typing import Union, Callable, Any
 
 from icecream import ic
 
@@ -46,6 +46,7 @@ from data_models import IndalekoSourceIdentifierDataModel
 from perf.perf_collector import IndalekoPerformanceDataCollector
 from perf.perf_recorder import IndalekoPerformanceDataRecorder
 from platforms.machine_config import IndalekoMachineConfig
+from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.runner import IndalekoCLIRunner
 from utils.decorators import type_check
@@ -120,25 +121,40 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
         logging.info('Command %s result: %d', command, result)
         print(f'Command {command} result: {result}')
 
+    class local_recorder_mixin(IndalekoBaseCLI.default_handler_mixin):
+        '''This is the mixin for the local recorder'''
+
+        @staticmethod
+        def load_machine_config(keys : dict[str, str]) -> IndalekoMachineConfig:
+            assert 'class' in keys, '(machine config) class must be specified'
+            return BaseLocalStorageRecorder.load_machine_config(keys)
+
+        @staticmethod
+        def get_additional_parameters(pre_parser):
+            '''This method is used to add additional parameters to the parser.'''
+            return BaseLocalStorageRecorder.get_additional_parameters(pre_parser)
+
+
     @staticmethod
     def local_run(keys: dict[str, str]) -> Union[dict, None]:
-        '''Run the collector'''
-        ic('local_run: ', keys)
-        exit(0)
+        '''Run the recorder'''
         args = keys['args'] # must be there.
         cli = keys['cli'] # must be there.
         config_data = cli.get_config_data()
         debug = hasattr(args, 'debug') and args.debug
         if debug:
             ic(config_data)
-        recorder_class = keys['parameters']['Class']
+        recorder_class = keys['parameters']['RecorderClass']
+        machine_config_class = keys['parameters']['MachineConfigClass']
+        # collector_class = keys['parameters']['CollectorClass'] # unused for now
         # recorders have the machine_id so they need to find the
         # matching machine configuration file.
         kwargs = {
             'machine_config': cli.handler_mixin.load_machine_config(
                 {
                     'machine_config_file' : str(Path(args.configdir) / args.machine_config),
-                    'offline' : args.offline
+                    'offline' : args.offline,
+                    'class' : machine_config_class
                 }
             ),
             'timestamp': config_data['Timestamp'],
@@ -162,10 +178,11 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
             perf_data = IndalekoPerformanceDataCollector.measure_performance(
                 task_func,
                 source=IndalekoSourceIdentifierDataModel(
-                    Identifier=recorder.service_identifier,
-                    Version = recorder.service_version,
-                    Description=recorder.service_description),
-                description=recorder.service_description,
+                    Identifier=recorder.get_recorder_service_uuid(),
+                    Version = recorder.get_recorder_service_version(),
+                    Description=recorder.get_recorder_service_description()
+                ),
+                description=recorder.get_recorder_service_description(),
                 MachineIdentifier=uuid.UUID(kwargs['machine_config'].machine_id),
                 process_results_func=extract_counters,
                 input_file_name=str(Path(args.datadir) / args.inputfile),
@@ -219,10 +236,9 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
     @staticmethod
     def local_recorder_runner(
         collector_class: BaseStorageCollector,
-        recorder_class : BaseStorageRecorder) -> None:
+        recorder_class : BaseStorageRecorder,
+        machine_config_class : IndalekoMachineConfig) -> None:
         '''This is the CLI handler for local storage collectors.'''
-        ic(collector_class.get_collector_platform_name())
-        ic(recorder_class.get_recorder_service_name())
         runner = IndalekoCLIRunner(
             cli_data=IndalekoBaseCliDataModel(
                 Service=recorder_class.get_recorder_service_name(),
@@ -231,8 +247,12 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
                     'svc' : collector_class.get_collector_service_name(),
                 }
             ),
-            handler_mixin=local_recorder_mixin,
-            Run=local_run,
-            RunParameters={'RecorderClass' : recorder_class}
+            handler_mixin=BaseLocalStorageRecorder.local_recorder_mixin,
+            Run=BaseLocalStorageRecorder.local_run,
+            RunParameters={
+                'CollectorClass' : collector_class,
+                'MachineConfigClass' : machine_config_class,
+                'RecorderClass' : recorder_class
+            }
         )
         runner.run()

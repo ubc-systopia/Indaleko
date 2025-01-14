@@ -43,7 +43,7 @@ class IndalekoBaseModel(BaseModel):
     '''
     def serialize(self) -> Dict[str, Any]:
         '''Serialize the object to a dictionary'''
-        return self.model_dump(exclude_unset=True)
+        return self.model_dump(exclude_unset=True, exclude_none=True)
 
     @classmethod
     def deserialize(cls: Type[T], data : Dict[str, Any]) -> T:
@@ -98,7 +98,7 @@ class IndalekoBaseModel(BaseModel):
         data = cls.get_example()
         ic(data)
         ic(dir(data))
-        print(data.model_dump_json(indent=2))
+        print(data.model_dump_json(indent=2, exclude_unset=True, exclude_none=True))
         serial_data = data.serialize()
         data_check = cls.deserialize(serial_data)
         assert data_check == data

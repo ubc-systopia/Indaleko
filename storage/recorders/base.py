@@ -162,7 +162,7 @@ class BaseStorageRecorder:
         '''
         self.recorder_service = IndalekoServiceManager().register_service(
             service_name = self.get_recorder_service_name(),
-            service_id = self.get_recorder_service_uuid(),
+            service_id = str(self.get_recorder_service_uuid()),
             service_version = self.get_recorder_service_version(),
             service_description = self.get_recorder_service_description(),
             service_type = self.get_recorder_service_type(),

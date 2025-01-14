@@ -208,7 +208,6 @@ class IndalekoBaseCLI:
             pre_args, _ = self.pre_parser.parse_known_args()
         if hasattr(pre_args, 'inputfile'):
             machine_id = self.config_data['InputFileKeys'].get('machine', None)
-            ic(f'setup_machine_config_parser: Machine ID: {machine_id}')
         self.config_data['MachineConfigChoices'] = self.handler_mixin.find_machine_config_files(self.config_data['ConfigDirectory'], pre_args.platform)
         default_machine_config_file = self.handler_mixin.get_default_file(
             self.config_data['ConfigDirectory'],
