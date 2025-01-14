@@ -253,8 +253,10 @@ class IndalekoBaseCLI:
         if hasattr(pre_args, 'outputfile'): # only process it once
             ic(f'setup_output_parser: outputfile already processed: {pre_args.outputfile}')
             return
-        storage_id = self.handler_mixin.get_storage_identifier(pre_args)
-        if storage_id:
+        if storage_id := self.handler_mixin.get_storage_identifier(self.config_data):
+            self.pre_parser.add_argument('--storage',
+                    default=storage_id,
+                    help=f'Storage identifier to use (default={storage_id})')
             self.config_data['StorageId'] = storage_id
         output_file = self.handler_mixin.generate_output_file_name(self.config_data)
         self.pre_parser.add_argument('--outputfile',
@@ -496,10 +498,17 @@ class IndalekoBaseCLI:
 
         @staticmethod
         def get_storage_identifier(
-            args : argparse.Namespace
+            config_data : dict[str,str],
         ) -> Union[str,None]:
             '''Default is no storage identifier'''
-            return None
+            if 'StorageId' in config_data and config_data['StorageId']:
+                storage_id = config_data['StorageId']
+            elif 'InputFileKeys' in config_data and \
+                 'storage' in config_data['InputFileKeys']:
+                storage_id = config_data['InputFileKeys']['storage']
+            else:
+                storage_id = None
+            return storage_id
 
         @staticmethod
         def get_additional_parameters(pre_parser : argparse.Namespace) -> Union[argparse.Namespace, None]:

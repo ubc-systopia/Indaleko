@@ -39,6 +39,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # pylint: enable=wrong-import-position
 
 def type_check(func):
+    '''Adds type checking to a function based on type hints.'''
     @wraps(func)
     def wrapper(*args, **kwargs):
         hints = get_type_hints(func)
