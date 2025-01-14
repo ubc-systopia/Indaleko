@@ -33,7 +33,7 @@ class IndalekoSchema:
     @staticmethod
     def build_from_db() -> 'IndalekoSchema':
         '''Build the schema from the database.'''
-        db_config = importlib.import_module('IndalekoDBConfig').IndalekoDBConfig()
+        db_config = importlib.import_module('.db.db_config', package='Indaleko').IndalekoDBConfig()
         db_config.start()
         schema = {}
         for collection in db_config.db.collections():

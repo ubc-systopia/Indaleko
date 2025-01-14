@@ -30,6 +30,12 @@ from platforms.data_models.hardware import Hardware
 from platforms.data_models.software import Software
 from typing import Dict, Any
 
+from activity.collectors.ambient.data_models.ambient_data_model import BaseAmbientConditionDataModel
+from activity.collectors.ambient.data_models.smart_thermostat import ThermostatSensorData
+from activity.collectors.ambient.music.base import AmbientMusicData
+from activity.collectors.ambient.music.spotify import SpotifyAmbientData
+from activity.collectors.ambient.smart_thermostat.ecobee import EcobeeAmbientData
+
 from activity.context.data_models.context_data_model import IndalekoActivityContextDataModel
 from activity.context.data_models.activity_data import ActivityDataModel
 from activity.data_model.activity import IndalekoActivityDataModel
@@ -126,7 +132,7 @@ class Dataset_Generator():
             self.earliest_starttime = min(self.earliest_starttime, starttime)
         return starttime, endtime
     
-    def generate_metadata_dataset(self):
+    def generate_metadata_dataset(self) -> dict:
         """
         Main function to generate metadata datasets
         """
@@ -309,15 +315,18 @@ class Dataset_Generator():
             file_counter = self.saved_directory_path["truth.directory"]["files"]
 
             if truth_parent_loc == "local": # if file dir specified, create truth file at that dir
-                if file_name in file_counter:
-                    file_counter[file_name] += 1
-                    updated_file_name = self._change_name(file_name= file_name, count = file_counter[file_name])
-                    path = self.saved_directory_path["truth.directory"]["path"] + "/" + updated_file_name
+                path = self.saved_directory_path["truth.directory"]["path"] + "/"
+                counter_key = path+file_name
+                if counter_key in file_counter:
+                    file_counter[counter_key] += 1
+                    updated_file_name = self._change_name(file_name= file_name, count = file_counter[counter_key])
+                    path += updated_file_name
                     URI = file_locations[truth_parent_loc] + path
+                    ic(updated_file_name)
                     return [path, URI, updated_file_name]
                 else:
-                    file_counter.update({file_name: 0})
-                    path = self.saved_directory_path["truth.directory"]["path"] + "/" + file_name
+                    file_counter.update({counter_key: 0})
+                    path += file_name
                     URI = file_locations[truth_parent_loc] + path
                     return [path, URI, file_name]
 
@@ -335,15 +344,17 @@ class Dataset_Generator():
         random_location = random.choice(list(file_locations.keys()))
         if random_location == "local":
             file_counter = self.saved_directory_path["filler.directory"]["files"]
-            if file_name in file_counter:
-                file_counter[file_name] += 1
-                updated_file_name = self._change_name(file_name= file_name, count = file_counter[file_name])
-                path = random.choice(self.saved_directory_path["filler.directory"]["path"]) + "/" + updated_file_name
+            path = random.choice(self.saved_directory_path["filler.directory"]["path"]) + "/"
+            counter_key = path+file_name
+            if counter_key in file_counter:
+                file_counter[counter_key] += 1
+                updated_file_name = self._change_name(file_name= file_name, count = file_counter[counter_key])
+                path += updated_file_name
                 URI = file_locations[random_location] + path
                 return [path, URI, updated_file_name]
             else:
-                file_counter.update({file_name: 0})
-                path = random.choice(self.saved_directory_path["filler.directory"]["path"]) + "/" + file_name
+                file_counter.update({counter_key: 0})
+                path += file_name
                 URI = file_locations[random_location] + path
                 return [path, URI, file_name]
         else:
@@ -661,7 +672,7 @@ class Dataset_Generator():
         """
         Creates the geographical semantic data
         """
-        geo_timestamp = self._generate_ac_timestamp(is_truth_file, timestamps)
+        geo_timestamp = self._generate_ac_timestamp(is_truth_file, timestamps, "geo_location")
         activity_geo_loc = self._generate_geo_context(is_truth_file)
         activity_geo_md = self._generate_WindowsGPSLocation(activity_geo_loc, geo_timestamp)
             
@@ -690,14 +701,14 @@ class Dataset_Generator():
         return activity_service, activity_context
     
     # helper functions for generate_geo_semantics:
-    def _generate_ac_timestamp(self, is_truth_file:bool, timestamps: dict[str]) -> str:
+    def _generate_ac_timestamp(self, is_truth_file:bool, timestamps: dict[str], activity_type: str) -> str:
         """
         Generate the activity context timestamp
         """
         timestamp_types = ["birthtime", "modified", "accessed", "changed"]
 
-        if "timestamp" in self.selected_AC_md:
-            time_query = self.selected_AC_md["timestamp"]
+        if activity_type in self.selected_AC_md and "timestamp" in self.selected_AC_md[activity_type]:
+            time_query = self.selected_AC_md[activity_type]["timestamp"]
             if is_truth_file:
                 return timestamps[time_query].strftime("%Y-%m-%dT%H:%M:%SZ")
             else:
@@ -1029,7 +1040,7 @@ class Dataset_Generator():
 
 
 def main():
-    selected_md_attributes = {"Posix": {"file.name": {"extension": [".txt"], "command": "exactly"}, "timestamps": {"birthtime": {"starttime": "2024-01-07T00:00:00", "endtime": "2024-01-07T23:59:59", "command": "range"}, "modified": {"starttime": "2025-01-01T00:00:00", "endtime": "2025-01-07T14:55:53", "command": "range"}}}, "Semantic": {}, "Activity": {"timestamp": "birthtime", "geo_location": {"location": "Vancouver", "command": "at"}}}
+    selected_md_attributes = {"Posix": {"file.name": {"pattern": "essay", "command": "exactly", "extension": [".pdf"]}, "file.directory": {"location": "local", "local_dir_name": "essays"}}, "Semantic": {}, "Activity": {}}
     config_path = "data_generator/dg_config.json"
     with open(config_path, 'r') as file:
         print("here")

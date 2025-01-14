@@ -135,8 +135,8 @@ class Validator():
 
         # EXTRACT QUERY FROM CONFIG FILE:
         self.logger.log_process("extracting query from config...")
-        selected_md_attributes = self.query_extractor.extract(query = query, llm_connector = self.llm_connector)
-        #selected_md_attributes = {"Posix":{"file.name":{"pattern":"essay","command":"starts","extension":[".txt"]},"timestamps":{"modified":{"starttime":"2019-10-31T00:00:00","endtime":"2019-10-31T00:00:00","command":"equal"}},"file.size":{"target_min" :7516192768, "target_max":7516192768,"command":"less_than"}},"Semantic":{"Content_1":{"Languages":"str","Text":"advancements in computer science"}}}
+        #selected_md_attributes = self.query_extractor.extract(query = query, llm_connector = self.llm_connector)
+        selected_md_attributes = {"Posix":{"file.name":{"pattern":"essay","command":"starts","extension":[".txt"]},"timestamps":{"modified":{"starttime":"2019-10-31T00:00:00","endtime":"2019-10-31T00:00:00","command":"equal"}},"file.size":{"target_min" :7516192768, "target_max":7516192768,"command":"less_than"}},"Semantic":{"Content_1":{"Languages":"str","Text":"advancements in computer science"}}}
 
         #selected_md_attributes = {"Posix": {"file.name": {"extension": ".pdf"}, "timestamps": {"modified": {"starttime": "2025-01-01T18:00:00", "endtime": "2025-01-01T18:00:00", "command": "equal"}}}, "Activity": {"timestamp": {"starttime": "2025-01-01T18:00:00", "endtime": "2025-01-01T18:00:00", "command": "equal"}, "geo_location": {"location": "Vancouver", "command": "within", "km": 2}}}
         self.logger.log_process_result("selected_md_attributes", selected_md_attributes)
@@ -148,11 +148,16 @@ class Validator():
         self.data_generator.set_selected_md_attributes(selected_md_attributes)
         self.logger.log_process("generating record and activity metadata...")
         generation_time, results = self.time_operation(self.data_generator.generate_metadata_dataset)
-        all_records_md, all_activity_md, all_machine_config_md, stats = results[0], results[1], results[2], results[3]
+        all_records_md, all_geo_activity_md, all_machine_config_md, stats = results[0], results[1], results[2], results[3]
+        # all_records_md, all_geo_activity_md, all_music_activity_md, all_temp_activity_md, all_machine_config_md, stats = results[0], results[1], results[2], results[3], results[4], results[5]
 
-        # save the resulting dataset to as a json file for future reference
+        # save the resulting dataset to a json file for future reference
         self.data_generator.write_json(all_records_md, self.file_path + "all_records.json")
-        self.data_generator.write_json(all_activity_md, self.file_path + "all_activity.json")
+        self.data_generator.write_json(all_geo_activity_md, self.file_path + "all_geo_activity.json")
+
+        # self.data_generator.write_json(all_music_activity_md, self.file_path + "all_music_activity.json")
+        # self.data_generator.write_json(all_temp_activity_md, self.file_path + "all_temp_activity.json")
+
         self.data_generator.write_json(all_machine_config_md, self.file_path + "all_machine_config.json")
         self.logger.log_process_result("metadata_generation_time", generation_time)
         self.add_result_to_dict("metadata_stats", stats)
@@ -163,10 +168,21 @@ class Validator():
         ic(f"Storing time for record metadata: {record_storage_time}")
         self.logger.log_process_result("stored record:", record_storage_time[0])
        
-        activity_storage_time = self.time_operation(self.data_storer.add_records_to_collection, collections=self.db_config.collections, collection_name="ActivityContext", records=all_activity_md, key_required = True)
-        self.logger.log_process("storing activity context...")
-        ic(f"Storing time for activity metadata: {activity_storage_time}")
-        self.logger.log_process_result("stored activity context:", activity_storage_time[0])
+        _, geo_collection = self.data_storer.register_activity_provider("Geographical Location Collector")
+        geo_activity_storage_time = self.time_operation(self.data_storer.add_records_with_activity_provider, collection=geo_collection, records=all_geo_activity_md)
+        self.logger.log_process("storing geo activity context...")
+        ic(f"Storing time for geographical location activity metadata: {geo_activity_storage_time}")
+        self.logger.log_process_result("stored geo activity context:", geo_activity_storage_time[0])
+        exit()
+        # music_activity_storage_time = self.time_operation(self.data_storer.add_records_to_collection, collections=self.db_config.collections, collection_name="MusicActivityContext", records=all_music_activity_md, key_required = True)
+        # self.logger.log_process("storing activity context...")
+        # ic(f"Storing time for music activity metadata: {music_activity_storage_time}")
+        # self.logger.log_process_result("stored activity context:", music_activity_storage_time[0])
+
+        # temp_activity_storage_time = self.time_operation(self.data_storer.add_records_to_collection, collections=self.db_config.collections, collection_name="TempActivityContext", records=all_temp_activity_md, key_required = True)
+        # self.logger.log_process("storing activity context...")
+        # ic(f"Storing time for temperature activity metadata: {temp_activity_storage_time}")
+        # self.logger.log_process_result("stored activity context:", temp_activity_storage_time[0])
 
         self.logger.log_process("storing machine config metadata...")
         machine_config_storage_time = self.time_operation(self.data_storer.add_records_to_collection, collections=self.db_config.collections, collection_name="MachineConfig", records=all_machine_config_md, key_required = True)
