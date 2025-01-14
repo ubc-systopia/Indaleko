@@ -27,7 +27,7 @@ Examples of recorders include:
 
 
 Project Indaleko
-Copyright (C) 2024 Tony Mason
+Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -63,9 +63,8 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from db.db_config import IndalekoDBConfig
-from db.db_collections import IndalekoDBCollections
-from db.service_manager import IndalekoServiceManager
+from db import IndalekoCollection, IndalekoDBConfig, IndalekoDBCollections, IndalekoServiceManager
+from utils.decorators import type_check
 from utils.misc.directory_management import indaleko_default_data_dir, indaleko_default_config_dir, indaleko_default_log_dir
 from utils.misc.file_name_management import generate_file_name, extract_keys_from_file_name
 from data_models import IndalekoSemanticAttributeDataModel
@@ -80,6 +79,8 @@ class BaseStorageRecorder():
 
     default_file_prefix = 'indaleko'
     default_file_suffix = '.jsonl'
+    local_recorder_name = 'fs_recorder'
+
 
     indaleko_generic_storage_recorder_uuid_str = '526e0240-1ee4-46e9-9dac-3e557a8fb654'
     indaleko_generic_storage_recorder_uuid = uuid.UUID(indaleko_generic_storage_recorder_uuid_str)
@@ -96,8 +97,6 @@ class BaseStorageRecorder():
         'error_count',
         'edge_count',
     )
-
-
 
     def __init__(self : 'BaseStorageRecorder', **kwargs : dict) -> None:
         '''
@@ -135,6 +134,7 @@ class BaseStorageRecorder():
         self.data_dir = kwargs.get('data_dir', indaleko_default_data_dir)
         self.output_dir = kwargs.get('output_dir', self.data_dir)
         self.input_dir = kwargs.get('input_dir', self.data_dir)
+        self.input_file = kwargs.get('input_file', None)
         self.config_dir = kwargs.get('config_dir', indaleko_default_config_dir)
         self.log_dir = kwargs.get('log_dir', indaleko_default_log_dir)
         self.service_name = kwargs.get('Name', kwargs.get('service_name', None))
@@ -147,15 +147,15 @@ class BaseStorageRecorder():
                                           BaseStorageRecorder\
                                             .indaleko_generic_storage_recorder_service_version)
         self.service_type = kwargs.get('Type', IndalekoServiceManager.service_type_storage_recorder)
-        self.service_id = kwargs.get('Identifier', kwargs.get('service_id', kwargs.get('service_identifier', None)))
-        assert self.service_id is not None, \
+        self.service_identifier = kwargs.get('Identifier', kwargs.get('service_id', kwargs.get('service_identifier', None)))
+        assert self.service_identifier is not None, \
             f'Service identifier must be specified\n{kwargs}'
         self.recorder_service = IndalekoServiceManager().register_service(
             service_name = self.service_name,
             service_description = self.service_description,
             service_version = self.service_version,
             service_type = self.service_type,
-            service_id = self.service_id,
+            service_id = self.service_identifier,
         )
         assert self.recorder_service is not None, 'Recorder service does not exist'
         for count in BaseStorageRecorder.counter_values:
@@ -178,7 +178,6 @@ class BaseStorageRecorder():
             del kwargs['output_dir']
         if output_dir is None:
             output_dir = self.data_dir
-        kwargs['recorder'] = self.recorder
         kwargs['machine'] = str(uuid.UUID(self.machine_id).hex)
         if self.storage_description is not None and \
             kwargs['storage'] != 'unknown':
@@ -194,8 +193,7 @@ class BaseStorageRecorder():
         'prefix' : self.file_prefix,
         'suffix' : suffix,
         'platform' : self.platform,
-        'service' : 'record',
-        'recorder' : self.recorder,
+        'service' : self.local_recorder_name,
         'machine' : str(uuid.UUID(self.machine_id).hex),
         'collection' : IndalekoDBCollections.Indaleko_Object_Collection,
         'timestamp' : self.timestamp,
@@ -217,27 +215,66 @@ class BaseStorageRecorder():
             data['storage'] = str(uuid.UUID(data['storage']))
         return data
 
-    def write_data_to_file(self, data : list, file_name : str = None, jsonlines_output : bool = True) -> None:
-        '''This will write the given data to the specified file.'''
+    @staticmethod
+    def write_data_to_file(data : list, file_name : str = None, jsonlines_output : bool = True) -> int:
+        '''
+        This will write the given data to the specified file.
+
+        Inputs:
+            * data: the data to write
+            * file_name: the name of the file to write to
+            * jsonlines_output: whether to write the data in JSONLines format
+
+        Returns:
+            The number of records written to the file.
+        '''
         if data is None:
             raise ValueError('data must be specified')
         if file_name is None:
             raise ValueError('file_name must be specified')
+        output_count = 0
         if jsonlines_output:
             with jsonlines.open(file_name, mode='w') as writer:
                 for entry in data:
                     try:
                         writer.write(entry.serialize())
-                        self.output_count += 1
+                        output_count += 1
                     except TypeError as err:
                         logging.error('Error writing entry to JSONLines file: %s', err)
                         logging.error('Entry: %s', entry)
+                        logging.error('Output count: %d', output_count)
+                        logging.error('Data size %d', len(data))
                         raise err
             logging.info('Wrote JSONLines data to %s', file_name)
             ic('Wrote JSON data to', file_name)
         else:
             json.dump(data, file_name, indent=4)
             logging.info('Wrote JSON data to %s', file_name)
+        return output_count
+
+    @type_check
+    def upload_data_to_database(self,
+                                data : list,
+                                collection : Union[IndalekoCollection, str] = 'Objects',
+                                database : IndalekoDBConfig = IndalekoDBConfig(),
+                                chunk_size : int = 5000) -> bool:
+        '''
+        This will upload the specified data to the database.
+
+        Inputs:
+            * data: list of data to upload (must be in the correct format, of course)
+            * collection: the collection to which we should upload the data (defaults to 'Objects')
+            * database: the database configuration object (uses default config if not specified)
+            * chunk_size: the number of records to upload at a time (defaults to 5000)
+        '''
+        raise NotImplementedError('upload_data_to_database implementation is not complete.')
+        if isinstance(collection, str):
+            collection = IndalekoCollection(collection, db_config=database)
+            assert isinstance(collection, IndalekoCollection), 'Collection is not an IndalekoCollection'
+        count = 0
+        while count < len(data):
+            chunk = data[count:count + chunk_size]
+            count += chunk_size
 
     @staticmethod
     def build_load_string(**kwargs) -> str:
@@ -271,15 +308,14 @@ class BaseStorageRecorder():
             with jsonlines.open(self.input_file) as reader:
                 for entry in reader:
                     self.collector_data.append(entry)
-            ic(len(self.collector_data))
         elif self.input_file.endswith('.json'):
             with open(self.input_file, 'r', encoding='utf-8-sig') as file:
                 self.collector_data = json.load(file)
-                ic(len(self.collector_data))
         else:
             raise ValueError(f'Input file {self.input_file} is an unknown type')
         if not isinstance(self.collector_data, list):
             raise ValueError('collector_data is not a list')
+        self.input_count = len(self.collector_data)
 
     @staticmethod
     def build_storage_relationship(
@@ -366,7 +402,6 @@ class BaseStorageRecorder():
         return BaseStorageRecorder.build_storage_relationship(
             child, machine, IndalekoRelationship.CONTAINED_BY_MACHINE_RELATIONSHIP_UUID_STR, source_id
         )
-
 
 def main():
     """Test code for IndalekoStorageRecorder.py"""

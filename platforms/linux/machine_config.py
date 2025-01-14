@@ -2,7 +2,7 @@
 This module is used to manage the Linux Machine configuration information.
 
 Project Indaleko
-Copyright (C) 2024 Tony Mason
+Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -90,7 +90,6 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
             self.service_registration = None
             self.db = None
         if 'machine_id' not in kwargs:
-            ic(kwargs)
             kwargs['machine_id'] = kwargs['MachineUUID']
         super().__init__(**kwargs)
 
@@ -380,7 +379,6 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
         if 'Hostname' not in machine_config_data:
             machine_config_data['Hostname'] = config_data['Hostname']
         config = IndalekoLinuxMachineConfig(**machine_config_data, offline=offline)
-        # ic(IndalekoMachineConfigDataModel.MachineConfig.serialize(config.machine_config))
         if not offline:
             config.write_config_to_db()
         if hasattr(config, 'extract_volume_info'):

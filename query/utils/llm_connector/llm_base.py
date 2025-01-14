@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List

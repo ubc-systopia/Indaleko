@@ -2,7 +2,7 @@
 This is the activity data provider discovery mechanism.
 
 Project Indaleko
-Copyright (C) 2024 Tony Mason
+Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -32,9 +32,10 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
+# pylint: disable=wrong-import-position
 from Indaleko import Indaleko
-from IndalekoLogging import IndalekoLogging
-
+from utils import IndalekoLogging
+# pylint: enable=wrong-import-position
 
 # This is a hack to get the project root
 

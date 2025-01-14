@@ -4,7 +4,7 @@ distinct Indaleko service class.  Registration and managemen is done in the
 complementary IndalekoServices class.
 
 Project Indaleko
-Copyright (C) 2024 Tony Mason
+Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -76,7 +76,7 @@ class IndalekoService:
         values.  Ugly, but it is what it is.
         '''
         self.record = kwargs.get('Record', kwargs.get('record', None))
-        self.service_type = kwargs.get('service_type', kwargs.get('Type', None))
+        self.service_type = kwargs.get('service_type', kwargs.get('ServiceType', None))
         self.service_identifier = kwargs.get('service_identifier', kwargs.get('Identifier', None))
         self.service_name = kwargs.get('service_name', kwargs.get('Name', None))
         self.service_description = kwargs.get('service_description', \
@@ -85,7 +85,7 @@ class IndalekoService:
         self.creation_date = kwargs.get('creation_date',
                                         datetime.datetime.now(datetime.timezone.utc).isoformat())
         assert self.record is not None, 'Record is required for IndalekoService'
-        assert self.service_type is not None, 'Type is required for IndalekoService'
+        assert self.service_type is not None, f'Type is required for IndalekoService {kwargs}'
         assert self.service_name is not None, 'Name is required for IndalekoService'
         assert self.service_version is not None, 'Version is required for IndalekoService'
         assert self.service_description is not None, 'Description is required for IndalekoService'
@@ -98,7 +98,7 @@ class IndalekoService:
             Identifier = self.service_identifier,
             Version = self.service_version,
             Name = self.service_name,
-            Type = self.service_type,
+            ServiceType = self.service_type,
             Description = self.service_description
         )
 

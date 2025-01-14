@@ -2,7 +2,7 @@
 This is the abstract base class that activity data providers use.
 
 Project Indaleko
-Copyright (C) 2024 Tony Mason
+Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -35,7 +35,9 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
+# pylint: disable=wrong-import-position
 from activity.characteristics import ActivityDataCharacteristics
+# pylint: enable=wrong-import-position
 
 class CollectorBase(ABC):
     '''

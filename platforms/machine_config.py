@@ -2,7 +2,7 @@
 Indaleko Machine Configuration class.
 
 Project Indaleko
-Copyright (C) 2024 Tony Mason
+Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -30,7 +30,7 @@ import sys
 
 import arango
 
-from typing import List
+from typing import List, Union
 
 from icecream import ic
 
@@ -42,10 +42,9 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 #pylint: disable=wrong-import-position
+from constants import IndalekoConstants
 from data_models import IndalekoMachineConfigDataModel
-from db import IndalekoCollections
-from db.db_collections import IndalekoDBCollections
-from db.service_manager import IndalekoServiceManager
+from db import IndalekoCollections, IndalekoDBCollections, IndalekoServiceManager
 from utils.data_validation import validate_uuid_string
 #pylint: enable=wrong-import-position
 
@@ -55,13 +54,14 @@ class IndalekoMachineConfig:
     This class provides the generic base for capturing a machine
     configuration
     '''
-    default_config_dir = "./config"
+    default_config_dir = IndalekoConstants.default_config_dir
     indaleko_machine_config_captured_label_str = "eb7eaeed-6b21-4b6a-a586-dddca6a1d5a4"
     indaleko_machine_config_captured_label_uuid = \
         uuid.UUID(indaleko_machine_config_captured_label_str)
 
     def __init__(self, **kwargs):
         '''Initialize the machine configuration'''
+        self.debug = kwargs.get('debug', False)
         if not hasattr(self, 'offline'):
             if 'offline' in kwargs:
                 self.offline = kwargs['offline']
@@ -71,15 +71,24 @@ class IndalekoMachineConfig:
             del kwargs['offline']
         if not hasattr(self, 'source'): # override in derived classes
             self.source_identifier = None
-        ic(kwargs)
+        # ic(kwargs)
         self.machine_id = kwargs.get('machine_id', kwargs.get('MachineUUID', None))
-        assert 'machine_id' is not None, 'Machine ID must be specified'
+        assert self.machine_id is not None, 'Machine ID must be specified'
         if 'machine_id' in kwargs:
             del kwargs['machine_id']
-        self.machine_config = IndalekoMachineConfigDataModel(**ic(kwargs))
+        self.machine_config = IndalekoMachineConfigDataModel(**kwargs)
         if not self.offline:
             self.collection = IndalekoCollections().get_collection(IndalekoDBCollections.Indaleko_MachineConfig_Collection)
             assert self.collection is not None, 'Failed to get the machine configuration collection'
+
+    @staticmethod
+    def find_configs_in_db(source_id : Union[str,None]= None) -> list:
+        '''Find the machine configurations in the database.'''
+        assert source_id is not None and validate_uuid_string(source_id), 'Invalid source identifier'
+        return [
+            IndalekoMachineConfig.serialize(config)
+            for config in IndalekoMachineConfig.lookup_machine_configurations(source_id=source_id)
+        ]
 
     @staticmethod
     def register_machine_configuration_service(**kwargs):
@@ -106,7 +115,7 @@ class IndalekoMachineConfig:
         if 'MachineUUID' not in doc:
             doc['MachineUUID'] = self.machine_id
         # ic(doc)
-        print(json.dumps(doc, indent=4))
+        # print(json.dumps(doc, indent=4))
         try:
             self.collection.insert(doc, overwrite=overwrite)
             status = True
@@ -154,7 +163,9 @@ class IndalekoMachineConfig:
 
     def serialize(self) -> dict:
         '''Serialize the machine configuration'''
-        return ic(json.loads(self.machine_config.model_dump_json()))
+        if self.debug:
+            return ic(json.loads(self.machine_config.model_dump_json()))
+        return json.loads(self.machine_config.model_dump_json())
 
     @staticmethod
     def deserialize(data : dict) -> 'IndalekoMachineConfig':

@@ -1,6 +1,6 @@
 '''
 Project Indaleko
-Copyright (C) 2024 Tony Mason
+Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -35,6 +35,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+from constants import IndalekoConstants
 from utils import IndalekoDocker, IndalekoLogging, IndalekoSingleton
 from utils.data_validation import validate_ip_address, validate_hostname
 from utils.misc.directory_management import indaleko_default_log_dir, indaleko_default_config_dir
@@ -47,7 +48,7 @@ class IndalekoDBConfig(IndalekoSingleton):
     Class used to read a configuration file, connect to, and set-up (if
     needed) the database.
     """
-    default_db_config_file_name = 'indaleko-db-config.ini'
+    default_db_config_file_name =  IndalekoConstants.default_db_config_file_name
     default_db_config_file = os.path.join(indaleko_default_config_dir, default_db_config_file_name)
     default_db_timeout=os.environ.get('INDALEKO_DB_TIMEOUT', 10)
 

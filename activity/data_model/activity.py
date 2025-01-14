@@ -3,7 +3,7 @@ This module defines the common data model for activity data providers
 in the Indaleko project.
 
 Project Indaleko
-Copyright (C) 2024 Tony Mason
+Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -35,9 +35,12 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
+# pylint: disable=wrong-import-position
+from data_models.base import IndalekoBaseModel
 from data_models.record import IndalekoRecordDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
-from data_models.base import IndalekoBaseModel
+# pylint: enable=wrong-import-position
+
 
 class IndalekoActivityDataModel(IndalekoBaseModel):
     '''

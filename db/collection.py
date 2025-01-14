@@ -2,7 +2,7 @@
 This module is used to manage specific collection objects in Indaleko.
 
 Project Indaleko
-Copyright (C) 2024 Tony Mason
+Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -20,9 +20,23 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import arango
 import json
+import os
+import sys
 
 import arango.collection
 from icecream import ic
+from typing import Any, Dict, Sequence, Union
+
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+# pylint: disable=wrong-import-position
+from utils.decorators import type_check
+# pylint: enable=wrong-import-position
 
 
 from db.db_config import IndalekoDBConfig
@@ -52,6 +66,7 @@ class IndalekoCollection():
         self.db_config = kwargs.get('db', None)
         self.db_config.start()
         self.reset = kwargs.get('reset', False)
+        self.max_chunk_size = kwargs.get('max_chunk_size', 1000)
         self.collection_name = self.name
         self.indices = {}
         if self.definition is None:
@@ -64,6 +79,7 @@ class IndalekoCollection():
             'db must be None or an IndalekoDBConfig object'
         self.create_collection(self.collection_name, self.definition, reset=self.reset)
 
+    @type_check
     def create_collection(self,
                           name : str,
                           config : dict,
@@ -99,6 +115,7 @@ class IndalekoCollection():
             f'self.collection is unexpected type {type(self.collection)}'
         return IndalekoCollection(ExistingCollection=self.collection)
 
+    @type_check
     def delete_collection(self, name: str) -> bool:
         '''Delete the collection with the given name.'''
         if not self.db_config.db.has_collection(name):
@@ -108,6 +125,7 @@ class IndalekoCollection():
         print(f'Collection {name} does exists, requesting deletion **')
         return True
 
+    @type_check
     def create_index(self,
                      name: str,
                      index_type: str,
@@ -126,8 +144,22 @@ class IndalekoCollection():
         """Given a list of keyword arguments, return a list of documents that match the criteria."""
         return [document for document in self.collection.find(kwargs)]
 
-    def insert(self, document: dict, overwrite : bool = False) -> 'IndalekoCollection':
-        """Insert a document into the collection."""
+    def insert(self, document: dict, overwrite : bool = False) -> Union[dict,bool]:
+        """
+        Insert a document into the collection.
+
+        Inputs:
+            document (dict): The document to insert.
+            overwrite (bool): If True, overwrite the document if it already exists.
+
+        Returns:
+            dict: The document that was inserted.
+            None: If the document could not be inserted.
+
+        Note: the python-arango library docs are ambiguous about the return type, suggesting
+        Union[dict,None] and Union[dict,bool] in different places.  The way we use it here,
+        this should return dict or None
+        """
         try:
             return self.collection.insert(document, overwrite=overwrite)
         except arango.exceptions.DocumentInsertError as e:
@@ -135,8 +167,26 @@ class IndalekoCollection():
             ic(document)
             print(json.dumps(document, indent=2))
             ic(e)
-            raise e
+            return None
 
+
+    @type_check
+    def bulk_insert(self, documents: Sequence[Dict[str, Any]]) -> Union[None, list[Dict[str, Any]]]:
+        '''Insert a list of documents into the collection in batches.'''
+        errors = []
+        for i in range(0, len(documents), self.max_chunk_size):
+            batch = documents[i:i + self.max_chunk_size]
+            try:
+                result = self.collection.insert_many(batch)
+                batch_errors = [doc for doc in result if doc.get('error')]
+                errors.extend(batch_errors)
+            except arango.exceptions.DocumentInsertError as e:
+                ic(f'Bulk insert failure for documents into collection {self.name}')
+                ic(batch)
+                print(json.dumps(batch, indent=2))
+                ic(e)
+                raise e
+        return errors if errors else None
 
     def add_schema(self, schema: dict) -> 'IndalekoCollection':
         """Add a schema to the collection."""

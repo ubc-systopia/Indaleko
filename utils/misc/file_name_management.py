@@ -1,7 +1,7 @@
 '''
 This module provides utility functions for managing file names in Indaleko.
 
-Copyright (C) 2024 Tony Mason
+Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -20,6 +20,8 @@ import os
 import platform
 import sys
 
+from icecream import ic
+
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
@@ -29,9 +31,10 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 import utils.misc.timestamp_management
+from constants.values import IndalekoConstants
 # pylint: enable=wrong-import-position
 
-indaleko_file_name_prefix = 'indaleko'
+indaleko_file_name_prefix = IndalekoConstants.default_prefix
 
 def generate_final_name(args : list, **kwargs) -> str:
     '''
@@ -52,30 +55,32 @@ def generate_final_name(args : list, **kwargs) -> str:
         raise ValueError('prefix must not contain a hyphen')
     if '-' in suffix:
         raise ValueError('suffix must not contain a hyphen')
-    name += f'-plt={target_platform}'
+    if target_platform: # platform is optional
+        name += f'-plt={target_platform}'
     name += f'-svc={service}'
     for key, value in kwargs.items():
         assert isinstance(value, str), f'value must be a string: {key, value}'
-        if '-' in key or '-' in value:
-            raise ValueError(f'key and value must not contain a hyphen: {key, value}')
+        if '-' in key:
+            raise ValueError(f'key must not contain a hyphen: {key, value}')
         name += f'-{key}={value}'
-    name += ts
+    if ts is not None:
+        name += ts
     name += f'.{suffix}'
     if len(name) > max_len:
         raise ValueError('file name is too long' + '\n' + name + '\n' + str(len(name)))
     return name
 
 def generate_file_name(**kwargs) -> str:
-    '''
+    f'''
     Given a key/value store of labels and values, this generates a file
     name in a common format.
     Special labels:
-        * prefix: string to prepend to the file name
-        * platform: identifies the platform from which the data originated
-        * service: identifies the service that generated the data (indexer,
-            ingester, etc.)
-        * timestamp: timestamp to use in the file name
-        * suffix: string to append to the file name
+        * prefix: string to prepend to the file name (default is {indaleko_file_name_prefix})
+        * platform: identifies the platform from which the data originated (default is {platform.system()})
+        * service: identifies the service that generated the data (collector,
+            recorder, etc.) (no default)
+        * timestamp: timestamp to use in the file name (default is the current time)
+        * suffix: string to append to the file name (default is jsonl)
     '''
     max_len = 255
     prefix = indaleko_file_name_prefix
@@ -88,7 +93,7 @@ def generate_file_name(**kwargs) -> str:
             raise ValueError('max_len must be an integer')
         del kwargs['max_len']
     if 'platform' not in kwargs:
-        target_platform = platform.system()
+        target_platform = None
     else:
         target_platform = kwargs['platform']
         del kwargs['platform']
@@ -98,7 +103,10 @@ def generate_file_name(**kwargs) -> str:
     del kwargs['service']
     ts = utils.misc.timestamp_management.generate_iso_timestamp_for_file()
     if 'timestamp' in kwargs:
-        ts = utils.misc.timestamp_management.generate_iso_timestamp_for_file(kwargs['timestamp'])
+        if kwargs['timestamp'] is not None:
+            ts = utils.misc.timestamp_management.generate_iso_timestamp_for_file(kwargs['timestamp'])
+        else:
+            ts = None
         del kwargs['timestamp']
     if 'prefix' in kwargs:
         prefix = kwargs['prefix']
@@ -108,10 +116,11 @@ def generate_file_name(**kwargs) -> str:
         del kwargs['suffix']
     if suffix.startswith('.'):
         suffix = suffix[1:] # avoid ".." for suffix
-    if '-' in target_platform:
-        raise ValueError('platform must not contain a hyphen')
+    if target_platform and '-' in target_platform:
+        raise ValueError(f'platform must not contain a hyphen (platform={target_platform})')
     if '-' in service:
-        raise ValueError('service must not contain a hyphen')
+        raise ValueError(f'service must not contain a hyphen (service={service})')
+
     return generate_final_name(
         [prefix,
         target_platform,
@@ -123,37 +132,43 @@ def generate_file_name(**kwargs) -> str:
 
 def extract_keys_from_file_name(file_name : str) -> dict:
     '''
-    Given a file name, extract the keys and values from the file name.
+    Given a file name, extract the keys and values from the file name,
+    then validate that fields we expect are present.
     '''
-    base_file_name, file_suffix = os.path.splitext(os.path.basename(file_name))
-    file_name = base_file_name + file_suffix
-    data = {}
-    if not isinstance(file_name, str):
-        raise ValueError('file_name must be a string')
-    fields = file_name.split('-')
-    prefix = fields.pop(0)
-    data['prefix'] = prefix
-    target_platform = fields.pop(0)
-    if not target_platform.startswith('plt='):
-        raise ValueError('platform field must start with plt=')
-    data['platform'] = target_platform[4:]
-    service = fields.pop(0)
-    if not service.startswith('svc='):
-        raise ValueError('service field must start with svc=')
-    data['service'] = service[4:]
-    trailer = fields.pop(-1)
-    suffix = trailer.split('.')[-1]
-    if not trailer.startswith('ts='):
-        raise ValueError('timestamp field must start with ts=')
-    ts_field = trailer[3:-len(suffix)-1]
-    data['suffix'] = suffix
-    data['timestamp'] = utils.misc.timestamp_management.extract_iso_timestamp_from_file_timestamp(ts_field)
-    while len(fields) > 0:
-        field = fields.pop(0)
-        if '=' not in field:
-            raise ValueError('field must be of the form key=value')
-        key, value = field.split('=')
-        data[key] = value
+    def parse_file_name(file_name: str) -> dict:
+        """
+        Helper function to parse a file name into a dictionary of keys and values.
+        """
+        # Extract the base file name (without extension) and split by '-'
+        base_file_name, file_suffix = os.path.splitext(os.path.basename(file_name))
+        fields = base_file_name.split('-')
+        data = {
+            'suffix': file_suffix.lstrip('.')
+        }
+
+        # Parse prefix
+        prefix = fields.pop(0)
+        next = None
+        while fields and '=' not in fields[0]:
+            next = fields.pop(0)
+            prefix += '-' + next
+        data['prefix'] = prefix
+        # now let's parse through the key/value pairs
+        while fields:
+            next = fields.pop(0)
+            if '=' not in next:
+                raise ValueError(f"Invalid key-value pair format: {next}")
+            key, value = next.split('=', 1)
+            # now let's see if there's more to append to the value
+            while fields and not '=' in fields[0]:
+                value += '-' + fields.pop(0)
+            data[key] = value
+        return data
+    data = parse_file_name(file_name)
+    assert 'svc' in data, f'service field must be present in file name ({file_name})'
+    if 'ts' in data:
+        data['timestamp'] = utils.misc.timestamp_management.extract_iso_timestamp_from_file_timestamp(data['ts'])
+        del data['ts']
     return data
 
 def find_candidate_files(input_strings : list[str], directory : str) -> list[tuple[str,str]]:

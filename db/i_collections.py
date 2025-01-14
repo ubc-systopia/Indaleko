@@ -4,7 +4,7 @@ Indaleko database.
 
 
 Project Indaleko
-Copyright (C) 2024 Tony Mason
+Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -38,6 +38,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 # from Indaleko import Indaleko
+from constants.values import IndalekoConstants
 from db.db_config import IndalekoDBConfig
 from db.collection_index import IndalekoCollectionIndex
 from db.collection import IndalekoCollection
@@ -104,7 +105,7 @@ def real_main():
                         help='Reset the database', action='store_true')
     parser.add_argument('--config',
                         '-c',
-                        help='Path to the config file', default='./config/indaleko-db-config.ini')
+                        help='Path to the config file', default=IndalekoConstants.default_db_config_file_name)
     parser.add_argument('--log',
                         '-l',
                         help='Log file to use', default=logfile)

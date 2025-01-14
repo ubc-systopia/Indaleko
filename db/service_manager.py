@@ -17,7 +17,7 @@ I expect there will be other kinds of services in the future, but that's the
 list for now.
 
 Project Indaleko
-Copyright (C) 2024 Tony Mason
+Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -52,11 +52,6 @@ if os.environ.get('INDALEKO_ROOT') is None:
 from db.db_config import IndalekoDBConfig
 from db.collection import IndalekoCollection
 from data_models import IndalekoServiceDataModel, IndalekoRecordDataModel, IndalekoSourceIdentifierDataModel
-# from Indaleko import Indaleko
-# from IndalekoServiceSchema import IndalekoServiceSchema
-# from IndalekoService import IndalekoService
-# from IndalekoRecordDataModel import IndalekoRecordDataModel
-# from IndalekoDataModel import IndalekoDataModel
 from db import IndalekoDBCollections
 from utils.data_validation import validate_uuid_string
 from utils.i_logging import IndalekoLogging
@@ -65,6 +60,7 @@ from utils.misc.directory_management import indaleko_default_log_dir
 from utils.misc.file_name_management import generate_file_name
 from utils.misc.service import IndalekoService
 from utils.singleton import IndalekoSingleton
+from constants import IndalekoConstants
 # pylint: enable=wrong-import-position
 
 
@@ -73,7 +69,7 @@ class IndalekoServiceManager(IndalekoSingleton):
     This class defines the service model for Indaleko.
     '''
 
-    Schema = IndalekoServiceDataModel().get_arangodb_schema()
+    Schema = IndalekoServiceDataModel.get_arangodb_schema()
 
     service_manager_uuid_str = 'c3e03488-660c-42f5-8277-1c8073fb2144'
     service_manager_version = '1.1'
@@ -82,14 +78,14 @@ class IndalekoServiceManager(IndalekoSingleton):
     assert indaleko_services in IndalekoDBCollections.Collections, \
         f'{indaleko_services} must be in Indaleko_Collections'
 
-    service_type_test = 'Test'
-    service_type_machine_configuration = "Machine Configuration"
-    service_type_storage_collector = 'Storage Collector'
-    service_type_storage_recorder = 'Storage Recorder'
-    service_type_semantic_transducer = 'Semantic Transducer'
-    service_type_activity_context_generator = 'Activity Context Generator'
-    service_type_activity_data_collector = 'Activity Data Collector'
-    service_type_activity_data_registrar = 'Activity Data Registrar'
+    service_type_test = IndalekoConstants.service_type_test
+    service_type_machine_configuration = IndalekoConstants.service_type_machine_configuration
+    service_type_storage_collector = IndalekoConstants.service_type_storage_collector
+    service_type_storage_recorder = IndalekoConstants.service_type_storage_recorder
+    service_type_semantic_transducer = IndalekoConstants.service_type_semantic_transducer
+    service_type_activity_context_generator = IndalekoConstants.service_type_activity_context_generator
+    service_type_activity_data_collector = IndalekoConstants.service_type_activity_data_collector
+    service_type_activity_data_registrar = IndalekoConstants.service_type_activity_data_registrar
 
     service_types = (
         service_type_test,
@@ -172,7 +168,8 @@ class IndalekoServiceManager(IndalekoSingleton):
                          service_description: str,
                          service_version: str,
                          service_type : str,
-                         service_id : str  = None) -> dict:
+                         service_id : str  = None,
+                         debug : bool = False) -> dict:
         """
         This method registers a service with the given name, description, and
         version in the database.
@@ -199,7 +196,8 @@ class IndalekoServiceManager(IndalekoSingleton):
         if existing_service is None:
             if service_id is None:
                 service_id = str(uuid.uuid4())
-            ic('Creating new service:', service_id)
+            if debug:
+                ic('Creating new service:', service_id)
             new_service = IndalekoService(
                 record = IndalekoRecordDataModel(
                     SourceIdentifier = IndalekoSourceIdentifierDataModel(

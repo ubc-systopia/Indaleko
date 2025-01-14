@@ -3,7 +3,7 @@ IndalekoActivityRegistrationService is the class that implements the
 registration service for activity data providers.
 
 Project Indaleko
-Copyright (C) 2024 Tony Mason
+Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -37,12 +37,9 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from Indaleko import Indaleko
-from IndalekoDBConfig import IndalekoDBConfig
-from IndalekoSingleton import IndalekoSingleton
-from IndalekoService import IndalekoService
-from IndalekoServiceManager import IndalekoServiceManager
-from IndalekoCollection import IndalekoCollection
-from IndalekoCollections import IndalekoCollections
+from db import IndalekoDBConfig, IndalekoCollection, IndalekoCollections, IndalekoServiceManager
+from utils.singleton import IndalekoSingleton
+from utils.misc.service import IndalekoService
 from activity.registration import IndalekoActivityDataRegistration
 from data_models.activity_data_registration \
     import IndalekoActivityDataRegistrationDataModel

@@ -1,7 +1,6 @@
-
 '''
 Project Indaleko
-Copyright (C) 2024 Tony Mason
+Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -53,10 +52,12 @@ class IndalekoDBCollections:
     Indaleko_Identity_Domain_Collection = 'IdentityDomains'
     Indaleko_User_Collection = 'Users'
     Indaleko_User_Relationship_Collection = 'UserRelationships'
+    Indaleko_Performance_Data_Collection = 'PerformanceData'
+    Indaleko_Query_History_collection = "QueryHistory"
 
     Collections = {
         Indaleko_Object_Collection: {
-            'schema' : IndalekoObjectDataModel().get_arangodb_schema(),
+            'schema' : IndalekoObjectDataModel.get_arangodb_schema(),
             'edge' : False,
             'indices' : {
                 'URI' : {
@@ -78,7 +79,7 @@ class IndalekoDBCollections:
             },
         },
         Indaleko_Relationship_Collection : {
-            'schema' : IndalekoRelationshipDataModel().get_arangodb_schema(),
+            'schema' : IndalekoRelationshipDataModel.get_arangodb_schema(),
             'edge' : True,
             'indices' : {
                 'relationship' : {
@@ -104,7 +105,7 @@ class IndalekoDBCollections:
             }
         },
         Indaleko_Service_Collection : {
-            'schema' : IndalekoServiceDataModel().get_arangodb_schema(),
+            'schema' : IndalekoServiceDataModel.get_arangodb_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {
@@ -142,12 +143,12 @@ class IndalekoDBCollections:
             },
         },
         Indaleko_Identity_Domain_Collection : {
-            'schema' : IndalekoIdentityDomainDataModel().get_arangodb_schema(),
+            'schema' : IndalekoIdentityDomainDataModel.get_arangodb_schema(),
             'edge' : False,
             'indices' : { }
         },
         Indaleko_User_Collection : {
-            'schema' : IndalekoUserDataModel().get_arangodb_schema(),
+            'schema' : IndalekoUserDataModel.get_arangodb_schema(),
             'edge' : False,
             'indices' : {
                 'identifier' : {
@@ -158,6 +159,18 @@ class IndalekoDBCollections:
             },
         },
         # Indaleko_User_Relationship_Collection : 'This needs to be tied into NER work'
+        Indaleko_Performance_Data_Collection : {
+            'schema' : None,
+            'edge' : False,
+            'indices' : {
+            }
+        },
+        Indaleko_Query_History_collection : {
+            'schema' : None,
+            'edge' : False,
+            'indices' : {
+            }
+        }
     }
 
 def main():

@@ -27,6 +27,7 @@ from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from data_models.timestamp import IndalekoTimestampDataModel
 from data_models.user_identity import IndalekoUserDataModel
 from data_models.i_uuid import IndalekoUUIDDataModel
+from data_models.i_perf import IndalekoPerformanceDataModel
 
 __version__ = '0.1.0'
 
@@ -35,6 +36,7 @@ __all__ = [
     'IndalekoIdentityDomainDataModel',
     'IndalekoObjectDataModel',
     'IndalekoMachineConfigDataModel',
+    'IndalekoPerformanceDataModel',
     'IndalekoRecordDataModel',
     'IndalekoRelationshipDataModel',
     'IndalekoSemanticAttributeDataModel',

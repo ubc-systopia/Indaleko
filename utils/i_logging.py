@@ -18,8 +18,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # overall package/project.  It's a bit of a hack, but it works.
 # pylint: disable=wrong-import-position
 from utils import IndalekoSingleton
-from utils.misc.directory_management import \
-    indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
+from utils.misc.directory_management import indaleko_default_log_dir
 import utils.misc.file_name_management
 # pylint: enable=wrong-import-position
 
@@ -75,6 +74,16 @@ class IndalekoLogging(IndalekoSingleton):
             logging_levels = sorted(set(logging.getLevelNamesMapping()))
         return logging_levels
 
+    @staticmethod
+    def map_logging_type_to_level(logging_type : str) -> int:
+        """Map a logging type to a logging level."""
+        return logging.getLevelNamesMapping()[logging_type]
+
+    @staticmethod
+    def map_logging_level_to_type(logging_level : int) -> str:
+        """Map a logging level to a logging type."""
+        assert isinstance(logging_level, int), f"logging_level must be an integer, not {type(logging_level)}"
+        return logging.getLevelName(logging_level)
 
     @staticmethod
     def generate_log_file_name(**kwargs) -> str:
@@ -173,6 +182,7 @@ def prune_logs(args: argparse.Namespace) -> None:
 def main():
     """Main function for the IndalekoLogging class."""
     print("Welcome to Indaleko Logging Management")
+    print(f'DEBUG maps to {IndalekoLogging.map_logging_type_to_level("DEBUG")}')
     indaleko_logging = IndalekoLogging(service_name='IndalekoLogging')
     assert indaleko_logging is not None, "IndalekoLogging is None"
     parser = argparse.ArgumentParser(description="Indaleko logging management")

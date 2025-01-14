@@ -2,7 +2,7 @@
 Init functionality for the ambient condition activity data providers.
 
 Project Indaleko
-Copyright (C) 2024 Tony Mason
+Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -34,7 +34,6 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from activity.collectors.ambient.smart_thermostat import EcobeeAmbientData
-
 # pylint: enable=wrong-import-position
 
 # Define what should be available when importing from this package

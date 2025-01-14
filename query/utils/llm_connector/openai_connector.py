@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 
 from typing import Dict, Any, List, Union
 from .llm_base import LLMBase

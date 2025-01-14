@@ -2,7 +2,7 @@
 This module is the base for ambient activity data collectors for Indaleko.
 
 Project Indaleko
-Copyright (C) 2024 Tony Mason
+Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
@@ -39,7 +39,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # overall package/project.  It's a bit of a hack, but it works.
 # pylint: disable=wrong-import-position
 from Indaleko import Indaleko
-from IndalekoLogging import IndalekoLogging
+from utils import IndalekoLogging
 from activity.collectors.base import CollectorBase
 # pylint: enable=wrong-import-position
 

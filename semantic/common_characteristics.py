@@ -4,7 +4,7 @@ describe the characteristics of a data provider.  This is intended to be used to
 help the system understand how to interact with the data provider.
 
 Project Indaleko
-Copyright (C) 2024 Tony Mason
+Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
