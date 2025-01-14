@@ -69,8 +69,9 @@ from utils.misc.directory_management import indaleko_default_data_dir, indaleko_
 from utils.misc.file_name_management import generate_file_name, extract_keys_from_file_name
 from data_models import IndalekoSemanticAttributeDataModel
 from storage.i_relationship import IndalekoRelationship
+from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 # pylint: enable=wrong-import-position
-class BaseStorageRecorder():
+class BaseStorageRecorder:
     '''
     IndalekoStorageRecorder is the generic class that we use for recording data from the
     various collectors that we have. Platform specific recorders are built on top
@@ -96,6 +97,14 @@ class BaseStorageRecorder():
         'file_count',
         'error_count',
         'edge_count',
+    )
+
+    # Note: this defaults the platform and service type value(s)frgsi;
+    recorder_data = IndalekoStorageRecorderDataModel(
+        RecorderServiceName = indaleko_generic_storage_recorder_service_name,
+        RecorderServiceUUID = indaleko_generic_storage_recorder_uuid,
+        RecorderServiceVersion = indaleko_generic_storage_recorder_service_version,
+        RecorderServiceDescription = indaleko_generic_storage_recorder_service_description,
     )
 
     def __init__(self : 'BaseStorageRecorder', **kwargs : dict) -> None:
@@ -137,7 +146,7 @@ class BaseStorageRecorder():
         self.input_file = kwargs.get('input_file', None)
         self.config_dir = kwargs.get('config_dir', indaleko_default_config_dir)
         self.log_dir = kwargs.get('log_dir', indaleko_default_log_dir)
-        self.service_name = kwargs.get('Name', kwargs.get('service_name', None))
+        '''self.service_name = kwargs.get('Name', kwargs.get('service_name', None))
         assert self.service_name is not None, \
             f'Service name must be specified, kwargs={kwargs}'
         self.service_description = kwargs.get('Description',
@@ -150,16 +159,47 @@ class BaseStorageRecorder():
         self.service_identifier = kwargs.get('Identifier', kwargs.get('service_id', kwargs.get('service_identifier', None)))
         assert self.service_identifier is not None, \
             f'Service identifier must be specified\n{kwargs}'
+        '''
         self.recorder_service = IndalekoServiceManager().register_service(
-            service_name = self.service_name,
-            service_description = self.service_description,
-            service_version = self.service_version,
-            service_type = self.service_type,
-            service_id = self.service_identifier,
+            service_name = self.get_recorder_service_name(),
+            service_id = self.get_recorder_service_uuid(),
+            service_version = self.get_recorder_service_version(),
+            service_description = self.get_recorder_service_description(),
+            service_type = self.get_recorder_service_type(),
         )
         assert self.recorder_service is not None, 'Recorder service does not exist'
-        for count in BaseStorageRecorder.counter_values:
+        for count in self.counter_values:
             setattr(self, count, 0)
+
+    @classmethod
+    def get_recorder_platform_name(cls : 'BaseStorageRecorder') -> str:
+        '''This function returns the platform name for the recorder.'''
+        return cls.recorder_data.RecorderPlatformName
+
+    @classmethod
+    def get_recorder_service_name(cls) -> str:
+        '''This function returns the service name for the recorder.'''
+        return cls.recorder_data.RecorderServiceName
+
+    @classmethod
+    def get_recorder_service_uuid(cls) -> uuid.UUID:
+        '''This function returns the service UUID for the recorder.'''
+        return cls.recorder_data.RecorderServiceUUID
+
+    @classmethod
+    def get_recorder_service_version(cls) -> str:
+        '''This function returns the service version for the recorder.'''
+        return cls.recorder_data.RecorderServiceVersion
+
+    @classmethod
+    def get_recorder_service_description(cls) -> str:
+        '''This function returns the service description for the recorder.'''
+        return cls.recorder_data.RecorderServiceDescription
+
+    @classmethod
+    def get_recorder_service_type(cls) -> str:
+        '''This function returns the service type for the recorder.'''
+        return cls.recorder_data.RecorderServiceType
 
     def get_counts(self) -> dict:
         '''

@@ -66,9 +66,9 @@ class IndalekoWindowsLocalCollector(BaseStorageCollector):
     indaleko_windows_local_collector_service_version = '1.0'
     indaleko_windows_local_collector_service_type = IndalekoServiceManager.service_type_storage_collector
 
-    windows_collector_data = IndalekoStorageCollectorDataModel(
+    collector_data = IndalekoStorageCollectorDataModel(
         CollectorPlatformName = windows_platform,
-        CollectorServiceName = indaleko_windows_local_collector_service_name,
+        CollectorServiceName = windows_local_collector_name,
         CollectorServiceUUID = uuid.UUID(indaleko_windows_local_collector_uuid),
         CollectorServiceVersion = indaleko_windows_local_collector_service_version,
         CollectorServiceDescription = indaleko_windows_local_collector_service_description

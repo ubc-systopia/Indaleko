@@ -28,6 +28,7 @@ import sys
 import uuid
 
 from icecream import ic
+from typing import Union
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -51,7 +52,7 @@ class BaseStorageCollector:
     mechanisms for managing the data and configuration files that are used by
     the collectors.
     '''
-    collector_data = IndalekoStorageCollectorDataModel(
+    default_collector_data = IndalekoStorageCollectorDataModel(
         CollectorPlatformName = None,
         CollectorServiceName = 'Indaleko Generic Collector',
         CollectorServiceUUID = uuid.UUID('4a80a080-9cc9-4856-bf43-7b646557ac2d'),
@@ -96,18 +97,7 @@ class BaseStorageCollector:
         assert os.path.isdir(self.data_dir), f'{self.data_dir} must be an existing directory'
         self.timestamp = kwargs.get('timestamp', datetime.datetime.now(datetime.timezone.utc).isoformat())
         assert isinstance(self.timestamp, str), 'timestamp must be a string'
-        self.collector_data = kwargs.get('collector_data')
-        if self.collector_data is None:
-            ic(f'Warning: {type(self)}.__init__: collector_data not provided, using default')
-            self.collector_data = BaseStorageCollector.collector_data
-        if self.collector_data.CollectorPlatformName is not None:
-            self.platform = self.collector_data.CollectorPlatformName
-        self.collector_name = self.collector_data.CollectorServiceName
-        self.service_name = self.collector_data.CollectorServiceName
-        self.service_description = self.collector_data.CollectorServiceDescription
-        self.service_version = self.collector_data.CollectorServiceVersion
-        self.service_type = self.collector_data.CollectorServiceType
-        self.service_identifier = self.collector_data.CollectorServiceUUID
+        self.collector_data = kwargs['collector_data'] # blow up if not defined
         if 'machine_id' in kwargs:
             self.machine_id = kwargs['machine_id']
         if 'storage_description' in kwargs:
@@ -135,6 +125,47 @@ class BaseStorageCollector:
             "Collector service does not exist, not in offline mode"
         for count in BaseStorageCollector.counter_values:
             setattr(self, count, 0)
+
+    @classmethod
+    def get_collector_data(cls) -> IndalekoStorageCollectorDataModel:
+        '''This function returns the collector data.'''
+        return cls.collector_data
+
+    @classmethod
+    def get_collector_platform_name(cls) -> Union[str, None]:
+        '''This function returns the collector platform, or None if not applicable.'''
+        return cls.collector_data.CollectorPlatformName
+
+    @classmethod
+    def get_collector_name(cls) -> str:
+        '''This function returns the collector name.'''
+        return cls.collector_data.CollectorPlatformName
+
+    @classmethod
+    def get_collector_service_name(cls) -> str:
+        '''This function returns the service name.'''
+        return cls.collector_data.CollectorServiceName
+
+    @classmethod
+    def get_collector_service_description(cls) -> str:
+        '''This function returns the service description.'''
+        return cls.collector_data.CollectorServiceDescription
+
+    @classmethod
+    def get_collector_service_version(cls) -> str:
+        '''This function returns the service version.'''
+        return cls.collector_data.CollectorServiceVersion
+
+    @classmethod
+    def get_collector_service_type(cls) -> str:
+        '''This function returns the service type.'''
+        return cls.collector_data.CollectorServiceType
+
+    @classmethod
+    def get_collector_service_identifier(cls) -> uuid.UUID:
+        '''This function returns the service identifier.'''
+        return cls.collector_data.CollectorServiceUUID
+
 
     @staticmethod
     def find_collector_files(

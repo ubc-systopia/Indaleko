@@ -63,6 +63,7 @@ class IndalekoCLIRunner:
         keys['LoadConfiguration'] = kwargs.get('LoadConfiguration', IndalekoCLIRunner.default_runner_mixin.load_configuration)
         keys['PerformanceConfiguration'] = kwargs.get('PerformanceConfiguration', IndalekoCLIRunner.default_runner_mixin.performance_configuration)
         keys['Run'] = kwargs.get('Run', IndalekoCLIRunner.default_runner_mixin.run)
+        keys['RunParameters'] = kwargs.get('RunParameters', {})
         keys['PerformanceRecording'] = kwargs.get('PerformanceRecording', IndalekoCLIRunner.default_runner_mixin.performance_recording)
         keys['Cleanup'] = kwargs.get('Cleanup', IndalekoCLIRunner.default_runner_mixin.cleanup)
         self.runner_data = IndalekoCLIRunnerData(**keys)
@@ -93,7 +94,8 @@ class IndalekoCLIRunner:
                 ic('Load Configuration')
             self.runner_data.LoadConfiguration({
                 'args':self.args,
-                'cli':self.cli
+                'cli':self.cli,
+                'class' : self.runner_data.RunParameters['MachineConfigClass'],
             })
         if self.runner_data.PerformanceConfiguration:
             if self.args.debug:
@@ -122,6 +124,7 @@ class IndalekoCLIRunner:
                 {
                     'args': self.args,
                     'cli': self.cli,
+                    'parameters' : self.runner_data.RunParameters,
                 }
             )
         self.cleanup()
@@ -205,6 +208,7 @@ class IndalekoCLIRunner:
             '''This method is used to load configuration'''
             args : Union[argparse.Namespace, None]= kwargs.get('args', None)
             cli : Union[IndalekoBaseCLI, None] = kwargs.get('cli', None)
+            machine_config_class : Type[IndalekoMachineConfig] = kwargs['class']
             if not args or not cli:
                 ic('load_configuration: No args or cli, returning None')
                 return None

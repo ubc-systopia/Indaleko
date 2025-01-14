@@ -26,7 +26,9 @@ import argparse
 import inspect
 import logging
 import os
+from pathlib import Path
 import sys
+import uuid
 
 from typing import Union
 
@@ -40,8 +42,14 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+from data_models import IndalekoSourceIdentifierDataModel
+from perf.perf_collector import IndalekoPerformanceDataCollector
+from perf.perf_recorder import IndalekoPerformanceDataRecorder
 from platforms.machine_config import IndalekoMachineConfig
+from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
+from utils.cli.runner import IndalekoCLIRunner
 from utils.decorators import type_check
+from storage.collectors import BaseStorageCollector
 from storage.recorders import BaseStorageRecorder
 # pylint: enable=wrong-import-position
 
@@ -111,3 +119,120 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
         result = os.system(command)
         logging.info('Command %s result: %d', command, result)
         print(f'Command {command} result: {result}')
+
+    @staticmethod
+    def local_run(keys: dict[str, str]) -> Union[dict, None]:
+        '''Run the collector'''
+        ic('local_run: ', keys)
+        exit(0)
+        args = keys['args'] # must be there.
+        cli = keys['cli'] # must be there.
+        config_data = cli.get_config_data()
+        debug = hasattr(args, 'debug') and args.debug
+        if debug:
+            ic(config_data)
+        recorder_class = keys['parameters']['Class']
+        # recorders have the machine_id so they need to find the
+        # matching machine configuration file.
+        kwargs = {
+            'machine_config': cli.handler_mixin.load_machine_config(
+                {
+                    'machine_config_file' : str(Path(args.configdir) / args.machine_config),
+                    'offline' : args.offline
+                }
+            ),
+            'timestamp': config_data['Timestamp'],
+            'input_file' : str(Path(args.datadir) / args.inputfile),
+            'offline': args.offline,
+            'args' : args,
+        }
+        def record(recorder : BaseLocalStorageRecorder):
+            recorder.record()
+        def extract_counters(**kwargs):
+            recorder = kwargs.get('recorder')
+            if recorder:
+                return recorder.get_counts()
+            else:
+                return {}
+        recorder = recorder_class(**kwargs)
+        def capture_performance(
+            task_func : Callable[..., Any],
+            output_file_name : Union[Path, str] = None
+        ):
+            perf_data = IndalekoPerformanceDataCollector.measure_performance(
+                task_func,
+                source=IndalekoSourceIdentifierDataModel(
+                    Identifier=recorder.service_identifier,
+                    Version = recorder.service_version,
+                    Description=recorder.service_description),
+                description=recorder.service_description,
+                MachineIdentifier=uuid.UUID(kwargs['machine_config'].machine_id),
+                process_results_func=extract_counters,
+                input_file_name=str(Path(args.datadir) / args.inputfile),
+                output_file_name=output_file_name,
+                recorder=recorder
+            )
+            if args.performance_db or args.performance_file:
+                perf_recorder = IndalekoPerformanceDataRecorder()
+                if args.performance_file:
+                    perf_file = str(Path(args.datadir) / config_data['PerformanceDataFile'])
+                    perf_recorder.add_data_to_file(perf_file, perf_data)
+                    if (debug):
+                        ic('Performance data written to ', config_data['PerformanceDataFile'])
+                if args.performance_db:
+                    perf_recorder.add_data_to_db(perf_data)
+                    if (debug):
+                        ic('Performance data written to the database')
+
+        # Step 1: normalize the data and gather the performance.
+        if args.debug:
+            ic('Normalizing data')
+        capture_performance(record)
+        # Step 2: record the time to save the object data.
+        if args.debug:
+            ic('Writing object data to file')
+        capture_performance(recorder.write_object_data_to_file, args.outputfile)
+        # Step 3: record the time to save the edge data.
+        if args.debug:
+            ic('Writing edge data to file')
+        capture_performance(recorder.write_edge_data_to_file, recorder.output_edge_file)
+
+        if args.arangoimport and args.bulk:
+            ic('Warning: both arangoimport and bulk upload specified.  Using arangoimport ONLY.')
+        if args.arangoimport:
+            # Step 4: upload the data to the database using the arangoimport utility
+            if args.debug:
+                ic('Using arangoimport to load object data')
+            capture_performance(recorder.arangoimport_object_data)
+            if args.debug:
+                ic('Using arangoimport to load relationship data')
+            capture_performance(recorder.arangoimport_relationship_data)
+        elif args.bulk:
+            # Step 5: upload the data to the database using the bulk uploader
+            if args.debug:
+                ic('Using bulk uploader to load object data')
+            capture_performance(recorder.bulk_upload_object_data)
+            if args.debug:
+                ic('Using bulk uploader to load relationship data')
+            capture_performance(recorder.bulk_upload_relationship_data)
+
+    @staticmethod
+    def local_recorder_runner(
+        collector_class: BaseStorageCollector,
+        recorder_class : BaseStorageRecorder) -> None:
+        '''This is the CLI handler for local storage collectors.'''
+        ic(collector_class.get_collector_platform_name())
+        ic(recorder_class.get_recorder_service_name())
+        runner = IndalekoCLIRunner(
+            cli_data=IndalekoBaseCliDataModel(
+                Service=recorder_class.get_recorder_service_name(),
+                InputFileKeys={
+                    'plt' : collector_class.get_collector_platform_name(),
+                    'svc' : collector_class.get_collector_service_name(),
+                }
+            ),
+            handler_mixin=local_recorder_mixin,
+            Run=local_run,
+            RunParameters={'RecorderClass' : recorder_class}
+        )
+        runner.run()

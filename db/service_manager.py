@@ -178,7 +178,7 @@ class IndalekoServiceManager(IndalekoSingleton):
             f'Invalid service type {service_type} specified.'
         existing_service = None
         if service_id is not None:
-            existing_service = self.lookup_service_by_identifier(service_id)
+            existing_service = self.lookup_service_by_identifier(str(service_id))
             if existing_service is not None:
                 # Make sure the registration data matches.
                 if existing_service.service_name != service_name:

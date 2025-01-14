@@ -48,5 +48,6 @@ class IndalekoCLIRunnerData(BaseModel):
     AddParameters : Union[Callable[..., argparse.ArgumentParser], None] = None
     PerformanceConfiguration : Callable[..., bool]
     Run: Callable[..., None]
+    RunParameters: dict[str, Any] = {}
     PerformanceRecording: Callable[..., None]
     Cleanup: Callable[..., None]

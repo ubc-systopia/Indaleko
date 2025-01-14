@@ -324,8 +324,8 @@ class IndalekoBaseCLI:
                                     choices=self.config_data['InputFileChoices'],
                                     default=self.config_data['InputFile'],
                                     help=f'Input file to use (default={self.config_data["InputFile"]})')
-        pre_args, _ = self.pre_parser.parse_known_args()
-        self.config_data['InputFileKeys'] = self.handler_mixin.extract_filename_metadata(pre_args.inputfile)
+            pre_args, _ = self.pre_parser.parse_known_args()
+            self.config_data['InputFileKeys'] = self.handler_mixin.extract_filename_metadata(pre_args.inputfile)
         # default timestamp is: 1) from the file, 2) from the config, 3) current time
         timestamp = self.config_data['InputFileKeys'].get('timestamp', None)
         if not timestamp:
