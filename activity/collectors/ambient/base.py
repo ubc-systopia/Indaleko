@@ -39,7 +39,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # overall package/project.  It's a bit of a hack, but it works.
 # pylint: disable=wrong-import-position
 from Indaleko import Indaleko
-from IndalekoLogging import IndalekoLogging
+from utils import IndalekoLogging
 from activity.collectors.base import CollectorBase
 # pylint: enable=wrong-import-position
 

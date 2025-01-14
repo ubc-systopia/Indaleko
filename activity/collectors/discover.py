@@ -32,9 +32,10 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
+# pylint: disable=wrong-import-position
 from Indaleko import Indaleko
-from IndalekoLogging import IndalekoLogging
-
+from utils import IndalekoLogging
+# pylint: enable=wrong-import-position
 
 # This is a hack to get the project root
 

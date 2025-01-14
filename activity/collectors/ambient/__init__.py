@@ -34,7 +34,6 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from activity.collectors.ambient.smart_thermostat import EcobeeAmbientData
-
 # pylint: enable=wrong-import-position
 
 # Define what should be available when importing from this package

@@ -38,14 +38,15 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
-from IndalekoSingleton import IndalekoSingleton
-from IndalekoDBConfig import IndalekoDBConfig
-from Indaleko import Indaleko
-from IndalekoLogging import IndalekoLogging
-from IndalekoCollections import IndalekoCollections
-
+# pylint: disable=wrong-import-position
 from activity.context.data_models.context_data_model import IndalekoActivityContextDataModel
 from activity.context.data_models.activity_data import ActivityDataModel
+from Indaleko import Indaleko
+from db import IndalekoDBConfig, IndalekoCollections
+from utils import IndalekoSingleton, IndalekoLogging
+from utils import IndalekoLogging
+# pylint: enable=wrong-import-position
+
 
 class IndalekoActivityContextService(IndalekoSingleton):
     '''

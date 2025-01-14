@@ -16,7 +16,9 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
-from IndalekoDBConfig import IndalekoDBConfig
+# pylint: disable=wrong-import-position
+from db import IndalekoDBConfig
+# pylint: enable=wrong-import-position
 
 class Recording:
     '''

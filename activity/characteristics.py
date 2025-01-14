@@ -33,6 +33,8 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
+# pylint: disable=wrong-import-position
+# pylint: enable=wrong-import-position
 class ActivityDataCharacteristics:
 
     '''

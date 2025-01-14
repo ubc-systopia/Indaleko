@@ -33,9 +33,11 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
+# pylint: disable=wrong-import-position
 from activity.context.data_models.activity_data import ActivityDataModel
-from data_models.record import IndalekoRecordDataModel
 from data_models.base import IndalekoBaseModel
+# pylint: enable=wrong-import-position
+
 
 class IndalekoActivityContextDataModel(IndalekoBaseModel):
     '''
@@ -87,7 +89,7 @@ class IndalekoActivityContextDataModel(IndalekoBaseModel):
                   title='ActivityData',
                   description='The activity data associated with the activity context.'
             )
-    
+
     @field_validator('Timestamp', mode='before')
     def ensure_timezone(cls, value: datetime):
         if isinstance(value, str):

@@ -36,7 +36,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from Indaleko import Indaleko
-from IndalekoCollection import IndalekoCollection
+from db import IndalekoCollection
 from data_models.activity_data_registration \
     import IndalekoActivityDataRegistrationDataModel
 # pylint: enable=wrong-import-position
@@ -96,7 +96,7 @@ class IndalekoActivityDataRegistration:
     def model_dump(self) -> dict:
         '''Return the model dump for the object.'''
         return self.registration_object.model_dump()
-    
+
     def model_dump_json(self) -> dict:
         '''Return a JSON compatible dictionary.'''
         data = self.registration_object.model_dump_json()
