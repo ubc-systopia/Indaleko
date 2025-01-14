@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import argparse
 import inspect
+import logging
 import os
 import sys
 
@@ -89,9 +90,24 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
                                 choices=output_type_choices,
                                 default=default_output_type,
                                 help=output_type_help)
+        pre_parser.add_argument('--arangoimport',
+                                default=False,
+                                help='Use arangoimport to load data (default=False)',
+                                action='store_true')
+        pre_parser.add_argument('--bulk',
+                                default=False,
+                                help='Use bulk loader to load data (default=False)',
+                                action='store_true')
         return pre_parser
 
     @staticmethod
     def get_local_storage_recorder() -> 'BaseLocalStorageRecorder':
         '''This function should be overridden: it is used to create the appropriate local storage recorder.'''
         raise NotImplementedError('This function must be overridden by the derived class')
+
+    @staticmethod
+    def execute_command(command : str) -> None:
+        '''Execute a command'''
+        result = os.system(command)
+        logging.info('Command %s result: %d', command, result)
+        print(f'Command {command} result: {result}')

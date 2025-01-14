@@ -352,12 +352,12 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
             recorder.data_dir,
             recorder.output_object_file,
         )
-        load_string = recorder.build_load_string(
+        recorder.object_data_load_string = recorder.build_load_string(
             collection=IndalekoDBCollections.Indaleko_Object_Collection,
             file=data_file_name
         )
-        logging.info('Load string: %s', load_string)
-        print('Load string: ', load_string)
+        logging.info('Load string: %s', recorder.object_data_load_string)
+        print('Load string: ', recorder.object_data_load_string)
 
     @staticmethod
     def write_edge_data_to_file(recorder : 'IndalekoWindowsLocalStorageRecorder') -> None:
@@ -367,12 +367,37 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
             recorder.data_dir,
             recorder.output_edge_file
         )
-        load_string = recorder.build_load_string(
+        recorder.relationship_data_load_string = recorder.build_load_string(
             collection=IndalekoDBCollections.Indaleko_Relationship_Collection,
             file=data_file_name
         )
-        logging.info('Load string: %s', load_string)
-        print('Load string: ', load_string)
+        logging.info('Load string: %s', recorder.relationship_data_load_string)
+        print('Load string: ', recorder.relationship_data_load_string)
+
+    @staticmethod
+    def arangoimport_object_data(recorder : 'IndalekoWindowsLocalStorageRecorder') -> None:
+        '''Import the object data into the database'''
+        if recorder.object_data_load_string is None:
+            raise ValueError('object_data_load_string must be set')
+        recorder.execute_command(recorder.object_data_load_string)
+
+    @staticmethod
+    def arangoimport_relationship_data(recorder : 'IndalekoWindowsLocalStorageRecorder') -> None:
+        '''Import the relationship data into the database'''
+        if recorder.relationship_data_load_string is None:
+            raise ValueError('relationship_data_load_string must be set')
+        recorder.execute_command(recorder.relationship_data_load_string)
+
+    @staticmethod
+    def bulk_upload_object_data(recorder : 'IndalekoWindowsLocalStorageRecorder') -> None:
+        '''Bulk upload the object data to the database'''
+        raise NotImplementedError('bulk_upload_object_data must be implemented')
+
+    @staticmethod
+    def bulk_upload_relationship_data(recorder : 'IndalekoWindowsLocalStorageRecorder') -> None:
+        '''Bulk upload the relationship data to the database'''
+        raise NotImplementedError('bulk_upload_relationship_data must be implemented')
+
 
 class local_recorder_mixin(IndalekoBaseCLI.default_handler_mixin):
     '''This is the mixin for the local recorder'''
@@ -396,7 +421,6 @@ def local_run(keys: dict[str, str]) -> Union[dict, None]:
     debug = hasattr(args, 'debug') and args.debug
     if debug:
         ic(config_data)
-        exit(1)
     # recorders have the machine_id so they need to find the
     # matching machine configuration file.
     kwargs = {
@@ -450,12 +474,36 @@ def local_run(keys: dict[str, str]) -> Union[dict, None]:
                     ic('Performance data written to the database')
 
     # Step 1: normalize the data and gather the performance.
+    if args.debug:
+        ic('Normalizing data')
     capture_performance(record)
     # Step 2: record the time to save the object data.
+    if args.debug:
+        ic('Writing object data to file')
     capture_performance(recorder.write_object_data_to_file, args.outputfile)
     # Step 3: record the time to save the edge data.
+    if args.debug:
+        ic('Writing edge data to file')
     capture_performance(recorder.write_edge_data_to_file, recorder.output_edge_file)
-    # TODO: add options to upload the data to the database and measure it.
+
+    if args.arangoimport and args.bulk:
+        ic('Warning: both arangoimport and bulk upload specified.  Using arangoimport ONLY.')
+    if args.arangoimport:
+        # Step 4: upload the data to the database using the arangoimport utility
+        if args.debug:
+            ic('Using arangoimport to load object data')
+        capture_performance(recorder.arangoimport_object_data)
+        if args.debug:
+            ic('Using arangoimport to load relationship data')
+        capture_performance(recorder.arangoimport_relationship_data)
+    elif args.bulk:
+        # Step 5: upload the data to the database using the bulk uploader
+        if args.debug:
+            ic('Using bulk uploader to load object data')
+        capture_performance(recorder.bulk_upload_object_data)
+        if args.debug:
+            ic('Using bulk uploader to load relationship data')
+        capture_performance(recorder.bulk_upload_relationship_data)
 
 def main():
     '''This is the CLI handler for the Windows local storage collector.'''
