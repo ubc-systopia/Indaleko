@@ -96,10 +96,11 @@ class BaseLocalStorageCollector(BaseStorageCollector):
         def get_pre_parser() -> Union[argparse.ArgumentParser, None]:
             '''This method is used to get the pre-parser'''
             parser = argparse.ArgumentParser(add_help=False)
+            default_path = os.path.expanduser('~')
             parser.add_argument('--path',
-                                help='Path to the directory from which to collect metadata',
+                                help=f'Path to the directory from which to collect metadata (default={default_path})',
                                 type=str,
-                                default=os.path.expanduser('~'))
+                                default=default_path)
             return parser
 
         @staticmethod
@@ -138,6 +139,10 @@ class BaseLocalStorageCollector(BaseStorageCollector):
             'path': args.path,
             'offline': args.offline
         }
+        if config_data.get('StorageId'):
+            kwargs['storage'] = config_data['StorageId']
+        else:
+            ic(config_data)
         collector = collector_class(**kwargs)
         def collect(collector : BaseLocalStorageCollector):
             collector.collect()

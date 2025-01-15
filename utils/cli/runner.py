@@ -18,8 +18,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import argparse
-from datetime import datetime, timezone
-import json
 import logging
 import os
 from pathlib import Path
@@ -82,6 +80,7 @@ class IndalekoCLIRunner:
         if self.args.debug:
             ic(self.args)
             ic(self.cli.get_config_data())
+
 
     def setup(self) -> None:
         '''This method is used to setup the CLI runner'''
@@ -230,8 +229,6 @@ class IndalekoCLIRunner:
             if args.debug:
                 ic(machine_config)
             return machine_config
-
-            return True
 
         @staticmethod
         def add_parameters(parser : argparse.ArgumentParser) -> argparse.ArgumentParser:

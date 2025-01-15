@@ -126,6 +126,8 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
         if 'collector_data' not in kwargs:
             kwargs['collector_data'] =  IndalekoWindowsLocalStorageCollector.collector_data
         super().__init__(**kwargs)
+        if not hasattr(self, 'storage') and 'storage' in kwargs:
+            self.storage = kwargs['storage']
 
     def generate_windows_collector_file_name(self, **kwargs) -> str:
         if 'platform' not in kwargs:
@@ -134,7 +136,11 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
             kwargs['collector_name'] = IndalekoWindowsLocalStorageCollector.get_collector_service_name()
         if 'machine_id' not in kwargs:
             kwargs['machine_id'] = uuid.UUID(self.machine_config.machine_id).hex
-        return BaseStorageCollector.generate_collector_file_name(**kwargs)
+        if 'storage_description' not in kwargs and getattr(self, 'storage'):
+            kwargs['storage_description'] = self.storage
+        file_name =  BaseStorageCollector.generate_collector_file_name(**kwargs)
+        assert 'storage' in file_name, f'File name {file_name} does not contain "storage", kwargs={kwargs}, dir(self)={dir(self)}'
+        return file_name
 
     def convert_windows_path_to_guid_uri(self, path : str) -> str:
         '''This method handles converting a Windows path to a volume GUID based URI.'''
@@ -256,6 +262,7 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
             if os.path.exists(preferred_file_name):
                 os.remove(preferred_file_name)
             os.rename(temp_file_name, preferred_file_name)
+            print(f'Renamed {temp_file_name} to {preferred_file_name}')
         except (
             FileNotFoundError,
             PermissionError,

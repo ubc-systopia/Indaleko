@@ -59,6 +59,7 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
 
     def __init__(self, **kwargs):
         '''This is the constructor for the base local storage recorder.'''
+        ic(kwargs)
         if 'args' in kwargs:
             self.args = kwargs['args']
             self.output_type = getattr(self.args, 'output_type', 'file')
@@ -256,7 +257,6 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
                     'svc' : collector_class.get_collector_service_name(),
                 },
             ),
-            features=IndalekoBaseCLI.cli_features(machine_config=False),
             handler_mixin=recorder_class.local_recorder_mixin,
             Run=recorder_class.local_run,
             RunParameters={

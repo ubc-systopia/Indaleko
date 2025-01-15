@@ -100,7 +100,6 @@ class IndalekoPerformanceDataRecorder:
             - file_name: the name of the file to write the data to
             - perf_data: the performance data to write to the file
         '''
-        ic(file_name)
         assert file_name, "file_name must be provided"
         assert file_name.endswith('.jsonl'), f"{file_name} must be in JSONL format"
         assert perf_data, "perf_data must be provided"

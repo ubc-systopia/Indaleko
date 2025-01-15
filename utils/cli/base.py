@@ -109,6 +109,7 @@ class IndalekoBaseCLI:
         self.pre_parser = self.handler_mixin.get_additional_parameters(self.pre_parser)
         self.args = None
 
+
     def get_args(self) -> argparse.Namespace:
         '''This method is used to get the arguments'''
         if not self.args:

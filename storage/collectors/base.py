@@ -202,7 +202,6 @@ class BaseStorageCollector:
     def generate_collector_file_name(**kwargs) -> str:
         '''This will generate a file name for the collector output file.'''
         # platform : str, target_dir : str = None, suffix : str = None) -> str:
-        ic(f'generate_collector_file_name: {kwargs}')
         assert 'collector_name' in kwargs, 'collector_name must be specified'
         platform = None
         if 'platform' in kwargs:
@@ -229,12 +228,11 @@ class BaseStorageCollector:
         }
         if platform:
             kwargs['platform'] = platform
-        if storage_description is not None:
-            kwargs['storage'] = storage_description
         if machine_id is not None:
             kwargs['machine'] = machine_id
+        if storage_description is not None:
+            kwargs['storage'] = storage_description
         kwargs['suffix'] = suffix
-        ic(f'calling generate_file_name with {kwargs}')
         name = generate_file_name(**kwargs)
         return os.path.join(target_dir,name)
 
@@ -362,9 +360,10 @@ class BaseStorageCollector:
                         logging.error('Data size %d', len(data))
                         raise err
             logging.info('Wrote JSONLines data to %s', file_name)
-            ic('Wrote JSON data to', file_name)
+            print('Wrote JSONLines data to', file_name)
         else:
             json.dump(data, file_name, indent=4)
+            print('Wrote JSON data to', file_name)
             logging.info('Wrote JSON data to %s', file_name)
         return output_count
 
