@@ -92,18 +92,15 @@ class IndalekoCLIRunner:
         if self.runner_data.LoadConfiguration:
             if self.args.debug:
                 ic('Load Configuration')
-            kwargs = {
-                'args':self.args,
-                'cli':self.cli
-            }
             data_class = None
             if self.runner_data.RunParameters:
                 data_class = self.runner_data.RunParameters.get('MachineConfigClass')
-            self.runner_data.LoadConfiguration({
+            kwargs = {
                 'args':self.args,
                 'cli':self.cli,
                 'class' : data_class
-            })
+            }
+            self.runner_data.LoadConfiguration(kwargs)
         if self.runner_data.PerformanceConfiguration:
             if self.args.debug:
                 ic('Performance Configuration')

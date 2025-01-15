@@ -123,6 +123,15 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
 
     class local_recorder_mixin(IndalekoBaseCLI.default_handler_mixin):
         '''This is the mixin for the local recorder'''
+        @staticmethod
+        def get_pre_parser() -> Union[argparse.ArgumentParser, None]:
+            '''This method is used to get the pre-parser'''
+            parser = argparse.ArgumentParser(add_help=False)
+            parser.add_argument('--path',
+                                help='Path to the directory from which to collect metadata',
+                                type=str,
+                                default=os.path.expanduser('~'))
+            return parser
 
         @staticmethod
         def load_machine_config(keys : dict[str, str]) -> IndalekoMachineConfig:
@@ -247,9 +256,9 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
                     'svc' : collector_class.get_collector_service_name(),
                 },
             ),
-            features=IndalekoBaseCLI.cli_features(input=False),
-            handler_mixin=BaseLocalStorageRecorder.local_recorder_mixin,
-            Run=BaseLocalStorageRecorder.local_run,
+            features=IndalekoBaseCLI.cli_features(machine_config=False),
+            handler_mixin=recorder_class.local_recorder_mixin,
+            Run=recorder_class.local_run,
             RunParameters={
                 'CollectorClass' : collector_class,
                 'MachineConfigClass' : machine_config_class,
