@@ -18,13 +18,13 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import argparse
-import inspect
 import logging
+from pathlib import Path
 import os
 import sys
+import tempfile
 import uuid
 
-from pathlib import Path
 from typing import Union
 
 from icecream import ic
@@ -222,20 +222,75 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
                 data.append(entry[0])
                 last_uri = entry[1]
                 last_drive = entry[2]
-        return data
+        self.data = data
+
+    @staticmethod
+    def record_data_in_file(
+        data : list,
+        dir_name : Union[Path,str],
+        preferred_file_name : Union[Path, str, None] = None
+    ) -> tuple[str, int]:
+        '''
+        Record the specified data in a file.
+
+        Inputs:
+            - data: The data to record
+            - preferred_file_name: The preferred file name (if any)
+
+        Returns:
+            - The name of the file where the data was recorded
+            - The number of entries that were written to the file
+
+        Notes:
+            A temporary file is always created to hold the data, and then it is renamed to the
+            preferred file name if it is provided.
+        '''
+        temp_file_name = ""
+        with tempfile.NamedTemporaryFile(dir=dir_name, delete=False) as tf:
+            temp_file_name = tf.name
+        count = BaseStorageCollector.write_data_to_file(data, temp_file_name)
+        if preferred_file_name is None:
+            return temp_file_name, count
+        # try to rename the file
+        try:
+            if os.path.exists(preferred_file_name):
+                os.remove(preferred_file_name)
+            os.rename(temp_file_name, preferred_file_name)
+        except (
+            FileNotFoundError,
+            PermissionError,
+            FileExistsError,
+            OSError
+        ) as e:
+            logging.error('Unable to rename temp file %s to %s : %s', temp_file_name, preferred_file_name, e)
+            ic(f'Unable to rename temp file {temp_file_name} to output file {preferred_file_name}')
+            ic(f'Error: {e}')
+            preferred_file_name = temp_file_name
+        return preferred_file_name, count
+
+    @staticmethod
+    def write_data_to_file(collector : 'IndalekoWindowsLocalStorageCollector') -> None:
+        '''Write the data to a file'''
+        if not hasattr(collector, 'output_file_name'):
+            collector.output_file_name = collector.generate_windows_collector_file_name()
+        data_file_name, count = IndalekoWindowsLocalStorageCollector.record_data_in_file(
+            collector.data,
+            collector.data_dir,
+            collector.output_file_name
+        )
+        logging.info('Wrote %d entries to %s', count, data_file_name)
+        if hasattr(collector, 'output_count'):
+            collector.output_count += count
 
     class windows_local_collector_mixin(BaseLocalStorageCollector.local_collector_mixin):
 
         @staticmethod
         def get_storage_identifier(args : argparse.Namespace) -> Union[str,None]:
             '''This method is used to get the storage identifier for a path'''
-            ic(args)
             if not hasattr(args, 'path'):
-                assert False
                 return
             if not os.path.exists(args.path):
                 ic(f'Path {args.path} does not exist')
-                assert False
                 return None
             config = IndalekoWindowsMachineConfig.load_config_from_file(
                 config_file = str(Path(args.configdir) / args.machine_config),
@@ -246,8 +301,7 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
             uri = '\\\\?\\' + drive + ':' # default format for lettered drives without GUIDs
             mapped_guid = config.map_drive_letter_to_volume_guid(drive)
             if mapped_guid is not None:
-                return ic(uuid.UUID(mapped_guid).hex)
-            assert False
+                return uuid.UUID(mapped_guid).hex
             return None
 
         @staticmethod

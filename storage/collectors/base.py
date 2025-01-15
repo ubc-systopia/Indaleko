@@ -317,7 +317,7 @@ class BaseStorageCollector:
             return None
 
 
-    def collect(self) -> list:
+    def collect(self) -> None:
         '''
         This is the main function for the collector.  Can be overridden
         for platforms that require additional processing.
@@ -327,36 +327,46 @@ class BaseStorageCollector:
             for name in dirs + files:
                 entry = self.build_stat_dict(name, root)
                 if entry is not None:
+                    ic(entry)
                     data.append(entry)
-        return data
+        self.data = data
 
+    @staticmethod
+    def write_data_to_file(data : list, file_name : str = None, jsonlines_output : bool = True) -> int:
+        '''
+        This will write the given data to the specified file.
 
-    def write_data_to_file(self, data : list, output_file : str, jsonlines_output : bool = True) -> None:
-        '''This function writes the data to the output file.'''
-        assert data is not None, 'data must be a valid list'
-        assert 'unknown' not in output_file, f'unknown should not be present in the file name {output_file}'
-        assert output_file is not None, 'output_file must be a valid string'
+        Inputs:
+            * data: the data to write
+            * file_name: the name of the file to write to
+            * jsonlines_output: whether to write the data in JSONLines format
+
+        Returns:
+            The number of records written to the file.
+        '''
+        if data is None:
+            raise ValueError('data must be specified')
+        if file_name is None:
+            raise ValueError('file_name must be specified')
+        output_count = 0
         if jsonlines_output:
-            with jsonlines.open(output_file, 'w') as output:
+            with jsonlines.open(file_name, mode='w') as writer:
                 for entry in data:
                     try:
-                        try:
-                            output.write(entry)
-                        except Exception as e:
-                            ic(f'Writing entry {entry} failed due to {e}', entry)
-                            raise e
-                        logging.debug('Wrote entry %s.', entry)
-                        self.output_count += 1
-                    except UnicodeEncodeError as e:
-                        logging.error('Writing entry %s to %s failed due to encoding issues', entry, output_file)
-                        ic('Writing entry %s to %s failed due to encoding issues', entry, output_file)
-                        self.encoding_count += 1
-            logging.info('Wrote jsonlines file %s.', output_file)
+                        writer.write(entry)
+                        output_count += 1
+                    except TypeError as err:
+                        logging.error('Error writing entry to JSONLines file: %s', err)
+                        logging.error('Entry: %s', entry)
+                        logging.error('Output count: %d', output_count)
+                        logging.error('Data size %d', len(data))
+                        raise err
+            logging.info('Wrote JSONLines data to %s', file_name)
+            ic('Wrote JSON data to', file_name)
         else:
-            json.dump(data, output_file, indent=4)
-            logging.info('Wrote json %s.', output_file)
-
-
+            json.dump(data, file_name, indent=4)
+            logging.info('Wrote JSON data to %s', file_name)
+        return output_count
 
 
 def main():

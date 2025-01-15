@@ -18,9 +18,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
-import argparse
 import datetime
-import inspect
 import json
 import logging
 from pathlib import Path
@@ -276,10 +274,11 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
                 )
                 self.edge_count += 1
 
+    @staticmethod
     def record_data_in_file(
             data : list,
             dir_name : Union[Path, str],
-            preferred_file_name : Union[Path, str, None] = None) -> str:
+            preferred_file_name : Union[Path, str, None] = None) -> tuple[str,int]:
         '''
         Record the specified data in a file.
 
@@ -289,6 +288,7 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
 
         Returns:
             - The name of the file where the data was recorded
+            - The number of entries that were written to the file
 
         Notes:
             A temporary file is always created to hold the data, and then it is renamed to the
@@ -297,9 +297,9 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
         temp_file_name = ""
         with tempfile.NamedTemporaryFile(dir=dir_name, delete=False) as tf:
             temp_file_name = tf.name
-        BaseStorageRecorder.write_data_to_file(data, temp_file_name)
+        count = BaseStorageRecorder.write_data_to_file(data, temp_file_name)
         if preferred_file_name is None:
-            return temp_file_name
+            return temp_file_name, count
         # try to rename the file
         try:
             if os.path.exists(preferred_file_name):
@@ -319,7 +319,7 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
             print(f'Unable to rename temp file {temp_file_name} to output file {preferred_file_name}')
             print(f'Error: {e}')
             preferred_file_name=temp_file_name
-        return preferred_file_name
+        return preferred_file_name, count
 
     def record(self) -> None:
         '''
@@ -346,7 +346,7 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
     @staticmethod
     def write_object_data_to_file(recorder : 'IndalekoWindowsLocalStorageRecorder') -> None:
         '''Write the object data to a file'''
-        data_file_name = IndalekoWindowsLocalStorageRecorder.record_data_in_file(
+        data_file_name, count = IndalekoWindowsLocalStorageRecorder.record_data_in_file(
             recorder.dir_data + recorder.file_data,
             recorder.data_dir,
             recorder.output_object_file,
@@ -357,11 +357,13 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
         )
         logging.info('Load string: %s', recorder.object_data_load_string)
         print('Load string: ', recorder.object_data_load_string)
+        if hasattr(recorder, 'output_count'): # should be there
+            recorder.output_count += count
 
     @staticmethod
-    def write_edge_data_to_file(recorder : 'IndalekoWindowsLocalStorageRecorder') -> None:
+    def write_edge_data_to_file(recorder : 'IndalekoWindowsLocalStorageRecorder') -> int:
         '''Write the edge data to a file'''
-        data_file_name = IndalekoWindowsLocalStorageRecorder.record_data_in_file(
+        data_file_name, count = IndalekoWindowsLocalStorageRecorder.record_data_in_file(
             recorder.dir_edges,
             recorder.data_dir,
             recorder.output_edge_file
@@ -372,6 +374,8 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
         )
         logging.info('Load string: %s', recorder.relationship_data_load_string)
         print('Load string: ', recorder.relationship_data_load_string)
+        if hasattr(recorder, 'edge_count'):
+            recorder.edge_count += count
 
     @staticmethod
     def arangoimport_object_data(recorder : 'IndalekoWindowsLocalStorageRecorder') -> None:

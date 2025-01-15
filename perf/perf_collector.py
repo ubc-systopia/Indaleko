@@ -93,7 +93,7 @@ class IndalekoPerformanceDataCollector:
                     ic(f'{process_results_func} is not a callable type: {e} ')
             elapsed_time = end_clock - start_clock
         except Exception as e:
-            ic(f'measure_performance: {e}')
+            ic(f'measure_performance (calling {task_func} with {args} and {kwargs}): {e}')
             result = None
             end_clock = time.perf_counter()
             elapsed_time = end_clock - start_clock

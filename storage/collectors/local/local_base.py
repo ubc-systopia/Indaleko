@@ -130,13 +130,15 @@ class BaseLocalStorageCollector(BaseStorageCollector):
             'machine_config': cli.handler_mixin.load_machine_config(
                 {
                     'machine_config_file' : str(Path(args.configdir) / args.machine_config),
-                    'offline' : args.offline
+                    'offline' : args.offline,
+                    'class' : machine_config_class
                 }
             ),
             'timestamp': config_data['Timestamp'],
             'path': args.path,
             'offline': args.offline
         }
+        collector = collector_class(**kwargs)
         def collect(collector : BaseLocalStorageCollector):
             collector.collect()
         def extract_counters(**kwargs):
@@ -145,7 +147,6 @@ class BaseLocalStorageCollector(BaseStorageCollector):
                 return collector.get_counts()
             else:
                 return {}
-        collector = collector_class(**kwargs)
         def capture_performance(
             task_func : Callable[..., Any],
             output_file_name : Union[Path, str] = None
@@ -153,8 +154,8 @@ class BaseLocalStorageCollector(BaseStorageCollector):
             perf_data = IndalekoPerformanceDataCollector.measure_performance(
                 task_func,
                 source=IndalekoSourceIdentifierDataModel(
-                    Identifier=collector.get_collector_service_uuid(),
-                    Version = collector.get_recorder_service_version(),
+                    Identifier=collector.get_collector_service_identifier(),
+                    Version = collector.get_collector_service_version(),
                     Description=collector.get_collector_service_description()
                 ),
                 description=collector.get_collector_service_description(),
@@ -180,9 +181,11 @@ class BaseLocalStorageCollector(BaseStorageCollector):
             ic('Normalizing data')
         capture_performance(collect)
         # Step 2: record the time to save the object data.
+        assert hasattr(collector, 'data'), 'No data collected'
+        assert len(collector.data), 'No data in set'
         if args.debug:
-            ic('Writing file sytem metadata to file')
-        capture_performance(collect.write_data_to_file, args.outputfile)
+            ic('Writing file system metadata to file')
+        capture_performance(collector.write_data_to_file)
 
     @staticmethod
     def local_collector_runner(
