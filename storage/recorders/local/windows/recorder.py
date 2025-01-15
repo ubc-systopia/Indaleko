@@ -54,7 +54,7 @@ from storage.recorders.base import BaseStorageRecorder
 from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from storage.recorders.local.local_base import BaseLocalStorageRecorder
 from storage.collectors import BaseStorageCollector
-from storage.collectors.local.windows.collector import IndalekoWindowsLocalCollector
+from storage.collectors.local.windows.collector import IndalekoWindowsLocalStorageCollector
 from utils.decorators import type_check
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
@@ -80,7 +80,7 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
         'service_identifier' : windows_local_recorder_uuid,
     }
 
-    windows_platform = IndalekoWindowsLocalCollector.windows_platform
+    windows_platform = IndalekoWindowsLocalStorageCollector.windows_platform
     windows_local_recorder_name = 'fs_recorder'
 
     recorder_data = IndalekoStorageRecorderDataModel(
@@ -124,8 +124,8 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
             raise ValueError('data_dir must be specified')
         return [x for x in find_candidate_files(
             [
-                IndalekoWindowsLocalCollector.windows_platform,
-                IndalekoWindowsLocalCollector.windows_local_collector_name
+                IndalekoWindowsLocalStorageCollector.windows_platform,
+                IndalekoWindowsLocalStorageCollector.windows_local_collector_name
             ],
             self.data_dir)
         ]
@@ -398,146 +398,10 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
         raise NotImplementedError('bulk_upload_relationship_data must be implemented')
 
 
-class old_local_recorder_mixin(IndalekoBaseCLI.default_handler_mixin):
-    '''This is the mixin for the local recorder'''
-
-    @staticmethod
-    def load_machine_config(keys : dict[str, str]) -> IndalekoMachineConfig:
-        # keys['class'] = IndalekoWindowsMachineConfig
-        assert 'class' in keys, 'class must be specified'
-        return BaseLocalStorageRecorder.load_machine_config(keys)
-
-    @staticmethod
-    def get_additional_parameters(pre_parser):
-        '''This method is used to add additional parameters to the parser.'''
-        return BaseLocalStorageRecorder.get_additional_parameters(pre_parser)
-
-@staticmethod
-def old_local_run(keys: dict[str, str]) -> Union[dict, None]:
-    '''Run the collector'''
-    args = keys['args'] # must be there.
-    cli = keys['cli'] # must be there.
-    config_data = cli.get_config_data()
-    debug = hasattr(args, 'debug') and args.debug
-    if debug:
-        ic(config_data)
-    recorder_class = keys['parameters']['RecorderClass']
-    machine_config_class = keys['parameters']['MachineConfigClass']
-    # collector_class = keys['parameters']['CollectorClass'] # unused for now
-    # recorders have the machine_id so they need to find the
-    # matching machine configuration file.
-    kwargs = {
-        'machine_config': cli.handler_mixin.load_machine_config(
-            {
-                'machine_config_file' : str(Path(args.configdir) / args.machine_config),
-                'offline' : args.offline,
-                'class' : machine_config_class
-            }
-        ),
-        'timestamp': config_data['Timestamp'],
-        'input_file' : str(Path(args.datadir) / args.inputfile),
-        'offline': args.offline,
-        'args' : args,
-    }
-    def record(recorder : BaseLocalStorageRecorder):
-        recorder.record()
-    def extract_counters(**kwargs):
-        recorder = kwargs.get('recorder')
-        if recorder:
-            return recorder.get_counts()
-        else:
-            return {}
-    recorder = recorder_class(**kwargs)
-    def capture_performance(
-        task_func : Callable[..., Any],
-        output_file_name : Union[Path, str] = None
-    ):
-        perf_data = IndalekoPerformanceDataCollector.measure_performance(
-            task_func,
-            source=IndalekoSourceIdentifierDataModel(
-                Identifier=recorder.get_recorder_service_uuid(),
-                Version = recorder.get_recorder_service_version(),
-                Description=recorder.get_recorder_service_description()
-            ),
-            description=recorder.get_recorder_service_description(),
-            MachineIdentifier=uuid.UUID(kwargs['machine_config'].machine_id),
-            process_results_func=extract_counters,
-            input_file_name=str(Path(args.datadir) / args.inputfile),
-            output_file_name=output_file_name,
-            recorder=recorder
-        )
-        if args.performance_db or args.performance_file:
-            perf_recorder = IndalekoPerformanceDataRecorder()
-            if args.performance_file:
-                perf_file = str(Path(args.datadir) / config_data['PerformanceDataFile'])
-                perf_recorder.add_data_to_file(perf_file, perf_data)
-                if (debug):
-                    ic('Performance data written to ', config_data['PerformanceDataFile'])
-            if args.performance_db:
-                perf_recorder.add_data_to_db(perf_data)
-                if (debug):
-                    ic('Performance data written to the database')
-
-    # Step 1: normalize the data and gather the performance.
-    if args.debug:
-        ic('Normalizing data')
-    capture_performance(record)
-    # Step 2: record the time to save the object data.
-    if args.debug:
-        ic('Writing object data to file')
-    capture_performance(recorder.write_object_data_to_file, args.outputfile)
-    # Step 3: record the time to save the edge data.
-    if args.debug:
-        ic('Writing edge data to file')
-    capture_performance(recorder.write_edge_data_to_file, recorder.output_edge_file)
-
-    if args.arangoimport and args.bulk:
-        ic('Warning: both arangoimport and bulk upload specified.  Using arangoimport ONLY.')
-    if args.arangoimport:
-        # Step 4: upload the data to the database using the arangoimport utility
-        if args.debug:
-            ic('Using arangoimport to load object data')
-        capture_performance(recorder.arangoimport_object_data)
-        if args.debug:
-            ic('Using arangoimport to load relationship data')
-        capture_performance(recorder.arangoimport_relationship_data)
-    elif args.bulk:
-        # Step 5: upload the data to the database using the bulk uploader
-        if args.debug:
-            ic('Using bulk uploader to load object data')
-        capture_performance(recorder.bulk_upload_object_data)
-        if args.debug:
-            ic('Using bulk uploader to load relationship data')
-        capture_performance(recorder.bulk_upload_relationship_data)
-
-@staticmethod
-def old_local_recorder_runner(
-    collector_class: BaseStorageCollector,
-    recorder_class : BaseStorageRecorder,
-    machine_config_class : IndalekoMachineConfig) -> None:
-    '''This is the CLI handler for local storage collectors.'''
-    runner = IndalekoCLIRunner(
-        cli_data=IndalekoBaseCliDataModel(
-            Service=recorder_class.get_recorder_service_name(),
-            InputFileKeys={
-                'plt' : collector_class.get_collector_platform_name(),
-                'svc' : collector_class.get_collector_service_name(),
-            }
-        ),
-        handler_mixin=local_recorder_mixin,
-        Run=local_run,
-        RunParameters={
-            'CollectorClass' : collector_class,
-            'MachineConfigClass' : machine_config_class,
-            'RecorderClass' : recorder_class
-        }
-    )
-    runner.run()
-
 def main():
     '''This is the CLI handler for the Windows local storage collector.'''
     BaseLocalStorageRecorder.local_recorder_runner(
-        IndalekoWindowsLocalCollector,
+        IndalekoWindowsLocalStorageCollector,
         IndalekoWindowsLocalStorageRecorder,
         IndalekoWindowsMachineConfig
     )

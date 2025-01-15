@@ -44,6 +44,7 @@ from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 from perf.perf_collector import IndalekoPerformanceDataCollector
 from perf.perf_recorder import IndalekoPerformanceDataRecorder
 from storage.collectors.base import BaseStorageCollector
+from storage.collectors.local.local_base import BaseLocalStorageCollector
 from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
@@ -53,7 +54,7 @@ from utils.misc.file_name_management import find_candidate_files
 # pylint: enable=wrong-import-position
 
 
-class IndalekoWindowsLocalCollector(BaseStorageCollector):
+class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
     '''
     This is the class that collects metadata from Windows local file systems.
     '''
@@ -81,6 +82,7 @@ class IndalekoWindowsLocalCollector(BaseStorageCollector):
         'service_type' : indaleko_windows_local_collector_service_type,
         'service_identifier' : indaleko_windows_local_collector_uuid,
     }
+
 
     @staticmethod
     def windows_to_posix(filename):
@@ -120,16 +122,16 @@ class IndalekoWindowsLocalCollector(BaseStorageCollector):
             if key not in kwargs:
                 kwargs[key] = value
         if 'platform' not in kwargs:
-            kwargs['platform'] = IndalekoWindowsLocalCollector.windows_platform
+            kwargs['platform'] = IndalekoWindowsLocalStorageCollector.windows_platform
         if 'collector_data' not in kwargs:
-            kwargs['collector_data'] =  IndalekoWindowsLocalCollector.windows_collector_data
+            kwargs['collector_data'] =  IndalekoWindowsLocalStorageCollector.collector_data
         super().__init__(**kwargs)
 
     def generate_windows_collector_file_name(self, **kwargs) -> str:
         if 'platform' not in kwargs:
-            kwargs['platform'] = IndalekoWindowsLocalCollector.windows_platform
+            kwargs['platform'] = IndalekoWindowsLocalStorageCollector.windows_platform
         if 'collector_name' not in kwargs:
-            kwargs['collector_name'] = IndalekoWindowsLocalCollector.windows_local_collector_name
+            kwargs['collector_name'] = IndalekoWindowsLocalStorageCollector.get_collector_service_name()
         if 'machine_id' not in kwargs:
             kwargs['machine_id'] = uuid.UUID(self.machine_config.machine_id).hex
         return BaseStorageCollector.generate_collector_file_name(**kwargs)
@@ -192,7 +194,7 @@ class IndalekoWindowsLocalCollector(BaseStorageCollector):
             assert last_uri.startswith('\\\\?\\Volume{'), \
                 f'last_uri {last_uri} does not start with \\\\?\\Volume{{'
         stat_dict['URI'] = os.path.join(last_uri, os.path.splitdrive(root)[1], name)
-        stat_dict['Collector'] = str(self.service_identifier)
+        stat_dict['Collector'] = str(self.get_collector_service_identifier())
         assert last_uri.startswith('\\\\?\\Volume{')
         if last_uri.startswith('\\\\?\\Volume{'):
             stat_dict['Volume GUID'] = last_uri[11:-2]
@@ -222,140 +224,47 @@ class IndalekoWindowsLocalCollector(BaseStorageCollector):
                 last_drive = entry[2]
         return data
 
-class local_collector_mixin(IndalekoBaseCLI.default_handler_mixin):
-    @staticmethod
-    def load_machine_config(keys: dict[str, str]) -> IndalekoWindowsMachineConfig:
-        '''Load the machine configuration'''
-        if keys.get('debug'):
-            ic(f'local_collector_mixin.load_machine_config: {keys}')
-        if 'machine_config_file' not in keys:
-            raise ValueError(f'{inspect.currentframe().f_code.co_name}: machine_config_file must be specified')
-        offline = keys.get('offline', False)
-        return IndalekoWindowsMachineConfig.load_config_from_file(
-            config_file=str(keys['machine_config_file']),
-            offline=offline)
+    class windows_local_collector_mixin(BaseLocalStorageCollector.local_collector_mixin):
 
-    @staticmethod
-    def get_storage_identifier(args : argparse.Namespace) -> Union[str,None]:
-        '''This method is used to get the storage identifier for a path'''
-        if not hasattr(args, 'path'):
-            return
-        if not os.path.exists(args.path):
-            ic(f'Path {args.path} does not exist')
+        @staticmethod
+        def get_storage_identifier(args : argparse.Namespace) -> Union[str,None]:
+            '''This method is used to get the storage identifier for a path'''
+            ic(args)
+            if not hasattr(args, 'path'):
+                assert False
+                return
+            if not os.path.exists(args.path):
+                ic(f'Path {args.path} does not exist')
+                assert False
+                return None
+            config = IndalekoWindowsMachineConfig.load_config_from_file(
+                config_file = str(Path(args.configdir) / args.machine_config),
+                offline=args.offline,
+                debug=args.debug
+            )
+            drive = os.path.splitdrive(args.path)[0][0].upper()
+            uri = '\\\\?\\' + drive + ':' # default format for lettered drives without GUIDs
+            mapped_guid = config.map_drive_letter_to_volume_guid(drive)
+            if mapped_guid is not None:
+                return ic(uuid.UUID(mapped_guid).hex)
+            assert False
             return None
-        config = IndalekoWindowsMachineConfig.load_config_from_file(
-            config_file = str(Path(args.configdir) / args.machine_config),
-            offline=args.offline,
-            debug=args.debug
-        )
-        drive = os.path.splitdrive(args.path)[0][0].upper()
-        uri = '\\\\?\\' + drive + ':' # default format for lettered drives without GUIDs
-        mapped_guid = config.map_drive_letter_to_volume_guid(drive)
-        if mapped_guid is not None:
-            return uuid.UUID(mapped_guid).hex
-        return None
 
-    @staticmethod
-    def get_pre_parser() -> Union[argparse.Namespace, None]:
-        '''This method is used to get the pre-parser'''
-        default_path = os.path.expanduser('~')
-        if default_path == '~':
-            default_path = os.path.abspath(os.sep)
-        parser = argparse.ArgumentParser(add_help=False)
-        parser.add_argument('--path',
-                            help=f'Path to the directory from which to collect metadata (default={default_path})',
-                            type=str,
-                            default=default_path)
-        return parser
+        @staticmethod
+        def generate_output_file_name(keys):
+            '''Generate the output file name'''
+            return IndalekoBaseCLI.default_handler_mixin.generate_output_file_name(keys)
 
-    @staticmethod
-    def generate_output_file_name(keys):
-        '''Generate the output file name'''
-        return IndalekoBaseCLI.default_handler_mixin.generate_output_file_name(keys)
+    cli_handler_mixin = windows_local_collector_mixin
 
-@staticmethod
-def local_run(keys: dict[str, str]) -> Union[dict, None]:
-    '''Run the collector'''
-    args = keys['args'] # must be there.
-    cli = keys['cli'] # must be there.
-    config_data = cli.get_config_data()
-    debug = hasattr(args, 'debug') and args.debug
-    if debug:
-        ic(config_data)
-    kwargs = {
-        'machine_config': cli.handler_mixin.load_machine_config(
-            {
-                'machine_config_file' : str(Path(args.configdir) / args.machine_config),
-                'offline' : args.offline
-            }
-        ),
-        'timestamp': config_data['Timestamp'],
-        'path': args.path,
-        'offline': args.offline
-    }
-    def collect(collector : IndalekoWindowsLocalCollector):
-        data = collector.collect()
-        output_file = Path(args.datadir) / args.outputfile
-        collector.write_data_to_file(data, str(output_file))
-    def extract_counters(**kwargs):
-        collector = kwargs.get('collector')
-        if collector:
-            return collector.get_counts()
-        else:
-            return {}
-    collector = IndalekoWindowsLocalCollector(**kwargs)
-    perf_data = IndalekoPerformanceDataCollector.measure_performance(
-        collect,
-        source=IndalekoSourceIdentifierDataModel(
-            Identifier=collector.service_identifier,
-            Version = collector.service_version,
-            Description=collector.service_description),
-        description=collector.service_description,
-        MachineIdentifier=uuid.UUID(kwargs['machine_config'].machine_id),
-        process_results_func=extract_counters,
-        input_file_name=None,
-        output_file_name=str(Path(args.datadir) / args.outputfile),
-        collector=collector
-    )
-    if args.performance_db or args.performance_file:
-        perf_recorder = IndalekoPerformanceDataRecorder()
-        if args.performance_file:
-            perf_file = str(Path(args.datadir) / config_data['PerformanceDataFile'])
-            perf_recorder.add_data_to_file(perf_file, perf_data)
-            if (debug):
-                ic('Performance data written to ', config_data['PerformanceDataFile'])
-        if args.performance_db:
-            perf_recorder.add_data_to_db(perf_data)
-            if (debug):
-                ic('Performance data written to the database')
-
-@staticmethod
-def add_storage_local_parameters(parser : argparse.ArgumentParser) -> argparse.ArgumentParser:
-    '''Add the parameters for the local collector path to use.'''
-    default_path = os.path.expanduser('~')
-    if default_path == '~':
-        default_path = os.path.abspath(os.sep)
-    parser.add_argument('--path',
-                        help=f'Path to the directory from which to collect metadata (default={default_path})',
-                        type=str,
-                        default=default_path)
-    return parser
 
 
 def main():
-    '''This is the CLI handler for the Windows local storage collector.'''
-    runner = IndalekoCLIRunner(
-        cli_data=IndalekoBaseCliDataModel(
-            Service=IndalekoWindowsLocalCollector.windows_local_collector_name,
-        ),
-        handler_mixin=local_collector_mixin,
-        features=IndalekoBaseCLI.cli_features(input=False),
-        additional_post_parameters=add_storage_local_parameters,
-        Run=local_run,
+    '''The CLI handler for the windows local storage collector.'''
+    BaseLocalStorageCollector.local_collector_runner(
+        IndalekoWindowsLocalStorageCollector,
+        IndalekoWindowsMachineConfig
     )
-    runner.run()
-
-
 
 if __name__ == '__main__':
     main()

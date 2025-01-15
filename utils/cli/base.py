@@ -88,6 +88,8 @@ class IndalekoBaseCLI:
             self.features = IndalekoBaseCLI.cli_features() # default features
         self.config_data = json.loads(cli_data.model_dump_json())
         self.handler_mixin = handler_mixin
+        ic(self.handler_mixin)
+        ic(type(self.handler_mixin))
         if not self.handler_mixin:
             self.handler_mixin = IndalekoBaseCLI.default_handler_mixin
         self.pre_parser = self.handler_mixin.get_pre_parser()
@@ -252,7 +254,9 @@ class IndalekoBaseCLI:
         if hasattr(pre_args, 'outputfile'): # only process it once
             ic(f'setup_output_parser: outputfile already processed: {pre_args.outputfile}')
             return
-        if storage_id := self.handler_mixin.get_storage_identifier(self.config_data):
+        storage_id = self.handler_mixin.get_storage_identifier(pre_args)
+        ic(storage_id)
+        if storage_id:
             self.pre_parser.add_argument('--storage',
                     default=storage_id,
                     help=f'Storage identifier to use (default={storage_id})')

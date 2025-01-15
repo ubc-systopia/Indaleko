@@ -80,6 +80,8 @@ class BaseStorageCollector:
         'bad_symlink_count',
     )
 
+    cli_handler_mixin = None # there is no default handler mixin
+
     def __init__(self, **kwargs):
         if 'offline' in kwargs:
             self.offline = kwargs['offline']
@@ -111,19 +113,19 @@ class BaseStorageCollector:
         self.collector_service = None
         if not self.offline:
             self.collector_service = IndalekoServiceManager()\
-                .lookup_service_by_identifier(str(self.service_identifier))
+                .lookup_service_by_identifier(str(self.get_collector_service_identifier()))
             if self.collector_service is None:
                 self.collector_service = IndalekoServiceManager()\
                     .register_service(
-                    service_name=self.service_name,
-                    service_id=str(self.service_identifier),
-                    service_description=self.service_description,
-                    service_version=self.service_version,
-                    service_type=self.service_type
+                    service_name=self.get_collector_service_name(),
+                    service_id=str(self.get_collector_service_identifier()),
+                    service_description=self.get_collector_service_description(),
+                    service_version=self.get_collector_service_version(),
+                    service_type=self.get_collector_service_type(),
                 )
         assert self.collector_service is not None or self.offline,\
             "Collector service does not exist, not in offline mode"
-        for count in BaseStorageCollector.counter_values:
+        for count in self.counter_values:
             setattr(self, count, 0)
 
     @classmethod
@@ -165,6 +167,11 @@ class BaseStorageCollector:
     def get_collector_service_identifier(cls) -> uuid.UUID:
         '''This function returns the service identifier.'''
         return cls.collector_data.CollectorServiceUUID
+
+    @classmethod
+    def get_collector_cli_handler_mixin(cls):
+        '''This function returns the cli handler mixin that should be used.'''
+        return cls.cli_handler_mixin
 
 
     @staticmethod
