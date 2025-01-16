@@ -129,7 +129,7 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
             kwargs['machine_id'] = uuid.UUID(self.machine_config.machine_id).hex
         if 'storage_description' not in kwargs and getattr(self, 'storage'):
             kwargs['storage_description'] = self.storage
-        file_name =  BaseStorageCollector.generate_collector_file_name(**kwargs)
+        file_name =  self.generate_collector_file_name(**kwargs)
         assert 'storage' in file_name, f'File name {file_name} does not contain "storage", kwargs={kwargs}, dir(self)={dir(self)}'
         return file_name
 
