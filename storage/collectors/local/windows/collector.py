@@ -222,51 +222,6 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
         self.data = data
 
     @staticmethod
-    def record_data_in_file(
-        data : list,
-        dir_name : Union[Path,str],
-        preferred_file_name : Union[Path, str, None] = None
-    ) -> tuple[str, int]:
-        '''
-        Record the specified data in a file.
-
-        Inputs:
-            - data: The data to record
-            - preferred_file_name: The preferred file name (if any)
-
-        Returns:
-            - The name of the file where the data was recorded
-            - The number of entries that were written to the file
-
-        Notes:
-            A temporary file is always created to hold the data, and then it is renamed to the
-            preferred file name if it is provided.
-        '''
-        temp_file_name = ""
-        with tempfile.NamedTemporaryFile(dir=dir_name, delete=False) as tf:
-            temp_file_name = tf.name
-        count = BaseStorageCollector.write_data_to_file(data, temp_file_name)
-        if preferred_file_name is None:
-            return temp_file_name, count
-        # try to rename the file
-        try:
-            if os.path.exists(preferred_file_name):
-                os.remove(preferred_file_name)
-            os.rename(temp_file_name, preferred_file_name)
-            print(f'Renamed {temp_file_name} to {preferred_file_name}')
-        except (
-            FileNotFoundError,
-            PermissionError,
-            FileExistsError,
-            OSError
-        ) as e:
-            logging.error('Unable to rename temp file %s to %s : %s', temp_file_name, preferred_file_name, e)
-            ic(f'Unable to rename temp file {temp_file_name} to output file {preferred_file_name}')
-            ic(f'Error: {e}')
-            preferred_file_name = temp_file_name
-        return preferred_file_name, count
-
-    @staticmethod
     def write_data_to_file(collector : 'IndalekoWindowsLocalStorageCollector') -> None:
         '''Write the data to a file'''
         if not hasattr(collector, 'output_file_name'):
