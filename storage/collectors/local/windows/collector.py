@@ -38,17 +38,12 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 # pylint: disable=wrong-import-position
-from data_models import IndalekoSourceIdentifierDataModel
 from db import IndalekoServiceManager
 from platforms.windows.machine_config import IndalekoWindowsMachineConfig
-from perf.perf_collector import IndalekoPerformanceDataCollector
-from perf.perf_recorder import IndalekoPerformanceDataRecorder
 from storage.collectors.base import BaseStorageCollector
 from storage.collectors.local.local_base import BaseLocalStorageCollector
 from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from utils.cli.base import IndalekoBaseCLI
-from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
-from utils.cli.runner import IndalekoCLIRunner
 from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
 from utils.misc.file_name_management import find_candidate_files
 # pylint: enable=wrong-import-position
@@ -114,10 +109,6 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
 
 
     def __init__(self, **kwargs):
-        assert 'machine_config' in kwargs, 'machine_config must be specified'
-        self.machine_config = kwargs['machine_config']
-        if 'machine_id' not in kwargs:
-            kwargs['machine_id'] = self.machine_config.machine_id
         for key, value in self.indaleko_windows_local_collector_service.items():
             if key not in kwargs:
                 kwargs[key] = value

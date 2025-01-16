@@ -44,7 +44,7 @@ from platforms.linux.machine_config import IndalekoLinuxMachineConfig
 from platforms.unix import UnixFileAttributes
 from storage import IndalekoObject
 from storage.recorders.base import BaseStorageRecorder
-from storage.collectors.local.linux.collector import IndalekoLinuxLocalCollector
+from storage.collectors.local.linux.collector import IndalekoLinuxLocalStorageCollector
 import utils.misc.directory_management
 import utils.misc.file_name_management
 import utils.misc.data_management
@@ -67,7 +67,7 @@ class IndalekoLinuxLocalRecorder(BaseStorageRecorder):
         'service_identifier' : linux_local_recorder_uuid,
     }
 
-    linux_platform = IndalekoLinuxLocalCollector.linux_platform
+    linux_platform = IndalekoLinuxLocalStorageCollector.linux_platform
     linux_local_recorder = 'local_fs_recorder'
 
     def __init__(self: BaseStorageRecorder, **kwargs: dict) -> None:
@@ -113,9 +113,9 @@ class IndalekoLinuxLocalRecorder(BaseStorageRecorder):
         '''
         if self.data_dir is None:
             raise ValueError('data_dir must be specified')
-        return [x for x in IndalekoLinuxLocalCollector.find_collector_files(self.data_dir)
-                if IndalekoLinuxLocalCollector.linux_platform in x and
-                IndalekoLinuxLocalCollector.linux_local_collector_name in x]
+        return [x for x in IndalekoLinuxLocalStorageCollector.find_collector_files(self.data_dir)
+                if IndalekoLinuxLocalStorageCollector.linux_platform in x and
+                IndalekoLinuxLocalStorageCollector.linux_local_collector_name in x]
 
     def load_collector_data_from_file(self : 'IndalekoLinuxLocalRecorder') -> None:
         '''This function loads the collector data from the file.'''
@@ -326,13 +326,13 @@ def main():
                             default=utils.misc.directory_management.indaleko_default_data_dir)
     pre_args, _ = pre_parser.parse_known_args()
     # restrict to linux collector files.
-    collector = IndalekoLinuxLocalCollector(
+    collector = IndalekoLinuxLocalStorageCollector(
         search_dir = pre_args.datadir,
-        prefix=IndalekoLinuxLocalCollector.linux_platform,
-        suffix=IndalekoLinuxLocalCollector.linux_local_collector_name,
+        prefix=IndalekoLinuxLocalStorageCollector.linux_platform,
+        suffix=IndalekoLinuxLocalStorageCollector.linux_local_collector_name,
         machine_config=machine_config,
     )
-    collector_files = [f for f in IndalekoLinuxLocalCollector.find_collector_files(pre_args.datadir) if IndalekoLinuxLocalRecorder.linux_platform in f]
+    collector_files = [f for f in IndalekoLinuxLocalStorageCollector.find_collector_files(pre_args.datadir) if IndalekoLinuxLocalRecorder.linux_platform in f]
     pre_parser.add_argument('--input',
                             choices=collector_files,
                             default=collector_files[-1],
@@ -362,7 +362,7 @@ def main():
     parser = argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument('--reset', action='store_true', help='Reset the service collection.')
     args = parser.parse_args()
-    metadata = IndalekoLinuxLocalCollector.extract_metadata_from_collector_file_name(args.input)
+    metadata = IndalekoLinuxLocalStorageCollector.extract_metadata_from_collector_file_name(args.input)
     machine_id = metadata['machine']
     if 'platform' in metadata:
         collector_platform = metadata['platform']
@@ -390,7 +390,7 @@ def main():
         'machine_config' : machine_config,
         'machine_id' : machine_id,
         'timestamp' : timestamp,
-        'platform' : IndalekoLinuxLocalCollector.linux_platform,
+        'platform' : IndalekoLinuxLocalStorageCollector.linux_platform,
         'recorder' : IndalekoLinuxLocalRecorder.linux_local_recorder,
         'file_prefix' : file_prefix,
         'file_suffix' : file_suffix,

@@ -24,7 +24,10 @@ import datetime
 import logging
 import jsonlines
 import json
+from pathlib import Path
+import shutil
 import sys
+import tempfile
 import uuid
 
 from icecream import ic
@@ -83,12 +86,15 @@ class BaseStorageCollector:
     cli_handler_mixin = None # there is no default handler mixin
 
     def __init__(self, **kwargs):
+        ic(kwargs)
+        self.debug = kwargs.get('debug', False)
         if 'offline' in kwargs:
             self.offline = kwargs['offline']
             del kwargs['offline']
         else:
             self.offline = False
-        # ic(self.offline)
+        if self.debug:
+            ic(self.offline)
         self.file_prefix = kwargs.get('file_prefix', BaseStorageCollector.default_file_prefix).replace('-', '_')
         self.file_suffix = kwargs.get('file_suffix', BaseStorageCollector.default_file_suffix).replace('-', '_')
         self.data_dir = kwargs.get('data_dir', indaleko_default_data_dir)
@@ -102,6 +108,11 @@ class BaseStorageCollector:
         self.collector_data = kwargs['collector_data'] # blow up if not defined
         if 'machine_id' in kwargs:
             self.machine_id = kwargs['machine_id']
+        else:
+            assert 'machine_config' in kwargs, 'machine_config must be specified'
+            self.machine_config = kwargs['machine_config']
+            self.machine_id = self.machine_config.machine_id
+        assert hasattr(self, 'machine_id')
         if 'storage_description' in kwargs:
             assert isinstance(kwargs['storage_description'], str), \
                 f'storage_description must be a string, not {type(kwargs["storage_description"])}'
@@ -198,8 +209,22 @@ class BaseStorageCollector:
         '''
         return {x : getattr(self, x) for x in BaseStorageCollector.counter_values}
 
+    def generate_collector_file_name(self : 'BaseStorageCollector', **kwargs) -> str:
+        '''Generate a file name for the Linux local collector'''
+        if 'platform' not in kwargs:
+            kwargs['platform'] = self.collector_data.CollectorPlatformName
+        if 'collector_name' not in kwargs:
+            kwargs['collector_name'] = self.collector_data.CollectorServiceName
+        if 'machine_id' not in kwargs:
+            if not hasattr(self, 'machine_id'):
+                ic(f'type(cls): {type(self)}')
+                ic(f'dir(cls): {dir(self)}')
+            kwargs['machine_id'] = self.machine_id # must be there!
+        assert 'machine_id' in kwargs, 'machine_id must be specified'
+        return BaseStorageCollector.__generate_collector_file_name(**kwargs)
+
     @staticmethod
-    def generate_collector_file_name(**kwargs) -> str:
+    def __generate_collector_file_name(**kwargs) -> str:
         '''This will generate a file name for the collector output file.'''
         # platform : str, target_dir : str = None, suffix : str = None) -> str:
         assert 'collector_name' in kwargs, 'collector_name must be specified'
@@ -297,7 +322,7 @@ class BaseStorageCollector:
         stat_dict['Name'] = name
         stat_dict['Path'] = root
         stat_dict['URI'] = os.path.join(root, name)
-        stat_dict['Collector'] = str(self.service_identifier)
+        stat_dict['Collector'] = str(self.get_collector_service_identifier())
         stat_dict['ObjectIdentifier'] = str(uuid.uuid4())
         return stat_dict
 
@@ -321,16 +346,21 @@ class BaseStorageCollector:
         for platforms that require additional processing.
         '''
         data = []
+        count = 0
         for root, dirs, files in os.walk(self.path):
             for name in dirs + files:
                 entry = self.build_stat_dict(name, root)
                 if entry is not None:
-                    ic(entry)
                     data.append(entry)
+                    count += 1
+                if self.debug and count % 10000 == 0:
+                    print('Processed', count, 'entries, continuing')
         self.data = data
+        if self.debug:
+            print('Processed', count, 'entries (complete)')
 
     @staticmethod
-    def write_data_to_file(data : list, file_name : str = None, jsonlines_output : bool = True) -> int:
+    def __write_data_to_file(data : list, file_name : str = None, jsonlines_output : bool = True) -> int:
         '''
         This will write the given data to the specified file.
 
@@ -366,6 +396,52 @@ class BaseStorageCollector:
             print('Wrote JSON data to', file_name)
             logging.info('Wrote JSON data to %s', file_name)
         return output_count
+
+    @staticmethod
+    def record_data_in_file(
+        data : list,
+        dir_name : Union[Path,str],
+        preferred_file_name : Union[Path, str, None] = None
+    ) -> tuple[str, int]:
+        '''
+        Record the specified data in a file.
+
+        Inputs:
+            - data: The data to record
+            - preferred_file_name: The preferred file name (if any)
+
+        Returns:
+            - The name of the file where the data was recorded
+            - The number of entries that were written to the file
+
+        Notes:
+            A temporary file is always created to hold the data, and then it is renamed to the
+            preferred file name if it is provided.
+        '''
+        temp_file_name = ""
+        with tempfile.NamedTemporaryFile(dir=dir_name, delete=False) as tf:
+            temp_file_name = tf.name
+        count = BaseStorageCollector.__write_data_to_file(data, temp_file_name)
+        if preferred_file_name is None:
+            return temp_file_name, count
+        # try to rename the file
+        try:
+            if os.path.exists(preferred_file_name):
+                os.remove(preferred_file_name)
+            shutil.move(temp_file_name, preferred_file_name)
+            print(f'Renamed {temp_file_name} to {preferred_file_name}')
+        except (
+            FileNotFoundError,
+            PermissionError,
+            FileExistsError,
+            OSError
+        ) as e:
+            logging.error('Unable to rename temp file %s to %s : %s', temp_file_name, preferred_file_name, e)
+            ic(f'Unable to rename temp file {temp_file_name} to output file {preferred_file_name}')
+            ic(f'Error: {e}')
+            preferred_file_name = temp_file_name
+        return preferred_file_name, count
+
 
 
 def main():
