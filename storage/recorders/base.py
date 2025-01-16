@@ -113,6 +113,7 @@ class BaseStorageRecorder:
         as a parameter. The configuration object is a dictionary that contains
         all the configuration parameters for the recorder.
         '''
+        self.debug = kwargs.get('debug', False)
         self.file_prefix = BaseStorageRecorder.default_file_prefix
         if 'file_prefix' in kwargs:
             self.file_prefix = kwargs['file_prefix']
@@ -140,26 +141,14 @@ class BaseStorageRecorder:
                 del kwargs['storage_description']
             else:
                 self.storage_description = str(uuid.UUID(kwargs['storage_description']).hex)
+                if self.debug:
+                    ic('Storage description: ', self.storage_description)
         self.data_dir = kwargs.get('data_dir', indaleko_default_data_dir)
         self.output_dir = kwargs.get('output_dir', self.data_dir)
         self.input_dir = kwargs.get('input_dir', self.data_dir)
         self.input_file = kwargs.get('input_file', None)
         self.config_dir = kwargs.get('config_dir', indaleko_default_config_dir)
         self.log_dir = kwargs.get('log_dir', indaleko_default_log_dir)
-        '''self.service_name = kwargs.get('Name', kwargs.get('service_name', None))
-        assert self.service_name is not None, \
-            f'Service name must be specified, kwargs={kwargs}'
-        self.service_description = kwargs.get('Description',
-                                              BaseStorageRecorder\
-                                                .indaleko_generic_storage_recorder_service_description)
-        self.service_version = kwargs.get('Version',
-                                          BaseStorageRecorder\
-                                            .indaleko_generic_storage_recorder_service_version)
-        self.service_type = kwargs.get('Type', IndalekoServiceManager.service_type_storage_recorder)
-        self.service_identifier = kwargs.get('Identifier', kwargs.get('service_id', kwargs.get('service_identifier', None)))
-        assert self.service_identifier is not None, \
-            f'Service identifier must be specified\n{kwargs}'
-        '''
         self.recorder_service = IndalekoServiceManager().register_service(
             service_name = self.get_recorder_service_name(),
             service_id = str(self.get_recorder_service_uuid()),

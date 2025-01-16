@@ -63,10 +63,11 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
         if 'args' in kwargs:
             self.args = kwargs['args']
             self.output_type = getattr(self.args, 'output_type', 'file')
-            kwargs['storage_description'] = getattr(self.args, 'storage')
         else:
             self.args = None
             self.output_type = 'file'
+        if 'storage' in kwargs:
+            self.storage_description = kwargs['storage']
         super().__init__(**kwargs)
 
     @staticmethod
@@ -172,6 +173,10 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
             'offline': args.offline,
             'args' : args,
         }
+        if 'InputFileKeys' in config_data and \
+            'storage' in config_data['InputFileKeys'] and \
+            config_data['InputFileKeys']['storage']:
+            kwargs['storage_description'] = config_data['InputFileKeys']['storage']
         def record(recorder : BaseLocalStorageRecorder):
             recorder.record()
         def extract_counters(**kwargs):
