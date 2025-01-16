@@ -190,7 +190,7 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
 
     def get_object_path(self : 'BaseLocalStorageRecorder', obj : IndalekoObject):
         '''Given an Indaleko object, return a valid local path to the object'''
-        return str(Path(os.path.join(obj['Path']) / obj['Volume GUID']))
+        return str(Path(obj['Path']) / obj['Volume GUID'])
 
 
     def is_object_directory(self : 'BaseLocalStorageRecorder', obj: IndalekoObject) -> bool:
