@@ -79,6 +79,7 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
         self.file_data = []
         self.dirmap = {}
         self.dir_edges = []
+        self.collector_data = []
 
     def find_collector_files(self) -> list:
         '''This function should be overridden: it is used to find the collector files for the recorder.'''

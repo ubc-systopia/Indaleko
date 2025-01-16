@@ -90,8 +90,6 @@ class IndalekoLinuxLocalStorageRecorder(BaseLocalStorageRecorder):
             kwargs['platform'] = IndalekoLinuxLocalStorageRecorder.linux_platform
         if 'recorder' not in kwargs:
             kwargs['recorder'] = IndalekoLinuxLocalStorageRecorder.linux_local_recorder
-        if 'input_file' not in kwargs:
-            kwargs['input_file'] = None
         for key, value in self.linux_local_recorder_service.items():
             if key not in kwargs:
                 kwargs[key] = value
@@ -101,7 +99,6 @@ class IndalekoLinuxLocalStorageRecorder(BaseLocalStorageRecorder):
             self.output_file = self.generate_file_name()
         else:
             self.output_file = kwargs['output_file']
-        self.collector_data = []
         self.source = {
             'Identifier' : self.linux_local_recorder_uuid,
             'Version' : '1.0'

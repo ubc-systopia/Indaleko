@@ -89,17 +89,14 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
                 kwargs[key] = value
         if 'platform' not in kwargs:
             kwargs['platform'] = IndalekoWindowsLocalStorageRecorder.windows_platform
+        if 'recorder' not in kwargs:
+            kwargs['recorder'] = IndalekoWindowsLocalStorageRecorder.windows_local_recorder_name
         super().__init__(**kwargs)
         self.output_file = kwargs.get('output_file', self.generate_file_name())
         self.source = {
             'Identifier' : self.windows_local_recorder_uuid,
             'Version' : self.windows_local_recorder_service['service_version'],
         }
-        self.dir_data_by_path = {}
-        self.dir_data = []
-        self.file_data = []
-        self.dirmap = {}
-        self.dir_edges = []
 
 
     def find_collector_files(self) -> list:
