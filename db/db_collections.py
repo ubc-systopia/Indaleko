@@ -124,11 +124,6 @@ class IndalekoDBCollections:
             'schema' :  IndalekoActivityDataRegistrationDataModel.get_arangodb_schema(),
             'edge' : False,
             'indices' : {
-                'identifier' : {
-                    'fields' : ['ActivityProvider'],
-                    'unique' : True,
-                    'type' : 'persistent'
-                },
             },
         },
         Indaleko_ActivityContext_Collection : {
