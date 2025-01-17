@@ -69,7 +69,6 @@ from utils.misc.directory_management import indaleko_default_data_dir, indaleko_
 from utils.misc.file_name_management import generate_file_name, extract_keys_from_file_name
 from data_models import IndalekoSemanticAttributeDataModel
 from storage.i_relationship import IndalekoRelationship
-from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 # pylint: enable=wrong-import-position
 class BaseStorageRecorder:
     '''
@@ -99,13 +98,14 @@ class BaseStorageRecorder:
         'edge_count',
     )
 
-    # Note: this defaults the platform and service type value(s)frgsi;
-    recorder_data = IndalekoStorageRecorderDataModel(
-        RecorderServiceName = indaleko_generic_storage_recorder_service_name,
-        RecorderServiceUUID = indaleko_generic_storage_recorder_uuid,
-        RecorderServiceVersion = indaleko_generic_storage_recorder_service_version,
-        RecorderServiceDescription = indaleko_generic_storage_recorder_service_description,
-    )
+    # Note: this defaults the platform and service type value(s);
+    # recorder_data = IndalekoStorageRecorderDataModel(
+    #    RecorderServiceName = indaleko_generic_storage_recorder_service_name,
+    #    RecorderServiceUUID = indaleko_generic_storage_recorder_uuid,
+    #    RecorderServiceVersion = indaleko_generic_storage_recorder_service_version,
+    #    RecorderServiceDescription = indaleko_generic_storage_recorder_service_description,
+    #)
+    # This must come from the derived class: not a default value
 
     def __init__(self : 'BaseStorageRecorder', **kwargs : dict) -> None:
         '''
