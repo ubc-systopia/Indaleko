@@ -71,7 +71,7 @@ class IndalekoMacLocalStorageCollector(BaseLocalStorageCollector):
 
     collector_data = IndalekoStorageCollectorDataModel(
         CollectorPlatformName = mac_platform,
-        CollectorServiceName = indaleko_mac_local_collector_service_name,
+        CollectorServiceName = mac_local_collector_name,
         CollectorServiceDescription = indaleko_mac_local_collector_service_description,
         CollectorServiceUUID = uuid.UUID(indaleko_mac_local_collector_uuid),
         CollectorServiceVersion = indaleko_mac_local_collector_service_version,

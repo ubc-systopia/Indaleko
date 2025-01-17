@@ -47,9 +47,10 @@ from perf.perf_recorder import IndalekoPerformanceDataRecorder
 from platforms.mac.machine_config import IndalekoMacOSMachineConfig
 from platforms.unix import UnixFileAttributes
 from storage import IndalekoObject
-from storage.recorders.base import BaseStorageRecorder
-from storage.recorders.local.local_base import BaseLocalStorageRecorder
 from storage.collectors.local.mac.collector import IndalekoMacLocalStorageCollector
+from storage.recorders.base import BaseStorageRecorder
+from storage.recorders.data_model import IndalekoStorageRecorderDataModel
+from storage.recorders.local.local_base import BaseLocalStorageRecorder
 from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
 from utils.misc.file_name_management import indaleko_file_name_prefix
 from utils.misc.data_management import encode_binary_data
@@ -74,6 +75,14 @@ class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
 
     mac_platform = IndalekoMacLocalStorageCollector.mac_platform
     mac_local_recorder = 'mac_local_recorder'
+
+    recorder_data = IndalekoStorageRecorderDataModel(
+        RecorderPlatformName=mac_platform,
+        RecorderServiceName = mac_local_recorder,
+        RecorderServiceUUID = uuid.UUID(mac_local_recorder_uuid),
+        RecorderServiceVersion = mac_local_recorder_service['service_version'],
+        RecorderServiceDescription = mac_local_recorder_service['service_description'],
+    )
 
     def __init__(self, reset_collection=False, objects_file="", relations_file="", **kwargs) -> None:
         self.db_config = IndalekoDBConfig()
