@@ -46,7 +46,7 @@ from platforms.mac.machine_config import IndalekoMacOSMachineConfig
 from platforms.unix import UnixFileAttributes
 from storage import IndalekoObject
 from storage.recorders.base import BaseStorageRecorder
-from storage.collectors.local.mac.collector import IndalekoMacLocalCollector
+from storage.collectors.local.mac.collector import IndalekoMacLocalStorageCollector
 from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
 from utils.misc.file_name_management import indaleko_file_name_prefix
 from utils.misc.data_management import encode_binary_data
@@ -69,7 +69,7 @@ class IndalekoMacLocalStorageRecorder(BaseStorageRecorder):
         'service_identifier' : mac_local_recorder_uuid,
     }
 
-    mac_platform = IndalekoMacLocalCollector.mac_platform
+    mac_platform = IndalekoMacLocalStorageCollector.mac_platform
     mac_local_recorder = 'mac_local_recorder'
 
     def __init__(self, reset_collection=False, objects_file="", relations_file="", **kwargs) -> None:
@@ -128,8 +128,8 @@ class IndalekoMacLocalStorageRecorder(BaseStorageRecorder):
         if self.data_dir is None:
             raise ValueError('data_dir must be specified')
         return [x for x in super().find_collector_files(self.data_dir)
-                if IndalekoMacLocalCollector.mac_platform in x and
-                IndalekoMacLocalCollector.mac_local_collector_name in x]
+                if IndalekoMacLocalStorageCollector.mac_platform in x and
+                IndalekoMacLocalStorageCollector.mac_local_collector_name in x]
 
     def normalize_collector_data(self, data: dict) -> IndalekoObject:
         '''
@@ -375,10 +375,10 @@ def main():
     pre_args, _ = pre_parser.parse_known_args()
     machine_config = IndalekoMacOSMachineConfig.load_config_from_file(
         config_file=default_config_file)
-    collector = IndalekoMacLocalCollector(
+    collector = IndalekoMacLocalStorageCollector(
         search_dir=pre_args.datadir,
-        prefix=IndalekoMacLocalCollector.mac_platform,
-        suffix=IndalekoMacLocalCollector.mac_local_collector_name,
+        prefix=IndalekoMacLocalStorageCollector.mac_platform,
+        suffix=IndalekoMacLocalStorageCollector.mac_local_collector_name,
         machine_config=machine_config
     )
     collector_files = collector.find_collector_files(pre_args.datadir)
@@ -421,7 +421,7 @@ def main():
                         action='store_true',
                         help='Record performance data to the database')
     args = parser.parse_args()
-    metadata = IndalekoMacLocalCollector.extract_metadata_from_collector_file_name(
+    metadata = IndalekoMacLocalStorageCollector.extract_metadata_from_collector_file_name(
         args.input)
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
     machine_id = 'unknown'
@@ -456,7 +456,7 @@ def main():
         machine_config=machine_config,
         machine_id=machine_id,
         timestamp=timestamp,
-        platform=IndalekoMacLocalCollector.mac_platform,
+        platform=IndalekoMacLocalStorageCollector.mac_platform,
         collector=IndalekoMacLocalStorageRecorder.mac_local_recorder,
         storage_description=storage,
         file_prefix=file_prefix,

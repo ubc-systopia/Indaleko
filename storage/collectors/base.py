@@ -86,15 +86,21 @@ class BaseStorageCollector:
     cli_handler_mixin = None # there is no default handler mixin
 
     def __init__(self, **kwargs):
-        ic(kwargs)
+        assert 'machine_config' in kwargs, 'machine_config must be specified'
+        self.machine_config = kwargs['machine_config']
+        if 'machine_id' not in kwargs:
+            kwargs['machine_id'] = self.machine_config.machine_id
         self.debug = kwargs.get('debug', False)
+        self.offline = False
         if 'offline' in kwargs:
             self.offline = kwargs['offline']
             del kwargs['offline']
-        else:
-            self.offline = False
         if self.debug:
             ic(self.offline)
+        if 'collector_data' in kwargs:
+            self.collector_data = kwargs['collector_data']
+        assert hasattr(self, 'collector_data'), 'collector_data must either be passed in or created in derived class'
+        self.platform = kwargs.get('platform', self.collector_data.CollectorPlatformName)
         self.file_prefix = kwargs.get('file_prefix', BaseStorageCollector.default_file_prefix).replace('-', '_')
         self.file_suffix = kwargs.get('file_suffix', BaseStorageCollector.default_file_suffix).replace('-', '_')
         self.data_dir = kwargs.get('data_dir', indaleko_default_data_dir)
@@ -105,7 +111,7 @@ class BaseStorageCollector:
         assert os.path.isdir(self.data_dir), f'{self.data_dir} must be an existing directory'
         self.timestamp = kwargs.get('timestamp', datetime.datetime.now(datetime.timezone.utc).isoformat())
         assert isinstance(self.timestamp, str), 'timestamp must be a string'
-        self.collector_data = kwargs['collector_data'] # blow up if not defined
+        assert hasattr(self, 'collector_data'), 'Must be created by derived class'
         if 'machine_id' in kwargs:
             self.machine_id = kwargs['machine_id']
         else:
@@ -358,6 +364,22 @@ class BaseStorageCollector:
         self.data = data
         if self.debug:
             print('Processed', count, 'entries (complete)')
+
+
+    @staticmethod
+    def write_data_to_file(collector : 'BaseStorageCollector') -> None:
+        '''Write the data to a file'''
+        if not hasattr(collector, 'output_file_name'):
+            collector.output_file_name = collector.generate_collector_file_name()
+        data_file_name, count = collector.record_data_in_file(
+            collector.data,
+            collector.data_dir,
+            collector.output_file_name
+        )
+        logging.info('Wrote %d entries to %s', count, data_file_name)
+        if hasattr(collector, 'output_count'):
+            collector.output_count += count
+
 
     @staticmethod
     def __write_data_to_file(data : list, file_name : str = None, jsonlines_output : bool = True) -> int:

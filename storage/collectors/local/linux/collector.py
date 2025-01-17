@@ -21,11 +21,7 @@ import inspect
 import logging
 import os
 import sys
-import tempfile
 import uuid
-
-from pathlib import Path
-from typing import Union
 
 from icecream import ic
 
@@ -37,18 +33,11 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from data_models import IndalekoSourceIdentifierDataModel
 from db.service_manager import IndalekoServiceManager
-from perf.perf_collector import IndalekoPerformanceDataCollector
-from perf.perf_recorder import IndalekoPerformanceDataRecorder
 from platforms.linux.machine_config import IndalekoLinuxMachineConfig
 from storage.collectors.base import BaseStorageCollector
 from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from storage.collectors.local.local_base import BaseLocalStorageCollector
-from utils.i_logging import IndalekoLogging
-from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
-from utils.cli.base import IndalekoBaseCLI
-from utils.cli.runner import IndalekoCLIRunner
 from utils.misc.file_name_management import generate_file_name, extract_keys_from_file_name
 # pylint: enable=wrong-import-position
 
@@ -85,35 +74,9 @@ class IndalekoLinuxLocalStorageCollector(BaseLocalStorageCollector):
 
 
     def __init__(self, **kwargs):
-        assert 'machine_config' in kwargs, 'machine_config must be specified'
-        self.machine_config = kwargs['machine_config']
-        if 'machine_id' not in kwargs:
-            kwargs['machine_id'] = self.machine_config.machine_id
-        self.offline = False
-        if 'offline' in kwargs:
-            self.offline = kwargs['offline']
-            del self.offline
-        if 'collector_data' not in kwargs:
-            kwargs['collector_data'] =  IndalekoLinuxLocalStorageCollector.collector_data
         super().__init__(**kwargs,
-                         platform=IndalekoLinuxLocalStorageCollector.linux_platform,
-                         collector_name=IndalekoLinuxLocalStorageCollector.linux_local_collector_name,
                          **IndalekoLinuxLocalStorageCollector.indaleko_linux_local_collector_service
         )
-
-    @staticmethod
-    def write_data_to_file(collector : 'BaseStorageCollector') -> None:
-        '''Write the data to a file'''
-        if not hasattr(collector, 'output_file_name'):
-            collector.output_file_name = collector.generate_collector_file_name()
-        data_file_name, count = collector.record_data_in_file(
-            collector.data,
-            collector.data_dir,
-            collector.output_file_name
-        )
-        logging.info('Wrote %d entries to %s', count, data_file_name)
-        if hasattr(collector, 'output_count'):
-            collector.output_count += count
 
     class linux_local_collector_mixin(BaseLocalStorageCollector.local_collector_mixin):
         @staticmethod
