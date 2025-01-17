@@ -37,8 +37,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 # pylint: disable=wrong-import-position
-from data_models import IndalekoSourceIdentifierDataModel
-from db import IndalekoDBCollections, IndalekoServiceManager
+from db import IndalekoServiceManager
 from platforms.linux.machine_config import IndalekoLinuxMachineConfig
 from platforms.unix import UnixFileAttributes
 from storage import IndalekoObject
@@ -48,7 +47,7 @@ from storage.recorders.local.local_base import BaseLocalStorageRecorder
 import utils.misc.directory_management
 import utils.misc.file_name_management
 import utils.misc.data_management
-from utils.i_logging import IndalekoLogging
+from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 # pylint: enable=wrong-import-position
 
 
@@ -69,6 +68,15 @@ class IndalekoLinuxLocalStorageRecorder(BaseLocalStorageRecorder):
 
     linux_platform = IndalekoLinuxLocalStorageCollector.linux_platform
     linux_local_recorder = 'local_fs_recorder'
+
+    recorder_data = IndalekoStorageRecorderDataModel(
+        RecorderPlatformName = linux_platform,
+        RecorderServiceName = linux_local_recorder,
+        RecorderServiceUUID = uuid.UUID(linux_local_recorder_uuid),
+        RecorderServiceVersion = linux_local_recorder_service['service_version'],
+        RecorderServiceDescription = linux_local_recorder_service['service_description'],
+    )
+
 
     def __init__(self: BaseStorageRecorder, **kwargs: dict) -> None:
         if 'input_file' not in kwargs:

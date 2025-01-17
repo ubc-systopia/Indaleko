@@ -66,7 +66,7 @@ class IndalekoLinuxLocalStorageCollector(BaseLocalStorageCollector):
 
     collector_data = IndalekoStorageCollectorDataModel(
         CollectorPlatformName = linux_platform,
-        CollectorServiceName = indaleko_linux_local_collector_service_name,
+        CollectorServiceName = linux_local_collector_name,
         CollectorServiceUUID = uuid.UUID(indaleko_linux_local_collector_uuid),
         CollectorServiceVersion = indaleko_linux_local_collector_service_version,
         CollectorServiceDescription = indaleko_linux_local_collector_service_description
