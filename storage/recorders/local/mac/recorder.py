@@ -40,22 +40,25 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 # pylint: disable=wrong-import-position
-from db import IndalekoDBCollections, IndalekoDBConfig, IndalekoServiceManager
 from data_models import IndalekoSourceIdentifierDataModel
+from db import IndalekoDBCollections, IndalekoDBConfig, IndalekoServiceManager
+from perf.perf_collector import IndalekoPerformanceDataCollector
+from perf.perf_recorder import IndalekoPerformanceDataRecorder
 from platforms.mac.machine_config import IndalekoMacOSMachineConfig
 from platforms.unix import UnixFileAttributes
 from storage import IndalekoObject
 from storage.recorders.base import BaseStorageRecorder
+from storage.recorders.local.local_base import BaseLocalStorageRecorder
 from storage.collectors.local.mac.collector import IndalekoMacLocalStorageCollector
 from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
 from utils.misc.file_name_management import indaleko_file_name_prefix
 from utils.misc.data_management import encode_binary_data
+from utils.i_logging import IndalekoLogging
 from utils import IndalekoLogging
-from perf.perf_collector import IndalekoPerformanceDataCollector
-from perf.perf_recorder import IndalekoPerformanceDataRecorder
 # pylint: enable=wrong-import-position
 
-class IndalekoMacLocalStorageRecorder(BaseStorageRecorder):
+
+class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
     '''
     This class handles the processing of metadata from the Indaleko Mac local storage recorder service.
     '''
@@ -131,6 +134,26 @@ class IndalekoMacLocalStorageRecorder(BaseStorageRecorder):
                 if IndalekoMacLocalStorageCollector.mac_platform in x and
                 IndalekoMacLocalStorageCollector.mac_local_collector_name in x]
 
+    class macos_recorder_mixin(BaseLocalStorageRecorder.local_recorder_mixin):
+        '''MacOS Specific mixin - dealing with machine config files again'''
+
+        @staticmethod
+        def find_machine_config_files(config_dir, platform = None, machine_id = None):
+            return IndalekoMacLocalStorageCollector.local_collector_mixin.find_machine_config_files(
+                config_dir,
+                platform,
+                machine_id
+            )
+
+        @staticmethod
+        def extract_filename_metadata(file_name : str) -> dict:
+            '''This method is used to parse the file name.'''
+            return IndalekoMacLocalStorageCollector.local_collector_mixin.extract_filename_metadata(file_name=file_name)
+
+
+
+    local_recorder_mixin = macos_recorder_mixin
+
     def normalize_collector_data(self, data: dict) -> IndalekoObject:
         '''
         Given some metadata, this will create a record that can be inserted into the
@@ -139,7 +162,7 @@ class IndalekoMacLocalStorageRecorder(BaseStorageRecorder):
         if data is None:
             raise ValueError('Data cannot be None')
         if not isinstance(data, dict):
-            raise ValueError('Data must be a dictionary')
+            raise ValueError(f'Data must be a dictionary, not {type(data)}\n\t{data}')
         if 'ObjectIdentifier' in data:
             oid = data['ObjectIdentifier']
         else:
@@ -181,12 +204,12 @@ class IndalekoMacLocalStorageRecorder(BaseStorageRecorder):
         }
 
         if 'st_mode' in data:
-            kwargs['UnixFileAttributes'] = UnixFileAttributes.map_file_attributes(
+            kwargs['PosixFileAttributes'] = UnixFileAttributes.map_file_attributes(
                 data['st_mode'])
 
         return IndalekoObject(**kwargs)
 
-    def record(self) -> None:
+    def xx_record(self) -> None:
         '''
         This function processes the mac local storage collector metadata file
         and emits the data needed to upload to the database.
@@ -341,7 +364,7 @@ class IndalekoMacLocalStorageRecorder(BaseStorageRecorder):
             print(f'failed to run the command, got: {e}')
 
 
-def main():
+def old_main():
     '''
     This is the main handler for the Indaleko Mac Local Storage Recorder service.
     '''
@@ -530,6 +553,13 @@ def main():
     logging.info('Total: %d', total)
     logging.info('Done')
 
+def main():
+    '''This is the CLI handler for the MacOS local storage recorder.'''
+    BaseLocalStorageRecorder.local_recorder_runner(
+        IndalekoMacLocalStorageCollector,
+        IndalekoMacLocalStorageRecorder,
+        IndalekoMacOSMachineConfig
+    )
 
 if __name__ == '__main__':
     main()

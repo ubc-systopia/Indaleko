@@ -192,7 +192,7 @@ class IndalekoLinuxLocalStorageRecorder(BaseLocalStorageRecorder):
         return file_name
 
 def main():
-    '''This is the CLI handler for the Linux local storage collector.'''
+    '''This is the CLI handler for the Linux local storage recorder.'''
     BaseLocalStorageRecorder.local_recorder_runner(
         IndalekoLinuxLocalStorageCollector,
         IndalekoLinuxLocalStorageRecorder,

@@ -121,7 +121,7 @@ class IndalekoMacLocalStorageCollector(BaseLocalStorageCollector):
         stat_dict['Path'] = root
         stat_dict['URI'] = os.path.join(root, name)
         stat_dict['Collector'] = str(self.get_collector_service_identifier())
-        return (stat_dict, last_uri)
+        return stat_dict
 
     class local_collector_mixin(BaseLocalStorageCollector.local_collector_mixin):
         @staticmethod
