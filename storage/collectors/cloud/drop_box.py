@@ -56,13 +56,14 @@ from utils.i_logging import IndalekoLogging
 from utils.misc.file_name_management import generate_file_name
 from utils.misc.directory_management import indaleko_default_data_dir, indaleko_default_config_dir, indaleko_default_log_dir
 from storage.collectors.base import BaseStorageCollector
+from storage.collectors.cloud.cloud_base import BaseCloudStorageCollector
 from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from perf.perf_collector import IndalekoPerformanceDataCollector
 from perf.perf_recorder import IndalekoPerformanceDataRecorder
 # pylint: enable=wrong-import-position
 
 
-class IndalekoDropboxCollector(BaseStorageCollector):
+class IndalekoDropboxCloudStorageCollector(BaseCloudStorageCollector):
 
     dropbox_platform='Dropbox'
     dropbox_collector_name='dropbox_collector'
@@ -87,7 +88,7 @@ class IndalekoDropboxCollector(BaseStorageCollector):
         'service_identifier': indaleko_dropbox_collector_uuid,
     }
 
-    dropbox_collector_data = IndalekoStorageCollectorDataModel(
+    collector_data = IndalekoStorageCollectorDataModel(
         CollectorPlatformName=dropbox_platform,
         CollectorServiceName=indaleko_dropbox_collector_service_name,
         CollectorServiceUUID=uuid.UUID(indaleko_dropbox_collector_uuid),
@@ -96,9 +97,35 @@ class IndalekoDropboxCollector(BaseStorageCollector):
     )
 
     def __init__(self, **kwargs):
+        '''This is the constructor for the Dropbox collector.'''
+        for key, value in self.indaleko_dropbox_collector_service.items():
+            if key not in kwargs:
+                kwargs[key] = value
+        if 'platform' not in kwargs:
+            kwargs['platform'] = self.dropbox_platform
+        if 'collector_data' not in kwargs:
+            kwargs['collector_data'] = self.collector_data
         self.config_dir = kwargs.get('config_dir', indaleko_default_config_dir)
-        self.dropbox_config_file = os.path.join(self.config_dir, IndalekoDropboxCollector.dropbox_config_file)
-        self.dropbox_token_file = os.path.join(self.config_dir, IndalekoDropboxCollector.dropbox_token_file)
+        self.dropbox_config_file = str(Path(self.config_dir) / IndalekoDropboxCloudStorageCollector.dropbox_config_file)
+        self.dropbox_token_file = str(Path(self.config_dir) / IndalekoDropboxCloudStorageCollector.dropbox_token_file)
+        self.dropbox_config = None
+        self.load_dropbox_config()
+        logging.debug('Dropbox config: %s', self.dropbox_config)
+        self.dropbox_credentials = None
+        self.load_dropbox_credentials()
+        if self.dropbox_credentials is None:
+            logging.debug('No Dropbox credentials found, reconstructing.')
+            self.query_user_for_credentials()
+        if self.dropbox_credentials is not None:
+            self.refresh_access_token()
+        self.dbx = dropbox.Dropbox(self.dropbox_credentials['token'])
+        self.user_info = self.dbx.users_get_current_account()
+        super().__init__(**kwargs)
+
+    def old__init__(self, **kwargs):
+        self.config_dir = kwargs.get('config_dir', indaleko_default_config_dir)
+        self.dropbox_config_file = os.path.join(self.config_dir, IndalekoDropboxCloudStorageCollector.dropbox_config_file)
+        self.dropbox_token_file = os.path.join(self.config_dir, IndalekoDropboxCloudStorageCollector.dropbox_token_file)
         self.dropbox_config = None
         self.load_dropbox_config()
         logging.debug('Dropbox config: %s', self.dropbox_config)
@@ -112,12 +139,12 @@ class IndalekoDropboxCollector(BaseStorageCollector):
         self.dbx = dropbox.Dropbox(self.dropbox_credentials['token'])
         self.user_info = self.dbx.users_get_current_account()
         if 'platform' not in kwargs:
-            kwargs['platform'] = IndalekoDropboxCollector.dropbox_platform
+            kwargs['platform'] = IndalekoDropboxCloudStorageCollector.dropbox_platform
         if 'collector_data' not in kwargs:
-            kwargs['collector_data'] = IndalekoDropboxCollector.dropbox_collector_data
+            kwargs['collector_data'] = IndalekoDropboxCloudStorageCollector.collector_data
         super().__init__(**kwargs,
-                         collector_name=IndalekoDropboxCollector.dropbox_collector_name,
-                         **IndalekoDropboxCollector.indaleko_dropbox_collector_service
+                         collector_name=IndalekoDropboxCloudStorageCollector.dropbox_collector_name,
+                         **IndalekoDropboxCloudStorageCollector.indaleko_dropbox_collector_service
         )
 
     def get_user_id(self):
@@ -125,7 +152,7 @@ class IndalekoDropboxCollector(BaseStorageCollector):
         assert hasattr(self.user_info, 'email'), f'{dir(self.user_info)}'
         return self.user_info.email
 
-    def load_dropbox_credentials(self) -> 'IndalekoDropboxCollector':
+    def load_dropbox_credentials(self) -> 'IndalekoDropboxCloudStorageCollector':
         '''This method retrieves the stored credentials.'''
         try:
             with open(self.dropbox_token_file,
@@ -138,26 +165,26 @@ class IndalekoDropboxCollector(BaseStorageCollector):
             logging.warning('No Dropbox credentials found in %s', self.dropbox_token_file)
         return self
 
-    def store_dropbox_credentials(self) -> 'IndalekoDropboxCollector':
+    def store_dropbox_credentials(self) -> 'IndalekoDropboxCloudStorageCollector':
         '''This method stores the credentials.'''
         assert self.dropbox_credentials is not None, 'No credentials to store'
         with open(self.dropbox_token_file, 'wt', encoding='utf-8-sig') as f:
             json.dump(self.dropbox_credentials, f, indent=4)
         return self
 
-    def set_dropbox_credentials(self, credentials : dict) -> 'IndalekoDropboxCollector':
+    def set_dropbox_credentials(self, credentials : dict) -> 'IndalekoDropboxCloudStorageCollector':
         '''This method sets the credentials.'''
         self.dropbox_credentials = credentials
         return self
 
-    def query_user_for_credentials(self) -> 'IndalekoDropboxCollector':
+    def query_user_for_credentials(self) -> 'IndalekoDropboxCloudStorageCollector':
         '''This method queries the user for credentials.'''
         params = {
             'response_type': 'code',
             'client_id': self.dropbox_config['app_key'],
             'token_access_type': 'offline'
         }
-        auth_request_url = f'{IndalekoDropboxCollector.dropbox_auth_url}?{urlencode(params)}'
+        auth_request_url = f'{IndalekoDropboxCloudStorageCollector.dropbox_auth_url}?{urlencode(params)}'
 
         print('Please visit the following URL to authorize this application:', auth_request_url)
         auth_code = input('Enter the authorization code here: ').strip()
@@ -168,7 +195,7 @@ class IndalekoDropboxCollector(BaseStorageCollector):
             'client_secret': self.dropbox_config['app_secret'],
         }
         response = requests.post(
-            IndalekoDropboxCollector.dropbox_token_url,
+            IndalekoDropboxCloudStorageCollector.dropbox_token_url,
             data=data,
             timeout=10)
         response.raise_for_status()
@@ -213,7 +240,7 @@ class IndalekoDropboxCollector(BaseStorageCollector):
             return True
         return time.time() > self.dropbox_credentials['expires_at']
 
-    def refresh_access_token(self) -> 'IndalekoDropboxCollector':
+    def refresh_access_token(self) -> 'IndalekoDropboxCloudStorageCollector':
         '''
         This method refreshes the access token.
         '''
@@ -229,7 +256,7 @@ class IndalekoDropboxCollector(BaseStorageCollector):
             'client_id': self.dropbox_config['app_key'],
             'client_secret': self.dropbox_config['app_secret']
         }
-        response = requests.post(IndalekoDropboxCollector.dropbox_token_url,
+        response = requests.post(IndalekoDropboxCloudStorageCollector.dropbox_token_url,
                                  data=data,
                                  timeout=10)
         response.raise_for_status()
@@ -244,7 +271,7 @@ class IndalekoDropboxCollector(BaseStorageCollector):
         self.store_dropbox_credentials()
         return self
 
-    def load_dropbox_config(self) -> 'IndalekoDropboxCollector':
+    def load_dropbox_config(self) -> 'IndalekoDropboxCloudStorageCollector':
         '''
         This method extracts the dropbox application configuration.  Config file
         must exist.
@@ -260,7 +287,7 @@ class IndalekoDropboxCollector(BaseStorageCollector):
         logging.debug('Loaded Dropbox config file: %s', self.dropbox_config_file)
         return self
 
-    def store_dropbox_config(self, app_id : str, app_secret : str) -> 'IndalekoDropboxCollector':
+    def store_dropbox_config(self, app_id : str, app_secret : str) -> 'IndalekoDropboxCloudStorageCollector':
         '''
         This method stores the Dropbox configuration.
         '''
@@ -280,7 +307,7 @@ class IndalekoDropboxCollector(BaseStorageCollector):
         '''
         assert 'user_id' in kwargs, 'No user_id found in kwargs'
         if 'collector_name' not in kwargs:
-            kwargs['collector_name'] = IndalekoDropboxCollector.dropbox_collector_name
+            kwargs['collector_name'] = IndalekoDropboxCloudStorageCollector.dropbox_collector_name
         return generate_file_name(**kwargs)
 
     def build_stat_dict(self,  obj : dropbox.files) -> dict:
@@ -302,7 +329,7 @@ class IndalekoDropboxCollector(BaseStorageCollector):
             'VideoMetadata',
         )
         metadata = {
-            'Indexer' : IndalekoDropboxCollector.indaleko_dropbox_collector_uuid,
+            'Indexer' : IndalekoDropboxCloudStorageCollector.indaleko_dropbox_collector_uuid,
             'ObjectIdentifier' : str(uuid.uuid4())
         }
         fields = []
@@ -321,7 +348,7 @@ class IndalekoDropboxCollector(BaseStorageCollector):
             if isinstance(attr, datetime.datetime):
                 metadata[field] = attr.isoformat()
                 continue
-            value = IndalekoDropboxCollector.convert_to_serializable(attr)
+            value = IndalekoDropboxCloudStorageCollector.convert_to_serializable(attr)
             if value is None:
                 continue
             metadata[field] = value
@@ -367,6 +394,7 @@ class IndalekoDropboxCollector(BaseStorageCollector):
         except dropbox.exceptions.ApiError as e:
             logging.error("Error enumerating folder, exception %s", e)
             print(f"Error enumerating folder, exception {e}")
+        self.data = metadata_list
         return metadata_list
 
     @staticmethod
@@ -380,90 +408,12 @@ class IndalekoDropboxCollector(BaseStorageCollector):
             suffix: suffix of the file to ingest (default is .json)
         '''
         prospects = BaseStorageCollector.find_collector_files(search_dir, prefix, suffix)
-        return [f for f in prospects if IndalekoDropboxCollector.dropbox_platform in f]
-
-class dropbox_collector_mixin(IndalekoBaseCLI.default_handler_mixin):
-    '''This is the mixin for the Dropbox collector.'''
-
-    @staticmethod
-    def get_pre_parser() -> Union[argparse.Namespace, None]:
-        '''Add the parameters for the local storage collector'''
-        parser = argparse.ArgumentParser(add_help=False)
-        parser.add_argument('--norecurse',
-                            help='Disable recursive directory indexing (for testing).',
-                            default=False,
-                            action='store_true')
-        return parser
-
-
-@staticmethod
-def local_run(keys: dict[str, str]) -> Union[dict,None]:
-    '''Run the collector'''
-    args = keys['args']
-    cli = keys['cli']
-    config_data = cli.get_config_data()
-    debug = hasattr(args, 'debug') and args.debug
-    if debug:
-        ic(config_data)
-    kwargs = {
-        'timestamp': config_data['Timestamp'],
-        'offline': args.offline
-    }
-    def collect(collector: IndalekoDropboxCollector):
-        '''local implementation of collect'''
-        data = collector.collect(not args.norecurse)
-        output_file = os.path.join(args.datadir, args.outputfile)
-        collector.write_data_to_file(data, output_file)
-    def extract_counters(**kwargs):
-        '''local implementation of extract_counters'''
-        collector = kwargs.get('collector')
-        if collector:
-            return ic(collector.get_counts())
-        else:
-            return {}
-    collector = IndalekoDropboxCollector(**kwargs)
-    perf_data = IndalekoPerformanceDataCollector.measure_performance(
-        collect,
-        source=IndalekoSourceIdentifierDataModel(
-            Identifier=collector.service_identifier,
-            Version = collector.service_version,
-            Description=collector.service_description),
-        description=collector.service_description,
-        MachineIdentifier=None,
-        process_results_func=extract_counters,
-        input_file_name=None,
-        output_file_name=str(Path(args.datadir) / args.outputfile),
-        collector=collector
-    )
-    if args.performance_db or args.performance_file:
-        perf_recorder = IndalekoPerformanceDataRecorder()
-        if args.performance_file:
-            perf_file = str(Path(args.datadir) / config_data['PerformanceDataFile'])
-            perf_recorder.add_data_to_file(perf_file, perf_data)
-            if (debug):
-                ic('Performance data written to ', config_data['PerformanceDataFile'])
-        if args.performance_db:
-            perf_recorder.add_data_to_db(perf_data)
-            if (debug):
-                ic('Performance data written to the database')
-
+        return [f for f in prospects if IndalekoDropboxCloudStorageCollector.dropbox_platform in f]
 
 def main():
     '''This is the entry point for using the Dropbox collector.'''
-    runner = IndalekoCLIRunner(
-        cli_data=IndalekoBaseCliDataModel(
-            Platform=None,
-            Service=IndalekoDropboxCollector.dropbox_collector_name,
-        ),
-        handler_mixin=dropbox_collector_mixin,
-        features=IndalekoBaseCLI.cli_features(
-            machine_config=False,
-            input=False,
-            platform=False,
-        ),
-        Run=local_run,
+    BaseCloudStorageCollector.cloud_collector_runner(
+        IndalekoDropboxCloudStorageCollector,
     )
-    runner.run()
-
 if __name__ == '__main__':
     main()

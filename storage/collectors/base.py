@@ -85,11 +85,15 @@ class BaseStorageCollector:
 
     cli_handler_mixin = None # there is no default handler mixin
 
+    # local requires it, cloud does not
+    requires_machine_config = True
+
     def __init__(self, **kwargs):
-        assert 'machine_config' in kwargs, 'machine_config must be specified'
-        self.machine_config = kwargs['machine_config']
-        if 'machine_id' not in kwargs:
-            kwargs['machine_id'] = self.machine_config.machine_id
+        if self.requires_machine_config:
+            assert 'machine_config' in kwargs, 'machine_config must be specified'
+            self.machine_config = kwargs['machine_config']
+            if 'machine_id' not in kwargs:
+                kwargs['machine_id'] = self.machine_config.machine_id
         self.debug = kwargs.get('debug', False)
         self.offline = False
         if 'offline' in kwargs:
@@ -112,17 +116,20 @@ class BaseStorageCollector:
         self.timestamp = kwargs.get('timestamp', datetime.datetime.now(datetime.timezone.utc).isoformat())
         assert isinstance(self.timestamp, str), 'timestamp must be a string'
         assert hasattr(self, 'collector_data'), 'Must be created by derived class'
-        if 'machine_id' in kwargs:
-            self.machine_id = kwargs['machine_id']
-        else:
-            assert 'machine_config' in kwargs, 'machine_config must be specified'
-            self.machine_config = kwargs['machine_config']
-            self.machine_id = self.machine_config.machine_id
-        assert hasattr(self, 'machine_id')
-        if 'storage_description' in kwargs:
-            assert isinstance(kwargs['storage_description'], str), \
-                f'storage_description must be a string, not {type(kwargs["storage_description"])}'
-            self.storage_description = kwargs['storage_description']
+        self.machine_id = None
+        self.storage_description = None
+        if self.requires_machine_config:
+            if 'machine_id' in kwargs:
+                self.machine_id = kwargs['machine_id']
+            else:
+                assert 'machine_config' in kwargs, 'machine_config must be specified'
+                self.machine_config = kwargs['machine_config']
+                self.machine_id = self.machine_config.machine_id
+            assert hasattr(self, 'machine_id')
+            if 'storage_description' in kwargs:
+                assert isinstance(kwargs['storage_description'], str), \
+                    f'storage_description must be a string, not {type(kwargs["storage_description"])}'
+                self.storage_description = kwargs['storage_description']
         if 'path' in kwargs:
             self.path = kwargs['path']
         else:
