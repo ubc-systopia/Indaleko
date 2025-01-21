@@ -66,7 +66,7 @@ from perf.perf_recorder import IndalekoPerformanceDataRecorder
 class IndalekoDropboxCloudStorageCollector(BaseCloudStorageCollector):
 
     dropbox_platform='Dropbox'
-    dropbox_collector_name='dropbox_collector'
+    dropbox_collector_name='collector'
 
     indaleko_dropbox_collector_uuid = '7c18f9c7-9153-427a-967a-55d942ac1f10'
     indaleko_dropbox_collector_service_name = 'Dropbox Collector'
@@ -90,7 +90,7 @@ class IndalekoDropboxCloudStorageCollector(BaseCloudStorageCollector):
 
     collector_data = IndalekoStorageCollectorDataModel(
         CollectorPlatformName=dropbox_platform,
-        CollectorServiceName=indaleko_dropbox_collector_service_name,
+        CollectorServiceName=dropbox_collector_name,
         CollectorServiceUUID=uuid.UUID(indaleko_dropbox_collector_uuid),
         CollectorServiceVersion=indaleko_dropbox_collector_service_version,
         CollectorServiceDescription=indaleko_dropbox_collector_service_description,
@@ -409,6 +409,23 @@ class IndalekoDropboxCloudStorageCollector(BaseCloudStorageCollector):
         '''
         prospects = BaseStorageCollector.find_collector_files(search_dir, prefix, suffix)
         return [f for f in prospects if IndalekoDropboxCloudStorageCollector.dropbox_platform in f]
+
+    class dropbox_collector_mixin(BaseCloudStorageCollector.cloud_collector_mixin):
+        '''This is the mixin for the Dropbox collector.'''
+
+        @staticmethod
+        def generate_output_file_name(keys : dict[str,str]) -> str:
+            '''This method is used to generate an output file name.  Note
+            that it assumes the keys are in the desired format. Don't just
+            pass in configuration data.'''
+            if not keys.get('UserId'):
+                collector = IndalekoDropboxCloudStorageCollector(
+                    config_dir = keys['ConfigDirectory']
+                )
+                keys['UserId'] = collector.get_user_id()
+            return BaseCloudStorageCollector.cloud_collector_mixin.generate_output_file_name(keys)
+
+    cli_handler_mixin = dropbox_collector_mixin
 
 def main():
     '''This is the entry point for using the Dropbox collector.'''

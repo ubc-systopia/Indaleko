@@ -449,6 +449,8 @@ class IndalekoBaseCLI:
                 kwargs['machine'] = keys['MachineConfigFileKeys']['machine']
             if 'StorageId' in keys and keys['StorageId']:
                 kwargs['storage'] = keys['StorageId']
+            if 'UserId' in keys and keys['UserId']:
+                kwargs['userid'] = keys['UserId']
             if 'suffix' not in keys:
                 kwargs['suffix'] = 'jsonl'
             return generate_file_name(**kwargs)
@@ -518,6 +520,19 @@ class IndalekoBaseCLI:
             '''
             return pre_parser
 
+        @staticmethod
+        def get_user_identifier(
+            config_data : dict[str,str],
+        ) -> Union[str,None]:
+            '''Default is no user identifier'''
+            if 'UserId' in config_data and config_data['UserId']:
+                user_id = config_data['UserId']
+            elif 'InputFileKeys' in config_data and \
+                 'userid' in config_data['InputFileKeys']:
+                user_id = config_data['InputFileKeys']['userid']
+            else:
+                user_id = None
+            return user_id
 
 
 def main():

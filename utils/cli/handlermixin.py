@@ -111,3 +111,7 @@ class IndalekoHandlermixin(ABC):
     @abstractmethod
     def get_storage_identifier(parser : argparse.Namespace) -> Union[str,None]:
         '''This method is used to get the storage identifier (if any) for a path'''
+
+    @abstractmethod
+    def get_user_identifier(parser : argparse.Namespace) -> Union[str,None]:
+        '''This method is used to get the user identifier (if any)'''

@@ -76,6 +76,7 @@ class IndalekoBaseCliDataModel(IndalekoBaseModel):
         description='Keys for the machine configuration file.'
     )
     StorageId: Optional[UUID] = None
+    UserID : Optional[str] = None
     ConfigDirectory : str = indaleko_default_config_dir
     DataDirectory : str = indaleko_default_data_dir
     LogDirectory : str = indaleko_default_log_dir

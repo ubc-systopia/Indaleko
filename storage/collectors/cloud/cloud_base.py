@@ -162,6 +162,7 @@ class BaseCloudStorageCollector(BaseStorageCollector):
         IndalekoCLIRunner(
             cli_data = IndalekoBaseCliDataModel(
                 Service=collector_class.get_collector_service_name(),
+                Platform=collector_class.get_collector_platform_name(),
             ),
             handler_mixin=collector_class.get_collector_cli_handler_mixin(),
             features=IndalekoBaseCLI.cli_features(
