@@ -126,6 +126,7 @@ class BaseLocalStorageCollector(BaseStorageCollector):
         # recorder_class = keys['parameters']['RecorderClass']
         machine_config_class = keys['parameters']['MachineConfigClass']
         collector_class = keys['parameters']['CollectorClass'] # unused for now
+        output_file = str(Path(args.datadir) / config_data['OutputFile'])
         # recorders have the machine_id so they need to find the
         kwargs = {
             'machine_config': cli.handler_mixin.load_machine_config(
@@ -144,7 +145,7 @@ class BaseLocalStorageCollector(BaseStorageCollector):
         else:
             ic(config_data)
         collector = collector_class(**kwargs)
-        def collect(collector : BaseLocalStorageCollector):
+        def collect(collector : BaseLocalStorageCollector, **kwargs):
             collector.collect()
         def extract_counters(**kwargs):
             collector = kwargs.get('collector')
@@ -184,13 +185,13 @@ class BaseLocalStorageCollector(BaseStorageCollector):
         # Step 1: normalize the data and gather the performance.
         if args.debug:
             ic('Normalizing data')
-        capture_performance(collect)
+        capture_performance(collect, output_file_name=output_file)
         # Step 2: record the time to save the object data.
         assert hasattr(collector, 'data'), 'No data collected'
         assert len(collector.data), 'No data in set'
         if args.debug:
             ic('Writing file system metadata to file')
-        capture_performance(collector.write_data_to_file)
+        capture_performance(collector.write_data_to_file, output_file)
 
     @staticmethod
     def local_collector_runner(

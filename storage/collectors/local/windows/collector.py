@@ -221,20 +221,6 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
                 last_drive = entry[2]
         self.data = data
 
-    @staticmethod
-    def write_data_to_file(collector : 'IndalekoWindowsLocalStorageCollector') -> None:
-        '''Write the data to a file'''
-        if not hasattr(collector, 'output_file_name'):
-            collector.output_file_name = collector.generate_windows_collector_file_name()
-        data_file_name, count = IndalekoWindowsLocalStorageCollector.record_data_in_file(
-            collector.data,
-            collector.data_dir,
-            collector.output_file_name
-        )
-        logging.info('Wrote %d entries to %s', count, data_file_name)
-        if hasattr(collector, 'output_count'):
-            collector.output_count += count
-
     class windows_local_collector_mixin(BaseLocalStorageCollector.local_collector_mixin):
 
         @staticmethod

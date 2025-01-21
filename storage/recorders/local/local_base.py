@@ -104,6 +104,7 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
             ic(config_data)
         recorder_class = keys['parameters']['RecorderClass']
         machine_config_class = keys['parameters']['MachineConfigClass']
+        output_file = str(Path(args.datadir) / config_data['OutputFile'])
         # collector_class = keys['parameters']['CollectorClass'] # unused for now
         # recorders have the machine_id so they need to find the
         # matching machine configuration file.
@@ -124,7 +125,7 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
             'storage' in config_data['InputFileKeys'] and \
             config_data['InputFileKeys']['storage']:
             kwargs['storage_description'] = config_data['InputFileKeys']['storage']
-        def record(recorder : BaseLocalStorageRecorder):
+        def record(recorder : BaseLocalStorageRecorder, **kwargs):
             recorder.record()
         def extract_counters(**kwargs):
             recorder = kwargs.get('recorder')
@@ -170,7 +171,7 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
         # Step 2: record the time to save the object data.
         if args.debug:
             ic('Writing object data to file')
-        capture_performance(recorder.write_object_data_to_file, args.outputfile)
+        capture_performance(recorder.write_object_data_to_file, output_file_name=output_file)
         # Step 3: record the time to save the edge data.
         if args.debug:
             ic('Writing edge data to file')

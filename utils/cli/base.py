@@ -430,12 +430,10 @@ class IndalekoBaseCLI:
                 return None
             # the hyphen at the end ensures we don't pick up partial matches
             selection_keys = [f'{key}={value}-' for key, value in keys.items()]
-            ic(data_dir)
-            ic(keys)
-            return ic([
+            return [
                 fname for fname, _ in find_candidate_files(selection_keys, str(data_dir))
                 if fname.startswith(prefix) and fname.endswith(suffix) and all([key in fname for key in selection_keys])
-            ])
+            ]
 
         @staticmethod
         def generate_output_file_name(keys : dict[str,str]) -> str:

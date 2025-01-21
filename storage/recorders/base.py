@@ -277,7 +277,6 @@ class BaseStorageRecorder:
         'output_dir' : target_dir,
         }
         if hasattr(self, 'machine_id') and self.machine_id is not None:
-            assert False
             kwargs['machine'] = str(uuid.UUID(self.machine_id).hex)
         if hasattr(self, 'storage_description') and self.storage_description is not None:
             kwargs['storage'] = str(uuid.UUID(self.storage_description).hex)
