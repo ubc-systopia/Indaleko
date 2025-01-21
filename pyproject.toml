@@ -15,6 +15,7 @@ dependencies = [
     "Faker==29.0.0",
     "Flask==3.1.0",
     "geopy==2.4.1",
+    "gitpython==3.1.44",
     "google_api_python_client==2.154.0",
     "google_auth_oauthlib==1.2.1",
     "icecream==2.1.3",
