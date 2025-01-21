@@ -84,11 +84,11 @@ class IndalekoPerformanceDataCollector:
         try:
             '''Run the task.'''
             start_clock = time.perf_counter()
-            result = task_func(*args, **kwargs)
+            result = task_func(*args, output_file_name=output_file_name, **kwargs)
             end_clock = time.perf_counter()
             if process_results_func is not None:
                 try:
-                    results_data = process_results_func(*args, **kwargs, result=result)
+                    results_data = process_results_func(*args, output_file_name=output_file_name, **kwargs, result=result)
                 except TypeError as e:
                     ic(f'{process_results_func} is not a callable type: {e} ')
             elapsed_time = end_clock - start_clock

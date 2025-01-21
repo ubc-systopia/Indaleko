@@ -353,7 +353,7 @@ class BaseStorageCollector:
             return None
 
 
-    def collect(self) -> None:
+    def collect(self, **kwargs) -> None:
         '''
         This is the main function for the collector.  Can be overridden
         for platforms that require additional processing.
@@ -374,14 +374,22 @@ class BaseStorageCollector:
 
 
     @staticmethod
-    def write_data_to_file(collector : 'BaseStorageCollector') -> None:
+    def write_data_to_file(
+        collector : 'BaseStorageCollector',
+        output_file_name : str = None
+    ) -> None:
         '''Write the data to a file'''
-        if not hasattr(collector, 'output_file_name'):
-            collector.output_file_name = collector.generate_collector_file_name()
+        if output_file_name is None:
+            if hasattr(collector, 'output_file_name'):
+                output_file_name = collector.output_file_name
+            else:
+                output_file_name = collector.generate_collector_file_name()
+                ic('Warning: implicit output file name being used')
+                assert False
         data_file_name, count = collector.record_data_in_file(
             collector.data,
             collector.data_dir,
-            collector.output_file_name
+            output_file_name
         )
         logging.info('Wrote %d entries to %s', count, data_file_name)
         if hasattr(collector, 'output_count'):

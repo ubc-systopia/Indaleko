@@ -83,9 +83,9 @@ class BaseCloudStorageCollector(BaseStorageCollector):
         @staticmethod
         def get_additional_parameters(pre_parser):
             '''This function is used to add additional parameters to the pre-parser.'''
-            pre_parser.add_argument('--recurse',
+            pre_parser.add_argument('--norecurse',
                                     action='store_true',
-                                    help='Recurse into subdirectories (default=False) - useful for debugging')
+                                    help='Do not recurse into subdirectories (default=False) - useful for debugging')
 
             return pre_parser
 
@@ -104,12 +104,12 @@ class BaseCloudStorageCollector(BaseStorageCollector):
         kwargs = {
             'timestamp' : config_data['Timestamp'],
             'path' : args.path,
-            'recurse' : args.recurse,
+            'recurse' : not args.norecurse,
             'offline' : args.offline,
         }
         collector = collector_class(**kwargs)
-        def collect(collector : BaseCloudStorageCollector) -> None:
-            collector.collect()
+        def collect(collector : BaseCloudStorageCollector, **kwargs) -> None:
+            collector.collect(recursive=not args.norecurse)
         def extract_counters(**kwargs) -> None:
             collector = kwargs.get('collector')
             if collector:
@@ -119,6 +119,7 @@ class BaseCloudStorageCollector(BaseStorageCollector):
         def capture_performance(
                 task_func : Callable[..., Any],
                 output_file_name : Union[Path, str] = None) -> None:
+            assert output_file_name
             perf_data = IndalekoPerformanceDataCollector.measure_performance(
                 task_func,
                 source=IndalekoSourceIdentifierDataModel(
@@ -146,13 +147,13 @@ class BaseCloudStorageCollector(BaseStorageCollector):
                     # Step 1: normalize the data and gather the performance.
         if args.debug:
             ic('Normalizing data')
-        capture_performance(collect)
+        capture_performance(collect, config_data['OutputFile'])
         # Step 2: record the time to save the object data.
         assert hasattr(collector, 'data'), 'No data collected'
         assert len(collector.data), 'No data in set'
         if args.debug:
             ic('Writing file system metadata to file')
-        capture_performance(collector.write_data_to_file)
+        capture_performance(collector.write_data_to_file, config_data['OutputFile'])
 
     @staticmethod
     def cloud_collector_runner(

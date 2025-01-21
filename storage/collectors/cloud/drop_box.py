@@ -299,17 +299,6 @@ class IndalekoDropboxCloudStorageCollector(BaseCloudStorageCollector):
             json.dump(self.dropbox_config, f, indent=4)
         return self
 
-    @staticmethod
-    def generate_dropbox_indexer_file_name(**kwargs):
-        '''
-        This method generates the name of the file that will contain the metadata
-        of the files in the Dropbox folder.
-        '''
-        assert 'user_id' in kwargs, 'No user_id found in kwargs'
-        if 'collector_name' not in kwargs:
-            kwargs['collector_name'] = IndalekoDropboxCloudStorageCollector.dropbox_collector_name
-        return generate_file_name(**kwargs)
-
     def build_stat_dict(self,  obj : dropbox.files) -> dict:
         '''
         This method builds a dictionary with the metadata of a file stored in
