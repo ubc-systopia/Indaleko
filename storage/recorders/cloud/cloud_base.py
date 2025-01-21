@@ -203,7 +203,10 @@ class BaseCloudStorageRecorder(BaseStorageRecorder):
                 },
             ),
             handler_mixin=recorder_class.cloud_recorder_mixin,
-            Run=recorder_class.local_run,
+            features=IndalekoBaseCLI.cli_features(
+                machine_config=False,
+            ),
+            Run=BaseCloudStorageRecorder.local_run,
             RunParameters={
                 'CollectorClass' : collector_class,
                 'RecorderClass' : recorder_class,

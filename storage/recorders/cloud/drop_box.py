@@ -111,9 +111,6 @@ class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
 
     def __init__(self, **kwargs) -> None:
         '''Build a new Dropbox recorder.'''
-        for key, value in self.recorder_data.serialize().items():
-            if key not in kwargs:
-                kwargs[key] = value
         for key, value in self.dropbox_recorder_service.items():
             if key not in kwargs:
                 kwargs[key] = value

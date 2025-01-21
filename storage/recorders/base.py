@@ -691,6 +691,51 @@ class BaseStorageRecorder:
         return 'S_IFDIR' in obj.args['PosixFileAttributes'] or \
                'FILE_ATTRIBUTE_DIRECTORY' in getattr(obj.args, 'WindowsFileAttributes', '')
 
+    def normalize(self) -> None:
+        '''Normalize the data from the collector'''
+        self.load_collector_data_from_file()
+        for item in self.collector_data:
+            try:
+                obj = self.normalize_collector_data(item)
+            except OSError as e:
+                logging.error('Error normalizing data: %s', e)
+                logging.error('Data: %s', item)
+                self.error_count += 1
+                continue
+            if self.is_object_directory(obj):
+                if 'Path' not in obj.indaleko_object.Record.Attributes:
+                    logging.warning('Directory object does not have a path: %s', obj.serialize())
+                    continue # skip
+                self.dir_data_by_path[self.get_object_path(obj)] = obj
+                self.dir_data.append(obj)
+                self.dir_count += 1
+            else:
+                self.file_data.append(obj)
+                self.file_count += 1
+
+    def record(self) -> None:
+        '''
+        This function processes and records the collector file and emits the data needed to
+        upload to the database.
+        '''
+        self.normalize()
+        assert len(self.dir_data) + len(self.file_data) > 0, 'No data to record'
+        self.build_dirmap()
+        self.build_edges()
+        kwargs={
+            'platform' : self.platform,
+            'service' : self.recorder_data.RecorderServiceName,
+            'collection' : IndalekoDBCollections.Indaleko_Object_Collection,
+            'timestamp' : self.timestamp,
+            'output_dir' : self.data_dir,
+        }
+        if hasattr(self, 'machine_id') and self.machine_id is not None:
+            kwargs['machine'] = str(uuid.UUID(self.machine_id).hex)
+        if hasattr(self, 'storage_description') and self.storage_description:
+            kwargs['storage'] = self.storage_description
+        self.output_object_file = self.generate_output_file_name(**kwargs)
+        kwargs['collection'] = IndalekoDBCollections.Indaleko_Relationship_Collection
+        self.output_edge_file = self.generate_output_file_name(**kwargs)
 
 
 def main():
