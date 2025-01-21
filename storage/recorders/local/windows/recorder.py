@@ -38,14 +38,12 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 # pylint: disable=wrong-import-position
-from db import IndalekoDBCollections, IndalekoServiceManager
-from data_models import IndalekoSourceIdentifierDataModel
+from db import IndalekoServiceManager
 from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 from platforms.unix import UnixFileAttributes
 from platforms.windows_attributes import IndalekoWindows
 from storage import IndalekoObject
 from storage.collectors.local.windows.collector import IndalekoWindowsLocalStorageCollector
-from storage.recorders.base import BaseStorageRecorder
 from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from storage.recorders.local.local_base import BaseLocalStorageRecorder
 from utils.decorators import type_check
@@ -187,17 +185,6 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
                 kwargs['timestamp'] = self.timestamp
         indaleko_object = IndalekoObject(**kwargs)
         return indaleko_object
-
-    def get_object_path(self : 'BaseLocalStorageRecorder', obj : IndalekoObject):
-        '''Given an Indaleko object, return a valid local path to the object'''
-        return str(Path(obj['Path']) / obj['Volume GUID'])
-
-
-    def is_object_directory(self : 'BaseLocalStorageRecorder', obj: IndalekoObject) -> bool:
-        '''Return True if the object is a directory'''
-        return 'S_IFDIR' in obj.args['PosixFileAttributes'] or \
-               'FILE_ATTRIBUTE_DIRECTORY' in obj.args['WindowsFileAttributes']
-
 
 def main():
     '''This is the CLI handler for the Windows local storage collector.'''

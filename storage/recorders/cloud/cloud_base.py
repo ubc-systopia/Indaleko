@@ -1,5 +1,5 @@
 """
-This is the generic class for an Indaleko Local Storage Recorder.
+This is the generic class for an Indaleko Cloud Storage Recorder.
 
 An Indaleko local storage recorder takes information about some (or all) of the data that is stored in
 local file system(s) on this machine. It is derived from the generic base for all
@@ -30,6 +30,7 @@ import logging
 import os
 from pathlib import Path
 import sys
+import tempfile
 import uuid
 
 from typing import Union, Callable, Any
@@ -58,39 +59,40 @@ from storage.collectors import BaseStorageCollector
 from storage.recorders import BaseStorageRecorder
 # pylint: enable=wrong-import-position
 
-class BaseLocalStorageRecorder(BaseStorageRecorder):
-    '''This is the base class for all local storage recorders in Indaleko.'''
+class BaseCloudStorageRecorder(BaseStorageRecorder):
+    '''This is the base class for all cloud storage recorder in Indaleko.'''
+
+    def __init__(self, **kwargs):
+        '''Build a new cloud storage recorder.'''
+        if 'args' in kwargs:
+            self.args = kwargs['args']
+            self.output_type = getattr(self.args, 'output_type', 'file')
+        else:
+            self.args = None
+            self.output_type = 'file'
+        super().__init__(**kwargs)
+        self.dir_data_by_path = {}
+        self.dir_data = []
+        self.file_data = []
+        self.dirmap = {}
+        self.dir_edges = []
+        self.collector_data = []
 
     def find_collector_files(self) -> list:
-        '''This function should be overridden: it is used to find the collector files for the recorder.'''
+        '''
+        This function is used to find the collector data files for the recorder.
+        It is expected to be overridden in a subclass.
+        '''
         raise NotImplementedError('This function must be overridden by the derived class')
 
     @staticmethod
-    def load_machine_config(keys: dict[str, str]) -> IndalekoMachineConfig:
-        '''Load the machine configuration'''
-        if keys.get('debug'):
-            ic(f'local_recorder_mixin.load_machine_config: {keys}')
-        if 'machine_config_file' not in keys:
-            raise ValueError(f'{inspect.currentframe().f_code.co_name}: machine_config_file must be specified')
-        offline = keys.get('offline', False)
-        platform_class = keys['class'] # must exist
-        return platform_class.load_config_from_file(
-            config_file=str(keys['machine_config_file']),
-            offline=offline)
-
-    @staticmethod
-    def get_local_storage_recorder() -> 'BaseLocalStorageRecorder':
-        '''This function should be overridden: it is used to create the appropriate local storage recorder.'''
+    def get_cloud_storage_recorder() -> 'BaseCloudStorageRecorder':
+        '''This function is used to get the cloud storage recorder.'''
         raise NotImplementedError('This function must be overridden by the derived class')
 
-    class local_recorder_mixin(BaseStorageRecorder.base_recorder_mixin):
-        '''This is the mixin for the local recorder'''
 
-        @staticmethod
-        def load_machine_config(keys : dict[str, str]) -> IndalekoMachineConfig:
-            assert 'class' in keys, '(machine config) class must be specified'
-            return BaseLocalStorageRecorder.load_machine_config(keys)
-
+    class cloud_recorder_mixin(BaseStorageRecorder.base_recorder_mixin):
+        '''This is the mixin for cloud storage recorders.'''
 
 
     @staticmethod
@@ -103,18 +105,10 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
         if debug:
             ic(config_data)
         recorder_class = keys['parameters']['RecorderClass']
-        machine_config_class = keys['parameters']['MachineConfigClass']
         # collector_class = keys['parameters']['CollectorClass'] # unused for now
         # recorders have the machine_id so they need to find the
         # matching machine configuration file.
         kwargs = {
-            'machine_config': cli.handler_mixin.load_machine_config(
-                {
-                    'machine_config_file' : str(Path(args.configdir) / args.machine_config),
-                    'offline' : args.offline,
-                    'class' : machine_config_class
-                }
-            ),
             'timestamp': config_data['Timestamp'],
             'input_file' : str(Path(args.datadir) / args.inputfile),
             'offline': args.offline,
@@ -124,7 +118,7 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
             'storage' in config_data['InputFileKeys'] and \
             config_data['InputFileKeys']['storage']:
             kwargs['storage_description'] = config_data['InputFileKeys']['storage']
-        def record(recorder : BaseLocalStorageRecorder):
+        def record(recorder : BaseCloudStorageRecorder):
             recorder.record()
         def extract_counters(**kwargs):
             recorder = kwargs.get('recorder')
@@ -145,7 +139,7 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
                     Description=recorder.get_recorder_service_description()
                 ),
                 description=recorder.get_recorder_service_description(),
-                MachineIdentifier=uuid.UUID(kwargs['machine_config'].machine_id),
+                MachineIdentifier=None,
                 process_results_func=extract_counters,
                 input_file_name=str(Path(args.datadir) / args.inputfile),
                 output_file_name=output_file_name,
@@ -196,72 +190,23 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
             capture_performance(recorder.bulk_upload_relationship_data)
 
     @staticmethod
-    def local_recorder_runner(
+    def cloud_recorder_runner(
         collector_class: BaseStorageCollector,
-        recorder_class : BaseStorageRecorder,
-        machine_config_class : IndalekoMachineConfig) -> None:
-        '''This is the CLI handler for local storage recorders.'''
+        recorder_class : BaseStorageRecorder) -> None:
+        '''This is the CLI handler for cloud storage recorders.'''
         runner = IndalekoCLIRunner(
-            cli_data=IndalekoBaseCliDataModel(
+            cli_data = IndalekoBaseCliDataModel(
                 Service=recorder_class.get_recorder_service_name(),
                 InputFileKeys={
                     'plt' : collector_class.get_collector_platform_name(),
                     'svc' : collector_class.get_collector_service_name(),
                 },
             ),
-            handler_mixin=recorder_class.local_recorder_mixin,
+            handler_mixin=recorder_class.cloud_recorder_mixin,
             Run=recorder_class.local_run,
             RunParameters={
                 'CollectorClass' : collector_class,
-                'MachineConfigClass' : machine_config_class,
-                'RecorderClass' : recorder_class
+                'RecorderClass' : recorder_class,
             }
         )
         runner.run()
-
-    def normalize(self) -> None:
-        '''Normalize the data from the collector'''
-        self.load_collector_data_from_file()
-        # Step 1: build the normalized data
-        for item in self.collector_data:
-            try:
-                obj = self.normalize_collector_data(item)
-            except OSError as e:
-                logging.error('Error normalizing data: %s', e)
-                logging.error('Data: %s', item)
-                self.error_count += 1
-                continue
-            if self.is_object_directory(obj):
-                if 'Path' not in obj.indaleko_object.Record.Attributes:
-                    logging.warning('Directory object does not have a path: %s', obj.serialize())
-                    continue # skip
-                self.dir_data_by_path[self.get_object_path(obj)] = obj
-                self.dir_data.append(obj)
-                self.dir_count += 1
-            else:
-                self.file_data.append(obj)
-                self.file_count += 1
-
-    def record(self) -> None:
-        '''
-        This function processes and records the collector file and emits the data needed to
-        upload to the database.
-        '''
-        self.normalize()
-        assert len(self.dir_data) + len(self.file_data) > 0, 'No data to record'
-        self.build_dirmap()
-        self.build_edges()
-        kwargs={
-            'machine' : self.machine_id,
-            'platform' : self.platform,
-            'service' : self.recorder_data.RecorderServiceName,
-            'collection' : IndalekoDBCollections.Indaleko_Object_Collection,
-            'timestamp' : self.timestamp,
-            'output_dir' : self.data_dir,
-        }
-        if self.storage_description:
-            kwargs['storage'] = self.storage_description
-
-        self.output_object_file = self.generate_output_file_name(**kwargs)
-        kwargs['collection'] = IndalekoDBCollections.Indaleko_Relationship_Collection
-        self.output_edge_file = self.generate_output_file_name(**kwargs)

@@ -1,5 +1,5 @@
 '''
-IndalekoDropboxIngester.py
+IndalekoDropboxRecorder.py
 
 This script is used to ingest the files that have been indexed from Dropbox.  It
 will create a JSONL file with the ingested metadata suitable for uploading to
@@ -24,51 +24,74 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import argparse
 import datetime
 from icecream import ic
-import logging
-import os
 import json
 import jsonlines
+import logging
+import os
+import sys
 import tempfile
 import uuid
-import datetime
 
-from IndalekoIngester import IndalekoIngester
-from Indaleko import Indaleko
-from IndalekoDropboxIndexer import IndalekoDropboxCollector
-from IndalekoServiceManager import IndalekoServiceManager
-import IndalekoLogging
-from IndalekoObject import IndalekoObject
-from IndalekoUnix import UnixFileAttributes
-from IndalekoWindows import IndalekoWindows
-from IndalekoRelationshipContains import IndalekoRelationshipContains
-from IndalekoRelationshipContained import IndalekoRelationshipContainedBy
+from icecream import ic
+from typing import Any, Union, Callable
+
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
 
 
-class IndalekoDropboxIngester(IndalekoIngester):
+# pylint: disable=wrong-import-position
+from db import IndalekoServiceManager
+from platforms.windows.machine_config import IndalekoWindowsMachineConfig
+from platforms.unix import UnixFileAttributes
+from platforms.windows_attributes import IndalekoWindows
+from storage import IndalekoObject
+from storage.collectors.cloud.drop_box import IndalekoDropboxCloudStorageCollector
+from storage.recorders.data_model import IndalekoStorageRecorderDataModel
+from storage.recorders.cloud.cloud_base import BaseCloudStorageRecorder
+from utils.decorators import type_check
+from utils.i_logging import IndalekoLogging
+from utils.misc.file_name_management import find_candidate_files
+from utils.misc.data_management import encode_binary_data
+# pylint: enable=wrong-import-position
+
+
+class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
     '''
     This class handles ingestion of metadata from the Indaleko Dropbox indexer.
     '''
 
-    dropbox_ingester_uuid = '389ce9e0-3924-4cd1-be8d-5dc4b268e668'
-    dropbox_ingester_service = IndalekoServiceManager().register_service(
-        service_name = 'Dropbox Ingester',
-        service_description = 'This service ingests captured index info from Dropbox.',
-        service_version = '1.0',
-        service_type = 'Ingester',
-        service_id = dropbox_ingester_uuid,
+    dropbox_recorder_uuid = '389ce9e0-3924-4cd1-be8d-5dc4b268e668'
+    dropbox_recorder_service = {
+        'service_name' : 'Dropbox Recorder',
+        'service_description' : 'This service records metadata collected from Dropbox.',
+        'service_version' : '1.0',
+        'service_type' : IndalekoServiceManager.service_type_storage_recorder,
+        'service_identifier' : dropbox_recorder_uuid,
+    }
+
+    dropbox_platform = IndalekoDropboxCloudStorageCollector.dropbox_platform
+    dropbox_recorder = 'dropbox_recorder'
+
+    recorder_data = IndalekoStorageRecorderDataModel(
+        RecorderPlatformName=dropbox_platform,
+        RecorderServiceName=dropbox_recorder,
+        RecorderServiceUUID=uuid.UUID(dropbox_recorder_uuid),
+        RecorderServiceVersion=dropbox_recorder_service['service_version'],
+        RecorderServiceDescription=dropbox_recorder_service['service_description'],
     )
 
-    dropbox_platform = IndalekoDropboxCollector.dropbox_platform
-    dropbox_ingester = 'dropbox_ingester'
-
-    def __init__(self, **kwargs) -> None:
+    def __old_init__(self, **kwargs) -> None:
         if 'input_file' not in kwargs:
             raise ValueError('input_file must be specified')
         if 'timestamp' not in kwargs:
             raise ValueError('timestamp must be specified')
         if 'platform' not in kwargs:
             raise ValueError('platform must be specified')
-        for key, value in self.dropbox_ingester_service.serialize().items():
+        for key, value in self.dropbox_recorder_service.serialize().items():
             if key not in kwargs:
                 kwargs[key] = value
         super().__init__(**kwargs)
@@ -82,25 +105,28 @@ class IndalekoDropboxIngester(IndalekoIngester):
             self.output_file = kwargs['output_file']
         self.indexer_data = []
         self.source = {
-            'Identifier' : self.dropbox_ingester_uuid,
+            'Identifier' : self.dropbox_recorder_uuid,
             'Version' : '1.0',
         }
 
-    def load_indexer_data_from_file(self) -> None:
-        '''This function loads the indexer data from the file.'''
-        if self.input_file is None:
-            raise ValueError('input_file must be specified')
-        if self.input_file.endswith('.jsonl'):
-            with jsonlines.open(self.input_file) as reader:
-                for entry in reader:
-                    self.indexer_data.append(entry)
-        elif self.input_file.endswith('.json'):
-            with open(self.input_file, 'r', encoding='utf-8-sig') as file:
-                self.indexer_data = json.load(file)
-        else:
-            raise ValueError(f'Input file {self.input_file} is an unknown type')
-        if not isinstance(self.indexer_data, list):
-            raise ValueError('indexer_data is not a list')
+    def __init__(self, **kwargs) -> None:
+        '''Build a new Dropbox recorder.'''
+        for key, value in self.recorder_data.serialize().items():
+            if key not in kwargs:
+                kwargs[key] = value
+        for key, value in self.dropbox_recorder_service.items():
+            if key not in kwargs:
+                kwargs[key] = value
+        if 'platform' not in kwargs:
+            kwargs['platform'] = self.dropbox_platform
+        if 'recorder' not in kwargs:
+            kwargs['recorder'] = self.dropbox_recorder
+        super().__init__(**kwargs)
+        self.output_file = kwargs.get('output_file', self.generate_file_name())
+        self.source = {
+            'Identifier' : self.dropbox_recorder_uuid,
+            'Version' : self.dropbox_recorder_service['service_version'],
+        }
 
     def build_dummy_root_dir_entry(self) -> IndalekoObject:
         '''This is used to build a dummy root directory object.'''
@@ -114,11 +140,26 @@ class IndalekoDropboxIngester(IndalekoIngester):
             'name' : '',
             'user_id' : self.user_id
         }
-        return self.normalize_index_data(dummy_attributes)
+        return self.normalize_collector_data(dummy_attributes)
+
+    def find_collector_files(self) -> list:
+        '''This function finds the files to record:
+            search_dir: path to the search directory
+            prefix: prefix of the file to record
+            suffix: suffix of the file to record (default is .json)
+        '''
+        if self.data_dir is None:
+            raise ValueError('data_dir must be specified')
+        return [x for x in find_candidate_files(
+            [
+                IndalekoDropboxCloudStorageCollector.dropbox_platform,
+                IndalekoDropboxCloudStorageCollector.dropbox_collector_name
+            ],
+            self.data_dir)
+        ]
 
 
-
-    def normalize_index_data(self, data : dict ) -> IndalekoObject:
+    def normalize_collector_data(self, data : dict ) -> IndalekoObject:
         '''
         Given some metadata, this will create a record that can be inserted into the
         Object collection.
@@ -175,7 +216,7 @@ class IndalekoDropboxIngester(IndalekoIngester):
             raise ValueError('Path does not end with child name')
         kwargs = {
             'source' : self.source,
-            'raw_data' : Indaleko.encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
+            'raw_data' : encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
             'URI' : 'https://www.dropbox.com/home' + data['path_display'],
             'Path' : path,
             'ObjectIdentifier' : data['ObjectIdentifier'],
@@ -188,7 +229,7 @@ class IndalekoDropboxIngester(IndalekoIngester):
         }
         return IndalekoObject(**kwargs)
 
-    def generate_output_file_name(self, **kwargs) -> str:
+    def xx_generate_output_file_name(self, **kwargs) -> str:
         '''
         Given a set of parameters, generate a file name for the output
         file.
@@ -200,40 +241,21 @@ class IndalekoDropboxIngester(IndalekoIngester):
         if output_dir is None:
             output_dir = self.data_dir
         kwargs['ingester'] = self.ingester
-        name = Indaleko.generate_file_name(**kwargs)
+        name = self.generate_file_name(**kwargs)
         return os.path.join(output_dir, name)
 
-    def generate_file_name(self, target_dir : str = None, suffix = None) -> str:
-        '''This will generate a file name for the ingester output file.'''
-        if suffix is None:
-            suffix = self.file_suffix
-        kwargs = {
-        'prefix' : self.file_prefix,
-        'suffix' : suffix,
-        'platform' : self.platform,
-        'user_id' : self.user_id,
-        'service' : 'ingest',
-        'ingester' : self.ingester,
-        'collection' : Indaleko.Indaleko_Object_Collection,
-        'timestamp' : self.timestamp,
-        'output_dir' : target_dir,
-        }
-        if self.storage_description is not None:
-            kwargs['storage'] = str(uuid.UUID(self.storage_description).hex)
-        return self.generate_output_file_name(**kwargs)
-
-    def ingest(self) -> None:
+    def xx_ingest(self) -> None:
         '''
         This method ingests the metadata from the Dropbox indexer file and
         writes it to a JSONL file.
         '''
-        self.load_indexer_data_from_file()
+        self.load_collector_data_from_file()
         dir_data_by_path = {}
         dir_data = [self.build_dummy_root_dir_entry()]
         file_data = []
         for item in self.indexer_data:
             try:
-                obj = self.normalize_index_data(item)
+                obj = self.normalize_collector_data(item)
             except OSError as e:
                 logging.error('Error normalizing data: %s', e)
                 logging.error('Data: %s', item)
@@ -265,7 +287,7 @@ class IndalekoDropboxIngester(IndalekoIngester):
             dirmap_lower[path.lower()] = item.args['ObjectIdentifier']
         dir_edges = []
         source = {
-            'Identifier' : self.dropbox_ingester_uuid,
+            'Identifier' : self.dropbox_recorder_uuid,
             'Version' : '1.0',
         }
         for item in dir_data + file_data:
@@ -382,7 +404,15 @@ class IndalekoDropboxIngester(IndalekoIngester):
         print('Load string: ', load_string)
         return
 
-def main():
+    def get_object_path(self : 'IndalekoDropboxCloudStorageRecorder', obj : IndalekoObject) -> str:
+        '''This method returns the path for the object.'''
+        return obj['Path']
+
+    def is_object_directory(self : 'IndalekoDropboxCloudStorageRecorder', obj : IndalekoObject) -> bool:
+        '''This method returns True if the object is a directory.'''
+        return 'S_IFDIR' in obj['PosixFileAttributes'] or 'FILE_ATTRIBUTE_DIRECTORY' in obj['WindowsFileAttributes']
+
+def old_main():
     '''This is the main handler for the Dropbox ingester.'''
     logging_levels = Indaleko.get_logging_levels()
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
@@ -404,7 +434,7 @@ def main():
                             type=str)
     pre_args , _ = pre_parser.parse_known_args()
     indaleko_logging = IndalekoLogging.IndalekoLogging(
-        platform=IndalekoDropboxIngester.dropbox_platform,
+        platform=IndalekoDropboxCloudStorageRecorder.dropbox_platform,
         service_name ='ingester',
         log_dir = pre_args.logdir,
         log_level = pre_args.loglevel,
@@ -428,11 +458,11 @@ def main():
     input_timestamp = timestamp
     if 'timestamp' in input_metadata:
         input_timestamp = input_metadata['timestamp']
-    input_platform = IndalekoDropboxIngester.dropbox_platform
+    input_platform = IndalekoDropboxCloudStorageRecorder.dropbox_platform
     if 'platform' in input_metadata:
         input_platform = input_metadata['platform']
-    if input_platform != IndalekoDropboxIngester.dropbox_platform:
-        ic(f'Input platform {input_platform} does not match expected platform {IndalekoDropboxIngester.dropbox_platform}')
+    if input_platform != IndalekoDropboxCloudStorageRecorder.dropbox_platform:
+        ic(f'Input platform {input_platform} does not match expected platform {IndalekoDropboxCloudStorageRecorder.dropbox_platform}')
     file_prefix = IndalekoIngester.default_file_prefix
     if 'file_prefix' in input_metadata:
         file_prefix = input_metadata['file_prefix']
@@ -440,10 +470,10 @@ def main():
     if 'file_suffix' in input_metadata:
         file_suffix = input_metadata['file_suffix']
     input_file = os.path.join(args.datadir, args.input)
-    ingester = IndalekoDropboxIngester(
+    ingester = IndalekoDropboxCloudStorageRecorder(
         timestamp=input_timestamp,
         platform=input_platform,
-        ingester=IndalekoDropboxIngester.dropbox_ingester,
+        ingester=IndalekoDropboxCloudStorageRecorder.dropbox_recorder,
         file_prefix=file_prefix,
         file_suffix=file_suffix,
         data_dir=args.datadir,
@@ -464,6 +494,12 @@ def main():
     logging.info('Total: %d', total)
     logging.info('Indaleko Dropbox Ingester completed.')
 
+def main() -> None:
+    '''This is the main handler for the Dropbox recorder.'''
+    BaseCloudStorageRecorder.cloud_recorder_runner(
+        IndalekoDropboxCloudStorageCollector,
+        IndalekoDropboxCloudStorageRecorder,
+    )
 
 if __name__ == '__main__':
     main()
