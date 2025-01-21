@@ -140,7 +140,6 @@ class BaseStorageRecorder:
         if 'file_suffix' in kwargs:
             self.file_suffix = kwargs['file_suffix']
         self.file_suffix = self.file_suffix.replace('-', '_')
-        self.machine_id = str(uuid.UUID('00000000-0000-0000-0000-000000000000').hex)
         if 'machine_id' in kwargs:
             self.machine_id = str(uuid.UUID(kwargs['machine_id']).hex)
         self.timestamp = datetime.datetime.now(datetime.UTC).isoformat()
@@ -256,7 +255,8 @@ class BaseStorageRecorder:
             del kwargs['output_dir']
         if output_dir is None:
             output_dir = self.data_dir
-        kwargs['machine'] = str(uuid.UUID(self.machine_id).hex)
+        if hasattr(self, 'machine_id') and self.machine_id is not None:
+            kwargs['machine'] = str(uuid.UUID(self.machine_id).hex)
         if self.storage_description is not None and \
             kwargs['storage'] != 'unknown':
             kwargs['storage'] = str(uuid.UUID(self.storage_description).hex)
@@ -277,11 +277,12 @@ class BaseStorageRecorder:
         'output_dir' : target_dir,
         }
         if hasattr(self, 'machine_id') and self.machine_id is not None:
+            assert False
             kwargs['machine'] = str(uuid.UUID(self.machine_id).hex)
         if hasattr(self, 'storage_description') and self.storage_description is not None:
             kwargs['storage'] = str(uuid.UUID(self.storage_description).hex)
         if hasattr(self, 'user_id') and self.user_id is not None:
-            kwargs['user'] = str(uuid.UUID(self.user_id).hex)
+            kwargs['user'] = self.user_id
         return self.generate_output_file_name(**kwargs)
 
     @staticmethod
@@ -602,36 +603,48 @@ class BaseStorageRecorder:
 
 
     @staticmethod
-    def write_object_data_to_file(recorder : 'BaseStorageRecorder') -> None:
+    def write_object_data_to_file(recorder : 'BaseStorageRecorder', **kwargs) -> None:
         '''Write the object data to a file'''
+        output_file = kwargs.get('output_file')
+        if not output_file and hasattr(recorder, 'output_object_file'):
+            output_file = recorder.output_object_file
+        if not output_file:
+            output_file = recorder.generate_file_name(target_dir=recorder.output_dir)
+            ic(f'Warning: falling back to auto-generated output file name {output_file}')
+        output_file = str(Path(recorder.output_dir) / output_file)
         data_file_name, count = recorder.record_data_in_file(
             recorder.dir_data + recorder.file_data,
             recorder.data_dir,
-            recorder.output_object_file,
+            output_file
         )
         recorder.object_data_load_string = recorder.build_load_string(
             collection=IndalekoDBCollections.Indaleko_Object_Collection,
-            file=data_file_name
+            file=output_file
         )
         logging.info('Load string: %s', recorder.object_data_load_string)
-        print('Load string: ', recorder.object_data_load_string)
+        print('Load string (objects): ', recorder.object_data_load_string)
         if hasattr(recorder, 'output_count'): # should be there
             recorder.output_count += count
 
     @staticmethod
-    def write_edge_data_to_file(recorder : 'BaseStorageRecorder') -> int:
+    def write_edge_data_to_file(recorder : 'BaseStorageRecorder', **kwargs) -> None:
         '''Write the edge data to a file'''
+        output_file = kwargs.get('output_file')
+        if not output_file and hasattr(recorder, 'output_object_file'):
+            output_file = recorder.output_edge_file
+        if output_file:
+            output_file = str(Path(recorder.output_dir) / output_file)
         data_file_name, count = recorder.record_data_in_file(
             recorder.dir_edges,
             recorder.data_dir,
-            recorder.output_edge_file
+            output_file,
         )
         recorder.relationship_data_load_string = recorder.build_load_string(
             collection=IndalekoDBCollections.Indaleko_Relationship_Collection,
             file=data_file_name
         )
         logging.info('Load string: %s', recorder.relationship_data_load_string)
-        print('Load string: ', recorder.relationship_data_load_string)
+        print('Load string (relationships): ', recorder.relationship_data_load_string)
         if hasattr(recorder, 'edge_count'):
             recorder.edge_count += count
 
@@ -688,6 +701,7 @@ class BaseStorageRecorder:
 
     def is_object_directory(self : 'BaseStorageRecorder', obj: IndalekoObject) -> bool:
         '''Return True if the object is a directory'''
+        assert isinstance(obj, IndalekoObject), f'obj is {type(obj)}, not an IndalekoObject'
         return 'S_IFDIR' in obj.args['PosixFileAttributes'] or \
                'FILE_ATTRIBUTE_DIRECTORY' in getattr(obj.args, 'WindowsFileAttributes', '')
 
@@ -702,8 +716,9 @@ class BaseStorageRecorder:
                 logging.error('Data: %s', item)
                 self.error_count += 1
                 continue
+            assert isinstance(obj, IndalekoObject), f'obj is {type(obj)}, not an IndalekoObject'
             if self.is_object_directory(obj):
-                if 'Path' not in obj.indaleko_object.Record.Attributes:
+                if 'Path' not in obj:
                     logging.warning('Directory object does not have a path: %s', obj.serialize())
                     continue # skip
                 self.dir_data_by_path[self.get_object_path(obj)] = obj

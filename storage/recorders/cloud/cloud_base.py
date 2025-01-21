@@ -114,11 +114,14 @@ class BaseCloudStorageRecorder(BaseStorageRecorder):
             'offline': args.offline,
             'args' : args,
         }
-        if 'InputFileKeys' in config_data and \
-            'storage' in config_data['InputFileKeys'] and \
+        if 'InputFileKeys' in config_data:
+            if 'storage' in config_data['InputFileKeys'] and \
             config_data['InputFileKeys']['storage']:
-            kwargs['storage_description'] = config_data['InputFileKeys']['storage']
-        def record(recorder : BaseCloudStorageRecorder):
+                kwargs['storage_description'] = config_data['InputFileKeys']['storage']
+            if 'userid' in config_data['InputFileKeys'] and \
+            config_data['InputFileKeys']['userid']:
+                kwargs['userid'] = config_data['InputFileKeys']['userid']
+        def record(recorder : BaseCloudStorageRecorder, **kwargs):
             recorder.record()
         def extract_counters(**kwargs):
             recorder = kwargs.get('recorder')

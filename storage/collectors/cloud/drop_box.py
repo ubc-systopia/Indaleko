@@ -121,6 +121,9 @@ class IndalekoDropboxCloudStorageCollector(BaseCloudStorageCollector):
         self.dbx = dropbox.Dropbox(self.dropbox_credentials['token'])
         self.user_info = self.dbx.users_get_current_account()
         super().__init__(**kwargs)
+        if hasattr(self, 'machine_id') and self.machine_id is not None:
+            assert False
+
 
     def get_user_id(self):
         '''This method returns the user id.'''

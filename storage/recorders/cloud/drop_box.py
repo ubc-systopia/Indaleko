@@ -54,7 +54,7 @@ from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from storage.recorders.cloud.cloud_base import BaseCloudStorageRecorder
 from utils.decorators import type_check
 from utils.i_logging import IndalekoLogging
-from utils.misc.file_name_management import find_candidate_files
+from utils.misc.file_name_management import find_candidate_files, extract_keys_from_file_name
 from utils.misc.data_management import encode_binary_data
 # pylint: enable=wrong-import-position
 
@@ -74,7 +74,7 @@ class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
     }
 
     dropbox_platform = IndalekoDropboxCloudStorageCollector.dropbox_platform
-    dropbox_recorder = 'dropbox_recorder'
+    dropbox_recorder = 'recorder'
 
     recorder_data = IndalekoStorageRecorderDataModel(
         RecorderPlatformName=dropbox_platform,
@@ -83,31 +83,6 @@ class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
         RecorderServiceVersion=dropbox_recorder_service['service_version'],
         RecorderServiceDescription=dropbox_recorder_service['service_description'],
     )
-
-    def __old_init__(self, **kwargs) -> None:
-        if 'input_file' not in kwargs:
-            raise ValueError('input_file must be specified')
-        if 'timestamp' not in kwargs:
-            raise ValueError('timestamp must be specified')
-        if 'platform' not in kwargs:
-            raise ValueError('platform must be specified')
-        for key, value in self.dropbox_recorder_service.serialize().items():
-            if key not in kwargs:
-                kwargs[key] = value
-        super().__init__(**kwargs)
-        self.input_file = kwargs['input_file']
-        if 'user_id' not in kwargs:
-            raise ValueError('user_id must be specified')
-        self.user_id = kwargs['user_id']
-        if 'output_file' not in kwargs:
-            self.output_file = self.generate_file_name()
-        else:
-            self.output_file = kwargs['output_file']
-        self.indexer_data = []
-        self.source = {
-            'Identifier' : self.dropbox_recorder_uuid,
-            'Version' : '1.0',
-        }
 
     def __init__(self, **kwargs) -> None:
         '''Build a new Dropbox recorder.'''
@@ -118,12 +93,20 @@ class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
             kwargs['platform'] = self.dropbox_platform
         if 'recorder' not in kwargs:
             kwargs['recorder'] = self.dropbox_recorder
+        if 'user_id_ not in kwargs':
+            assert 'input_file' in kwargs
+            keys = extract_keys_from_file_name(kwargs['input_file'])
+            assert 'userid' in keys, f'userid not found in input file name: {kwargs["input_file"]}'
+            self.user_id = keys['userid']
+        else:
+            self.user_id = kwargs['user_id']
         super().__init__(**kwargs)
         self.output_file = kwargs.get('output_file', self.generate_file_name())
         self.source = {
             'Identifier' : self.dropbox_recorder_uuid,
             'Version' : self.dropbox_recorder_service['service_version'],
         }
+        self.dir_data.append(self.build_dummy_root_dir_entry())
 
     def build_dummy_root_dir_entry(self) -> IndalekoObject:
         '''This is used to build a dummy root directory object.'''
@@ -147,6 +130,14 @@ class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
         '''
         if self.data_dir is None:
             raise ValueError('data_dir must be specified')
+        candidates = find_candidate_files(
+            [
+                IndalekoDropboxCloudStorageCollector.dropbox_platform,
+                IndalekoDropboxCloudStorageCollector.dropbox_collector_name
+            ],
+            self.data_dir
+        )
+        ic(candidates)
         return [x for x in find_candidate_files(
             [
                 IndalekoDropboxCloudStorageCollector.dropbox_platform,
@@ -193,9 +184,9 @@ class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
             ]
             size = data['size']
         name = data['name']
+        data['Name'] = name
         path = data['path_display']
-        if path == '/' and name == '':
-            pass # root directory
+        if path == '/' and name == '':            pass # root directory
         elif path.endswith(name):
             path = os.path.dirname(path)
             assert len(path) < len(data['path_display'])
@@ -211,11 +202,14 @@ class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
             ic(name)
             ic(path)
             raise ValueError('Path does not end with child name')
+        assert path
+        data['Path'] = path
         kwargs = {
             'source' : self.source,
             'raw_data' : encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
             'URI' : 'https://www.dropbox.com/home' + data['path_display'],
             'Path' : path,
+            'Name' : name,
             'ObjectIdentifier' : data['ObjectIdentifier'],
             'Timestamps' : timestamps,
             'Size' : size,
@@ -224,272 +218,17 @@ class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
             'PosixFileAttributes' : UnixFileAttributes.map_file_attributes(unix_file_attributes),
             'WindowsFileAttributes' : IndalekoWindows.map_file_attributes(windows_file_attributes),
         }
-        return IndalekoObject(**kwargs)
+        obj = IndalekoObject(**kwargs)
+        if 'Path' not in obj:
+            ic(obj)
+            ic(obj.indaleko_object)
+            ic(data)
+            ic(path)
+            ic(name)
+            ic(obj.args)
+            exit(0)
+        return obj
 
-    def xx_generate_output_file_name(self, **kwargs) -> str:
-        '''
-        Given a set of parameters, generate a file name for the output
-        file.
-        '''
-        output_dir = None
-        if 'output_dir' in kwargs:
-            output_dir = kwargs['output_dir']
-            del kwargs['output_dir']
-        if output_dir is None:
-            output_dir = self.data_dir
-        kwargs['ingester'] = self.ingester
-        name = self.generate_file_name(**kwargs)
-        return os.path.join(output_dir, name)
-
-    def xx_ingest(self) -> None:
-        '''
-        This method ingests the metadata from the Dropbox indexer file and
-        writes it to a JSONL file.
-        '''
-        self.load_collector_data_from_file()
-        dir_data_by_path = {}
-        dir_data = [self.build_dummy_root_dir_entry()]
-        file_data = []
-        for item in self.indexer_data:
-            try:
-                obj = self.normalize_collector_data(item)
-            except OSError as e:
-                logging.error('Error normalizing data: %s', e)
-                logging.error('Data: %s', item)
-                self.error_count +=1
-                continue
-            assert 'Path' in obj.args
-            if 'S_IFDIR' in obj.args['PosixFileAttributes'] or \
-               'FILE_ATTRIBUTE_DIRECTORY' in obj.args['WindowsFileAttributes']:
-                if 'path_display' not in item:
-                    logging.warning('Directory object does not have a path: %s', item)
-                    continue # skip
-                dir_data_by_path[item['path_display']] = obj
-                dir_data.append(obj)
-                self.dir_count += 1
-            else:
-                file_data.append(obj)
-                self.file_count += 1
-        dirmap = {}
-        dirmap_lower = {}
-        for item in dir_data:
-            parent_name = item.args['Path']
-            child_name = item.args['Label']
-            if parent_name == '/':
-                path = parent_name + child_name
-            else:
-                path = parent_name + '/' + child_name # force use of UNIX style separator
-            assert path not in dirmap, f'Duplicate path: {path}'
-            dirmap[path] = item.args['ObjectIdentifier']
-            dirmap_lower[path.lower()] = item.args['ObjectIdentifier']
-        dir_edges = []
-        source = {
-            'Identifier' : self.dropbox_recorder_uuid,
-            'Version' : '1.0',
-        }
-        for item in dir_data + file_data:
-            if 'Path' not in item.args:
-                ic(item.args)
-                raise ValueError('Path not found in item')
-            parent = item.args['Path']
-            if parent in dirmap:
-                parent_id = dirmap[parent]
-            elif parent.lower() in dirmap_lower:
-                parent_id = dirmap_lower[parent.lower()]
-            elif parent == '/':
-                ic(f'Skipping root directory edges for: {item.args}')
-                continue # skip the root directory
-            else:
-                ic(item.args)
-                ic('Parent directory not found. aborting.')
-                exit(1)
-                logging.warning('Parent directory not found: %s', parent)
-                continue # skip an unknown parent
-            dir_edge = IndalekoRelationshipContains(
-                relationship = \
-                    IndalekoRelationshipContains.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR,
-                object1 = {
-                    'collection' : Indaleko.Indaleko_Object_Collection,
-                    'object' : item.args['ObjectIdentifier'],
-                },
-                object2 = {
-                    'collection' : Indaleko.Indaleko_Object_Collection,
-                    'object' : parent_id,
-                },
-                source = source
-            )
-            dir_edges.append(dir_edge)
-            self.edge_count += 1
-            dir_edge = IndalekoRelationshipContainedBy(
-                relationship = \
-                    IndalekoRelationshipContainedBy.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR,
-                object1 = {
-                    'collection' : Indaleko.Indaleko_Object_Collection,
-                    'object' : parent_id,
-                },
-                object2 = {
-                    'collection' : Indaleko.Indaleko_Object_Collection,
-                    'object' : item.args['ObjectIdentifier'],
-                },
-                source = source
-            )
-            dir_edges.append(dir_edge)
-            self.edge_count += 1
-        # Save the data to the ingester output file
-        temp_file_name = ''
-        with tempfile.NamedTemporaryFile(dir=self.data_dir, delete=False) as temp_file:
-            temp_file_name = temp_file.name
-        self.write_data_to_file(dir_data + file_data, temp_file_name)
-        try:
-            if os.path.exists(self.output_file):
-                os.remove(self.output_file)
-            os.rename(temp_file_name, self.output_file)
-        except (
-            FileNotFoundError,
-            PermissionError,
-            FileExistsError,
-            OSError,
-        ) as e:
-            logging.error(
-                'Unable to rename temp file %s to output file %s',
-                temp_file_name,
-                self.output_file
-            )
-            print(f'Unable to rename temp file {temp_file_name} to output file {self.output_file}')
-            print(e)
-            self.output_file = temp_file_name
-        load_string = self.build_load_string(
-            collection=Indaleko.Indaleko_Object_Collection,
-            file=self.output_file
-        )
-        logging.info('Load string: %s', load_string)
-        print('Load string: ', load_string)
-        with tempfile.NamedTemporaryFile(dir=self.data_dir, delete=False) as temp_file:
-            temp_file_name = temp_file.name
-        edge_file = self.generate_output_file_name(
-            platform=self.platform,
-            service='ingest',
-            user_id=self.user_id,
-            collection=Indaleko.Indaleko_Relationship_Collection,
-            timestamp=self.timestamp,
-            output_dir=self.data_dir,
-        )
-        self.write_data_to_file(dir_edges, edge_file)
-        try:
-            if os.path.exists(edge_file):
-                os.remove(edge_file)
-            os.rename(temp_file_name, edge_file)
-        except (
-            FileNotFoundError,
-            PermissionError,
-            FileExistsError,
-            OSError,
-        ) as e:
-            logging.error(
-                'Unable to rename temp file %s to output file %s',
-                temp_file_name,
-                edge_file
-            )
-            print(f'Unable to rename temp file {temp_file_name} to output file {edge_file}')
-            print(e)
-            edge_file = temp_file
-        load_string = self.build_load_string(
-            collection=Indaleko.Indaleko_Relationship_Collection,
-            file=edge_file
-        )
-        logging.info('Load string: %s', load_string)
-        print('Load string: ', load_string)
-        return
-
-    def get_object_path(self : 'IndalekoDropboxCloudStorageRecorder', obj : IndalekoObject) -> str:
-        '''This method returns the path for the object.'''
-        return obj['Path']
-
-    def is_object_directory(self : 'IndalekoDropboxCloudStorageRecorder', obj : IndalekoObject) -> bool:
-        '''This method returns True if the object is a directory.'''
-        return 'S_IFDIR' in obj['PosixFileAttributes'] or 'FILE_ATTRIBUTE_DIRECTORY' in obj['WindowsFileAttributes']
-
-def old_main():
-    '''This is the main handler for the Dropbox ingester.'''
-    logging_levels = Indaleko.get_logging_levels()
-    timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    pre_parser = argparse.ArgumentParser(add_help=False)
-    pre_parser.add_argument('--configdir',
-                            help='Path to the config directory',
-                            default=Indaleko.default_config_dir)
-    pre_parser.add_argument('--logdir', '-l',
-                            help='Path to the log directory',
-                            default=Indaleko.default_log_dir)
-    pre_parser.add_argument('--loglevel',
-                            type=int,
-                            default=logging.DEBUG,
-                            choices=logging_levels,
-                            help='Logging level to use (lower number = more logging)')
-    pre_parser.add_argument('--datadir',
-                            help='Path to the data directory',
-                            default=Indaleko.default_data_dir,
-                            type=str)
-    pre_args , _ = pre_parser.parse_known_args()
-    indaleko_logging = IndalekoLogging.IndalekoLogging(
-        platform=IndalekoDropboxCloudStorageRecorder.dropbox_platform,
-        service_name ='ingester',
-        log_dir = pre_args.logdir,
-        log_level = pre_args.loglevel,
-        timestamp = timestamp,
-        suffix = 'log'
-    )
-    log_file_name = indaleko_logging.get_log_file_name()
-    ic(log_file_name)
-    indexer = IndalekoDropboxCollector()
-    indexer_files = indexer.find_indexer_files(pre_args.datadir)
-    ic(indexer_files)
-    parser = argparse.ArgumentParser(parents=[pre_parser])
-    parser.add_argument('--input',
-                        choices=indexer_files,
-                        default=indexer_files[-1],
-                        help='Dropbox index data file to ingest')
-    args=parser.parse_args()
-    ic(args)
-    input_metadata = IndalekoDropboxCollector.extract_metadata_from_indexer_file_name(args.input)
-    ic(input_metadata)
-    input_timestamp = timestamp
-    if 'timestamp' in input_metadata:
-        input_timestamp = input_metadata['timestamp']
-    input_platform = IndalekoDropboxCloudStorageRecorder.dropbox_platform
-    if 'platform' in input_metadata:
-        input_platform = input_metadata['platform']
-    if input_platform != IndalekoDropboxCloudStorageRecorder.dropbox_platform:
-        ic(f'Input platform {input_platform} does not match expected platform {IndalekoDropboxCloudStorageRecorder.dropbox_platform}')
-    file_prefix = IndalekoIngester.default_file_prefix
-    if 'file_prefix' in input_metadata:
-        file_prefix = input_metadata['file_prefix']
-    file_suffix = IndalekoIngester.default_file_suffix
-    if 'file_suffix' in input_metadata:
-        file_suffix = input_metadata['file_suffix']
-    input_file = os.path.join(args.datadir, args.input)
-    ingester = IndalekoDropboxCloudStorageRecorder(
-        timestamp=input_timestamp,
-        platform=input_platform,
-        ingester=IndalekoDropboxCloudStorageRecorder.dropbox_recorder,
-        file_prefix=file_prefix,
-        file_suffix=file_suffix,
-        data_dir=args.datadir,
-        input_file=input_file,
-        log_dir=args.logdir,
-        user_id=input_metadata['user_id']
-    )
-    output_file = ingester.generate_file_name()
-    logging.info('Indaleko Dropbox Ingester started.')
-    logging.info('Input file: %s', input_file)
-    logging.info('Output file: %s', output_file)
-    logging.info(args)
-    ingester.ingest()
-    total=0
-    for count_type, count_value in ingester.get_counts().items():
-        logging.info('%s: %d', count_type, count_value)
-        total += count_value
-    logging.info('Total: %d', total)
-    logging.info('Indaleko Dropbox Ingester completed.')
 
 def main() -> None:
     '''This is the main handler for the Dropbox recorder.'''
