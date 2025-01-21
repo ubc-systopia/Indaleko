@@ -101,6 +101,7 @@ class BaseCloudStorageCollector(BaseStorageCollector):
         if debug:
             ic(f'cloud_base local_run: {config_data}')
         collector_class = keys['parameters']['CollectorClass']
+        output_file = str(Path(args.datadir) / config_data['OutputFile'])
         kwargs = {
             'timestamp' : config_data['Timestamp'],
             'path' : args.path,
@@ -147,13 +148,13 @@ class BaseCloudStorageCollector(BaseStorageCollector):
                     # Step 1: normalize the data and gather the performance.
         if args.debug:
             ic('Normalizing data')
-        capture_performance(collect, config_data['OutputFile'])
+        capture_performance(collect, output_file)
         # Step 2: record the time to save the object data.
         assert hasattr(collector, 'data'), 'No data collected'
         assert len(collector.data), 'No data in set'
         if args.debug:
             ic('Writing file system metadata to file')
-        capture_performance(collector.write_data_to_file, config_data['OutputFile'])
+        capture_performance(collector.write_data_to_file, output_file)
 
     @staticmethod
     def cloud_collector_runner(

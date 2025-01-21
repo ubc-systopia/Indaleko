@@ -122,31 +122,6 @@ class IndalekoDropboxCloudStorageCollector(BaseCloudStorageCollector):
         self.user_info = self.dbx.users_get_current_account()
         super().__init__(**kwargs)
 
-    def old__init__(self, **kwargs):
-        self.config_dir = kwargs.get('config_dir', indaleko_default_config_dir)
-        self.dropbox_config_file = os.path.join(self.config_dir, IndalekoDropboxCloudStorageCollector.dropbox_config_file)
-        self.dropbox_token_file = os.path.join(self.config_dir, IndalekoDropboxCloudStorageCollector.dropbox_token_file)
-        self.dropbox_config = None
-        self.load_dropbox_config()
-        logging.debug('Dropbox config: %s', self.dropbox_config)
-        self.dropbox_credentials = None
-        self.load_dropbox_credentials()
-        if self.dropbox_credentials is None:
-            logging.debug('No Dropbox credentials found, reconstructing.')
-            self.query_user_for_credentials()
-        if self.dropbox_credentials is not None:
-            self.refresh_access_token()
-        self.dbx = dropbox.Dropbox(self.dropbox_credentials['token'])
-        self.user_info = self.dbx.users_get_current_account()
-        if 'platform' not in kwargs:
-            kwargs['platform'] = IndalekoDropboxCloudStorageCollector.dropbox_platform
-        if 'collector_data' not in kwargs:
-            kwargs['collector_data'] = IndalekoDropboxCloudStorageCollector.collector_data
-        super().__init__(**kwargs,
-                         collector_name=IndalekoDropboxCloudStorageCollector.dropbox_collector_name,
-                         **IndalekoDropboxCloudStorageCollector.indaleko_dropbox_collector_service
-        )
-
     def get_user_id(self):
         '''This method returns the user id.'''
         assert hasattr(self.user_info, 'email'), f'{dir(self.user_info)}'
