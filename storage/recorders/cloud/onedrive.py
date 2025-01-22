@@ -1,8 +1,8 @@
 '''
-This module handles data ingestion into Indaleko from the Google Drive data
-indexer.
+This module handles data ingestion into Indaleko from the One Drive data
+collector.
 
-Indaleko Linux Local Ingester
+Indaleko OneDrive Data Recorder
 Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
@@ -18,65 +18,97 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
-import argparse
-import datetime
 import json
-import logging
 import os
+import sys
 import uuid
-import re
 
 from icecream import ic
 
-from IndalekoLogging import IndalekoLogging
-from Indaleko import Indaleko
-from IndalekoOneDriveIndexer import IndalekoOneDriveIndexer
-from IndalekoIngester import IndalekoIngester
-from IndalekoObject import IndalekoObject
-from IndalekoRelationshipContains import IndalekoRelationshipContains
-from IndalekoRelationshipContained import IndalekoRelationshipContainedBy
-from IndalekoUnix import UnixFileAttributes
-from IndalekoWindows import IndalekoWindows
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
 
-class IndalekoOneDriveIngester(IndalekoIngester):
+
+# pylint: disable=wrong-import-position
+from db import IndalekoServiceManager
+from platforms.unix import UnixFileAttributes
+from platforms.windows_attributes import IndalekoWindows
+from storage import IndalekoObject
+from storage.collectors.cloud.onedrive import IndalekoOneDriveCloudStorageCollector
+from storage.recorders.data_model import IndalekoStorageRecorderDataModel
+from storage.recorders.cloud.cloud_base import BaseCloudStorageRecorder
+from utils.misc.file_name_management import find_candidate_files, extract_keys_from_file_name
+from utils.misc.data_management import encode_binary_data
+# pylint: enable=wrong-import-position
+
+
+class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
     '''
     This class provides the OneDrive Ingester for Indaleko.
     '''
 
-    onedrive_ingester_uuid_str = 'c15afa0f-5e5a-4a5b-82ab-8adb0311dfaf'
-    onedrive_ingester_uuid = uuid.UUID(onedrive_ingester_uuid_str)
-    onedrive_ingester_service = {
-        'service_name' : 'Microsoft OneDrive Ingester',
-        'service_description' : 'This service ingests metadata from OneDrive into Indaleko.',
-        'service_version' : '1.0.0',
-        'service_type' : 'ingester',
-        'service_identifier' : onedrive_ingester_uuid_str,
+    onedrive_recorder_uuid = 'c15afa0f-5e5a-4a5b-82ab-8adb0311dfaf'
+    onedrive_recorder_service = {
+        'service_name': 'Microsoft OneDrive Ingester',
+        'service_description': 'This service ingests metadata from OneDrive into Indaleko.',
+        'service_version': '1.0.0',
+        'service_type': IndalekoServiceManager.service_type_storage_recorder,
+        'service_identifier': onedrive_recorder_uuid,
     }
-    onedrive_ingester = 'OneDrive_ingester'
 
-    def __init__(self, **kwargs : dict) -> None:
+    onedrive_platform = IndalekoOneDriveCloudStorageCollector.onedrive_platform
+    onedrive_recorder = 'recorder'
+
+    recorder_data = IndalekoStorageRecorderDataModel(
+        RecorderPlatformName=onedrive_platform,
+        RecorderServiceName=onedrive_recorder,
+        RecorderServiceUUID=uuid.UUID(onedrive_recorder_uuid),
+        RecorderServiceVersion=onedrive_recorder_service['service_version'],
+        RecorderServiceDescription=onedrive_recorder_service['service_description'],
+    )
+
+    def __init__(self, **kwargs: dict) -> None:
         '''Initialize the OneDrive Drive Ingester'''
-        if 'input_file' not in kwargs:
-            raise ValueError('input_file is required for the OneDrive Ingester')
-        for key, value in self.onedrive_ingester_service.items():
+        for key, value in self.onedrive_recorder_service.items():
             if key not in kwargs:
                 kwargs[key] = value
-        if 'service_id' not in kwargs and 'Identifier' not in kwargs:
-            kwargs['service_id'] = self.onedrive_ingester_uuid_str
-        self.data_dir = kwargs.get('data_dir', Indaleko.default_data_dir)
-        self.input_file = kwargs['input_file']
-        self.indexer_file_metadata = Indaleko.extract_keys_from_file_name(self.input_file)
-        kwargs['timestamp'] = \
-            self.indexer_file_metadata.get('timestamp',
-                                            datetime.datetime.now(datetime.UTC).isoformat())
+        if 'platform' not in kwargs:
+            kwargs['platform'] = self.onedrive_platform
+        if 'recorder' not in kwargs:
+            kwargs['recorder'] = self.onedrive_recorder
+        if 'user_id_ not in kwargs':
+            assert 'input_file' in kwargs
+            keys = extract_keys_from_file_name(kwargs['input_file'])
+            assert 'userid' in keys, f'userid not found in input file name: {kwargs["input_file"]}'
+            self.user_id = keys['userid']
+        else:
+            self.user_id = kwargs['user_id']
         super().__init__(**kwargs)
-        self.ingester = IndalekoOneDriveIngester.onedrive_ingester
-        self.indexer_data = []
+        self.output_file = kwargs.get('output_file', self.generate_file_name())
         self.source = {
-            'Identifier' : self.onedrive_ingester_uuid_str,
-            'Version' : '1.0.0',
+            'Identifier': self.dropbox_recorder_uuid,
+            'Version': self.dropbox_recorder_service['service_version'],
         }
-        self.ingester_service = IndalekoOneDriveIngester.onedrive_ingester_service
+        # self.dir_data.append(self.build_dummy_root_dir_entry())
+
+    def find_collector_files(self) -> list:
+        '''This function finds the files produced by the collector.'''
+        if self.data_dir is None:
+            raise ValueError('data_dir must be specified')
+        candidates = find_candidate_files(
+            [
+                IndalekoOneDriveCloudStorageCollector.dropbox_platform,
+                IndalekoOneDriveCloudStorageCollector.dropbox_collector_name
+            ],
+            self.data_dir
+        )
+        if self.debug:
+            ic(candidates)
+        return candidates
 
     @staticmethod
     def extract_uuid_from_etag(etag: str) -> uuid.UUID:
@@ -217,7 +249,7 @@ class IndalekoOneDriveIngester(IndalekoIngester):
                 self.file_count += 1
         dir_edges = []
         source = {
-            'Identifier' : self.onedrive_ingester,
+            'Identifier' : self.onedrive_recorder,
             'Version' : '1.0.0',
         }
         for item in dir_data + file_data:
@@ -289,9 +321,9 @@ class IndalekoOneDriveIngester(IndalekoIngester):
                 file_data.append(obj)
                 self.file_count += 1
         source = {
-            'Identifier' : self.onedrive_ingester,
+            'Identifier' : self.onedrive_recorder,
             'Version' : '1.0.0',
-            'Description' : self.onedrive_ingester_service['service_description'],
+            'Description' : self.onedrive_recorder_service['service_description'],
         }
         kwargs = {
             'platform' : self.indexer_file_metadata['platform'],
@@ -354,7 +386,7 @@ def ingest_file(args: argparse.Namespace) -> None:
         print('Multiple files match the filter strings: ', args.strings)
         Indaleko.print_candidate_files(candidates)
         return
-    ingester = IndalekoOneDriveIngester(
+    ingester = IndalekoOneDriveCloudStorageRecorder(
         input_file=os.path.join(args.datadir,
                                 candidates[0][0]),
         data_dir=args.datadir

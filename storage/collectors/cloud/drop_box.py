@@ -43,7 +43,6 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
-
 # pylint: disable=wrong-import-position
 from db import IndalekoServiceManager
 from utils.misc.directory_management import indaleko_default_config_dir
