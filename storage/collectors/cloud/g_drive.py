@@ -225,6 +225,17 @@ class IndalekoGDriveCloudStorageCollector(BaseCloudStorageCollector):
         '''This builds the stat dict for the entry'''
         return entry
 
+    def fetch_root_metadata(self) -> dict:
+        '''Fetch metadata for the root directory'''
+        service = build('drive', 'v3', credentials=self.gdrive_credentials)
+        try:
+            root_metadata = service.files().get(fileId='root', fields=','.join(self.FILE_METADATA_FIELDS)).execute()
+            return self.build_stat_dict(root_metadata)
+        except HttpError as error:
+            logging.error('Error fetching root metadata: %s', error)
+            ic('Error fetching root metadata: ', error)
+            return {}
+
     def collect(self, recursive=True) -> list:
         '''
         This method indexes Google Drive.
@@ -236,6 +247,15 @@ class IndalekoGDriveCloudStorageCollector(BaseCloudStorageCollector):
             ', '.join(IndalekoGDriveCloudStorageCollector.FILE_METADATA_FIELDS))
         metadata_list = []
         service = None
+
+        # Fetch the metadata for the root directory
+        root_metadata = self.fetch_root_metadata()
+        if root_metadata:
+            metadata_list.append(root_metadata)
+            self.dir_count += 1
+        else:
+            ic('Root metadata fetching failed. Aborting.')
+            exit(0)
 
         while True:
             if service is None:
