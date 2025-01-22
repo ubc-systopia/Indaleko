@@ -197,12 +197,11 @@ class BaseStorageCollector:
         '''This function returns the cli handler mixin that should be used.'''
         return cls.cli_handler_mixin
 
-
     @staticmethod
     def find_collector_files(
-            search_dir : str,
-            prefix : str = default_file_prefix,
-            suffix : str = default_file_suffix) -> list:
+            search_dir: str,
+            prefix: str = default_file_prefix,
+            suffix: str = default_file_suffix) -> list:
         '''This function finds the files to ingest:
             search_dir: path to the search directory
             prefix: prefix of the collector file

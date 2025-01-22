@@ -38,14 +38,12 @@ if os.environ.get('INDALEKO_ROOT') is None:
 from data_models import IndalekoSourceIdentifierDataModel
 from perf.perf_collector import IndalekoPerformanceDataCollector
 from perf.perf_recorder import IndalekoPerformanceDataRecorder
-from platforms.machine_config import IndalekoMachineConfig
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.runner import IndalekoCLIRunner
-from utils.decorators import type_check
 from storage.collectors import BaseStorageCollector
-from storage.recorders import BaseStorageRecorder
 # pylint: enable=wrong-import-position
+
 
 class BaseCloudStorageCollector(BaseStorageCollector):
     '''This is the base class for all cloud storage recorders in Indaleko.'''
@@ -73,7 +71,7 @@ class BaseCloudStorageCollector(BaseStorageCollector):
         def get_pre_parser() -> Union[argparse.ArgumentParser, None]:
             '''This method returns the pre-parser for the cloud storage collector.'''
             parser = argparse.ArgumentParser(add_help=False)
-            default_path = '/' # root of the cloud storage
+            default_path = '/'  # root of the cloud storage
             parser.add_argument('--path',
                                 type=str,
                                 default=default_path,
@@ -94,8 +92,8 @@ class BaseCloudStorageCollector(BaseStorageCollector):
     @staticmethod
     def local_run(keys: dict[str, str]) -> Union[dict, None]:
         '''This function is used to run the cloud storage collector.'''
-        args = keys['args'] # must be there
-        cli = keys['cli'] # must be there
+        args = keys['args']  # must be there
+        cli = keys['cli']  # must be there
         config_data = cli.get_config_data()
         debug = hasattr(args, 'debug') and args.debug
         if debug:
@@ -103,29 +101,32 @@ class BaseCloudStorageCollector(BaseStorageCollector):
         collector_class = keys['parameters']['CollectorClass']
         output_file = str(Path(args.datadir) / config_data['OutputFile'])
         kwargs = {
-            'timestamp' : config_data['Timestamp'],
-            'path' : args.path,
-            'recurse' : not args.norecurse,
-            'offline' : args.offline,
+            'timestamp': config_data['Timestamp'],
+            'path': args.path,
+            'recurse': not args.norecurse,
+            'offline': args.offline,
         }
         collector = collector_class(**kwargs)
-        def collect(collector : BaseCloudStorageCollector, **kwargs) -> None:
+
+        def collect(collector: BaseCloudStorageCollector, **kwargs) -> None:
             collector.collect(recursive=not args.norecurse)
+
         def extract_counters(**kwargs) -> None:
             collector = kwargs.get('collector')
             if collector:
                 return collector.get_counts()
             else:
                 return {}
+
         def capture_performance(
-                task_func : Callable[..., Any],
-                output_file_name : Union[Path, str] = None) -> None:
+                task_func: Callable[..., Any],
+                output_file_name: Union[Path, str] = None) -> None:
             assert output_file_name
             perf_data = IndalekoPerformanceDataCollector.measure_performance(
                 task_func,
                 source=IndalekoSourceIdentifierDataModel(
                     Identifier=collector.get_collector_service_identifier(),
-                    Version = collector.get_collector_service_version(),
+                    Version=collector.get_collector_service_version(),
                     Description=collector.get_collector_service_description()
                 ),
                 description=collector.get_collector_service_description(),
@@ -158,11 +159,11 @@ class BaseCloudStorageCollector(BaseStorageCollector):
 
     @staticmethod
     def cloud_collector_runner(
-        collector_class : BaseStorageCollector,
+        collector_class: BaseStorageCollector,
     ) -> None:
         '''This function is used to run the cloud storage collector.'''
         IndalekoCLIRunner(
-            cli_data = IndalekoBaseCliDataModel(
+            cli_data=IndalekoBaseCliDataModel(
                 Service=collector_class.get_collector_service_name(),
                 Platform=collector_class.get_collector_platform_name(),
             ),
@@ -173,6 +174,6 @@ class BaseCloudStorageCollector(BaseStorageCollector):
             ),
             Run=BaseCloudStorageCollector.local_run,
             RunParameters={
-                'CollectorClass' : collector_class,
+                'CollectorClass': collector_class,
             }
         ).run()
