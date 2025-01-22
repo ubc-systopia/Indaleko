@@ -176,7 +176,7 @@ class IndalekoGDriveCloudStorageRecorder(BaseCloudStorageRecorder):
                 }
             )
         if not self.root_dir:
-            path = data['id'] # root directory
+            path = data['id']  # root directory
         else:
             path = self.root_dir['id']
         if 'parents' in data:
