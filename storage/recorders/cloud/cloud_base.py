@@ -22,16 +22,9 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import argparse
-import inspect
-import json
-import jsonlines
-import logging
 import os
 from pathlib import Path
 import sys
-import tempfile
-import uuid
 
 from typing import Union, Callable, Any
 
@@ -46,18 +39,15 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from data_models import IndalekoSourceIdentifierDataModel
-from db import IndalekoDBCollections
 from perf.perf_collector import IndalekoPerformanceDataCollector
 from perf.perf_recorder import IndalekoPerformanceDataRecorder
-from platforms.machine_config import IndalekoMachineConfig
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.runner import IndalekoCLIRunner
-from utils.decorators import type_check
-from storage import IndalekoObject
 from storage.collectors import BaseStorageCollector
 from storage.recorders import BaseStorageRecorder
 # pylint: enable=wrong-import-position
+
 
 class BaseCloudStorageRecorder(BaseStorageRecorder):
     '''This is the base class for all cloud storage recorder in Indaleko.'''
@@ -90,16 +80,14 @@ class BaseCloudStorageRecorder(BaseStorageRecorder):
         '''This function is used to get the cloud storage recorder.'''
         raise NotImplementedError('This function must be overridden by the derived class')
 
-
     class cloud_recorder_mixin(BaseStorageRecorder.base_recorder_mixin):
         '''This is the mixin for cloud storage recorders.'''
-
 
     @staticmethod
     def local_run(keys: dict[str, str]) -> Union[dict, None]:
         '''Run the recorder'''
-        args = keys['args'] # must be there.
-        cli = keys['cli'] # must be there.
+        args = keys['args']  # must be there.
+        cli = keys['cli']  # must be there.
         config_data = cli.get_config_data()
         debug = hasattr(args, 'debug') and args.debug
         if debug:
@@ -110,35 +98,39 @@ class BaseCloudStorageRecorder(BaseStorageRecorder):
         # matching machine configuration file.
         kwargs = {
             'timestamp': config_data['Timestamp'],
-            'input_file' : str(Path(args.datadir) / args.inputfile),
+            'input_file': str(Path(args.datadir) / args.inputfile),
             'offline': args.offline,
-            'args' : args,
+            'args': args,
         }
         if 'InputFileKeys' in config_data:
             if 'storage' in config_data['InputFileKeys'] and \
-            config_data['InputFileKeys']['storage']:
+                            config_data['InputFileKeys']['storage']:
                 kwargs['storage_description'] = config_data['InputFileKeys']['storage']
             if 'userid' in config_data['InputFileKeys'] and \
-            config_data['InputFileKeys']['userid']:
+                    config_data['InputFileKeys']['userid']:
                 kwargs['userid'] = config_data['InputFileKeys']['userid']
-        def record(recorder : BaseCloudStorageRecorder, **kwargs):
+
+        def record(recorder: BaseCloudStorageRecorder, **kwargs):
             recorder.record()
+
         def extract_counters(**kwargs):
             recorder = kwargs.get('recorder')
             if recorder:
                 return recorder.get_counts()
             else:
                 return {}
+
         recorder = recorder_class(**kwargs)
+
         def capture_performance(
-            task_func : Callable[..., Any],
-            output_file_name : Union[Path, str] = None
+            task_func: Callable[..., Any],
+            output_file_name: Union[Path, str] = None
         ):
             perf_data = IndalekoPerformanceDataCollector.measure_performance(
                 task_func,
                 source=IndalekoSourceIdentifierDataModel(
                     Identifier=recorder.get_recorder_service_uuid(),
-                    Version = recorder.get_recorder_service_version(),
+                    Version=recorder.get_recorder_service_version(),
                     Description=recorder.get_recorder_service_description()
                 ),
                 description=recorder.get_recorder_service_description(),
@@ -194,15 +186,15 @@ class BaseCloudStorageRecorder(BaseStorageRecorder):
 
     @staticmethod
     def cloud_recorder_runner(
-        collector_class: BaseStorageCollector,
-        recorder_class : BaseStorageRecorder) -> None:
+            collector_class: BaseStorageCollector,
+            recorder_class: BaseStorageRecorder) -> None:
         '''This is the CLI handler for cloud storage recorders.'''
         runner = IndalekoCLIRunner(
-            cli_data = IndalekoBaseCliDataModel(
+            cli_data=IndalekoBaseCliDataModel(
                 Service=recorder_class.get_recorder_service_name(),
                 InputFileKeys={
-                    'plt' : collector_class.get_collector_platform_name(),
-                    'svc' : collector_class.get_collector_service_name(),
+                    'plt': collector_class.get_collector_platform_name(),
+                    'svc': collector_class.get_collector_service_name(),
                 },
             ),
             handler_mixin=recorder_class.cloud_recorder_mixin,
@@ -211,8 +203,8 @@ class BaseCloudStorageRecorder(BaseStorageRecorder):
             ),
             Run=BaseCloudStorageRecorder.local_run,
             RunParameters={
-                'CollectorClass' : collector_class,
-                'RecorderClass' : recorder_class,
+                'CollectorClass': collector_class,
+                'RecorderClass': recorder_class,
             }
         )
         runner.run()

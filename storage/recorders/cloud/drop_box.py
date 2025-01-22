@@ -21,19 +21,12 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
-import argparse
-import datetime
-from icecream import ic
 import json
-import jsonlines
-import logging
 import os
 import sys
-import tempfile
 import uuid
 
 from icecream import ic
-from typing import Any, Union, Callable
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -45,15 +38,12 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from db import IndalekoServiceManager
-from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 from platforms.unix import UnixFileAttributes
 from platforms.windows_attributes import IndalekoWindows
 from storage import IndalekoObject
 from storage.collectors.cloud.drop_box import IndalekoDropboxCloudStorageCollector
 from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from storage.recorders.cloud.cloud_base import BaseCloudStorageRecorder
-from utils.decorators import type_check
-from utils.i_logging import IndalekoLogging
 from utils.misc.file_name_management import find_candidate_files, extract_keys_from_file_name
 from utils.misc.data_management import encode_binary_data
 # pylint: enable=wrong-import-position
@@ -66,11 +56,11 @@ class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
 
     dropbox_recorder_uuid = '389ce9e0-3924-4cd1-be8d-5dc4b268e668'
     dropbox_recorder_service = {
-        'service_name' : 'Dropbox Recorder',
-        'service_description' : 'This service records metadata collected from Dropbox.',
-        'service_version' : '1.0',
-        'service_type' : IndalekoServiceManager.service_type_storage_recorder,
-        'service_identifier' : dropbox_recorder_uuid,
+        'service_name': 'Dropbox Recorder',
+        'service_description': 'This service records metadata collected from Dropbox.',
+        'service_version': '1.0',
+        'service_type': IndalekoServiceManager.service_type_storage_recorder,
+        'service_identifier': dropbox_recorder_uuid,
     }
 
     dropbox_platform = IndalekoDropboxCloudStorageCollector.dropbox_platform
@@ -103,31 +93,27 @@ class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
         super().__init__(**kwargs)
         self.output_file = kwargs.get('output_file', self.generate_file_name())
         self.source = {
-            'Identifier' : self.dropbox_recorder_uuid,
-            'Version' : self.dropbox_recorder_service['service_version'],
+            'Identifier': self.dropbox_recorder_uuid,
+            'Version': self.dropbox_recorder_service['service_version'],
         }
         self.dir_data.append(self.build_dummy_root_dir_entry())
 
     def build_dummy_root_dir_entry(self) -> IndalekoObject:
         '''This is used to build a dummy root directory object.'''
         dummy_attributes = {
-            'Indexer' : '7c18f9c7-9153-427a-967a-55d942ac1f10',
-            'ObjectIdentifier' : str(uuid.uuid4()),
-            'FolderMetadata' : True,
-            'Metadata' : True,
-            'path_lower' : '/',
-            'path_display' : '/',
-            'name' : '',
-            'user_id' : self.user_id
+            'Indexer': IndalekoDropboxCloudStorageCollector.indaleko_dropbox_collector_uuid,
+            'ObjectIdentifier': str(uuid.uuid4()),
+            'FolderMetadata': True,
+            'Metadata': True,
+            'path_lower': '/',
+            'path_display': '/',
+            'name': '',
+            'user_id': self.user_id
         }
         return self.normalize_collector_data(dummy_attributes)
 
     def find_collector_files(self) -> list:
-        '''This function finds the files to record:
-            search_dir: path to the search directory
-            prefix: prefix of the file to record
-            suffix: suffix of the file to record (default is .json)
-        '''
+        '''This function finds the files produced by the collector.'''
         if self.data_dir is None:
             raise ValueError('data_dir must be specified')
         candidates = find_candidate_files(
@@ -137,17 +123,11 @@ class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
             ],
             self.data_dir
         )
-        ic(candidates)
-        return [x for x in find_candidate_files(
-            [
-                IndalekoDropboxCloudStorageCollector.dropbox_platform,
-                IndalekoDropboxCloudStorageCollector.dropbox_collector_name
-            ],
-            self.data_dir)
-        ]
+        if self.debug:
+            ic(candidates)
+        return candidates
 
-
-    def normalize_collector_data(self, data : dict ) -> IndalekoObject:
+    def normalize_collector_data(self, data: dict) -> IndalekoObject:
         '''
         Given some metadata, this will create a record that can be inserted into the
         Object collection.
@@ -172,21 +152,22 @@ class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
             # data, it will fail the schema validation.
             timestamps = [
                 {
-                    'Label' : IndalekoObject.MODIFICATION_TIMESTAMP,
-                    'Value' : data['client_modified'],
-                    'Description' : 'Client Modified'
+                    'Label': IndalekoObject.MODIFICATION_TIMESTAMP,
+                    'Value': data['client_modified'],
+                    'Description': 'Client Modified'
                 },
                 {
-                    'Label' : IndalekoObject.CHANGE_TIMESTAMP,
-                    'Value' : data['server_modified'],
-                    'Description' : 'Server Modified'
+                    'Label': IndalekoObject.CHANGE_TIMESTAMP,
+                    'Value': data['server_modified'],
+                    'Description': 'Server Modified'
                 },
             ]
             size = data['size']
         name = data['name']
         data['Name'] = name
         path = data['path_display']
-        if path == '/' and name == '':            pass # root directory
+        if path == '/' and name == '':
+            pass  # root directory
         elif path.endswith(name):
             path = os.path.dirname(path)
             assert len(path) < len(data['path_display'])
@@ -205,18 +186,18 @@ class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
         assert path
         data['Path'] = path
         kwargs = {
-            'source' : self.source,
-            'raw_data' : encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
-            'URI' : 'https://www.dropbox.com/home' + data['path_display'],
-            'Path' : path,
-            'Name' : name,
-            'ObjectIdentifier' : data['ObjectIdentifier'],
-            'Timestamps' : timestamps,
-            'Size' : size,
-            'Attributes' : data,
-            'Label' : name,
-            'PosixFileAttributes' : UnixFileAttributes.map_file_attributes(unix_file_attributes),
-            'WindowsFileAttributes' : IndalekoWindows.map_file_attributes(windows_file_attributes),
+            'source': self.source,
+            'raw_data': encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
+            'URI': 'https://www.dropbox.com/home' + data['path_display'],
+            'Path': path,
+            'Name': name,
+            'ObjectIdentifier': data['ObjectIdentifier'],
+            'Timestamps': timestamps,
+            'Size': size,
+            'Attributes': data,
+            'Label': name,
+            'PosixFileAttributes': UnixFileAttributes.map_file_attributes(unix_file_attributes),
+            'WindowsFileAttributes': IndalekoWindows.map_file_attributes(windows_file_attributes),
         }
         obj = IndalekoObject(**kwargs)
         if 'Path' not in obj:
@@ -236,6 +217,7 @@ def main() -> None:
         IndalekoDropboxCloudStorageCollector,
         IndalekoDropboxCloudStorageRecorder,
     )
+
 
 if __name__ == '__main__':
     main()

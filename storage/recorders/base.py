@@ -70,13 +70,16 @@ from data_models import IndalekoSourceIdentifierDataModel
 from db import IndalekoCollection, IndalekoDBConfig, IndalekoDBCollections, IndalekoServiceManager
 from utils.cli.base import IndalekoBaseCLI
 from utils.decorators import type_check
-from utils.misc.directory_management import indaleko_default_data_dir, indaleko_default_config_dir, indaleko_default_log_dir
+from utils.misc.directory_management import \
+    indaleko_default_data_dir, indaleko_default_config_dir, indaleko_default_log_dir
 from utils.misc.file_name_management import generate_file_name, extract_keys_from_file_name
 from data_models import IndalekoSemanticAttributeDataModel
 from storage import IndalekoObject
 from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from storage.i_relationship import IndalekoRelationship
 # pylint: enable=wrong-import-position
+
+
 class BaseStorageRecorder:
     '''
     IndalekoStorageRecorder is the generic class that we use for recording data from the
@@ -87,7 +90,6 @@ class BaseStorageRecorder:
     default_file_prefix = 'indaleko'
     default_file_suffix = '.jsonl'
     recorder_name = 'fs_recorder'
-
 
     indaleko_generic_storage_recorder_uuid_str = '526e0240-1ee4-46e9-9dac-3e557a8fb654'
     indaleko_generic_storage_recorder_uuid = uuid.UUID(indaleko_generic_storage_recorder_uuid_str)
@@ -111,10 +113,10 @@ class BaseStorageRecorder:
     #    RecorderServiceUUID = indaleko_generic_storage_recorder_uuid,
     #    RecorderServiceVersion = indaleko_generic_storage_recorder_service_version,
     #    RecorderServiceDescription = indaleko_generic_storage_recorder_service_description,
-    #)
+    # )
     # This must come from the derived class: not a default value
 
-    def __init__(self : 'BaseStorageRecorder', **kwargs : dict) -> None:
+    def __init__(self: 'BaseStorageRecorder', **kwargs: dict) -> None:
         '''
         Constructor for the IndalekoStorageRecorder class. Takes a configuration object
         as a parameter. The configuration object is a dictionary that contains
@@ -154,7 +156,7 @@ class BaseStorageRecorder:
         self.storage_description = None
         if 'storage_description' in kwargs:
             if kwargs['storage_description'] is None or \
-                kwargs['storage_description'] == 'unknown':
+               kwargs['storage_description'] == 'unknown':
                 del kwargs['storage_description']
             else:
                 self.storage_description = str(uuid.UUID(kwargs['storage_description']).hex)
@@ -167,11 +169,11 @@ class BaseStorageRecorder:
         self.config_dir = kwargs.get('config_dir', indaleko_default_config_dir)
         self.log_dir = kwargs.get('log_dir', indaleko_default_log_dir)
         self.recorder_service = IndalekoServiceManager().register_service(
-            service_name = self.get_recorder_service_name(),
-            service_id = str(self.get_recorder_service_uuid()),
-            service_version = self.get_recorder_service_version(),
-            service_description = self.get_recorder_service_description(),
-            service_type = self.get_recorder_service_type(),
+            service_name=self.get_recorder_service_name(),
+            service_id=str(self.get_recorder_service_uuid()),
+            service_version=self.get_recorder_service_version(),
+            service_description=self.get_recorder_service_description(),
+            service_type=self.get_recorder_service_type(),
         )
         assert self.recorder_service is not None, 'Recorder service does not exist'
         for count in self.counter_values:
@@ -184,12 +186,12 @@ class BaseStorageRecorder:
         self.collector_data = []
 
     @classmethod
-    def get_recorder_platform_name(cls : 'BaseStorageRecorder') -> str:
+    def get_recorder_platform_name(cls: 'BaseStorageRecorder') -> str:
         '''This function returns the platform name for the recorder.'''
         if hasattr(cls, 'recorder_data'):
             return cls.recorder_data.RecorderPlatformName
         else:
-            ic(f'Warning, no recorder_data, returning indaleko_recorder_platform')
+            ic('Warning, no recorder_data, returning indaleko_recorder_platform')
             return 'indaleko_recorder_platform'
 
     @classmethod
@@ -198,7 +200,7 @@ class BaseStorageRecorder:
         if hasattr(cls, 'recorder_data'):
             return cls.recorder_data.RecorderServiceName
         else:
-            ic(f'Warning, no recorder_data, returning indaleko_service_name')
+            ic('Warning, no recorder_data, returning indaleko_service_name')
             return 'indaleko_service_name'
 
     @classmethod
@@ -216,7 +218,7 @@ class BaseStorageRecorder:
         if hasattr(cls, 'recorder_data'):
             return cls.recorder_data.RecorderServiceVersion
         else:
-            ic(f'Warning, no recorder_data, returning 1.0')
+            ic('Warning, no recorder_data, returning 1.0')
             return '1.0'
 
     @classmethod
@@ -225,7 +227,7 @@ class BaseStorageRecorder:
         if hasattr(cls, 'recorder_data'):
             return cls.recorder_data.RecorderServiceDescription
         else:
-            ic(f'Warning, no recorder_data, returning indaleko_service_description')
+            ic('Warning, no recorder_data, returning indaleko_service_description')
             return 'indaleko_service_description'
 
     @classmethod
@@ -242,7 +244,7 @@ class BaseStorageRecorder:
         '''
         Retrieves counters about the recorder.
         '''
-        return {x : getattr(self, x) for x in BaseStorageRecorder.counter_values}
+        return {x: getattr(self, x) for x in BaseStorageRecorder.counter_values}
 
     def generate_output_file_name(self, **kwargs) -> str:
         '''
@@ -258,23 +260,23 @@ class BaseStorageRecorder:
         if hasattr(self, 'machine_id') and self.machine_id is not None:
             kwargs['machine'] = str(uuid.UUID(self.machine_id).hex)
         if self.storage_description is not None and \
-            kwargs['storage'] != 'unknown':
+           kwargs['storage'] != 'unknown':
             kwargs['storage'] = str(uuid.UUID(self.storage_description).hex)
         name = generate_file_name(**kwargs)
         return os.path.join(output_dir, name)
 
-    def generate_file_name(self, target_dir : str = None, suffix = None) -> str:
+    def generate_file_name(self, target_dir: str = None, suffix=None) -> str:
         '''This will generate a file name for the recorder output file.'''
         if suffix is None:
             suffix = self.file_suffix
         kwargs = {
-        'prefix' : self.file_prefix,
-        'suffix' : suffix,
-        'platform' : self.platform,
-        'service' : self.recorder_name,
-        'collection' : IndalekoDBCollections.Indaleko_Object_Collection,
-        'timestamp' : self.timestamp,
-        'output_dir' : target_dir,
+            'prefix': self.file_prefix,
+            'suffix': suffix,
+            'platform': self.platform,
+            'service': self.recorder_name,
+            'collection': IndalekoDBCollections.Indaleko_Object_Collection,
+            'timestamp': self.timestamp,
+            'output_dir': target_dir,
         }
         if hasattr(self, 'machine_id') and self.machine_id is not None:
             kwargs['machine'] = str(uuid.UUID(self.machine_id).hex)
@@ -285,7 +287,7 @@ class BaseStorageRecorder:
         return self.generate_output_file_name(**kwargs)
 
     @staticmethod
-    def extract_metadata_from_recorder_file_name(file_name : str) -> dict:
+    def extract_metadata_from_recorder_file_name(file_name: str) -> dict:
         '''
         This will extract the metadata from the given file name.
         '''
@@ -297,7 +299,7 @@ class BaseStorageRecorder:
         return data
 
     @staticmethod
-    def write_data_to_file(data : list, file_name : str = None, jsonlines_output : bool = True) -> int:
+    def write_data_to_file(data: list, file_name: str = None, jsonlines_output: bool = True) -> int:
         '''
         This will write the given data to the specified file.
 
@@ -335,10 +337,10 @@ class BaseStorageRecorder:
 
     @type_check
     def upload_data_to_database(self,
-                                data : list,
-                                collection : Union[IndalekoCollection, str] = 'Objects',
-                                database : IndalekoDBConfig = IndalekoDBConfig(),
-                                chunk_size : int = 5000) -> bool:
+                                data: list,
+                                collection: Union[IndalekoCollection, str] = 'Objects',
+                                database: IndalekoDBConfig = IndalekoDBConfig(),
+                                chunk_size: int = 5000) -> bool:
         '''
         This will upload the specified data to the database.
 
@@ -356,6 +358,7 @@ class BaseStorageRecorder:
         while count < len(data):
             chunk = data[count:count + chunk_size]
             count += chunk_size
+            assert chunk
 
     @staticmethod
     def build_load_string(**kwargs) -> str:
@@ -380,7 +383,7 @@ class BaseStorageRecorder:
             load_string += ' ' + kwargs['file']
         return load_string
 
-    def load_collector_data_from_file(self : 'BaseStorageRecorder') -> None:
+    def load_collector_data_from_file(self: 'BaseStorageRecorder') -> None:
         '''This function loads the collector data from the file.'''
         if self.input_file is None:
             raise ValueError('input_file must be specified')
@@ -400,23 +403,24 @@ class BaseStorageRecorder:
 
     @staticmethod
     def build_storage_relationship(
-        id1 : Union[str, uuid.UUID],
-        id2 : Union[str, uuid.UUID],
-        relationship : Union[str, uuid.UUID],
-        source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
+        id1: Union[str, uuid.UUID],
+        id2: Union[str, uuid.UUID],
+        relationship: Union[str, uuid.UUID],
+        source_id: Union[str, uuid.UUID]
+    ) -> IndalekoRelationship:
         '''This builds a storage relationship object between two objects.'''
         return IndalekoRelationship(
-            objects = (
+            objects=(
                 {
-                    'collection' : IndalekoDBCollections.Indaleko_Object_Collection,
-                    'object' : id1,
+                    'collection': IndalekoDBCollections.Indaleko_Object_Collection,
+                    'object': id1,
                 },
                 {
-                    'collection' : IndalekoDBCollections.Indaleko_Object_Collection,
-                    'object' : id2,
+                    'collection': IndalekoDBCollections.Indaleko_Object_Collection,
+                    'object': id2,
                 }
             ),
-            relationships = [
+            relationships=[
                 IndalekoSemanticAttributeDataModel(
                     Identifier=relationship
                 )
@@ -426,9 +430,10 @@ class BaseStorageRecorder:
 
     @staticmethod
     def build_dir_contains_relationship(
-        parent : Union[str, uuid.UUID], # parent
-        child : Union[str, uuid.UUID], # child
-        source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
+        parent: Union[str, uuid.UUID],  # parent
+        child: Union[str, uuid.UUID],  # child
+        source_id: Union[str, uuid.UUID]
+    ) -> IndalekoRelationship:
         '''This builds a contains relationship object for a directory and a child.'''
         return BaseStorageRecorder.build_storage_relationship(
             parent, child, IndalekoRelationship.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR, source_id
@@ -436,9 +441,10 @@ class BaseStorageRecorder:
 
     @staticmethod
     def build_contained_by_dir_relationship(
-        child : Union[str, uuid.UUID], # child
-        parent : Union[str, uuid.UUID], # parent
-        source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
+        child: Union[str, uuid.UUID],  # child
+        parent: Union[str, uuid.UUID],  # parent
+        source_id: Union[str, uuid.UUID]
+    ) -> IndalekoRelationship:
         '''This builds a contains relationship object for a directory and a child.'''
         return BaseStorageRecorder.build_storage_relationship(
             child, parent, IndalekoRelationship.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR, source_id
@@ -446,9 +452,10 @@ class BaseStorageRecorder:
 
     @staticmethod
     def build_volume_contains_relationship(
-        volume : Union[str, uuid.UUID], # volume
-        child : Union[str, uuid.UUID], # child
-        source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
+        volume: Union[str, uuid.UUID],  # volume
+        child: Union[str, uuid.UUID],  # child
+        source_id: Union[str, uuid.UUID]
+    ) -> IndalekoRelationship:
         '''This builds a contains relationship object for a volume and a child.'''
         return BaseStorageRecorder.build_storage_relationship(
             volume, child, IndalekoRelationship.VOLUME_CONTAINS_RELATIONSHIP_UUID_STR, source_id
@@ -456,9 +463,10 @@ class BaseStorageRecorder:
 
     @staticmethod
     def build_contained_by_volume_relationship(
-        child : Union[str, uuid.UUID], # child
-        volume : Union[str, uuid.UUID], # volume
-        source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
+        child: Union[str, uuid.UUID],  # child
+        volume: Union[str, uuid.UUID],  # volume
+        source_id: Union[str, uuid.UUID]
+    ) -> IndalekoRelationship:
         '''This builds a contains relationship object for a volume and a child.'''
         return BaseStorageRecorder.build_storage_relationship(
             child, volume, IndalekoRelationship.CONTAINED_BY_VOLUME_RELATIONSHIP_UUID_STR, source_id
@@ -466,9 +474,10 @@ class BaseStorageRecorder:
 
     @staticmethod
     def build_machine_contains_relationship(
-        machine : Union[str, uuid.UUID], # machine
-        child : Union[str, uuid.UUID], # child
-        source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
+        machine: Union[str, uuid.UUID],  # machine
+        child: Union[str, uuid.UUID],  # child
+        source_id: Union[str, uuid.UUID]
+    ) -> IndalekoRelationship:
         '''This builds a contains relationship object for a machine and a child.'''
         return BaseStorageRecorder.build_storage_relationship(
             machine, child, IndalekoRelationship.MACHINE_CONTAINS_RELATIONSHIP_UUID_STR, source_id
@@ -476,14 +485,14 @@ class BaseStorageRecorder:
 
     @staticmethod
     def build_contained_by_machine_relationship(
-        child : Union[str, uuid.UUID], # child
-        machine : Union[str, uuid.UUID], # machine
-        source_id : Union[str, uuid.UUID]) -> IndalekoRelationship:
+        child: Union[str, uuid.UUID],  # child
+        machine: Union[str, uuid.UUID],  # machine
+        source_id: Union[str, uuid.UUID]
+    ) -> IndalekoRelationship:
         '''This builds a contains relationship object for a machine and a child.'''
         return BaseStorageRecorder.build_storage_relationship(
             child, machine, IndalekoRelationship.CONTAINED_BY_MACHINE_RELATIONSHIP_UUID_STR, source_id
         )
-
 
     def build_dirmap(self) -> None:
         '''This function builds the directory/file map'''
@@ -494,13 +503,12 @@ class BaseStorageRecorder:
 
     def build_edges(self) -> None:
         '''Build the edges between files and directories.'''
-        # TODO: this should be abstracted out to allow
-        # moving this into the base class.
         source_id = IndalekoSourceIdentifierDataModel(
-            Identifier = str(self.recorder_data.RecorderServiceUUID),
-            Version='1.0',
+            Identifier=str(self.recorder_data.RecorderServiceUUID),
+            Version=self.recorder_data.RecorderServiceVersion,
         )
         for item in self.dir_data + self.file_data:
+            assert 'Path' in item, f'Path not in item: {item.args}'
             parent = item['Path']
             if parent not in self.dirmap:
                 continue
@@ -534,32 +542,30 @@ class BaseStorageRecorder:
                 )
                 self.edge_count += 1
 
-
     @staticmethod
-    def arangoimport_object_data(recorder : 'BaseStorageRecorder') -> None:
+    def arangoimport_object_data(recorder: 'BaseStorageRecorder') -> None:
         '''Import the object data into the database'''
         if recorder.object_data_load_string is None:
             raise ValueError('object_data_load_string must be set')
         recorder.execute_command(recorder.object_data_load_string)
 
-
     @staticmethod
-    def arangoimport_relationship_data(recorder : 'BaseStorageRecorder') -> None:
+    def arangoimport_relationship_data(recorder: 'BaseStorageRecorder') -> None:
         '''Import the relationship data into the database'''
         if recorder.relationship_data_load_string is None:
             raise ValueError('relationship_data_load_string must be set')
         recorder.execute_command(recorder.relationship_data_load_string)
 
-
     @staticmethod
-    def bulk_upload_object_data(recorder : 'BaseStorageRecorder') -> None:
+    def bulk_upload_object_data(recorder: 'BaseStorageRecorder') -> None:
         '''Bulk upload the object data to the database'''
+        assert isinstance(recorder, BaseStorageRecorder), 'recorder is not a BaseStorageRecorder'
         raise NotImplementedError('bulk_upload_object_data must be implemented')
 
-
     @staticmethod
-    def bulk_upload_relationship_data(recorder : 'BaseStorageRecorder') -> None:
+    def bulk_upload_relationship_data(recorder: 'BaseStorageRecorder') -> None:
         '''Bulk upload the relationship data to the database'''
+        assert isinstance(recorder, BaseStorageRecorder), 'recorder is not a BaseStorageRecorder'
         raise NotImplementedError('bulk_upload_relationship_data must be implemented')
 
     class base_recorder_mixin(IndalekoBaseCLI.default_handler_mixin):
@@ -567,7 +573,7 @@ class BaseStorageRecorder:
 
         @staticmethod
         @type_check
-        def get_additional_parameters(pre_parser : argparse.ArgumentParser) -> argparse.ArgumentParser:
+        def get_additional_parameters(pre_parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
             '''This function adds common switches for local storage recorders to a parser.'''
             default_output_type = 'file'
             output_type_choices = [default_output_type]
@@ -594,15 +600,14 @@ class BaseStorageRecorder:
             return pre_parser
 
     @staticmethod
-    def execute_command(command : str) -> None:
+    def execute_command(command: str) -> None:
         '''Execute a command'''
         result = os.system(command)
         logging.info('Command %s result: %d', command, result)
         print(f'Command {command} result: {result}')
 
-
     @staticmethod
-    def write_object_data_to_file(recorder : 'BaseStorageRecorder', **kwargs) -> None:
+    def write_object_data_to_file(recorder: 'BaseStorageRecorder', **kwargs) -> None:
         '''Write the object data to a file'''
         output_file = kwargs.get('output_file')
         if not output_file and hasattr(recorder, 'output_object_file'):
@@ -622,11 +627,11 @@ class BaseStorageRecorder:
         )
         logging.info('Load string: %s', recorder.object_data_load_string)
         print('Load string (objects): ', recorder.object_data_load_string)
-        if hasattr(recorder, 'output_count'): # should be there
+        if hasattr(recorder, 'output_count'):  # should be there
             recorder.output_count += count
 
     @staticmethod
-    def write_edge_data_to_file(recorder : 'BaseStorageRecorder', **kwargs) -> None:
+    def write_edge_data_to_file(recorder: 'BaseStorageRecorder', **kwargs) -> None:
         '''Write the edge data to a file'''
         output_file = kwargs.get('output_file')
         if not output_file and hasattr(recorder, 'output_object_file'):
@@ -649,9 +654,10 @@ class BaseStorageRecorder:
 
     @staticmethod
     def record_data_in_file(
-            data : list,
-            dir_name : Union[Path, str],
-            preferred_file_name : Union[Path, str, None] = None) -> tuple[str,int]:
+            data: list,
+            dir_name: Union[Path, str],
+            preferred_file_name: Union[Path, str, None] = None
+    ) -> tuple[str, int]:
         '''
         Record the specified data in a file.
 
@@ -691,14 +697,14 @@ class BaseStorageRecorder:
             )
             print(f'Unable to rename temp file {temp_file_name} to output file {preferred_file_name}')
             print(f'Error: {e}')
-            preferred_file_name=temp_file_name
+            preferred_file_name = temp_file_name
         return preferred_file_name, count
 
-    def get_object_path(self : 'BaseStorageRecorder', obj : IndalekoObject):
+    def get_object_path(self: 'BaseStorageRecorder', obj: IndalekoObject):
         '''Given an Indaleko object, return a valid local path to the object'''
-        return obj['Path'] # default is no change
+        return obj['Path']  # default is no change
 
-    def is_object_directory(self : 'BaseStorageRecorder', obj: IndalekoObject) -> bool:
+    def is_object_directory(self: 'BaseStorageRecorder', obj: IndalekoObject) -> bool:
         '''Return True if the object is a directory'''
         assert isinstance(obj, IndalekoObject), f'obj is {type(obj)}, not an IndalekoObject'
         return 'S_IFDIR' in obj.args['PosixFileAttributes'] or \
@@ -719,7 +725,7 @@ class BaseStorageRecorder:
             if self.is_object_directory(obj):
                 if 'Path' not in obj:
                     logging.warning('Directory object does not have a path: %s', obj.serialize())
-                    continue # skip
+                    continue  # skip
                 self.dir_data_by_path[self.get_object_path(obj)] = obj
                 self.dir_data.append(obj)
                 self.dir_count += 1
@@ -736,12 +742,12 @@ class BaseStorageRecorder:
         assert len(self.dir_data) + len(self.file_data) > 0, 'No data to record'
         self.build_dirmap()
         self.build_edges()
-        kwargs={
-            'platform' : self.platform,
-            'service' : self.recorder_data.RecorderServiceName,
-            'collection' : IndalekoDBCollections.Indaleko_Object_Collection,
-            'timestamp' : self.timestamp,
-            'output_dir' : self.data_dir,
+        kwargs = {
+            'platform': self.platform,
+            'service': self.recorder_data.RecorderServiceName,
+            'collection': IndalekoDBCollections.Indaleko_Object_Collection,
+            'timestamp': self.timestamp,
+            'output_dir': self.data_dir,
         }
         if hasattr(self, 'machine_id') and self.machine_id is not None:
             kwargs['machine'] = str(uuid.UUID(self.machine_id).hex)
@@ -756,11 +762,11 @@ def main():
     """Test code for IndalekoStorageRecorder.py"""
     # Now parse the arguments
     recorder = BaseStorageRecorder(
-        recorder_data = IndalekoStorageRecorderDataModel(
-            RecorderServiceName = BaseStorageRecorder.indaleko_generic_storage_recorder_service_name,
-            RecorderServiceUUID = BaseStorageRecorder.indaleko_generic_storage_recorder_uuid,
-            RecorderServiceVersion = BaseStorageRecorder.indaleko_generic_storage_recorder_service_version,
-            RecorderServiceDescription = BaseStorageRecorder.indaleko_generic_storage_recorder_service_description,
+        recorder_data=IndalekoStorageRecorderDataModel(
+            RecorderServiceName=BaseStorageRecorder.indaleko_generic_storage_recorder_service_name,
+            RecorderServiceUUID=BaseStorageRecorder.indaleko_generic_storage_recorder_uuid,
+            RecorderServiceVersion=BaseStorageRecorder.indaleko_generic_storage_recorder_service_version,
+            RecorderServiceDescription=BaseStorageRecorder.indaleko_generic_storage_recorder_service_description,
         ),
         service_name=BaseStorageRecorder.indaleko_generic_storage_recorder_service_name,
         service_id=BaseStorageRecorder.indaleko_generic_storage_recorder_uuid_str,
