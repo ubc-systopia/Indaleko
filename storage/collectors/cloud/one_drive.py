@@ -263,13 +263,16 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
         '''This builds the stat dict for the entry'''
         return entry
 
-    def collect(self) -> list:
+    def collect(self, recursive: bool = True) -> list:
         '''
         This method indexes OneDrive Drive.
         '''
-        ic('Indexing OneDrive Drive')
-        ic('Recurse: ', self.recurse)
-        return self.get_onedrive_metadata()
+        assert recursive == self.recurse, 'Recursive flag mismatch'
+        if self.debug:
+            ic('Indexing OneDrive Drive')
+            ic('Recurse: ', self.recurse)
+        self.data = self.get_onedrive_metadata()
+        return self.data
 
     def get_drives(self) -> list:
         '''

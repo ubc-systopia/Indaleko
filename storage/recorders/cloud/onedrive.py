@@ -54,7 +54,7 @@ class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
     '''
     onedrive_recorder_uuid = 'c15afa0f-5e5a-4a5b-82ab-8adb0311dfaf'
     onedrive_recorder_service = {
-        'service_name': 'Microsoft OneDrive Ingester',
+        'service_name': 'Microsoft OneDrive Collector',
         'service_description': 'This service ingests metadata from OneDrive into Indaleko.',
         'service_version': '1.0.0',
         'service_type': IndalekoServiceManager.service_type_storage_recorder,
@@ -91,8 +91,8 @@ class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
         super().__init__(**kwargs)
         self.output_file = kwargs.get('output_file', self.generate_file_name())
         self.source = {
-            'Identifier': self.dropbox_recorder_uuid,
-            'Version': self.dropbox_recorder_service['service_version'],
+            'Identifier': self.onedrive_recorder_uuid,
+            'Version': self.onedrive_recorder_service['service_version'],
         }
         # self.dir_data.append(self.build_dummy_root_dir_entry())
 
@@ -102,8 +102,8 @@ class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
             raise ValueError('data_dir must be specified')
         candidates = find_candidate_files(
             [
-                IndalekoOneDriveCloudStorageCollector.dropbox_platform,
-                IndalekoOneDriveCloudStorageCollector.dropbox_collector_name
+                IndalekoOneDriveCloudStorageCollector.onedrive_platform,
+                IndalekoOneDriveCloudStorageCollector.onedrive_collector_name
             ],
             self.data_dir
         )
@@ -197,6 +197,8 @@ class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
                         'Description': 'Access Time',
                     }
                 )
+        data['Path'] = path
+        data['Name'] = data['name']
         if 'folder' in data:
             unix_file_attributes = UnixFileAttributes.FILE_ATTRIBUTES['S_IFDIR']
             windows_file_attributes = IndalekoWindows.FILE_ATTRIBUTES['FILE_ATTRIBUTE_DIRECTORY']
