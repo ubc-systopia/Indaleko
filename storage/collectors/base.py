@@ -44,7 +44,8 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # from data_models import IndalekoServiceDataModel
 from db import IndalekoServiceManager
 from storage.collectors.data_model import IndalekoStorageCollectorDataModel
-from utils.misc.directory_management import indaleko_default_log_dir, indaleko_default_data_dir, indaleko_default_config_dir
+from utils.misc.directory_management import indaleko_default_log_dir, indaleko_default_data_dir, \
+    indaleko_default_config_dir
 from utils.misc.file_name_management import indaleko_file_name_prefix, generate_file_name, extract_keys_from_file_name
 # pylint: enable=wrong-import-position
 
@@ -56,11 +57,11 @@ class BaseStorageCollector:
     the collectors.
     '''
     default_collector_data = IndalekoStorageCollectorDataModel(
-        CollectorPlatformName = None,
-        CollectorServiceName = 'Indaleko Generic Collector',
-        CollectorServiceUUID = uuid.UUID('4a80a080-9cc9-4856-bf43-7b646557ac2d'),
-        CollectorServiceVersion = '1.0',
-        CollectorServiceDescription = 'This is the base (non-specialized) Indaleko storage collector. You should not see it in the database.'
+        CollectorPlatformName=None,
+        CollectorServiceName='Indaleko Generic Collector',
+        CollectorServiceUUID=uuid.UUID('4a80a080-9cc9-4856-bf43-7b646557ac2d'),
+        CollectorServiceVersion='1.0',
+        CollectorServiceDescription='Base Indaleko storage collector. Do not use.',
     )
 
     # define the parameters for the generic collector service.  These should be
@@ -83,7 +84,7 @@ class BaseStorageCollector:
         'bad_symlink_count',
     )
 
-    cli_handler_mixin = None # there is no default handler mixin
+    cli_handler_mixin = None  # there is no default handler mixin
 
     # local requires it, cloud does not
     requires_machine_config = True
@@ -147,7 +148,7 @@ class BaseStorageCollector:
                     service_version=self.get_collector_service_version(),
                     service_type=self.get_collector_service_type(),
                 )
-        assert self.collector_service is not None or self.offline,\
+        assert self.collector_service is not None or self.offline, \
             "Collector service does not exist, not in offline mode"
         for count in self.counter_values:
             setattr(self, count, 0)
@@ -219,9 +220,9 @@ class BaseStorageCollector:
         '''
         Retrieves counters about the collector.
         '''
-        return {x : getattr(self, x) for x in BaseStorageCollector.counter_values}
+        return {x: getattr(self, x) for x in BaseStorageCollector.counter_values}
 
-    def generate_collector_file_name(self : 'BaseStorageCollector', **kwargs) -> str:
+    def generate_collector_file_name(self: 'BaseStorageCollector', **kwargs) -> str:
         '''Generate a file name for the Linux local collector'''
         if 'platform' not in kwargs:
             kwargs['platform'] = self.collector_data.CollectorPlatformName
@@ -231,7 +232,7 @@ class BaseStorageCollector:
             if not hasattr(self, 'machine_id'):
                 ic(f'type(cls): {type(self)}')
                 ic(f'dir(cls): {dir(self)}')
-            kwargs['machine_id'] = self.machine_id # must be there!
+            kwargs['machine_id'] = self.machine_id  # must be there!
         assert 'machine_id' in kwargs, 'machine_id must be specified'
         return BaseStorageCollector.__generate_collector_file_name(**kwargs)
 
@@ -260,8 +261,8 @@ class BaseStorageCollector:
             target_dir = kwargs['target_dir']
         suffix = kwargs.get('suffix', BaseStorageCollector.default_file_suffix)
         kwargs = {
-            'service' : collector_name,
-            'timestamp' : timestamp,
+            'service': collector_name,
+            'timestamp': timestamp,
         }
         if platform:
             kwargs['platform'] = platform
@@ -271,10 +272,10 @@ class BaseStorageCollector:
             kwargs['storage'] = storage_description
         kwargs['suffix'] = suffix
         name = generate_file_name(**kwargs)
-        return os.path.join(target_dir,name)
+        return os.path.join(target_dir, name)
 
     @staticmethod
-    def extract_metadata_from_collector_file_name(file_name : str) -> dict:
+    def extract_metadata_from_collector_file_name(file_name: str) -> dict:
         '''
         This script extracts metadata from a collector file name, based upon
         the format used by generate_collector_file_name.
@@ -288,11 +289,11 @@ class BaseStorageCollector:
             data['storage'] = str(uuid.UUID(data['storage']))
         return data
 
-    def build_stat_dict(self, name: str, root : str) -> tuple:
+    def build_stat_dict(self, name: str, root: str) -> tuple:
         '''This function builds a stat dict for a given file.'''
         file_path = os.path.join(root, name)
         if not os.path.exists(file_path):
-            if not name in os.listdir(root):
+            if name not in os.listdir(root):
                 logging.warning('File %s does not exist in directory %s', file_path, root)
                 self.not_found_count += 1
             elif os.path.lexists(file_path):
@@ -307,7 +308,7 @@ class BaseStorageCollector:
         try:
             lstat_data = os.lstat(file_path)
             stat_data = os.stat(file_path)
-        except Exception as e: # pylint: disable=broad-except
+        except Exception as e:  # pylint: disable=broad-except
             # at least for now, we just skip errors
             logging.warning('Unable to stat %s : %s', file_path, e)
             if lstat_data is not None:
@@ -327,10 +328,12 @@ class BaseStorageCollector:
             raise ValueError('Symlinks should have been handled above')
         else:
             self.special_count += 1
-            return None # don't process special files
+            return None  # don't process special files
 
-        stat_dict = {key : getattr(stat_data, key) \
-                    for key in dir(stat_data) if key.startswith('st_')}
+        stat_dict = {
+            key: getattr(stat_data, key)
+            for key in dir(stat_data) if key.startswith('st_')
+        }
         stat_dict['Name'] = name
         stat_dict['Path'] = root
         stat_dict['URI'] = os.path.join(root, name)
@@ -351,7 +354,6 @@ class BaseStorageCollector:
                 return BaseStorageCollector.convert_to_serializable(data.__dict__)
             return None
 
-
     def collect(self, **kwargs) -> None:
         '''
         This is the main function for the collector.  Can be overridden
@@ -371,11 +373,10 @@ class BaseStorageCollector:
         if self.debug:
             print('Processed', count, 'entries (complete)')
 
-
     @staticmethod
     def write_data_to_file(
-        collector : 'BaseStorageCollector',
-        output_file_name : str = None
+        collector: 'BaseStorageCollector',
+        output_file_name: str = None
     ) -> None:
         '''Write the data to a file'''
         if output_file_name is None:
@@ -394,9 +395,8 @@ class BaseStorageCollector:
         if hasattr(collector, 'output_count'):
             collector.output_count += count
 
-
     @staticmethod
-    def __write_data_to_file(data : list, file_name : str = None, jsonlines_output : bool = True) -> int:
+    def __write_data_to_file(data: list, file_name: str = None, jsonlines_output: bool = True) -> int:
         '''
         This will write the given data to the specified file.
 
@@ -435,9 +435,9 @@ class BaseStorageCollector:
 
     @staticmethod
     def record_data_in_file(
-        data : list,
-        dir_name : Union[Path,str],
-        preferred_file_name : Union[Path, str, None] = None
+        data: list,
+        dir_name: Union[Path, str],
+        preferred_file_name: Union[Path, str, None] = None
     ) -> tuple[str, int]:
         '''
         Record the specified data in a file.
@@ -479,12 +479,11 @@ class BaseStorageCollector:
         return preferred_file_name, count
 
 
-
 def main():
     """Test code for this module."""
     collector = BaseStorageCollector()
     output_file = collector.generate_collector_file_name(
-        collector_name = 'test_collector',
+        collector_name='test_collector',
     )
     ic(output_file)
     with open(output_file, 'wt', encoding='utf-8-sig') as output:
@@ -492,6 +491,7 @@ def main():
         print(f'Wrote {output_file}')
     metadata = collector.extract_metadata_from_collector_file_name(output_file)
     print(json.dumps(metadata, indent=4))
+
 
 if __name__ == "__main__":
     main()

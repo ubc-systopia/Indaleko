@@ -18,8 +18,10 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
+import datetime
 import json
 import os
+import re
 import sys
 import uuid
 
@@ -38,10 +40,10 @@ from db import IndalekoServiceManager
 from platforms.unix import UnixFileAttributes
 from platforms.windows_attributes import IndalekoWindows
 from storage import IndalekoObject
-from storage.collectors.cloud.onedrive import IndalekoOneDriveCloudStorageCollector
+from storage.collectors.cloud.one_drive import IndalekoOneDriveCloudStorageCollector
 from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from storage.recorders.cloud.cloud_base import BaseCloudStorageRecorder
-from utils.misc.file_name_management import find_candidate_files, extract_keys_from_file_name
+from utils.misc.file_name_management import find_candidate_files, extract_keys_from_file_name, generate_file_name
 from utils.misc.data_management import encode_binary_data
 # pylint: enable=wrong-import-position
 
@@ -50,7 +52,6 @@ class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
     '''
     This class provides the OneDrive Ingester for Indaleko.
     '''
-
     onedrive_recorder_uuid = 'c15afa0f-5e5a-4a5b-82ab-8adb0311dfaf'
     onedrive_recorder_service = {
         'service_name': 'Microsoft OneDrive Ingester',
@@ -145,10 +146,9 @@ class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
                 timestamps.append(
                     {
                         'Label': IndalekoObject.CREATION_TIMESTAMP,
-                        'Value' : datetime.datetime\
-                            .fromisoformat(data['fileSystemInfo']['createdDateTime'])\
-                                .isoformat(),
-                        'Description' : 'Creation Time',
+                        'Value': datetime.datetime.fromisoformat(data['fileSystemInfo']
+                                                                 ['createdDateTime']).isoformat(),
+                        'Description': 'Creation Time',
                     }
                 )
             if 'lastModifiedDateTime' in data['fileSystemInfo']:
@@ -156,19 +156,17 @@ class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
                 timestamps.append(
                     {
                         'Label': IndalekoObject.MODIFICATION_TIMESTAMP,
-                        'Value' : datetime.datetime\
-                            .fromisoformat(data['fileSystemInfo']['lastModifiedDateTime'])\
-                                .isoformat(),
-                        'Description' : 'Modification Time',
+                        'Value': datetime.datetime.fromisoformat(data['fileSystemInfo']
+                                                                 ['lastModifiedDateTime']).isoformat(),
+                        'Description': 'Modification Time',
                     }
                 )
                 timestamps.append(
                     {
                         'Label': IndalekoObject.CHANGE_TIMESTAMP,
-                    'Value' : datetime.datetime\
-                        .fromisoformat(data['fileSystemInfo']['lastModifiedDateTime'])\
-                            .isoformat(),
-                    'Description' : 'Access Time',
+                        'Value': datetime.datetime.fromisoformat(data['fileSystemInfo']
+                                                                 ['lastModifiedDateTime']).isoformat(),
+                        'Description': 'Access Time',
                     }
                 )
         else:
@@ -176,8 +174,8 @@ class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
                 timestamps.append(
                     {
                         'Label': IndalekoObject.CREATION_TIMESTAMP,
-                        'Value' : datetime.datetime.fromisoformat(data['createdTime']).isoformat(),
-                        'Description' : 'Creation Time',
+                        'Value': datetime.datetime.fromisoformat(data['createdTime']).isoformat(),
+                        'Description': 'Creation Time',
                     }
                 )
             if 'lastModifiedDateTime' in data:
@@ -185,15 +183,15 @@ class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
                 timestamps.append(
                     {
                         'Label': IndalekoObject.MODIFICATION_TIMESTAMP,
-                        'Value' : datetime.datetime.fromisoformat(data['modifiedTime']).isoformat(),
-                        'Description' : 'Modification Time',
+                        'Value': datetime.datetime.fromisoformat(data['modifiedTime']).isoformat(),
+                        'Description': 'Modification Time',
                     }
                 )
                 timestamps.append(
                     {
                         'Label': IndalekoObject.CHANGE_TIMESTAMP,
-                        'Value' : datetime.datetime.fromisoformat(data['modifiedTime']).isoformat(),
-                        'Description' : 'Access Time',
+                        'Value': datetime.datetime.fromisoformat(data['modifiedTime']).isoformat(),
+                        'Description': 'Access Time',
                     }
                 )
         if 'folder' in data:
@@ -205,17 +203,17 @@ class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
         else:
             raise ValueError('Unknown file type')
         kwargs = {
-            'source' : self.source,
-            'raw_data' : Indaleko.encode_binary_data(bytes(json.dumps(data), 'utf-8-sig')),
-            'URI' : data.get('webUrl', None),
-            'Path' : path,
-            'ObjectIdentifier' : str(oid),
-            'Timestamps' : timestamps,
-            'Size' : int(data.get('size', 0)),
-            'Attributes' : data,
-            'Label' : data.get('name', None),
-            'PosixFileAttributes' : UnixFileAttributes.map_file_attributes(unix_file_attributes),
-            'WindowsFileAttributes' : IndalekoWindows.map_file_attributes(windows_file_attributes),
+            'source': self.source,
+            'raw_data': encode_binary_data(bytes(json.dumps(data), 'utf-8-sig')),
+            'URI': data.get('webUrl', None),
+            'Path': path,
+            'ObjectIdentifier': str(oid),
+            'Timestamps': timestamps,
+            'Size': int(data.get('size', 0)),
+            'Attributes': data,
+            'Label': data.get('name', None),
+            'PosixFileAttributes': UnixFileAttributes.map_file_attributes(unix_file_attributes),
+            'WindowsFileAttributes': IndalekoWindows.map_file_attributes(windows_file_attributes),
         }
         # ic(kwargs)
         return IndalekoObject(**kwargs)
@@ -224,7 +222,7 @@ class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
     def generate_ingester_file_name(**kwargs):
         '''Generate the file name for the ingester'''
         assert 'user_id' in kwargs, 'user_id is required'
-        return Indaleko.generate_file_name(**kwargs)
+        return generate_file_name(**kwargs)
 
     def ingest(self) -> None:
         '''Ingest the data from the Google Drive Indexer'''
@@ -237,27 +235,27 @@ class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
             obj = self.normalize_index_data(item)
             assert 'Path' in obj.args, f'Path is required\n\n{item}\n\n{obj.args}'
             if 'S_IFDIR' in obj.args['PosixFileAttributes'] or \
-                'FILE_ATTRIBUTE_DIRECTORY' in obj.args['WindowsFileAttributes']:
+                    'FILE_ATTRIBUTE_DIRECTORY' in obj.args['WindowsFileAttributes']:
                 id_to_oid_map[item['id']] = obj.args['ObjectIdentifier']
                 dir_data.append(obj)
                 self.dir_count += 1
             else:
                 assert 'S_IFREG' in obj.args['PosixFileAttributes'] or \
-                    'FILE_ATTRIBUTE_NORMAL' in obj.args['WindowsFileAttributes'], \
+                        'FILE_ATTRIBUTE_NORMAL' in obj.args['WindowsFileAttributes'], \
                         'Unrecognized file type'
                 file_data.append(obj)
                 self.file_count += 1
         dir_edges = []
         source = {
-            'Identifier' : self.onedrive_recorder,
-            'Version' : '1.0.0',
+            'Identifier': self.onedrive_recorder,
+            'Version': '1.0.0',
         }
         for item in dir_data + file_data:
             # deal with parent ref
             parent_id = item.args['Record']['Attributes']['parentReference']['id']
             parent_oid = id_to_oid_map[parent_id]
             if parent_oid == item.args['ObjectIdentifier']:
-                continue # this is normal for root.  Don't need that relationship.
+                continue  # this is normal for root.  Don't need that relationship.
             dir_edge = IndalekoRelationshipContains(
                 relationship = \
                     IndalekoRelationshipContains.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR,
