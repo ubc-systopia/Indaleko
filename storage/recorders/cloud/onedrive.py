@@ -43,7 +43,7 @@ from storage import IndalekoObject
 from storage.collectors.cloud.one_drive import IndalekoOneDriveCloudStorageCollector
 from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from storage.recorders.cloud.cloud_base import BaseCloudStorageRecorder
-from utils.misc.file_name_management import find_candidate_files, extract_keys_from_file_name, generate_file_name
+from utils.misc.file_name_management import find_candidate_files, extract_keys_from_file_name
 from utils.misc.data_management import encode_binary_data
 # pylint: enable=wrong-import-position
 
@@ -123,8 +123,11 @@ class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
             return None
         return uuid.UUID(match.group(1))
 
-    def normalize_index_data(self, data: dict) -> dict:
-        '''Normalize the index data'''
+    def normalize_collector_data(self, data: dict) -> dict:
+        '''
+        Given some metadata, this will create a record that can be inserted into the
+        Object collection.
+        '''
         if data is None:
             raise ValueError('data is required')
         if not isinstance(data, dict):
@@ -218,216 +221,14 @@ class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
         # ic(kwargs)
         return IndalekoObject(**kwargs)
 
-    @staticmethod
-    def generate_ingester_file_name(**kwargs):
-        '''Generate the file name for the ingester'''
-        assert 'user_id' in kwargs, 'user_id is required'
-        return generate_file_name(**kwargs)
 
-    def ingest(self) -> None:
-        '''Ingest the data from the Google Drive Indexer'''
-        self.load_indexer_data_from_file()
-        # We need to pre-process the data before we can normalize the data.
-        dir_data = []
-        file_data = []
-        id_to_oid_map = {}
-        for item in self.indexer_data:
-            obj = self.normalize_index_data(item)
-            assert 'Path' in obj.args, f'Path is required\n\n{item}\n\n{obj.args}'
-            if 'S_IFDIR' in obj.args['PosixFileAttributes'] or \
-                    'FILE_ATTRIBUTE_DIRECTORY' in obj.args['WindowsFileAttributes']:
-                id_to_oid_map[item['id']] = obj.args['ObjectIdentifier']
-                dir_data.append(obj)
-                self.dir_count += 1
-            else:
-                assert 'S_IFREG' in obj.args['PosixFileAttributes'] or \
-                        'FILE_ATTRIBUTE_NORMAL' in obj.args['WindowsFileAttributes'], \
-                        'Unrecognized file type'
-                file_data.append(obj)
-                self.file_count += 1
-        dir_edges = []
-        source = {
-            'Identifier': self.onedrive_recorder,
-            'Version': '1.0.0',
-        }
-        for item in dir_data + file_data:
-            # deal with parent ref
-            parent_id = item.args['Record']['Attributes']['parentReference']['id']
-            parent_oid = id_to_oid_map[parent_id]
-            if parent_oid == item.args['ObjectIdentifier']:
-                continue  # this is normal for root.  Don't need that relationship.
-            dir_edge = IndalekoRelationshipContains(
-                relationship = \
-                    IndalekoRelationshipContains.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR,
-                object1 = {
-                    'collection' : Indaleko.Indaleko_Object_Collection,
-                    'object' : item.args['ObjectIdentifier'],
-                },
-                object2 = {
-                    'collection' : Indaleko.Indaleko_Object_Collection,
-                    'object' : parent_oid,
-                },
-                source = source
-            )
-            dir_edges.append(dir_edge)
-            self.edge_count += 1
-            dir_edge = IndalekoRelationshipContainedBy(
-                relationship = \
-                    IndalekoRelationshipContainedBy.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR,
-                object1 = {
-                    'collection' : Indaleko.Indaleko_Object_Collection,
-                    'object' : parent_oid,
-                },
-                object2 = {
-                    'collection' : Indaleko.Indaleko_Object_Collection,
-                    'object' : item.args['ObjectIdentifier'],
-                },
-                source = source
-            )
-            dir_edges.append(dir_edge)
-            self.edge_count += 1
-        for data in self.indexer_data:
-            if 'ObjectIdentifier' not in data:
-                data['ObjectIdentifier'] = str(self.extract_uuid_from_etag(data['eTag']))
-            assert isinstance(data['ObjectIdentifier'], str),\
-                f'ObjectIdentifier is not a string: {data["ObjectIdentifier"]}'
-            assert Indaleko.validate_uuid_string(data['ObjectIdentifier']),\
-                f'ObjectIdentifier is not a valid UUID: {data["ObjectIdentifier"]}'
-            id_to_oid_map[data['id']] = data['ObjectIdentifier']
-        # Now let's update the data with the parent object identifiers
-        dir_oids = []
-        for data in self.indexer_data:
-            if 'parentReference' in data:
-                parent_id = data['parentReference']
-                parent_oid = id_to_oid_map.get(parent_id['id'], None)
-                if parent_oid is not None:
-                    data['parents'] = [parent_oid]
-                else:
-                    ic('Parent not found for: ', data)
-            if 'parents' in data:
-                parent_ids = data['parents']
-                parent_oids = [id_to_oid_map.get(pid, None) for pid in parent_ids if pid in id_to_oid_map]
-                for parent_oid in parent_oids:
-                    if parent_oid not in dir_oids:
-                        dir_oids.append(parent_oid)
-                data['parents'] = parent_oids
-            obj = self.normalize_index_data(data)
-            if 'S_IFDIR' in obj.args['PosixFileAttributes']:
-                dir_data.append(obj)
-                self.dir_count += 1
-            else:
-                file_data.append(obj)
-                self.file_count += 1
-        source = {
-            'Identifier' : self.onedrive_recorder,
-            'Version' : '1.0.0',
-            'Description' : self.onedrive_recorder_service['service_description'],
-        }
-        kwargs = {
-            'platform' : self.indexer_file_metadata['platform'],
-            'prefix' : self.indexer_file_metadata['prefix'],
-            'service' : 'ingester',
-            'suffix' : 'jsonl',
-            'timestamp' : self.indexer_file_metadata.get('timestamp', self.timestamp),
-            'collection' : Indaleko.Indaleko_Object_Collection,
-            'user_id' : self.indexer_file_metadata['user_id']
-        }
-        data_file = os.path.join(self.data_dir, Indaleko.generate_file_name(**kwargs))
-        kwargs['collection'] = Indaleko.Indaleko_Relationship_Collection
-        edge_file = os.path.join(self.data_dir, Indaleko.generate_file_name(**kwargs))
-        ic(data_file, edge_file)
-        self.write_data_to_file(dir_data + file_data, data_file)
-        self.write_data_to_file(dir_edges, edge_file)
-        print(f'size of dir_edges: {len(dir_edges)}')
-        load_string = self.build_load_string(
-            collection=Indaleko.Indaleko_Object_Collection,
-            file=data_file
-        )
-        logging.info('Load string: %s', load_string)
-        ic('Object Collection load string is:\n', load_string)
-        load_string = self.build_load_string(
-            collection=Indaleko.Indaleko_Relationship_Collection,
-            file=edge_file
-        )
-        logging.info('Load string: %s', load_string)
-        ic('Relationship Collection load string is:\n', load_string)
-
-
-
-
-def list_files(args: argparse.Namespace) -> None:
-    '''List the available indexer files'''
-    if len(args.strings) == 0:
-        strings = [IndalekoOneDriveIndexer.onedrive_platform, 'indexer', IndalekoOneDriveIndexer.default_file_suffix]
-    else:
-        strings = args.strings
-    print(strings)
-    matched_files = Indaleko.find_candidate_files(strings, args.datadir)
-    Indaleko.print_candidate_files(matched_files)
-
-def ingest_file(args: argparse.Namespace) -> None:
-    '''Ingest the specified file'''
-    print('ingest_file called: ', args)
-    if not hasattr(args, 'input') or args.input is None:
-        print('Pick the most likely file')
-        candidates = Indaleko.find_candidate_files([IndalekoOneDriveIndexer.onedrive_platform,
-                                                    'indexer',
-                                                    IndalekoOneDriveIndexer.default_file_suffix],
-                                                    args.datadir)
-    else:
-        candidates = Indaleko.find_candidate_files([args.input], args.datadir)
-    if len(candidates) == 0:
-        print(f'No files match the filter strings: {args.strings}')
-        list_files(args.strings)
-        return
-    if len(candidates) > 1:
-        print('Multiple files match the filter strings: ', args.strings)
-        Indaleko.print_candidate_files(candidates)
-        return
-    ingester = IndalekoOneDriveCloudStorageRecorder(
-        input_file=os.path.join(args.datadir,
-                                candidates[0][0]),
-        data_dir=args.datadir
+def main():
+    '''Main entry point for the OneDrive recorder'''
+    BaseCloudStorageRecorder.cloud_recorder_runner(
+        IndalekoOneDriveCloudStorageCollector,
+        IndalekoOneDriveCloudStorageRecorder,
     )
-    ingester.ingest()
-    for count_type, count_value in ingester.get_counts().items():
-        logging.info('%s: %d', count_type, count_value)
-        ic(count_type, count_value)
-    ic('Done ingesting')
 
-def main() -> None:
-    '''Provides command line processing for the IndalekoOneDriveIngester module.'''
-    logging_levels = IndalekoLogging.get_logging_levels()
-    pre_parser = argparse.ArgumentParser(add_help=False)
-    pre_parser.add_argument('--configdir',
-                            help=f'Path to the config directory (default is {Indaleko.default_config_dir})',
-                            default=Indaleko.default_config_dir)
-    pre_parser.add_argument('--logdir',
-                            help=f'Path to the log directory (default is {Indaleko.default_log_dir})',
-                            default=Indaleko.default_log_dir)
-    pre_parser.add_argument('--loglevel',
-                        choices=logging_levels,
-                        default=logging.DEBUG,
-                        help='Logging level to use.')
-    pre_parser.add_argument('--datadir',
-                            help=f'Path to the data directory (default is {Indaleko.default_data_dir})',
-                            type=str,
-                            default=Indaleko.default_data_dir)
-    command_subparser = pre_parser.add_subparsers(dest='command')
-    parser_list = command_subparser.add_parser('list', help='List the available indexer files', )
-    parser_list.add_argument('strings', nargs='*', type=str, help='Strings to search for')
-    parser_list.set_defaults(func=list_files)
-    parser_ingest = command_subparser.add_parser('ingest', help='Ingest the specified file')
-    parser_ingest.add_argument('--input', default=None, help='Indexer file to ingest', type=str)
-    parser_ingest.set_defaults(func=ingest_file)
-    pre_args, _ = pre_parser.parse_known_args()
-    if pre_args.command == 'list':
-        list_files(pre_args)
-    parser = argparse.ArgumentParser(parents=[pre_parser], description='OneDrive Metadata Ingest Management')
-    parser.set_defaults(func=ingest_file)
-    args = parser.parse_args()
-    print(args)
-    args.func(args)
 
 if __name__ == '__main__':
     main()

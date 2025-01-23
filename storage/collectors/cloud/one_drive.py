@@ -20,14 +20,11 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
-import argparse
 import concurrent.futures
-import datetime
 import json
 import logging
 import msal
 import os
-from pathlib import Path
 from queue import Queue
 import requests
 import socket
@@ -36,7 +33,6 @@ import threading
 import time
 from uuid import UUID
 
-from typing import Union
 from icecream import ic
 from pyngrok import ngrok
 
@@ -48,17 +44,11 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from data_models import IndalekoSourceIdentifierDataModel
 from db import IndalekoServiceManager
-from utils.cli.base import IndalekoBaseCLI
-from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
-from utils.cli.runner import IndalekoCLIRunner
 from utils.misc.file_name_management import generate_file_name
 from utils.misc.directory_management import indaleko_default_config_dir
 from storage.collectors.cloud.cloud_base import BaseCloudStorageCollector
 from storage.collectors.data_model import IndalekoStorageCollectorDataModel
-from perf.perf_collector import IndalekoPerformanceDataCollector
-from perf.perf_recorder import IndalekoPerformanceDataRecorder
 # pylint: enable=wrong-import-position
 
 
@@ -87,7 +77,7 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
 
     collector_data = IndalekoStorageCollectorDataModel(
         CollectorPlatformName=onedrive_platform,
-        CollectorServiceName=indaleko_onedrive_collector_service_name,
+        CollectorServiceName=onedrive_collector_name,
         CollectorServiceUUID=UUID(indaleko_onedrive_collector_uuid),
         CollectorServiceVersion=indaleko_onedrive_collector_service_version,
         CollectorServiceDescription=indaleko_onedrive_collector_service_description,
@@ -236,8 +226,12 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
         if 'collector_data' not in kwargs:
             kwargs['collector_data'] = self.collector_data
         self.config_dir = kwargs.get('config_dir', indaleko_default_config_dir)
-        self.onedrive_config_file = os.path.join(self.config_dir, IndalekoOneDriveCloudStorageCollector.onedrive_config_file)
-        self.onedrive_token_file = os.path.join(self.config_dir, IndalekoOneDriveCloudStorageCollector.onedrive_token_file)
+        self.onedrive_config_file = os.path.join(
+            self.config_dir,
+            IndalekoOneDriveCloudStorageCollector.onedrive_config_file)
+        self.onedrive_token_file = os.path.join(
+            self.config_dir,
+            IndalekoOneDriveCloudStorageCollector.onedrive_token_file)
         self.graphcreds = IndalekoOneDriveCloudStorageCollector.MicrosoftGraphCredentials(
             config=self.onedrive_config_file,
             cache_file=self.onedrive_token_file
@@ -284,7 +278,7 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
         '''
         headers = self.get_headers()
         url = 'https://graph.microsoft.com/v1.0/me/drives'
-        response = requests.get(url, headers=headers, timeout=(10,30))
+        response = requests.get(url, headers=headers, timeout=(10, 30))
         response.raise_for_status()
         if response.status_code == 200:
             drives = response.json().get('value', [])
@@ -333,7 +327,7 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
                     return trace_function
 
                 sys.settrace(trace_function)
-                response = requests.get(url, headers=headers, params=params, timeout=(10,30))
+                response = requests.get(url, headers=headers, params=params, timeout=(10, 30))
                 sys.settrace(None)
 
                 ic(f"Response: {response.status_code}")
@@ -349,7 +343,7 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
                     if 'folder' in item and self.recurse:
                         ic(f'{tid}: Found folder: {item["id"]}')
                         directories.append(item['id'])
-                    self.results.put(self.build_stat_dict(item),timeout=30)
+                    self.results.put(self.build_stat_dict(item), timeout=30)
                 return ic(directories)
 
             except requests.exceptions.Timeout as e:
@@ -360,7 +354,7 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
 
             except requests.exceptions.RequestException as e:
                 retries -= 1
-                if response is not None and 401 == response.status_code: # seems to indicate a stale token
+                if response is not None and 401 == response.status_code:  # seems to indicate a stale token
                     logging.info(f"{tid} : Request failed (401).  Refresh token.")
                     self.graphcreds.clear_token()
                     headers = self.get_headers()
@@ -402,7 +396,7 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
                 break
             directories = self.fetch_directory(url)
             ic(f'worker {tid} retrieved directories: ', directories)
-            if directories is None: # the fetch failed
+            if directories is None:  # the fetch failed
                 self.queue.put(url, timeout=30)
             elif self.recurse:
                 for directory in directories:
@@ -432,7 +426,7 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
         return [self.results.get() for _ in range(self.results.qsize())]
 
     @staticmethod
-    def get_url_for_folder(drive_id : str = None,
+    def get_url_for_folder(drive_id: str = None,
                            folder_id: str = None,
                            return_children: bool = True) -> None:
         '''This method returns the URL for the folder.'''
@@ -520,7 +514,7 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
             headers = self.get_headers()
             params = {'$top': '999'}
             try:
-                response = requests.get(url, headers=headers, params=params, timeout=(10,30))
+                response = requests.get(url, headers=headers, params=params, timeout=(10, 30))
                 response.raise_for_status()
             except requests.exceptions.Timeout as e:
                 logging.error(ic(f"Request timed out: {e}. Retrying {url}"))
@@ -529,7 +523,7 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
             except requests.exceptions.RequestException as e:
                 logging.error("Error: %s - %s", response.status_code, response.text)
                 ic(e)
-                if 401 == response.status_code: # seems to indicate a stale token
+                if 401 == response.status_code:  # seems to indicate a stale token
                     self.graphcreds.clear_token()
                     # try again
                     ic(f'Refreshing token, url {url}')
@@ -567,7 +561,10 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
                 # provide useful additional detail.  I preserve it here to
                 # explain why we are not using it.
                 results.append(self.build_stat_dict(item))
-        ic(f'Processed {len(results)} items, refresh_count {refresh_count}, error_count {error_count}, success_error_count {success_error_count}')
+        ic(f'Processed {len(results)} items, '
+           f'refresh_count {refresh_count}, '
+           f'error_count {error_count}, '
+           f'success_error_count {success_error_count}')
         return results
 
     @staticmethod
@@ -592,9 +589,10 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
             that it assumes the keys are in the desired format. Don't just
             pass in configuration data.'''
             if not keys.get('UserId'):
-                collector=IndalekoOneDriveCloudStorageCollector(
+                collector = IndalekoOneDriveCloudStorageCollector(
                     config_dir=keys['ConfigDirectory'],
                 )
+                keys['UserId'] = collector.get_email()
             return BaseCloudStorageCollector.cloud_collector_mixin.generate_output_file_name(keys)
 
     cli_handler_mixin = onedrive_collector_mixin
