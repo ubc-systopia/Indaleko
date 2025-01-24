@@ -18,11 +18,15 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
+import argparse
 import logging
 import os
 import sys
 
-from icecream import ic
+from abc import abstractmethod
+from typing import Any, Union
+
+# from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -33,12 +37,32 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 # pylint: disable=wrong-import-position
-from perf_collector import IndalekoPerformanceDataRecorder
+# from perf_collector import IndalekoPerformanceDataCollector
 from perf_recorder import IndalekoPerformanceDataRecorder
 # pylint: enable=wrong-import-position
 
 
 class IndalekoPerformanceMixin:
+    '''Mixin class to handle performance measurement functionality'''
+
+    @abstractmethod
+    def get_platform_config_data(self, args: argparse.Namespace) -> Union[None, dict[str, Any]]:
+        '''Retrieve information about the current platform state (e.g, version data)'''
+
+    @abstractmethod
+    def setup_performance_measurement(self, args: argparse.Namespace) -> None:
+        '''Configure performance measurement based on CLI args'''
+
+    @abstractmethod
+    def extract_counters(self) -> dict[str, int]:
+        '''Extract performance counters'''
+
+    @abstractmethod
+    def record_performance(self, perf_data: dict[str, Any], args: argparse.Namespace) -> None:
+        '''Record performance data based on configuration'''
+
+
+class base_performance_mixin(IndalekoPerformanceMixin):
     """Mixin class to handle performance measurement functionality"""
 
     def setup_performance_measurement(self, args):

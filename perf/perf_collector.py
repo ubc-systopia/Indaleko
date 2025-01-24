@@ -43,6 +43,7 @@ from data_models import IndalekoPerformanceDataModel, IndalekoSourceIdentifierDa
 from utils.misc.data_management import encode_binary_data
 # pylint: enable=wrong-import-position
 
+
 class IndalekoPerformanceDataCollector:
     '''
     The IndalekoPerformanceData class is used to collect, store,
@@ -52,15 +53,15 @@ class IndalekoPerformanceDataCollector:
 
     def __init__(self, *args, **kwargs):
         '''Initialize the object.'''
-        self.perf_data : IndalekoPerformanceDataModel = IndalekoPerformanceDataModel(**kwargs)
+        self.perf_data: IndalekoPerformanceDataModel = IndalekoPerformanceDataModel(**kwargs)
 
     @staticmethod
     def measure_performance(
-        task_func : Callable[..., Any],
+        task_func: Callable[..., Any],
         source: IndalekoSourceIdentifierDataModel,
         description: str,
         MachineIdentifier: Union[uuid.UUID, None],
-        process_results_func : Callable[..., Dict[str, Union[int, float, str]]] = None,
+        process_results_func: Callable[..., Dict[str, Union[int, float, str]]] = None,
         input_file_name: Union[str, None] = None,
         output_file_name: Union[str, None] = None,
         *args: Union[Any, None],
@@ -88,7 +89,12 @@ class IndalekoPerformanceDataCollector:
             end_clock = time.perf_counter()
             if process_results_func is not None:
                 try:
-                    results_data = process_results_func(*args, output_file_name=output_file_name, **kwargs, result=result)
+                    results_data = process_results_func(
+                        *args,
+                        output_file_name=output_file_name,
+                        **kwargs,
+                        result=result
+                    )
                 except TypeError as e:
                     ic(f'{process_results_func} is not a callable type: {e} ')
             elapsed_time = end_clock - start_clock
@@ -148,29 +154,28 @@ class IndalekoPerformanceDataCollector:
         }
 
         record = IndalekoRecordDataModel(
-            SourceIdentifier = source,
-            Timestamp = end_time,
-            Attributes = data,
-            Data = encode_binary_data(json.dumps(data))
+            SourceIdentifier=source,
+            Timestamp=end_time,
+            Attributes=data,
+            Data=encode_binary_data(json.dumps(data))
         )
 
-
         return IndalekoPerformanceDataCollector(
-            Record = record,
-            SourceIdentifier = source,
-            MachineConfigurationId = MachineIdentifier,
-            StartTimestamp = start_time,
-            EndTimestamp = end_time,
-            ElapsedTime = data['elapsed_time'],
-            UserCPUTime = data['user_cpu_time'],
-            SystemCPUTime = data['system_cpu_time'],
-            InputSize = data['input_file_size'],
-            OutputSize = data['output_file_size'],
-            PeakMemoryUsage = data['peak_memory_usage'],
-            IOReadBytes = data['io_read_bytes'],
-            IOWriteBytes = data['io_write_bytes'],
-            ThreadCount = data['thread_count'],
-            AdditionalData = data['additional_data']
+            Record=record,
+            SourceIdentifier=source,
+            MachineConfigurationId=MachineIdentifier,
+            StartTimestamp=start_time,
+            EndTimestamp=end_time,
+            ElapsedTime=data['elapsed_time'],
+            UserCPUTime=data['user_cpu_time'],
+            SystemCPUTime=data['system_cpu_time'],
+            InputSize=data['input_file_size'],
+            OutputSize=data['output_file_size'],
+            PeakMemoryUsage=data['peak_memory_usage'],
+            IOReadBytes=data['io_read_bytes'],
+            IOWriteBytes=data['io_write_bytes'],
+            ThreadCount=data['thread_count'],
+            AdditionalData=data['additional_data']
         )
 
     @staticmethod
@@ -185,7 +190,7 @@ class IndalekoPerformanceDataCollector:
         return doc
 
     test_data = {
-        'Record' : {
+        'Record': {
             'SourceIdentifier': {
                 'Identifier': '1697394b-0f8f-44b4-91c0-a0fbd9d77feb',
                 'Version': '1.0'
@@ -195,23 +200,23 @@ class IndalekoPerformanceDataCollector:
             },
             'Data': encode_binary_data(b'')
         },
-        'MachineConfigurationId' : 'f7a439ec-c2d0-4844-a043-d8ac24d9ac0b',
-        'StartTimestamp' : '2024-12-15 15:55:35.786212+00:00',
-        'EndTimestamp' : '2024-12-15 15:56:06.200578+00:00',
-        'UserCPUTime' : 0.02,
-        'SystemCPUTime' : 0.221,
-        'PeakMemoryUsage' : 3152 * 1024,
-        'IOReadBytes' : int(4.2 * 1024 * 1024),
-        'IOWriteBytes' : int(3.9 * 1024),
-        'ThreadCount' : 1,
+        'MachineConfigurationId': 'f7a439ec-c2d0-4844-a043-d8ac24d9ac0b',
+        'StartTimestamp': '2024-12-15 15:55:35.786212+00:00',
+        'EndTimestamp': '2024-12-15 15:56:06.200578+00:00',
+        'UserCPUTime': 0.02,
+        'SystemCPUTime': 0.221,
+        'PeakMemoryUsage': 3152 * 1024,
+        'IOReadBytes': int(4.2 * 1024 * 1024),
+        'IOWriteBytes': int(3.9 * 1024),
+        'ThreadCount': 1,
     }
 
 
 def main():
     """Test code for the IndalekoPerformanceData class."""
     ic('IndalekoPerformanceData test code')
-    perf_data : IndalekoPerformanceDataCollector = IndalekoPerformanceDataCollector(
-        Record = {
+    perf_data: IndalekoPerformanceDataCollector = IndalekoPerformanceDataCollector(
+        Record={
             'SourceIdentifier': {
                 'Identifier': '1697394b-0f8f-44b4-91c0-a0fbd9d77feb',
                 'Version': '1.0'
@@ -221,17 +226,18 @@ def main():
             },
             'Data': encode_binary_data(b'')
         },
-        MachineConfigurationId = 'f7a439ec-c2d0-4844-a043-d8ac24d9ac0b',
-        StartTimestamp = '2024-12-15 15:55:35.786212+00:00',
-        EndTimestamp = '2024-12-15 15:56:06.200578+00:00',
-        UserCPUTime = 0.02,
-        SystemCPUTime = 0.221,
-        PeakMemoryUsage = 3152 * 1024,
-        IOReadBytes = int(4.2 * 1024 * 1024),
-        IOWriteBytes = int(3.9 * 1024),
-        ThreadCount = 1,
+        MachineConfigurationId='f7a439ec-c2d0-4844-a043-d8ac24d9ac0b',
+        StartTimestamp='2024-12-15 15:55:35.786212+00:00',
+        EndTimestamp='2024-12-15 15:56:06.200578+00:00',
+        UserCPUTime=0.02,
+        SystemCPUTime=0.221,
+        PeakMemoryUsage=3152 * 1024,
+        IOReadBytes=int(4.2 * 1024 * 1024),
+        IOWriteBytes=int(3.9 * 1024),
+        ThreadCount=1,
     )
     ic(perf_data.serialize())
+
 
 if __name__ == "__main__":
     main()
