@@ -41,6 +41,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # pylint: disable=wrong-import-position
 from data_models import IndalekoPerformanceDataModel, IndalekoSourceIdentifierDataModel, IndalekoRecordDataModel
 from utils.misc.data_management import encode_binary_data
+from source_code_version import IndalekoGitInfo
 # pylint: enable=wrong-import-position
 
 
@@ -150,7 +151,8 @@ class IndalekoPerformanceDataCollector:
         data['additional_data'] = {
             **results_data,
             'InputFileName': input_file_name,
-            'OutputFileName': output_file_name
+            'OutputFileName': output_file_name,
+            'SourceVersionInformation': IndalekoGitInfo.get_framework_source_version_data(as_json=True),
         }
 
         record = IndalekoRecordDataModel(
@@ -235,6 +237,9 @@ def main():
         IOReadBytes=int(4.2 * 1024 * 1024),
         IOWriteBytes=int(3.9 * 1024),
         ThreadCount=1,
+        AdditionalData={
+            'SourceVersionInformation': IndalekoGitInfo.get_framework_source_version_data(as_json=True),
+        }
     )
     ic(perf_data.serialize())
 

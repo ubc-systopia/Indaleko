@@ -19,13 +19,13 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 '''
+import json
 import os
 import sys
 
 from git import Repo
 from icecream import ic
 from pydantic import BaseModel
-from typing import List, Optional
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -40,9 +40,18 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 class IndalekoGitInfoDataModel(BaseModel):
     '''This class provides a data model for the IndalekoGitInfo class.'''
+    project_base: str
     commit_hash: str
-    modified_files: List[str]
-    untracked_files: List[str]
+    modified_files: list[str]
+    untracked_files: list[str]
+
+    def serialize(self) -> dict:
+        '''Serialize the object to a dictionary.'''
+        return json.loads(self.model_dump_json())
+
+    def __str__(self):
+        '''Return the string representation of the object.'''
+        return self.model_dump_json()
 
 
 class IndalekoGitInfo:
@@ -50,6 +59,11 @@ class IndalekoGitInfo:
     This class provides a mechanism for retrieving source code
     version information for use by the performance package.
     '''
+    @staticmethod
+    def get_project_base() -> str:
+        '''Retrieve the base path for the project.'''
+        return os.environ['INDALEKO_ROOT']
+
     @staticmethod
     def get_current_hash(repo_path: str = os.environ['INDALEKO_ROOT']) -> str:
         '''Retrieve the current hash for the repository.'''
@@ -61,7 +75,7 @@ class IndalekoGitInfo:
         return repo.head.commit.hexsha
 
     @staticmethod
-    def get_modified_files(repo_path: str = os.environ['INDALEKO_ROOT']) -> List[str]:
+    def get_modified_files(repo_path: str = os.environ['INDALEKO_ROOT']) -> list[str]:
         '''Retrieve the list of modified files in the repository.'''
         try:
             repo = Repo(repo_path)
@@ -71,7 +85,7 @@ class IndalekoGitInfo:
         return [item.a_path for item in repo.index.diff(None)]
 
     @staticmethod
-    def get_untracked_files(repo_path: str = os.environ['INDALEKO_ROOT']) -> List[str]:
+    def get_untracked_files(repo_path: str = os.environ['INDALEKO_ROOT']) -> list[str]:
         '''Retrieve the list of untracked files in the repository.'''
         try:
             repo = Repo(repo_path)
@@ -81,13 +95,19 @@ class IndalekoGitInfo:
         return repo.untracked_files
 
     @staticmethod
-    def get_framework_source_version_data() -> IndalekoGitInfoDataModel:
+    def get_framework_source_version_data(as_str: bool = False, as_json: bool = False) -> IndalekoGitInfoDataModel:
         '''Retrieve the source code version information for the framework.'''
-        return IndalekoGitInfoDataModel(
+        data = IndalekoGitInfoDataModel(
+            project_base=IndalekoGitInfo.get_project_base(),
             commit_hash=IndalekoGitInfo.get_current_hash(),
             modified_files=IndalekoGitInfo.get_modified_files(),
             untracked_files=IndalekoGitInfo.get_untracked_files()
         )
+        if as_str:
+            return str(data)
+        if as_json:
+            return data.serialize()
+        return data
 
 
 def main():
@@ -95,6 +115,8 @@ def main():
     ic('IndalekoGitInfo test code')
     git_info = IndalekoGitInfo()
     ic(git_info.get_framework_source_version_data())
+    ic(git_info.get_framework_source_version_data(as_json=True))
+    ic(git_info.get_framework_source_version_data(as_str=True))
 
 
 if __name__ == '__main__':
