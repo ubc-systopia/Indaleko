@@ -40,8 +40,8 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from data_models import IndalekoPerformanceDataModel, IndalekoSourceIdentifierDataModel, IndalekoRecordDataModel
+from perf.source_code_version import IndalekoGitInfo
 from utils.misc.data_management import encode_binary_data
-from source_code_version import IndalekoGitInfo
 # pylint: enable=wrong-import-position
 
 
