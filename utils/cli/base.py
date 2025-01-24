@@ -23,6 +23,7 @@ import inspect
 import json
 import os
 from pathlib import Path
+import platform
 import sys
 
 from typing import Union, Any
@@ -380,6 +381,11 @@ class IndalekoBaseCLI:
 
     class default_handler_mixin(IndalekoHandlermixin):
         '''Default handler mixin for the CLI'''
+
+        @staticmethod
+        def get_platform_name() -> str:
+            '''This method is used to get the platform name'''
+            return platform.system()
 
         @staticmethod
         def get_pre_parser() -> Union[argparse.Namespace, None]:

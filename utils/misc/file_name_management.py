@@ -20,7 +20,7 @@ import os
 import platform
 import sys
 
-from icecream import ic
+# from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -36,7 +36,8 @@ from constants.values import IndalekoConstants
 
 indaleko_file_name_prefix = IndalekoConstants.default_prefix
 
-def generate_final_name(args : list, **kwargs) -> str:
+
+def generate_final_name(args: list, **kwargs) -> str:
     '''
     This is a helper function for generate_file_name, which throws
     a pylint error as having "too many branches".  An explicit args list
@@ -55,7 +56,7 @@ def generate_final_name(args : list, **kwargs) -> str:
         raise ValueError('prefix must not contain a hyphen')
     if '-' in suffix:
         raise ValueError('suffix must not contain a hyphen')
-    if target_platform: # platform is optional
+    if target_platform:  # platform is optional
         name += f'-plt={target_platform}'
     name += f'-svc={service}'
     for key, value in kwargs.items():
@@ -69,6 +70,7 @@ def generate_final_name(args : list, **kwargs) -> str:
     if len(name) > max_len:
         raise ValueError('file name is too long' + '\n' + name + '\n' + str(len(name)))
     return name
+
 
 def generate_file_name(**kwargs) -> str:
     f'''
@@ -115,22 +117,25 @@ def generate_file_name(**kwargs) -> str:
         suffix = kwargs['suffix']
         del kwargs['suffix']
     if suffix.startswith('.'):
-        suffix = suffix[1:] # avoid ".." for suffix
+        suffix = suffix[1:]  # avoid ".." for suffix
     if target_platform and '-' in target_platform:
         raise ValueError(f'platform must not contain a hyphen (platform={target_platform})')
     if '-' in service:
         raise ValueError(f'service must not contain a hyphen (service={service})')
 
     return generate_final_name(
-        [prefix,
-        target_platform,
-        service,
-        ts,
-        suffix,
-        max_len],
+        [
+            prefix,
+            target_platform,
+            service,
+            ts,
+            suffix,
+            max_len
+        ],
         **kwargs)
 
-def extract_keys_from_file_name(file_name : str) -> dict:
+
+def extract_keys_from_file_name(file_name: str) -> dict:
     '''
     Given a file name, extract the keys and values from the file name,
     then validate that fields we expect are present.
@@ -160,7 +165,7 @@ def extract_keys_from_file_name(file_name : str) -> dict:
                 raise ValueError(f"Invalid key-value pair format: {next}")
             key, value = next.split('=', 1)
             # now let's see if there's more to append to the value
-            while fields and not '=' in fields[0]:
+            while fields and '=' not in fields[0]:
                 value += '-' + fields.pop(0)
             data[key] = value
         return data
@@ -171,7 +176,8 @@ def extract_keys_from_file_name(file_name : str) -> dict:
         del data['ts']
     return data
 
-def find_candidate_files(input_strings : list[str], directory : str) -> list[tuple[str,str]]:
+
+def find_candidate_files(input_strings: list[str], directory: str) -> list[tuple[str, str]]:
     '''Given a directory location, find a list of candidate files that match
     the input strings.'''
 
@@ -209,7 +215,8 @@ def find_candidate_files(input_strings : list[str], directory : str) -> list[tup
         return candidates
     return []
 
-def print_candidate_files(candidates : list[tuple[str,str]]) -> None:
+
+def print_candidate_files(candidates: list[tuple[str, str]]) -> None:
     '''Print the candidate files in a nice format.'''
     print(candidates)
     if len(candidates) == 0:

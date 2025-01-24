@@ -83,6 +83,30 @@ class BaseCloudStorageRecorder(BaseStorageRecorder):
     class cloud_recorder_mixin(BaseStorageRecorder.base_recorder_mixin):
         '''This is the mixin for cloud storage recorders.'''
 
+        @staticmethod
+        def generate_output_file_name(keys: dict[str, str]) -> str:
+            '''Generate the output file name for the recorder.'''
+            if 'InputFileKeys' in keys:
+                if 'plt' in keys['InputFileKeys']:  # substitute the cloud platform name
+                    keys['Platform'] = keys['InputFileKeys']['plt']
+            return BaseStorageRecorder.base_recorder_mixin.generate_output_file_name(keys)
+
+        @staticmethod
+        def generate_log_file_name(keys: dict[str, str]) -> str:
+            '''This method is used to generate a log file name'''
+            if 'InputFileKeys' in keys:
+                if 'plt' in keys['InputFileKeys']:  # substitute the cloud platform name
+                    keys['Platform'] = keys['InputFileKeys']['plt']
+            return BaseStorageRecorder.base_recorder_mixin.generate_log_file_name(keys)
+
+        @staticmethod
+        def generate_perf_file_name(keys: dict[str, str]) -> str:
+            '''This method is used to generate a performance file name'''
+            if 'InputFileKeys' in keys:
+                if 'plt' in keys['InputFileKeys']:  # substitute the cloud platform name
+                    keys['Platform'] = keys['InputFileKeys']['plt']
+            return BaseStorageRecorder.base_recorder_mixin.generate_perf_file_name(keys)
+
     @staticmethod
     def local_run(keys: dict[str, str]) -> Union[dict, None]:
         '''Run the recorder'''
@@ -196,6 +220,7 @@ class BaseCloudStorageRecorder(BaseStorageRecorder):
                     'plt': collector_class.get_collector_platform_name(),
                     'svc': collector_class.get_collector_service_name(),
                 },
+                Platform=recorder_class.cloud_recorder_mixin.get_platform_name(),
             ),
             handler_mixin=recorder_class.cloud_recorder_mixin,
             features=IndalekoBaseCLI.cli_features(

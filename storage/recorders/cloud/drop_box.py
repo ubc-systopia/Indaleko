@@ -35,7 +35,6 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
-
 # pylint: disable=wrong-import-position
 from db import IndalekoServiceManager
 from platforms.unix import UnixFileAttributes
@@ -83,7 +82,7 @@ class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
             kwargs['platform'] = self.dropbox_platform
         if 'recorder' not in kwargs:
             kwargs['recorder'] = self.dropbox_recorder
-        if 'user_id_ not in kwargs':
+        if 'user_id' not in kwargs:
             assert 'input_file' in kwargs
             keys = extract_keys_from_file_name(kwargs['input_file'])
             assert 'userid' in keys, f'userid not found in input file name: {kwargs["input_file"]}'
@@ -148,21 +147,21 @@ class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
         if 'FileMetadata' in data:
             unix_file_attributes = UnixFileAttributes.FILE_ATTRIBUTES['S_IFREG']
             windows_file_attributes = IndalekoWindows.FILE_ATTRIBUTES['FILE_ATTRIBUTE_NORMAL']
-            # ArangoDB is VERY fussy about the timestamps.  If there is no TZ
-            # data, it will fail the schema validation.
-            timestamps = [
-                {
-                    'Label': IndalekoObject.MODIFICATION_TIMESTAMP,
-                    'Value': data['client_modified'],
-                    'Description': 'Client Modified'
-                },
-                {
-                    'Label': IndalekoObject.CHANGE_TIMESTAMP,
-                    'Value': data['server_modified'],
-                    'Description': 'Server Modified'
-                },
-            ]
-            size = data['size']
+        # ArangoDB is VERY fussy about the timestamps.  If there is no TZ
+        # data, it will fail the schema validation.
+        timestamps = [
+            {
+                'Label': IndalekoObject.MODIFICATION_TIMESTAMP,
+                'Value': data['client_modified'],
+                'Description': 'Client Modified'
+            },
+            {
+                'Label': IndalekoObject.CHANGE_TIMESTAMP,
+                'Value': data['server_modified'],
+                'Description': 'Server Modified'
+            },
+        ]
+        size = data['size']
         name = data['name']
         data['Name'] = name
         path = data['path_display']

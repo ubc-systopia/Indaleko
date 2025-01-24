@@ -66,6 +66,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+from constants import IndalekoConstants
 from data_models import IndalekoSourceIdentifierDataModel
 from db import IndalekoCollection, IndalekoDBConfig, IndalekoDBCollections, IndalekoServiceManager
 from utils.cli.base import IndalekoBaseCLI
@@ -87,17 +88,19 @@ class BaseStorageRecorder:
     of this class to handle platform-specific recording.
     '''
 
-    default_file_prefix = 'indaleko'
-    default_file_suffix = '.jsonl'
-    recorder_name = 'fs_recorder'
+    file_prefix = IndalekoConstants.default_prefix
+    file_suffix = '.jsonl'
 
-    indaleko_generic_storage_recorder_uuid_str = '526e0240-1ee4-46e9-9dac-3e557a8fb654'
-    indaleko_generic_storage_recorder_uuid = uuid.UUID(indaleko_generic_storage_recorder_uuid_str)
-    indaleko_generic_storage_recorder_service_name = 'Indaleko Generic Storage Recorder'
-    indaleko_generic_storage_recorder_service_description = \
+    recorder_platform = None  # This must be set by the derived class
+    recorder_name = 'recorder'
+
+    storage_recorder_uuid = '526e0240-1ee4-46e9-9dac-3e557a8fb654'
+    storage_recorder_service_name = 'Indaleko Generic Storage Recorder'
+    storage_recorder_service_description = \
         'This is the base (non-specialized) Indaleko Storage Recorder. ' +\
         'You should not see it in the database.'
-    indaleko_generic_storage_recorder_service_version = '1.0'
+    storage_recorder_service_version = '1.0'
+
     counter_values = (
         'input_count',
         'output_count',
@@ -107,14 +110,12 @@ class BaseStorageRecorder:
         'edge_count',
     )
 
-    # Note: this defaults the platform and service type value(s);
-    # recorder_data = IndalekoStorageRecorderDataModel(
-    #    RecorderServiceName = indaleko_generic_storage_recorder_service_name,
-    #    RecorderServiceUUID = indaleko_generic_storage_recorder_uuid,
-    #    RecorderServiceVersion = indaleko_generic_storage_recorder_service_version,
-    #    RecorderServiceDescription = indaleko_generic_storage_recorder_service_description,
-    # )
-    # This must come from the derived class: not a default value
+    recorder_data = IndalekoStorageRecorderDataModel(
+        RecorderServiceName=storage_recorder_service_name,
+        RecorderServiceUUID=storage_recorder_uuid,
+        RecorderServiceVersion=storage_recorder_service_version,
+        RecorderServiceDescription=storage_recorder_service_description,
+    )
 
     def __init__(self: 'BaseStorageRecorder', **kwargs: dict) -> None:
         '''
@@ -122,6 +123,7 @@ class BaseStorageRecorder:
         as a parameter. The configuration object is a dictionary that contains
         all the configuration parameters for the recorder.
         '''
+        self.kwargs = kwargs
         if 'recorder_data' in kwargs:
             self.recorder_data = kwargs['recorder_data']
         if 'args' in kwargs:
@@ -134,11 +136,11 @@ class BaseStorageRecorder:
             self.debug = kwargs.get('debug', False)
         if 'storage' in kwargs:
             self.storage_description = kwargs['storage']
-        self.file_prefix = BaseStorageRecorder.default_file_prefix
+        self.file_prefix = BaseStorageRecorder.file_prefix
         if 'file_prefix' in kwargs:
             self.file_prefix = kwargs['file_prefix']
         self.file_prefix = self.file_prefix.replace('-', '_')
-        self.file_suffix = BaseStorageRecorder.default_file_suffix
+        self.file_suffix = BaseStorageRecorder.file_suffix
         if 'file_suffix' in kwargs:
             self.file_suffix = kwargs['file_suffix']
         self.file_suffix = self.file_suffix.replace('-', '_')
@@ -147,9 +149,6 @@ class BaseStorageRecorder:
         self.timestamp = datetime.datetime.now(datetime.UTC).isoformat()
         if 'timestamp' in kwargs:
             self.timestamp = kwargs['timestamp']
-        self.platform = 'unknown'
-        if 'platform' in kwargs:
-            self.platform = kwargs['platform']
         self.recorder = 'unknown'
         if 'recorder' in kwargs:
             self.recorder = kwargs['recorder']
@@ -191,8 +190,7 @@ class BaseStorageRecorder:
         if hasattr(cls, 'recorder_data'):
             return cls.recorder_data.RecorderPlatformName
         else:
-            ic('Warning, no recorder_data, returning indaleko_recorder_platform')
-            return 'indaleko_recorder_platform'
+            return cls.recorder_platform
 
     @classmethod
     def get_recorder_service_name(cls) -> str:
@@ -201,7 +199,7 @@ class BaseStorageRecorder:
             return cls.recorder_data.RecorderServiceName
         else:
             ic('Warning, no recorder_data, returning indaleko_service_name')
-            return 'indaleko_service_name'
+            return cls.storage_recorder_service_name
 
     @classmethod
     def get_recorder_service_uuid(cls) -> uuid.UUID:
@@ -219,7 +217,7 @@ class BaseStorageRecorder:
             return cls.recorder_data.RecorderServiceVersion
         else:
             ic('Warning, no recorder_data, returning 1.0')
-            return '1.0'
+            return cls.storage_recorder_service_version
 
     @classmethod
     def get_recorder_service_description(cls) -> str:
@@ -228,7 +226,7 @@ class BaseStorageRecorder:
             return cls.recorder_data.RecorderServiceDescription
         else:
             ic('Warning, no recorder_data, returning indaleko_service_description')
-            return 'indaleko_service_description'
+            return cls.storage_recorder_service_description
 
     @classmethod
     def get_recorder_service_type(cls) -> str:
@@ -239,6 +237,11 @@ class BaseStorageRecorder:
             service_type = IndalekoServiceManager.service_type_storage_recorder
             ic(f'Warning, no recorder_data, returning {service_type}')
             return service_type
+
+    @classmethod
+    def get_recorder_file_service_name(cls) -> str:
+        '''This function returns the service name to use in output file names.'''
+        return cls.recorder_name
 
     def get_counts(self) -> dict:
         '''
@@ -272,7 +275,7 @@ class BaseStorageRecorder:
         kwargs = {
             'prefix': self.file_prefix,
             'suffix': suffix,
-            'platform': self.platform,
+            'platform': self.recorder_platform,
             'service': self.recorder_name,
             'collection': IndalekoDBCollections.Indaleko_Object_Collection,
             'timestamp': self.timestamp,
@@ -743,8 +746,8 @@ class BaseStorageRecorder:
         self.build_dirmap()
         self.build_edges()
         kwargs = {
-            'platform': self.platform,
-            'service': self.recorder_data.RecorderServiceName,
+            'platform': self.recorder_platform,
+            'service': self.get_recorder_file_service_name(),
             'collection': IndalekoDBCollections.Indaleko_Object_Collection,
             'timestamp': self.timestamp,
             'output_dir': self.data_dir,

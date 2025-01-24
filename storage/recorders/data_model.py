@@ -17,15 +17,13 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
-from abc import ABC, abstractmethod
-from datetime import datetime, timezone
 import os
 import platform
 import sys
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, Union
 from uuid import UUID, uuid4
 
-from pydantic import Field, AwareDatetime, BaseModel
+from pydantic import Field, BaseModel
 from icecream import ic
 
 
@@ -39,27 +37,29 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from constants import IndalekoConstants
-from data_models.base import IndalekoBaseModel
-from db import IndalekoDBConfig
-from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
-from utils.misc.file_name_management import indaleko_file_name_prefix
-from utils.misc.file_name_management import find_candidate_files
 # pylint: enable=wrong-import-position
+
 
 class IndalekoStorageRecorderDataModel(BaseModel):
     '''Defines the base data model for the storage recorders'''
-    RecorderPlatformName : Optional[Union[str, None]] = \
+    RecorderPlatformName: Optional[Union[str, None]] = \
         Field(None,
               title='PlatformName',
               description='The name of the platform (e.g., Linux, Windows, etc.) if any (default=None).'
               )
-    RecorderServiceName : str = Field(..., title='RecorderName', description='The service name of the recorder.')
-    RecorderServiceUUID : UUID = Field(..., title='RecorderUUID', description='The UUID of the recorder.')
-    RecorderServiceVersion : str = Field(..., title='RecorderVersion', description='The version of the recorder.')
-    RecorderServiceDescription : str = Field(..., title='RecorderDescription', description='The description of the recorder.')
-    RecorderServiceType : str = Field(IndalekoConstants.service_type_storage_recorder,
-                                       title='RecorderType',
-                                       description=f'The type of the recorder. (default is {IndalekoConstants.service_type_storage_recorder})')
+    RecorderServiceName: str = Field(..., title='RecorderName', description='The service name of the recorder.')
+    RecorderServiceUUID: UUID = Field(..., title='RecorderUUID', description='The UUID of the recorder.')
+    RecorderServiceVersion: str = Field(..., title='RecorderVersion', description='The version of the recorder.')
+    RecorderServiceDescription: str = Field(
+        ...,
+        title='RecorderDescription',
+        description='The description of the recorder.'
+    )
+    RecorderServiceType: str = Field(
+        IndalekoConstants.service_type_storage_recorder,
+        title='RecorderType',
+        description=f'The type of the recorder. (default is {IndalekoConstants.service_type_storage_recorder})'
+    )
 
     class Config:
         '''Configuration for the base CLI data model'''
@@ -70,9 +70,10 @@ class IndalekoStorageRecorderDataModel(BaseModel):
                 'RecorderServiceUUID': uuid4(),
                 'RecorderServiceVersion': '1.0',
                 'RecorderServiceDescription': 'This service record local filesystem metadata of a Linux machine.',
-                'RecorderServiceType': IndalekoConstants.service_type_storage_recorder # same as default
+                'RecorderServiceType': IndalekoConstants.service_type_storage_recorder  # same as default
             }
         }
+
 
 def main():
     '''Test code for the base CLI data model'''
@@ -84,6 +85,7 @@ def main():
     ic(platform.system())
     print(storage_recorder_data.model_dump(exclude_unset=True))
     print(storage_recorder_data.model_dump_json(indent=2))
+
 
 if __name__ == '__main__':
     main()

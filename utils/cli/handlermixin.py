@@ -44,6 +44,10 @@ class IndalekoHandlermixin(ABC):
     """Class for providing callback processing for the main handler"""
 
     @abstractmethod
+    def get_platform_name() -> str:
+        '''This method is used to get the platform name'''
+
+    @abstractmethod
     def get_pre_parser() -> Union[argparse.Namespace, None]:
         '''This method is used to get the pre-parser'''
 

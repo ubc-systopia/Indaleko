@@ -477,7 +477,7 @@ def old_main():
     file_prefix = indaleko_file_name_prefix
     if 'file_prefix' in metadata:
         file_prefix = metadata['file_prefix']
-    file_suffix = BaseStorageRecorder.default_file_suffix
+    file_suffix = BaseStorageRecorder.file_suffix
     if 'file_suffix' in metadata:
         file_suffix = metadata['file_suffix']
     input_file = os.path.join(args.datadir, args.input)
