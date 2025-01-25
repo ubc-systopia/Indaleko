@@ -362,7 +362,24 @@ class BaseStorageCollector:
         data = []
         count = 0
         for root, dirs, files in os.walk(self.path):
+            try:
+                root.encode('utf-8')
+            except UnicodeEncodeError as e:
+                logging.warning('Unable to encode directory %s : %s * skipping', root, e)
+                ic(f'Unable to encode directory {root} : {e} * skipping')
+                self.encoding_count += 1
+                continue
             for name in dirs + files:
+                try:
+                    name.encode('utf-8')
+                except UnicodeEncodeError as e:
+                    logging.warning('Unable to encode name %s (path %s) : %s * skipping',
+                                    name,
+                                    root,
+                                    e)
+                    ic(f'Unable to encode name {name} (path {root}) : {e} * skipping')
+                    self.encoding_count += 1
+                    continue
                 entry = self.build_stat_dict(name, root)
                 if entry is not None:
                     data.append(entry)
@@ -372,6 +389,7 @@ class BaseStorageCollector:
         self.data = data
         if self.debug:
             print('Processed', count, 'entries (complete)')
+        self.output_count = count
 
     @staticmethod
     def write_data_to_file(
@@ -425,6 +443,13 @@ class BaseStorageCollector:
                         logging.error('Output count: %d', output_count)
                         logging.error('Data size %d', len(data))
                         raise err
+                    except UnicodeEncodeError as err:
+                        logging.error('Error writing entry to JSONLines file: %s', err)
+                        logging.error('Entry: %s', entry)
+                        logging.error('Output count: %d', output_count)
+                        logging.error('Data size %d', len(data))
+                        ic(f'Error writing entry to JSONLines file: \n\t{entry}\n\t{err}')
+                        continue  # ignoring
             logging.info('Wrote JSONLines data to %s', file_name)
             print('Wrote JSONLines data to', file_name)
         else:
