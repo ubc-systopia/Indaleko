@@ -49,7 +49,7 @@ from platforms.data_models.software import Software
 from platforms.machine_config import IndalekoMachineConfig
 from utils.data_validation import validate_uuid_string, validate_iso_timestamp
 from utils.misc.data_management import encode_binary_data
-from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_log_dir, indaleko_default_data_dir
+from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_log_dir
 from utils.misc.file_name_management import generate_file_name, extract_keys_from_file_name
 # pylint: enable=wrong-import-position
 
