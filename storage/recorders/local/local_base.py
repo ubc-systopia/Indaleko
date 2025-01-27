@@ -22,10 +22,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import argparse
 import inspect
-import json
-import jsonlines
 import logging
 import os
 from pathlib import Path
@@ -49,14 +46,12 @@ from db import IndalekoDBCollections
 from perf.perf_collector import IndalekoPerformanceDataCollector
 from perf.perf_recorder import IndalekoPerformanceDataRecorder
 from platforms.machine_config import IndalekoMachineConfig
-from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.runner import IndalekoCLIRunner
-from utils.decorators import type_check
-from storage import IndalekoObject
 from storage.collectors import BaseStorageCollector
 from storage.recorders import BaseStorageRecorder
 # pylint: enable=wrong-import-position
+
 
 class BaseLocalStorageRecorder(BaseStorageRecorder):
     '''This is the base class for all local storage recorders in Indaleko.'''
@@ -73,7 +68,7 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
         if 'machine_config_file' not in keys:
             raise ValueError(f'{inspect.currentframe().f_code.co_name}: machine_config_file must be specified')
         offline = keys.get('offline', False)
-        platform_class = keys['class'] # must exist
+        platform_class = keys['class']  # must exist
         return platform_class.load_config_from_file(
             config_file=str(keys['machine_config_file']),
             offline=offline)
@@ -87,17 +82,15 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
         '''This is the mixin for the local recorder'''
 
         @staticmethod
-        def load_machine_config(keys : dict[str, str]) -> IndalekoMachineConfig:
+        def load_machine_config(keys: dict[str, str]) -> IndalekoMachineConfig:
             assert 'class' in keys, '(machine config) class must be specified'
             return BaseLocalStorageRecorder.load_machine_config(keys)
-
-
 
     @staticmethod
     def local_run(keys: dict[str, str]) -> Union[dict, None]:
         '''Run the recorder'''
-        args = keys['args'] # must be there.
-        cli = keys['cli'] # must be there.
+        args = keys['args']  # must be there.
+        cli = keys['cli']    # must be there.
         config_data = cli.get_config_data()
         debug = hasattr(args, 'debug') and args.debug
         if debug:
@@ -111,38 +104,42 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
         kwargs = {
             'machine_config': cli.handler_mixin.load_machine_config(
                 {
-                    'machine_config_file' : str(Path(args.configdir) / args.machine_config),
-                    'offline' : args.offline,
-                    'class' : machine_config_class
+                    'machine_config_file': str(Path(args.configdir) / args.machine_config),
+                    'offline': args.offline,
+                    'class': machine_config_class
                 }
             ),
             'timestamp': config_data['Timestamp'],
-            'input_file' : str(Path(args.datadir) / args.inputfile),
+            'input_file': str(Path(args.datadir) / args.inputfile),
             'offline': args.offline,
-            'args' : args,
+            'args': args,
         }
         if 'InputFileKeys' in config_data and \
-            'storage' in config_data['InputFileKeys'] and \
-            config_data['InputFileKeys']['storage']:
+                'storage' in config_data['InputFileKeys'] and \
+                config_data['InputFileKeys']['storage']:
             kwargs['storage_description'] = config_data['InputFileKeys']['storage']
-        def record(recorder : BaseLocalStorageRecorder, **kwargs):
+
+        def record(recorder: BaseLocalStorageRecorder, **kwargs):
             recorder.record()
+
         def extract_counters(**kwargs):
             recorder = kwargs.get('recorder')
             if recorder:
                 return recorder.get_counts()
             else:
                 return {}
+
         recorder = recorder_class(**kwargs)
+
         def capture_performance(
-            task_func : Callable[..., Any],
-            output_file_name : Union[Path, str] = None
+            task_func: Callable[..., Any],
+            output_file_name: Union[Path, str] = None
         ):
             perf_data = IndalekoPerformanceDataCollector.measure_performance(
                 task_func,
                 source=IndalekoSourceIdentifierDataModel(
                     Identifier=recorder.get_recorder_service_uuid(),
-                    Version = recorder.get_recorder_service_version(),
+                    Version=recorder.get_recorder_service_version(),
                     Description=recorder.get_recorder_service_description()
                 ),
                 description=recorder.get_recorder_service_description(),
@@ -199,23 +196,24 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
     @staticmethod
     def local_recorder_runner(
         collector_class: BaseStorageCollector,
-        recorder_class : BaseStorageRecorder,
-        machine_config_class : IndalekoMachineConfig) -> None:
+        recorder_class: BaseStorageRecorder,
+        machine_config_class: IndalekoMachineConfig
+    ) -> None:
         '''This is the CLI handler for local storage recorders.'''
         runner = IndalekoCLIRunner(
             cli_data=IndalekoBaseCliDataModel(
                 Service=recorder_class.get_recorder_service_name(),
                 InputFileKeys={
-                    'plt' : collector_class.get_collector_platform_name(),
-                    'svc' : collector_class.get_collector_service_name(),
+                    'plt': collector_class.get_collector_platform_name(),
+                    'svc': collector_class.get_collector_service_name(),
                 },
             ),
             handler_mixin=recorder_class.local_recorder_mixin,
             Run=recorder_class.local_run,
             RunParameters={
-                'CollectorClass' : collector_class,
-                'MachineConfigClass' : machine_config_class,
-                'RecorderClass' : recorder_class
+                'CollectorClass': collector_class,
+                'MachineConfigClass': machine_config_class,
+                'RecorderClass': recorder_class
             }
         )
         runner.run()
@@ -235,7 +233,7 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
             if self.is_object_directory(obj):
                 if 'Path' not in obj.indaleko_object.Record.Attributes:
                     logging.warning('Directory object does not have a path: %s', obj.serialize())
-                    continue # skip
+                    continue  # skip
                 self.dir_data_by_path[self.get_object_path(obj)] = obj
                 self.dir_data.append(obj)
                 self.dir_count += 1
@@ -252,13 +250,13 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
         assert len(self.dir_data) + len(self.file_data) > 0, 'No data to record'
         self.build_dirmap()
         self.build_edges()
-        kwargs={
-            'machine' : self.machine_id,
-            'platform' : self.platform,
-            'service' : self.recorder_data.RecorderServiceName,
-            'collection' : IndalekoDBCollections.Indaleko_Object_Collection,
-            'timestamp' : self.timestamp,
-            'output_dir' : self.data_dir,
+        kwargs = {
+            'machine': self.machine_id,
+            'platform': getattr(self, 'platform', self.get_recorder_platform_name()),
+            'service': self.recorder_data.RecorderServiceName,
+            'collection': IndalekoDBCollections.Indaleko_Object_Collection,
+            'timestamp': self.timestamp,
+            'output_dir': self.data_dir,
         }
         if self.storage_description:
             kwargs['storage'] = self.storage_description
