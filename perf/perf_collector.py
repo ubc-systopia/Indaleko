@@ -86,7 +86,10 @@ class IndalekoPerformanceDataCollector:
         try:
             '''Run the task.'''
             start_clock = time.perf_counter()
-            result = task_func(*args, output_file_name=output_file_name, **kwargs)
+            if output_file_name:
+                result = task_func(*args, output_file_name=output_file_name, **kwargs)
+            else:
+                result = task_func(*args, **kwargs)
             end_clock = time.perf_counter()
             if process_results_func is not None:
                 try:
