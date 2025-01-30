@@ -178,13 +178,13 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
 
         # Free that memory before running arangoimport!
         proc = psutil.Process(os.getpid())
-        memory_before = proc.memory_full_info()
+        memory_before = proc.memory_info()
         if args.debug:
             ic(f'Memory usage before deleting recorder: {memory_before.rss}')
             ic(memory_before)
         recorder.reset_data()
         gc.collect()
-        memory_after = proc.memory_full_info()
+        memory_after = proc.memory_info()
         if args.debug:
             ic(f'Memory usage after deleting recorder: {memory_after.rss}')
             ic(memory_after)
