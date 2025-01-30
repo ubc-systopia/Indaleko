@@ -22,10 +22,12 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import gc
 import inspect
 import logging
 import os
 from pathlib import Path
+import psutil
 import sys
 import uuid
 
@@ -173,6 +175,19 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
         if args.debug:
             ic('Writing edge data to file')
         capture_performance(recorder.write_edge_data_to_file, recorder.output_edge_file)
+
+        # Free that memory before running arangoimport!
+        proc = psutil.Process(os.getpid())
+        memory_before = proc.memory_full_info()
+        if args.debug:
+            ic(f'Memory usage before deleting recorder: {memory_before.rss}')
+            ic(memory_before)
+        recorder.reset_data()
+        gc.collect()
+        memory_after = proc.memory_full_info()
+        if args.debug:
+            ic(f'Memory usage after deleting recorder: {memory_after.rss}')
+            ic(memory_after)
 
         if args.arangoimport and args.bulk:
             ic('Warning: both arangoimport and bulk upload specified.  Using arangoimport ONLY.')

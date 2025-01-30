@@ -177,12 +177,21 @@ class BaseStorageRecorder:
         assert self.recorder_service is not None, 'Recorder service does not exist'
         for count in self.counter_values:
             setattr(self, count, 0)
+        self.reset_data()
+
+
+    def reset_data(self) -> None:
+        '''
+        This function will reclaim any memory used by the recorder by
+        resetting the data elements.
+        '''
         self.dir_data_by_path = {}
         self.dir_data = []
         self.file_data = []
         self.dirmap = {}
         self.dir_edges = []
         self.collector_data = []
+
 
     @classmethod
     def get_recorder_platform_name(cls: 'BaseStorageRecorder') -> str:
