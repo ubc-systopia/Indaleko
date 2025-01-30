@@ -148,7 +148,6 @@ class IndalekoDBConfig(IndalekoSingleton):
         )
         assert self.db is not None, 'Could not connect to database'
         logging.info('Connected to database %s', self.config['database']['database'])
-        print(connected)
         return connected
 
     @staticmethod
