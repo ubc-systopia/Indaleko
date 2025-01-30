@@ -179,7 +179,6 @@ class BaseStorageRecorder:
             setattr(self, count, 0)
         self.reset_data()
 
-
     def reset_data(self) -> None:
         '''
         This function will reclaim any memory used by the recorder by
@@ -191,7 +190,6 @@ class BaseStorageRecorder:
         self.dirmap = {}
         self.dir_edges = []
         self.collector_data = []
-
 
     @classmethod
     def get_recorder_platform_name(cls: 'BaseStorageRecorder') -> str:
