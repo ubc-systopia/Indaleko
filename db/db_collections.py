@@ -30,7 +30,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from data_models import \
-    IndalekoActivityDataRegistrationDataModel,\
+    IndalekoActivityDataRegistrationDataModel, \
     IndalekoIdentityDomainDataModel, \
     IndalekoObjectDataModel, \
     IndalekoMachineConfigDataModel, \
@@ -39,6 +39,7 @@ from data_models import \
     IndalekoUserDataModel
 from activity import IndalekoActivityDataModel
 # pylint: enable=wrong-import-position
+
 
 class IndalekoDBCollections:
     '''Defines the set of well-known collections used by Indaleko.'''
@@ -57,116 +58,119 @@ class IndalekoDBCollections:
 
     Collections = {
         Indaleko_Object_Collection: {
-            'schema' : IndalekoObjectDataModel.get_arangodb_schema(),
-            'edge' : False,
-            'indices' : {
-                'URI' : {
-                    'fields' : ['URI'],
-                    'unique' : True,
-                    'type' : 'persistent'
+            'schema': IndalekoObjectDataModel.get_arangodb_schema(),
+            'edge': False,
+            'indices': {
+                'URI': {
+                    'fields': ['URI'],
+                    'unique': True,
+                    'type': 'persistent'
                 },
-                'file identity' : {
-                    'fields' : ['ObjectIdentifier'],
-                    'unique' : True,
-                    'type' : 'persistent'
+                'file identity': {
+                    'fields': ['ObjectIdentifier'],
+                    'unique': True,
+                    'type': 'persistent'
                 },
-                'local identity' : {
+                'local identity': {
                     # Question: should this be combined with other info to allow uniqueness?
-                    'fields' : ['LocalIdentifier'],
-                    'unique' : False,
-                    'type' : 'persistent'
+                    'fields': ['LocalIdentifier'],
+                    'unique': False,
+                    'type': 'persistent'
                 },
             },
         },
-        Indaleko_Relationship_Collection : {
-            'schema' : IndalekoRelationshipDataModel.get_arangodb_schema(),
-            'edge' : True,
-            'indices' : {
-                'relationship' : {
-                    'fields' : ['relationship'],
-                    'unique' : False,
-                    'type' : 'persistent'
+        Indaleko_Relationship_Collection: {
+            'schema': IndalekoRelationshipDataModel.get_arangodb_schema(),
+            'edge': True,
+            'indices': {
+                'relationship': {
+                    'fields': ['relationship'],
+                    'unique': False,
+                    'type': 'persistent'
                 },
-                'vertex1' : {
-                    'fields' : ['object1'],
-                    'unique' : False,
-                    'type' : 'persistent'
+                'vertex1': {
+                    'fields': ['object1'],
+                    'unique': False,
+                    'type': 'persistent'
                 },
-                'vertex2' : {
-                    'fields' : ['object2'],
-                    'unique' : False,
-                    'type' : 'persistent'
+                'vertex2': {
+                    'fields': ['object2'],
+                    'unique': False,
+                    'type': 'persistent'
                 },
-                'edge' : {
-                    'fields' : ['object1', 'object2'],
-                    'unique' : False,
-                    'type' : 'persistent'
+                'edge': {
+                    'fields': ['object1', 'object2'],
+                    'unique': False,
+                    'type': 'persistent'
                 },
             }
         },
-        Indaleko_Service_Collection : {
-            'schema' : IndalekoServiceDataModel.get_arangodb_schema(),
-            'edge' : False,
-            'indices' : {
-                'identifier' : {
-                    'fields' : ['Name'],
-                    'unique' : True,
-                    'type' : 'persistent'
+        Indaleko_Service_Collection: {
+            'schema': IndalekoServiceDataModel.get_arangodb_schema(),
+            'edge': False,
+            'indices': {
+                'identifier': {
+                    'fields': ['Name'],
+                    'unique': True,
+                    'type': 'persistent'
                 },
             },
         },
-        Indaleko_MachineConfig_Collection : {
-            'schema' : IndalekoMachineConfigDataModel.get_arangodb_schema(),
-            'edge' : False,
-            'indices' : { },
-        },
-        Indaleko_ActivityDataProvider_Collection : {
-            'schema' :  IndalekoActivityDataRegistrationDataModel.get_arangodb_schema(),
-            'edge' : False,
-            'indices' : {
+        Indaleko_MachineConfig_Collection: {
+            'schema': IndalekoMachineConfigDataModel.get_arangodb_schema(),
+            'edge': False,
+            'indices': {
             },
         },
-        Indaleko_ActivityContext_Collection : {
-            'schema' : IndalekoActivityDataModel.get_arangodb_schema(),
-            'edge' : False,
-            'indices' : {
-                'identifier' : {
-                    'fields' : ['ActivityContextIdentifier'],
-                    'unique' : True,
-                    'type' : 'persistent'
+        Indaleko_ActivityDataProvider_Collection: {
+            'schema':  IndalekoActivityDataRegistrationDataModel.get_arangodb_schema(),
+            'edge': False,
+            'indices': {
+            },
+        },
+        Indaleko_ActivityContext_Collection: {
+            'schema': IndalekoActivityDataModel.get_arangodb_schema(),
+            'edge': False,
+            'indices': {
+                'identifier': {
+                    'fields': ['ActivityContextIdentifier'],
+                    'unique': True,
+                    'type': 'persistent'
                 },
             },
         },
-        Indaleko_Identity_Domain_Collection : {
-            'schema' : IndalekoIdentityDomainDataModel.get_arangodb_schema(),
-            'edge' : False,
-            'indices' : { }
-        },
-        Indaleko_User_Collection : {
-            'schema' : IndalekoUserDataModel.get_arangodb_schema(),
-            'edge' : False,
-            'indices' : {
-                'identifier' : {
-                    'fields' : ['Identifier'],
-                    'unique' : True,
-                    'type' : 'persistent'
-                },
-            },
-        },
-        # Indaleko_User_Relationship_Collection : 'This needs to be tied into NER work'
-        Indaleko_Performance_Data_Collection : {
-            'schema' : None,
-            'edge' : False,
-            'indices' : {
+        Indaleko_Identity_Domain_Collection: {
+            'schema': IndalekoIdentityDomainDataModel.get_arangodb_schema(),
+            'edge': False,
+            'indices': {
             }
         },
-        Indaleko_Query_History_collection : {
-            'schema' : None,
-            'edge' : False,
-            'indices' : {
+        Indaleko_User_Collection:  {
+            'schema': IndalekoUserDataModel.get_arangodb_schema(),
+            'edge': False,
+            'indices': {
+                'identifier': {
+                    'fields': ['Identifier'],
+                    'unique': True,
+                    'type': 'persistent'
+                },
+            },
+        },
+        # Indaleko_User_Relationship_Collection:  'This needs to be tied into NER work'
+        Indaleko_Performance_Data_Collection:  {
+            'schema': None,
+            'edge': False,
+            'indices': {
+            }
+        },
+        Indaleko_Query_History_collection: {
+            'schema': None,
+            'edge': False,
+            'indices': {
             }
         }
     }
+
 
 def main():
     '''Main entry point for the script.'''
@@ -180,6 +184,7 @@ def main():
             else:
                 ic(f'  {key}: {value}')
         print('\n')
+
 
 if __name__ == '__main__':
     main()
