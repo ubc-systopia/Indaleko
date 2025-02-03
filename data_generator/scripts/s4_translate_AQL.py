@@ -82,9 +82,9 @@ class AQLQueryConverter(TranslatorBase):
             
             You need to search through all four collections (GeoActivity, MusicActivity, TempActivity, and Objects) to verify if an item satisfies the necessary 
             conditions across these different contexts. First, identify the GeoActivity, MusicActivity, TempActivity, Objects data via its Record.SourceIdentifier.Identifier. 
-            If 'geo_location' is specified in selected_md_attributes, search within the {GeoActivity}. If 'ambient_music' 
-            is specified in selected_md_attributes, search within the {MusicActivity}. If 'ecobee_temp' is specified in selected_md_attributes, search within 
-            {TempActivity}. The item is uniquely identified by its Identifier, which is stored within the SourceIdentifier field of the Records in each collection. 
+            If 'geo_location' is specified in selected_md_attributes, search within the {GeoActivity} and compare longitude and latitude with the {geo_coords} . 
+            If 'ambient_music' is specified in selected_md_attributes, search within the {MusicActivity}. 
+            If 'ecobee_temp' is specified in selected_md_attributes, search within {TempActivity}. The item is uniquely identified by its Identifier, which is stored within the SourceIdentifier field of the Records in each collection. 
             When looking through multiple collections at once, properly quote these long collection names with `` like `{GeoActivity}` and make sure to check that 
             their identifiers are the same e.g., FILTER musicActivity.Record.SourceIdentifier.Identifier == geoActivity.Record.SourceIdentifier.Identifier.
             You don't necessarily have to check the Objects collection to check the Posix metadata, since all activity collections should have a Record attribute. 
@@ -145,10 +145,9 @@ class AQLQueryConverter(TranslatorBase):
             ex.) if we want to find a Name containing "1990's news" -> FILTER object.Record.Attributes.Name LIKE '%1990\'s news%.pdf'. The query should only include 
             the AQL code in a single line, with no additional explanations or comments. You must return one single code block that with '``` at the start and '``` at the end and that contains a FOR and
             a RETURN ... statement. Do not create additional attributes not found in the dictionary. \n""" + \
-            "\n Number of truth attributes:" + str(n_truth_md) + "\n Geographical coordinates: " + \
-            additional_notes + "\n Schema:" + str(parsed_query['schema'])
+            "\n Number of truth attributes:" + str(n_truth_md) + "\n Schema:" + str(parsed_query['schema'])
 
-        system_prompt = system_prompt.replace("{GeoActivity}", dynamic_activity_providers["GeoActivity"]).replace("{TempActivity}", dynamic_activity_providers["TempActivity"]).replace("{MusicActivity}", dynamic_activity_providers["MusicActivity"])
+        system_prompt = system_prompt.replace("{GeoActivity}", dynamic_activity_providers["GeoActivity"]).replace("{TempActivity}", dynamic_activity_providers["TempActivity"]).replace("{MusicActivity}", dynamic_activity_providers["MusicActivity"]).replace("{geo_coords}", additional_notes)
         # user_prompt = parsed_query['original_query']
         user_prompt = "Dictionary: " + str(selected_md_attributes)
 
