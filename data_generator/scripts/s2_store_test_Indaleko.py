@@ -1,20 +1,12 @@
 import json
 import uuid
-import os, sys
-if os.environ.get('INDALEKO_ROOT') is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
-        current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
-    sys.path.append(current_path)
-
 from db.i_collections import IndalekoCollections
 from db.collection import IndalekoCollection
-
 from activity.recorders.registration_service import IndalekoActivityDataRegistrationService
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from data_models.record import IndalekoRecordDataModel
 from datetime import datetime
+from icecream import ic
 
 '''
 MetadataStorer for moving the metadata dataset onto the Indaleko DB
@@ -27,7 +19,8 @@ class MetadataStorer():
         """
         Initialize the metadata storer service.
         """
-        pass
+        self.activity_data_registrar = IndalekoActivityDataRegistrationService()
+
 
     def delete_records_from_collection(self, collections: IndalekoCollections, collection_name: str) -> None:
         """
@@ -59,8 +52,6 @@ class MetadataStorer():
             collection
         """
         identifier = uuid.uuid4()
-        activity_data_registrar = IndalekoActivityDataRegistrationService()
-
         source_identifier = IndalekoSourceIdentifierDataModel(
             Identifier=identifier,
             Version=version,
@@ -78,8 +69,8 @@ class MetadataStorer():
                 Data=''
             )
         }
-        _, collection = activity_data_registrar.register_provider(**record_kwargs)
-        return activity_data_registrar, collection
+        activity_registration_service, collection = self.activity_data_registrar.register_provider(**record_kwargs)
+        return activity_registration_service, collection
 
     def add_records_with_activity_provider(self, collection: IndalekoCollection, activity_contexts: dict) -> None:
         """
@@ -87,6 +78,7 @@ class MetadataStorer():
         Args: 
             collection
         """
+        ic("here")
         for activity in activity_contexts:
             collection.insert(activity)
             
@@ -105,20 +97,12 @@ def convert_json_file(json_file: str) -> dict:
 def main():
     collections = IndalekoCollections()
     storer = MetadataStorer()
-
     # records = "/Indaleko/data_generator/results/all_records.json"
     # record_dataset = convert_json_file(records)
     # storer.add_records_to_collection(collections, "Objects", record_dataset)
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    print(current_path)
-
     activities = "./data_generator/results/test_temp_records.json"
     activity_dataset = convert_json_file(activities)
     storer.add_records_to_collection(collections, "TempActivityContext", activity_dataset)
-
-    # machine_config = "/Indaleko/data_generator/results/all_machine_config.json"
-    # machine_config_dg = convert_json_file(machine_config)
-    # storer.add_ac_to_collection(collections, "MachineConfig", machine_config_dg)
 
 if __name__ == '__main__':
     main()

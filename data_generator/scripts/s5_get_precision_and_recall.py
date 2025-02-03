@@ -1,4 +1,5 @@
 from icecream import ic
+import math
 
 class ResultCalculator():
     """
@@ -19,18 +20,20 @@ class ResultCalculator():
         Returns:
             int: the total number of truth metadata returned by Indaleko
         '''
-        n_actual_truth = 0
+        truth_set = set()
+
         for result in raw_results:
             uuid = result['result']['Record']['SourceIdentifier']['Identifier']
             self.selected_uuid.append(uuid)
             self.selected_metadata.append(result['result'])
+            
+            assert uuid not in truth_set, "Result contains duplicate objects."
 
             if uuid.startswith("c"):
-                n_actual_truth += 1
-        self.n_truth_metadata = n_actual_truth
-        return n_actual_truth
+                truth_set.add(uuid)
+        return len(truth_set)
     
-    def calculate_precision(self, total_n_truth: int, total_n_results: int) -> int:
+    def calculate_precision(self, total_n_truth: int, total_n_results: int) -> float:
         '''
         Calculates the precision of the search
         Args: 
@@ -40,10 +43,10 @@ class ResultCalculator():
             int: precision
         '''
         if total_n_results == 0:
-            return -1
+            return math.nan
         return total_n_truth / total_n_results
 
-    def calculate_recall(self, total_n_truth: int, n_truth_metadata:int) -> int:
+    def calculate_recall(self, total_n_truth: int, n_truth_metadata:int) -> float:
         '''
             Calculates the precision of the search
             Args: 
@@ -52,6 +55,8 @@ class ResultCalculator():
             Returns:
                 int: recall
         '''
+        if n_truth_metadata == 0:
+            return math.nan
         return total_n_truth / n_truth_metadata
 
     def run(self, raw_results: list[str], theoretical_truth_n: int) -> tuple[int, int, int]:
