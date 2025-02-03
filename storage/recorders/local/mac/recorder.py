@@ -18,17 +18,16 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
-import argparse
 import datetime
 import json
 import logging
 import os
+from pathlib import Path
 import subprocess
 import sys
 import uuid
 
-import jsonlines
-
+from typing import Union
 from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -40,22 +39,26 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 # pylint: disable=wrong-import-position
-from db import IndalekoDBCollections, IndalekoDBConfig, IndalekoServiceManager
 from data_models import IndalekoSourceIdentifierDataModel
+from db import IndalekoDBCollections, IndalekoDBConfig, IndalekoServiceManager
+from perf.perf_collector import IndalekoPerformanceDataCollector
+from perf.perf_recorder import IndalekoPerformanceDataRecorder
 from platforms.mac.machine_config import IndalekoMacOSMachineConfig
 from platforms.unix import UnixFileAttributes
 from storage import IndalekoObject
+from storage.collectors.local.mac.collector import IndalekoMacLocalStorageCollector
 from storage.recorders.base import BaseStorageRecorder
-from storage.collectors.local.mac.collector import IndalekoMacLocalCollector
+from storage.recorders.data_model import IndalekoStorageRecorderDataModel
+from storage.recorders.local.local_base import BaseLocalStorageRecorder
 from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
 from utils.misc.file_name_management import indaleko_file_name_prefix
 from utils.misc.data_management import encode_binary_data
+from utils.i_logging import IndalekoLogging
 from utils import IndalekoLogging
-from perf.perf_collector import IndalekoPerformanceDataCollector
-from perf.perf_recorder import IndalekoPerformanceDataRecorder
 # pylint: enable=wrong-import-position
 
-class IndalekoMacLocalStorageRecorder(BaseStorageRecorder):
+
+class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
     '''
     This class handles the processing of metadata from the Indaleko Mac local storage recorder service.
     '''
@@ -69,8 +72,16 @@ class IndalekoMacLocalStorageRecorder(BaseStorageRecorder):
         'service_identifier' : mac_local_recorder_uuid,
     }
 
-    mac_platform = IndalekoMacLocalCollector.mac_platform
+    mac_platform = IndalekoMacLocalStorageCollector.mac_platform
     mac_local_recorder = 'mac_local_recorder'
+
+    recorder_data = IndalekoStorageRecorderDataModel(
+        RecorderPlatformName=mac_platform,
+        RecorderServiceName = mac_local_recorder,
+        RecorderServiceUUID = uuid.UUID(mac_local_recorder_uuid),
+        RecorderServiceVersion = mac_local_recorder_service['service_version'],
+        RecorderServiceDescription = mac_local_recorder_service['service_description'],
+    )
 
     def __init__(self, reset_collection=False, objects_file="", relations_file="", **kwargs) -> None:
         self.db_config = IndalekoDBConfig()
@@ -91,7 +102,7 @@ class IndalekoMacLocalStorageRecorder(BaseStorageRecorder):
             kwargs['timestamp'] = datetime.datetime.now(
                 datetime.timezone.utc).isoformat()
         if 'platform' not in kwargs:
-            kwargs['platform'] = IndalekoMacLocalStorageRecorder.mac_platform
+            kwargs['platform'] = sys.platform
         if 'recorder' not in kwargs:
             kwargs['recorder'] = IndalekoMacLocalStorageRecorder.mac_local_recorder
         if 'input_file' not in kwargs:
@@ -128,8 +139,46 @@ class IndalekoMacLocalStorageRecorder(BaseStorageRecorder):
         if self.data_dir is None:
             raise ValueError('data_dir must be specified')
         return [x for x in super().find_collector_files(self.data_dir)
-                if IndalekoMacLocalCollector.mac_platform in x and
-                IndalekoMacLocalCollector.mac_local_collector_name in x]
+                if IndalekoMacLocalStorageCollector.mac_platform in x and
+                IndalekoMacLocalStorageCollector.mac_local_collector_name in x]
+
+    class macos_recorder_mixin(BaseLocalStorageRecorder.local_recorder_mixin):
+        '''MacOS Specific mixin - dealing with machine config files again'''
+
+        @staticmethod
+        def find_machine_config_files(config_dir, platform = None, machine_id = None):
+            return IndalekoMacLocalStorageCollector.local_collector_mixin.find_machine_config_files(
+                config_dir,
+                platform,
+                machine_id
+            )
+
+        @staticmethod
+        def extract_filename_metadata(file_name : str) -> dict:
+            '''This method is used to parse the file name.'''
+            return IndalekoMacLocalStorageCollector.local_collector_mixin.extract_filename_metadata(file_name=file_name)
+
+        @staticmethod
+        def find_data_files(
+            data_dir: Union[str, Path],
+            keys: dict[str, str],
+            prefix: str,
+            suffix: str
+        ) -> Union[list[str], None]:
+            '''This method is used to find data files'''
+            # This is a hack, but the input files are labeled Darwin.  Need to track it down
+            # and fix it, but for now this works.
+            keys['plt'] = 'Darwin'
+            candidates = BaseLocalStorageRecorder.local_recorder_mixin.find_data_files(
+                data_dir,
+                keys,
+                prefix,
+                suffix
+            )
+            return candidates
+
+
+    local_recorder_mixin = macos_recorder_mixin
 
     def normalize_collector_data(self, data: dict) -> IndalekoObject:
         '''
@@ -139,7 +188,7 @@ class IndalekoMacLocalStorageRecorder(BaseStorageRecorder):
         if data is None:
             raise ValueError('Data cannot be None')
         if not isinstance(data, dict):
-            raise ValueError('Data must be a dictionary')
+            raise ValueError(f'Data must be a dictionary, not {type(data)}\n\t{data}')
         if 'ObjectIdentifier' in data:
             oid = data['ObjectIdentifier']
         else:
@@ -181,125 +230,10 @@ class IndalekoMacLocalStorageRecorder(BaseStorageRecorder):
         }
 
         if 'st_mode' in data:
-            kwargs['UnixFileAttributes'] = UnixFileAttributes.map_file_attributes(
+            kwargs['PosixFileAttributes'] = UnixFileAttributes.map_file_attributes(
                 data['st_mode'])
 
         return IndalekoObject(**kwargs)
-
-    def record(self) -> None:
-        '''
-        This function processes the mac local storage collector metadata file
-        and emits the data needed to upload to the database.
-        '''
-
-        # if the Objects and Relationships are provided, use them
-        if len(self.objects_file) and len(self.relations_file):
-            print(f'provided two paths for objects and relationships')
-            assert os.path.isfile(self.objects_file), f'given objects file does not exist, got={
-                self.objects_file}'
-            assert os.path.isfile(self.relations_file), f'given objects file does not exits, got={
-                self.relations_file}'
-
-            print(f'importing objects and relations from:', f'Objects={
-                  self.objects_file}', f'Relationships={self.relations_file}', sep='\n')
-            self.arangoimport()
-            return
-
-        self.load_collector_data_from_file()
-        dir_data_by_path = {}
-        dir_data = []
-        file_data = []
-        # Step 1: build the normalized data
-        for item in self.collector_data:
-            try:
-                obj = self.normalize_collector_data(item)
-            except OSError as e:
-                logging.error('Error normalizing data: %s', e)
-                logging.error('Data: %s', item)
-                self.error_count += 1
-                continue
-            if 'S_IFDIR' in obj.args['UnixFileAttributes']:
-                if 'Path' not in obj:
-                    logging.warning(
-                        'Directory object does not have a path: %s', obj.to_json())
-                    continue  # skip
-                dir_data_by_path[obj['Path']] = obj
-                dir_data.append(obj)
-                self.dir_count += 1
-            else:
-                file_data.append(obj)
-                self.file_count += 1
-        # Step 2: build a table of paths to directory uuids
-        dirmap = {}
-        for item in dir_data:
-            fqp = os.path.join(item['Path'], item['Name'])
-            identifier = item.args['ObjectIdentifier']
-            dirmap[fqp] = identifier
-        # now, let's build a list of the edges, using our map.
-        dir_edges = []
-        source = {
-            'Identifier': self.mac_local_recorder_uuid,
-            'Version': '1.0',
-        }
-        source_id = IndalekoSourceIdentifierDataModel(**source)
-        for item in dir_data + file_data:
-            parent = item['Path']
-            if parent not in dirmap:
-                continue
-            parent_id = dirmap[parent]
-        for item in dir_data + file_data:
-            parent = item['Path']
-            if parent not in dirmap:
-                continue
-            parent_id = dirmap[parent]
-            dir_edges.append(BaseStorageRecorder.build_dir_contains_relationship(
-                parent_id, item.args['ObjectIdentifier'], source_id)
-            )
-            self.edge_count += 1
-            dir_edges.append(BaseStorageRecorder.build_contained_by_dir_relationship(
-                item.args['ObjectIdentifier'], parent_id, source_id)
-            )
-            self.edge_count += 1
-            volume = item.args.get('Volume')
-            if volume:
-                dir_edges.append(BaseStorageRecorder.build_volume_contains_relationship(
-                    volume, item.args['ObjectIdentifier'], source_id)
-                )
-                self.edge_count += 1
-                dir_edges.append(BaseStorageRecorder.build_contained_by_volume_relationship(
-                    item.args['ObjectIdentifier'], volume, source_id)
-                )
-                self.edge_count += 1
-            machine_id = item.args.get('machine_id')
-            if machine_id:
-                dir_edges.append(BaseStorageRecorder.build_machine_contains_relationship(
-                    machine_id, item.args['ObjectIdentifier'], source_id)
-                )
-                self.edge_count += 1
-                dir_edges.append(BaseStorageRecorder.build_contained_by_machine_relationship(
-                    item.args['ObjectIdentifier'], machine_id, source_id)
-                )
-                self.edge_count += 1
-        # Save the data to the recorder output file
-        self.write_data_to_file(dir_data + file_data, self.output_file)
-        edge_file = self.generate_output_file_name(
-            machine=self.machine_id,
-            platform=self.platform,
-            service='recorder',
-            collection=IndalekoDBCollections.Indaleko_Relationship_Collection,
-            timestamp=self.timestamp,
-            output_dir=self.data_dir,
-        )
-        self.write_data_to_file(dir_edges, edge_file)
-
-        # set the objects and relations file paths to these newly created ones
-        self.objects_file = self.output_file
-        self.relations_file = edge_file
-
-        # import these using arangoimport tool
-        if self.docker_upload:
-            self.arangoimport()
-
 
     def arangoimport(self):
         print('{:-^20}'.format(""))
@@ -340,196 +274,13 @@ class IndalekoMacLocalStorageRecorder(BaseStorageRecorder):
         except subprocess.CalledProcessError as e:
             print(f'failed to run the command, got: {e}')
 
-
 def main():
-    '''
-    This is the main handler for the Indaleko Mac Local Storage Recorder service.
-    '''
-    logging_levels = IndalekoLogging.get_logging_levels()
-
-    # step 1: find the machine configuration file
-    pre_parser = argparse.ArgumentParser(add_help=False)
-    pre_parser.add_argument('--configdir', '-c',
-                            help=f'Path to the config directory (default is {
-                                indaleko_default_config_dir})',
-                            default=indaleko_default_config_dir)
-    pre_args, _ = pre_parser.parse_known_args()
-    config_files = IndalekoMacOSMachineConfig.find_config_files(
-        pre_args.configdir)
-    assert isinstance(config_files, list), 'config_files must be a list'
-    if len(config_files) == 0:
-        print(f'No config files found in {pre_args.configdir}, exiting.')
-        return
-    default_config_file = IndalekoMacOSMachineConfig.get_most_recent_config_file(
-        pre_args.configdir)
-    pre_parser = argparse.ArgumentParser(add_help=False, parents=[pre_parser])
-    pre_parser.add_argument('--config',
-                            choices=config_files,
-                            default=default_config_file,
-                            help=f'Configuration file to use. (default: {default_config_file})')
-    pre_parser.add_argument('--datadir',
-                            help=f'Path to the data directory (default is {
-                                indaleko_default_data_dir})',
-                            type=str,
-                            default=indaleko_default_data_dir)
-    pre_args, _ = pre_parser.parse_known_args()
-    machine_config = IndalekoMacOSMachineConfig.load_config_from_file(
-        config_file=default_config_file)
-    collector = IndalekoMacLocalCollector(
-        search_dir=pre_args.datadir,
-        prefix=IndalekoMacLocalCollector.mac_platform,
-        suffix=IndalekoMacLocalCollector.mac_local_collector_name,
-        machine_config=machine_config
+    '''This is the CLI handler for the MacOS local storage recorder.'''
+    BaseLocalStorageRecorder.local_recorder_runner(
+        IndalekoMacLocalStorageCollector,
+        IndalekoMacLocalStorageRecorder,
+        IndalekoMacOSMachineConfig
     )
-    collector_files = collector.find_collector_files(pre_args.datadir)
-    parser = argparse.ArgumentParser(parents=[pre_parser])
-    parser.add_argument('--input',
-                        choices=collector_files,
-                        default=collector_files[0],
-                        help='Mac Local Storage Collector file to process.')
-    parser.add_argument('--objects-file',
-                        default="",
-                        dest='objects_file',
-                        help='path to the jsonl file that contains the documents for the Objects collection'
-                        )
-    parser.add_argument('--relations-file',
-                        default="",
-                        dest='relations_file',
-                        help='path to the jsonl file that contains the documents for the Relationships collection'
-                        )
-    parser.add_argument('--reset', action='store_true',
-                        help='Drop the collections before recording new data')
-    parser.add_argument('--logdir',
-                        help=f'Path to the log directory (default is {
-                            indaleko_default_log_dir})',
-                        default=indaleko_default_log_dir)
-    parser.add_argument('--loglevel',
-                        choices=logging_levels,
-                        default=logging.DEBUG,
-                        help='Logging level to use.')
-    parser.add_argument('--docker_upload',
-                        '-du',
-                        default=False,
-                        action='store_true',
-                        help='copy into local docker container with arangodb for bulk uploading')
-    parser.add_argument('--performance_file',
-                        default=False,
-                        action='store_true',
-                        help='Record performance data to a file')
-    parser.add_argument('--performance_db',
-                        default=False,
-                        action='store_true',
-                        help='Record performance data to the database')
-    args = parser.parse_args()
-    metadata = IndalekoMacLocalCollector.extract_metadata_from_collector_file_name(
-        args.input)
-    timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    machine_id = 'unknown'
-    if 'machine' in metadata:
-        if metadata['machine'] != machine_config.machine_id:
-            print('Warning: machine ID of collector file ' +
-                  f'({metadata["machine"]}) does not match machine ID of recorder ' +
-                  f'({machine_config.machine_id})')
-        machine_id = metadata['machine']
-    if 'timestamp' in metadata:
-        timestamp = metadata['timestamp']
-    if 'platform' in metadata:
-        collector_platform = metadata['platform']
-        if collector_platform != IndalekoMacLocalStorageRecorder.mac_platform:
-            print('Warning: platform of collector file ' +
-                  f'({collector_platform}) name does not match platform of recorder ' +
-                  f'({IndalekoMacLocalStorageRecorder.mac_platform}.)')
-    storage = 'unknown'
-    if 'storage' in metadata:
-        storage = metadata['storage']
-    file_prefix = indaleko_file_name_prefix
-    if 'file_prefix' in metadata:
-        file_prefix = metadata['file_prefix']
-    file_suffix = BaseStorageRecorder.default_file_suffix
-    if 'file_suffix' in metadata:
-        file_suffix = metadata['file_suffix']
-    input_file = os.path.join(args.datadir, args.input)
-    recorder = IndalekoMacLocalStorageRecorder(
-        reset_collection=args.reset,
-        objects_file=args.objects_file,
-        relations_file=args.relations_file,
-        machine_config=machine_config,
-        machine_id=machine_id,
-        timestamp=timestamp,
-        platform=IndalekoMacLocalCollector.mac_platform,
-        collector=IndalekoMacLocalStorageRecorder.mac_local_recorder,
-        storage_description=storage,
-        file_prefix=file_prefix,
-        file_suffix=file_suffix,
-        data_dir=args.datadir,
-        input_file=input_file,
-        log_dir=args.logdir,
-        docker_upload=args.docker_upload,
-    )
-    output_file = recorder.generate_file_name()
-    log_file_name = recorder.generate_file_name(
-        target_dir=args.logdir, suffix='.log')
-    print(f"logging into {log_file_name}")
-    logging.basicConfig(filename=os.path.join(log_file_name),
-                        level=logging.DEBUG,
-                        format='%(asctime)s - %(levelname)s - %(message)s',
-                        force=True)
-    logging.info('Found these collected metadata files: %s', collector_files)
-    logging.info('Input file %s ', input_file)
-    logging.info('Output file %s ', output_file)
-    perf_file_name = os.path.join(
-        args.datadir,
-        IndalekoPerformanceDataRecorder().generate_perf_file_name(
-            platform=recorder.mac_platform,
-            service=recorder.mac_local_recorder,
-            machine=machine_id.replace('-', ''),
-        )
-    )
-    perf_file_name = os.path.join(
-        args.datadir,
-        IndalekoPerformanceDataRecorder().generate_perf_file_name(
-            platform=recorder.mac_platform,
-            service=recorder.mac_local_recorder,
-            machine=machine_id.replace('-', ''),
-        )
-    )
-    def extract_counters(**kwargs):
-        ic(kwargs)
-        recorder = kwargs.get('recorder')
-        if recorder:
-            return ic(recorder.get_counts())
-        else:
-            return {}
-    def record_data(recorder : IndalekoMacLocalStorageRecorder):
-        recorder.record()
-    perf_data = IndalekoPerformanceDataCollector.measure_performance(
-        record_data,
-        source=IndalekoSourceIdentifierDataModel(
-            Identifier=collector.service_identifier,
-            Version = collector.service_version,
-            Description=collector.service_description),
-        description=collector.service_description,
-        MachineIdentifier=None,
-        process_results_func=extract_counters,
-        input_file_name=None,
-        output_file_name=output_file,
-        recorder=recorder
-    )
-    if args.performance_db or args.performance_file:
-        perf_recorder = IndalekoPerformanceDataRecorder()
-        if args.performance_file:
-            perf_recorder.add_data_to_file(perf_file_name, perf_data)
-            ic('Performance data written to ', perf_file_name)
-        if args.performance_db:
-            perf_recorder.add_data_to_db(perf_data)
-            ic('Performance data written to the database')
-    total = 0
-    for count_type, count_value in recorder.get_counts().items():
-        logging.info('%s: %d', count_type, count_value)
-        total += count_value
-    logging.info('Total: %d', total)
-    logging.info('Done')
-
 
 if __name__ == '__main__':
     main()

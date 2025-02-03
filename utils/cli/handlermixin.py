@@ -22,10 +22,10 @@ from pathlib import Path
 import os
 import sys
 
-from typing import Union, Any, Callable
+from typing import Union
 from abc import ABC, abstractmethod
 
-from icecream import ic
+# from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -37,22 +37,26 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from platforms.machine_config import IndalekoMachineConfig
-from storage.collectors.base import BaseStorageCollector
 # pylint: enable=wrong-import-position
+
 
 class IndalekoHandlermixin(ABC):
     """Class for providing callback processing for the main handler"""
+
+    @abstractmethod
+    def get_platform_name() -> str:
+        '''This method is used to get the platform name'''
 
     @abstractmethod
     def get_pre_parser() -> Union[argparse.Namespace, None]:
         '''This method is used to get the pre-parser'''
 
     @abstractmethod
-    def get_additional_parameters(pre_parser : argparse.Namespace) -> Union[argparse.Namespace, None]:
+    def get_additional_parameters(pre_parser: argparse.Namespace) -> Union[argparse.Namespace, None]:
         '''This method is used to add additional parameters to the parser.'''
 
     @abstractmethod
-    def get_default_file(data_directory: Union[str, Path], candidates : list[Union[str, Path]]) -> Union[str, None]:
+    def get_default_file(data_directory: Union[str, Path], candidates: list[Union[str, Path]]) -> Union[str, None]:
         '''Pick the preferred/default file from a list of candidates (None if the list is empty)'''
 
     @abstractmethod
@@ -61,9 +65,10 @@ class IndalekoHandlermixin(ABC):
 
     @abstractmethod
     def find_machine_config_files(
-        config_dir : Union[str, Path],
-        platform : str = None,
-        machine_id : str = None) -> Union[list[str], None]:
+        config_dir: Union[str, Path],
+        platform: str = None,
+        machine_id: str = None
+    ) -> Union[list[str], None]:
         '''
         This method is used to find machine configuration files
 
@@ -82,32 +87,35 @@ class IndalekoHandlermixin(ABC):
 
     @abstractmethod
     def find_data_files(data_dir: Union[str, Path],
-                        keys : dict[str,str],
-                        prefix : str,
-                        suffix : str) -> Union[list[str], None]:
+                        keys: dict[str, str],
+                        prefix: str,
+                        suffix: str) -> Union[list[str], None]:
         '''This method is used to find data files'''
 
     @abstractmethod
-    def generate_output_file_name(keys : dict[str, str]) -> str:
+    def generate_output_file_name(keys: dict[str, str]) -> str:
         '''This method is used to generate an output file name'''
 
-
     @abstractmethod
-    def generate_log_file_name(keys : dict[str,str]) -> str:
+    def generate_log_file_name(keys: dict[str, str]) -> str:
         '''This method is used to generate a log file name'''
 
     @abstractmethod
-    def generate_perf_file_name(keys : dict[str,str]) -> str:
+    def generate_perf_file_name(keys: dict[str, str]) -> str:
         '''This method is used to generate a performance file name'''
 
     @abstractmethod
-    def load_machine_config(keys : dict[str,str]) -> IndalekoMachineConfig:
+    def load_machine_config(keys: dict[str, str]) -> IndalekoMachineConfig:
         '''This method is used to load a machine configuration'''
 
     @abstractmethod
-    def extract_filename_metadata(file_name : str) -> dict:
+    def extract_filename_metadata(file_name: str) -> dict:
         '''This method is used to parse the file name.'''
 
     @abstractmethod
-    def get_storage_identifier(parser : argparse.Namespace) -> Union[str,None]:
+    def get_storage_identifier(parser: argparse.Namespace) -> Union[str, None]:
         '''This method is used to get the storage identifier (if any) for a path'''
+
+    @abstractmethod
+    def get_user_identifier(parser: argparse.Namespace) -> Union[str, None]:
+        '''This method is used to get the user identifier (if any)'''

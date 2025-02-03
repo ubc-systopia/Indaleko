@@ -100,7 +100,7 @@ class IndalekoMacOSMachineConfig(IndalekoMachineConfig):
                               offline : bool = False) -> 'IndalekoMacOSMachineConfig':
         config_data = {}
         if config_dir is None and config_file is None:
-            config_dir = Indaleko.default_config_dir
+            config_dir = indaleko_default_config_dir
         if config_file is None:
             assert config_dir is not None, 'config_dir must be specified'
             config_file = IndalekoMacOSMachineConfig.get_most_recent_config_file(config_dir)

@@ -214,6 +214,8 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
                      hardware : Hardware,
                      drive_data : dict,
                      captured: dict,
+                     machine_config : IndalekoMachineConfig = None,
+                     offline : bool = False,
                      debug : bool = False) -> None:
             assert 'GUID' not in drive_data, 'GUID should not be in drive_data'
             assert 'UniqueId' in drive_data, 'UniqueId must be in drive_data'
@@ -229,23 +231,28 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
             timestamp = captured['Value']
             if isinstance(timestamp, str):
                 timestamp = datetime.datetime.fromisoformat(timestamp)
-            self.machine_config = IndalekoWindowsMachineConfig(
-                machine_id=machine_id,
-                Hardware=hardware,
-                Software=software,
-                Captured=captured,
-                Record=IndalekoRecordDataModel(
-                    SourceIdentifier=IndalekoSourceIdentifierDataModel(
-                        Identifier=self.WindowsDriveInfo_UUID_str,
-                        Version=self.WindowsDriveInfo_Version,
-                        Description=self.WindowsDriveInfo_Description
+            if machine_config is not None:
+                self.machine_config = machine_config
+            else:
+                self.machine_config = IndalekoWindowsMachineConfig(
+                    machine_id=machine_id,
+                    Hardware=hardware,
+                    Software=software,
+                    Captured=captured,
+                    Record=IndalekoRecordDataModel(
+                        SourceIdentifier=IndalekoSourceIdentifierDataModel(
+                            Identifier=self.WindowsDriveInfo_UUID_str,
+                            Version=self.WindowsDriveInfo_Version,
+                            Description=self.WindowsDriveInfo_Description
+                        ),
+                        Timestamp=timestamp,
+                        Data=encode_binary_data(drive_data),
+                        Attributes=drive_data
                     ),
-                    Timestamp=timestamp,
-                    Data=encode_binary_data(drive_data),
-                    Attributes=drive_data
-                ),
-            )
-            return
+                    debug=debug,
+                    offline=offline
+                )
+                return
 
         @staticmethod
         def __find_volume_guid__(vol_name : str) -> str:
@@ -289,7 +296,7 @@ class IndalekoWindowsMachineConfig(IndalekoMachineConfig):
         if debug:
             ic(volume_info)
         for volume in volume_info:
-            wdi = self.WindowsDriveInfo(machine_id, software, hardware, volume, captured)
+            wdi = self.WindowsDriveInfo(machine_id, software, hardware, volume, captured, self, debug=debug)
             if debug:
                 ic(volume)
             assert wdi.get_vol_guid() not in self.volume_data,\

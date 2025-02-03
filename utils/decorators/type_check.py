@@ -52,9 +52,9 @@ def type_check(func):
                 if not isinstance(all_args[arg], arg_type):
                     if hasattr(arg_type, '__origin__') and arg_type.__origin__ is Union:
                         if not any(isinstance(all_args[arg], t) for t in arg_type.__args__):
-                            raise TypeError(f"Argument '{arg}' must be of type {arg_type}")
+                            raise TypeError(f"Argument '{arg}' must be of type {arg_type}, not {type(all_args[arg])}")
                     else:
-                        raise TypeError(f"Argument '{arg}' must be of type {arg_type}")
+                        raise TypeError(f"Argument '{arg}' must be of type {arg_type}, not {type(all_args[arg])}")
         return func(*args, **kwargs)
     return wrapper
 

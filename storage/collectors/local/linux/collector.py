@@ -17,14 +17,11 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
-import argparse
 import inspect
+import logging
 import os
 import sys
 import uuid
-
-from pathlib import Path
-from typing import Union
 
 from icecream import ic
 
@@ -36,23 +33,17 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from data_models import IndalekoSourceIdentifierDataModel
 from db.service_manager import IndalekoServiceManager
-from perf.perf_collector import IndalekoPerformanceDataCollector
-from perf.perf_recorder import IndalekoPerformanceDataRecorder
 from platforms.linux.machine_config import IndalekoLinuxMachineConfig
 from storage.collectors.base import BaseStorageCollector
 from storage.collectors.data_model import IndalekoStorageCollectorDataModel
-from utils.i_logging import IndalekoLogging
-from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
-from utils.cli.base import IndalekoBaseCLI
-from utils.cli.runner import IndalekoCLIRunner
+from storage.collectors.local.local_base import BaseLocalStorageCollector
 from utils.misc.file_name_management import generate_file_name, extract_keys_from_file_name
 # pylint: enable=wrong-import-position
 
 
 
-class IndalekoLinuxLocalCollector(BaseStorageCollector):
+class IndalekoLinuxLocalStorageCollector(BaseLocalStorageCollector):
     '''
     This is the class that collects metadata from Linux local file systems.
     '''
@@ -73,9 +64,9 @@ class IndalekoLinuxLocalCollector(BaseStorageCollector):
         'service_identifier' : indaleko_linux_local_collector_uuid,
     }
 
-    linux_collector_data = IndalekoStorageCollectorDataModel(
+    collector_data = IndalekoStorageCollectorDataModel(
         CollectorPlatformName = linux_platform,
-        CollectorServiceName = indaleko_linux_local_collector_service_name,
+        CollectorServiceName = linux_local_collector_name,
         CollectorServiceUUID = uuid.UUID(indaleko_linux_local_collector_uuid),
         CollectorServiceVersion = indaleko_linux_local_collector_service_version,
         CollectorServiceDescription = indaleko_linux_local_collector_service_description
@@ -83,35 +74,11 @@ class IndalekoLinuxLocalCollector(BaseStorageCollector):
 
 
     def __init__(self, **kwargs):
-        assert 'machine_config' in kwargs, 'machine_config must be specified'
-        self.machine_config = kwargs['machine_config']
-        if 'machine_id' not in kwargs:
-            kwargs['machine_id'] = self.machine_config.machine_id
-        self.offline = False
-        if 'offline' in kwargs:
-            self.offline = kwargs['offline']
-            del self.offline
-        if 'collector_data' not in kwargs:
-            kwargs['collector_data'] =  IndalekoLinuxLocalCollector.linux_collector_data
         super().__init__(**kwargs,
-                         platform=IndalekoLinuxLocalCollector.linux_platform,
-                         collector_name=IndalekoLinuxLocalCollector.linux_local_collector_name,
-                         **IndalekoLinuxLocalCollector.indaleko_linux_local_collector_service
+                         **IndalekoLinuxLocalStorageCollector.indaleko_linux_local_collector_service
         )
 
-    @staticmethod
-    def generate_linux_collector_file_name(**kwargs) -> str:
-        '''Generate a file name for the Linux local collector'''
-        if 'platform' not in kwargs:
-            kwargs['platform'] = IndalekoLinuxLocalCollector.linux_platform
-        if 'collector_name' not in kwargs:
-            kwargs['collector_name'] = IndalekoLinuxLocalCollector.linux_local_collector_name
-        assert 'machine_id' in kwargs, 'machine_id must be specified'
-        return BaseStorageCollector.generate_collector_file_name(**kwargs)
-
-def main():
-    '''This is the new CLI based utility for executing local Linux metadata collection.'''
-    class linux_local_collector_mixin(IndalekoBaseCLI.default_handler_mixin):
+    class linux_local_collector_mixin(BaseLocalStorageCollector.local_collector_mixin):
         @staticmethod
         def load_machine_config(keys: dict[str, str]) -> IndalekoLinuxMachineConfig:
             '''Load the machine configuration'''
@@ -125,82 +92,14 @@ def main():
                 config_file=str(keys['machine_config_file']),
                 offline=offline)
 
-    @staticmethod
-    def linux_local_run(keys: dict[str, str]) -> Union[dict, None]:
-        '''Run the collector'''
-        args = keys['args'] # must be there.
-        cli = keys['cli'] # must be there.
-        config_data = cli.get_config_data()
-        debug = hasattr(args, 'debug') and args.debug
-        if debug:
-            ic(config_data)
-        kwargs = {
-            'machine_config': cli.handler_mixin.load_machine_config(
-                {
-                    'machine_config_file' : str(Path(args.configdir) / args.machine_config),
-                    'offline' : args.offline
-                }
-            ),
-            'timestamp': config_data['Timestamp'],
-            'path': args.path,
-            'offline': args.offline
-        }
-        def collect(collector : IndalekoLinuxLocalCollector):
-            data = collector.collect()
-            output_file = Path(args.datadir) / args.outputfile
-            collector.write_data_to_file(data, str(output_file))
-        def extract_counters(**kwargs):
-            collector = kwargs.get('collector')
-            if collector:
-                return ic(collector.get_counts())
-            else:
-                return {}
-        collector = IndalekoLinuxLocalCollector(**kwargs)
-        perf_data = IndalekoPerformanceDataCollector.measure_performance(
-            collect,
-            source=IndalekoSourceIdentifierDataModel(
-                Identifier=collector.service_identifier,
-                Version = collector.service_version,
-                Description=collector.service_description),
-            description=collector.service_description,
-            MachineIdentifier=uuid.UUID(kwargs['machine_config'].machine_id),
-            process_results_func=extract_counters,
-            input_file_name=None,
-            output_file_name=str(Path(args.datadir) / args.outputfile),
-            collector=collector
-        )
-        if args.performance_db or args.performance_file:
-            perf_recorder = IndalekoPerformanceDataRecorder()
-            if args.performance_file:
-                perf_file = str(Path(args.datadir) / config_data['PerformanceDataFile'])
-                perf_recorder.add_data_to_file(perf_file, perf_data)
-                if (debug):
-                    ic('Performance data written to ', config_data['PerformanceDataFile'])
-            if args.performance_db:
-                perf_recorder.add_data_to_db(perf_data)
-                if (debug):
-                    ic('Performance data written to the database')
+    cli_handler_mixin = linux_local_collector_mixin
 
-    @staticmethod
-    def add_linux_local_parameters(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
-        '''Add the parameters for the local Linux collector'''
-        default_path = os.path.expanduser('~')
-        if default_path == '~':
-            default_path = os.path.abspath(os.sep)
-        parser.add_argument('--path',
-                            help=f'Path to the directory from which to collect metadata {default_path}',
-                            type=str,
-                            default=default_path)
-        return parser
-
-    runner = IndalekoCLIRunner(
-        cli_data=IndalekoBaseCliDataModel(Service=IndalekoLinuxLocalCollector.linux_local_collector_name),
-        handler_mixin=linux_local_collector_mixin,
-        features=IndalekoBaseCLI.cli_features(input=False),
-        additional_post_parameters=add_linux_local_parameters,
-        Run=linux_local_run
+def main():
+    '''The CLI handler for the linux local storage collector.'''
+    BaseLocalStorageCollector.local_collector_runner(
+        IndalekoLinuxLocalStorageCollector,
+        IndalekoLinuxMachineConfig
     )
-    runner.run()
 
 if __name__ == '__main__':
     main()

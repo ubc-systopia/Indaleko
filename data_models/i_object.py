@@ -65,7 +65,7 @@ class IndalekoObjectDataModel(IndalekoBaseModel):
                         title='Size',
                         description='The size of the object in bytes.')
 
-    SemanticAttributes : List[IndalekoSemanticAttributeDataModel] \
+    SemanticAttributes : Union[List[IndalekoSemanticAttributeDataModel], None] \
         = Field(None,
                 title='SemanticAttributes',
                 description='The semantic attributes related to this object by the storage service.')

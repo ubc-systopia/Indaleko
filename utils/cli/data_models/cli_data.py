@@ -17,7 +17,6 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
-from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 import logging
 import os
@@ -42,44 +41,49 @@ if os.environ.get('INDALEKO_ROOT') is None:
 from constants import IndalekoConstants
 from data_models.base import IndalekoBaseModel
 from db import IndalekoDBConfig
-from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
+from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, \
+    indaleko_default_log_dir
 from utils.misc.file_name_management import indaleko_file_name_prefix
-from utils.misc.file_name_management import find_candidate_files
 # pylint: enable=wrong-import-position
+
 
 class IndalekoBaseCliDataModel(IndalekoBaseModel):
     '''Defines the base data model for the CLI'''
-    Timestamp: AwareDatetime = Field(default_factory = lambda: datetime.now(timezone.utc),
-                                     title='Timestamp',
-                                     description='The timestamp for the data.')
-    Service: Union[str, None] = Field(None,
-                         title='Service',
-                         description='The service being run.')
+    Timestamp: AwareDatetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        title='Timestamp',
+        description='The timestamp for the data.'
+    )
+    Service: Union[str, None] = Field(
+        None,
+        title='Service',
+        description='The service being run.')
     Platform: Optional[Union[str, None]] = Field(
         default_factory=lambda: platform.system(),
         title='Platform',
         description='The platform for the machine.'
     )
-    MachineConfigChoices : List[str] = Field(
+    MachineConfigChoices: List[str] = Field(
         default_factory=list,
         title='MachineConfigChoices',
         description='Available machine configuration files.'
     )
-    MachineConfigFile : Optional[Union[str, None]] = Field(
+    MachineConfigFile: Optional[Union[str, None]] = Field(
         None,
         title='MachineConfigFile',
         description='The selected machine configuration file.'
     )
-    MachineConfigFileKeys : Optional[Dict[str, Any]] = Field(
+    MachineConfigFileKeys: Optional[Dict[str, Any]] = Field(
         default_factory=dict,
         title='MachineConfigFileKeys',
         description='Keys for the machine configuration file.'
     )
     StorageId: Optional[UUID] = None
-    ConfigDirectory : str = indaleko_default_config_dir
-    DataDirectory : str = indaleko_default_data_dir
-    LogDirectory : str = indaleko_default_log_dir
-    InputFileKeys : Optional[Dict[str, Any]] = Field(
+    UserID: Optional[str] = None
+    ConfigDirectory: str = indaleko_default_config_dir
+    DataDirectory: str = indaleko_default_data_dir
+    LogDirectory: str = indaleko_default_log_dir
+    InputFileKeys: Optional[Dict[str, Any]] = Field(
         default_factory=dict,
         title='InputFileKeys',
         description='Keys for the input file.'
@@ -144,12 +148,12 @@ class IndalekoBaseCliDataModel(IndalekoBaseModel):
         title='FileSuffix',
         description='Suffix for file names.'
     )
-    FileKeys : Dict[str, str] = Field(
+    FileKeys: Dict[str, str] = Field(
         default_factory=dict,
         title='FileKeys',
         description='These are keys and their values for identifying relevant files.'
     )
-    PerformanceDataFile : Optional[Union[str, None]] = Field(
+    PerformanceDataFile: Optional[Union[str, None]] = Field(
         None,
         title='PerformanceDataFile',
         description='The file to which performance data is written.'
@@ -184,7 +188,7 @@ class IndalekoBaseCliDataModel(IndalekoBaseModel):
                 'InputFile': 'file1',
                 'InputFileKeys': {'key1': 'value1', 'key2': 'value2'},
                 'OutputFile': 'output.txt',
-                'OutputFileKeys' : ['key1', 'key2'],
+                'OutputFileKeys': ['key1', 'key2'],
                 'LogFile': 'log.txt',
                 'Offline': False,
                 'DBConfigChoices': ['db1', 'db2'],
@@ -194,12 +198,14 @@ class IndalekoBaseCliDataModel(IndalekoBaseModel):
             }
         }
 
+
 def main():
     '''Test code for the base CLI data model'''
     ic('Testing Base CLI Data Model')
     cli_data = IndalekoBaseCliDataModel()
     ic(cli_data)
     cli_data.test_model_main()
+
 
 if __name__ == '__main__':
     main()
