@@ -33,6 +33,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 class IndalekoConstants:
 
+    project_name = 'Indaleko'
     default_prefix = 'indaleko'
     default_db_config_file_name = f'{default_prefix}-db-config.ini'
     default_data_dir = os.path.join(os.environ.get('INDALEKO_ROOT', '.'), 'data')

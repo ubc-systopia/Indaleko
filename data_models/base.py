@@ -37,16 +37,18 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 T = TypeVar('T', bound='IndalekoBaseModel')
 
+
 class IndalekoBaseModel(BaseModel):
     '''
-    This expands upon the base model and provides common methods that we use in meshing the Pydanic data model with ArangoDB and our usuage model.
+    This expands upon the base model and provides common methods that we use in meshing the
+    Pydanic data model with ArangoDB and our usuage model.
     '''
     def serialize(self) -> Dict[str, Any]:
         '''Serialize the object to a dictionary'''
         return self.model_dump(exclude_unset=True, exclude_none=True)
 
     @classmethod
-    def deserialize(cls: Type[T], data : Dict[str, Any]) -> T:
+    def deserialize(cls: Type[T], data: Dict[str, Any]) -> T:
         '''Deserialize the object from a dictionary'''
         if isinstance(data, str):
             return cls(**json.loads(data))
@@ -61,11 +63,11 @@ class IndalekoBaseModel(BaseModel):
         return json.loads(cls(**cls.Config.json_schema_extra['example']).model_dump_json())
 
     @classmethod
-    def get_example(cls : Type[T]) -> T:
+    def get_example(cls: Type[T]) -> T:
         return cls(**cls.get_json_example())
 
     @classmethod
-    def build_arangodb_doc(cls : Type[T], _key : uuid.UUID = uuid.uuid4()) -> dict:
+    def build_arangodb_doc(cls: Type[T], _key: uuid.UUID = uuid.uuid4()) -> dict:
         '''
         Builds a dictionary that can be used to insert the data into ArangoDB.
         If a key is provided, it will be used, otherwise a random UUID is generated.
@@ -76,24 +78,23 @@ class IndalekoBaseModel(BaseModel):
         data['_key'] = str(_key)
         return json.dumps(data)
 
-
     @classmethod
-    def get_json_schema(cls : Type[T]) -> dict:
+    def get_json_schema(cls: Type[T]) -> dict:
         '''Returns the JSON schema for the data model in Python dictionary format.'''
         return cls.get_example().model_json_schema()
 
     @classmethod
-    def get_arangodb_schema(cls : Type[T]) -> dict:
+    def get_arangodb_schema(cls: Type[T]) -> dict:
         '''Returns the JSON schema for the data model in the format required by ArangoDB'''
         return {
-        "message": "Unfortunately, your data did not conform to the schema.",
-        "level": "strict",
-        "type": "json",
-        "rule" : cls.get_json_schema()
-    }
+            "message": "Unfortunately, your data did not conform to the schema.",
+            "level": "strict",
+            "type": "json",
+            "rule": cls.get_json_schema()
+        }
 
     @classmethod
-    def test_model_main(cls : Type[T]) -> None:
+    def test_model_main(cls: Type[T]) -> None:
         '''This function can be used to do basic testing of the data model.'''
         data = cls.get_example()
         ic(data)
@@ -105,11 +106,10 @@ class IndalekoBaseModel(BaseModel):
         ic(cls.get_arangodb_schema())
 
 
-
-
 def main():
     '''This allows testing the data model.'''
     ic('Currently no test code for IndalekoBaseModel')
+
 
 if __name__ == '__main__':
     main()

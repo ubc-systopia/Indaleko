@@ -40,23 +40,34 @@ from data_models.base import IndalekoBaseModel
 from utils.misc.data_management import encode_binary_data
 # pylint: enable=wrong-import-position
 
+
 class IndalekoRecordDataModel(IndalekoBaseModel):
     '''
     This class defines the UUID data model for Indaleko.
     '''
-    SourceIdentifier : IndalekoSourceIdentifierDataModel = Field(...,
-                                      title='SourceIdentifier',
-                                      description='The source identifier for the record.')
-    Timestamp : AwareDatetime = Field(datetime.now(timezone.utc),
-                                 title='Timestamp',
-                                 description='The timestamp of when this record was created.')
-    Attributes : Union[Dict[str, Any], None] = \
-                    Field({},
-                          title='Attributes',
-                          description='Attributes extracted from the source data. [Optional]')
-    Data : str = Field(default=encode_binary_data(b''),
-                       title='Data',
-                       description='The raw (uninterpreted) data from the source.')
+    SourceIdentifier: IndalekoSourceIdentifierDataModel = Field(
+        ...,
+        title='SourceIdentifier',
+        description='The source identifier for the record.'
+    )
+
+    Timestamp: AwareDatetime = Field(
+        datetime.now(timezone.utc),
+        title='Timestamp',
+        description='The timestamp of when this record was created.'
+    )
+
+    Attributes: Union[Dict[str, Any], None] = Field(
+        {},
+        title='Attributes',
+        description='Attributes extracted from the source data. [Optional]'
+    )
+
+    Data: str = Field(
+        default=encode_binary_data(b''),
+        title='Data',
+        description='The raw (uninterpreted) data from the source.'
+    )
 
     @field_validator('Timestamp', mode='before')
     @classmethod
@@ -101,7 +112,22 @@ class IndalekoRecordDataModel(IndalekoBaseModel):
                     "Volume GUID": "3397d97b-2ca5-11ed-b2fc-b40ede9a5a3c",
                     "ObjectIdentifier": "2c73d6e5-eaba-4f0a-acf3-e02c529f097a"
                 },
-                "Data": "xQL6xQL3eyJzdF9hdGltZSI6IDE2OTMyMjM0NTYuMzMzNDI4MSwgInN0X2F0aW1lX25zIjogMTY5MzIyMzQ1NjMzMzQyODEwMCwgInN0X2JpcnRodGltZSI6IDE2ODU4OTEyMjEuNTU5MTkxNywgInN0X2JpcnRodGltZV9ucyI6IDE2ODU4OTEyMjE1NTkxOTE3MDAsICJzdF9jdGltZSI6IDE2ODU4OTEyMjEuNTU5MTkxNywgInN0X2N0aW1lX25zIjogMTY4NTg5MTIyMTU1OTE5MTcwMCwgInN0X2RldiI6IDI3NTYzNDcwOTQ5NTU2NDk1OTksICJzdF9maWxlX2F0dHJpYnV0ZXMiOiAzMiwgInN0X2dpZCI6IDAsICJzdF9pbm8iOiAxMTI1ODk5OTEwMTE5ODMyLCAic3RfbW9kZSI6IDMzMjc5LCAic3RfbXRpbWUiOiAxNjg1ODkxMjIxLjU1OTcxNTcsICJzdF9tdGltZV9ucyI6IDE2ODU4OTEyMjE1NTk3MTU3MDAsICJzdF9ubGluayI6IDEsICJzdF9yZXBhcnNlX3RhZyI6IDAsICJzdF9zaXplIjogMTQxMDEyMCwgInN0X3VpZCI6IDAsICJOYW1lIjogInJ1ZnVzLTQuMS5leGUiLCAiUGF0aCI6ICJkOlxcZGlzdCIsICJVUkkiOiAiXFxcXD9cXFZvbHVtZXszMzk3ZDk3Yi0yY2E1LTExZWQtYjJmYy1iNDBlZGU5YTVhM2N9XFxkaXN0XFxydWZ1cy00LjEuZXhlIiwgIkluZGV4ZXIiOiAiMDc5M2I0ZDUtZTU0OS00Y2I2LTgxNzctMDIwYTczOGI2NmI3IiwgIlZvbHVtZSBHVUlEIjogIjMzOTdkOTdiLTJjYTUtMTFlZC1iMmZjLWI0MGVkZTlhNWEzYyIsICJPYmplY3RJZGVudGlmaWVyIjogIjJjNzNkNmU1LWVhYmEtNGYwYS1hY2YzLWUwMmM1MjlmMDk3YSJ9"
+                "Data": "xQL6xQL3eyJzdF9hdGltZSI6IDE2OTMyMjM0NTYuMzMzNDI4MSwgInN0X2F"
+                "0aW1lX25zIjogMTY5MzIyMzQ1NjMzMzQyODEwMCwgInN0X2JpcnRodGltZSI6IDE2OD"
+                "U4OTEyMjEuNTU5MTkxNywgInN0X2JpcnRodGltZV9ucyI6IDE2ODU4OTEyMjE1NTkxOT"
+                "E3MDAsICJzdF9jdGltZSI6IDE2ODU4OTEyMjEuNTU5MTkxNywgInN0X2N0aW1lX25zIj"
+                "ogMTY4NTg5MTIyMTU1OTE5MTcwMCwgInN0X2RldiI6IDI3NTYzNDcwOTQ5NTU2NDk1OT"
+                "ksICJzdF9maWxlX2F0dHJpYnV0ZXMiOiAzMiwgInN0X2dpZCI6IDAsICJzdF9pbm8iOi"
+                "AxMTI1ODk5OTEwMTE5ODMyLCAic3RfbW9kZSI6IDMzMjc5LCAic3RfbXRpbWUiOiAxNj"
+                "g1ODkxMjIxLjU1OTcxNTcsICJzdF9tdGltZV9ucyI6IDE2ODU4OTEyMjE1NTk3MTU3MD"
+                "AsICJzdF9ubGluayI6IDEsICJzdF9yZXBhcnNlX3RhZyI6IDAsICJzdF9zaXplIjogMT"
+                "QxMDEyMCwgInN0X3VpZCI6IDAsICJOYW1lIjogInJ1ZnVzLTQuMS5leGUiLCAiUGF0aC"
+                "I6ICJkOlxcZGlzdCIsICJVUkkiOiAiXFxcXD9cXFZvbHVtZXszMzk3ZDk3Yi0yY2E1LT"
+                "ExZWQtYjJmYy1iNDBlZGU5YTVhM2N9XFxkaXN0XFxydWZ1cy00LjEuZXhlIiwgIkluZG"
+                "V4ZXIiOiAiMDc5M2I0ZDUtZTU0OS00Y2I2LTgxNzctMDIwYTczOGI2NmI3IiwgIlZvbH"
+                "VtZSBHVUlEIjogIjMzOTdkOTdiLTJjYTUtMTFlZC1iMmZjLWI0MGVkZTlhNWEzYyIsIC"
+                "JPYmplY3RJZGVudGlmaWVyIjogIjJjNzNkNmU1LWVhYmEtNGYwYS1hY2YzLWUwMmM1Mj"
+                "lmMDk3YSJ9"
             }
         }
 
@@ -109,6 +135,7 @@ class IndalekoRecordDataModel(IndalekoBaseModel):
 def main():
     '''This allows testing the data model'''
     IndalekoRecordDataModel.test_model_main()
+
 
 if __name__ == '__main__':
     main()

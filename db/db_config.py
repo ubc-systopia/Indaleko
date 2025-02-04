@@ -27,6 +27,9 @@ import sys
 from arango import ArangoClient
 import requests
 
+from icecream import ic
+from typing import Union
+
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
@@ -36,6 +39,8 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from constants import IndalekoConstants
+from data_models.db_config import IndalekoDBConfigDataModel, IndalekoDBConfigUserDataModel, \
+    IndalekoDBConfigDockerConfigurationDataModel
 from utils import IndalekoDocker, IndalekoLogging, IndalekoSingleton
 from utils.data_validation import validate_ip_address, validate_hostname
 from utils.misc.directory_management import indaleko_default_log_dir, indaleko_default_config_dir
@@ -268,7 +273,8 @@ class IndalekoDBConfig(IndalekoSingleton):
         assert self.sys_db is not None, 'No system database found'
         if dbname in self.sys_db.databases():
             if reset:
-                self.sys_db.delete_database(dbname)
+                result = self.sys_db.delete_database(dbname)
+                assert result, 'Could not delete database'
             else:
                 return True
         self.sys_db.create_database(dbname)
@@ -332,6 +338,101 @@ class IndalekoDBConfig(IndalekoSingleton):
             return self.config['database']['ssl']
         return False
 
+    @staticmethod
+    def read_config_file(config_file: Union[str, None]) -> configparser.ConfigParser:
+        """
+        Read the config file.
+
+        Inputs:
+            * config_file: str: The name of the config file to read. (Optional)
+
+        If the config file is not provided, the default config file and directory are used.
+        If the config file is provided but does not exist as passed, the default directory is checked.
+
+        Returns:
+            * configparser.ConfigParser: The configuration file as parsed
+            * None: If the file could not be read
+        """
+        config = configparser.ConfigParser()
+        if config_file:
+            if not os.path.exists(config_file):
+                alt_path = os.path.join(indaleko_default_config_dir, config_file)
+                if os.path.exists(alt_path):
+                    config_file = alt_path
+        if config_file is None:
+            config_file = IndalekoDBConfig.default_db_config_file
+        config.read(config_file, encoding='utf-8-sig')
+        return config
+
+    @staticmethod
+    def config_parser_to_config_data(config_parser: configparser.ConfigParser) -> IndalekoDBConfigDataModel:
+        '''Convert the configuration parser object into a configuration data model.'''
+        inputs = {
+            'Name': config_parser['database']['database'],
+            'Timestamp': config_parser['database']['timestamp'],
+            'AdminUser': IndalekoDBConfigUserDataModel(
+                Name=config_parser['database']['admin_user'],
+                Password=config_parser['database']['admin_passwd']
+            ),
+            'DBUser': IndalekoDBConfigUserDataModel(
+                Name=config_parser['database']['user_name'],
+                Password=config_parser['database']['user_password']
+            ),
+            'Hostname': config_parser['database']['host'],
+            'Port': config_parser['database']['port'],
+        }
+        if 'container' in config_parser['database']:
+            inputs['Docker'] = True
+            inputs['Local'] = False
+            inputs['DockerConfiguration'] = IndalekoDBConfigDockerConfigurationDataModel(
+                ContainerName=config_parser['database']['container'],
+                VolumeName=config_parser['database']['volume']
+            )
+        else:
+            inputs['Docker'] = False
+            inputs['Local'] = True
+        return IndalekoDBConfigDataModel(**inputs)
+
+    @staticmethod
+    def load_config_data(config_file: Union[str, None] = None) -> Union[IndalekoDBConfigDataModel, None]:
+        '''
+        Load the configuration data from the file and convert it into the config data format.
+
+        If the `config_file` is not provided, the default config file and directory are used (see
+        read_config_file for details).
+
+        Returns:
+            * IndalekoDBConfigDataModel: The configuration data as a data model
+            * None: If the file could not be read
+        '''
+        config_parser = IndalekoDBConfig.read_config_file(config_file)
+        if config_parser is None:
+            return None
+        return IndalekoDBConfig.config_parser_to_config_data(config_parser)
+
+    @staticmethod
+    def create_config_parser(config_data: IndalekoDBConfigDataModel) -> configparser.ConfigParser:
+        '''Given a configuration data model, create a configuration parser object.'''
+        config = configparser.ConfigParser()
+        config['database'] = {}
+        config['database']['database'] = config_data.Name
+        if isinstance(config_data.Timestamp, datetime.datetime):
+            config['database']['timestamp'] = config_data.Timestamp.strftime('%Y%m%d%H%M%S')
+        else:
+            config['database']['timestamp'] = config_data.Timestamp
+        config['database']['admin_user'] = config_data.AdminUser.Name
+        config['database']['admin_passwd'] = config_data.AdminUser.Password
+        config['database']['user_name'] = config_data.DBUser.Name
+        config['database']['user_password'] = config_data.DBUser.Password
+        config['database']['host'] = config_data.Hostname
+        config['database']['port'] = str(config_data.Port)
+        if config_data.Docker:
+            config['database']['container'] = config_data.DockerConfiguration.ContainerName
+            config['database']['volume'] = config_data.DockerConfiguration.VolumeName
+        if config_data.SSL:
+            config['database']['ssl'] = 'true'
+        return config
+
 
 def check_command(args: argparse.Namespace) -> None:
     """Check the database connection."""
@@ -385,6 +486,30 @@ def setup_command(args: argparse.Namespace) -> None:
         print('Could not start DB connection.  Confirm the docker image is running.')
         return
     logging.info('Database connection successful')
+
+
+def docker_reset() -> None:
+    '''This resets the docker container and volume'''
+    logging.info('Resetting database')
+    indaleko_docker = IndalekoDocker()
+    config = IndalekoDBConfig()
+    # In either case we will delete the container and volume
+    logging.warning('DB Reset: stopping container %s', config.config['database']['container'])
+    print('DB Reset: stopping container '
+          f"{config.config['database']['container']}")
+    indaleko_docker.stop_container(config.config['database']['container'])
+    logging.warning('DB Reset: deleting container %s', config.config['database']['container'])
+    print('DB Reset: deleting container '
+          f"{config.config['database']['container']}")
+    indaleko_docker.delete_container(config.config['database']['container'])
+    logging.warning('DB Reset: deleting volume %s', config.config['database']['volume'])
+    print('DB Reset: deleting volume '
+          f"{config.config['database']['volume']}")
+    indaleko_docker.delete_volume(config.config['database']['volume'])
+
+
+def indaleko_reset() -> None:
+    '''This resets the Indaleko database'''
 
 
 def reset_command(args: argparse.Namespace) -> None:
@@ -465,6 +590,10 @@ def default_command_handler(args: argparse.Namespace) -> None:
     else:
         setup_command(args)
     return
+
+
+def new_main():
+    ic(IndalekoDBConfig.load_config_data())
 
 
 def main():
