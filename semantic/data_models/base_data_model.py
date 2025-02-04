@@ -67,6 +67,10 @@ class BaseSemanticDataModel(IndalekoBaseModel):
               title='Timestamp',
               description='The timestamp when the semantic data was collected.')
 
+    ObjectIdentifier: UUID = Field(...,
+                                   title = "ObjectIdentifier",
+                                   description= "ObjectIdentifier of the original source file")
+
     RelatedObjects : List[UUID] = \
         Field(...,
               title='RelatedObjects',
@@ -104,6 +108,7 @@ class BaseSemanticDataModel(IndalekoBaseModel):
                     "Data" : "xAA="
                 },
                 "Timestamp": "2023-09-21T10:30:00Z",
+                "ObjectIdentifier" : "5a833720-7293-47fe-b3b3-1296302956cd",
                 "RelatedObjects" : [
                     "5a833720-7293-47fe-b3b3-1296302956cd",
                 ],
