@@ -226,14 +226,6 @@ class UnstructuredRecorder:
                     )
 
                     jsonl_output.write(i_semantic_attribute.model_dump_json() + '\n')
-
-
-    def serialize_attributes(attributes):
-        serialized_attributes = []
-        for attr in attributes:
-            serialized_attributes.append(attr.serialize())
-
-        return serialized_attributes
     
 
 

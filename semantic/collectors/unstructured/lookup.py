@@ -66,18 +66,18 @@ class UnstructuredLookup():
     unstructured_config_file_name = 'unstructured_config.ini'
 
     # Query to retrieve files wanted for unstructured processing
-    # query_string = 'FOR doc IN Object \
-    #                     FILTER doc.WindowsFileAttributes == @val \
-    #                     SORT doc.URI \
-    #                     RETURN doc'
+    query_string = 'FOR doc IN Objects \
+                        FILTER doc.WindowsFileAttributes == @val \
+                        SORT doc.URI \
+                        RETURN doc'
 
     # Query that returns a smaller result. 
     # Make sure to edit variables in perform_query()
-    query_string = 'FOR doc IN Object \
-                        FILTER doc.WindowsFileAttributes == @val \
-                            AND doc.Label == @essay \
-                        SORT doc.URI \
-                        RETURN doc'
+    # query_string = 'FOR doc IN Objects \
+    #                     FILTER doc.WindowsFileAttributes == @val \
+    #                         AND doc.Label == @essay \
+    #                     SORT doc.URI \
+    #                     RETURN doc'
 
     def __init__(self):
         unstructured_config_file = os.path.join(Indaleko.default_config_dir, self.unstructured_config_file_name)
@@ -117,7 +117,7 @@ class UnstructuredLookup():
         client = ArangoClient(hosts = host)
         db = client.db("Indaleko", ARANGO_USER_NAME, ARANGO_USER_PASSWORD)
 
-        assert db.has_collection('Object')
+        assert db.has_collection('Objects')
         ic(f'Connected to ArangoDB: {host}')
         return db
 
@@ -125,7 +125,7 @@ class UnstructuredLookup():
         '''Returns a Cursor to the results of the query.'''
         db = self.connect_db()
         cursor = db.aql.execute(self.query_string,
-                                    bind_vars = {'val': 'FILE_ATTRIBUTE_ARCHIVE', 'essay' : 'Essay.docx'},
+                                    bind_vars = {'val': 'FILE_ATTRIBUTE_ARCHIVE'},
                                     batch_size=10,
                                     count=True)
         ic('Query Successful')
