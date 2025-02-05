@@ -33,10 +33,12 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # pylint: disable=wrong-import-position
 # pylint: enable=wrong-import-position
 
-def encode_binary_data(data : bytes) -> str:
+
+def encode_binary_data(data: bytes) -> str:
     '''Encode binary data as a string.'''
     return base64.b64encode(msgpack.packb(data, use_bin_type=True)).decode('ascii')
 
-def decode_binary_data(data : str) -> bytes:
+
+def decode_binary_data(data: str) -> bytes:
     '''Decode binary data from a string.'''
     return msgpack.unpackb(base64.b64decode(data), raw=False)
