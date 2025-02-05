@@ -1,18 +1,49 @@
 
-from typing import List, Dict, Any
+'''
+This module implements an execution mechanism for AQL queries.
+
+Copyright (C) 2024-2025 Tony Mason
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+'''
+import os
+import sys
+
+from typing import Any
 
 from icecream import ic
 
-from .executor_base import ExecutorBase
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
 
-from IndalekoDBConfig import IndalekoDBConfig
+
+# pylint: disable=wrong-import-position
+from db import IndalekoDBConfig
+from query.search_execution.query_executor.executor_base import ExecutorBase
+# pylint: enable=wrong-import-position
+
 
 class AQLExecutor(ExecutorBase):
     """
     Executor for AQL (ArangoDB Query Language) queries.
     """
 
-    def execute(self, query: str, data_connector: Any) -> List[Dict[str, Any]]:
+    def execute(self, query: str, data_connector: Any) -> list[dict[str, Any]]:
         """
         Execute an AQL query using the provided data connector.
 
@@ -23,7 +54,7 @@ class AQLExecutor(ExecutorBase):
         Returns:
             List[Dict[str, Any]]: The query results
         """
-        assert type(data_connector) == IndalekoDBConfig, "Data connector must be an instance of IndalekoDBConfig"
+        assert isinstance(data_connector, IndalekoDBConfig), "Data connector must be an instance of IndalekoDBConfig"
         ic(query)
         if not self.validate_query(query):
             raise ValueError("Invalid AQL query")
@@ -44,7 +75,7 @@ class AQLExecutor(ExecutorBase):
         # This is a placeholder implementation
         return "FOR" in query and "RETURN" in query
 
-    def format_results(self, raw_results: Any) -> List[Dict[str, Any]]:
+    def format_results(self, raw_results: Any) -> list[dict[str, Any]]:
         """
         Format the raw AQL query results into a standardized format.
 
