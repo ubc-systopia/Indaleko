@@ -37,6 +37,7 @@ from data_models.base import IndalekoBaseModel
 from data_models.i_uuid import IndalekoUUIDDataModel
 # pylint: enable=wrong-import-position
 
+
 class IndalekoSemanticAttributeDataModel(IndalekoBaseModel):
     '''
     This class defines the UUID data model for Indaleko.
@@ -53,14 +54,18 @@ class IndalekoSemanticAttributeDataModel(IndalekoBaseModel):
     this way, we allow Indaleko to index these values without understanding the
     meaning of them.
     '''
-    Identifier : Union[str, IndalekoUUIDDataModel] =\
-          Field(...,
-                title='Identifier',
-                description='The UUID specific to this type of semantic attribute.',
-                example='12345678-1234-5678-1234-567812345678')
-    Data : Union[Any, None] = Field(None,
-                       title='Data',
-                       description='The data associated with this semantic attribute.')
+    Identifier: Union[str, IndalekoUUIDDataModel] = Field(
+        ...,
+        title='Identifier',
+        description='The UUID specific to this type of semantic attribute.',
+        example='12345678-1234-5678-1234-567812345678'
+    )
+
+    Data: Union[Any, None] = Field(
+        None,
+        title='Data',
+        description='The data associated with this semantic attribute.'
+    )
 
     class Config:
         '''Sample configuration data for the data model'''
@@ -72,10 +77,10 @@ class IndalekoSemanticAttributeDataModel(IndalekoBaseModel):
         }
 
 
-
 def main():
     '''This allows testing the data model'''
     IndalekoSemanticAttributeDataModel.test_model_main()
+
 
 if __name__ == '__main__':
     main()
