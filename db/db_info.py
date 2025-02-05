@@ -94,16 +94,16 @@ def main():
     ic(type(db_info.db_config.db))
     collections = db_info.get_collections()
     #  ic(db_info.get_collection_info(collections[0]))
-    foo = None
+    collection_data = None
     for collection in collections:
-        foo = db_info.db_config.db.collection(collection)
-        stats = foo.statistics()
-        count = foo.count()
-        properties = foo.properties()
-        checksum = foo.checksum()
-        revision = foo.revision()
+        collection_data = db_info.db_config.db.collection(collection)
+        stats = collection_data.statistics()
+        count = collection_data.count()
+        properties = collection_data.properties()
+        checksum = collection_data.checksum()
+        revision = collection_data.revision()
         ic(collection, stats, count, properties, checksum, revision)
-    ic(dir(foo))
+    ic(dir(collection_data))
 
 
 if __name__ == '__main__':
