@@ -45,7 +45,7 @@ class IndalekoBaseModel(BaseModel):
     '''
     def serialize(self) -> Dict[str, Any]:
         '''Serialize the object to a dictionary'''
-        return self.model_dump(exclude_unset=True, exclude_none=True)
+        return self.model_dump(mode='json', exclude_unset=True, exclude_none=True)
 
     @classmethod
     def deserialize(cls: Type[T], data: Dict[str, Any]) -> T:
