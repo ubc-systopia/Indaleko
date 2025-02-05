@@ -5,7 +5,7 @@ from icecream import ic
 
 from .executor_base import ExecutorBase
 
-from IndalekoDBConfig import IndalekoDBConfig
+from db.db_config import IndalekoDBConfig
 
 class AQLExecutor(ExecutorBase):
     """

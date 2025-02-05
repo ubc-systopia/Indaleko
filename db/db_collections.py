@@ -49,6 +49,10 @@ class IndalekoDBCollections:
     Indaleko_MachineConfig_Collection = 'MachineConfig'
     Indaleko_ActivityDataProvider_Collection = 'ActivityDataProviders'
     Indaleko_ActivityContext_Collection = 'ActivityContext'
+    Indaleko_MusicActivityContext_Collection = 'MusicActivityContext'
+    Indaleko_TempActivityContext_Collection = 'TempActivityContext'
+    Indaleko_GeoActivityContext_Collection = 'GeoActivityContext'
+
     Indaleko_Identity_Domain_Collection = 'IdentityDomains'
     Indaleko_User_Collection = 'Users'
     Indaleko_User_Relationship_Collection = 'UserRelationships'
@@ -129,13 +133,21 @@ class IndalekoDBCollections:
         Indaleko_ActivityContext_Collection : {
             'schema' : IndalekoActivityDataModel.get_arangodb_schema(),
             'edge' : False,
-            'indices' : {
-                'identifier' : {
-                    'fields' : ['ActivityContextIdentifier'],
-                    'unique' : True,
-                    'type' : 'persistent'
-                },
-            },
+            'indices' : {},
+        },
+        Indaleko_MusicActivityContext_Collection : {
+            'schema' : IndalekoActivityDataModel.get_arangodb_schema(),
+            'edge' : False,
+            'indices' : {},
+        },
+        Indaleko_GeoActivityContext_Collection : {
+            'schema' : IndalekoActivityDataModel.get_arangodb_schema(),
+            'edge' : False,
+            'indices' : {},
+        },Indaleko_TempActivityContext_Collection : {
+            'schema' : IndalekoActivityDataModel.get_arangodb_schema(),
+            'edge' : False,
+            'indices' : {},
         },
         Indaleko_Identity_Domain_Collection : {
             'schema' : IndalekoIdentityDomainDataModel.get_arangodb_schema(),

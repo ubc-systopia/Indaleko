@@ -1,1 +1,7 @@
 *.pdf
+./s6_test_dg_functionality.py
+./main_pipeline_old.py
+./scripts/s1_metadata_generator_old.py
+./previous_script/*
+!./config/dg_config.json
+!./config/schema.json
