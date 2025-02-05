@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 
 from typing import Dict, Any, List, Union
 from .llm_base import LLMBase
@@ -27,7 +28,7 @@ class OpenAIConnector(LLMBase):
         self.model = model
         self.client = openai.OpenAI(api_key=api_key)
 
-    def generate_query(self, prompt: str) -> str:
+    def generate_query(self, prompt: str, temperature=0) -> str:
         """
         Generate a query using OpenAI's model.
 
@@ -50,6 +51,7 @@ class OpenAIConnector(LLMBase):
                     'content' : prompt['user']
                 }
             ],
+            temperature = temperature
         )
         ic('Received response from OpenAI')
         ic(completion.choices)
