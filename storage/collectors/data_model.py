@@ -17,15 +17,13 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
-from abc import ABC, abstractmethod
-from datetime import datetime, timezone
 import os
 import platform
 import sys
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, Union
 from uuid import UUID, uuid4
 
-from pydantic import Field, AwareDatetime, BaseModel
+from pydantic import Field, BaseModel
 from icecream import ic
 
 
@@ -39,27 +37,40 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from constants import IndalekoConstants
-from data_models.base import IndalekoBaseModel
-from db import IndalekoDBConfig
-from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
-from utils.misc.file_name_management import indaleko_file_name_prefix
-from utils.misc.file_name_management import find_candidate_files
 # pylint: enable=wrong-import-position
+
 
 class IndalekoStorageCollectorDataModel(BaseModel):
     '''Defines the base data model for the storage collectors'''
-    CollectorPlatformName : Optional[Union[str, None]] = \
-        Field(None,
-              title='PlatformName',
-              description='The name of the platform (e.g., Linux, Windows, etc.) if any (default=None).'
-              )
-    CollectorServiceName : str = Field(..., title='CollectorName', description='The service name of the collector.')
-    CollectorServiceUUID : UUID = Field(..., title='CollectorUUID', description='The UUID of the collector.')
-    CollectorServiceVersion : str = Field(..., title='CollectorVersion', description='The version of the collector.')
-    CollectorServiceDescription : str = Field(..., title='CollectorDescription', description='The description of the collector.')
-    CollectorServiceType : str = Field(IndalekoConstants.service_type_storage_collector,
-                                       title='CollectorType',
-                                       description=f'The type of the collector. (default is {IndalekoConstants.service_type_storage_collector})')
+    CollectorPlatformName: Optional[Union[str, None]] = Field(
+        None,
+        title='PlatformName',
+        description='The name of the platform (e.g., Linux, Windows, etc.) if any (default=None).'
+    )
+    CollectorServiceName: str = Field(
+        ...,
+        title='CollectorName',
+        description='The service name of the collector.'
+    )
+    CollectorServiceUUID: UUID = Field(
+        ...,
+        title='CollectorUUID',
+        description='The UUID of the collector.'
+    )
+    CollectorServiceVersion: str = Field(
+        ...,
+        title='CollectorVersion',
+        description='The version of the collector.'
+    )
+    CollectorServiceDescription: str = Field(
+        ...,
+        title='CollectorDescription',
+        description='The description of the collector.'
+    )
+    CollectorServiceType: str = Field(
+        IndalekoConstants.service_type_storage_collector,
+        title='CollectorType',
+        description=f'The type of the collector. (default is {IndalekoConstants.service_type_storage_collector})')
 
     class Config:
         '''Configuration for the base CLI data model'''
@@ -74,6 +85,7 @@ class IndalekoStorageCollectorDataModel(BaseModel):
             }
         }
 
+
 def main():
     '''Test code for the base CLI data model'''
     ic('Testing Storage Collector Data Model')
@@ -84,6 +96,7 @@ def main():
     ic(platform.system())
     print(storage_collector_data.model_dump(exclude_unset=True))
     print(storage_collector_data.model_dump_json(indent=2))
+
 
 if __name__ == '__main__':
     main()
