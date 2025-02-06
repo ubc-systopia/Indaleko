@@ -27,6 +27,7 @@ from query import NLParser, QueryHistory, AQLExecutor, OpenAIConnector
 from data_generator.scripts.s6_log_result import ResultLogger
 from pathlib import Path
 from typing import Dict, Any
+import subprocess
 
 class Validator():
     """
@@ -48,8 +49,14 @@ class Validator():
         self.config = self.get_config_file('data_generator/config/dg_config.json')
         self.logger = ResultLogger(result_path=self.file_path )
 
+        try:
+            subprocess.run(["python3", "./db/db_config.py", "reset"], check=True)
+            subprocess.run(["python", "./platforms/mac/machine_config.py", "--add"], check=True)
+        except subprocess.CalledProcessError as e:
+            raise e
+
         self.db_config = IndalekoDBConfig()
-        self.db_config.setup_database(self.db_config.config['database']['database'],reset = True)
+        self.db_config.setup_database(self.db_config.config['database']['database'],reset = False)
         self.db_config.collections = IndalekoCollections()
 
         self.query_extractor = QueryExtractor()
@@ -142,12 +149,13 @@ class Validator():
         # EXTRACT QUERY FROM CONFIG FILE:
         self.logger.log_process("extracting query from config...")
         selected_md_attributes = self.query_extractor.extract(query = query, llm_connector = self.llm_connector)
-        
+
         self.logger.log_process_result("selected_md_attributes", selected_md_attributes)
         self.add_result_to_dict("selected_md_attributes", selected_md_attributes)
 
         # GENERATE METADATA DATASET:
         selected_md_attributes = self.data_generator.preprocess_dictionary_timestamps(selected_md_attributes, False)
+        
         self.logger.log_process("generating record and activity metadata...")
         generation_time, results = self.time_operation(self.data_generator.generate_metadata_dataset, selected_md_attributes=selected_md_attributes)
        
@@ -202,10 +210,10 @@ class Validator():
         ic(f"Storing time for music activity metadata: {temp_activity_storage_time}")
         self.logger.log_process_result("stored music activity context:", temp_activity_storage_time[0])
     
-        # self.logger.log_process("storing semantics metadata...")
-        # semantics_storage_time = self.time_operation(self.data_storer.add_records_to_collection, collections=self.db_config.collections, collection_name="Unstructured", records=all_machine_config_md, key_required = True)
-        # ic(f"Storing time for semantics metadata: {semantics_storage_time}")
-        # self.logger.log_process_result("stored semantics metadata:", semantics_storage_time[0])
+        self.logger.log_process("storing semantics metadata...")
+        semantics_storage_time = self.time_operation(self.data_storer.add_records_to_collection, collections=self.db_config.collections, collection_name="SemanticData", records=all_machine_config_md, key_required = True)
+        ic(f"Storing time for semantics metadata: {semantics_storage_time}")
+        self.logger.log_process_result("stored semantics metadata:", semantics_storage_time[0])
 
         self.logger.log_process("storing machine config metadata...")
         machine_config_storage_time = self.time_operation(self.data_storer.add_records_to_collection, collections=self.db_config.collections, collection_name="MachineConfig", records=all_machine_config_md, key_required = True)

@@ -4,6 +4,8 @@ from typing import Dict, Any
 from icecream import ic
 import json
 from datetime import datetime
+from data_generator.scripts.metadata.semantic_metadata import SemanticMetadata
+
 
 class QueryExtractor():
     """
@@ -49,7 +51,7 @@ class QueryExtractor():
         Returns:
             str: The dictionary of the selected metadata
         """
-        return """
+        dictionary = """
             {"Posix": {"file.name": {"pattern": "str (word contained in file name)", "command": "starts, ends, contains, exactly", 
                 "extension": [".pdf", ".doc", ".docx", ".txt", ".rtf", ".xls", ".xlsx", ".csv", ".ppt", ".pptx", ".jpg", ".jpeg", ".png", ".gif", ".tif", ".mov", ".mp4", 
                 ".avi", ".mp3", ".wav", ".zip", ".rar"]}, "timestamps": {"birthtime": {"starttime": "str or list (lists must be in order latest to most recent)", 
@@ -57,10 +59,9 @@ class QueryExtractor():
                 "file.size": {"target_min": "int (in bytes so if in GB, multiply by 1e+9 to get bytes, if necessary)", "target_max": "int", "command": "equal, range, 
                 greater_than, greater_than_equal, less_than, less_than_equal"}, "file.directory": {"location": "str (google_drive, dropbox, icloud, local; must be stated 
                 local if local_dir_name specified)", "local_dir_name": "str (provide name for local directories only; create a directory name if none provided)"}}, 
-            "Semantic": {"Content_1": {"Languages": "str (based on language of Text)", "PageNumber": "int", "Text": "str", "Type": one of "Title, Subtitle, Header, 
-                Footer, Paragraph, BulletPoint, NumberedList, Caption, Quote, Metadata, UncategorizedText, SectionHeader, Footnote, Abstract, FigureDescription, Annotation", 
+                "Semantic": {"Content_1": {"Languages": "str (based on language of Text)", "PageNumber": "int", "Text": "str", "Type": one of {TEXT_TAGS}, 
                 "EmphasizedTextTags": "bold, italic, underline, strikethrough, highlight", "EmphasizedTextContents": "str"}, "Content_2":{...}, ...}, 
-            "Activity": {"geo_location": {"location": "str", "command": "at, within", "km": "int (only when command is 'within' convert to km if necessary)", "timestamp": 
+                "Activity": {"geo_location": {"location": "str", "command": "at, within", "km": "int (only when command is 'within' convert to km if necessary)", "timestamp": 
                 "str (one of 'birthtime', 'modified', 'changed', or 'accessed')"}, "ecobee_temp": {"temperature": {"start": "float within [-50.0, 100.0]", "end": "float within
                 [-50.0, 100.0]", "command": "range, equal"}, "humidity": {"start": "float within [0.0, 100.0]", "end": "float within [0.0, 100.0]", "command": "range, equal"}, 
                 "target_temperature": {"start": "float within [-50.0, 100.0]", "end": "float", "command": "range, equal"}, "hvac_mode": "str (heat, cool, auto, off)", 
@@ -71,6 +72,7 @@ class QueryExtractor():
                 (Computer|Smartphone|Speaker|TV|Game_Console|Automobile|Unknown)", "timestamp": "str one of ['birthtime', 
                 'modified', 'changed', 'accessed']"}}}
             """
+        return dictionary.replace("{TEXT_TAGS}", str(SemanticMetadata.AVAIL_TEXT_TAGS))
 
     def _create_extraction_prompt(self, query: str, selected_md_schema: dict) -> Dict:
         """

@@ -3,8 +3,6 @@
 from typing import Dict, Any
 from query.query_processing.query_translator.translator_base import TranslatorBase
 
-from icecream import ic
-
 class AQLQueryConverter(TranslatorBase):
     """
     Translator for converting parsed queries to AQL (ArangoDB Query Language).
@@ -78,9 +76,10 @@ class AQLQueryConverter(TranslatorBase):
              1) {GeoActivity}: the GeoActivity that stores metadata related to the geographical context of activities. It includes the location field.
              2) {MusicActivity} : the MusicActivity that stores music related activity context.
              3) {TempActivity} : the TempActivity that stores temperature related activity context.
-             4) Objects: Stores information about posix information or semantics data.
-            
-            You need to search through all four collections (GeoActivity, MusicActivity, TempActivity, and Objects) to verify if an item satisfies the necessary 
+             4) Objects: Stores information about posix information
+             5) Semantics: STores information about the semantic data
+             
+            You need to search through all five collections (GeoActivity, MusicActivity, TempActivity, Objects, Semantics) to verify if an item satisfies the necessary 
             conditions across these different contexts. First, identify the GeoActivity, MusicActivity, TempActivity, Objects data via its Record.SourceIdentifier.Identifier. 
             If 'geo_location' is specified in selected_md_attributes, search within the {GeoActivity} and compare longitude and latitude with the {geo_coords} . 
             If 'ambient_music' is specified in selected_md_attributes, search within the {MusicActivity}. 
@@ -124,12 +123,12 @@ class AQLQueryConverter(TranslatorBase):
             Only search within the Object collection if there is 'Semantic' attributes are involved, or when only the "Posix" metadata are queried. 
             The attr.Identifier.Label should be the key of what's in Content_# of the dictionary and the attr.Data is the value of that key. 
             Make sure to access the object.SemanticAttributes to access the list of semantic attributes. The attr.Identifier.Identifier of semantic attributes within a single Content_# must be the same ex.)
-            Ex.) "Semantic": {"Content_1": {"PageNumber": 8, "Text": "Province","Type": "Title"}, "Content_2": {"Text": "City","Type": "Subtitle"}} is equal to: 
-            "FOR object IN Objects 
+            Ex.) "Semantic": ["PageNumber": 20, "SUBTITLE": "jogging", "TITLE": "EXERCISE", "TEXT": "I was walking today and ...", "SUBTITLE": "fishiing"]} is equal to: 
+            "FOR object IN Semantics 
             LET text1Attr = FIRST(FOR attr IN object.SemanticAttributes FILTER attr.Identifier.Label == 'Text' AND attr.Data LIKE 'Province' RETURN attr) 
-            LET type1Attr = FIRST(FOR attr IN object.SemanticAttributes FILTER attr.Identifier.Label == 'Type' AND attr.Data LIKE 'Title' RETURN attr) 
+            LET type1Attr = FIRST(FOR attr IN object.SemanticAttributes FILTER attr.Identifier.Label == 'Type' AND attr.Data LIKE 'TITLE' RETURN attr) 
             LET textAttr = FIRST(FOR attr IN object.SemanticAttributes FILTER attr.Identifier.Label == 'Text' AND attr.Data LIKE 'City' RETURN attr) 
-            LET typeAttr = FIRST(FOR attr IN object.SemanticAttributes FILTER attr.Identifier.Label == 'Type' AND attr.Data LIKE 'Subtitle' RETURN attr) 
+            LET typeAttr = FIRST(FOR attr IN object.SemanticAttributes FILTER attr.Identifier.Label == 'Type' AND attr.Data LIKE 'SUBTITLE' RETURN attr) 
             FILTER text1Attr != null AND type1Attr != null AND textAttr != null AND typeAttr != null 
                 AND typeAttr.Identifier.Identifier == textAttr.Identifier.Identifier 
                 AND type1Attr.Identifier.Identifier == text1Attr.Identifier.Identifier 

@@ -93,7 +93,7 @@ class PosixMetadata(Metadata):
                 ObjectIdentifier=uuid.uuid4(), 
                 Timestamps=timestamp_data,
                 Size = file_size, 
-                SemanticAttributes=semantic_attributes_data,
+                SemanticAttributes= None,
                 Label = key_name, 
                 LocalIdentifier=str(local_identifier),
                 Volume=uuid.uuid4(),
@@ -190,8 +190,6 @@ class PosixMetadata(Metadata):
                     file_extension.remove(true_extension)
                     if true_extension in Metadata.TEXT_FILE_EXTENSIONS:
                         avail_text_file_extension.remove(true_extension)
-
-            ic(avail_text_file_extension)
 
             if is_truth_file: 
                 # choose file extension

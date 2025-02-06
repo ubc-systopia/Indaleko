@@ -42,6 +42,7 @@ class MetadataStorer():
         for record in records:
             if key_required:
                 record['_key'] = str(uuid.uuid4())
+            ic(collections)
             collections.get_collection(collection_name).insert(record)
             print(f'Inserted {record} into {collection_name}')
 
@@ -70,6 +71,8 @@ class MetadataStorer():
             )
         }
         activity_registration_service, collection = self.activity_data_registrar.register_provider(**record_kwargs)
+        ic(activity_registration_service)
+        ic(collection)
         return activity_registration_service, collection
 
     def add_records_with_activity_provider(self, collection: IndalekoCollection, activity_contexts: dict) -> None:
@@ -78,7 +81,6 @@ class MetadataStorer():
         Args: 
             collection
         """
-        ic("here")
         for activity in activity_contexts:
             collection.insert(activity)
             

@@ -228,17 +228,21 @@ class Dataset_Generator():
             attribute =  self.posix_generator.generate_file_attributes(file_name, path, timestamps, file_size)
             record_data =  self.posix_generator.generate_record_data(IO_UUID, attribute)
 
-            semantic_attributes = self.semantic_generator.create_semantic_attribute(file_name.split(".")[-1], 
+            # semantic_attributes = self.semantic_generator.create_semantic_attribute(file_name.split(".")[-1], 
+            #                                                                             timestamps["modified"].strftime("%Y-%m-%dT%H:%M:%S"), 
+            #                                                                             is_truth_file, truth_like, 
+            #                                                                             truthlike_attributes, 
+            #                                                                             has_semantic_filler)
+            
+
+            i_object =  self.posix_generator.generate_metadata(record_data, IO_UUID, timestamps, URI, file_size, 
+                                                                None, key_name, 
+                                                                current_filenum + file_num)
+            semantic = self.semantic_generator.generate_metadata(record_data, IO_UUID, file_name.split(".")[-1], 
                                                                                         timestamps["modified"].strftime("%Y-%m-%dT%H:%M:%S"), 
                                                                                         is_truth_file, truth_like, 
                                                                                         truthlike_attributes, 
                                                                                         has_semantic_filler)
-            
-
-            i_object =  self.posix_generator.generate_metadata(record_data, IO_UUID, timestamps, URI, file_size, 
-                                                                semantic_attributes, key_name, 
-                                                                current_filenum + file_num)
-            semantic = self.semantic_generator.generate_metadata(record_data, IO_UUID, semantic_attributes)
             geo_activity = self.geo_activity_generator.generate_metadata(record_data, timestamps, is_truth_file, truth_like, truthlike_attributes)
             temp_activity = self.temp_activity_generator.generate_metadata(record_data, timestamps, is_truth_file, truth_like, truthlike_attributes)
             music_activity = self.music_activity_generator.generate_metadata(record_data, timestamps, is_truth_file, truth_like, truthlike_attributes)
@@ -309,8 +313,13 @@ class Dataset_Generator():
 
 def main():
     selected_md_attributes = {"Posix": {"file.name": {"extension": [".pdf", ".txt"]}, "timestamps": {"modified": {"starttime": "2025-01-29T00:00:00", "endtime": "2025-01-29T23:59:59", "command": "range"}, 
-    "changed": {"starttime": "2025-01-31T00:00:00", "endtime": "2025-01-31T23:59:59", "command": "range"}},
-    "Semantic": {"Content_1": {"PageNumber": 8, "Text": "city", "Type": "Title"}, "Content_2": {"Text": "vancouver", "Type": "Subtitle"}}}}
+    "changed": {"starttime": "2025-01-31T00:00:00", "endtime": "2025-01-31T23:59:59", "command": "range"}}},
+     "Semantic": {
+        "Content_1": ("PageNumber", 20),
+        "Content_2" : ("Subtitle", "jogging"),
+        "Content_3" : ("Title", "EXERCISE")
+    }
+}
     config_path = "data_generator/config/dg_config.json"
     with open(config_path, 'r') as file:
         config = json.load(file)
