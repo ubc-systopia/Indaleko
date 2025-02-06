@@ -238,8 +238,9 @@ class Dataset_Generator():
             i_object =  self.posix_generator.generate_metadata(record_data, IO_UUID, timestamps, URI, file_size, 
                                                                 None, key_name, 
                                                                 current_filenum + file_num)
-            semantic = self.semantic_generator.generate_metadata(record_data, IO_UUID, file_name.split(".")[-1], 
-                                                                                        timestamps["modified"].strftime("%Y-%m-%dT%H:%M:%S"), 
+            name, extension = file_name.split(".")
+            semantic = self.semantic_generator.generate_metadata(record_data, IO_UUID, extension, 
+                                                                                        timestamps["modified"].strftime("%Y-%m-%dT%H:%M:%S"), name,
                                                                                         is_truth_file, truth_like, 
                                                                                         truthlike_attributes, 
                                                                                         has_semantic_filler)
@@ -325,7 +326,8 @@ def main():
         config = json.load(file)
     data_generator = Dataset_Generator(config)
     selected_md_attributes = data_generator.preprocess_dictionary_timestamps(selected_md_attributes, False)
-    results = data_generator.generate_metadata_dataset(selected_md_attributes)
+    all_record, all_geo_activity, all_temp_activity, all_music_activity,  all_machine_config, all_semantics, metadata_stats = data_generator.generate_metadata_dataset(selected_md_attributes)
+    data_generator.write_json(all_semantics, "/Users/pearl/Indaleko_updated/Indaleko/data_generator/semantics_test.json")
 
 if __name__ == '__main__':
     main()

@@ -59,8 +59,7 @@ class QueryExtractor():
                 "file.size": {"target_min": "int (in bytes so if in GB, multiply by 1e+9 to get bytes, if necessary)", "target_max": "int", "command": "equal, range, 
                 greater_than, greater_than_equal, less_than, less_than_equal"}, "file.directory": {"location": "str (google_drive, dropbox, icloud, local; must be stated 
                 local if local_dir_name specified)", "local_dir_name": "str (provide name for local directories only; create a directory name if none provided)"}}, 
-                "Semantic": {"Content_1": {"Languages": "str (based on language of Text)", "PageNumber": "int", "Text": "str", "Type": one of {TEXT_TAGS}, 
-                "EmphasizedTextTags": "bold, italic, underline, strikethrough, highlight", "EmphasizedTextContents": "str"}, "Content_2":{...}, ...}, 
+                "Semantic": {"Content_1": ["label": data], "Content_2":["label": data], ...}, 
                 "Activity": {"geo_location": {"location": "str", "command": "at, within", "km": "int (only when command is 'within' convert to km if necessary)", "timestamp": 
                 "str (one of 'birthtime', 'modified', 'changed', or 'accessed')"}, "ecobee_temp": {"temperature": {"start": "float within [-50.0, 100.0]", "end": "float within
                 [-50.0, 100.0]", "command": "range, equal"}, "humidity": {"start": "float within [0.0, 100.0]", "end": "float within [0.0, 100.0]", "command": "range, equal"}, 
@@ -95,8 +94,18 @@ class QueryExtractor():
             target_min < target_max. File sizes can be 1B-10GB inclusive. Order any list of file sizes from least file size to most. File sizes in the 
             form of lists can only use the command 'equal'.
 
-            The 'semantics' is for the content of the file specified by Text and with the Type specifying the type of semantics content. There can be
-            many semantic attributes starting with Content_1, onwards. The 'ecobee_temp' is only for queries that implicitly or explicitly imply for
+            The 'semantics' is for the semantic content of the file represented in a 2 element list with ['label', data]. 'label' is any one of 
+            ['Title', 'Text', 'UncategorizedText', 'NarrativeText', 'BulletedText', 'FormKeysValues',
+            'Paragraph', 'Abstract', 'Threading', 'Form', 'Field-Name', 'Value', 'Link', 'CompositeElement', 
+            'Image', 'Picture', 'FigureCaption', 'Figure', 'Caption', 'List', 'ListItem', 'List-item', 'Checked', 
+            'Unchecked', 'CheckBoxChecked', 'CheckBoxUnchecked', 'RadioButtonChecked', 'RadioButtonUnchecked', 
+            'Address', 'EmailAddress', 'PageBreak', 'Formula', 'Table', 'Header', 'Headline', 'Subheadline', 
+            'Page-header', 'Section-header', 'Footer', 'Footnote', 'Page-footer', 'PageNumber', 'CodeSnippet'] Make sure that the syntax is exactly the same as 
+            in the list above. The data is the label of that particular semantic 
+            attribute. There can be many semantic attributes starting with Content_1, onwards. There can be multiple duplicate labels. 
+            ex.) This is how you should convert a paragraph that has the word "hi" and title 'bye' --> {"Semantic": {"Content_1": ["Paragraph", "hi"], "Content_2": ["Title", "bye"]}},
+            
+            The 'ecobee_temp' is only for queries that implicitly or explicitly imply for
             settings taken at the user's home. If the user specifically implies a location elsewhere, then do not create a query related to this. The 
             'ambient_music' is for queries related to music listening activities related to the file. 
             

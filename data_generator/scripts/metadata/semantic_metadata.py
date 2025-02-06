@@ -9,6 +9,7 @@ from data_models.i_uuid import IndalekoUUIDDataModel
 from semantic.data_models.base_data_model import BaseSemanticDataModel
 from data_generator.scripts.metadata.metadata import Metadata
 from icecream import ic
+# from semantic.recorders.unstructured.recorder import get_attribute_identifier
 # from pillow import Image
 
 
@@ -40,7 +41,7 @@ class SemanticMetadata(Metadata):
 
     #random/always there:
     PageBreak = "--- PAGE BREAK ---"
-    LANGUAGES = "English"
+    DEFAULT_LANGUAGE = "English"
     #should be generated
     IMAGE_TAGS = ['Image', 'Picture', 'Figure'] # faker.image()
     TEXT_BASED_FILES = ["pdf", "doc", "docx", "txt", "rtf", "csv", "xls", "xlsx", "ppt", "pptx"] 
@@ -124,8 +125,8 @@ class SemanticMetadata(Metadata):
     # --------------------------------------------------------------------------
 
     def generate_metadata(self, record_data: IndalekoRecordDataModel, IO_UUID: str, extension: str, 
-                    last_modified: str, is_truth_file: bool, truth_like: bool, truthlike_attributes: list[str], has_semantic_filler: bool)  -> BaseSemanticDataModel:
-        semantic_attributes_data = self.create_semantic_attribute(extension, last_modified, is_truth_file, truth_like, truthlike_attributes, has_semantic_filler)
+                    last_modified: str, file_name:str, is_truth_file: bool, truth_like: bool, truthlike_attributes: list[str], has_semantic_filler: bool)  -> BaseSemanticDataModel:
+        semantic_attributes_data = self.create_semantic_attribute(extension, last_modified, file_name, is_truth_file, truth_like, truthlike_attributes, has_semantic_filler)
         return self._generate_semantic_data(record_data, IO_UUID, semantic_attributes_data)
 
 
@@ -139,7 +140,7 @@ class SemanticMetadata(Metadata):
                 SemanticAttributes=semantic_attributes_data)
 
 
-    def create_semantic_attribute(self, extension: str, last_modified: str, is_truth_file: bool, truth_like: bool, truthlike_attributes: list[str], has_semantic_filler:bool) -> list[Dict[str, Any]]:
+    def create_semantic_attribute(self, extension: str, last_modified: str, file_name:str, is_truth_file: bool, truth_like: bool, truthlike_attributes: list[str], has_semantic_filler:bool) -> list[Dict[str, Any]]:
         """Creates the semantic attribute data based on semantic attribute datamodel"""
         # text based files supported by the metadata generator
         list_semantic_attribute = []
@@ -149,17 +150,20 @@ class SemanticMetadata(Metadata):
             data = semantic_data
 
         data.append(("LastModified", last_modified))
-        data.append(("FileType", extension))
+        data.append(("filetype", extension))
+        data.append(("filename", file_name))
+        data.append(("language", self.DEFAULT_LANGUAGE))
         
         for tuple in data: 
             label, content = tuple
             semantic_attribute = {
                 "Identifier": label,
-                "Data": content
+                "Data": {
+                    "Text":content
+                    }
             }
-            
-
-            # semantic_attribute = IndalekoSemanticAttributeDataModel(Identifier= identifier, Data=content)
+        
+            # semantic_attribute = IndalekoSemanticAttributeDataModel(Identifier= get_attribute_identifier(label), Data=content)
             # list_semantic_attribute.append(semantic_attribute.dict())
             list_semantic_attribute.append(semantic_attribute)
         ic(list_semantic_attribute)
@@ -173,7 +177,6 @@ class SemanticMetadata(Metadata):
         attribute_tuple_list = []
         if self.selected_md:
             for key, value in self.selected_md.items():
-                ic("h")
                 is_truth_file = self._define_truth_attribute(key, is_truth_file, truth_like, truthlike_attributes)
                 ic(is_truth_file)
                 if is_truth_file: # for truth and truth like metadata
@@ -194,6 +197,7 @@ class SemanticMetadata(Metadata):
         return attribute_tuple_list
 
     def _generate_semantics(self, is_truth_file, tag, content: str = None):
+        ic(tag)
         if tag in self.LONG_TAGS:
             semantic_attribute = self._generate_long_tags(is_truth_file, content)
         elif tag in self.LIST_TAGS:
@@ -255,9 +259,6 @@ class SemanticMetadata(Metadata):
         else:
             raise ValueError(f"No numbers in the range. Consider broadening the boundary for {tag}")
 
-        
-
-
     def _generate_email(self, is_truth_file, value = None) -> str:
         if is_truth_file and self.selected_md: 
             return value
@@ -285,14 +286,14 @@ class SemanticMetadata(Metadata):
             return self.faker.text(max_nb_chars = 10)
 
     def _generate_long_tags(self, truth_file: bool, content = None) -> str:
+        sentences = self.faker.sentences()
+        concatenated_sentences = " ".join(sentences)
         if truth_file and self.selected_md:
             ic(truth_file)
             ic(content)
-            sentences = content + self.faker.sentences()
-        else: 
-            sentences = self.faker.sentences()
+            concatenated_sentences = content + concatenated_sentences
         
-        concatenated_sentences = " ".join(sentences)
+        
         return concatenated_sentences
             
     def _generate_formula(self, is_truth_file) -> str:

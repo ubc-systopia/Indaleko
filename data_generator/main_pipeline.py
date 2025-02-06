@@ -211,7 +211,7 @@ class Validator():
         self.logger.log_process_result("stored music activity context:", temp_activity_storage_time[0])
     
         self.logger.log_process("storing semantics metadata...")
-        semantics_storage_time = self.time_operation(self.data_storer.add_records_to_collection, collections=self.db_config.collections, collection_name="SemanticData", records=all_machine_config_md, key_required = True)
+        semantics_storage_time = self.time_operation(self.data_storer.add_records_to_collection, collections=self.db_config.collections, collection_name="SemanticData", records=all_semantics_md, key_required = True)
         ic(f"Storing time for semantics metadata: {semantics_storage_time}")
         self.logger.log_process_result("stored semantics metadata:", semantics_storage_time[0])
 

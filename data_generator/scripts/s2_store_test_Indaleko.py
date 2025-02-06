@@ -102,9 +102,11 @@ def main():
     # records = "/Indaleko/data_generator/results/all_records.json"
     # record_dataset = convert_json_file(records)
     # storer.add_records_to_collection(collections, "Objects", record_dataset)
-    activities = "./data_generator/results/test_temp_records.json"
+    activities = "/Users/pearl/Indaleko_updated/Indaleko/data_generator/results/stored_metadata/all_semantics_config.json"
     activity_dataset = convert_json_file(activities)
-    storer.add_records_to_collection(collections, "TempActivityContext", activity_dataset)
+    # storer.add_records_to_collection(collections, "TempActivityContext", activity_dataset)
+    storer.add_records_to_collection(collections, "SemanticData", activity_dataset, key_required = True)
+
 
 if __name__ == '__main__':
     main()

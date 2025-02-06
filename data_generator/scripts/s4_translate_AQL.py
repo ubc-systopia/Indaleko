@@ -77,7 +77,7 @@ class AQLQueryConverter(TranslatorBase):
              2) {MusicActivity} : the MusicActivity that stores music related activity context.
              3) {TempActivity} : the TempActivity that stores temperature related activity context.
              4) Objects: Stores information about posix information
-             5) Semantics: STores information about the semantic data
+             5) SemanticData: Stores information about the semantic data
              
             You need to search through all five collections (GeoActivity, MusicActivity, TempActivity, Objects, Semantics) to verify if an item satisfies the necessary 
             conditions across these different contexts. First, identify the GeoActivity, MusicActivity, TempActivity, Objects data via its Record.SourceIdentifier.Identifier. 
@@ -120,19 +120,27 @@ class AQLQueryConverter(TranslatorBase):
             The file.name also specifies the extenstion of the file, if none specified assume that any can be used e.g., {'Posix': {'file.name': {'pattern': 'photo', 'command': 'exactly'}}
             use record.Record.Attributes.Name LIKE 'photo%'
 
-            Only search within the Object collection if there is 'Semantic' attributes are involved, or when only the "Posix" metadata are queried. 
-            The attr.Identifier.Label should be the key of what's in Content_# of the dictionary and the attr.Data is the value of that key. 
-            Make sure to access the object.SemanticAttributes to access the list of semantic attributes. The attr.Identifier.Identifier of semantic attributes within a single Content_# must be the same ex.)
-            Ex.) "Semantic": ["PageNumber": 20, "SUBTITLE": "jogging", "TITLE": "EXERCISE", "TEXT": "I was walking today and ...", "SUBTITLE": "fishiing"]} is equal to: 
-            "FOR object IN Semantics 
-            LET text1Attr = FIRST(FOR attr IN object.SemanticAttributes FILTER attr.Identifier.Label == 'Text' AND attr.Data LIKE 'Province' RETURN attr) 
-            LET type1Attr = FIRST(FOR attr IN object.SemanticAttributes FILTER attr.Identifier.Label == 'Type' AND attr.Data LIKE 'TITLE' RETURN attr) 
-            LET textAttr = FIRST(FOR attr IN object.SemanticAttributes FILTER attr.Identifier.Label == 'Text' AND attr.Data LIKE 'City' RETURN attr) 
-            LET typeAttr = FIRST(FOR attr IN object.SemanticAttributes FILTER attr.Identifier.Label == 'Type' AND attr.Data LIKE 'SUBTITLE' RETURN attr) 
-            FILTER text1Attr != null AND type1Attr != null AND textAttr != null AND typeAttr != null 
-                AND typeAttr.Identifier.Identifier == textAttr.Identifier.Identifier 
-                AND type1Attr.Identifier.Identifier == text1Attr.Identifier.Identifier 
-            RETURN object" 
+            For the semantics, attribute, the attr.Identifier NOT attr.Identifier label for semantics should be the key of what's in Content_# of the dictionary and the attr.Data.Text is the value of that key. 
+            Make sure to access the semantic.SemanticAttributes to access the list of semantic attributes and all of these attributes should be in the semantic attributes list.
+            Ex.) "Semantic": {"Content_1": ["PageNumber", 20], "Content_2": ["Subtitle", "jogging"], "Content_3":["Subtitle", "EXERCISE"]} is equal to: 
+            FOR object IN SemanticData
+            LET text1Attr = FIRST(
+                FOR attr IN object.SemanticAttributes
+                FILTER attr.Identifier == 'PageNumber' AND TO_NUMBER(attr.Data.Text) == 20 (notice how it's attr.Identifier not attr.Indeitifer.Label)
+                RETURN 1
+            )
+            LET type1Attr = FIRST(
+                FOR attr IN object.SemanticAttributes
+                FILTER attr.Identifier == 'Subtitle' AND attr.Data.Text LIKE 'jogging'
+                RETURN 1
+            )
+            LET textAttr = FIRST(
+                FOR attr IN object.SemanticAttributes
+                FILTER attr.Identifier == 'Subtitle' AND attr.Data.Text LIKE 'EXERCISE'
+                RETURN 1
+            )
+            FILTER text1Attr != NULL AND type1Attr != NULL AND textAttr != NULL
+            RETURN object 
             For queries involving title of a file, you can either search within any collection's record.Record.Attributes.Name or search in object.SemanticAttributes.Identifier.Label where object is from Objects.  
             Ex.) {'Posix': {'file.name': {'pattern': 'presentation', 'command': 'equal'}}, 'Semantic': {}, 'Activity': {'ecobee_temp': {'temperature': {'start': 20.0,
             'end': 20.0, 'command': 'equal'}, 'timestamp': 'birthtime'}}} then to get the file name, we would just search within the tempActivity.Record.Attributes.Name.
