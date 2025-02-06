@@ -233,7 +233,7 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
         )
         runner.run()
 
-    def normalize(self) -> None:
+    def xx_normalize(self) -> None:
         '''Normalize the data from the collector'''
         self.load_collector_data_from_file()
         # Step 1: build the normalized data

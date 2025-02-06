@@ -508,7 +508,7 @@ class BaseStorageRecorder:
     def build_dirmap(self) -> None:
         '''This function builds the directory/file map'''
         for item in self.dir_data:
-            fqp = os.path.join(item['LocalPath'], item['Name'])
+            fqp = os.path.join(item['LocalPath'], item['Label'])
             identifier = item.args['ObjectIdentifier']
             self.dirmap[fqp] = identifier
 
@@ -522,6 +522,7 @@ class BaseStorageRecorder:
             assert 'LocalPath' in item, f'Path not in item: {item.indaleko_object}'
             parent = item['LocalPath']
             if parent not in self.dirmap:
+                # ic('Parent not in dirmap: ', parent)
                 continue
             parent_id = self.dirmap[parent]
             self.dir_edges.append(BaseStorageRecorder.build_dir_contains_relationship(
@@ -730,12 +731,14 @@ class BaseStorageRecorder:
             except OSError as e:
                 logging.error('Error normalizing data: %s', e)
                 logging.error('Data: %s', item)
+                ic(f'Error normalizing data: {e}')
                 self.error_count += 1
                 continue
             assert isinstance(obj, IndalekoObject), f'obj is {type(obj)}, not an IndalekoObject'
             if self.is_object_directory(obj):
                 if 'LocalPath' not in obj:
                     logging.warning('Directory object does not have a path: %s', obj.serialize())
+                    ic(f'Directory object does not have a path: {obj.serialize()}')
                     continue  # skip
                 self.dir_data_by_path[self.get_object_path(obj)] = obj
                 self.dir_data.append(obj)
