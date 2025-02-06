@@ -45,10 +45,9 @@ from platforms.machine_config import IndalekoMachineConfig
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.runner import IndalekoCLIRunner
-from utils.decorators import type_check
 from storage.collectors import BaseStorageCollector
-from storage.recorders import BaseStorageRecorder
 # pylint: enable=wrong-import-position
+
 
 class BaseLocalStorageCollector(BaseStorageCollector):
     '''This is the base class for all local storage recorders in Indaleko.'''
@@ -73,7 +72,7 @@ class BaseLocalStorageCollector(BaseStorageCollector):
         if 'machine_config_file' not in keys:
             raise ValueError(f'{inspect.currentframe().f_code.co_name}: machine_config_file must be specified')
         offline = keys.get('offline', False)
-        platform_class = keys['class'] # must exist
+        platform_class = keys['class']  # must exist
         return platform_class.load_config_from_file(
             config_file=str(keys['machine_config_file']),
             offline=offline)
@@ -84,7 +83,7 @@ class BaseLocalStorageCollector(BaseStorageCollector):
         raise NotImplementedError('This function must be overridden by the derived class')
 
     @staticmethod
-    def execute_command(command : str) -> None:
+    def execute_command(command: str) -> None:
         '''Execute a command'''
         result = os.system(command)
         logging.info('Command %s result: %d', command, result)
@@ -97,10 +96,11 @@ class BaseLocalStorageCollector(BaseStorageCollector):
             '''This method is used to get the pre-parser'''
             parser = argparse.ArgumentParser(add_help=False)
             default_path = os.path.expanduser('~')
-            parser.add_argument('--path',
-                                help=f'Path to the directory from which to collect metadata (default={default_path})',
-                                type=str,
-                                default=default_path)
+            parser.add_argument(
+                '--path',
+                help=f'Path to the directory from which to collect metadata (default={default_path})',
+                type=str,
+                default=default_path)
             return parser
 
         @staticmethod
@@ -117,23 +117,23 @@ class BaseLocalStorageCollector(BaseStorageCollector):
     @staticmethod
     def local_run(keys: dict[str, str]) -> Union[dict, None]:
         '''Run the collector'''
-        args = keys['args'] # must be there.
-        cli = keys['cli'] # must be there.
+        args = keys['args']  # must be there.
+        cli = keys['cli']  # must be there.
         config_data = cli.get_config_data()
         debug = hasattr(args, 'debug') and args.debug
         if debug:
             ic(config_data)
         # recorder_class = keys['parameters']['RecorderClass']
         machine_config_class = keys['parameters']['MachineConfigClass']
-        collector_class = keys['parameters']['CollectorClass'] # unused for now
+        collector_class = keys['parameters']['CollectorClass']  # unused for now
         output_file = str(Path(args.datadir) / config_data['OutputFile'])
         # recorders have the machine_id so they need to find the
         kwargs = {
             'machine_config': cli.handler_mixin.load_machine_config(
                 {
-                    'machine_config_file' : str(Path(args.configdir) / args.machine_config),
-                    'offline' : args.offline,
-                    'class' : machine_config_class
+                    'machine_config_file': str(Path(args.configdir) / args.machine_config),
+                    'offline': args.offline,
+                    'class': machine_config_class
                 }
             ),
             'timestamp': config_data['Timestamp'],
@@ -145,23 +145,26 @@ class BaseLocalStorageCollector(BaseStorageCollector):
         else:
             ic(config_data)
         collector = collector_class(**kwargs)
-        def collect(collector : BaseLocalStorageCollector, **kwargs):
+
+        def collect(collector: BaseLocalStorageCollector, **kwargs):
             collector.collect()
+
         def extract_counters(**kwargs):
             collector = kwargs.get('collector')
             if collector:
                 return collector.get_counts()
             else:
                 return {}
+
         def capture_performance(
-            task_func : Callable[..., Any],
-            output_file_name : Union[Path, str] = None
+            task_func: Callable[..., Any],
+            output_file_name: Union[Path, str] = None
         ):
             perf_data = IndalekoPerformanceDataCollector.measure_performance(
                 task_func,
                 source=IndalekoSourceIdentifierDataModel(
                     Identifier=collector.get_collector_service_identifier(),
-                    Version = collector.get_collector_service_version(),
+                    Version=collector.get_collector_service_version(),
                     Description=collector.get_collector_service_description()
                 ),
                 description=collector.get_collector_service_description(),
@@ -195,8 +198,8 @@ class BaseLocalStorageCollector(BaseStorageCollector):
 
     @staticmethod
     def local_collector_runner(
-        collector_class : BaseStorageCollector,
-        machine_config_class : IndalekoMachineConfig
+        collector_class: BaseStorageCollector,
+        machine_config_class: IndalekoMachineConfig
     ) -> None:
         '''This is the CLI handler for local storage collectors.'''
         IndalekoCLIRunner(
@@ -207,7 +210,7 @@ class BaseLocalStorageCollector(BaseStorageCollector):
             features=IndalekoBaseCLI.cli_features(input=False),
             Run=BaseLocalStorageCollector.local_run,
             RunParameters={
-                'CollectorClass' : collector_class,
-                'MachineConfigClass' : machine_config_class
+                'CollectorClass': collector_class,
+                'MachineConfigClass': machine_config_class
             }
         ).run()
