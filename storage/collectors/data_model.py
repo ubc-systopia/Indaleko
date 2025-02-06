@@ -81,7 +81,7 @@ class IndalekoStorageCollectorDataModel(BaseModel):
                 'CollectorServiceUUID': uuid4(),
                 'CollectorServiceVersion': '1.0',
                 'CollectorServiceDescription': 'This service collects local filesystem metadata of a Linux machine.',
-                'CollectorServiceType': IndalekoConstants.service_type_storage_collector # same as default
+                'CollectorServiceType': IndalekoConstants.service_type_storage_collector  # same as default
             }
         }
 
