@@ -37,6 +37,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 # pylint: disable=wrong-import-position
+from data_models import IndalekoRecordDataModel
 from db import IndalekoServiceManager
 from platforms.linux.machine_config import IndalekoLinuxMachineConfig
 from platforms.unix import UnixFileAttributes
@@ -44,9 +45,7 @@ from storage import IndalekoObject
 from storage.collectors.local.linux.collector import IndalekoLinuxLocalStorageCollector
 from storage.recorders.base import BaseStorageRecorder
 from storage.recorders.local.local_base import BaseLocalStorageRecorder
-import utils.misc.directory_management
-import utils.misc.file_name_management
-import utils.misc.data_management
+from utils.misc.data_management import encode_binary_data
 from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 # pylint: enable=wrong-import-position
 
@@ -165,22 +164,31 @@ class IndalekoLinuxLocalStorageRecorder(BaseLocalStorageRecorder):
                 'Description' : 'Changed',
             })
         kwargs = {
-            'source' : self.source,
-            'raw_data' : utils.misc.data_management.encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
-            'URI' : data['URI'],
-            'ObjectIdentifier' : oid,
-            'Timestamps' : timestamps,
-            'Size' : data['st_size'],
-            'Attributes' : data,
-            'Machine' : self.machine_config.machine_id,
+            'URI': data['URI'],
+            'ObjectIdentifier': oid,
+            'Timestamps': timestamps,
+            'Size': data['st_size'],
+            'Machine': self.machine_config.machine_id,
+            'SemanticAttributes': self.map_posix_storage_attributes_to_semantic_attributes(data),
         }
         if 'st_mode' in data:
             kwargs['PosixFileAttributes'] = UnixFileAttributes.map_file_attributes(data['st_mode'])
+        if 'st_ino' in data:
+            kwargs['LocalIdentifier'] = str(data['st_ino'])
+        if 'Name' in data:
+            kwargs['Label'] = data['Name']
+        if 'Path' in data:
+            kwargs['LocalPath'] = data['Path']
         if 'timestamp' not in kwargs:
             if isinstance(self.timestamp, str):
                 kwargs['timestamp'] = datetime.datetime.fromisoformat(self.timestamp)
             else:
                 kwargs['timestamp'] = self.timestamp
+        kwargs['Record'] = IndalekoRecordDataModel(
+            SourceIdentifier=self.source,
+            Timestamp=kwargs['timestamp'],
+            Data=encode_binary_data(bytes(json.dumps(data).encode('utf-8')))
+        )
         return IndalekoObject(**kwargs)
 
 
