@@ -246,7 +246,7 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
                 self.error_count += 1
                 continue
             if self.is_object_directory(obj):
-                if 'Path' not in obj.indaleko_object.Record.Attributes:
+                if 'LocalPath' not in obj.indaleko_object:
                     logging.warning('Directory object does not have a path: %s', obj.serialize())
                     continue  # skip
                 self.dir_data_by_path[self.get_object_path(obj)] = obj

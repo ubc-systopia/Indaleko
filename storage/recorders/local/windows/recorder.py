@@ -24,7 +24,7 @@ import os
 import uuid
 import sys
 
-# from icecream import ic
+from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -34,6 +34,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+from data_models import IndalekoRecordDataModel
 from db import IndalekoServiceManager
 from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 from platforms.unix import UnixFileAttributes
@@ -162,8 +163,8 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
             'ObjectIdentifier': oid,
             'Timestamps': timestamps,
             'Size': data['st_size'],
-            'Attributes': data,
             'Machine': self.machine_config.machine_id,
+            'SemanticAttributes': self.map_posix_storage_attributes_to_semantic_attributes(data),
         }
         if 'Volume GUID' in data:
             kwargs['Volume'] = data['Volume GUID']
@@ -178,11 +179,21 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
             kwargs['LocalIdentifier'] = str(data['st_ino'])
         if 'Name' in data:
             kwargs['Label'] = data['Name']
+        if 'Path' in data:
+            kwargs['LocalPath'] = data['Path']
+        else:
+            ic('\n***Warning: no path in data***\n')
+            # ic(data)
         if 'timestamp' not in kwargs:
             if isinstance(self.timestamp, str):
                 kwargs['timestamp'] = datetime.datetime.fromisoformat(self.timestamp)
             else:
                 kwargs['timestamp'] = self.timestamp
+        kwargs['Record'] = IndalekoRecordDataModel(
+            SourceIdentifier=self.source,
+            Timestamp=kwargs['timestamp'],
+            Data=encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
+        )
         indaleko_object = IndalekoObject(**kwargs)
         return indaleko_object
 

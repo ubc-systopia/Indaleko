@@ -48,25 +48,26 @@ class IndalekoRecordDataModel(IndalekoBaseModel):
     SourceIdentifier: IndalekoSourceIdentifierDataModel = Field(
         ...,
         title='SourceIdentifier',
-        description='The source identifier for the record.'
+        description='The source identifier for the record (e.g., for provenance).'
     )
 
     Timestamp: AwareDatetime = Field(
         datetime.now(timezone.utc),
         title='Timestamp',
-        description='The timestamp of when this record was created.'
+        description='Record creation timestamp.'
     )
 
     Attributes: Union[Dict[str, Any], None] = Field(
-        {},
+        None,
         title='Attributes',
-        description='Attributes extracted from the source data. [Optional]'
+        description='Optional field, do not rely upon its contents or presence.'
+        'Attributes from the metadata source.'
     )
 
     Data: str = Field(
         default=encode_binary_data(b''),
         title='Data',
-        description='The raw (uninterpreted) data from the source.'
+        description='The raw (uninterpreted) data from the original source.'
     )
 
     @field_validator('Timestamp', mode='before')
@@ -87,31 +88,6 @@ class IndalekoRecordDataModel(IndalekoBaseModel):
                     "Version": "1.0",
                 },
                 "Timestamp": "2024-07-30T23:38:48.319654+00:00",
-                "Attributes": {
-                    "st_atime": 1693223456.3334281,
-                    "st_atime_ns": 1693223456333428100,
-                    "st_birthtime": 1685891221.5591917,
-                    "st_birthtime_ns": 1685891221559191700,
-                    "st_ctime": 1685891221.5591917,
-                    "st_ctime_ns": 1685891221559191700,
-                    "st_dev": 2756347094955649599,
-                    "st_file_attributes": 32,
-                    "st_gid": 0,
-                    "st_ino": 1125899910119832,
-                    "st_mode": 33279,
-                    "st_mtime": 1685891221.5597157,
-                    "st_mtime_ns": 1685891221559715700,
-                    "st_nlink": 1,
-                    "st_reparse_tag": 0,
-                    "st_size": 1410120,
-                    "st_uid": 0,
-                    "Name": "rufus-4.1.exe",
-                    "Path": "d:\\dist",
-                    "URI": "\\\\?\\Volume{3397d97b-2ca5-11ed-b2fc-b40ede9a5a3c}\\dist\\rufus-4.1.exe",
-                    "Indexer": "0793b4d5-e549-4cb6-8177-020a738b66b7",
-                    "Volume GUID": "3397d97b-2ca5-11ed-b2fc-b40ede9a5a3c",
-                    "ObjectIdentifier": "2c73d6e5-eaba-4f0a-acf3-e02c529f097a"
-                },
                 "Data": "xQL6xQL3eyJzdF9hdGltZSI6IDE2OTMyMjM0NTYuMzMzNDI4MSwgInN0X2F"
                 "0aW1lX25zIjogMTY5MzIyMzQ1NjMzMzQyODEwMCwgInN0X2JpcnRodGltZSI6IDE2OD"
                 "U4OTEyMjEuNTU5MTkxNywgInN0X2JpcnRodGltZV9ucyI6IDE2ODU4OTEyMjE1NTkxOT"

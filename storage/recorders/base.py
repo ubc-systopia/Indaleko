@@ -54,7 +54,7 @@ import uuid
 import sys
 import tempfile
 
-from typing import Union
+from typing import Union, Any
 
 from icecream import ic
 
@@ -76,6 +76,7 @@ from utils.misc.directory_management import \
 from utils.misc.file_name_management import generate_file_name, extract_keys_from_file_name
 from data_models import IndalekoSemanticAttributeDataModel
 from storage import IndalekoObject
+from storage.known_attributes import KnownStorageAttributes
 from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from storage.i_relationship import IndalekoRelationship
 # pylint: enable=wrong-import-position
@@ -507,7 +508,7 @@ class BaseStorageRecorder:
     def build_dirmap(self) -> None:
         '''This function builds the directory/file map'''
         for item in self.dir_data:
-            fqp = os.path.join(item['Path'], item['Name'])
+            fqp = os.path.join(item['LocalPath'], item['Name'])
             identifier = item.args['ObjectIdentifier']
             self.dirmap[fqp] = identifier
 
@@ -518,8 +519,8 @@ class BaseStorageRecorder:
             Version=self.recorder_data.RecorderServiceVersion,
         )
         for item in self.dir_data + self.file_data:
-            assert 'Path' in item, f'Path not in item: {item.args}'
-            parent = item['Path']
+            assert 'LocalPath' in item, f'Path not in item: {item.indaleko_object}'
+            parent = item['LocalPath']
             if parent not in self.dirmap:
                 continue
             parent_id = self.dirmap[parent]
@@ -712,7 +713,7 @@ class BaseStorageRecorder:
 
     def get_object_path(self: 'BaseStorageRecorder', obj: IndalekoObject):
         '''Given an Indaleko object, return a valid local path to the object'''
-        return obj['Path']  # default is no change
+        return obj['LocalPath']  # default is no change
 
     def is_object_directory(self: 'BaseStorageRecorder', obj: IndalekoObject) -> bool:
         '''Return True if the object is a directory'''
@@ -733,7 +734,7 @@ class BaseStorageRecorder:
                 continue
             assert isinstance(obj, IndalekoObject), f'obj is {type(obj)}, not an IndalekoObject'
             if self.is_object_directory(obj):
-                if 'Path' not in obj:
+                if 'LocalPath' not in obj:
                     logging.warning('Directory object does not have a path: %s', obj.serialize())
                     continue  # skip
                 self.dir_data_by_path[self.get_object_path(obj)] = obj
@@ -742,6 +743,63 @@ class BaseStorageRecorder:
             else:
                 self.file_data.append(obj)
                 self.file_count += 1
+
+    @staticmethod
+    def map_posix_storage_attributes_to_semantic_attributes(
+        posix_attributes: dict[str, Any]
+    ) -> list[IndalekoSemanticAttributeDataModel]:
+        '''Map POSIX storage attributes to semantic attributes'''
+        semantic_attributes = []
+        if 'st_dev' in posix_attributes:
+            semantic_attributes.append(
+                IndalekoSemanticAttributeDataModel(
+                    Identifier=KnownStorageAttributes.STORAGE_ATTRIBUTES_DEVICE,
+                    Value=posix_attributes['st_dev']
+                )
+            )
+        if 'st_gid' in posix_attributes:
+            semantic_attributes.append(
+                IndalekoSemanticAttributeDataModel(
+                    Identifier=KnownStorageAttributes.STORAGE_ATTRIBUTES_GID,
+                    Value=posix_attributes['st_gid']
+                )
+            )
+        if 'st_mode' in posix_attributes:
+            semantic_attributes.append(
+                IndalekoSemanticAttributeDataModel(
+                    Identifier=KnownStorageAttributes.STORAGE_ATTRIBUTES_MODE,
+                    Value=posix_attributes['st_mode']
+                )
+            )
+        if 'st_nlink' in posix_attributes:
+            semantic_attributes.append(
+                IndalekoSemanticAttributeDataModel(
+                    Identifier=KnownStorageAttributes.STORAGE_ATTRIBUTES_NLINK,
+                    Value=posix_attributes['st_nlink']
+                )
+            )
+        if 'st_reparse_tag' in posix_attributes:
+            semantic_attributes.append(
+                IndalekoSemanticAttributeDataModel(
+                    Identifier=KnownStorageAttributes.STORAGE_ATTRIBUTES_REPARSE_TAG,
+                    Value=posix_attributes['st_reparse_tag']
+                )
+            )
+        if 'st_uid' in posix_attributes:
+            semantic_attributes.append(
+                IndalekoSemanticAttributeDataModel(
+                    Identifier=KnownStorageAttributes.STORAGE_ATTRIBUTES_UID,
+                    Value=posix_attributes['st_uid']
+                )
+            )
+        if 'st_inode' in posix_attributes:
+            semantic_attributes.append(
+                IndalekoSemanticAttributeDataModel(
+                    Identifier=KnownStorageAttributes.STORAGE_ATTRIBUTES_INODE,
+                    Value=posix_attributes['st_inode']
+                )
+            )
+        return semantic_attributes
 
     def record(self) -> None:
         '''
