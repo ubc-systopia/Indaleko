@@ -22,7 +22,6 @@ import logging
 from pathlib import Path
 import os
 import sys
-import tempfile
 import uuid
 
 from typing import Union
@@ -40,12 +39,9 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # pylint: disable=wrong-import-position
 from db import IndalekoServiceManager
 from platforms.windows.machine_config import IndalekoWindowsMachineConfig
-from storage.collectors.base import BaseStorageCollector
 from storage.collectors.local.local_base import BaseLocalStorageCollector
 from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from utils.cli.base import IndalekoBaseCLI
-from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
-from utils.misc.file_name_management import find_candidate_files
 # pylint: enable=wrong-import-position
 
 
@@ -58,26 +54,26 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
 
     indaleko_windows_local_collector_uuid = '0793b4d5-e549-4cb6-8177-020a738b66b7'
     indaleko_windows_local_collector_service_name = 'Windows Local collector'
-    indaleko_windows_local_collector_service_description = 'This service collects metadata from the local filesystems of a Windows machine.'
+    indaleko_windows_local_collector_service_description = \
+        'This service collects metadata from the local filesystems of a Windows machine.'
     indaleko_windows_local_collector_service_version = '1.0'
     indaleko_windows_local_collector_service_type = IndalekoServiceManager.service_type_storage_collector
 
     collector_data = IndalekoStorageCollectorDataModel(
-        CollectorPlatformName = windows_platform,
-        CollectorServiceName = windows_local_collector_name,
-        CollectorServiceUUID = uuid.UUID(indaleko_windows_local_collector_uuid),
-        CollectorServiceVersion = indaleko_windows_local_collector_service_version,
-        CollectorServiceDescription = indaleko_windows_local_collector_service_description
+        CollectorPlatformName=windows_platform,
+        CollectorServiceName=windows_local_collector_name,
+        CollectorServiceUUID=uuid.UUID(indaleko_windows_local_collector_uuid),
+        CollectorServiceVersion=indaleko_windows_local_collector_service_version,
+        CollectorServiceDescription=indaleko_windows_local_collector_service_description
     )
 
-    indaleko_windows_local_collector_service ={
-        'service_name' : indaleko_windows_local_collector_service_name,
-        'service_description' : indaleko_windows_local_collector_service_description,
-        'service_version' : indaleko_windows_local_collector_service_version,
-        'service_type' : indaleko_windows_local_collector_service_type,
-        'service_identifier' : indaleko_windows_local_collector_uuid,
+    indaleko_windows_local_collector_service = {
+        'service_name': indaleko_windows_local_collector_service_name,
+        'service_description': indaleko_windows_local_collector_service_description,
+        'service_version': indaleko_windows_local_collector_service_version,
+        'service_type': indaleko_windows_local_collector_service_type,
+        'service_identifier': indaleko_windows_local_collector_uuid,
     }
-
 
     @staticmethod
     def windows_to_posix(filename):
@@ -107,7 +103,6 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
             filename = filename.replace(posix_char, win32_char)
         return filename
 
-
     def __init__(self, **kwargs):
         for key, value in self.indaleko_windows_local_collector_service.items():
             if key not in kwargs:
@@ -115,7 +110,7 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
         if 'platform' not in kwargs:
             kwargs['platform'] = IndalekoWindowsLocalStorageCollector.windows_platform
         if 'collector_data' not in kwargs:
-            kwargs['collector_data'] =  IndalekoWindowsLocalStorageCollector.collector_data
+            kwargs['collector_data'] = IndalekoWindowsLocalStorageCollector.collector_data
         super().__init__(**kwargs)
         if not hasattr(self, 'storage') and 'storage' in kwargs:
             self.storage = kwargs['storage']
@@ -129,14 +124,15 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
             kwargs['machine_id'] = uuid.UUID(self.machine_config.machine_id).hex
         if 'storage_description' not in kwargs and getattr(self, 'storage'):
             kwargs['storage_description'] = self.storage
-        file_name =  self.generate_collector_file_name(**kwargs)
-        assert 'storage' in file_name, f'File name {file_name} does not contain "storage", kwargs={kwargs}, dir(self)={dir(self)}'
+        file_name = self.generate_collector_file_name(**kwargs)
+        assert 'storage' in file_name, f'File name {file_name} does not contain "storage", '
+        'kwargs={kwargs}, dir(self)={dir(self)}'
         return file_name
 
-    def convert_windows_path_to_guid_uri(self, path : str) -> str:
+    def convert_windows_path_to_guid_uri(self, path: str) -> str:
         '''This method handles converting a Windows path to a volume GUID based URI.'''
         drive = os.path.splitdrive(path)[0][0].upper()
-        uri = '\\\\?\\' + drive + ':' # default format for lettered drives without GUIDs
+        uri = '\\\\?\\' + drive + ':'  # default format for lettered drives without GUIDs
         mapped_guid = self.machine_config.map_drive_letter_to_volume_guid(drive)
         if mapped_guid is not None:
             uri = '\\\\?\\Volume{' + mapped_guid + '}\\'
@@ -145,8 +141,7 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
             uri = '\\\\?\\' + drive + ':'
         return uri
 
-
-    def build_stat_dict(self, name: str, root : str, last_uri = None, last_drive = None) -> tuple:
+    def build_stat_dict(self, name: str, root: str, last_uri: str = None, last_drive: str = None) -> tuple:
         '''
         Given a file name and a root directory, this will return a dict
         constructed from the file system metadata ("stat") for that file.
@@ -169,7 +164,7 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
         try:
             lstat_data = os.lstat(file_path)
             stat_data = os.stat(file_path)
-        except Exception as e: # pylint: disable=broad-except
+        except Exception as e:  # pylint: disable=broad-except
             # at least for now, we log and skip errors
             logging.warning('Unable to stat %s : %s', file_path, e)
             self.error_count += 1
@@ -181,7 +176,7 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
             logging.info('File %s is a symlink, collecting symlink metadata', file_path)
             self.good_symlink_count += 1
             stat_data = lstat_data
-        stat_dict = {key : getattr(stat_data, key) \
+        stat_dict = {key: getattr(stat_data, key)
                      for key in dir(stat_data) if key.startswith('st_')}
         stat_dict['Name'] = name
         stat_dict['Path'] = root
@@ -197,7 +192,6 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
             stat_dict['Volume GUID'] = last_uri[11:-2]
         stat_dict['ObjectIdentifier'] = str(uuid.uuid4())
         return (stat_dict, last_uri, last_drive)
-
 
     def collect(self) -> list:
         data = []
@@ -224,7 +218,7 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
     class windows_local_collector_mixin(BaseLocalStorageCollector.local_collector_mixin):
 
         @staticmethod
-        def get_storage_identifier(args : argparse.Namespace) -> Union[str,None]:
+        def get_storage_identifier(args: argparse.Namespace) -> Union[str, None]:
             '''This method is used to get the storage identifier for a path'''
             if not hasattr(args, 'path'):
                 return
@@ -232,12 +226,11 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
                 ic(f'Path {args.path} does not exist')
                 return None
             config = IndalekoWindowsMachineConfig.load_config_from_file(
-                config_file = str(Path(args.configdir) / args.machine_config),
+                config_file=str(Path(args.configdir) / args.machine_config),
                 offline=args.offline,
                 debug=args.debug
             )
             drive = os.path.splitdrive(args.path)[0][0].upper()
-            uri = '\\\\?\\' + drive + ':' # default format for lettered drives without GUIDs
             mapped_guid = config.map_drive_letter_to_volume_guid(drive)
             if mapped_guid is not None:
                 return uuid.UUID(mapped_guid).hex
@@ -251,13 +244,13 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
     cli_handler_mixin = windows_local_collector_mixin
 
 
-
 def main():
     '''The CLI handler for the windows local storage collector.'''
     BaseLocalStorageCollector.local_collector_runner(
         IndalekoWindowsLocalStorageCollector,
         IndalekoWindowsMachineConfig
     )
+
 
 if __name__ == '__main__':
     main()
