@@ -81,10 +81,13 @@ class AQLTranslator(TranslatorBase):
         Returns:
             bool: True if the query is valid, False otherwise
         """
-        return ("FOR" in query and "RETURN" in query) and (
+        result = ("FOR" in query and "RETURN" in query) and (
                 ".Record" in query or ".SemanticAttributes" in
                 query or ".Timestamp" in query or ".Size" in
                 query or ".URI" in query)
+        if not result:
+            ic("Invalid AQL query:", query)
+        return result
 
     def optimize_query(self, query: str) -> str:
         """

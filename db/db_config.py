@@ -56,6 +56,7 @@ class IndalekoDBConfig(IndalekoSingleton):
     default_db_config_file_name = IndalekoConstants.default_db_config_file_name
     default_db_config_file = os.path.join(indaleko_default_config_dir, default_db_config_file_name)
     default_db_timeout = os.environ.get('INDALEKO_DB_TIMEOUT', 10)
+    default_db_aql_timeout = os.environ.get('INDALEKO_DB_AQL_TIMEOUT', 300)
 
     def __init__(self,
                  config_file: str = default_db_config_file,
@@ -126,7 +127,8 @@ class IndalekoDBConfig(IndalekoSingleton):
         connect_arg += ':'
         connect_arg += f"{self.config['database']['port']}"
         logging.debug('Connecting to %s', connect_arg)
-        self.client = ArangoClient(connect_arg)
+        aql_timeout = self.config['database'].get('timeout', IndalekoDBConfig.default_db_aql_timeout)
+        self.client = ArangoClient(connect_arg, request_timeout=aql_timeout)
         if 'admin_user' not in self.config['database']:
             self.config['database']['admin_user'] = 'root'
         if 'admin_passwd' not in self.config['database']:

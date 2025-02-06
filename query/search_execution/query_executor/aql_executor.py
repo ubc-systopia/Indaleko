@@ -58,8 +58,13 @@ class AQLExecutor(ExecutorBase):
         ic(query)
         if not self.validate_query(query):
             raise ValueError("Invalid AQL query")
-        raw_results = data_connector.db.aql.execute(query)
-        return self.format_results(raw_results)
+        try:
+            raw_results = data_connector.db.aql.execute(query)
+            return self.format_results(raw_results)
+        except TimeoutError as e:
+            ic(f'The query execution has timed out:\n\tquery: {query}\n\tException: {e}')
+            ic('Terminating')
+            sys.exit(1)
 
     def validate_query(self, query: str) -> bool:
         """

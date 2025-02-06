@@ -116,7 +116,13 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 
             # Process the query
             parsed_query = self.nl_parser.parse(query=user_query, schema=self.schema)
-            translated_query = self.query_translator.translate(parsed_query, self.llm_connector)
+            translated_query = self.query_translator.translate(
+                parsed_query,
+                selected_md_attributes=None,
+                additional_notes=None,
+                n_truth=1,
+                llm_connector=self.llm_connector,
+            )
 
             # Execute the query
             raw_results = self.query_executor.execute(translated_query, self.db_config)
@@ -186,7 +192,8 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 def main():
     '''A CLI based query tool for Indaleko.'''
     ic('Starting Indaleko Query CLI')
-    IndalekoQueryCLI().run()
+    cli = IndalekoQueryCLI()
+    cli.run()
 
 
 if __name__ == '__main__':
