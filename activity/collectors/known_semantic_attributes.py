@@ -19,7 +19,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
-import importlib 
+import importlib
 import os
 import sys
 
@@ -48,10 +48,10 @@ class KnownSemanticAttributes:
     full_prefix = 'ACTIVITY_DATA'
 
     _modules_to_load = {
-        'collaboration' : 'activity.collectors.collaboration.semantic_attributes',
+        'collaboration': 'activity.collectors.collaboration.semantic_attributes',
         'location': 'activity.collectors.location.semantic_attributes',
-        'network' : 'activity.collectors.network.semantic_attributes',
-        'storage' : 'activity.collectors.storage.semantic_attributes'
+        'network': 'activity.collectors.network.semantic_attributes',
+        'storage': 'activity.collectors.storage.semantic_attributes'
     }
 
     @classmethod
@@ -75,7 +75,7 @@ class KnownSemanticAttributes:
                     cls._attributes_by_uuid[value] = full_label
 
     @staticmethod
-    def safe_import(name : str) -> Union[Dict[str, Any], None]:
+    def safe_import(name: str) -> Union[Dict[str, Any], None]:
         '''Given a module name, load it and then extract the important data from it'''
         module = None
         try:
@@ -83,8 +83,6 @@ class KnownSemanticAttributes:
         except ImportError as e:
             ic(f'Import module {name} failed {e}')
         return module
-
-
 
     def __init__(self):
         if not self._initialized:
@@ -96,12 +94,15 @@ class KnownSemanticAttributes:
         '''Get the attribute by the UUID'''
         return KnownSemanticAttributes._attributes_by_uuid.get(uuid_value)
 
+
 KnownSemanticAttributes._initialize()
+
 
 def main():
     '''Main function for the module'''
     ic('Starting')
     ic(dir(KnownSemanticAttributes))
+
 
 if __name__ == '__main__':
     main()

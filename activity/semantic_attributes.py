@@ -42,6 +42,7 @@ from utils.singleton import IndalekoSingleton
 from activity.collectors.known_semantic_attributes import KnownSemanticAttributes
 # pylint: enable=wrong-import-position
 
+
 class IndalekoActivityDataProviderKnownSemanticAttributes(IndalekoSingleton):
     '''
     This class defines known semantic attributes for the activity data
@@ -65,8 +66,8 @@ class IndalekoActivityDataProviderKnownSemanticAttributes(IndalekoSingleton):
     def get_known_semantic_attributes():
         '''Get the known semantic attributes for the activity data providers'''
         return {
-            label : value for label, value in KnownSemanticAttributes.\
-                __dict__.items() if label.startswith('KnownSemanticAttributes.full_prefix')
+            label: value for label, value in KnownSemanticAttributes.
+            __dict__.items() if label.startswith('KnownSemanticAttributes.full_prefix')
         }
 
     @staticmethod
@@ -75,12 +76,14 @@ class IndalekoActivityDataProviderKnownSemanticAttributes(IndalekoSingleton):
         return IndalekoActivityDataProviderKnownSemanticAttributes()\
             .uuid_to_label.get(identifier, None)
 
+
 def main():
     '''Test code for the known semantic attributes'''
     known_semantic_attributes = IndalekoActivityDataProviderKnownSemanticAttributes()
     print(known_semantic_attributes.get_known_semantic_attributes())
     ic(known_semantic_attributes.__dict__)
     ic(KnownSemanticAttributes.__dict__)
+
 
 if __name__ == '__main__':
     main()
