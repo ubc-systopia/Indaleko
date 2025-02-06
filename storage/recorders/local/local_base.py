@@ -233,29 +233,6 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
         )
         runner.run()
 
-    def xx_normalize(self) -> None:
-        '''Normalize the data from the collector'''
-        self.load_collector_data_from_file()
-        # Step 1: build the normalized data
-        for item in self.collector_data:
-            try:
-                obj = self.normalize_collector_data(item)
-            except OSError as e:
-                logging.error('Error normalizing data: %s', e)
-                logging.error('Data: %s', item)
-                self.error_count += 1
-                continue
-            if self.is_object_directory(obj):
-                if 'LocalPath' not in obj.indaleko_object:
-                    logging.warning('Directory object does not have a path: %s', obj.serialize())
-                    continue  # skip
-                self.dir_data_by_path[self.get_object_path(obj)] = obj
-                self.dir_data.append(obj)
-                self.dir_count += 1
-            else:
-                self.file_data.append(obj)
-                self.file_count += 1
-
     def record(self) -> None:
         '''
         This function processes and records the collector file and emits the data needed to
