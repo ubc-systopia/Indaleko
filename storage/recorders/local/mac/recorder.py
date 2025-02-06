@@ -187,8 +187,6 @@ class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
         else:
             oid = str(uuid.uuid4())
         kwargs = {
-            'source': self.source,
-            'raw_data': encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
             'URI': data['URI'],
             'ObjectIdentifier': oid,
             'Timestamps': [
