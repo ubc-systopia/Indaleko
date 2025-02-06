@@ -42,6 +42,7 @@ from semantic.data_models.base_data_model import BaseSemanticDataModel
 from data_models.record import IndalekoRecordDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 from semantic.characteristics import SemanticDataCharacteristics
+from data_models.i_uuid import IndalekoUUIDDataModel
 
 from utils.misc.data_management import encode_binary_data
 
@@ -101,7 +102,7 @@ class UnstructuredRecorder:
         filetype = first_element['metadata']['filetype']
 
         return IndalekoSemanticAttributeDataModel(
-            Identifier = 'filetype',
+            Identifier = self.get_attribute_identifier('filetype'),
             Data = {
                 "text": filetype
             }
@@ -115,7 +116,7 @@ class UnstructuredRecorder:
         filename = first_element['metadata']['filename']
 
         return IndalekoSemanticAttributeDataModel(
-            Identifier= 'filename',
+            Identifier= self.get_attribute_identifier('filename'),
             Data= {
                 "text": filename
             }
@@ -130,7 +131,7 @@ class UnstructuredRecorder:
         language_list = []
         for language in languages:
             language_list.append(IndalekoSemanticAttributeDataModel(
-                Identifier= 'language',
+                Identifier= self.get_attribute_identifier('language'),
                 Data = {
                     'text': language
                 }
@@ -163,7 +164,7 @@ class UnstructuredRecorder:
 
         for element in elements:
             semantic_attribute = IndalekoSemanticAttributeDataModel(
-                Identifier= element['type'],
+                Identifier= self.get_attribute_identifier(element['type']),
                 Data = {
                     "text": element['text'],
                     # "metadata": element["metadata"] #May be redundant
@@ -177,6 +178,15 @@ class UnstructuredRecorder:
 
         return attributes
 
+    def get_attribute_identifier(self, label:str):
+        prefix = known_semantic_attributes.PREFIX
+        id = prefix + '_'+label.upper()
+        return IndalekoUUIDDataModel(
+                    Identifier = self.attributes_by_label[id],
+                    Label=label
+                )
+    
+    
 
     def map_attributes(self, attributes:list[IndalekoSemanticAttributeDataModel]) -> None:
         '''
