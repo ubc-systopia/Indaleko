@@ -59,7 +59,7 @@ class UnstructuredRecorder:
     semantic_recorder_uuid = '31764240-1397-4cd2-9c74-b332a0ff1b72'
 
     input_file = os.path.join(Indaleko.default_data_dir,'semantic\\unstructured_outputs.jsonl')
-    output_file = os.path.join(Indaleko.default_data_dir,'semantic\\unstructured_collector.jsonl')
+    output_file = os.path.join(Indaleko.default_data_dir,'semantic\\unstructured_recorder.jsonl')
     semantic_recording_date = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
     attributes_by_uuid = {}
