@@ -24,7 +24,8 @@ import sys
 
 from typing import Union
 from pydantic import Field, BaseModel
-from icecream import ic
+
+# from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -52,7 +53,7 @@ class IndexMetadata(BaseModel):
     Deduplicate: bool
 
 
-class IndalekoCollectionMetadataDatamodel(IndalekoBaseModel):
+class IndalekoCollectionMetadataDataModel(IndalekoBaseModel):
     '''
     This class defines the data model for the Indaleko collection metadata.
     '''
@@ -63,25 +64,25 @@ class IndalekoCollectionMetadataDatamodel(IndalekoBaseModel):
         description='The name of the collection we are describing'
     )
 
-    Description: str = Field(
+    Description: Union[str, None] = Field(
         ...,
         title='Description',
         description='This describes the basic purpose of the collection'
     )
 
-    RelevantQueries: list[str] = Field(
+    RelevantQueries: Union[list[str], None] = Field(
         ...,
         Name='RelevantQueries',
         description='Example queries that are relevant to this collection',
     )
 
-    PrimaryKeys: list[str] = Field(
+    PrimaryKeys: Union[list[str], None] = Field(
         ...,
         Name='PrimaryKeys',
         description='The primary keys for this collection',
     )
 
-    IndexedFields: list[IndexMetadata] = Field(
+    IndexedFields: Union[list[IndexMetadata], None] = Field(
         ...,
         Name='IndexedFields',
         description='The fields that are indexed for this collection',
@@ -107,7 +108,7 @@ class IndalekoCollectionMetadataDatamodel(IndalekoBaseModel):
         return data
 
     @staticmethod
-    def deserialize(data: Union[dict[str, str], str]) -> 'IndalekoCollectionMetadataDatamodel':
+    def deserialize(data: Union[dict[str, str], str]) -> 'IndalekoCollectionMetadataDataModel':
         '''Deserialize the data model from a dictionary.'''
         if isinstance(data, str):
             data = json.loads(data)
@@ -116,7 +117,7 @@ class IndalekoCollectionMetadataDatamodel(IndalekoBaseModel):
         if '_key' in data and 'key' not in data:  # Pydantic doesn't allow _key, ArangoDB uses it.
             data['key'] = data['_key']
             del data['_key']
-        return IndalekoCollectionMetadataDatamodel(**data)
+        return IndalekoCollectionMetadataDataModel(**data)
 
     class Config:
         '''Sample configuration data for the data model.'''
@@ -139,7 +140,7 @@ class IndalekoCollectionMetadataDatamodel(IndalekoBaseModel):
 
 def main():
     '''This allows testing the data model.'''
-    IndalekoCollectionMetadataDatamodel.test_model_main()
+    IndalekoCollectionMetadataDataModel.test_model_main()
 
 
 if __name__ == '__main__':

@@ -36,7 +36,9 @@ from data_models import \
     IndalekoMachineConfigDataModel, \
     IndalekoRelationshipDataModel, \
     IndalekoServiceDataModel, \
-    IndalekoUserDataModel
+    IndalekoUserDataModel, \
+    IndalekoPerformanceDataModel
+
 from activity import IndalekoActivityDataModel
 # pylint: enable=wrong-import-position
 
@@ -53,12 +55,13 @@ class IndalekoDBCollections:
     Indaleko_MusicActivityContext_Collection = 'MusicActivityContext'
     Indaleko_TempActivityContext_Collection = 'TempActivityContext'
     Indaleko_GeoActivityContext_Collection = 'GeoActivityContext'
-
     Indaleko_Identity_Domain_Collection = 'IdentityDomains'
     Indaleko_User_Collection = 'Users'
     Indaleko_User_Relationship_Collection = 'UserRelationships'
     Indaleko_Performance_Data_Collection = 'PerformanceData'
     Indaleko_Query_History_collection = "QueryHistory"
+    Indaleko_Named_Entity_Recognition_Collection = 'NamedEntityRecognition'
+    Indaleko_Collection_Metadata = 'CollectionMetadata'
 
     Collections = {
         Indaleko_Object_Collection: {
@@ -132,24 +135,25 @@ class IndalekoDBCollections:
             'indices': {
             },
         },
-        Indaleko_ActivityContext_Collection : {
-            'schema' : IndalekoActivityDataModel.get_arangodb_schema(),
-            'edge' : False,
-            'indices' : {},
+        Indaleko_ActivityContext_Collection: {
+            'schema': IndalekoActivityDataModel.get_arangodb_schema(),
+            'edge': False,
+            'indices': {},
         },
-        Indaleko_MusicActivityContext_Collection : {
-            'schema' : IndalekoActivityDataModel.get_arangodb_schema(),
-            'edge' : False,
-            'indices' : {},
+        Indaleko_MusicActivityContext_Collection: {
+            'schema': IndalekoActivityDataModel.get_arangodb_schema(),
+            'edge': False,
+            'indices': {},
         },
-        Indaleko_GeoActivityContext_Collection : {
-            'schema' : IndalekoActivityDataModel.get_arangodb_schema(),
-            'edge' : False,
-            'indices' : {},
-        },Indaleko_TempActivityContext_Collection : {
-            'schema' : IndalekoActivityDataModel.get_arangodb_schema(),
-            'edge' : False,
-            'indices' : {},
+        Indaleko_GeoActivityContext_Collection: {
+            'schema': IndalekoActivityDataModel.get_arangodb_schema(),
+            'edge': False,
+            'indices': {},
+        },
+        Indaleko_TempActivityContext_Collection: {
+            'schema': IndalekoActivityDataModel.get_arangodb_schema(),
+            'edge': False,
+            'indices': {},
         },
         Indaleko_Identity_Domain_Collection: {
             'schema': IndalekoIdentityDomainDataModel.get_arangodb_schema(),
@@ -170,7 +174,7 @@ class IndalekoDBCollections:
         },
         # Indaleko_User_Relationship_Collection:  'This needs to be tied into NER work'
         Indaleko_Performance_Data_Collection:  {
-            'schema': None,
+            'schema': IndalekoPerformanceDataModel.get_arangodb_schema(),
             'edge': False,
             'indices': {
             }
@@ -180,7 +184,19 @@ class IndalekoDBCollections:
             'edge': False,
             'indices': {
             }
-        }
+        },
+        Indaleko_Named_Entity_Recognition_Collection: {
+            'schema': None,
+            'edge': False,
+            'indices': {
+            }
+        },
+        Indaleko_Collection_Metadata: {
+            'schema': None,
+            'edge': False,
+            'indices': {
+            }
+        },
     }
 
 
