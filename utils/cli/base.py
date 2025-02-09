@@ -344,7 +344,7 @@ class IndalekoBaseCLI:
         if 'plt' not in input_file_keys and 'Platform' in self.config_data:
             input_file_keys['plt'] = self.config_data['Platform']
         # this needs to be  provided
-        assert 'svc' in input_file_keys, 'Service not found in input file keys'
+        assert 'svc' in input_file_keys, f'Service not found in input file keys: {input_file_keys}'
         self.config_data['InputFileChoices'] = self.handler_mixin.find_data_files(
             self.config_data['DataDirectory'],
             input_file_keys,
