@@ -187,7 +187,6 @@ class IndalekoDBInfo:
                     'Version': self.source_version,
                     'Description': self.source_description
                 },
-                'Attributes': {},
                 'Data': encode_binary_data(bytes(json.dumps(collection_data).encode('utf-8'))),
             },
             DataAttributes=[

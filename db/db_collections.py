@@ -65,6 +65,7 @@ class IndalekoDBCollections:
 
     Collections = {
         Indaleko_Object_Collection: {
+            'internal': False,
             'schema': IndalekoObjectDataModel.get_arangodb_schema(),
             'edge': False,
             'indices': {
@@ -87,6 +88,7 @@ class IndalekoDBCollections:
             },
         },
         Indaleko_Relationship_Collection: {
+            'internal': False,
             'schema': IndalekoRelationshipDataModel.get_arangodb_schema(),
             'edge': True,
             'indices': {
@@ -113,6 +115,7 @@ class IndalekoDBCollections:
             }
         },
         Indaleko_Service_Collection: {
+            'internal': True,  # registration for various services, not generally useful for querying
             'schema': IndalekoServiceDataModel.get_arangodb_schema(),
             'edge': False,
             'indices': {
@@ -124,44 +127,52 @@ class IndalekoDBCollections:
             },
         },
         Indaleko_MachineConfig_Collection: {
+            'internal': False,
             'schema': IndalekoMachineConfigDataModel.get_arangodb_schema(),
             'edge': False,
             'indices': {
             },
         },
         Indaleko_ActivityDataProvider_Collection: {
+            'internal': True,  # registration for various activity data providers, not generally useful for querying
             'schema':  IndalekoActivityDataRegistrationDataModel.get_arangodb_schema(),
             'edge': False,
             'indices': {
             },
         },
         Indaleko_ActivityContext_Collection: {
+            'internal': False,
             'schema': IndalekoActivityDataModel.get_arangodb_schema(),
             'edge': False,
             'indices': {},
         },
         Indaleko_MusicActivityContext_Collection: {
+            'internal': False,
             'schema': IndalekoActivityDataModel.get_arangodb_schema(),
             'edge': False,
             'indices': {},
         },
         Indaleko_GeoActivityContext_Collection: {
+            'internal': False,
             'schema': IndalekoActivityDataModel.get_arangodb_schema(),
             'edge': False,
             'indices': {},
         },
         Indaleko_TempActivityContext_Collection: {
+            'internal': True,  # temporary storage for activity data, not generally useful for querying
             'schema': IndalekoActivityDataModel.get_arangodb_schema(),
             'edge': False,
             'indices': {},
         },
         Indaleko_Identity_Domain_Collection: {
+            'internal': False,
             'schema': IndalekoIdentityDomainDataModel.get_arangodb_schema(),
             'edge': False,
             'indices': {
             }
         },
         Indaleko_User_Collection:  {
+            'internal': False,
             'schema': IndalekoUserDataModel.get_arangodb_schema(),
             'edge': False,
             'indices': {
@@ -174,24 +185,28 @@ class IndalekoDBCollections:
         },
         # Indaleko_User_Relationship_Collection:  'This needs to be tied into NER work'
         Indaleko_Performance_Data_Collection:  {
+            'internal': True,  # performance data is not generally useful for querying
             'schema': IndalekoPerformanceDataModel.get_arangodb_schema(),
             'edge': False,
             'indices': {
             }
         },
         Indaleko_Query_History_collection: {
+            'internal': False,
             'schema': None,
             'edge': False,
             'indices': {
             }
         },
         Indaleko_Named_Entity_Recognition_Collection: {
+            'internal': False,
             'schema': None,
             'edge': False,
             'indices': {
             }
         },
         Indaleko_Collection_Metadata: {
+            'internal': True,  # metadata about collections, not generally useful for querying
             'schema': None,
             'edge': False,
             'indices': {
@@ -203,14 +218,16 @@ class IndalekoDBCollections:
 def main():
     '''Main entry point for the script.'''
     ic('Indaleko Database Collections')
+    verbose = False
     for collection in IndalekoDBCollections.Collections:
         ic(f'Collection: {collection}')
-        for key, value in IndalekoDBCollections.Collections[collection].items():
-            if 'schema' == key:
-                schema = json.dumps(value, indent=4)
-                print(f'Schema: {schema}')
-            else:
-                ic(f'  {key}: {value}')
+        if verbose:
+            for key, value in IndalekoDBCollections.Collections[collection].items():
+                if 'schema' == key:
+                    schema = json.dumps(value, indent=4)
+                    print(f'Schema: {schema}')
+                else:
+                    ic(f'  {key}: {value}')
         print('\n')
 
 

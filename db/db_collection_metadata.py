@@ -34,7 +34,8 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from db import IndalekoDBConfig, IndalekoDBCollections
-from data_models.collection_metadata_data_model import IndalekoCollectionMetadataDataModel, IndexMetadata
+from data_models.collection_metadata_data_model import IndalekoCollectionMetadataDataModel
+from data_models.db_index import IndalekoCollectionIndexDataModel
 from utils import IndalekoSingleton
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
@@ -54,22 +55,47 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
         self.db_config = db_config
         self.collections = self.db_config.db.collections()
         self.collections_metadata = {}
+        self.collections_additional_data = {}
         for collection in self.collections:
-            if 'name' in collection and not collection['name'].startswith('_'):
+            if 'name' not in collection:
+                continue
+            if collection['name'] not in IndalekoDBCollections.Collections:
+                continue
+            if 'internal' not in IndalekoDBCollections.Collections[collection['name']] or \
+                    not IndalekoDBCollections.Collections[collection['name']]['internal']:
+                # Only gather metadata for external collections
                 self.collections_metadata[collection['name']] = self.get_collection_metadata(collection['name'])
+            if collection['name'] not in self._collection_handlers:  # handlers can add more information
+                continue  # Done with this collection
+            self.collections_additional_data[collection['name']] = \
+                self._collection_handlers[collection['name']](collection['name'])
 
     def generate_new_collection_metadata(self, name: str) -> IndalekoCollectionMetadataDataModel:
         '''Generate a new collection metadata object.'''
+        db_collection = self.db_config.db.collection(name)
+        assert db_collection is not None, f'Failed to get collection {name}'
+        description = db_collection.properties().get('description', "No description available")
+        relevant_queries = db_collection.properties().get('relevant_queries', [])
+        query_guidelines = db_collection.properties().get('query_guidelines', "No guidelines provided")
+        indexed_fields = []
+        for index in db_collection.indexes():
+            indexed_fields.append(
+                IndalekoCollectionIndexDataModel(
+                    Name=index['name'],
+                    Type=index['type'],
+                    Fields=index['fields'],
+                    Unique=index['unique'],
+                    Sparse=index['sparse'],
+                    Deduplicate=index.get('deduplicate'),
+                )
+            )
         return IndalekoCollectionMetadataDataModel(
             key=name,
-            Description=None,
-            RelevantQueries=None,
-            PrimaryKeys=None,
-            IndexedFields=None,
-            QueryGuidelines=None,
+            Description=description,
+            RelevantQueries=relevant_queries,
+            IndexedFields=indexed_fields,
+            QueryGuidelines=query_guidelines,
         )
-
-        return IndalekoCollectionMetadataDataModel()
 
     def get_collection_metadata(self, collection_name: str) -> Union[IndalekoCollectionMetadataDataModel, None]:
         '''Get the metadata for the specified collection.'''
@@ -79,7 +105,18 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
         entry = db_collection.get(collection_name)
         if not entry:
             return self.generate_new_collection_metadata(collection_name)
-        return IndalekoCollectionMetadataDataModel.deserialize(**entry)
+        return IndalekoCollectionMetadataDataModel.deserialize(entry)
+
+    @staticmethod
+    def __activity_data_provider_collection_handler(collection_name: str) -> None:
+        '''Handle the activity data provider collection.'''
+        ic(collection_name)
+        ic('Need to implement the activity data provider collection handler')
+        return {}
+
+    _collection_handlers = {
+        IndalekoDBCollections.Indaleko_ActivityDataProvider_Collection: __activity_data_provider_collection_handler,
+    }
 
 
 class IndalekoCollectorMetadataCLI(IndalekoBaseCLI):
@@ -112,13 +149,13 @@ class IndalekoCollectorMetadataCLI(IndalekoBaseCLI):
     def run(self):
         '''Run the command-line interface.'''
         ic('Running the IndalekoCollectorMetadataCLI')
+        ic(self.collections_metadata.collections_metadata)
+        ic(self.collections_metadata.collections_additional_data)
 
 
 def main():
     ''''Main entry point for the program.'''
-    ic('Hello, World!')
     IndalekoCollectorMetadataCLI().run()
-
 
 
 if __name__ == "__main__":

@@ -23,9 +23,9 @@ import os
 import sys
 
 from typing import Union
-from pydantic import Field, BaseModel
+from pydantic import Field
 
-# from icecream import ic
+from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -37,20 +37,8 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel  # noqa: E402
+from data_models.db_index import IndalekoCollectionIndexDataModel  # noqa: E402
 # pylint: enable=wrong-import-position
-
-
-class IndexMetadata(BaseModel):
-    '''
-    This class defines the data model for Arango index metadata used
-    with collections in Indaleko.
-    '''
-    Name: str
-    Type: str
-    Fields: list[str]
-    Unique: bool
-    Sparse: bool
-    Deduplicate: bool
 
 
 class IndalekoCollectionMetadataDataModel(IndalekoBaseModel):
@@ -76,13 +64,7 @@ class IndalekoCollectionMetadataDataModel(IndalekoBaseModel):
         description='Example queries that are relevant to this collection',
     )
 
-    PrimaryKeys: Union[list[str], None] = Field(
-        ...,
-        Name='PrimaryKeys',
-        description='The primary keys for this collection',
-    )
-
-    IndexedFields: Union[list[IndexMetadata], None] = Field(
+    IndexedFields: Union[list[IndalekoCollectionIndexDataModel], None] = Field(
         ...,
         Name='IndexedFields',
         description='The fields that are indexed for this collection',
@@ -105,7 +87,7 @@ class IndalekoCollectionMetadataDataModel(IndalekoBaseModel):
         if '_key' not in data and 'key' in data:
             data['_key'] = data['key']
             del data['key']
-        return data
+        return ic(data)
 
     @staticmethod
     def deserialize(data: Union[dict[str, str], str]) -> 'IndalekoCollectionMetadataDataModel':
@@ -117,6 +99,7 @@ class IndalekoCollectionMetadataDataModel(IndalekoBaseModel):
         if '_key' in data and 'key' not in data:  # Pydantic doesn't allow _key, ArangoDB uses it.
             data['key'] = data['_key']
             del data['_key']
+        ic(data)
         return IndalekoCollectionMetadataDataModel(**data)
 
     class Config:
