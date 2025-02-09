@@ -110,7 +110,6 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
     @staticmethod
     def __activity_data_provider_collection_handler(collection_name: str) -> None:
         '''Handle the activity data provider collection.'''
-        ic(collection_name)
         ic('Need to implement the activity data provider collection handler')
         return {}
 

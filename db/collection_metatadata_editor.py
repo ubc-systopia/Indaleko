@@ -20,7 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import argparse
 import os
 import json
+from pathlib import Path
 import tempfile
+import shutil
 import subprocess
 import sys
 
@@ -41,6 +43,7 @@ from db import IndalekoDBConfig  # noqa: E402
 from db.db_collection_metadata import IndalekoDBCollectionsMetadata  # noqa: E402
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
+from utils.misc.file_name_management import generate_file_name
 # pylint: enable=wrong-import-position
 
 
@@ -76,6 +79,7 @@ class CollectionMetadataEditor:
             tmp_file.flush()  # Ensure all data is written
             tmp_file_path = tmp_file.name
 
+        ic(f'Environment is: {os.environ['PATH']}')
         editor_options = []
         if os.environ.get("EDITOR"):
             editor_options.append(os.environ.get("EDITOR"))
@@ -86,6 +90,7 @@ class CollectionMetadataEditor:
         found = False
         for editor in editor_options:
             try:
+                ic(f'Trying editor: {editor}')
                 subprocess.run([editor, tmp_file_path])
                 found = True
                 break
@@ -128,7 +133,6 @@ class CollectionMetadataEditor:
 
             # Update in the database
             db_collection = self.db_metadata.db_config.db.collection("CollectionMetadata")
-            ic(updated_metadata.serialize())
             db_collection.insert(updated_metadata.serialize(), overwrite=True)
 
             print(f"Successfully updated metadata for '{collection_name}'.")
@@ -137,36 +141,23 @@ class CollectionMetadataEditor:
             print(f"Error: Failed to update collection metadata - {e}")
 
 
-def old_main():
-    '''A CLI tool for editing Indaleko collection metadata.'''
-    editor = CollectionMetadataEditor(IndalekoDBConfig())
-
-    # List available collections
-    collections = editor.export_metadata()
-    print("\nAvailable collections:")
-    for col in collections.keys():
-        print(f"- {col}")
-
-    # Prompt user for a collection to edit
-    collection_name = input("\nEnter collection name to edit: ").strip()
-    if collection_name:
-        editor.edit_metadata(collection_name)
-
-
 class IndalekoCollectorMetadataCLI(IndalekoBaseCLI):
     '''This class is used to define the command-line interface for the Indaleko collector metadata.'''
 
     service_name = 'collector_metadata_util'
+    platform_name = 'metadata_editor'
 
     def __init__(self):
         '''Create an instance of the IndalekoCollectorMetadataCLI class.'''
         cli_data = IndalekoBaseCliDataModel(
             Service=IndalekoCollectorMetadataCLI.service_name,
+            Platform=self.platform_name,
+            InputFileKeys={'svc': 'backup'}
         )
         handler_mixin = self.local_handler_mixin
         features = IndalekoBaseCLI.cli_features(
             machine_config=False,
-            input=False,
+            input=True,
             output=True,
             offline=False,
             logging=True,
@@ -180,24 +171,38 @@ class IndalekoCollectorMetadataCLI(IndalekoBaseCLI):
 
     def run(self):
         '''Run the command-line interface.'''
-        ic('Running the IndalekoCollectorMetadataCLI')
-        ic(self.config_data)
         args = self.get_args()
-        ic(args)
         if hasattr(self, args.func):
             getattr(self, args.func)()
 
     def edit(self):
         '''Edit the metadata for the specified collection.'''
-        ic('edit called')
+        ic(f'Editing: {self.args.collection_name}')
+        CollectionMetadataEditor().edit_metadata(self.args.collection_name)
 
     def backup(self):
         '''Backup the metadata for the specified collection.'''
         ic('backup called')
+        backup_file = os.path.join(self.config_data['DataDirectory'], self.args.outputfile)
+        ic(f'Backing up Collector Metadata to: {backup_file}')
+        all_metadata = CollectionMetadataEditor().export_metadata()
 
-    def restore(self, collection_name: str):
+        # Write to a temp file
+        tmp_file_path = None
+        with tempfile.NamedTemporaryFile(mode="w+", suffix=".json", delete=False) as tmp_file:
+            json.dump(all_metadata, tmp_file, indent=4)
+            tmp_file.flush()      # Ensure all data is written
+            tmp_file_path = tmp_file.name
+
+        # Move to final location
+        shutil.move(tmp_file_path, backup_file)
+        ic(f'Backup complete: {backup_file}')
+
+    def restore(self):
         '''Restore the metadata for the specified collection.'''
         ic('restore called')
+        restore_file = os.path.join(self.config_data['ConfigDirectory'], self.args.inputfile)
+        ic(f'Need to finish implementing restore for file: {restore_file}')
 
     class CollectorMetadataCLIHandlerMixin(IndalekoBaseCLI.default_handler_mixin):
         '''This class is used to provide callback processing for the IndalekoCollectorMetadataCLI class.'''
@@ -214,13 +219,35 @@ class IndalekoCollectorMetadataCLI(IndalekoBaseCLI):
             pre_parser = IndalekoBaseCLI.default_handler_mixin.get_pre_parser()
             command_subparser = pre_parser.add_subparsers(dest='command', help='Command to execute')
             edit_subparser = command_subparser.add_parser('edit', help='Edit the metadata for a collection')
+            edit_subparser.add_argument(
+                'collection_name',
+                nargs='?',
+                default='Objects',
+                help='The name of the collection to edit (default=Objects)'
+            )
             edit_subparser.set_defaults(func='edit')
             backup_subparser = command_subparser.add_parser('backup', help='Backup the metadata for a collection')
             backup_subparser.set_defaults(func='backup')
             restore_subparser = command_subparser.add_parser('restore', help='Restore the metadata for a collection')
             restore_subparser.set_defaults(func='restore')
-            pre_parser.set_defaults(func='edit')
+            pre_parser.set_defaults(
+                command='edit',
+                collection_name='Objects',
+                func='edit')
             return pre_parser
+
+        @staticmethod
+        def generate_output_file_name(keys: dict[str, str]) -> str:
+            '''This method is used to generate an output file name.  Note
+            that it assumes the keys are in the desired format. Don't just
+            pass in configuration data.'''
+            kwargs = {
+                'platform': IndalekoCollectorMetadataCLI.platform_name,
+                'service': 'backup',
+                'timestamp': keys['Timestamp'],
+                'suffix': 'json',
+            }
+            return generate_file_name(**kwargs)
 
     local_handler_mixin = CollectorMetadataCLIHandlerMixin
 

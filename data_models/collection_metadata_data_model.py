@@ -25,7 +25,7 @@ import sys
 from typing import Union
 from pydantic import Field
 
-from icecream import ic
+# from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -87,7 +87,7 @@ class IndalekoCollectionMetadataDataModel(IndalekoBaseModel):
         if '_key' not in data and 'key' in data:
             data['_key'] = data['key']
             del data['key']
-        return ic(data)
+        return data
 
     @staticmethod
     def deserialize(data: Union[dict[str, str], str]) -> 'IndalekoCollectionMetadataDataModel':
@@ -99,7 +99,6 @@ class IndalekoCollectionMetadataDataModel(IndalekoBaseModel):
         if '_key' in data and 'key' not in data:  # Pydantic doesn't allow _key, ArangoDB uses it.
             data['key'] = data['_key']
             del data['_key']
-        ic(data)
         return IndalekoCollectionMetadataDataModel(**data)
 
     class Config:
