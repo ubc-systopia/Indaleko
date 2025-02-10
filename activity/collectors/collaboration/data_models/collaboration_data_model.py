@@ -23,6 +23,7 @@ import os
 import sys
 
 from pydantic import Field
+from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -36,10 +37,14 @@ from activity.data_model.activity import IndalekoActivityDataModel
 # pylint: enable=wrong-import-position
 
 
-class BaseAmbientConditionDataModel(IndalekoActivityDataModel):
-    '''This is the base data model for ambient condition data'''
-    source: str = Field(...,
-                        description="Source of the location data, e.g., 'Sensor', 'Music App', etc.")
+class BaseCollaborationDataModel(IndalekoActivityDataModel):
+    '''This is the base data model for the collaboration data'''
+
+    CollaborationType: str = Field(
+        ...,
+        title='CollaborationType',
+        description='The type of collaboration (e-mail, file sharing, messaging, etc.)',
+    )
 
     class Config:
         '''Sample configuration for the data model'''
@@ -47,8 +52,8 @@ class BaseAmbientConditionDataModel(IndalekoActivityDataModel):
         @staticmethod
         def generate_example():
             '''Generate an example for the data model'''
-            example = IndalekoActivityDataModel.Config.json_schema_extra
-            example["source"] = "Spotify"
+            example = IndalekoActivityDataModel.Config.json_schema_extra['example']
+            example["CollaborationType"] = "file sharing"
             return example
 
         json_schema_extra = {
@@ -59,7 +64,8 @@ class BaseAmbientConditionDataModel(IndalekoActivityDataModel):
 
 def main():
     '''This allows testing the data model'''
-    BaseAmbientConditionDataModel.test_model_main()
+    ic(BaseCollaborationDataModel.Config.json_schema_extra)
+    BaseCollaborationDataModel.test_model_main()
 
 
 if __name__ == '__main__':

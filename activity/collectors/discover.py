@@ -34,9 +34,9 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+from activity.collectors.known_semantic_attributes import KnownSemanticAttributes
 from Indaleko import Indaleko
 from utils import IndalekoLogging
-from activity.collectors.known_semantic_attributes import KnownSemanticAttributes
 # pylint: enable=wrong-import-position
 
 
@@ -99,15 +99,15 @@ class IndalekoActivityDataProviderDiscovery:
         # Step 1: Build a list of subdirectories
         subdirectories = [f.name for f in os.scandir(provider_dir) if f.is_dir() and not f.name.startswith('_')]
         for subdir in subdirectories:
+            ic(subdir)
             module = KnownSemanticAttributes.safe_import(f'activity.collectors.{subdir}')
             if hasattr(module, 'activity_providers'):
                 for provider in module.activity_providers():
-                    provider_class = getattr(module, provider)
-                data_providers.append({
-                    'category': subdir,
-                    'provider_class': provider_class,
-                    'module': module
-                })
+                    data_providers.append({
+                        'category': subdir,
+                        'provider_class': provider,
+                        'module': module
+                    })
         return data_providers
 
     @staticmethod

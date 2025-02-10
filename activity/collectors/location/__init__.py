@@ -31,6 +31,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+from activity.collectors.base import CollectorBase
 from activity.collectors.location.location_base import LocationCollector
 from activity.collectors.location.ip_location import IPLocation
 from activity.collectors.location.tile_location import TileLocation
@@ -52,13 +53,15 @@ if platform.system() == 'Windows':
     __all__.append('WindowsGPSLocation')
 
 
-def activity_providers() -> list:
+def activity_providers() -> list[CollectorBase]:
     '''
     This method retrieves the activity data providers in this module.
     '''
-    return [
-        'IPLocation',
-        'TileLocation',
-        'WiFiLocation',
-        'WindowsGPSLocation',
+    providers = [
+        IPLocation,
+        TileLocation,
+        WiFiLocation,
     ]
+    if platform.system() == 'Windows':
+        providers.append(WindowsGPSLocation)
+    return providers
