@@ -122,6 +122,22 @@ class EcobeeAmbientDataModel(ThermostatSensorData):
             raise ValueError("Average temperature must be between -50°C and 100°C")
         return value
 
+    def process_ecobee_data(self, raw_data: dict) -> None:
+        """
+        Process raw data from the Ecobee API and populate the model fields.
+        """
+        self.device_id = raw_data.get("device_id", self.device_id)
+        self.device_name = raw_data.get("device_name", self.device_name)
+        self.aux_heat_active = raw_data.get("aux_heat_active", self.aux_heat_active)
+        self.dehumidifier_mode = raw_data.get("dehumidifier_mode", self.dehumidifier_mode)
+        self.ventilator_mode = raw_data.get("ventilator_mode", self.ventilator_mode)
+        self.current_climate = raw_data.get("current_climate", self.current_climate)
+        self.heat_stage = raw_data.get("heat_stage", self.heat_stage)
+        self.cool_stage = raw_data.get("cool_stage", self.cool_stage)
+        self.connected_sensors = raw_data.get("connected_sensors", self.connected_sensors)
+        self.average_temperature = raw_data.get("average_temperature", self.average_temperature)
+        # ...additional processing as needed...
+
     class Config:
         """Configuration and example data for the ecobee ambient data model"""
         json_schema_extra = {

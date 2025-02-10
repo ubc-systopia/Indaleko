@@ -24,7 +24,7 @@ import sys
 import uuid
 
 from abc import ABC, abstractmethod
-from typing import List, Dict
+from typing import List, Dict, Any
 
 from icecream import ic
 
@@ -38,6 +38,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # pylint: disable=wrong-import-position
 from activity.characteristics import ActivityDataCharacteristics
 # pylint: enable=wrong-import-position
+
 
 class CollectorBase(ABC):
     '''
@@ -59,7 +60,7 @@ class CollectorBase(ABC):
         '''
 
     @abstractmethod
-    def get_collectorr_name(self) -> str:
+    def get_collector_name(self) -> str:
         '''Get the name of the provider'''
 
     @abstractmethod
@@ -80,7 +81,7 @@ class CollectorBase(ABC):
         '''
 
     @abstractmethod
-    def get_cursor(self, activity_context : uuid. UUID) -> uuid.UUID:
+    def get_cursor(self, activity_context: uuid. UUID) -> uuid.UUID:
         '''Retrieve the current cursor for this data provider
            Input:
                 activity_context: the activity context into which this cursor is
@@ -111,9 +112,31 @@ class CollectorBase(ABC):
         Retrieve the JSON data schema to use for the database.
         '''
 
+    @abstractmethod
+    def collect_data(self) -> None:
+        '''Collect data from the provider'''
+
+    @abstractmethod
+    def process_data(self, data: Any) -> Dict[str, Any]:
+        '''Process the collected data'''
+
+    @abstractmethod
+    def store_data(self, data: Dict[str, Any]) -> None:
+        '''Store the processed data'''
+
+    @abstractmethod
+    def update_data(self) -> None:
+        '''Update the data in the database'''
+
+    @abstractmethod
+    def get_latest_db_update(self) -> Dict[str, Any]:
+        '''Get the latest data update from the database'''
+
+
 def main():
     '''This is a test interface for the provider base.'''
     ic('ProviderBase test interface')
+
 
 if __name__ == '__main__':
     main()

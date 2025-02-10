@@ -18,9 +18,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
-import importlib
 import os
-import platform
 import sys
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -31,10 +29,10 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from activity.collectors.ambient.smart_thermostat.ecobee import EcobeeAmbientDataModel
+from activity.collectors.ambient.smart_thermostat.ecobee_data_model import EcobeeAmbientDataModel
 # pylint: enable=wrong-import-position
 
 # Define what should be available when importing from this package
 __all__ = [
     'EcobeeAmbientDataModel',
-    ]
+]

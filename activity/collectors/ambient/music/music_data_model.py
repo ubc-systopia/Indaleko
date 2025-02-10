@@ -34,6 +34,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 from activity.collectors.ambient.data_models.ambient_data_model import BaseAmbientConditionDataModel
 # pylint: enable=wrong-import-position
 
+
 class AmbientMusicData(BaseAmbientConditionDataModel):
     """
     Base model for ambient music data collection. This model captures
@@ -118,6 +119,7 @@ class AmbientMusicData(BaseAmbientConditionDataModel):
         if 'track_duration_ms' in values and value > values['track_duration_ms']:
             raise ValueError("Playback position cannot exceed track duration")
         return value
+
 
 class SpotifyAmbientData(AmbientMusicData):
     """
@@ -242,6 +244,7 @@ def main():
     """This allows testing the data models"""
     print("Testing base Ambient Music Data Model:")
     AmbientMusicData.test_model_main()
+
 
 if __name__ == '__main__':
     main()

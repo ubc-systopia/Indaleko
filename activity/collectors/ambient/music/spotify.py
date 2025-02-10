@@ -1,6 +1,5 @@
 """
-This module defines the data models for
-a Spotify-specific implementation.
+This module defines a utility for acquiring Spotify data.
 
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason
@@ -21,8 +20,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-from typing import Optional
-from pydantic import Field
+from typing import Any, Dict
+import spotipy
+from spotipy.oauth2 import SpotifyOAuth
+from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -32,132 +33,118 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from activity.collectors.ambient.music.base import AmbientMusicData
+from activity.collectors.ambient.music.music_data_model import SpotifyAmbientData
+from activity.collectors.ambient.base import AmbientCollector
 # pylint: enable=wrong-import-position
 
 
-class SpotifyAmbientData(AmbientMusicData):
+class SpotifyMusicCollector(AmbientCollector):
     """
-    Spotify-specific implementation of the ambient music data model.
-    Extends the base model with Spotify-specific attributes and features.
+    This class provides a utility for acquiring Spotify data.
     """
-    # Spotify-specific identifiers
-    track_id: str = Field(
-        ...,
-        description="Spotify track URI",
-        pattern="^spotify:track:[a-zA-Z0-9]{22}$"
-    )
 
-    artist_id: str = Field(
-        ...,
-        description="Spotify artist URI",
-        pattern="^spotify:artist:[a-zA-Z0-9]{22}$"
-    )
+    def __init__(self, client_id: str, client_secret: str, redirect_uri: str, **kwargs):
+        """Initialize the object."""
+        super().__init__(**kwargs)
+        self.data = SpotifyAmbientData()
+        self.sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=client_id,
+                                                            client_secret=client_secret,
+                                                            redirect_uri=redirect_uri,
+                                                            scope="user-read-playback-state"))
+        self.authenticate()
 
-    album_id: Optional[str] = Field(
-        None,
-        description="Spotify album URI",
-        pattern="^spotify:album:[a-zA-Z0-9]{22}$"
-    )
+    def authenticate(self) -> None:
+        """Authenticate with the Spotify API."""
+        ic('Authenticating with Spotify API')
+        self.sp.current_user()
 
-    # Spotify-specific playback information
-    device_name: str = Field(
-        ...,
-        description="Name of the Spotify playback device"
-    )
-
-    device_type: str = Field(
-        ...,
-        description="Type of Spotify playback device",
-        pattern="^(Computer|Smartphone|Speaker|TV|Game_Console|Automobile|Unknown)$"
-    )
-
-    shuffle_state: bool = Field(
-        False,
-        description="Whether shuffle mode is enabled"
-    )
-
-    repeat_state: str = Field(
-        "off",
-        description="Current repeat mode",
-        pattern="^(track|context|off)$"
-    )
-
-    # Spotify-specific audio features
-    danceability: Optional[float] = Field(
-        None,
-        description="Spotify danceability score",
-        ge=0.0,
-        le=1.0
-    )
-
-    energy: Optional[float] = Field(
-        None,
-        description="Spotify energy score",
-        ge=0.0,
-        le=1.0
-    )
-
-    valence: Optional[float] = Field(
-        None,
-        description="Spotify valence (positiveness) score",
-        ge=0.0,
-        le=1.0
-    )
-
-    instrumentalness: Optional[float] = Field(
-        None,
-        description="Spotify instrumentalness score",
-        ge=0.0,
-        le=1.0
-    )
-
-    acousticness: Optional[float] = Field(
-        None,
-        description="Spotify acousticness score",
-        ge=0.0,
-        le=1.0
-    )
-
-    # Context information
-    context_type: Optional[str] = Field(
-        None,
-        description="Type of playback context",
-        pattern="^(album|artist|playlist|collection)$"
-    )
-
-    context_id: Optional[str] = Field(
-        None,
-        description="Spotify URI of the playback context"
-    )
-
-    class Config:
-        """Configuration and example data for the Spotify ambient data model"""
-        json_schema_extra = {
-            "example": {
-                **AmbientMusicData.Config.json_schema_extra["example"],
-                "track_id": "spotify:track:4uLU6hMCjMI75M1A2tKUQC",
-                "artist_id": "spotify:artist:0OdUWJ0sBjDrqHygGUXeCF",
-                "album_id": "spotify:album:2noRn2Aes5aoNVsU6iWThc",
-                "device_name": "My Speaker",
-                "device_type": "Speaker",
-                "shuffle_state": False,
-                "repeat_state": "off",
-                "danceability": 0.735,
-                "energy": 0.578,
-                "valence": 0.624,
-                "instrumentalness": 0.0902,
-                "acousticness": 0.0264,
-                "context_type": "playlist",
-                "context_id": "spotify:playlist:37i9dQZF1DX5",
-                "source": "spotify"
+    def collect_data(self) -> None:
+        """
+        Collect Spotify data.
+        """
+        ic('Collecting Spotify data')
+        playback = self.sp.current_playback()
+        if playback:
+            raw_data = {
+                "track_name": playback['item']['name'],
+                "artist_name": playback['item']['artists'][0]['name'],
+                "album_name": playback['item']['album']['name'],
+                "is_playing": playback['is_playing'],
+                "playback_position_ms": playback['progress_ms'],
+                "track_duration_ms": playback['item']['duration_ms'],
+                "volume_percent": playback['device']['volume_percent'],
+                "track_id": playback['item']['uri'],
+                "artist_id": playback['item']['artists'][0]['uri'],
+                "album_id": playback['item']['album']['uri'],
+                "device_name": playback['device']['name'],
+                "device_type": playback['device']['type'],
+                "shuffle_state": playback['shuffle_state'],
+                "repeat_state": playback['repeat_state'],
+                "context_type": playback['context']['type'] if playback['context'] else None,
+                "context_id": playback['context']['uri'] if playback['context'] else None
             }
+            self.data.process_spotify_data(raw_data)
+
+    def process_data(self, data: Any) -> Dict[str, Any]:
+        """
+        Process the collected data.
+        """
+        ic('Processing Spotify data')
+        return self.data.dict()
+
+    def store_data(self, data: Dict[str, Any]) -> None:
+        """
+        Store the processed data.
+        """
+        ic('Storing Spotify data')
+        print("Storing data:", data)
+
+    def get_latest_db_update(self) -> Dict[str, Any]:
+        """
+        Get the latest data update from the database.
+        """
+        ic('Getting latest Spotify data update from the database')
+        return {
+            "track_name": "Bohemian Rhapsody",
+            "artist_name": "Queen",
+            "album_name": "A Night at the Opera",
+            "is_playing": True,
+            "playback_position_ms": 120000,
+            "track_duration_ms": 354000,
+            "volume_percent": 65,
+            "track_id": "spotify:track:123ABC456DEF",
+            "artist_id": "spotify:artist:123ABC456DEF",
+            "album_id": "spotify:album:123ABC456DEF",
+            "device_name": "My Computer",
+            "device_type": "Computer",
+            "shuffle_state": False,
+            "repeat_state": "off",
+            "context_type": "playlist",
+            "context_id": "spotify:playlist:123ABC456DEF"
         }
 
+    def update_data(self) -> None:
+        """
+        Update the data in the database.
+        """
+        ic('Updating Spotify data in the database')
+        latest_data = self.get_latest_db_update()
+        self.store_data(latest_data)
+
+
 def main():
-    """This allows testing the data models"""
-    print("\nTesting Spotify-specific Ambient Data Model:")
-    SpotifyAmbientData.test_model_main()
+    """Main entry point for the Spotify Music Collector."""
+    ic('Starting Spotify Music Collector')
+    client_id = "YOUR_SPOTIFY_CLIENT_ID"
+    client_secret = "YOUR_SPOTIFY_CLIENT_SECRET"
+    redirect_uri = "YOUR_SPOTIFY_REDIRECT_URI"
+    collector = SpotifyMusicCollector(client_id=client_id, client_secret=client_secret, redirect_uri=redirect_uri)
+    collector.collect_data()
+    latest = collector.get_latest_db_update()
+    ic(latest)
+    ic(collector.get_description())
+    ic('Finished Spotify Music Collector')
+
 
 if __name__ == '__main__':
     main()

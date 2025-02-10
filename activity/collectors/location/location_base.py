@@ -65,6 +65,33 @@ class LocationCollector(CollectorBase):
         '''Get the distance between two locations'''
 
 
+class LocationCollector:
+    """
+    Base class for location activity data providers.
+    """
+
+    def __init__(self, **kwargs):
+        self.config = kwargs.get('config', {})
+        self.data = []
+
+    def collect_data(self) -> None:
+        """
+        Collect location data. This method should be implemented by subclasses.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    def process_data(self, data: Any) -> Dict[str, Any]:
+        """
+        Process the collected data. This method should be implemented by subclasses.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    def store_data(self, data: Dict[str, Any]) -> None:
+        """
+        Store the processed data. This method should be implemented by subclasses.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
 
 def list_data_providers_command(args: argparse.Namespace):
     '''List the data providers available'''
