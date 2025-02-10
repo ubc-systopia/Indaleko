@@ -22,9 +22,9 @@ import arango
 import json
 import os
 import sys
-
 import arango.collection
 from icecream import ic
+
 from typing import Any, Dict, Sequence, Union
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -35,12 +35,10 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from utils.decorators import type_check
-# pylint: enable=wrong-import-position
-
-
 from db.db_config import IndalekoDBConfig
 from db.collection_index import IndalekoCollectionIndex
+from utils.decorators import type_check
+# pylint: enable=wrong-import-position
 
 
 class IndalekoCollection():
