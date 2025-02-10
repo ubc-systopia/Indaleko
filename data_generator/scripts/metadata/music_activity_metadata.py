@@ -1,15 +1,15 @@
 from typing import Dict, Union
 import random
 from faker import Faker
-import uuid 
+import uuid
 import string
 from typing import Any
 from datetime import datetime
 from data_models.record import IndalekoRecordDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 from data_models.i_uuid import IndalekoUUIDDataModel
-from activity.collectors.ambient.music.base import AmbientMusicData
-from activity.collectors.ambient.music.spotify import SpotifyAmbientData
+from activity.collectors.ambient.music.music_data_model import AmbientMusicData
+from activity.collectors.ambient.music.spotify_data_model import SpotifyAmbientData
 from data_generator.scripts.metadata.activity_metadata import ActivityMetadata
 
 class MusicActivityData(ActivityMetadata):
@@ -26,12 +26,12 @@ class MusicActivityData(ActivityMetadata):
         is_truth_file=self._define_truth_attribute("ambient_music", is_truth_file, truth_like, truthlike_attributes)
         return self._generate_music_metadata(record_kwargs, timestamps, is_truth_file)
 
-    def _generate_music_metadata(self, record_kwargs: IndalekoRecordDataModel, timestamps: Dict[str, datetime], 
+    def _generate_music_metadata(self, record_kwargs: IndalekoRecordDataModel, timestamps: Dict[str, datetime],
                                 is_truth_file: bool) -> Union[AmbientMusicData, SpotifyAmbientData]:
         """generates the music metadata for either the base ambient music data model or specifically for spotify"""
         music_md = self._generate_general_music_data(record_kwargs, is_truth_file, timestamps)
         if (music_md.source == "spotify") or ("ambient_music" in self.selected_md and "spotify" in self.selected_md["ambient_music"]):
-            return self._generate_spotify_music_data(music_md, is_truth_file)    
+            return self._generate_spotify_music_data(music_md, is_truth_file)
         return music_md
 
     def _generate_spotify_music_data(self, base_md: AmbientMusicData, is_truth_file: bool) -> SpotifyAmbientData:
@@ -49,19 +49,19 @@ class MusicActivityData(ActivityMetadata):
                 artist_id = self._create_spotify_id(is_truth_file, "artist", music_dict["artist_name"])
             if "device_type" in music_dict and is_truth_file:
                 device_type = self._choose_random_element(is_truth_file, music_dict["device_type"], devices)
-            
+
         return SpotifyAmbientData(
-                                    **base_md.dict(), 
-                                    track_id = track_id, 
-                                    artist_id = artist_id, 
-                                    device_name= "My " + device_type, 
-                                    device_type= device_type, 
-                                    shuffle_state= random.choice([True, False]), 
-                                    repeat_state = random.choice(["track", "context", "off"]), 
-                                    danceability= self._generate_spotify_score(), 
-                                    energy=self._generate_spotify_score(), 
-                                    valence=self._generate_spotify_score(), 
-                                    instrumentalness=self._generate_spotify_score(), 
+                                    **base_md.dict(),
+                                    track_id = track_id,
+                                    artist_id = artist_id,
+                                    device_name= "My " + device_type,
+                                    device_type= device_type,
+                                    shuffle_state= random.choice([True, False]),
+                                    repeat_state = random.choice(["track", "context", "off"]),
+                                    danceability= self._generate_spotify_score(),
+                                    energy=self._generate_spotify_score(),
+                                    valence=self._generate_spotify_score(),
+                                    instrumentalness=self._generate_spotify_score(),
                                     acousticness=self._generate_spotify_score())
 
     def _create_spotify_id(self, is_truth_file, prefix:str, name:str = None):
@@ -74,12 +74,12 @@ class MusicActivityData(ActivityMetadata):
             return heading + changed_name + space_filler
         else:
             return heading + ''.join(random.choices(string.ascii_letters + string.digits, k=22))
-        
+
     def _generate_spotify_score(self, lower:float = 0.000, upper: float = 1.000) -> float:
         """generate a random spotify score for the given track"""
         return round(random.uniform(lower, upper), 3)
 
-    def _generate_general_music_data(self, record_kwargs: IndalekoRecordDataModel, is_truth_file: bool, 
+    def _generate_general_music_data(self, record_kwargs: IndalekoRecordDataModel, is_truth_file: bool,
                                     timestamps: Dict[str, datetime]) -> AmbientMusicData:
         """generates the general music activity context data"""
         faker = Faker()
@@ -109,8 +109,8 @@ class MusicActivityData(ActivityMetadata):
             if "track_duration_ms" in music_dict and is_truth_file:
                 track_duration_ms = music_dict["track_duration_ms"]
             if "is_currently_playing" in music_dict and is_truth_file:
-                is_currently_playing = self._choose_random_element(is_truth_file, music_dict["is_currently_playing"], [True, False]) 
-        
+                is_currently_playing = self._choose_random_element(is_truth_file, music_dict["is_currently_playing"], [True, False])
+
         track_name_identifier = IndalekoUUIDDataModel(Identifier=uuid.uuid4(), Label="track_name")
         artist_name_identifier = IndalekoUUIDDataModel(Identifier=uuid.uuid4(), Label="artist_name")
         semantic_attributes = [
@@ -120,12 +120,12 @@ class MusicActivityData(ActivityMetadata):
 
         return AmbientMusicData(Record=record_kwargs,
                                 Timestamp=timestamp,
-                                SemanticAttributes=semantic_attributes, 
+                                SemanticAttributes=semantic_attributes,
                                 source=source,
                                 track_name=track_name,
                                 artist_name=artist_name,
                                 album_name = album_name,
                                 is_playing=is_currently_playing,
                                 playback_position_ms=playback_position_ms,
-                                track_duration_ms=track_duration_ms,                                
+                                track_duration_ms=track_duration_ms,
                                 )
