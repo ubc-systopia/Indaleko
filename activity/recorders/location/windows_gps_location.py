@@ -18,8 +18,8 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
-import json
-import math
+# import json
+# import math
 import os
 import sys
 import uuid
@@ -39,7 +39,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 from Indaleko import Indaleko
 from db.db_config import IndalekoDBConfig
 from activity.collectors.known_semantic_attributes import KnownSemanticAttributes
-from activity.registration import IndalekoActivityDataRegistration
+# from activity.registration import IndalekoActivityDataRegistration
 from activity.recorders.registration_service import IndalekoActivityDataRegistrationService
 from activity.collectors.location.windows_gps_location import WindowsGPSLocation
 from activity.collectors.location.data_models.windows_gps_location_data_model\
@@ -51,6 +51,7 @@ from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 from location_data_collector import BaseLocationDataCollector
 
 # pylint: enable=wrong-import-position
+
 
 class WindowsGPSLocationCollector(BaseLocationDataCollector):
     '''This class provides a utility for acquiring GPS data for a windows system
@@ -68,10 +69,14 @@ class WindowsGPSLocationCollector(BaseLocationDataCollector):
 
     def __init__(self, **kwargs):
         '''Initialize the Windows GPS Location Collector.'''
-        self.min_movement_change_required = kwargs.get('min_movement_change_required',
-                                                         self.default_min_movement_change_required)
-        self.max_time_between_updates = kwargs.get('max_time_between_updates',
-                                                    self.default_max_time_between_updates)
+        self.min_movement_change_required = kwargs.get(
+            'min_movement_change_required',
+            self.default_min_movement_change_required
+        )
+        self.max_time_between_updates = kwargs.get(
+            'max_time_between_updates',
+            self.default_max_time_between_updates
+        )
         self.db_config = IndalekoDBConfig()
         assert self.db_config is not None, 'Failed to get the database configuration'
         source_identifier = IndalekoSourceIdentifierDataModel(
@@ -81,10 +86,10 @@ class WindowsGPSLocationCollector(BaseLocationDataCollector):
         )
         ic(source_identifier.serialize())
         record_kwargs = {
-            'Identifier' : str(self.identifier),
-            'Version' : self.version,
-            'Description' : self.description,
-            'Record' : IndalekoRecordDataModel(
+            'Identifier': str(self.identifier),
+            'Version': self.version,
+            'Description': self.description,
+            'Record': IndalekoRecordDataModel(
                 SourceIdentifier=source_identifier,
                 Timestamp=datetime.now(),
                 Attributes={},
@@ -121,7 +126,7 @@ class WindowsGPSLocationCollector(BaseLocationDataCollector):
         ksa = KnownSemanticAttributes
         current_data = WindowsGPSLocation().get_coords()
         ic(type(current_data))
-        assert isinstance(current_data, WindowsGPSLocationDataModel),\
+        assert isinstance(current_data, WindowsGPSLocationDataModel), \
             f'current_data is not a WindowsGPSLocationDataModel {type(current_data)}'
         ic(type(current_data))
         latest_db_data = self.get_latest_db_update()
@@ -137,7 +142,7 @@ class WindowsGPSLocationCollector(BaseLocationDataCollector):
         )
         semantic_attributes = [
             IndalekoSemanticAttributeDataModel(
-                Identifier = IndalekoUUIDDataModel(
+                Identifier=IndalekoUUIDDataModel(
                     Identifier=ksa.ACTIVITY_DATA_LOCATION_LATITUDE,
                     Version='1',
                     Description='Latitude'
@@ -145,7 +150,7 @@ class WindowsGPSLocationCollector(BaseLocationDataCollector):
                 Data=current_data.latitude,
             ),
             IndalekoSemanticAttributeDataModel(
-                Identifier= IndalekoUUIDDataModel(
+                Identifier=IndalekoUUIDDataModel(
                     Identifier=ksa.ACTIVITY_DATA_LOCATION_LONGITUDE,
                     Version='1',
                     Description='Longitude'
@@ -153,7 +158,7 @@ class WindowsGPSLocationCollector(BaseLocationDataCollector):
                 Data=current_data.longitude,
             ),
             IndalekoSemanticAttributeDataModel(
-                Identifier = IndalekoUUIDDataModel(
+                Identifier=IndalekoUUIDDataModel(
                     Identifier=ksa.ACTIVITY_DATA_LOCATION_ACCURACY,
                     Version='1',
                     Description='Accuracy'
@@ -167,10 +172,7 @@ class WindowsGPSLocationCollector(BaseLocationDataCollector):
             location_data=current_data,
             semantic_attributes=semantic_attributes
         )
-        # doc = current_data.model_dump_json()
-        ic(doc)
-        data = doc.build_arangodb_doc()
-        self.collection.insert(data)
+        self.collection.insert(doc)
         return ic(current_data)
 
 
@@ -183,6 +185,7 @@ def main():
     ic(latest)
     ic(collector.get_description())
     ic('Finished Windows GPS Location Collector')
+
 
 if __name__ == '__main__':
     main()

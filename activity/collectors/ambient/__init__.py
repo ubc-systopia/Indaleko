@@ -33,10 +33,10 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from activity.collectors.ambient.smart_thermostat import EcobeeAmbientData
+from activity.collectors.ambient.smart_thermostat import EcobeeAmbientDataModel
 # pylint: enable=wrong-import-position
 
 # Define what should be available when importing from this package
 __all__ = [
-    'EcobeeAmbientData',
+    'EcobeeAmbientDataModel',
     ]

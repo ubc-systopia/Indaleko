@@ -23,8 +23,6 @@ import os
 import platform
 import sys
 
-from typing import Dict, Type
-
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
@@ -47,7 +45,20 @@ __all__ = [
     'IPLocation',
     'TileLocation',
     'WiFiLocation',
+    'WindowsGPSLocation',
     ]
 
 if platform.system() == 'Windows':
     __all__.append('WindowsGPSLocation')
+
+
+def activity_providers() -> list:
+    '''
+    This method retrieves the activity data providers in this module.
+    '''
+    return [
+        'IPLocation',
+        'TileLocation',
+        'WiFiLocation',
+        'WindowsGPSLocation',
+    ]

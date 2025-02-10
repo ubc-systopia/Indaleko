@@ -23,8 +23,6 @@ import importlib
 import os
 import sys
 
-from typing import Union, Any, Dict
-
 from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -75,7 +73,7 @@ class KnownSemanticAttributes:
                     cls._attributes_by_uuid[value] = full_label
 
     @staticmethod
-    def safe_import(name: str) -> Union[Dict[str, Any], None]:
+    def safe_import(name: str):
         '''Given a module name, load it and then extract the important data from it'''
         module = None
         try:

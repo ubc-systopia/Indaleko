@@ -35,7 +35,8 @@ if os.environ.get('INDALEKO_ROOT') is None:
 from activity.collectors.ambient.data_models.smart_thermostat import ThermostatSensorData
 # pylint: enable=wrong-import-position
 
-class EcobeeAmbientData(ThermostatSensorData):
+
+class EcobeeAmbientDataModel(ThermostatSensorData):
     """
     Ecobee-specific implementation of the thermostat sensor ambient data model.
     Extends ThermostatSensorData to maintain the common structure while adding
@@ -143,9 +144,11 @@ class EcobeeAmbientData(ThermostatSensorData):
             }
         }
 
+
 def main():
     """This allows testing the data model"""
-    EcobeeAmbientData.test_model_main()
+    EcobeeAmbientDataModel.test_model_main()
+
 
 if __name__ == '__main__':
     main()
