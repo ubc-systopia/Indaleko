@@ -30,7 +30,7 @@ class WindowsGPSLocation(LocationCollector):
     def __init__(self):
         self._name = 'GPS Location Service'
         self._location = 'GPS Location'
-        self._provider_id = uuid.UUID('750fd846-b6cd-4c81-b774-53ba25905e29')
+        self._collector_id = uuid.UUID('750fd846-b6cd-4c81-b774-53ba25905e29')
         self.coords = self.get_coords()
 
     @staticmethod
@@ -71,7 +71,7 @@ class WindowsGPSLocation(LocationCollector):
         '''Get the provider characteristics'''
         return [
             ActivityDataCharacteristics.ACTIVITY_DATA_SPATIAL,
-            ActivityDataCharacteristics.PROVIDER_DEVICE_STATE_DATA,
+            ActivityDataCharacteristics.ACTIVITY_DATA_DEVICE_STATE,
         ]
 
     def get_collector_name(self) -> str:
@@ -80,7 +80,7 @@ class WindowsGPSLocation(LocationCollector):
 
     def get_provider_id(self) -> uuid.UUID:
         '''Get the provider ID'''
-        return self._provider_id
+        return self._collector_id
 
     def retrieve_data(self, data_type: str) -> str:
         '''Retrieve data from the provider'''
@@ -153,7 +153,7 @@ class WindowsGPSLocation(LocationCollector):
 
 
 def main():
-    '''This is the interface for testing the foo.py module.'''
+    '''This is the interface for testing the module.'''
 
 
 if __name__ == '__main__':

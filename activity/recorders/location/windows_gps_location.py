@@ -109,7 +109,7 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
         ic(collector_data)
         ic(collection)
         self.collector_data = collector_data
-        self.provider = WindowsGPSLocation()
+        self.collector = WindowsGPSLocation()
         self.collection = collection
 
     def get_latest_db_update(self) -> Union[WindowsGPSLocation, None]:
@@ -175,6 +175,9 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
         self.collection.insert(doc)
         return ic(current_data)
 
+    def get_recorder_characteristics(self):
+        return self.collector.get_collector_characteristics()
+
 
 def main():
     '''Main entry point for the Windows GPS Location Recorder.'''
@@ -185,6 +188,7 @@ def main():
     ic(latest)
     ic(recorder.get_description())
     ic('Finished Windows GPS Location Recorder')
+    ic(recorder.get_recorder_characteristics())
 
 
 if __name__ == '__main__':
