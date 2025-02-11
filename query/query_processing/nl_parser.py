@@ -1,6 +1,7 @@
 
 from typing import Dict, Any
 
+
 class NLParser:
     """
     Natural Language Parser for processing user queries.
@@ -10,7 +11,7 @@ class NLParser:
         # Initialize any necessary components or models
         pass
 
-    def parse(self, query: str, schema : dict) -> Dict[str, Any]:
+    def parse(self, query: str, schema: dict) -> Dict[str, Any]:
         """
         Parse the natural language query into a structured format.
 
