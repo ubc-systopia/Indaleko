@@ -51,7 +51,7 @@ class UnstructuredLookup():
         Steps involved:
 
         1. Connect to DB
-        2. Retrieve all file objects in Object
+        2. Retrieve all file objects in Object that are supported
         3. Converts retrieved Objects into IndalekoObject
         4. Get volume GUID path to file in local.
         5. Convert the local paths to a unix path
@@ -60,25 +60,24 @@ class UnstructuredLookup():
         - Add logging
         - More error handling
         - Checksums
-        - Filter out incompatible file types
         
         '''
     arango_config_file_name = "indaleko-db-config.ini"
     unstructured_config_file_name = 'unstructured_config.ini'
 
     # Query to retrieve files wanted for unstructured processing
-    # query_string = 'FOR doc IN Object \
-    #                     FILTER doc.WindowsFileAttributes == @val \
-    #                     SORT doc.URI \
-    #                     RETURN doc'
+    query_string = 'FOR doc IN Objects \
+                        FILTER doc.WindowsFileAttributes == @val \
+                        SORT doc.URI \
+                        RETURN doc'
 
     # Query that returns a smaller result. 
     # Make sure to edit variables in perform_query()
-    query_string = 'FOR doc IN Object \
-                        FILTER doc.WindowsFileAttributes == @val \
-                            AND doc.Label == @essay \
-                        SORT doc.URI \
-                        RETURN doc'
+    # query_string = 'FOR doc IN Objects \
+    #                     FILTER doc.WindowsFileAttributes == @val \
+    #                         AND doc.Label == @essay \
+    #                     SORT doc.URI \
+    #                     RETURN doc'
 
     def __init__(self):
         unstructured_config_file = os.path.join(Indaleko.default_config_dir, self.unstructured_config_file_name)
@@ -88,6 +87,8 @@ class UnstructuredLookup():
         self.host_drive_mount = unstructured_config['VOLUMES']['HostDriveMount']
         self.unstructured_data_dir = unstructured_config['DATA']['UnstructuredDataDir']
         self.output_name = unstructured_config['DATA']['InputFileName']
+
+        self.supported_formats = unstructured_config['DATA']['SupportedFormats']
 
 
     def windows_to_unix_path(self, windows_path):
@@ -116,7 +117,7 @@ class UnstructuredLookup():
         client = ArangoClient(hosts = host)
         db = client.db("Indaleko", ARANGO_USER_NAME, ARANGO_USER_PASSWORD)
 
-        assert db.has_collection('Object')
+        assert db.has_collection('Objects')
         ic(f'Connected to ArangoDB: {host}')
         return db
 
@@ -124,11 +125,15 @@ class UnstructuredLookup():
         '''Returns a Cursor to the results of the query.'''
         db = self.connect_db()
         cursor = db.aql.execute(self.query_string,
-                                    bind_vars = {'val': 'FILE_ATTRIBUTE_ARCHIVE', 'essay' : 'Essay.docx'},
+                                    bind_vars = {'val': 'FILE_ATTRIBUTE_ARCHIVE'},
                                     batch_size=10,
                                     count=True)
         ic('Query Successful')
         return cursor
+    
+    def file_supported(self, object_uri):
+        _, file_extension = os.path.splitext(object_uri)
+        return file_extension in self.supported_formats
     
     def generate_input(self):
         '''Creates a jsonl file in the Data directory with a set of inputs to be sent to Unstructured for processing. Each row contains a unique ObjectIdentifier and unix-base URI converted from the original Windows one. 
@@ -138,14 +143,15 @@ class UnstructuredLookup():
         if not os.path.exists(self.unstructured_data_dir):
             os.mkdir(self.unstructured_data_dir)
         with open(os.path.join(self.unstructured_data_dir, 
-                               self.output_name), 'w') as jsonl_file:
+                               self.output_name), 'w', encoding='utf-8') as jsonl_file:
             for doc in cursor:
                 indaleko_object = IndalekoObject.deserialize(doc)
                 ## Add more code here to filter out unknown file types, or files that have been processed already
                 object_uri = indaleko_object.__getitem__('URI')
                 object_uuid = indaleko_object.__getitem__('ObjectIdentifier')
-                jsonl_file.write(json.dumps({'ObjectIdentifier': object_uuid,
-                                            'URI': self.windows_to_unix_path(object_uri)}) + '\n')
+                if (self.file_supported(object_uri)):
+                    jsonl_file.write(json.dumps({'ObjectIdentifier': object_uuid,
+                                                'URI': self.windows_to_unix_path(object_uri)}) + '\n')
         
         
 

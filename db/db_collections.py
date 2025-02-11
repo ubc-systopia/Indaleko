@@ -40,6 +40,7 @@ from data_models import \
     IndalekoPerformanceDataModel
 
 from activity import IndalekoActivityDataModel
+from semantic.data_models.base_data_model import BaseSemanticDataModel
 # pylint: enable=wrong-import-position
 
 
@@ -59,7 +60,9 @@ class IndalekoDBCollections:
     Indaleko_User_Collection = 'Users'
     Indaleko_User_Relationship_Collection = 'UserRelationships'
     Indaleko_Performance_Data_Collection = 'PerformanceData'
-    Indaleko_Query_History_collection = "QueryHistory"
+    Indaleko_Query_History_collection = 'QueryHistory'
+
+    Indaleko_Semantic_Data_Collection = 'SemanticData'
     Indaleko_Named_Entity_Recognition_Collection = 'NamedEntityRecognition'
     Indaleko_Collection_Metadata = 'CollectionMetadata'
 
@@ -164,12 +167,21 @@ class IndalekoDBCollections:
             'edge': False,
             'indices': {},
         },
-        Indaleko_Identity_Domain_Collection: {
-            'internal': False,
-            'schema': IndalekoIdentityDomainDataModel.get_arangodb_schema(),
+        Indaleko_Semantic_Data_Collection: {
+            'schema': BaseSemanticDataModel.get_arangodb_schema(),
             'edge': False,
             'indices': {
+                'source identity': {
+                    'fields': ['ObjectIdentifier'],
+                    'unique': True,
+                    'type': 'persistent'
+                }
             }
+        },
+        Indaleko_Identity_Domain_Collection: {
+            'schema': IndalekoIdentityDomainDataModel.get_arangodb_schema(),
+            'edge': False,
+            'indices': {}
         },
         Indaleko_User_Collection:  {
             'internal': False,

@@ -36,6 +36,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from semantic.characteristics import SemanticDataCharacteristics
+import semantic.collectors.semantic_attributes as semantic_attributes
 # pylint: enable=wrong-import-position
 
 class IndalekoUnstructuredData:
@@ -54,3 +55,11 @@ class IndalekoUnstructuredData:
     def get_semantic_characteristics(self):
         '''Get the semantic characteristics for the unstructured data.'''
         return self.semantic_characteristics
+    
+
+def main():
+    attributes = [attr for attr, value in semantic_attributes.__dict__.items() if not attr.startswith('__')]
+    ic(attributes)
+
+if __name__ == '__main__':
+    main()

@@ -127,7 +127,7 @@ class UnstructuredRetrieval:
             image=f"{unstructured_image_name}:{unstructured_image_tag}",
             command=["python3", f"{unix_project_dir_mount}/{unix_script_path}", unix_input_path, unix_output_path],
             name=container_name,
-            mem_limit='2g',
+            mem_limit='5g', # Change if required
             remove=True,
             stdin_open=True,
             volumes=bind_mounts, # Bind mounts

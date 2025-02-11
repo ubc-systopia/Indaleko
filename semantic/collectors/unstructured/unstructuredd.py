@@ -149,6 +149,7 @@ class IndalekoUnstructured(SemanticCollector):
 
     def get_json_schema(self) -> dict:
         '''Get the JSON schema for the unstructured data collector'''
+        # TODO
         return {}
 
     def lookup_files(self, args) -> None:
@@ -208,7 +209,7 @@ def main():
 
     parser.set_defaults(func = None)
     args = parser.parse_args()
-    ic(args)
+    # ic(args)
     args.func(args)
 
 if __name__ == '__main__':
