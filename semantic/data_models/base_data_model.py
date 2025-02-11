@@ -113,6 +113,7 @@ class BaseSemanticDataModel(IndalekoBaseModel):
                     "Data": "xAA="
                 },
                 "Timestamp": "2023-09-21T10:30:00Z",
+                "ObjectIdentifier": "467de59f-fe7f-4cdd-b5b8-0256e090ed04",
                 "RelatedObjects": [
                     "5a833720-7293-47fe-b3b3-1296302956cd",
                 ],
