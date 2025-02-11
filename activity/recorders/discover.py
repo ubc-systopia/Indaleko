@@ -1,5 +1,5 @@
 '''
-This is the activity data provider discovery mechanism.
+This is the activity data provider recorder discovery mechanism.
 
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason
@@ -24,6 +24,7 @@ import os
 from pathlib import Path
 import sys
 
+from typing import Union
 from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -34,13 +35,14 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+from activity.collectors.discover import IndalekoActivityDataProviderCollectorDiscovery
 from activity.collectors.known_semantic_attributes import KnownSemanticAttributes
 from Indaleko import Indaleko
 from utils import IndalekoLogging
 # pylint: enable=wrong-import-position
 
 
-class IndalekoActivityDataProviderCollectorDiscovery:
+class IndalekoActivityDataProviderRecorderDiscovery:
     '''
     The Indaleko activity data providers are dynamically recognized and added to
     the database.  This class provides the mechanism to discover and add new
@@ -50,10 +52,18 @@ class IndalekoActivityDataProviderCollectorDiscovery:
     default_config_dir = None  # os.path.join(os.environ['INDALEKO_ROOT'], Indaleko.default_config_dir)
     default_data_dir = None  # os.path.join(os.environ['INDALEKO_ROOT'], Indaleko.default_data_dir)
     default_log_dir = None  # os.path.join(os.environ['INDALEKO_ROOT'], Indaleko.default_log_dir)
-    default_provider_dir = str(Path(os.environ['INDALEKO_ROOT']) / 'activity' / 'collectors')
+    default_recorder_provider_dir = str(Path(os.environ['INDALEKO_ROOT']) / 'activity' / 'recorders')
+    default_collector_provider_dir = IndalekoActivityDataProviderCollectorDiscovery.default_provider_dir
 
     def __init__(self, **kwargs):
-        '''Initialize the data provider discovery mechanism'''
+        '''Set up the recorder discovery mechanism'''
+        self.collectors = IndalekoActivityDataProviderCollectorDiscovery.\
+            find_collectors(
+                kwargs.get(
+                    'collector_dir',
+                    IndalekoActivityDataProviderCollectorDiscovery.default_collector_dir
+                )
+            )
         for dir_name in ['config_dir', 'data_dir', 'log_dir']:
             if dir_name in kwargs:
                 setattr(self, dir_name, kwargs[dir_name])
@@ -74,41 +84,53 @@ class IndalekoActivityDataProviderCollectorDiscovery:
                     )
         self.provider_dir = kwargs.get(
             'provider_dir',
-            IndalekoActivityDataProviderCollectorDiscovery.default_provider_dir
+            IndalekoActivityDataProviderRecorderDiscovery.default_recorder_provider_dir
         )
         self.config_dir = kwargs.get(
             'config_dir',
-            IndalekoActivityDataProviderCollectorDiscovery.default_config_dir
+            IndalekoActivityDataProviderRecorderDiscovery.default_config_dir
         )
         self.data_dir = kwargs.get(
             'data_dir',
-            IndalekoActivityDataProviderCollectorDiscovery.default_data_dir
+            IndalekoActivityDataProviderRecorderDiscovery.default_data_dir
         )
         self.log_dir = kwargs.get(
             'log_dir',
-            IndalekoActivityDataProviderCollectorDiscovery.default_log_dir
+            IndalekoActivityDataProviderRecorderDiscovery.default_log_dir
         )
         self.data_providers = \
-            IndalekoActivityDataProviderCollectorDiscovery.find_data_providers(self.provider_dir)
+            IndalekoActivityDataProviderRecorderDiscovery.find_data_providers(self.provider_dir)
 
     @staticmethod
-    def find_data_providers(provider_dir: str) -> list:
+    def find_data_providers(
+        collector_provider_dir: Union[str, None] = None,
+        recorder_provider_dir: Union[str, None] = None
+    ) -> list:
         '''Find the data providers in the specified directory'''
-        data_providers = []
-
+        if recorder_provider_dir is None:
+            recorder_provider_dir = IndalekoActivityDataProviderRecorderDiscovery.default_recorder_provider_dir
+        if collector_provider_dir is None:
+            collector_provider_dir = IndalekoActivityDataProviderRecorderDiscovery.default_collector_provider_dir
+        collector_data_providers = IndalekoActivityDataProviderCollectorDiscovery.\
+            find_data_providers(collector_provider_dir)
+        recorder_data_providers = []
         # Step 1: Build a list of subdirectories
-        subdirectories = [f.name for f in os.scandir(provider_dir) if f.is_dir() and not f.name.startswith('_')]
+        subdirectories = [f.name for f in os.scandir(recorder_provider_dir) if f.is_dir() and not f.name.startswith('_')]
+        ic(subdirectories)
+        ic(collector_data_providers)
+        ic(dir(collector_data_providers[0]['module']))
+        return recorder_data_providers
         for subdir in subdirectories:
-            ic(subdir)
             module = KnownSemanticAttributes.safe_import(f'activity.collectors.{subdir}')
             if hasattr(module, 'activity_providers'):
                 for provider in module.activity_providers():
-                    data_providers.append({
+                    recorder_data_providers.append({
                         'category': subdir,
-                        'provider_class': provider,
+                        'collector_provider_class': provider,
+                        'recorder_provider_class': provider,
                         'module': module
                     })
-        return data_providers
+        return recorder_data_providers
 
     @staticmethod
     def initialize_project() -> bool:
@@ -118,7 +140,7 @@ class IndalekoActivityDataProviderCollectorDiscovery:
     @staticmethod
     def list_data_providers(args: argparse.Namespace):
         '''List the data providers available'''
-        discovery = IndalekoActivityDataProviderCollectorDiscovery()
+        discovery = IndalekoActivityDataProviderRecorderDiscovery()
         for provider in discovery.data_providers:
             ic(provider)
 
@@ -133,10 +155,12 @@ def main():
     This is the interactive interface to the activity data provider discovery
     mechanism.
     '''
+    ic(IndalekoActivityDataProviderRecorderDiscovery.find_data_providers())
+    exit(0)
     parser = argparse.ArgumentParser(description='Indaleko Activity Data Provider Discovery Tool')
     parser.add_argument('--logdir',
                         type=str,
-                        default=IndalekoActivityDataProviderCollectorDiscovery.default_log_dir,
+                        default=IndalekoActivityDataProviderRecorderDiscovery.default_log_dir,
                         help='Directory for log files')
     parser.add_argument('--log', type=str, default=None, help='Log file name')
     parser.add_argument('--loglevel', type=int, default=logging.DEBUG,
@@ -146,12 +170,12 @@ def main():
     parser_list = command_subparser.add_parser('list', help='List the data providers available')
     parser_list.add_argument('--providerdir',
                              type=str,
-                             default=IndalekoActivityDataProviderCollectorDiscovery.default_provider_dir,
+                             default=IndalekoActivityDataProviderRecorderDiscovery.default_recorder_provider_dir,
                              help='Directory for the data providers '
-                             f'(default: {IndalekoActivityDataProviderCollectorDiscovery.default_provider_dir})'
+                             f'(default: {IndalekoActivityDataProviderRecorderDiscovery.default_recorder_provider_dir})'
                              )
-    parser_list.set_defaults(func=IndalekoActivityDataProviderCollectorDiscovery.list_data_providers)
-    parser.set_defaults(func=IndalekoActivityDataProviderCollectorDiscovery.list_data_providers)
+    parser_list.set_defaults(func=IndalekoActivityDataProviderRecorderDiscovery.list_data_providers)
+    parser.set_defaults(func=IndalekoActivityDataProviderRecorderDiscovery.list_data_providers)
     args = parser.parse_args()
     args.func(args)
 

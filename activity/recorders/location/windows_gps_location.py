@@ -48,18 +48,18 @@ from data_models.record import IndalekoRecordDataModel
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from data_models.i_uuid import IndalekoUUIDDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
-from location_data_collector import BaseLocationDataCollector
+from location_data_recorder import BaseLocationDataRecorder
 
 # pylint: enable=wrong-import-position
 
 
-class WindowsGPSLocationCollector(BaseLocationDataCollector):
+class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
     '''This class provides a utility for acquiring GPS data for a windows system
     and recording it in the database.'''
 
     identifier = uuid.UUID('7e85669b-ecc7-4d57-8b51-8d325ea84930')
     version = '1.0.0'
-    description = 'Windows GPS Location Collector'
+    description = 'Windows GPS Location Recorder'
 
     semantic_attributes_supported = {
         KnownSemanticAttributes.ACTIVITY_DATA_LOCATION_LATITUDE: 'Latitude',
@@ -68,7 +68,7 @@ class WindowsGPSLocationCollector(BaseLocationDataCollector):
     }
 
     def __init__(self, **kwargs):
-        '''Initialize the Windows GPS Location Collector.'''
+        '''Initialize the Windows GPS Location Recorder.'''
         self.min_movement_change_required = kwargs.get(
             'min_movement_change_required',
             self.default_min_movement_change_required
@@ -98,23 +98,23 @@ class WindowsGPSLocationCollector(BaseLocationDataCollector):
         }
         self.provider_registrar = IndalekoActivityDataRegistrationService()
         assert self.provider_registrar is not None, 'Failed to get the provider registrar'
-        provider_data = self.provider_registrar.lookup_provider_by_identifier(str(self.identifier))
-        if provider_data is None:
+        collector_data = self.provider_registrar.lookup_provider_by_identifier(str(self.identifier))
+        if collector_data is None:
             ic('Registering the provider')
-            provider_data, collection = self.provider_registrar.register_provider(**record_kwargs)
+            collector_data, collection = self.provider_registrar.register_provider(**record_kwargs)
         else:
             ic('Provider already registered')
             collection = IndalekoActivityDataRegistrationService\
                 .lookup_activity_provider_collection(str(self.identifier))
-        ic(provider_data)
+        ic(collector_data)
         ic(collection)
-        self.provider_data = provider_data
+        self.collector_data = collector_data
         self.provider = WindowsGPSLocation()
         self.collection = collection
 
     def get_latest_db_update(self) -> Union[WindowsGPSLocation, None]:
         '''Get the latest update from the database.'''
-        doc = BaseLocationDataCollector.get_latest_db_update_dict(self.collection)
+        doc = BaseLocationDataRecorder.get_latest_db_update_dict(self.collection)
         if doc is None:
             return None
         current_data = Indaleko.decode_binary_data(doc['Record']['Data'])
@@ -167,7 +167,7 @@ class WindowsGPSLocationCollector(BaseLocationDataCollector):
             )
         ]
         ic(type(current_data))
-        doc = BaseLocationDataCollector.build_location_activity_document(
+        doc = BaseLocationDataRecorder.build_location_activity_document(
             source_data=source_identifier,
             location_data=current_data,
             semantic_attributes=semantic_attributes
@@ -177,14 +177,14 @@ class WindowsGPSLocationCollector(BaseLocationDataCollector):
 
 
 def main():
-    '''Main entry point for the Windows GPS Location Collector.'''
-    ic('Starting Windows GPS Location Collector')
-    collector = WindowsGPSLocationCollector()
-    collector.update_data()
-    latest = collector.get_latest_db_update()
+    '''Main entry point for the Windows GPS Location Recorder.'''
+    ic('Starting Windows GPS Location Recorder')
+    recorder = WindowsGPSLocationRecorder()
+    recorder.update_data()
+    latest = recorder.get_latest_db_update()
     ic(latest)
-    ic(collector.get_description())
-    ic('Finished Windows GPS Location Collector')
+    ic(recorder.get_description())
+    ic('Finished Windows GPS Location Recorder')
 
 
 if __name__ == '__main__':

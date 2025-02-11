@@ -1,5 +1,5 @@
 '''
-This is the abstract base class that activity data providers use.
+This is the abstract base class that activity data recorders use.
 
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason
@@ -17,7 +17,6 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
-
 import datetime
 import os
 import sys
@@ -40,7 +39,7 @@ from activity.characteristics import ActivityDataCharacteristics
 # pylint: enable=wrong-import-position
 
 
-class CollectorBase(ABC):
+class RecorderBase(ABC):
     '''
     Abstract base class for activity data providers.
 
@@ -49,7 +48,7 @@ class CollectorBase(ABC):
     '''
 
     @abstractmethod
-    def get_collector_characteristics(self) -> List[ActivityDataCharacteristics]:
+    def get_recorder_characteristics(self) -> List[ActivityDataCharacteristics]:
         '''
         This call returns the characteristics of the data provider.  This is
         intended to be used to help users understand the data provider and to
@@ -60,25 +59,16 @@ class CollectorBase(ABC):
         '''
 
     @abstractmethod
-    def get_collector_name(self) -> str:
+    def get_recorder_name(self) -> str:
         '''Get the name of the provider'''
 
     @abstractmethod
-    def get_provider_id(self) -> uuid.UUID:
-        '''Get the UUID for the provider'''
+    def get_collector_class_model(self) -> dict[str, type]:
+        '''Get the class models for the collector(s) used by this recorder.'''
 
     @abstractmethod
-    def retrieve_data(self, data_id: uuid.UUID) -> Dict:
-        '''
-        This call retrieves the data associated with the provided data_id.
-
-        Args:
-            data_id (uuid.UUID): The UUID that represents the data to be
-            retrieved.
-
-        Returns:
-            Dict: The data associated with the data_id.
-        '''
+    def get_recorder_id(self) -> uuid.UUID:
+        '''Get the UUID for the recorder'''
 
     @abstractmethod
     def get_cursor(self, activity_context: uuid. UUID) -> uuid.UUID:
@@ -113,10 +103,6 @@ class CollectorBase(ABC):
         '''
 
     @abstractmethod
-    def collect_data(self) -> None:
-        '''Collect data from the provider'''
-
-    @abstractmethod
     def process_data(self, data: Any) -> Dict[str, Any]:
         '''Process the collected data'''
 
@@ -124,10 +110,18 @@ class CollectorBase(ABC):
     def store_data(self, data: Dict[str, Any]) -> None:
         '''Store the processed data'''
 
+    @abstractmethod
+    def update_data(self) -> None:
+        '''Update the data in the database'''
+
+    @abstractmethod
+    def get_latest_db_update(self) -> Dict[str, Any]:
+        '''Get the latest data update from the database'''
+
 
 def main():
-    '''This is a test interface for the provider base.'''
-    ic('ProviderBase test interface')
+    '''This is a test interface for the recorder base.'''
+    ic('RecorderBase test interface')
 
 
 if __name__ == '__main__':

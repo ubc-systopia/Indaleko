@@ -18,13 +18,11 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import argparse
-import datetime
 import logging
 import os
 import sys
 
-from abc import abstractmethod
-from typing import List, Dict, Any
+from typing import Any
 
 from icecream import ic
 
@@ -42,30 +40,8 @@ from activity.collectors.base import CollectorBase
 from utils.i_logging import IndalekoLogging
 # pylint: enable=wrong-import-position
 
+
 class LocationCollector(CollectorBase):
-    '''This is a location activity data provider for Indaleko.'''
-
-    @abstractmethod
-    def get_location_name(self) -> Any:
-        '''Get the location'''
-
-    @abstractmethod
-    def get_coordinates(self) -> Dict[str, float]:
-        '''Get the coordinates for the location'''
-
-    @abstractmethod
-    def get_location_history(
-        self,
-        start_time : datetime.datetime,
-        end_time : datetime.datetime) -> List[Dict[str, Any]]:
-        '''Get the location history for the location'''
-
-    @abstractmethod
-    def get_distance(self, location1: Dict[str, float], location2: Dict[str, float]) -> float:
-        '''Get the distance between two locations'''
-
-
-class LocationCollector:
     """
     Base class for location activity data providers.
     """
@@ -80,13 +56,13 @@ class LocationCollector:
         """
         raise NotImplementedError("Subclasses must implement this method")
 
-    def process_data(self, data: Any) -> Dict[str, Any]:
+    def process_data(self, data: Any) -> dict[str, Any]:
         """
         Process the collected data. This method should be implemented by subclasses.
         """
         raise NotImplementedError("Subclasses must implement this method")
 
-    def store_data(self, data: Dict[str, Any]) -> None:
+    def store_data(self, data: dict[str, Any]) -> None:
         """
         Store the processed data. This method should be implemented by subclasses.
         """
@@ -112,8 +88,8 @@ def main():
                         help='Directory for log files')
 
     parser.add_argument('--log', type=str, default=None, help='Log file name')
-    parser.add_argument('--loglevel', type=int, default = logging.DEBUG,
-                        choices= IndalekoLogging.get_logging_levels(),
+    parser.add_argument('--loglevel', type=int, default=logging.DEBUG,
+                        choices=IndalekoLogging.get_logging_levels(),
                         help='Logging level')
     command_subparser = parser.add_subparsers(dest='command', help='Command to execute')
     parser_list = command_subparser.add_parser('list', help='List the data providers available')
@@ -123,8 +99,9 @@ def main():
     parser_list.set_defaults(func=list_data_providers_command)
     parser.set_defaults(func=list_data_providers_command)
     parser.add_argument('--config', type=str, help='Configuration file for the location provider')
-    args=parser.parse_args()
+    args = parser.parse_args()
     args.func(args)
+
 
 if __name__ == '__main__':
     main()

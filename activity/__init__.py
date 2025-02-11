@@ -1,7 +1,6 @@
 '''initializtion logic for the activity context system'''
 
 import os
-import importlib
 import sys
 
 # from icecream import ic
@@ -16,16 +15,22 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from activity.data_model.activity import IndalekoActivityDataModel
-from activity.collectors.base import CollectorBase
-from activity.characteristics import ActivityDataCharacteristics
+from activity.data_model.activity import IndalekoActivityDataModel  # noqa: E402
+from activity.collectors.base import CollectorBase  # noqa: E402
+from activity.characteristics import ActivityDataCharacteristics  # noqa: E402
 # pylint: enable=wrong-import-position
 
 collector_dir = os.path.join(init_path, 'collectors')
 collectors = [
-    x for x in os.listdir(collector_dir) \
-        if os.path.isdir(os.path.join(collector_dir, x))
-        and not x.startswith('_')
+    x for x in os.listdir(collector_dir)
+    if os.path.isdir(os.path.join(collector_dir, x))
+    and not x.startswith('_')
+]
+recorder_dir = os.path.join(init_path, 'recorders')
+recorders = [
+    x for x in os.listdir(recorder_dir)
+    if os.path.isdir(os.path.join(recorder_dir, x))
+    and not x.startswith('_')
 ]
 # ic(collectors)
 

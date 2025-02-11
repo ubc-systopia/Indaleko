@@ -19,8 +19,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
 import os
-import importlib
-import platform
 import sys
 
 # from icecream import ic
@@ -34,12 +32,6 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 # pylint: disable=wrong-import-position
-from activity.collectors.location.location_base import LocationCollector  # noqa: E402
-from activity.collectors.location.ip_location import IPLocation  # noqa: E402
-from activity.collectors.location.tile_location import TileLocation  # noqa: E402
-from activity.collectors.location.wifi_location import WiFiLocation  # noqa: E402
-if platform.system() == 'Windows':
-    WindowsGPSLocation = importlib.import_module('activity.collectors.location.windows_gps_location').WindowsGPSLocation
 # pylint: enable=wrong-import-position
 
 __version__ = '0.1.0'
@@ -52,11 +44,6 @@ __version__ = '0.1.0'
 # globals().update(discovered_plugins)
 
 __all__ = [
-    'LocationCollector',
-    'IPLocation',
-    'TileLocation',
-    'WiFiLocation',
-    'WindowsGPSLocation',
 ]
 
 

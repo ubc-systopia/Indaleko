@@ -24,7 +24,7 @@ import sys
 import uuid
 
 from datetime import datetime, timedelta
-from typing import Union, List, Dict
+from typing import Union, Any
 from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -43,12 +43,14 @@ from activity.collectors.location.data_models.location_data_model import BaseLoc
 from activity.data_model.activity import IndalekoActivityDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 from activity.collectors.base import CollectorBase
+# from activity.collectors.location
 from activity.semantic_attributes import KnownSemanticAttributes
 from activity.characteristics import ActivityDataCharacteristics
+from activity.recorders.base import RecorderBase
 # pylint: enable=wrong-import-position
 
 
-class BaseLocationDataCollector:
+class BaseLocationDataRecorder(RecorderBase):
     '''
     This class provides a common base for location data collectors. Typically a
     location data _collector_ will be associated with a location data
@@ -151,13 +153,13 @@ class BaseLocationDataCollector:
             f'data1 is not a BaseLocationDataModel {type(data1)}'
         assert isinstance(data2, BaseLocationDataModel), \
             f'data2 is not a BaseLocationDataModel {type(data2)}'
-        distance = BaseLocationDataCollector.compute_distance(
+        distance = BaseLocationDataRecorder.compute_distance(
             data1.latitude,
             data1.longitude,
             data2.latitude,
             data2.longitude
         )
-        time_delta = BaseLocationDataCollector.compute_time_difference(data1.timestamp, data2.timestamp)
+        time_delta = BaseLocationDataRecorder.compute_time_difference(data1.timestamp, data2.timestamp)
         return distance > self.min_movement_change_required or \
             time_delta > self.max_time_between_updates
 
@@ -201,7 +203,7 @@ class BaseLocationDataCollector:
     def build_location_activity_document(
         source_data: Union[IndalekoSourceIdentifierDataModel, dict],
         location_data: Union[BaseLocationDataModel, dict],
-        semantic_attributes: List[IndalekoSemanticAttributeDataModel]
+        semantic_attributes: list[IndalekoSemanticAttributeDataModel]
     ) -> dict:
         '''
         This builds a dictionary that can be used to generate the json
@@ -225,7 +227,7 @@ class BaseLocationDataCollector:
             f'source_data is not an IndalekoSourceIdentifierDataModel or dict {type(source_data)}'
         assert isinstance(location_data, BaseLocationDataModel) or isinstance(location_data, dict), \
             f'location_data is not a BaseLocationDataModel or dict {type(location_data)}'
-        assert isinstance(semantic_attributes, List), \
+        assert isinstance(semantic_attributes, list), \
             f'semantic_attributes is not a List {type(semantic_attributes)}'
         if isinstance(location_data, BaseLocationDataModel):
             location_data = json.loads(location_data.model_dump_json())
@@ -267,7 +269,7 @@ class BaseLocationDataCollector:
             then all entries are returned.
 
         Returns:
-            List[Dict]: The data available within the specified time window.
+            list[dict]: The data available within the specified time window.
         '''
         raise NotImplementedError('retrieve_temporal_data is not implemented')
 
@@ -275,14 +277,15 @@ class BaseLocationDataCollector:
     # CollectorBase.  Since many of them involve interacting with the database,
     # we can interact with the provider to interpret and handle the data, while
     # we handle the database interactions.
-    def get_provider_characteristics(self) -> Union[list[ActivityDataCharacteristics], None]:
+    def get_collector_characteristics(self) -> Union[list[ActivityDataCharacteristics], None]:
         '''
         This call returns the characteristics of the data provider.  This is
         intended to be used to help users understand the data provider and to
         help the system understand how to interact with the data provider.
 
         Returns:
-            Dict: A dictionary containing the characteristics of the provider.
+            A list of the characteristics of the provider, or None if there are
+            no characteristics available.
         '''
         if hasattr(self, 'provider'):
             assert isinstance(self.provider, CollectorBase), \
@@ -298,7 +301,7 @@ class BaseLocationDataCollector:
         query interface.
 
         Returns:
-            List[str]: A list of the semantic attributes that the provider
+            list[str]: A list of the semantic attributes that the provider
             supports. Note that these are UUIDs, not the symbolic names.
             None: If no semantic attributes are available.
 
@@ -313,7 +316,7 @@ class BaseLocationDataCollector:
             KnownSemanticAttributes.ACTIVITY_DATA_LOCATION_ACCURACY
         ]
 
-    def get_provider_name(self) -> Union[str, None]:
+    def get_recorder_name(self) -> Union[str, None]:
         '''
         Get the name of the provider
 
@@ -323,10 +326,10 @@ class BaseLocationDataCollector:
         if hasattr(self, 'provider'):
             assert isinstance(self.provider, CollectorBase), \
                 f'provider is not an CollectorBase {type(self.provider)}'
-            return self.provider.get_collectorr_name()
+            return self.provider.get_collector_name()
         return None
 
-    def get_provider_id(self) -> Union[uuid.UUID, None]:
+    def get_recorder_id(self) -> Union[uuid.UUID, None]:
         '''Get the UUID for the provider'''
         if hasattr(self, 'provider'):
             assert isinstance(self.provider, CollectorBase), \
@@ -334,7 +337,7 @@ class BaseLocationDataCollector:
             return self.provider.get_provider_id()
         return None
 
-    def retrieve_data(self, data_id: uuid.UUID) -> Union[Dict, None]:
+    def retrieve_data(self, data_id: uuid.UUID) -> Union[dict, None]:
         '''
         This call retrieves the data associated with the provided data_id.
 
@@ -430,3 +433,31 @@ class BaseLocationDataCollector:
                 f'provider is not an CollectorBase {type(self.provider)}'
             return self.provider.get_cursor(activity_context)
         return None
+
+    def get_recorder_characteristics(self) -> list[ActivityDataCharacteristics]:
+        raise NotImplementedError('get_recorder_characteristics is not implemented')
+
+    def get_collector_class_model(self) -> list[type]:
+        raise NotImplementedError('get_collector_class_model is not implemented')
+
+    def process_data(self, data: Any) -> dict[str, Any]:
+        raise NotImplementedError('process_data is not implemented')
+
+    def store_data(self, data: dict[str, Any]) -> None:
+        raise NotImplementedError('store_data is not implemented')
+
+    def update_data(self) -> None:
+        raise NotImplementedError('update_data is not implemented')
+
+    def get_latest_db_update(self) -> dict[str, Any]:
+        raise NotImplementedError('get_latest_db_update is not implemented')
+
+
+def main():
+    '''Main function for the base location data recorder testing.'''
+    ldr = BaseLocationDataRecorder()
+    ic(ldr)
+
+
+if __name__ == '__main__':
+    main()
