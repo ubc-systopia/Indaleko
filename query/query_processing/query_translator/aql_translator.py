@@ -32,8 +32,13 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+from activity.recorders.registration_service import IndalekoActivityDataRegistrationService
 from db import IndalekoDBConfig
+from db.db_collection_metadata import IndalekoDBCollectionsMetadata
+from query.query_processing.data_models.collection_info import CollectionInfo
+from query.query_processing.data_models.query_output import LLMQueryResponse
 from query.query_processing.query_translator.translator_base import TranslatorBase
+from query.llm_base import IndalekoLLMBase
 # pylint: enable=wrong-import-position
 
 
@@ -42,13 +47,23 @@ class AQLTranslator(TranslatorBase):
     Translator for converting parsed queries to AQL (ArangoDB Query Language).
     """
 
+    def __init__(self, db: IndalekoDBConfig = IndalekoDBConfig()):
+        """
+        Initialize the AQL translator.
+
+        Args:
+            db (IndalekoDBConfig): The database configuration
+        """
+        self.db = db
+        self.collections_metadata = IndalekoDBCollectionsMetadata(db)
+
     def translate(
             self,
             parsed_query: dict[str, Any],
             selected_md_attributes: dict[str, Any],
             additional_notes: str,
             n_truth: int,
-            llm_connector: Any,
+            llm_connector: IndalekoLLMBase,
             db: IndalekoDBConfig = IndalekoDBConfig()
     ) -> str:
         """
@@ -63,14 +78,12 @@ class AQLTranslator(TranslatorBase):
         """
         # Use the LLM to help generate the AQL query
         prompt = self._create_translation_prompt2(parsed_query, selected_md_attributes, additional_notes, n_truth)
-        aql_query = llm_connector.generate_query(prompt)
 
         ic('translate')
-        aql_statement = aql_query.message.content
-        assert self.validate_query(aql_statement), "Generated AQL query is invalid"
-        aql_statement = aql_statement[aql_statement.index('FOR'):]  # trim preamble
-        assert aql_statement.endswith('```'), "Code block not found at the end of the generated AQL query"
-        aql_statement = aql_statement[:aql_statement.rindex('```')-1]  # trim postamble
+        query_response = llm_connector.generate_query(prompt)
+        assert isinstance(query_response, LLMQueryResponse)
+        aql_statement = query_response.aql_query
+        assert self.validate_query(aql_statement), f"Generated AQL query is invalid: {aql_statement}"
         ic(aql_statement)
         return self.optimize_query(aql_statement)
 
@@ -206,6 +219,44 @@ class AQLTranslator(TranslatorBase):
             'user': user_prompt
         }
 
+    def _get_collection_data(
+            self,
+            db: IndalekoDBConfig = IndalekoDBConfig()
+    ) -> dict[str, CollectionInfo]:
+        '''
+        Extract important information from the database and return it.
+        Note that this probably should be moved out of the query
+        translator.
+        '''
+        collection_data = {}
+        for provider in IndalekoActivityDataRegistrationService.get_provider_list():
+            collection_name = IndalekoActivityDataRegistrationService.\
+                lookup_activity_provider_collection(provider['Identifier'])
+            collection_metadata = IndalekoDBCollectionsMetadata().get_collection_metadata(collection_name)
+            indexed_fields = []
+            for index in collection_metadata.IndexedFields:
+                for field in index.Fields:
+                    indexed_fields.append(field)
+            collection_data[collection_name] = CollectionInfo(
+                Name=collection_name,
+                Description=collection_metadata.Description,
+                IndexedFields=indexed_fields,
+                Indices=[indexed_field.Name for indexed_field in collection_metadata.IndexedFields],
+                Schema=collection_metadata.Schema,
+                QueryGuidelines=collection_metadata.QueryGuidelines,
+                RelevantQueries=collection_metadata.RelevantQueries,
+            )
+
+        ic(activity_providers)
+        activity_collections = [
+            IndalekoActivityDataRegistrationService.lookup_activity_provider_collection(provider['Identifier'])
+            for provider in activity_providers
+        ]
+        ic(activity_collections[0].collection_name)
+        collection_name = activity_collections[0].collection_name
+        collection_metadata = IndalekoDBCollectionsMetadata().get_collection_metadata(collection_name)
+        ic(collection_metadata)
+
     def _generate_collection_mapping(
             self,
             db: IndalekoDBConfig = IndalekoDBConfig()
@@ -219,13 +270,15 @@ class AQLTranslator(TranslatorBase):
         Returns:
             dict[str, str]: A mapping of keywords to their relevant collections.
         """
+        self._get_collection_data(db)
+        exit(0)
         collection_mapping = {}
 
         # Fetch all collection metadata from CollectionMetadata
-        cursor = db.db_config.db.aql.execute("FOR doc IN CollectionMetadata RETURN doc")
+        cursor = db.db.aql.execute("FOR doc IN CollectionMetadata RETURN doc")
 
         for doc in cursor:
-            collection_name = doc["Name"]
+            collection_name = doc['_key']
             description = doc["Description"].lower()  # Normalize text for matching
 
             # Identify potential keywords for this collection
@@ -236,6 +289,12 @@ class AQLTranslator(TranslatorBase):
                 if keyword not in collection_mapping:
                     collection_mapping[keyword] = collection_name
 
+        collection_mapping = {
+            'file': 'Objects',
+            'files': 'Objects',
+            'directory': 'Objects',
+            'directories': 'Objects',
+        }
         return collection_mapping
 
     def _determine_relevant_collections(
@@ -305,12 +364,14 @@ class AQLTranslator(TranslatorBase):
         """
         Constructs a structured prompt for the LLM to generate an AQL query.
         """
+        ic(parsed_query.keys())
 
         relevant_collections = self._determine_relevant_collections(parsed_query, selected_md_attributes)
+        ic(relevant_collections)
 
         # Fetch schema details for relevant collections
         schema_descriptions = "\n".join([
-            f"- **{col}**: {parsed_query['schema'][col]['description']}\n"
+            f"- **{col}**: {parsed_query['schema'][col]['rule']['description']}\n"
             f"  Indexed Fields: {', '.join(parsed_query['schema'][col].get('indexed_fields', []))}"
             for col in relevant_collections
         ])

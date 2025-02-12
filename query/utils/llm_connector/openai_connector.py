@@ -1,18 +1,45 @@
-#!/usr/bin/env python3
+'''
+This module defines the base data model for semantic metadata recorders.
 
-from typing import Dict, Any, List, Union
-from .llm_base import LLMBase
+Project Indaleko
+Copyright (C) 2024-2025 Tony Mason
 
-from enum import Enum
-from pydantic import BaseModel
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-from icecream import ic
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+'''
+
+import json
+import os
+import sys
 
 import openai
-from openai import OpenAI
+from icecream import ic
+from typing import List
+
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+# pylint: disable=wrong-import-position
+from query.query_processing.data_models.query_output import LLMQueryResponse
+from query.llm_base import IndalekoLLMBase
+# pylint: enable=wrong-import-position
 
 
-class OpenAIConnector(LLMBase):
+class OpenAIConnector(IndalekoLLMBase):
     """
     Connector for OpenAI's language models.
     """
@@ -28,7 +55,7 @@ class OpenAIConnector(LLMBase):
         self.model = model
         self.client = openai.OpenAI(api_key=api_key)
 
-    def generate_query(self, prompt: str, temperature=0) -> str:
+    def generate_query(self, prompt: str, temperature=0) -> LLMQueryResponse:
         """
         Generate a query using OpenAI's model.
 
@@ -39,23 +66,33 @@ class OpenAIConnector(LLMBase):
             str: The generated query
         """
         ic('Submitting prompt to OpenAI')
+        response_schema = LLMQueryResponse.model_json_schema()
         completion = self.client.beta.chat.completions.parse(
             model='gpt-4o',
             messages=[
                 {
-                    "role" : "system",
+                    "role": "system",
                     "content": prompt['system']
                 },
                 {
-                    'role' : 'user',
-                    'content' : prompt['user']
+                    'role': 'user',
+                    'content': prompt['user']
                 }
             ],
-            temperature = temperature
+            temperature=temperature,
+            # response_format=OpenAIQueryResponse
+            response_format={
+                'type':  'json_schema',
+                'json_schema': {
+                    'name': 'OpenAIQueryResponse',
+                    'schema': response_schema
+                }
+            }
         )
         ic('Received response from OpenAI')
-        ic(completion.choices)
-        return completion.choices[0]
+        doc = json.loads(completion.choices[0].message.content)
+        response = LLMQueryResponse(**doc)
+        return response
 
     def summarize_text(self, text: str, max_length: int = 100) -> str:
         """
@@ -139,8 +176,14 @@ class OpenAIConnector(LLMBase):
         response = openai.ChatCompletion.create(
             model=self.model,
             messages=[
-                {"role": "system", "content": "You are a helpful assistant that answers questions based on provided context."},
-                {"role": "user", "content": prompt}
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant that answers questions based on provided context."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
             ]
         )
         return response.choices[0].message['content'].strip()

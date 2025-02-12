@@ -74,15 +74,14 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         config_file_path = os.path.join(config_data['ConfigDirectory'], config_data['DBConfigFile'])
         self.db_config = IndalekoDBConfig(config_file=config_file_path)
         self.openai_key = self.get_api_key()
-        self.nl_parser = NLParser()
+        self.llm_connector = OpenAIConnector(api_key=self.openai_key)
+        self.nl_parser = NLParser(llm_connector=self.llm_connector)
         self.query_translator = AQLTranslator()
         self.query_history = QueryHistory()
         self.query_executor = AQLExecutor()
         self.metadata_analyzer = MetadataAnalyzer()
         self.facet_generator = FacetGenerator()
         self.result_ranker = ResultRanker()
-        self.openai_key = self.get_api_key()
-        self.llm_connector = OpenAIConnector(api_key=self.openai_key)
         self.prompt = 'Indaleko Search> '
         self.schema = self.build_schema_table()
 

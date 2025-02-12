@@ -22,7 +22,7 @@ import json
 import os
 import sys
 
-from typing import Union
+from typing import Union, Any
 from pydantic import Field
 
 # from icecream import ic
@@ -76,6 +76,12 @@ class IndalekoCollectionMetadataDataModel(IndalekoBaseModel):
         description='Guidelines for querying this collection',
     )
 
+    Schema: dict[str, Any] = Field(
+        ...,
+        Name='Schema',
+        description='The schema for the collection',
+    )
+
     def serialize(self) -> dict[str, str]:
         '''Serialize the data model to a dictionary.'''
         data = json.loads(
@@ -115,7 +121,8 @@ class IndalekoCollectionMetadataDataModel(IndalekoBaseModel):
                     "_key"
                 ],
                 "IndexedFields": [],
-                "QueryGuidelines": "Please use the primary key for queries"
+                "QueryGuidelines": "Please use the primary key for queries",
+                "Schema": IndalekoCollectionIndexDataModel.Config.json_schema_extra,
             }
         }
 
