@@ -17,9 +17,9 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # pylint: disable=wrong-import-position
 from db.collection import IndalekoCollection  # noqa: E402
 from db.collection_index import IndalekoCollectionIndex  # noqa: E402
-from db.i_collections import IndalekoCollections    # noqa: E402
 from db.db_config import IndalekoDBConfig  # noqa: E402
 from db.db_collections import IndalekoDBCollections  # noqa: E402
+from db.i_collections import IndalekoCollections    # noqa: E402
 from db.service_manager import IndalekoServiceManager  # noqa: E402
 # pylint: enable=wrong-import-position
 

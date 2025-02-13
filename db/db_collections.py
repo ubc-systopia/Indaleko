@@ -34,10 +34,12 @@ from data_models import \
     IndalekoIdentityDomainDataModel, \
     IndalekoObjectDataModel, \
     IndalekoMachineConfigDataModel, \
+    IndalekoNamedEntityDataModel, \
+    IndalekoPerformanceDataModel, \
+    IndalekoQueryHistoryDataModel, \
     IndalekoRelationshipDataModel, \
     IndalekoServiceDataModel, \
-    IndalekoUserDataModel, \
-    IndalekoPerformanceDataModel
+    IndalekoUserDataModel
 
 from activity import IndalekoActivityDataModel
 from semantic.data_models.base_data_model import BaseSemanticDataModel
@@ -61,9 +63,8 @@ class IndalekoDBCollections:
     Indaleko_User_Relationship_Collection = 'UserRelationships'
     Indaleko_Performance_Data_Collection = 'PerformanceData'
     Indaleko_Query_History_collection = 'QueryHistory'
-
     Indaleko_Semantic_Data_Collection = 'SemanticData'
-    Indaleko_Named_Entity_Recognition_Collection = 'NamedEntityRecognition'
+    Named_Entity_Collection = 'NamedEntities'
     Indaleko_Collection_Metadata = 'CollectionMetadata'
 
     Collections = {
@@ -205,16 +206,31 @@ class IndalekoDBCollections:
         },
         Indaleko_Query_History_collection: {
             'internal': False,
-            'schema': None,
+            'schema': IndalekoQueryHistoryDataModel.get_arangodb_schema(),
             'edge': False,
             'indices': {
             }
         },
-        Indaleko_Named_Entity_Recognition_Collection: {
+        Named_Entity_Collection: {
             'internal': False,
-            'schema': None,
+            'schema': IndalekoNamedEntityDataModel.get_arangodb_schema(),
             'edge': False,
             'indices': {
+                'Name': {
+                    'fields': ['name'],
+                    'unique': True,
+                    'type': 'persistent'
+                },
+                'Location': {
+                    'fields': ['gis_location'],
+                    'unique': False,
+                    'type': 'geo'
+                },
+                'Device': {
+                    'fields': ['device_id'],
+                    'unique': True,
+                    'type': 'persistent'
+                }
             }
         },
         Indaleko_Collection_Metadata: {

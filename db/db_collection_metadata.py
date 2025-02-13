@@ -35,6 +35,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # pylint: disable=wrong-import-position
 from activity.recorders.registration_service import IndalekoActivityDataRegistrationService
 from db import IndalekoDBConfig, IndalekoDBCollections
+from data_models.collection_info import CollectionInfo
 from data_models.collection_metadata_data_model import IndalekoCollectionMetadataDataModel
 from data_models.db_index import IndalekoCollectionIndexDataModel
 from utils import IndalekoSingleton
@@ -72,8 +73,9 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
             if collection['name'] not in self._collection_handlers:  # handlers can add more information
                 continue  # Done with this collection
             ic(f'Processing additional data for collection {collection["name"]}')
-            self.collections_additional_data[collection['name']] = \
-                self._collection_handlers[collection['name']](collection['name'])
+            assert collection['name'] in self._collection_handlers, \
+                f'Failed to find handler for collection {collection["name"]}'
+            self._collection_handlers[collection['name']](self)
 
     def generate_new_collection_metadata(self, name: str) -> IndalekoCollectionMetadataDataModel:
         '''Generate a new collection metadata object.'''
@@ -121,10 +123,54 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
             entry['Schema'] = {}
         return IndalekoCollectionMetadataDataModel.deserialize(entry)
 
-    @staticmethod
-    def __activity_data_provider_collection_handler(
-        collection_name: str
-    ) -> Union[IndalekoCollectionMetadataDataModel, None]:
+    def get_all_collections_metadata(self) -> dict[str, IndalekoCollectionMetadataDataModel]:
+        '''
+        Get the metadata for all collections.
+
+        Note: this does not cache data, callers may wish to do so.
+        '''
+        collection_data = {}
+        for name, data in self.collections_metadata.items():
+            indexed_fields = []
+            for index in data.IndexedFields:
+                for field in index.Fields:
+                    indexed_fields.append(field)
+            ic(data.Schema)
+            collection_data[name] = CollectionInfo(
+                Name=name,
+                Description=data.Description,
+                IndexedFields=indexed_fields,
+                Indices=[indexed_field.Name for indexed_field in data.IndexedFields],
+                Schema=data.Schema,
+                QueryGuidelines=data.QueryGuidelines,
+                RelevantQueries=data.RelevantQueries,
+            )
+        return collection_data
+
+    def foo(self):
+        collection_data = {}
+        for provider in IndalekoActivityDataRegistrationService.get_provider_list():
+            collection_name = IndalekoActivityDataRegistrationService.\
+                lookup_activity_provider_collection(provider['Identifier'])
+            ic(collection_name)
+            ic(collection_name.name)
+            collection_metadata = self.get_collection_metadata(collection_name.name)
+            indexed_fields = []
+            for index in collection_metadata.IndexedFields:
+                for field in index.Fields:
+                    indexed_fields.append(field)
+            collection_data[collection_name] = CollectionInfo(
+                Name=collection_name.name,
+                Description=collection_metadata.Description,
+                IndexedFields=indexed_fields,
+                Indices=[indexed_field.Name for indexed_field in collection_metadata.IndexedFields],
+                Schema=collection_metadata.Schema,
+                QueryGuidelines=collection_metadata.QueryGuidelines,
+                RelevantQueries=collection_metadata.RelevantQueries,
+            )
+        return collection_data
+
+    def __activity_data_provider_collection_handler(self) -> None:
         '''Handle the activity data provider collection.'''
         ic('Need to implement the activity data provider collection handler')
         collection_data = {}
@@ -134,14 +180,7 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
             collection = IndalekoActivityDataRegistrationService.\
                 lookup_activity_provider_collection(provider['Identifier'])
             collection_metadata = collections_metadata.get_collection_metadata(collection.name)
-            collection_data[collection_name] = IndalekoCollectionMetadataDataModel(
-                key=collection_name,
-                Description=collection_metadata.Description,
-                RelevantQueries=collection_metadata.RelevantQueries,
-                IndexedFields=collection_metadata.IndexedFields,
-                QueryGuidelines=collection_metadata.QueryGuidelines,
-                Schema=collection_metadata.Schema,
-            )
+            self.collections_metadata[collection.name] = collection_metadata
         return collection_data
 
     _collection_handlers = {

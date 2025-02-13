@@ -24,6 +24,7 @@ import sys
 
 # from icecream import ic
 from pydantic import BaseModel
+from typing import Any
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -42,6 +43,6 @@ class CollectionInfo(BaseModel):
     Description: str
     IndexedFields: list[str]
     Indices: list[str]
-    Schema: dict[str, str]
+    Schema: dict[str, Any]
     QueryGuidelines: str
     RelevantQueries: list[str]

@@ -39,27 +39,32 @@ from platforms.data_models.software import Software as software
 from platforms.data_models.hardware import Hardware as hardware
 # pylint: enable=wrong-import-position
 
+
 class IndalekoMachineConfigDataModel(IndalekoBaseModel):
     '''
     This class defines the data model for the MachineConfig collection.
     '''
-    Record : IndalekoRecordDataModel = Field(...,
-                                    title='Record',
-                                    description='The record associated with the object.')
+    Record: IndalekoRecordDataModel = Field(
+        ...,
+        title='Record',
+        description='The record associated with the object.'
+    )
 
-    Captured : IndalekoTimestampDataModel = \
+    Captured: IndalekoTimestampDataModel = \
         Field(...,
               title='Captured',
               description='The timestamp of when this data was captured.')
 
-    Hardware : hardware = \
+    Hardware: hardware = \
         Field(...,
               title='Hardware',
               description='The hardware information for the machine.')
 
-    Software : software = Field(...,
-                                title='Software',
-                                description='The software information for the machine.')
+    Software: software = Field(
+        ...,
+        title='Software',
+        description='The software information for the machine.'
+    )
 
     class Config:
         '''Configuration for the machine config data model'''
@@ -72,10 +77,12 @@ class IndalekoMachineConfigDataModel(IndalekoBaseModel):
             }
         }
 
+
 def main():
     '''Main function for the machine config data model'''
     ic('Testing Machine Config Data Model')
     IndalekoMachineConfigDataModel.test_model_main()
+
 
 if __name__ == '__main__':
     main()
