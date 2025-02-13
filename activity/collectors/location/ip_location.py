@@ -3,7 +3,6 @@
 import datetime
 import ipaddress
 import os
-import platform
 import requests
 import sys
 import uuid
@@ -27,6 +26,7 @@ from activity.characteristics import ActivityDataCharacteristics
 from activity.collectors.location.data_models.ip_location_data_model import IPLocationDataModel
 # pylint: enable=wrong-import-position
 
+
 class IPLocation(LocationCollector):
     '''This is the IP Location Service'''
     def __init__(self):
@@ -38,15 +38,14 @@ class IPLocation(LocationCollector):
         self.ip_location_data = self.get_ip_location_data()
         self.location_data = self.map_ip_location_data_to_data_model(self.ip_location_data)
 
-
     @staticmethod
-    def capture_public_ip_address(timeout : int = 10) -> str:
+    def capture_public_ip_address(timeout: int = 10) -> str:
         '''Capture the public IP address'''
         response = requests.get('https://api.ipify.org?format=json', timeout=timeout)
         data = response.json()
         return data.get('ip')
 
-    def map_ip_location_data_to_data_model(self, location_data : dict) -> IPLocationDataModel:
+    def map_ip_location_data_to_data_model(self, location_data: dict) -> IPLocationDataModel:
         '''Map the IP location data to the data model'''
         # start with the required fields
         if 'ip_address' in location_data:
@@ -130,14 +129,14 @@ class IPLocation(LocationCollector):
         raise NotImplementedError('This method is not implemented yet.')
 
     def retrieve_temporal_data(self,
-                               reference_time : datetime.datetime,
-                               prior_time_window : datetime.timedelta,
-                               subsequent_time_window : datetime.timedelta,
-                               max_entries : int = 0) -> List[Dict]:
+                               reference_time: datetime.datetime,
+                               prior_time_window: datetime.timedelta,
+                               subsequent_time_window: datetime.timedelta,
+                               max_entries: int = 0) -> List[Dict]:
         '''Retrieve temporal data from the provider'''
         raise NotImplementedError('This method is not implemented yet.')
 
-    def get_cursor(self, activity_context : uuid. UUID) -> uuid.UUID:
+    def get_cursor(self, activity_context: uuid. UUID) -> uuid.UUID:
         '''Retrieve the current cursor for this data provider
            Input:
                 activity_context: the activity context into which this cursor is
@@ -182,14 +181,16 @@ class IPLocation(LocationCollector):
 
     def get_location_history(
         self,
-        start_time : datetime.datetime,
-        end_time : datetime.datetime) -> List[Dict[str, Any]]:
+        start_time: datetime.datetime,
+        end_time: datetime.datetime
+    ) -> List[Dict[str, Any]]:
         '''Get the location history for the location'''
         return []
 
     def get_distance(self, location1: Dict[str, float], location2: Dict[str, float]) -> float:
         '''Get the distance between two locations'''
         raise NotImplementedError('This method is not implemented yet.')
+
 
 def main():
     '''This is the interface for testing the foo.py module.'''
@@ -205,6 +206,7 @@ def main():
     ic(location.ip_address)
     ic(location.ip_location_data)
     ic(location.location_data.json())
+
 
 if __name__ == '__main__':
     main()

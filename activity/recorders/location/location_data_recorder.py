@@ -24,7 +24,7 @@ import sys
 import uuid
 
 from datetime import datetime, timedelta
-from typing import Union, Any
+from typing import Union, List, Dict
 from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -39,7 +39,7 @@ from Indaleko import Indaleko
 from db import IndalekoDBConfig, IndalekoCollection
 from data_models.record import IndalekoRecordDataModel
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
-from activity.collectors.location.data_models.location_data_model import BaseLocationDataModel
+from data_models.location_data_model import BaseLocationDataModel
 from activity.data_model.activity import IndalekoActivityDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 from activity.collectors.base import CollectorBase
@@ -203,7 +203,7 @@ class BaseLocationDataRecorder(RecorderBase):
     def build_location_activity_document(
         source_data: Union[IndalekoSourceIdentifierDataModel, dict],
         location_data: Union[BaseLocationDataModel, dict],
-        semantic_attributes: list[IndalekoSemanticAttributeDataModel]
+        semantic_attributes: List[IndalekoSemanticAttributeDataModel]
     ) -> dict:
         '''
         This builds a dictionary that can be used to generate the json
@@ -227,7 +227,7 @@ class BaseLocationDataRecorder(RecorderBase):
             f'source_data is not an IndalekoSourceIdentifierDataModel or dict {type(source_data)}'
         assert isinstance(location_data, BaseLocationDataModel) or isinstance(location_data, dict), \
             f'location_data is not a BaseLocationDataModel or dict {type(location_data)}'
-        assert isinstance(semantic_attributes, list), \
+        assert isinstance(semantic_attributes, List), \
             f'semantic_attributes is not a List {type(semantic_attributes)}'
         if isinstance(location_data, BaseLocationDataModel):
             location_data = json.loads(location_data.model_dump_json())
@@ -269,7 +269,7 @@ class BaseLocationDataRecorder(RecorderBase):
             then all entries are returned.
 
         Returns:
-            list[dict]: The data available within the specified time window.
+            List[Dict]: The data available within the specified time window.
         '''
         raise NotImplementedError('retrieve_temporal_data is not implemented')
 
@@ -277,15 +277,14 @@ class BaseLocationDataRecorder(RecorderBase):
     # CollectorBase.  Since many of them involve interacting with the database,
     # we can interact with the provider to interpret and handle the data, while
     # we handle the database interactions.
-    def get_collector_characteristics(self) -> Union[list[ActivityDataCharacteristics], None]:
+    def get_provider_characteristics(self) -> Union[list[ActivityDataCharacteristics], None]:
         '''
         This call returns the characteristics of the data provider.  This is
         intended to be used to help users understand the data provider and to
         help the system understand how to interact with the data provider.
 
         Returns:
-            A list of the characteristics of the provider, or None if there are
-            no characteristics available.
+            Dict: A dictionary containing the characteristics of the provider.
         '''
         if hasattr(self, 'provider'):
             assert isinstance(self.provider, CollectorBase), \
@@ -301,7 +300,7 @@ class BaseLocationDataRecorder(RecorderBase):
         query interface.
 
         Returns:
-            list[str]: A list of the semantic attributes that the provider
+            List[str]: A list of the semantic attributes that the provider
             supports. Note that these are UUIDs, not the symbolic names.
             None: If no semantic attributes are available.
 
@@ -316,7 +315,7 @@ class BaseLocationDataRecorder(RecorderBase):
             KnownSemanticAttributes.ACTIVITY_DATA_LOCATION_ACCURACY
         ]
 
-    def get_recorder_name(self) -> Union[str, None]:
+    def get_provider_name(self) -> Union[str, None]:
         '''
         Get the name of the provider
 
@@ -326,10 +325,10 @@ class BaseLocationDataRecorder(RecorderBase):
         if hasattr(self, 'provider'):
             assert isinstance(self.provider, CollectorBase), \
                 f'provider is not an CollectorBase {type(self.provider)}'
-            return self.provider.get_collector_name()
+            return self.provider.get_collectorr_name()
         return None
 
-    def get_recorder_id(self) -> Union[uuid.UUID, None]:
+    def get_provider_id(self) -> Union[uuid.UUID, None]:
         '''Get the UUID for the provider'''
         if hasattr(self, 'provider'):
             assert isinstance(self.provider, CollectorBase), \
@@ -337,7 +336,7 @@ class BaseLocationDataRecorder(RecorderBase):
             return self.provider.get_provider_id()
         return None
 
-    def retrieve_data(self, data_id: uuid.UUID) -> Union[dict, None]:
+    def retrieve_data(self, data_id: uuid.UUID) -> Union[Dict, None]:
         '''
         This call retrieves the data associated with the provided data_id.
 
@@ -433,31 +432,3 @@ class BaseLocationDataRecorder(RecorderBase):
                 f'provider is not an CollectorBase {type(self.provider)}'
             return self.provider.get_cursor(activity_context)
         return None
-
-    def get_recorder_characteristics(self) -> list[ActivityDataCharacteristics]:
-        raise NotImplementedError('get_recorder_characteristics is not implemented')
-
-    def get_collector_class_model(self) -> list[type]:
-        raise NotImplementedError('get_collector_class_model is not implemented')
-
-    def process_data(self, data: Any) -> dict[str, Any]:
-        raise NotImplementedError('process_data is not implemented')
-
-    def store_data(self, data: dict[str, Any]) -> None:
-        raise NotImplementedError('store_data is not implemented')
-
-    def update_data(self) -> None:
-        raise NotImplementedError('update_data is not implemented')
-
-    def get_latest_db_update(self) -> dict[str, Any]:
-        raise NotImplementedError('get_latest_db_update is not implemented')
-
-
-def main():
-    '''Main function for the base location data recorder testing.'''
-    ldr = BaseLocationDataRecorder()
-    ic(ldr)
-
-
-if __name__ == '__main__':
-    main()

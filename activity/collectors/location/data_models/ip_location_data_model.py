@@ -22,10 +22,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 from typing import Optional, Union
 from ipaddress import IPv4Address, IPv6Address
-from datetime import datetime
 from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -35,7 +34,10 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
-from activity.collectors.location.data_models.location_data_model import BaseLocationDataModel
+# pylint: disable=wrong-import-position
+from data_models.location_data_model import BaseLocationDataModel
+# pylint: enable=wrong-import-position
+
 
 class IPLocationDataModel(BaseLocationDataModel):
     '''This is the data model for the ip location service.'''
@@ -50,7 +52,6 @@ class IPLocationDataModel(BaseLocationDataModel):
     org: Optional[str] = Field(None, description="Organization associated with the IP address")
     as_name: Optional[str] = Field(None, description="Autonomous System (AS) associated with the IP address")
     timezone: Optional[str] = Field(None, description="Timezone of the inferred location")
-
 
     class Config:
         json_schema_extra = {
@@ -88,6 +89,7 @@ def main():
     data_check = IPLocationDataModel.deserialize(serial_data)
     assert data_check == data
     ic(IPLocationDataModel.get_arangodb_schema())
+
 
 if __name__ == '__main__':
     main()

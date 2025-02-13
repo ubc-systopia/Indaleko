@@ -23,8 +23,8 @@ import sys
 
 from pydantic import Field
 from typing import Optional
-from datetime import datetime
-from icecream import ic
+
+# from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -33,9 +33,12 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
-from data_models.base import IndalekoBaseModel
+# pylint: disable=wrong-import-position
+from data_models.location_data_model import BaseLocationDataModel
+# pylint: enable=wrong-import-position
 
-class WindowsGPSLocationSatelliteDataModel(IndalekoBaseModel):
+
+class WindowsGPSLocationSatelliteDataModel(BaseLocationDataModel):
     geometric_dilution_of_precision: Optional[float]\
         = Field(None, description="Geometric dilution of precision")
     horizontal_dilution_of_precision: Optional[float]\
@@ -62,6 +65,7 @@ class WindowsGPSLocationSatelliteDataModel(IndalekoBaseModel):
 def main():
     '''This allows testing the data model.'''
     WindowsGPSLocationSatelliteDataModel.test_model_main()
+
 
 if __name__ == '__main__':
     main()

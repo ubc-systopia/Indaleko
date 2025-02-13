@@ -24,7 +24,7 @@ import uuid
 
 from typing import List, Dict, Any
 
-from icecream import ic
+# from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -39,6 +39,7 @@ from activity.characteristics import ActivityDataCharacteristics
 from activity.collectors.location.data_models.wifi_location_data_model import WiFiLocationDataModel
 # pylint: enable=wrong-import-position
 
+
 class WiFiLocation(LocationCollector):
     '''This is the IP Location Service'''
     def __init__(self):
@@ -46,6 +47,7 @@ class WiFiLocation(LocationCollector):
         self._name = 'WiFi Location Service'
         self._location = 'WiFi Location'
         self._provider_id = uuid.UUID('a6647dfc-de28-4f89-82ca-d61b775a4c15')
+        self.wifi_data = WiFiLocationDataModel()
 
     def get_collector_characteristics(self) -> List[ActivityDataCharacteristics]:
         '''Get the provider characteristics'''
@@ -69,14 +71,14 @@ class WiFiLocation(LocationCollector):
         raise NotImplementedError('This method is not implemented yet.')
 
     def retrieve_temporal_data(self,
-                               reference_time : datetime.datetime,
-                               prior_time_window : datetime.timedelta,
-                               subsequent_time_window : datetime.timedelta,
-                               max_entries : int = 0) -> List[Dict]:
+                               reference_time: datetime.datetime,
+                               prior_time_window: datetime.timedelta,
+                               subsequent_time_window: datetime.timedelta,
+                               max_entries: int = 0) -> List[Dict]:
         '''Retrieve temporal data from the provider'''
         raise NotImplementedError('This method is not implemented yet.')
 
-    def get_cursor(self, activity_context : uuid. UUID) -> uuid.UUID:
+    def get_cursor(self, activity_context: uuid. UUID) -> uuid.UUID:
         '''Retrieve the current cursor for this data provider
            Input:
                 activity_context: the activity context into which this cursor is
@@ -121,8 +123,9 @@ class WiFiLocation(LocationCollector):
 
     def get_location_history(
         self,
-        start_time : datetime.datetime,
-        end_time : datetime.datetime) -> List[Dict[str, Any]]:
+        start_time: datetime.datetime,
+        end_time: datetime.datetime
+    ) -> List[Dict[str, Any]]:
         '''Get the location history for the location'''
         return []
 
@@ -130,10 +133,10 @@ class WiFiLocation(LocationCollector):
         '''Get the distance between two locations'''
         raise NotImplementedError('This method is not implemented yet.')
 
+
 def main():
     '''This is the interface for testing the foo.py module.'''
 
+
 if __name__ == '__main__':
     main()
-
-

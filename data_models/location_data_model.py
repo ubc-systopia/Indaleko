@@ -18,13 +18,13 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
-import os 
+import os
 import sys
 
 from typing import Optional
 from datetime import datetime, timezone
 
-from pydantic import  Field, field_validator, AwareDatetime
+from pydantic import Field, field_validator, AwareDatetime
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -58,7 +58,6 @@ class BaseLocationDataModel(IndalekoBaseModel):
             value = value.replace(tzinfo=timezone.utc)
         return value
 
-
     class Config:
         json_schema_extra = {
             "example": {
@@ -73,10 +72,11 @@ class BaseLocationDataModel(IndalekoBaseModel):
             }
         }
 
+
 def main():
     '''This allows testing the data model'''
     BaseLocationDataModel.test_model_main()
 
+
 if __name__ == '__main__':
     main()
-

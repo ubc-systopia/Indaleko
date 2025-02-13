@@ -21,10 +21,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
-from pydantic import  Field, field_validator, AwareDatetime
+from pydantic import Field, field_validator, AwareDatetime
 from typing import Optional
 from datetime import datetime, timezone
-from icecream import ic
+# from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -33,7 +33,10 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
-from activity.collectors.location.data_models.location_data_model import BaseLocationDataModel
+# pylint: disable=wrong-import-position
+from data_models.location_data_model import BaseLocationDataModel
+# pylint: enable=wrong-import-position
+
 
 class TileLocationDataModel(BaseLocationDataModel):
     '''
@@ -61,18 +64,18 @@ class TileLocationDataModel(BaseLocationDataModel):
         'voip_state' # state of the voip connection (only seen 'OFFLINE')
     '''
     tile_id: str = Field(..., description="Unique identifier for the Tile device")
-    archetype : Optional[str] = Field(None, description="Archetype of the Tile device")
-    dead : bool = Field(False, description="Boolean indicating if the Tile device is dead")
+    archetype: Optional[str] = Field(None, description="Archetype of the Tile device")
+    dead: bool = Field(False, description="Boolean indicating if the Tile device is dead")
     firmware_version: Optional[str] = Field(None, description="Version of the firmware")
     hardware_version: Optional[str] = Field(None, description="Version of the hardware")
     kind: Optional[str] = Field(None, description="Kind of Tile device")
     lost: bool = Field(False, description="Boolean indicating if the Tile device is lost")
     lost_timestamp: Optional[AwareDatetime] = Field(None, description="Timestamp when the Tile device was lost")
-    name : str = Field(..., description="User defined name for the Tile device")
+    name: str = Field(..., description="User defined name for the Tile device")
     ring_state: Optional[str] = Field(None, description="Current ring state")
     visible: bool = Field(False, description="Boolean indicating if the Tile device is visible")
     voip_state: Optional[str] = Field(None, description="State of the voip connection")
-    email : str = Field(..., description="Email address associated with the Tile device")
+    email: str = Field(..., description="Email address associated with the Tile device")
 
     @classmethod
     @field_validator('lost_timestamp', mode='before')
@@ -82,8 +85,6 @@ class TileLocationDataModel(BaseLocationDataModel):
         if value.tzinfo is None:
             value = value.replace(tzinfo=timezone.utc)
         return value
-
-
 
     class Config:
         '''Define configuraiton info for the data model'''
@@ -106,7 +107,7 @@ class TileLocationDataModel(BaseLocationDataModel):
                 "lost_timestamp": "1970-01-01T00:00:00Z",
                 "name": "Backpack",
                 "ring_state": "STOPPED",
-                "tile_id" : "77736942235f491e",
+                "tile_id": "77736942235f491e",
                 "visible": True,
                 "voip_state": "OFFLINE",
                 "email": "aki@null.com"
@@ -118,6 +119,6 @@ def main():
     '''This allows testing the data model'''
     TileLocationDataModel.test_model_main()
 
-    
+
 if __name__ == '__main__':
     main()
