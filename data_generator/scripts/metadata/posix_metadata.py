@@ -19,6 +19,8 @@ class PosixMetadata(Metadata):
     Subclass for Metadata.
     Generates Posix Metadata based on the given dictionary of queries
     """
+    ALL_EXTENSIONS = [".pdf", ".doc",".docx", ".txt", ".rtf", ".xls", ".xlsx", ".csv", ".ppt", ".pptx", ".jpg", ".jpeg", ".png", ".gif", ".tif", ".mov", ".mp4", ".avi", ".mp3", ".wav", ".zip", ".rar"]
+
     def __init__(self, selected_POSIX_md, default_lower_filesize, default_upper_filesize, default_lower_timestamp, 
                 default_upper_timestamp, earliest_starttime, earliest_endtime):
         super().__init__(selected_POSIX_md)
@@ -173,7 +175,7 @@ class PosixMetadata(Metadata):
         command, pattern = "", ""
         true_extension = None
         n_filler_letters = random.randint(1, 10)
-        file_extension = Metadata.TEXT_FILE_EXTENSIONS.copy()
+        file_extension = self.ALL_EXTENSIONS.copy()
         #if the file name is part of the query, extract the appropriate attributes and generate title
         if "file.name" in self.selected_md :
             if "pattern" in self.selected_md ["file.name"]:
@@ -185,6 +187,7 @@ class PosixMetadata(Metadata):
                 true_extension = self.selected_md ["file.name"]["extension"]
                 if isinstance(true_extension, list):
                     file_extension = list(set(file_extension) - set(true_extension))
+                    assert file_extension, "file_extension is empty!"
                     avail_text_file_extension = list(set(Metadata.TEXT_FILE_EXTENSIONS) - set(true_extension))
                 else: 
                     file_extension.remove(true_extension)
@@ -249,9 +252,8 @@ class PosixMetadata(Metadata):
         # RUN after initialization:
         if "file.directory" in self.selected_md  and is_truth_file:
             truth_parent_loc = self.selected_md ["file.directory"]["location"]
-            file_counter = self.saved_directory_path["truth.directory"]["files"]
-
             if truth_parent_loc == "local": # if file dir specified, create truth file at that dir
+                file_counter = self.saved_directory_path["truth.directory"]["files"]
                 path = self.saved_directory_path["truth.directory"]["path"] + "/"
                 counter_key = path+file_name
                 if counter_key in file_counter:
@@ -300,9 +302,9 @@ class PosixMetadata(Metadata):
         return path, URI, file_name
 
     def _change_name(self, file_name:str, count:int) -> str:
-        """changes name to avoid duplicate files in the same path"""
+        """changes name to avoid duplicate files in the same path in the format 'duplicateName (#).extension"""
         base_name, ext = os.path.splitext(file_name)
-        return f'{base_name}({count}){ext}'
+        return f'{base_name} ({count}){ext}'
 
     # helper functions for generate_dir_location
     def _generate_remote_path(self, service_type: str, file_name: str) -> str:

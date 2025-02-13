@@ -131,7 +131,7 @@ class GeoActivityData(ActivityMetadata):
                     min_alt = max(GeoActivityData.DEFAULT_MIN_ALT, altitude - delta)
                     max_alt = min(GeoActivityData.DEFAULT_MAX_ALT, altitude + delta)
 
-                    latitude = self._self._check_return_value_within_range(GeoActivityData.DEFAULT_MIN_LAT, 
+                    latitude = self._check_return_value_within_range(GeoActivityData.DEFAULT_MIN_LAT, 
                                                                             GeoActivityData.DEFAULT_MAX_LAT, 
                                                                             min_lat, 
                                                                             max_lat, 

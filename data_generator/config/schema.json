@@ -208,19 +208,35 @@
                 }
             ],
             "Size": "size of the file in int",
-            "SemanticAttributes": [
-                {
-                    "Identifier": {
-                        "Identifier": "uuid for semantics attribute",
-                        "Label": "some sort of semantics specified in 'Semantic' of the selected_md_attributes dictionary including Type, Text, LastModified, FileType, PageNumber, etc."
-                    },
-                    "Data": "the semantic data"
-                }
-            ],
+            "SemanticAttributes": null,
             "Label": "string",
             "LocalIdentifier": "number for identifier",
             "Volume": "uuid for volume",
             "PosixFileAttributes": "S_IREG",
             "WindowsFileAttributes": "FILE_ATTRIBUTE_ARCHIVE"
+    },
+    
+    "Semantics": {
+    "Record" : {
+        "SourceIdentifier" : {
+            "Identifier" : "uuid for the semantics",
+            "Version" : "1.0"
+        },
+        "Timestamp" : "2023-09-21T10:29:59Z",
+        "Attributes" : {},
+        "Data" : "xAA="
+    },
+    "Timestamp": "2023-09-21T10:30:00Z",
+    "RelatedObjects" : [
+        "5a833720-7293-47fe-b3b3-1296302956cd"
+    ],
+    "SemanticAttributes": [
+        {
+            "Identifier": {
+                "Identifier": "label"
+            },
+            "Data": "the semantic data"
+        }
+    ]
     }
 }

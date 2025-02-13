@@ -9,6 +9,7 @@ import json
 from icecream import ic
 from datetime import datetime
 
+import click
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
@@ -36,6 +37,8 @@ class Validator():
     def __init__(self) -> None:
         self.file_path = "./data_generator/results/"
         self.stored_file_path = self.file_path + "stored_metadata/"
+        self.config_path =  './data_generator/config/'
+
         api_path = './config/openai-key.ini'
 
         path = Path(self.file_path)
@@ -46,7 +49,7 @@ class Validator():
         metadata_path = Path(self.stored_file_path)
         metadata_path.mkdir(parents=True, exist_ok=True)
 
-        self.config = self.get_config_file('data_generator/config/dg_config.json')
+        self.config = self.get_config_file(self.config_path + 'dg_config.json')
         self.logger = ResultLogger(result_path=self.file_path )
 
         try:
@@ -68,9 +71,9 @@ class Validator():
         self.llm_connector = OpenAIConnector(api_key=self.openai_key)
         self.nl_parser = NLParser()
         self.query_translator = AQLQueryConverter()
-        self.query_history = QueryHistory()
         self.query_executor = AQLExecutor()
 
+        self.dynamic_activity_providers = {}
         self.result_dictionary = {}
         self.schema = self.read_json('data_generator/config/schema.json')
     
@@ -131,31 +134,76 @@ class Validator():
             value (str): The value to add to the dictionary
         """
         self.result_dictionary[key] = value
+    
+    def generate_query(self, query: str, n_truth_md: int, query_attributes) -> str:
+        # PARSE QUERY
+        # Adapted from IndalekoSearch.py
+        # NOTE: parser hasn't yet been implemented so takes the query + schema and puts in dictionary format
+        parse_query_time, parsed_query = self.time_operation(
+            self.nl_parser.parse, 
+            query=query, 
+            schema=self.schema)
+
+        self.logger.log_process("parsing query...")
+        ic(f"Parse time: {parse_query_time}")
+        self.logger.log_process_result("parsed_query", parse_query_time) 
+
+        #GENERATE AQL TRANSLATION:
+        translate_query_time, translated_query = self.time_operation(
+            self.query_translator.translate, 
+            parsed_query=parsed_query, 
+            selected_md_attributes=query_attributes["converted_selected_md_attributes"], 
+            dynamic_activity_providers=self.dynamic_activity_providers,
+            additional_notes=query_attributes["geo_coords"], 
+            n_truth = n_truth_md,
+            llm_connector=self.llm_connector)
+        self.logger.log_process_result("translated_aql", translate_query_time, translated_query)
+        return translated_query
+
+    def generate_dictionary(self, query:str):
+        json_name = "dictionary.json"
+        self.logger.log_process("building dictionary...")
+        selected_md_attributes = self.query_extractor.extract(query = query, llm_connector = self.llm_connector)
+        self.logger.log_process_result("selected_md_attributes", selected_md_attributes)
+        self.write_json(self.config_path, json_name, selected_md_attributes)
+
+        dictionary_selection = click.prompt("Dictionary ready for evaluation, please type 1 to continue, otherwise type 0 to exit", type=int)
+        if dictionary_selection != 1:
+            sys.exit()
+        else:
+            selected_md_attributes = self.read_json(self.config_path + json_name)
+            return selected_md_attributes
 
     def run(self) -> None:
         """
         Run function for the validator tool
         """
+        translated_query ={}
         query = self.config["query"]
         n_truth_md = self.config["n_matching_queries"]
         n_total_md = self.config["n_metadata_records"]
-        dynamic_activity_providers = {}
 
         self.logger.log_config(self.config)
         self.add_result_to_dict("query", query)
         self.add_result_to_dict("n_total_truth", n_truth_md)
         self.add_result_to_dict("n_metadata", n_total_md)
 
-        # EXTRACT QUERY FROM CONFIG FILE:
-        self.logger.log_process("extracting query from config...")
-        selected_md_attributes = self.query_extractor.extract(query = query, llm_connector = self.llm_connector)
+        intial_selection = click.prompt("Create new dictionary (1) or use existing (0)", type=int)
+        if intial_selection == 1:
+            print("Creating new dictionary...")
+            selected_md_attributes = self.generate_dictionary(query)
+            
+        elif intial_selection == 0:
+            print("Using existing dictionary...")
+            selected_md_attributes = self.read_json(self.config_path + "dictionary.json")  
+        else:
+            print("Invalid input. Exiting.")
+            sys.exit()
 
-        self.logger.log_process_result("selected_md_attributes", selected_md_attributes)
         self.add_result_to_dict("selected_md_attributes", selected_md_attributes)
-
-        # GENERATE METADATA DATASET:
         selected_md_attributes = self.data_generator.preprocess_dictionary_timestamps(selected_md_attributes, False)
-        
+
+        # GENERATE METADATA DATASET:        
         self.logger.log_process("generating record and activity metadata...")
         generation_time, results = self.time_operation(self.data_generator.generate_metadata_dataset, selected_md_attributes=selected_md_attributes)
        
@@ -180,6 +228,7 @@ class Validator():
         self.logger.log_process_result("metadata_generation_time", generation_time)
         self.add_result_to_dict("metadata_stats", stats)
         
+        # -------------------------------------------------------------------------------------
         # STORE METADATA INTO DATABASE:
         self.logger.log_process("storing record metadata...")
         record_storage_time = self.time_operation(self.data_storer.add_records_to_collection, collections=self.db_config.collections, collection_name="Objects", records=all_records_md)
@@ -187,7 +236,7 @@ class Validator():
         self.logger.log_process_result("stored record:", record_storage_time[0])
        
         geo_registrator, geo_collection = self.data_storer.register_activity_provider("Geographical Location Collector")
-        dynamic_activity_providers["GeoActivity"]=geo_registrator.get_activity_collection_name()
+        self.dynamic_activity_providers["GeoActivity"]=geo_registrator.get_activity_collection_name()
 
         geo_activity_storage_time = self.time_operation(self.data_storer.add_records_with_activity_provider, collection=geo_collection, activity_contexts=all_geo_activity_md)
         self.logger.log_process("storing geo activity context...")
@@ -195,7 +244,7 @@ class Validator():
         self.logger.log_process_result("stored geo activity context:", geo_activity_storage_time[0])
 
         music_registrator, music_collection = self.data_storer.register_activity_provider("Music Collector")
-        dynamic_activity_providers["MusicActivity"]=music_registrator.get_activity_collection_name()
+        self.dynamic_activity_providers["MusicActivity"]=music_registrator.get_activity_collection_name()
 
         music_activity_storage_time = self.time_operation(self.data_storer.add_records_with_activity_provider, collection=music_collection, activity_contexts=all_music_activity_md)
         self.logger.log_process("storing music activity context...")
@@ -203,7 +252,7 @@ class Validator():
         self.logger.log_process_result("stored music activity context:", music_activity_storage_time[0])
 
         temp_registrator, temp_collection = self.data_storer.register_activity_provider("Temperature Collector")
-        dynamic_activity_providers["TempActivity"]= temp_registrator.get_activity_collection_name()
+        self.dynamic_activity_providers["TempActivity"]= temp_registrator.get_activity_collection_name()
 
         temp_activity_storage_time = self.time_operation(self.data_storer.add_records_with_activity_provider, collection=temp_collection, activity_contexts=all_temp_activity_md)
         self.logger.log_process("storing music activity context...")
@@ -220,47 +269,43 @@ class Validator():
         ic(f"Storing time for machine config metadata: {machine_config_storage_time}")
         self.logger.log_process_result("stored machine config:", machine_config_storage_time[0])
 
-        # PARSE QUERY
-        # Adapted from IndalekoSearch.py
-        # NOTE: parser hasn't yet been implemented so takes the query + schema and puts in dictionary format
-        parse_query_time, parsed_query = self.time_operation(
-            self.nl_parser.parse, 
-            query=query, 
-            schema=self.schema)
-        self.logger.log_process("parsing query...")
-        ic(f"Parse time: {parse_query_time}")
-        self.logger.log_process_result("parsed_query", parse_query_time) 
-
-        # PREPARE AQL TRANSLATION:
+        #PREPARE FOR QUERY GENERATION:
         self.logger.log_process("preparing aql translation...")
         # retrieve the geo coordinates for the AQL translator:
-        geo_coordinates = str(self.data_generator.geo_activity_generator.saved_geo_loc)
-        self.add_result_to_dict("geo_coord", geo_coordinates)
+        translated_query["geo_coords"] = str(self.data_generator.geo_activity_generator.saved_geo_loc)
+        self.add_result_to_dict("geo_coords", translated_query["geo_coords"])
 
         #convert the time to posix timestamps for consistent AQL translation results:
-        converted_selected_md_attributes = self.data_generator.preprocess_dictionary_timestamps(selected_md_attributes, True)        
+        translated_query["converted_selected_md_attributes"] = self.data_generator.preprocess_dictionary_timestamps(selected_md_attributes, True)        
         self.logger.log_process("translating query to aql...")
-        self.logger.log_process_result("converted_selected_md_attributes", converted_selected_md_attributes)
-        self.add_result_to_dict("converted_selected_md_attributes", converted_selected_md_attributes)
+        self.logger.log_process_result("converted_selected_md_attributes", translated_query["converted_selected_md_attributes"])
+        self.add_result_to_dict("converted_selected_md_attributes", translated_query["converted_selected_md_attributes"])
+        
+        
+        
 
-        #GENERATE AQL TRANSLATION:
-        translate_query_time, translated_query = self.time_operation(
-            self.query_translator.translate, 
-            parsed_query= parsed_query, 
-            selected_md_attributes=converted_selected_md_attributes, 
-            dynamic_activity_providers=dynamic_activity_providers,
-            additional_notes=geo_coordinates, 
-            n_truth = n_truth_md,
-            llm_connector=self.llm_connector)
-        self.logger.log_process_result("translated_aql", translate_query_time, translated_query)
+        # GENERATE QUERY:
+        txt_name = "AQL.json"
+        translate_query = click.prompt("Ready for AQL generation, please type 1 to use existing, otherwise type 0 to generate a new one", type=int)
+        if translate_query == 1:
+            translated_query["AQL"] = self.read_json(self.config_path + txt_name)
+        elif translate_query == 0:
+            translated_query["AQL"] = self.generate_query(query, n_truth_md, translated_query)
+            self.write_json(self.config_path, txt_name, translated_query)
 
-        self.add_result_to_dict("aql_query", translated_query)
+        aql_selection = click.prompt("AQL query ready for evaluation, please type 1 to continue, otherwise type 0 to exit", type=int)
+
+        if aql_selection != 1:
+            sys.exit()
+        
+        final_query = self.read_json(self.config_path + txt_name)["AQL"]
+        self.add_result_to_dict("aql_query", final_query)
 
         # RUN INDALEKO SEARCH
         self.logger.log_process("running search with translated aql query...")
         execute_time, raw_results = self.time_operation(
             self.query_executor.execute,
-            query=translated_query,
+            query=final_query,
             data_connector=self.db_config
         )
         self.logger.log_process_result("Indaleko search completed", execute_time)
@@ -278,16 +323,24 @@ class Validator():
         self.add_result_to_dict("recall", recall)
         self.logger.log_process("precision and recall calculated")
         self.logger.log_process("DONE -- please check /data_generator/results/validator_result.log for the full results")
-        self.save_as_json("Indaleko_search_result", raw_results)
+        self.write_json(self.file_path, "Indaleko_search_result.json", raw_results)
         
     def read_json(self, json_path):
         with open(json_path, 'r') as file:
             data = json.load(file)
         return data
+    
+    def read_text(self, txt_path):
+        with open(txt_path, 'r') as file:
+            return file.read()
+    
+    def write_text(self, txt_path, text: str):
+        with open(txt_path, 'w') as file:
+            file.write(text)
 
 
-    def save_as_json(self, title, result_dict):
-        with open(self.file_path + title + '.json', 'w') as file:
+    def write_json(self, path, title, result_dict):
+        with open(path + title, 'w') as file:
             json.dump(result_dict, file, indent=4)
 
 def main() -> None:

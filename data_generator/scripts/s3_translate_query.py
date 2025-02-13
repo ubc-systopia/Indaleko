@@ -67,7 +67,7 @@ class QueryExtractor():
                 "hvac_state": "str (heating, cooling, fan, idle)", "timestamp": "str one of ['birthtime', 'modified', 'changed', 'accessed']"}, 
                 "ambient_music": {"track_name": "str", “album_name”:str, "artist_name": "str", "playback_position_ms": "int (ms [0, track_duration_ms])", 
                 "track_duration_ms": "int (in milliseconds bound by [10000, 300000])", “is_currently_playing”:bool, "source": "str (one of 'spotify', 'youtube music', 
-                'apple music'; if 'spotify' can specify device_type)", "device_type": "str (device the music was streamed)one of 
+                'apple music'; if 'spotify' can specify device_type)", "device_type": "str only populated when source is 'spotify'(device the music was streamed) one of 
                 (Computer|Smartphone|Speaker|TV|Game_Console|Automobile|Unknown)", "timestamp": "str one of ['birthtime', 
                 'modified', 'changed', 'accessed']"}}}
             """
@@ -86,8 +86,10 @@ class QueryExtractor():
             which stores metadata about digital objects. Given a user query, extract information for record, semantics, and activity context. 
             The dictionary should look like the following: {selected_md_schema}
             
-            File name: The 'command' can only exist in the presence of the 'pattern' key, otherwise, ignore. The 'extension' is separate from the 
-            command and pattern.
+            File name: If file name is not specifically stated, assume it's a title in the semantics. The 'command' can only exist in the presence 
+            of the 'pattern' key, otherwise, ignore. The 'extension' is separate from the command and pattern, it specifies what type the file created is e.g., 
+            the presentation with an image of a rabbit, the presentation is the file type not the image another ex.) find me the images I took, the type is images. 
+            Remove spaces from file name patterns and use '_' instead or camel casing. 
 
             File size: When using commands like "less_than," "greater_than," "equal," "greater_than_equal," and "less_than_equal" in "file.size", the 
             target_min and target_max must both be populated and be equal. For command "range", target_min and target_max should be different where 
@@ -101,25 +103,32 @@ class QueryExtractor():
             'Unchecked', 'CheckBoxChecked', 'CheckBoxUnchecked', 'RadioButtonChecked', 'RadioButtonUnchecked', 
             'Address', 'EmailAddress', 'PageBreak', 'Formula', 'Table', 'Header', 'Headline', 'Subheadline', 
             'Page-header', 'Section-header', 'Footer', 'Footnote', 'Page-footer', 'PageNumber', 'CodeSnippet'] Make sure that the syntax is exactly the same as 
-            in the list above. The data is the label of that particular semantic 
-            attribute. There can be many semantic attributes starting with Content_1, onwards. There can be multiple duplicate labels. 
+            in the list above. The data is the label of that particular semantic attribute. There can be many semantic attributes starting with Content_1, onwards. 
+            There can be multiple duplicate labels. For attributes like "CodeSnippet" or "Formula" just make a code or math formula/equation based on the arbitrary code or equation given by the user. 
+            For any {BUTTON_TAGS}, the value should only be True. For any {IMAGE_TAGS}, if the extension of the image, and the name is specified return the full 
+            name and extension e.g., the file with a png image of a dog --> "Content_1": ["Image", "dog.png"]
             ex.) This is how you should convert a paragraph that has the word "hi" and title 'bye' --> {"Semantic": {"Content_1": ["Paragraph", "hi"], "Content_2": ["Title", "bye"]}},
             
             The 'ecobee_temp' is only for queries that implicitly or explicitly imply for
             settings taken at the user's home. If the user specifically implies a location elsewhere, then do not create a query related to this. The 
-            'ambient_music' is for queries related to music listening activities related to the file. 
+            'ambient_music' is for queries related to music listening activities related to the file. device_type can only exist when "source" is "spotify" so 
+            add "source": "spotify" when device_type is specified, or don't specify device_type when source is not "spotify" so "what is the file I created when 
+            listening to youtube music on my phone? => don't include device_type so "ambient_music": {
+            "source": "youtube music",
+            "timestamp": "birthtime"
+        }.
             
             Posix timestamps are for when the file is modified, created, accessed, or changed. For timestamps for 'Posix' the starttime can only be the  
             same as the endtime or earlier than the endtime. Otherwise, raise error. 
             If there are no specific time queries listed, timestamps shouldn't be populated. For example, query: what are the pdf files I 
             created/modified/changed/accessed?: there should be no 'created' in the Posix dictionary), should return 
-            {"Posix": {"file.name": {"extension": [".txt"], "command": "contains"}}, "Semantic":{}, "Activity": {}}.
+            {"Posix": {"file.name": {"extension": [".txt"]}}, "Semantic":{}, "Activity": {}}.
 
             starttime and endtime in Posix timestamps should use 'YYYY-MM-DDTHH:MM:SS' format and must be relative to the time right now: {curr_date}.
             There starttime and endtime are between October 25, 2000 and {curr_date} inclusive. So if the time is October 25, 2000 or {curr_date} 
             exactly, it's fine. If any type of timestamp from modified, changed, and accessed specify a starttime / endttime pair not within the birthtime, raise an error.
 
-            If there is a query that uses keywords for location e.g., home or work, then replace that keyword with a reasonable location within BC 
+            If there is a query that uses keywords for location e.g., home, work, someone's place, then replace that keyword with a reasonable location within BC 
             e.g., file I created at home -> 'Activity': {'geo_location': {'location': 'Vancouver, BC', 'command': 'at', 'timestamp': 'birthtime'}.
             where what's specified in the location can be an actual location or a random one within BC. The timestamp within the geo_location is when the 
             activity data was collected at that location, so there should be a timestamp for any geo_location populated. This goes for the ecobee_temp and 
@@ -131,7 +140,7 @@ class QueryExtractor():
             If any of the above constraints are broken, return an error message as a string "error:..." specifying the specific error. 
             """
         # adding the current date since LLM has difficulties getting today's date
-        system_prompt = system_prompt.replace("{curr_date}", str(datetime.now())).replace("{selected_md_schema}", selected_md_schema)
+        system_prompt = system_prompt.replace("{curr_date}", str(datetime.now())).replace("{selected_md_schema}", selected_md_schema).replace("{BUTTON_TAGS}", str(SemanticMetadata.BUTTON_TAGS)).replace("{IMAGE_TAGS}", str(SemanticMetadata.IMAGE_TAGS))
 
         user_prompt = query
         return {

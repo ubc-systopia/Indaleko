@@ -101,7 +101,7 @@ class ResultLogger:
         self.result_logger.info(f" Original Query: {results['query']}")
         self.result_logger.info(f" Truth File Attributes:\n{json.dumps(results['selected_md_attributes'], indent=4)}")
         # self.result_logger.info(f" Converted Truth File Attributes:\n{json.dumps(results['converted_selected_md_attributes'], indent=4)}")
-        self.result_logger.info(f" Geographical Coordinates: {results['geo_coord']}")
+        self.result_logger.info(f" Geographical Coordinates: {results['geo_coords']}")
         self.result_logger.info(f" AQL Query:\n{results['aql_query']}")
         self.result_logger.info("--------------------------------------------------------------------------------------------")
         self.result_logger.info("Metadata Generation:")

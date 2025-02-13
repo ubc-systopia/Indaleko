@@ -183,7 +183,6 @@ class Dataset_Generator():
         else:
             self.truth_like_num = 0
         filler_num = remaining_files - self.truth_like_num
-
         truth = self._generate_metadata(0, self.n_matching_queries+1, 'Truth File', True, False)
         filler = self._generate_metadata(self.truth_like_num,  filler_num +1, 'Filler File', False, False)
         truth_like_filler = self._generate_metadata(0, self.truth_like_num +1, 'Filler Truth-Like File', False, True)
@@ -313,14 +312,68 @@ class Dataset_Generator():
     
 
 def main():
-    selected_md_attributes = {"Posix": {"file.name": {"extension": [".pdf", ".txt"]}, "timestamps": {"modified": {"starttime": "2025-01-29T00:00:00", "endtime": "2025-01-29T23:59:59", "command": "range"}, 
-    "changed": {"starttime": "2025-01-31T00:00:00", "endtime": "2025-01-31T23:59:59", "command": "range"}}},
-     "Semantic": {
-        "Content_1": ("PageNumber", 20),
-        "Content_2" : ("Subtitle", "jogging"),
-        "Content_3" : ("Title", "EXERCISE")
-    }
-}
+#     selected_md_attributes = {"Posix": {"file.name": {"extension": [".pdf", ".txt"]}, "timestamps": {"modified": {"starttime": "2025-01-29T00:00:00", "endtime": "2025-01-29T23:59:59", "command": "range"}, 
+#     "changed": {"starttime": "2025-01-31T00:00:00", "endtime": "2025-01-31T23:59:59", "command": "range"}}},
+#      "Semantic": {
+#         "Content_1": ("PageNumber", 20),
+#         "Content_2" : ("Paragraph", "jogging"),
+#         "Content_3" : ("Title", "EXERCISE")
+#     }
+# }
+    selected_md_attributes = {
+                            "Posix": {
+                                "file.directory": {
+                                    "location": "local",
+                                    "local_dir_name": "photos"
+                                }, 
+                                "file.name" :{
+                                    "extension": ['.jpg', '.png'],
+                                    "command": "exactly",
+                                    "pattern": "image"
+                                }
+                            },
+                            "Semantic": {
+                            },
+                            "Activity": {}
+                        }
+#     selected_md_attributes = {
+#     "Posix": {},
+#     "Semantic": {
+#         "Content_1": [
+#             "Title",
+#             "hi"
+#         ],
+#         "Content_2": [
+#             "Paragraph",
+#             "happy girl"
+#         ],
+#         "Content_3": [
+#             "Subheadline",
+#             "sad"
+#         ],
+#         "Content_4": [
+#             "Image",
+#             "sun"
+#         ],
+#         "Content_5": [
+#             "CodeSnippet",
+#             "let x = 1;"
+#         ],
+#         "Content_6": [
+#             "PageNumber",
+#             20        ],
+#         "Content_7": [
+#         "CheckBoxChecked",
+#         True        ], 
+#         "Content_8": [
+#         "Address",
+#         "Vancouver, BC"        ],
+#         "Content_9": [
+#         "EmailAddress",
+#         "helooo@gmail.com"        ]
+#     },
+#     "Activity": {}
+# }
     config_path = "data_generator/config/dg_config.json"
     with open(config_path, 'r') as file:
         config = json.load(file)
@@ -328,6 +381,6 @@ def main():
     selected_md_attributes = data_generator.preprocess_dictionary_timestamps(selected_md_attributes, False)
     all_record, all_geo_activity, all_temp_activity, all_music_activity,  all_machine_config, all_semantics, metadata_stats = data_generator.generate_metadata_dataset(selected_md_attributes)
     data_generator.write_json(all_semantics, "/Users/pearl/Indaleko_updated/Indaleko/data_generator/semantics_test.json")
-
+    data_generator.write_json(all_record, "/Users/pearl/Indaleko_updated/Indaleko/data_generator/records_test.json")
 if __name__ == '__main__':
     main()

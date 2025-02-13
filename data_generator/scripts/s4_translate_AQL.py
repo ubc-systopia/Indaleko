@@ -2,6 +2,7 @@
 
 from typing import Dict, Any
 from query.query_processing.query_translator.translator_base import TranslatorBase
+from data_generator.scripts.metadata.semantic_metadata import SemanticMetadata
 
 class AQLQueryConverter(TranslatorBase):
     """
@@ -76,16 +77,17 @@ class AQLQueryConverter(TranslatorBase):
              1) {GeoActivity}: the GeoActivity that stores metadata related to the geographical context of activities. It includes the location field.
              2) {MusicActivity} : the MusicActivity that stores music related activity context.
              3) {TempActivity} : the TempActivity that stores temperature related activity context.
-             4) Objects: Stores information about posix information
-             5) SemanticData: Stores information about the semantic data
+             4) Objects: Stores information about posix information only ("Posix" of the dictionary). Do not search up semantics within Objects
+             5) SemanticData: Stores information about the semantic data of the file ("Semantic" of the dictionary)
              
             You need to search through all five collections (GeoActivity, MusicActivity, TempActivity, Objects, Semantics) to verify if an item satisfies the necessary 
-            conditions across these different contexts. First, identify the GeoActivity, MusicActivity, TempActivity, Objects data via its Record.SourceIdentifier.Identifier. 
+            conditions across these different contexts. First, identify the Semantic, GeoActivity, MusicActivity, TempActivity, Objects data via its Record.SourceIdentifier.Identifier. 
+            When looking through multiple collections at once, properly quote these long collection names with `` like `{GeoActivity}` and make sure to check that 
+            their identifiers are the same e.g., FILTER musicActivity.Record.SourceIdentifier.Identifier == semantic.Record.SourceIdentifier.Identifier
+            FILTER semantic.Record.SourceIdentifier.Identifier == Objects.Record.SourceIdentifier.Identifier.
             If 'geo_location' is specified in selected_md_attributes, search within the {GeoActivity} and compare longitude and latitude with the {geo_coords} . 
             If 'ambient_music' is specified in selected_md_attributes, search within the {MusicActivity}. 
             If 'ecobee_temp' is specified in selected_md_attributes, search within {TempActivity}. The item is uniquely identified by its Identifier, which is stored within the SourceIdentifier field of the Records in each collection. 
-            When looking through multiple collections at once, properly quote these long collection names with `` like `{GeoActivity}` and make sure to check that 
-            their identifiers are the same e.g., FILTER musicActivity.Record.SourceIdentifier.Identifier == geoActivity.Record.SourceIdentifier.Identifier.
             You don't necessarily have to check the Objects collection to check the Posix metadata, since all activity collections should have a Record attribute. 
             For the {MusicActivity} or the {TempActivity}, you can access the attributes directly by doing: musicActivity.attribute_specified or tempActivity.attribute_specified 
             instead of the SemanticAttributes like for geo_location. Ex.) tempActivity.temperature to access temperature for temperature activity or musicActivity.track_name 
@@ -113,33 +115,33 @@ class AQLQueryConverter(TranslatorBase):
             FILTER attr.Identifier.Label == 'Longitude' RETURN attr.Data) LET latitude = FIRST(FOR attr IN object.SemanticAttributes FILTER attr.Identifier.Label == 'Latitude' RETURN attr.Data) 
             FILTER longitude >= -123.400 AND longitude <= -123.113952 FILTER latitude >= 49.000 AND latitude <= 49.2608724 RETURN record"
 
+            Always checkc for the extension if specified in file.name.
             If the number of truth attributes is greater than one and in the dictionary and the file name command is 'exactly' with a local directory specified, make sure
             to add % in command as there could be files with duplicate names in the same directory: {'Posix': {'file.name': {'pattern': 'photo', 'command': 'exactly', 
-            'extension': ['.jpg']}, 'file.directory': {'location': 'local', 'local_dir_name': 'photo'}}} should give aql: record.Record.Attributes.Name LIKE 'photo%.pdf' 
-            OR 'photo(%).pdf'; instead of record.Record.Attributes.Name LIKE 'photo.pdf'. If number of attributes is one, just use record.Record.Attributes.Name LIKE 'photo.pdf.
+            'extension': ['.jpg']}, 'file.directory': {'location': 'local', 'local_dir_name': 'vacation'}}} should give aql: record.Record.Attributes.Name LIKE 'photo%.pdf'.
+            OR 'photo(%).pdf'; instead of record.Record.Attributes.Name LIKE 'photo.pdf', you should compare the path separately to see if it's stored in vacation. If number of attributes is one, just use record.Record.Attributes.Name LIKE 'photo.pdf.
             The file.name also specifies the extenstion of the file, if none specified assume that any can be used e.g., {'Posix': {'file.name': {'pattern': 'photo', 'command': 'exactly'}}
             use record.Record.Attributes.Name LIKE 'photo%'
 
-            For the semantics, attribute, the attr.Identifier NOT attr.Identifier label for semantics should be the key of what's in Content_# of the dictionary and the attr.Data.Text is the value of that key. 
-            Make sure to access the semantic.SemanticAttributes to access the list of semantic attributes and all of these attributes should be in the semantic attributes list.
-            Ex.) "Semantic": {"Content_1": ["PageNumber", 20], "Content_2": ["Subtitle", "jogging"], "Content_3":["Subtitle", "EXERCISE"]} is equal to: 
+            For the semantics attribute, the attr.Identifier for semantics should be the key of what's in Content_# of the dictionary and the attr.Data is the value of that key. 
+            Make sure to access the semantic.SemanticAttributes to access the list of semantic attributes and all of these attributes should be in the semantic attributes list. 
+            For {BUTTON_TAGS} the associated data can only be true (as boolean value).
+            Use LIKE '%data%' to check whether a word is contained in any of these semantic attributes:  {LONG_TAG}, {LIST_TAGS}, "CodeSnippet", "Formula", "EmailAddress", "Link", 
+            for {IMAGE_TAGS} use LIKE 'data%' and check that either the capitalized or the uncapitalized exists (compare both capitalized and uncapitalized),
+            and for others check their exact values. PageBreaks should always have value: "--- PAGE BREAK ---".
+            Ex.) "Semantic": {"Content_1": ["PageNumber", 20], "Content_2": ["Subtitle", "jogging"]} is equal to: 
             FOR object IN SemanticData
             LET text1Attr = FIRST(
                 FOR attr IN object.SemanticAttributes
-                FILTER attr.Identifier == 'PageNumber' AND TO_NUMBER(attr.Data.Text) == 20 (notice how it's attr.Identifier not attr.Indeitifer.Label)
+                FILTER attr.Identifier == 'PageNumber' AND TO_NUMBER(attr.Data) == 20 (notice how it's attr.Identifier not attr.Indeitifer.Label)
                 RETURN 1
             )
-            LET type1Attr = FIRST(
+            LET type2Attr = FIRST(
                 FOR attr IN object.SemanticAttributes
-                FILTER attr.Identifier == 'Subtitle' AND attr.Data.Text LIKE 'jogging'
+                FILTER attr.Identifier == 'Paragraph' AND (attr.Data LIKE '%jogging%' OR attr.Data LIKE '%Jogging%')
                 RETURN 1
             )
-            LET textAttr = FIRST(
-                FOR attr IN object.SemanticAttributes
-                FILTER attr.Identifier == 'Subtitle' AND attr.Data.Text LIKE 'EXERCISE'
-                RETURN 1
-            )
-            FILTER text1Attr != NULL AND type1Attr != NULL AND textAttr != NULL
+            FILTER text1Attr != NULL AND type2Attr != NULL AND textAttr != NULL
             RETURN object 
             For queries involving title of a file, you can either search within any collection's record.Record.Attributes.Name or search in object.SemanticAttributes.Identifier.Label where object is from Objects.  
             Ex.) {'Posix': {'file.name': {'pattern': 'presentation', 'command': 'equal'}}, 'Semantic': {}, 'Activity': {'ecobee_temp': {'temperature': {'start': 20.0,
@@ -151,10 +153,11 @@ class AQLQueryConverter(TranslatorBase):
             object multiple times, just once. Make sure to incorporate all attributes from the given dictionary into the aql statement. Escape any ' with a backslash
             ex.) if we want to find a Name containing "1990's news" -> FILTER object.Record.Attributes.Name LIKE '%1990\'s news%.pdf'. The query should only include 
             the AQL code in a single line, with no additional explanations or comments. You must return one single code block that with '``` at the start and '``` at the end and that contains a FOR and
-            a RETURN ... statement. Do not create additional attributes not found in the dictionary. \n""" + \
+            a RETURN ... statement. Do not create additional attributes not found in the dictionary. Make sure to check all posix, semantic, and activity contexts in the aql query given the Dictionary below. \n""" + \
             "\n Number of truth attributes:" + str(n_truth_md) + "\n Schema:" + str(parsed_query['schema'])
 
-        system_prompt = system_prompt.replace("{GeoActivity}", dynamic_activity_providers["GeoActivity"]).replace("{TempActivity}", dynamic_activity_providers["TempActivity"]).replace("{MusicActivity}", dynamic_activity_providers["MusicActivity"]).replace("{geo_coords}", additional_notes)
+        system_prompt = system_prompt.replace("{GeoActivity}", dynamic_activity_providers["GeoActivity"]).replace("{TempActivity}", dynamic_activity_providers["TempActivity"]).replace("{MusicActivity}", dynamic_activity_providers["MusicActivity"])\
+        .replace("{geo_coords}", additional_notes).replace("{BUTTON_TAGS}", str(SemanticMetadata.BUTTON_TAGS)).replace("{LONG_TAG}", str(SemanticMetadata.LONG_TAGS)).replace("{LIST_TAGS}", str(SemanticMetadata.LIST_TAGS)).replace("{IMAGE_TAGS}", str(SemanticMetadata.IMAGE_TAGS))
         # user_prompt = parsed_query['original_query']
         user_prompt = "Dictionary: " + str(selected_md_attributes)
 
