@@ -34,7 +34,6 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # pylint: disable=wrong-import-position
 from db import IndalekoDBConfig, IndalekoDBCollections
 from data_models.named_entity import IndalekoNamedEntityDataModel
-import asyncio
 # pylint: enable=wrong-import-position
 
 
