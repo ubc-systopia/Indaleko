@@ -20,6 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+from uuid import uuid4
+
+from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -29,8 +32,9 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from db import IndalekoDBConfig
+from db import IndalekoDBConfig, IndalekoDBCollections
 from data_models.named_entity import IndalekoNamedEntityDataModel
+import asyncio
 # pylint: enable=wrong-import-position
 
 
@@ -43,16 +47,37 @@ class IndalekoNamedEntity:
         Initialize the named entity handler.
         '''
         self.named_entities = {}
+        self.db_config = db_config
+        self.collection = self.db_config.db.collection(
+            IndalekoDBCollections.Indaleko_Named_Entity_Collection
+        )
+        assert self.collection is not None, 'Failed to get the named entity collection'
+        self.named_entities = self.get_named_entities()
 
-    def add_named_entity(self, named_entity: IndalekoNamedEntityDataModel):
+    def add_named_entity(
+            self,
+            named_entity: IndalekoNamedEntityDataModel
+    ) -> bool:
         '''
-        Add a named entity to the handler.
+        Add a named entity to the handler and database.
 
         Args:
             named_entity (NamedEntity): The named entity to add
+
+        Returns:
+            bool: True if the named entity was added successfully, False otherwise
         '''
-        assert isinstance(named_entity, IndalekoNamedEntityDataModel), f'named_entity must be a NamedEntity, not {type(named_entity)}'
+        assert isinstance(named_entity, IndalekoNamedEntityDataModel), \
+            f'named_entity must be a NamedEntity, not {type(named_entity)}'
+
         self.named_entities[named_entity.name] = named_entity
+
+        # Serialize the named entity to JSON
+        entity_json = named_entity.serialize()
+
+        # Insert the named entity into the database
+        self.collection.insert(entity_json)
+        return True
 
     def get_named_entity(self, name: str) -> IndalekoNamedEntityDataModel:
         '''
@@ -64,58 +89,118 @@ class IndalekoNamedEntity:
         Returns:
             NamedEntity: The named entity
         '''
+        # In future, we may want to cache individual entities and/or
+        # negative lookups to speed things up as a performance
+        # optimization.
         return self.named_entities.get(name, None)
 
-    def get_named_entities(self) -> dict[str, IndalekoNamedEntityDataModel]:
+    def get_named_entities(self, allow_cached: bool = False) -> dict[str, IndalekoNamedEntityDataModel]:
         '''
         Get all named entities from the handler.
 
         Returns:
             Dict[str, NamedEntity]: The named entities
         '''
+
+        if allow_cached and self.named_entities:
+            return self.named_entities
+
+        ic('Fetching all named entities')
+
+        cursor = self.collection.all()
+        ic(dir(cursor))
+        while True:
+            if cursor.count():
+                entity = cursor.next()
+                ic(entity)
+                self.named_entities[entity['name']] = IndalekoNamedEntityDataModel(**entity)
+            if not cursor.has_more():
+                break
         return self.named_entities
 
-    def remove_named_entity(self, name: str):
+    def remove_named_entity(self, name: str) -> bool:
         '''
         Remove a named entity from the handler.
 
         Args:
             name (str): The name of the named entity to remove
         '''
-        self.named_entities.pop(name, None)
+        named_entity = self.named_entities.get(name, None)
+        if not named_entity:
+            return False
 
-    def clear_named_entities(self):
+        # Remove the named entity from the collection
+        result = self.collection.delete({'name': name})
+
+        if result.acknowledged:
+            # Remove the named entity from the handler
+            self.named_entities.pop(name, None)
+
+        return result.acknowledged
+
+    def update_named_entity(self, name: str):
+        '''
+        Update a named entity in the handler.
+
+        Args:
+            name (str): The name of the named entity to update
+        '''
+        named_entity = self.named_entities.get(name, None)
+        if named_entity:
+            # Serialize the named entity to JSON
+            entity_json = named_entity.serialize()
+
+            # Update the named entity in the database
+            result = self.collection.update(
+                {'name': name},
+                {'$set': entity_json}
+            )
+
+            if result.acknowledged:
+                # update the named entity in the handler
+                self.named_entities[name] = named_entity
+
+            return result.acknowledged
+
+        return False
+
+    def clear_named_entities(self) -> bool:
         '''
         Clear all named entities from the handler.
         '''
-        self.named_entities.clear()
+        # Truncate the collection in the database
+        result = self.collection.truncate()
 
-    def __str__(self) -> str:
-        '''
-        Return a string representation of the named entities.
+        ic(result)
 
-        Returns:
-            str: The string representation
-        '''
-        return str(self.named_entities)
+        # Clear the local cached copy of the named entities
+        if result:
+            self.named_entities.clear()
 
-    def __get_named_entities_from_db(self) -> dict[str, IndalekoNamedEntityDataModel]:
-        '''
-        Get named entities from the database.
 
-        Returns:
-            Dict[str, NamedEntity]: The named entities
-        '''
-        return {}  # Placeholder
+def main():
+    '''
+    Main function for the named entity module.
+    '''
+    named_entity = IndalekoNamedEntity()
+    print(named_entity)
+    named_entities = named_entity.get_named_entities()
+    ic(named_entities)
+    if len(named_entities) > 0:
+        named_entity.clear_named_entities()
+    named_entity_1 = IndalekoNamedEntityDataModel(
+        name='Home',
+        category='place',
+        gis_location={
+            'source': 'GPS',
+            'timestamp': '2025-01-01T00:00:00Z',
+            'latitude': -122.084,
+            'longitude': 37.422,
+        },
+        device_id=uuid4()
+    )
+    assert named_entity.add_named_entity(named_entity_1)
 
-    def __save_named_entities_to_db(self, named_entities: dict[str, IndalekoNamedEntityDataModel]) -> bool:
-        '''
-        Save named entities to the database.
-        '''
-        return False  # Placeholder
 
-    def __update_named_entity_in_db(self, named_entity: IndalekoNamedEntityDataModel) -> bool:
-        '''
-        Update a named entity in the database.
-        '''
-        return False  # Placeholder
+if __name__ == '__main__':
+    main()
