@@ -20,9 +20,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+from uuid import UUID
 
 from icecream import ic
 from pydantic import Field
+from typing import Optional, Union
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -66,6 +68,12 @@ class IndalekoMachineConfigDataModel(IndalekoBaseModel):
         description='The software information for the machine.'
     )
 
+    MachineUUID: Optional[Union[UUID, None]] = Field(
+        None,
+        title='Machine UUID',
+        description='The unique identifier for the machine.'
+    )
+
     class Config:
         '''Configuration for the machine config data model'''
         json_schema_extra = {
@@ -73,7 +81,8 @@ class IndalekoMachineConfigDataModel(IndalekoBaseModel):
                 'Record': IndalekoRecordDataModel.Config.json_schema_extra['example'],
                 'Captured': IndalekoTimestampDataModel.Config.json_schema_extra['example'],
                 'Hardware': hardware.Config.json_schema_extra['example'],
-                'Software': software.Config.json_schema_extra['example']
+                'Software': software.Config.json_schema_extra['example'],
+                'MachineUUID': '5cc80ef1-0385-47c8-8491-fffa66261481'
             }
         }
 

@@ -115,7 +115,6 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
         db_collection = self.db_config.db.collection(IndalekoDBCollections.Indaleko_Collection_Metadata)
         assert db_collection is not None, \
             f'Failed to get collection {IndalekoDBCollections.Indaleko_Collection_Metadata}'
-        ic(f'Getting metadata for collection {collection_name}')
         entry = db_collection.get(collection_name)
         if not entry:
             return self.generate_new_collection_metadata(collection_name)
@@ -135,7 +134,6 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
             for index in data.IndexedFields:
                 for field in index.Fields:
                     indexed_fields.append(field)
-            ic(data.Schema)
             collection_data[name] = CollectionInfo(
                 Name=name,
                 Description=data.Description,
@@ -172,11 +170,9 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
 
     def __activity_data_provider_collection_handler(self) -> None:
         '''Handle the activity data provider collection.'''
-        ic('Need to implement the activity data provider collection handler')
         collection_data = {}
         collections_metadata = IndalekoDBCollectionsMetadata()
         for provider in IndalekoActivityDataRegistrationService.get_provider_list():
-            ic(provider)
             collection = IndalekoActivityDataRegistrationService.\
                 lookup_activity_provider_collection(provider['Identifier'])
             collection_metadata = collections_metadata.get_collection_metadata(collection.name)

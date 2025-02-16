@@ -147,17 +147,53 @@ class IndalekoQueryHistoryDataModel(IndalekoBaseModel):
     class Config:
         '''Sample configuration data for the data model.'''
         json_schema_extra = {
-            "example": {
-                "Record": {
-                    "SourceIdentifier": {
-                        "Identifier": "429f1f3c-7a21-463f-b7aa-cd731bb202b1",
-                        "Version": "1.0",
-                    },
-                    "Timestamp": "2024-07-30T23:38:48.319654+00:00",
-                    "Data": "Base64EncodedData"
-                },
-            }
-        }
+                    "example": {
+                        "Record": {
+                            "SourceIdentifier": {
+                                "Identifier": "429f1f3c-7a21-463f-b7aa-cd731bb202b1",
+                                "Version": "1.0",
+                            },
+                            "Timestamp": "2024-07-30T23:38:48.319654+00:00",
+                            "Data": "Base64EncodedData"
+                        },
+                        "OriginalQuery": "Show me the latest performance data",
+                        "Categorization": {
+                            "Intent": "search",
+                            "Entities": {
+                                "PerformanceData": "latest"
+                            }
+                        },
+                        "ImportantTerms": {
+                            "PerformanceData": "latest"
+                        },
+                        "GeneratedAQL": "FOR doc IN PerformanceData SORT doc.Timestamp DESC LIMIT 1 RETURN doc",
+                        "LLMExplanations": {
+                            "Intent": "search",
+                            "Rationale": "The user wants to see the latest performance data.",
+                            "AlternativesConsidered": [
+                                {
+                                    "Intent": "search",
+                                    "Rationale": "The user wants to see the latest performance data."
+                                }
+                            ]
+                        },
+                        "QueryResults": {
+                            "Results": [
+                                {
+                                    "Timestamp": "2024-07-30T23:38:48.319654+00:00",
+                                    "Data": "Base64EncodedData"
+                                }
+                            ]
+                        },
+                        "StartTimestamp": "2024-07-30T23:38:48.319654+00:00",
+                        "EndTimestamp": "2024-07-30T23:38:48.319654+00:00",
+                        "ElapsedTime": 0.0,
+                        "ResourceUtilization": {
+                            "CPU": 0.0,
+                            "Memory": 0.0
+                        },
+                    }
+                }
 
 
 def main():

@@ -60,7 +60,9 @@ class KnownSemanticAttributes:
             return
         cls._initialized = True
         for label, name in cls._modules_to_load.items():
-            module = KnownSemanticAttributes.safe_import(name)
+            module = KnownSemanticAttributes.safe_import(name, quiet=True)
+            if not module:
+                continue
             for label, value in module.__dict__.items():
                 if label.startswith(KnownSemanticAttributes._short_prefix):
                     full_label = KnownSemanticAttributes.full_prefix + label[3:]
@@ -73,13 +75,14 @@ class KnownSemanticAttributes:
                     cls._attributes_by_uuid[value] = full_label
 
     @staticmethod
-    def safe_import(name: str):
+    def safe_import(name: str, quiet: bool = False):
         '''Given a module name, load it and then extract the important data from it'''
         module = None
         try:
             module = importlib.import_module(name)
         except ImportError as e:
-            ic(f'Import module {name} failed {e}')
+            if not quiet:
+                ic(f'Import module {name} failed {e}')
         return module
 
     def __init__(self):
@@ -92,6 +95,11 @@ class KnownSemanticAttributes:
         '''Get the attribute by the UUID'''
         return KnownSemanticAttributes._attributes_by_uuid.get(uuid_value)
 
+    @staticmethod
+    def get_all_attributes() -> dict[str, dict[str, str]]:
+        '''Get all of the known attributes'''
+        return KnownSemanticAttributes._attributes_by_provider_type
+
 
 KnownSemanticAttributes._initialize()
 
@@ -100,6 +108,7 @@ def main():
     '''Main function for the module'''
     ic('Starting')
     ic(dir(KnownSemanticAttributes))
+    ic(KnownSemanticAttributes._attributes_by_uuid)
 
 
 if __name__ == '__main__':

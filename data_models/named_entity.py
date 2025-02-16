@@ -18,11 +18,13 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 from datetime import datetime, timezone
+from enum import Enum
+import json
 import os
 import sys
 from uuid import UUID, uuid4
 
-from typing import Literal, Optional
+from typing import Optional
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -37,30 +39,61 @@ from data_models.location_data_model import BaseLocationDataModel
 # pylint: enable=wrong-import-position
 
 
+class IndalekoNamedEntityType(str, Enum):
+    person = "person"
+    organization = "organization"
+    location = "location"
+    date = "date"
+    event = "event"
+    product = "product"
+    item = "item"
+
+
 class IndalekoNamedEntityDataModel(IndalekoBaseModel):
     name: str
     uuid: UUID = uuid4()
-    category: Literal['person', 'place', 'thing']
+    category: IndalekoNamedEntityType
     description: Optional[str] = None
     gis_location: Optional[BaseLocationDataModel] = None  # GIS location for places
     device_id: Optional[UUID] = None  # Device identifier for things
 
+    class Config:
+        '''Sample configuration data for the data model.'''
+        json_schema_extra = {
+            "example": {
+                    "name": "Tony",
+                    "uuid": "981a3522-c394-40b0-a82c-a9d7fa1f7e01",
+                    "category": IndalekoNamedEntityType.person,
+                    "description": "The user"
+            },
+        }
+
 
 class NamedEntityCollection(IndalekoBaseModel):
     entities: list[IndalekoNamedEntityDataModel]
+
+    class Config:
+        '''Sample configuration data for the data model.'''
+        json_schema_extra = {
+            "example": {
+                'entities': [
+                    IndalekoNamedEntityDataModel.Config.json_schema_extra['example'],
+                ],
+            }
+        }
 
 
 # Example usage
 example_entities = NamedEntityCollection(entities=[
     IndalekoNamedEntityDataModel(
         name="Tony",
-        category="person",
+        category=IndalekoNamedEntityType.person,
         description="The user",
         uuid=UUID("981a3522-c394-40b0-a82c-a9d7fa1f7e01")
     ),
     IndalekoNamedEntityDataModel(
         name="Paris",
-        category="place",
+        category=IndalekoNamedEntityType.location,
         description="Capital of France",
         gis_location=BaseLocationDataModel(
             source='defined',
@@ -71,10 +104,17 @@ example_entities = NamedEntityCollection(entities=[
         ),
     IndalekoNamedEntityDataModel(
         name="Laptop",
-        category="thing",
+        category=IndalekoNamedEntityType.item,
         description="User's personal laptop",
         device_id="3dd1f5f6-1bd1-4822-864a-7470eeb8eebc"
     )
 ])
 
-print(example_entities)
+
+def main():
+    '''Test code'''
+    print(json.dumps(example_entities.model_json_schema(), indent=2))
+
+
+if __name__ == '__main__':
+    main()

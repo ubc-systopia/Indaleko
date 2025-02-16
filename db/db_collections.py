@@ -55,16 +55,16 @@ class IndalekoDBCollections:
     Indaleko_MachineConfig_Collection = 'MachineConfig'
     Indaleko_ActivityDataProvider_Collection = 'ActivityDataProviders'
     Indaleko_ActivityContext_Collection = 'ActivityContext'
-    Indaleko_MusicActivityContext_Collection = 'MusicActivityContext'
-    Indaleko_TempActivityContext_Collection = 'TempActivityContext'
-    Indaleko_GeoActivityContext_Collection = 'GeoActivityContext'
+    Indaleko_MusicActivityData_Collection = 'MusicActivityContext'
+    Indaleko_TempActivityData_Collection = 'TempActivityContext'
+    Indaleko_GeoActivityData_Collection = 'GeoActivityContext'
     Indaleko_Identity_Domain_Collection = 'IdentityDomains'
     Indaleko_User_Collection = 'Users'
     Indaleko_User_Relationship_Collection = 'UserRelationships'
     Indaleko_Performance_Data_Collection = 'PerformanceData'
     Indaleko_Query_History_collection = 'QueryHistory'
-    Indaleko_Semantic_Data_Collection = 'SemanticData'
-    Named_Entity_Collection = 'NamedEntities'
+    Indaleko_SemanticData_Collection = 'SemanticData'
+    Indaleko_Named_Entity_Collection = 'NamedEntities'
     Indaleko_Collection_Metadata = 'CollectionMetadata'
 
     Collections = {
@@ -150,25 +150,25 @@ class IndalekoDBCollections:
             'edge': False,
             'indices': {},
         },
-        Indaleko_MusicActivityContext_Collection: {
+        Indaleko_MusicActivityData_Collection: {
             'internal': False,
             'schema': IndalekoActivityDataModel.get_arangodb_schema(),
             'edge': False,
             'indices': {},
         },
-        Indaleko_GeoActivityContext_Collection: {
+        Indaleko_GeoActivityData_Collection: {
             'internal': False,
             'schema': IndalekoActivityDataModel.get_arangodb_schema(),
             'edge': False,
             'indices': {},
         },
-        Indaleko_TempActivityContext_Collection: {
+        Indaleko_TempActivityData_Collection: {
             'internal': True,  # temporary storage for activity data, not generally useful for querying
             'schema': IndalekoActivityDataModel.get_arangodb_schema(),
             'edge': False,
             'indices': {},
         },
-        Indaleko_Semantic_Data_Collection: {
+        Indaleko_SemanticData_Collection: {
             'schema': BaseSemanticDataModel.get_arangodb_schema(),
             'edge': False,
             'indices': {
@@ -208,10 +208,11 @@ class IndalekoDBCollections:
             'internal': False,
             'schema': IndalekoQueryHistoryDataModel.get_arangodb_schema(),
             'edge': False,
+            'geoJson': True,
             'indices': {
             }
         },
-        Named_Entity_Collection: {
+        Indaleko_Named_Entity_Collection: {
             'internal': False,
             'schema': IndalekoNamedEntityDataModel.get_arangodb_schema(),
             'edge': False,

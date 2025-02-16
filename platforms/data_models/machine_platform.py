@@ -37,14 +37,20 @@ import platforms.data_models.hardware as hardware
 import platforms.data_models.software as software
 # pylint: enable=wrong-import-position
 
+
 class MachinePlatform(IndalekoBaseModel):
     '''Defines the platform (hardware and software) information'''
-    Software : software.Software = Field(...,
-                                title='Software',
-                                description='The software information for the machine.')
-    Hardware : hardware.Hardware = Field(...,
-                                title='Hardware',
-                                description='The hardware information for the machine.')
+    Software: software.Software = Field(
+        ...,
+        title='Software',
+        description='The software information for the machine.'
+    )
+
+    Hardware: hardware.Hardware = Field(
+        ...,
+        title='Hardware',
+        description='The hardware information for the machine.'
+    )
 
     class Config:
         '''Configuration for the hardware data model'''
@@ -55,10 +61,12 @@ class MachinePlatform(IndalekoBaseModel):
             }
         }
 
+
 def main():
     '''Main function for the software data model'''
     ic('Testing Software Data Model')
     MachinePlatform.test_model_main()
+
 
 if __name__ == '__main__':
     main()

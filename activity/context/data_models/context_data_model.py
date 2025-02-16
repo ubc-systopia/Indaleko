@@ -74,21 +74,23 @@ class IndalekoActivityContextDataModel(IndalekoBaseModel):
     An _activity handle_ is a UUID, which serves as a reference to the data
     object ("activity context") in the database.
     '''
+    Handle: uuid.UUID = Field(
+        ...,
+        title='Handle',
+        description='The activity context handle.'
+    )
 
-    Handle : uuid.UUID = Field(...,
-                               title='Handle',
-                               description='The activity context handle.')
+    Timestamp: AwareDatetime = Field(
+        ...,
+        title='Timestamp',
+        description='The timestamp when the activity context was created.'
+    )
 
-    Timestamp : AwareDatetime = Field(...,
-                                    title='Timestamp',
-                                    description='The timestamp when the activity context was created.'
-                                )
-
-    Cursors : List[ActivityDataModel]\
-          = Field(...,
-                  title='ActivityData',
-                  description='The activity data associated with the activity context.'
-            )
+    Cursors: List[ActivityDataModel] = Field(
+        ...,
+        title='ActivityData',
+        description='The activity data associated with the activity context.'
+    )
 
     @field_validator('Timestamp', mode='before')
     def ensure_timezone(cls, value: datetime):
@@ -98,14 +100,13 @@ class IndalekoActivityContextDataModel(IndalekoBaseModel):
             value = value.replace(tzinfo=timezone.utc)
         return value
 
-
     class Config:
         '''Configuration for the class.'''
         json_schema_extra = {
-            'example' : {
-                'Handle' : uuid.uuid4(),
-                'Timestamp' : '2024-01-01T00:00:00Z',
-                'Cursors' : [
+            'example': {
+                'Handle': uuid.uuid4(),
+                'Timestamp': '2024-01-01T00:00:00Z',
+                'Cursors': [
                     ActivityDataModel.Config.json_schema_extra['example'],
                     ActivityDataModel.Config.json_schema_extra['example'],
                     ActivityDataModel.Config.json_schema_extra['example'],
@@ -117,6 +118,7 @@ class IndalekoActivityContextDataModel(IndalekoBaseModel):
 def main():
     '''Test code for IndalekoActivityContextDataModel.'''
     IndalekoActivityContextDataModel.test_model_main()
+
 
 if __name__ == '__main__':
     main()

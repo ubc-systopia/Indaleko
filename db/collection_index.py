@@ -31,7 +31,6 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from utils.singleton import IndalekoSingleton
 # pylint: enable=wrong-import-position
 
 
@@ -39,78 +38,78 @@ class IndalekoCollectionIndex:
     '''Manages an index for an IndalekoCollection object.'''
 
     index_args = {
-        'hash' : {
-            'fields' : str,
-            'name' : str,
-            'unique' : bool,
-            'sparse' : bool,
-            'deduplicate' : bool,
-            'in_background' : bool
+        'hash': {
+            'fields': str,
+            'name': str,
+            'unique': bool,
+            'sparse': bool,
+            'deduplicate': bool,
+            'in_background': bool
         },
-        'skip_list' : {
-            'fields' : str,
-            'name' : str,
-            'unique' : bool,
-            'sparse' : bool,
-            'deduplicate' : bool,
-            'in_background' : bool
+        'skip_list': {
+            'fields': str,
+            'name': str,
+            'unique': bool,
+            'sparse': bool,
+            'deduplicate': bool,
+            'in_background': bool
         },
-        'geo_index' : {
-            'fields' : str,
-            'name' : str,
-            'geo_json' : bool,
-            'in_background' : bool,
-            'legacyPolygons' : bool
-    },
-        'fulltext' : {
-            'fields' : str,
-            'name' : str,
-            'min_length' : int,
-            'in_background' : bool
+        'geo_index': {
+            'fields': str,
+            'name': str,
+            'geo_json': bool,
+            'in_background': bool,
+            'legacyPolygons': bool
         },
-        'persistent' : {
-            'fields' : str,
-            'name' : str,
-            'unique' : bool,
-            'sparse' : bool,
-            'in_background' : bool,
-            'storedValues' : list,
-            'cacheEnabled' : bool
+        'fulltext': {
+            'fields': str,
+            'name': str,
+            'min_length': int,
+            'in_background': bool
         },
-        'ttl' : {
-            'fields' : str,
-            'name' : str,
-            'expiry_time' : int,
-            'in_background' : bool
+        'persistent': {
+            'fields': str,
+            'name': str,
+            'unique': bool,
+            'sparse': bool,
+            'in_background': bool,
+            'storedValues': list,
+            'cacheEnabled': bool
         },
-        'inverted' : {
-            'fields' : str,
-            'name' : str,
-            'inBackground' : bool,
-            'parallelism' : int,
-            'primarySort' : list,
-            'storedValues' : list,
-            'analyzer' : str,
-            'features' : list,
-            'includeAllFields' : bool,
-            'trackListPositions' : bool,
-            'searchField' : str,
-            'primaryKeyCache' : bool,
-            'cache' : bool
+        'ttl': {
+            'fields': str,
+            'name': str,
+            'expiry_time': int,
+            'in_background': bool
         },
-        'zkd' : {
-            'fields' : str,
-            'name' : str,
-            'field_value_types' : list,
-            'unique' : bool,
-            'in_background' : bool
+        'inverted': {
+            'fields': str,
+            'name': str,
+            'inBackground': bool,
+            'parallelism': int,
+            'primarySort': list,
+            'storedValues': list,
+            'analyzer': str,
+            'features': list,
+            'includeAllFields': bool,
+            'trackListPositions': bool,
+            'searchField': str,
+            'primaryKeyCache': bool,
+            'cache': bool
         },
-        'mdi' : {
-            'fields' : str,
-            'name' : str,
-            'field_value_types' : list,
-            'unique' : bool,
-            'in_background' : bool
+        'zkd': {
+            'fields': str,
+            'name': str,
+            'field_value_types': list,
+            'unique': bool,
+            'in_background': bool
+        },
+        'mdi': {
+            'fields': str,
+            'name': str,
+            'field_value_types': list,
+            'unique': bool,
+            'in_background': bool
         }
     }
 
@@ -158,7 +157,7 @@ class IndalekoCollectionIndex:
             self.in_background = kwargs['in_background']
         # There are two parameters that are common to all index types:
         # fields (the fields being indexed) and name (the name of the index).
-        args = {'fields' : self.fields}
+        args = {'fields': self.fields}
         if self.name is not None:
             args['name'] = self.name
         if self.index_type == 'hash':
@@ -170,12 +169,16 @@ class IndalekoCollectionIndex:
                 args['deduplicate'] = self.deduplicate
             if self.in_background is not None:
                 args['in_background'] = self.in_background
-            self.index = self.collection.add_hash_index(**args) # pylint: disable=unexpected-keyword-arg
+            self.index = self.collection.add_hash_index(**args)  # pylint: disable=unexpected-keyword-arg
         elif self.index_type == 'persistent':
             self.index = self.collection.add_persistent_index(fields=self.fields,
                                                               unique=self.unique)
         elif self.index_type == 'geo':
-            self.index = self.collection.add_geo_index(fields=self.fields, unique=self.unique)
+            args = {}
+            args['type'] = 'geo'
+            args['fields'] = self.fields
+            args['geoJson'] = getattr(self, 'geo_json', True)
+            self.index = self.collection.ensureIndex(args)
         elif self.index_type == 'fulltext':
             self.index = self.collection.add_fulltext_index(fields=self.fields,
                                                             unique=self.unique)
@@ -189,9 +192,11 @@ class IndalekoCollectionIndex:
             raise ValueError('Invalid index type')
         ic(f'Created index {self.index}')
 
+
 def main():
     '''Test the IndalekoCollectionIndex class.'''
     print('IndalekoCollectionIndex: called.  No tests yet.')
+
 
 if __name__ == '__main__':
     main()

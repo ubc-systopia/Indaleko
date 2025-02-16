@@ -58,19 +58,7 @@ class IndalekoCollectionMetadataDataModel(IndalekoBaseModel):
         description='This describes the basic purpose of the collection'
     )
 
-    RelevantQueries: Union[list[str], None] = Field(
-        ...,
-        Name='RelevantQueries',
-        description='Example queries that are relevant to this collection',
-    )
-
-    IndexedFields: Union[list[IndalekoCollectionIndexDataModel], None] = Field(
-        ...,
-        Name='IndexedFields',
-        description='The fields that are indexed for this collection',
-    )
-
-    QueryGuidelines: Union[str, None] = Field(
+    QueryGuidelines: Union[list[str], None] = Field(
         ...,
         Name='QueryGuidelines',
         description='Guidelines for querying this collection',
