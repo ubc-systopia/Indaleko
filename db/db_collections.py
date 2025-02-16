@@ -39,7 +39,8 @@ from data_models import \
     IndalekoQueryHistoryDataModel, \
     IndalekoRelationshipDataModel, \
     IndalekoServiceDataModel, \
-    IndalekoUserDataModel
+    IndalekoUserDataModel, \
+    IndalekoCollectionMetadataDataModel
 
 from activity import IndalekoActivityDataModel
 from semantic.data_models.base_data_model import BaseSemanticDataModel
@@ -236,7 +237,7 @@ class IndalekoDBCollections:
         },
         Indaleko_Collection_Metadata: {
             'internal': True,  # metadata about collections, not generally useful for querying
-            'schema': None,
+            'schema': IndalekoCollectionMetadataDataModel.get_arangodb_schema(),
             'edge': False,
             'indices': {
             }

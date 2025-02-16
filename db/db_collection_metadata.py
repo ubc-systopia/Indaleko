@@ -33,11 +33,15 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+from activity.activity_metadata import ActivityCollectionMetadata
 from activity.recorders.registration_service import IndalekoActivityDataRegistrationService
 from db import IndalekoDBConfig, IndalekoDBCollections
 from data_models.collection_info import CollectionInfo
 from data_models.collection_metadata_data_model import IndalekoCollectionMetadataDataModel
 from data_models.db_index import IndalekoCollectionIndexDataModel
+from platforms.machine_config_metadata import MachineConfigCollectionMetadata
+from storage.object_metadata import ObjectCollectionMetadata
+from storage.relationship_metadata import RelationshipCollectionMetadata
 from utils import IndalekoSingleton
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
@@ -49,6 +53,13 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
     This class is used to manage the metadata for the collections in the
     Indaleko database.
     '''
+
+    default_collection_metadata = {
+        IndalekoDBCollections.Indaleko_Object_Collection: ObjectCollectionMetadata.default_metadata,
+        IndalekoDBCollections.Indaleko_Relationship_Collection: RelationshipCollectionMetadata.default_metadata,
+        IndalekoDBCollections.Indaleko_MachineConfig_Collection: MachineConfigCollectionMetadata.default_metadata,
+        'ActivityData': ActivityCollectionMetadata.default_metadata,
+    }
 
     def __init__(self,
                  db_config: IndalekoDBConfig = IndalekoDBConfig()):
@@ -79,11 +90,12 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
 
     def generate_new_collection_metadata(self, name: str) -> IndalekoCollectionMetadataDataModel:
         '''Generate a new collection metadata object.'''
+        if self.default_collection_metadata.get(name):
+            return self.default_collection_metadata[name]
         db_collection = self.db_config.db.collection(name)
         assert db_collection is not None, f'Failed to get collection {name}'
         description = db_collection.properties().get('description', "No description available")
-        relevant_queries = db_collection.properties().get('relevant_queries', [])
-        query_guidelines = db_collection.properties().get('query_guidelines', "No guidelines provided")
+        query_guidelines = [db_collection.properties().get('query_guidelines', "No guidelines provided")]
         indexed_fields = []
         for index in db_collection.indexes():
             indexed_fields.append(
@@ -104,8 +116,6 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
         return IndalekoCollectionMetadataDataModel(
             key=name,
             Description=description,
-            RelevantQueries=relevant_queries,
-            IndexedFields=indexed_fields,
             QueryGuidelines=query_guidelines,
             Schema=schema,
         )

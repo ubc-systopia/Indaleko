@@ -16,6 +16,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from data_models.activity_data_registration import IndalekoActivityDataRegistrationDataModel  # noqa: E402
+from data_models.collection_metadata_data_model import IndalekoCollectionMetadataDataModel  # noqa: E402
 from data_models.i_object import IndalekoObjectDataModel  # noqa: E402
 from data_models.i_perf import IndalekoPerformanceDataModel  # noqa: E402
 from data_models.i_uuid import IndalekoUUIDDataModel  # noqa: E402
@@ -36,6 +37,7 @@ __version__ = '0.1.0'
 
 __all__ = [
     'IndalekoActivityDataRegistrationDataModel',
+    'IndalekoCollectionMetadataDataModel',
     'IndalekoIdentityDomainDataModel',
     'IndalekoObjectDataModel',
     'IndalekoMachineConfigDataModel',
@@ -49,5 +51,5 @@ __all__ = [
     'IndalekoSourceIdentifierDataModel',
     'IndalekoTimestampDataModel',
     'IndalekoUserDataModel',
-    'IndalekoUUIDDataModel'
+    'IndalekoUUIDDataModel',
 ]

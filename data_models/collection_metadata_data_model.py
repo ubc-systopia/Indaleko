@@ -101,17 +101,14 @@ class IndalekoCollectionMetadataDataModel(IndalekoBaseModel):
             "example": {
                 "key": "IndalekoCollectionMetadata",
                 "Description": "This collection contains metadata about collections",
-                "RelevantQueries": [
-                    "FOR doc IN IndalekoCollectionMetadata FILTER doc.Name "
-                    "== 'IndalekoCollectionMetadata' RETURN doc",
-                ],
-                "PrimaryKeys": [
-                    "_key"
-                ],
-                "IndexedFields": [],
-                "QueryGuidelines": "Please use the primary key for queries",
+                "QueryGuidelines": ["Please use the primary key for queries"],
                 "Schema": IndalekoCollectionIndexDataModel.Config.json_schema_extra,
-            }
+            },
+            "required": [
+                "Description",
+                "QueryGuidelines",
+                "Schema"
+            ]
         }
 
 

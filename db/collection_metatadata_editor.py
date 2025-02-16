@@ -138,7 +138,7 @@ class CollectionMetadataEditor:
             print(f"Successfully updated metadata for '{collection_name}'.")
 
         except Exception as e:
-            print(f"Error: Failed to update collection metadata - {e}")
+            print(f"Error: Failed to update collection {collection_name} metadata - {e}")
 
 
 class IndalekoCollectorMetadataCLI(IndalekoBaseCLI):

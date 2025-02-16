@@ -33,7 +33,7 @@ from data_models.collection_metadata_data_model import IndalekoCollectionMetadat
 from utils import IndalekoSingleton
 
 
-class ActivityMetadata(IndalekoSingleton):
+class ActivityCollectionMetadata(IndalekoSingleton):
     '''Provides structured metadata guidance for activity data collections.'''
 
     @staticmethod
@@ -102,7 +102,7 @@ class ActivityMetadata(IndalekoSingleton):
 
 def main():
     '''Main entry point for the module.'''
-    metadata = ActivityMetadata()
+    metadata = ActivityCollectionMetadata()
     print(metadata.default_metadata.model_dump_json(indent=4))
 
 
