@@ -24,7 +24,7 @@ import sys
 
 import openai
 from icecream import ic
-from typing import List
+from typing import Any
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -34,7 +34,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from query.query_processing.data_models.query_output import LLMQueryResponse
+from query.query_processing.data_models.query_output import LLMTranslateQueryResponse
 from query.llm_base import IndalekoLLMBase
 # pylint: enable=wrong-import-position
 
@@ -55,7 +55,7 @@ class OpenAIConnector(IndalekoLLMBase):
         self.model = model
         self.client = openai.OpenAI(api_key=api_key)
 
-    def generate_query(self, prompt: str, temperature=0) -> LLMQueryResponse:
+    def generate_query(self, prompt: str, temperature=0) -> LLMTranslateQueryResponse:
         """
         Generate a query using OpenAI's model.
 
@@ -66,9 +66,9 @@ class OpenAIConnector(IndalekoLLMBase):
             str: The generated query
         """
         ic('Submitting prompt to OpenAI')
-        response_schema = LLMQueryResponse.model_json_schema()
+        response_schema = LLMTranslateQueryResponse.model_json_schema()
         completion = self.client.beta.chat.completions.parse(
-            model='gpt-4o',
+            model=self.model,
             messages=[
                 {
                     "role": "system",
@@ -91,7 +91,7 @@ class OpenAIConnector(IndalekoLLMBase):
         )
         ic('Received response from OpenAI')
         doc = json.loads(completion.choices[0].message.content)
-        response = LLMQueryResponse(**doc)
+        response = LLMTranslateQueryResponse(**doc)
         return response
 
     def summarize_text(self, text: str, max_length: int = 100) -> str:
@@ -117,7 +117,7 @@ class OpenAIConnector(IndalekoLLMBase):
         )
         return response.choices[0].message['content'].strip()
 
-    def extract_keywords(self, text: str, num_keywords: int = 5) -> List[str]:
+    def extract_keywords(self, text: str, num_keywords: int = 5) -> list[str]:
         """
         Extract keywords from the given text using OpenAI's model.
 
@@ -126,7 +126,7 @@ class OpenAIConnector(IndalekoLLMBase):
             num_keywords (int): The number of keywords to extract
 
         Returns:
-            List[str]: The extracted keywords
+            list[str]: The extracted keywords
         """
         prompt = f"Extract {num_keywords} keywords from the following text:\n\n{text}"
         response = openai.ChatCompletion.create(
@@ -139,13 +139,13 @@ class OpenAIConnector(IndalekoLLMBase):
         keywords = response.choices[0].message['content'].strip().split(',')
         return [keyword.strip() for keyword in keywords[:num_keywords]]
 
-    def classify_text(self, text: str, categories: List[str]) -> str:
+    def classify_text(self, text: str, categories: list[str]) -> str:
         """
         Classify the given text into one of the provided categories using OpenAI's model.
 
         Args:
             text (str): The text to classify
-            categories (List[str]): The list of possible categories
+            categories (list[str]): The list of possible categories
 
         Returns:
             str: The predicted category
@@ -161,7 +161,7 @@ class OpenAIConnector(IndalekoLLMBase):
         )
         return response.choices[0].message['content'].strip()
 
-    def answer_question(self, context: str, question: str) -> str:
+    def answer_question(self, context: str, question: str, schema: dict[str, Any]) -> str:
         """
         Answer a question based on the given context using OpenAI's model.
 
@@ -172,18 +172,27 @@ class OpenAIConnector(IndalekoLLMBase):
         Returns:
             str: The answer to the question
         """
-        prompt = f"Context: {context}\n\nQuestion: {question}\n\nAnswer:"
-        response = openai.ChatCompletion.create(
+        prompt = f"Context: {context}\n\n"
+        question = f"User query: {question}"
+        completion = self.client.beta.chat.completions.parse(
             model=self.model,
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a helpful assistant that answers questions based on provided context."
+                    "content": prompt
                 },
                 {
                     "role": "user",
-                    "content": prompt
+                    "content": question
                 }
-            ]
+            ],
+            temperature=0,
+            response_format={
+                'type': 'json_schema',
+                'json_schema': {
+                    'name': 'OpenAIAnswerResponse',
+                    'schema': schema,
+                }
+            }
         )
-        return response.choices[0].message['content'].strip()
+        return completion.choices[0].message.content

@@ -43,7 +43,8 @@ class AQLExecutor(ExecutorBase):
     Executor for AQL (ArangoDB Query Language) queries.
     """
 
-    def execute(self, query: str, data_connector: Any) -> list[dict[str, Any]]:
+    @staticmethod
+    def execute(query: str, data_connector: Any) -> list[dict[str, Any]]:
         """
         Execute an AQL query using the provided data connector.
 
@@ -56,17 +57,18 @@ class AQLExecutor(ExecutorBase):
         """
         assert isinstance(data_connector, IndalekoDBConfig), "Data connector must be an instance of IndalekoDBConfig"
         ic(query)
-        if not self.validate_query(query):
+        if not AQLExecutor.validate_query(query):
             raise ValueError("Invalid AQL query")
         try:
             raw_results = data_connector.db.aql.execute(query)
-            return self.format_results(raw_results)
+            return AQLExecutor.format_results(raw_results)
         except TimeoutError as e:
             ic(f'The query execution has timed out:\n\tquery: {query}\n\tException: {e}')
             ic('Terminating')
             sys.exit(1)
 
-    def validate_query(self, query: str) -> bool:
+    @staticmethod
+    def validate_query(query: str) -> bool:
         """
         Validate the AQL query before execution.
 
@@ -80,7 +82,8 @@ class AQLExecutor(ExecutorBase):
         # This is a placeholder implementation
         return "FOR" in query and "RETURN" in query
 
-    def format_results(self, raw_results: Any) -> list[dict[str, Any]]:
+    @staticmethod
+    def format_results(raw_results: Any) -> list[dict[str, Any]]:
         """
         Format the raw AQL query results into a standardized format.
 

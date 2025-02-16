@@ -32,11 +32,8 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from activity.recorders.registration_service import IndalekoActivityDataRegistrationService
-from db import IndalekoDBConfig
 from db.db_collection_metadata import IndalekoDBCollectionsMetadata
-from query.query_processing.data_models.collection_info import CollectionInfo
-from query.query_processing.data_models.query_output import LLMQueryResponse
+from query.query_processing.data_models.query_output import LLMTranslateQueryResponse
 from query.query_processing.query_translator.translator_base import TranslatorBase
 from query.llm_base import IndalekoLLMBase
 # pylint: enable=wrong-import-position
@@ -47,15 +44,16 @@ class AQLTranslator(TranslatorBase):
     Translator for converting parsed queries to AQL (ArangoDB Query Language).
     """
 
-    def __init__(self, db: IndalekoDBConfig = IndalekoDBConfig()):
+    def __init__(self, collections_metadata: IndalekoDBCollectionsMetadata):
         """
         Initialize the AQL translator.
 
         Args:
-            db (IndalekoDBConfig): The database configuration
+            collections_metadata: Metadata for the collections in the database.
         """
-        self.db = db
-        self.collections_metadata = IndalekoDBCollectionsMetadata(db)
+        self.db_collections_metadata = collections_metadata
+        self.db_config = self.db_collections_metadata.db_config
+        self.collection_data = self.db_collections_metadata.get_all_collections_metadata()
 
     def translate(
             self,
@@ -63,8 +61,7 @@ class AQLTranslator(TranslatorBase):
             selected_md_attributes: dict[str, Any],
             additional_notes: str,
             n_truth: int,
-            llm_connector: IndalekoLLMBase,
-            db: IndalekoDBConfig = IndalekoDBConfig()
+            llm_connector: IndalekoLLMBase
     ) -> str:
         """
         Translate a parsed query into an AQL query.
@@ -81,13 +78,15 @@ class AQLTranslator(TranslatorBase):
 
         ic('translate')
         query_response = llm_connector.generate_query(prompt)
-        assert isinstance(query_response, LLMQueryResponse)
+        assert isinstance(query_response, LLMTranslateQueryResponse)
+        ic(prompt)
+        ic(query_response)
         aql_statement = query_response.aql_query
-        assert self.validate_query(aql_statement), f"Generated AQL query is invalid: {aql_statement}"
+        assert self.validate_query(aql_statement, True), f"Generated AQL query is invalid: {aql_statement}"
         ic(aql_statement)
         return self.optimize_query(aql_statement)
 
-    def validate_query(self, query: str) -> bool:
+    def validate_query(self, query: str, explain=False) -> bool:
         """
         Validate the translated AQL query.
 
@@ -97,13 +96,18 @@ class AQLTranslator(TranslatorBase):
         Returns:
             bool: True if the query is valid, False otherwise
         """
-        result = ("FOR" in query and "RETURN" in query) and (
-                ".Size" in query or ".Label" in query or ".URI" in query or ".Timestamp" in query or
-                ".Label" in query or ".SemanticAttributes" in
-                query or ".Timestamp" in query or ".Size" in
-                query or ".URI" in query)
-        if not result:
-            ic("Invalid AQL query:", query)
+        required_fields = [".Size", ".Label", ".URI", ".Timestamp", ".SemanticAttributes"]
+        result = "FOR" in query and "RETURN" in query and any(field in query for field in required_fields)
+
+        if explain and not result:
+            explanation = []
+            if "FOR" not in query:
+                explanation.append("Missing 'FOR' clause.")
+            if "RETURN" not in query:
+                explanation.append("Missing 'RETURN' clause.")
+            if not any(keyword in query for keyword in required_fields):
+                explanation.append(f"No instance of any required field {" ".join(required_fields)}.")
+            ic("Invalid AQL query:", query, explanation)
         return result
 
     def optimize_query(self, query: str) -> str:
@@ -219,48 +223,7 @@ class AQLTranslator(TranslatorBase):
             'user': user_prompt
         }
 
-    def _get_collection_data(
-            self,
-            db: IndalekoDBConfig = IndalekoDBConfig()
-    ) -> dict[str, CollectionInfo]:
-        '''
-        Extract important information from the database and return it.
-        Note that this probably should be moved out of the query
-        translator.
-        '''
-        collection_data = {}
-        for provider in IndalekoActivityDataRegistrationService.get_provider_list():
-            collection_name = IndalekoActivityDataRegistrationService.\
-                lookup_activity_provider_collection(provider['Identifier'])
-            collection_metadata = IndalekoDBCollectionsMetadata().get_collection_metadata(collection_name)
-            indexed_fields = []
-            for index in collection_metadata.IndexedFields:
-                for field in index.Fields:
-                    indexed_fields.append(field)
-            collection_data[collection_name] = CollectionInfo(
-                Name=collection_name,
-                Description=collection_metadata.Description,
-                IndexedFields=indexed_fields,
-                Indices=[indexed_field.Name for indexed_field in collection_metadata.IndexedFields],
-                Schema=collection_metadata.Schema,
-                QueryGuidelines=collection_metadata.QueryGuidelines,
-                RelevantQueries=collection_metadata.RelevantQueries,
-            )
-
-        ic(activity_providers)
-        activity_collections = [
-            IndalekoActivityDataRegistrationService.lookup_activity_provider_collection(provider['Identifier'])
-            for provider in activity_providers
-        ]
-        ic(activity_collections[0].collection_name)
-        collection_name = activity_collections[0].collection_name
-        collection_metadata = IndalekoDBCollectionsMetadata().get_collection_metadata(collection_name)
-        ic(collection_metadata)
-
-    def _generate_collection_mapping(
-            self,
-            db: IndalekoDBConfig = IndalekoDBConfig()
-    ) -> dict[str, str]:
+    def _generate_collection_mapping(self) -> dict[str, str]:
         """
         Dynamically generates a mapping of keywords to collections based on CollectionMetadata.
 
@@ -270,24 +233,11 @@ class AQLTranslator(TranslatorBase):
         Returns:
             dict[str, str]: A mapping of keywords to their relevant collections.
         """
-        self._get_collection_data(db)
-        exit(0)
         collection_mapping = {}
 
         # Fetch all collection metadata from CollectionMetadata
-        cursor = db.db.aql.execute("FOR doc IN CollectionMetadata RETURN doc")
-
-        for doc in cursor:
-            collection_name = doc['_key']
-            description = doc["Description"].lower()  # Normalize text for matching
-
-            # Identify potential keywords for this collection
-            keywords = set(description.split())  # Simple tokenization (can be improved)
-
-            # Map each keyword to the collection
-            for keyword in keywords:
-                if keyword not in collection_mapping:
-                    collection_mapping[keyword] = collection_name
+        for data in self.collection_data:
+            ic(dir(data))
 
         collection_mapping = {
             'file': 'Objects',
@@ -301,7 +251,6 @@ class AQLTranslator(TranslatorBase):
             self,
             parsed_query: dict[str, Any],
             selected_md_attributes: dict[str, Any],
-            db: IndalekoDBConfig = IndalekoDBConfig()
     ) -> list[str]:
         """
         Dynamically determine the relevant collections based on the user query.
@@ -309,16 +258,15 @@ class AQLTranslator(TranslatorBase):
         Args:
             parsed_query (dict[str, Any]): The parsed user query.
             selected_md_attributes (dict[str, Any]): Extracted metadata attributes.
-            db: ArangoDB database connection.
 
         Returns:
             List[str]: A list of relevant collections for AQL generation.
         """
-        assert isinstance(db, IndalekoDBConfig), "Database connection must be an IndalekoDBConfig object"
+
         relevant_collections = set()
 
         # Step 1: Fetch dynamic keyword → collection mapping from CollectionMetadata
-        collection_mapping = self._generate_collection_mapping(db)
+        collection_mapping = self._generate_collection_mapping()
 
         # Step 2: Extract keywords from user query
         user_query_text = parsed_query.get("original_query", "").lower().split()
@@ -342,7 +290,7 @@ class AQLTranslator(TranslatorBase):
 
         if needs_activity_data:
             # Step 5: Query `ActivityDataProviders` to find available sources
-            activity_providers = db.db_config.db.aql.execute(
+            activity_providers = self.db_config.db.aql.execute(
                 "FOR provider IN ActivityDataProviders RETURN provider.Name"
             )
             provider_collections = list(activity_providers)
@@ -360,21 +308,31 @@ class AQLTranslator(TranslatorBase):
             parsed_query: dict[str, Any],
             selected_md_attributes: dict[str, Any],
             additional_notes: str,
-            n_truth_md: int,) -> dict[str, str]:
+            n_truth_md: int,
+    ) -> dict[str, str]:
         """
         Constructs a structured prompt for the LLM to generate an AQL query.
         """
         ic(parsed_query.keys())
+        ic(selected_md_attributes)
 
         relevant_collections = self._determine_relevant_collections(parsed_query, selected_md_attributes)
         ic(relevant_collections)
 
+        schema_descriptions = ""
+        for col in relevant_collections:
+            schema_descriptions += f'Collection {col} has the following JSON '
+            schema_descriptions += f'data schema: {parsed_query['schema'][col]['rule']}\n'
+
         # Fetch schema details for relevant collections
-        schema_descriptions = "\n".join([
-            f"- **{col}**: {parsed_query['schema'][col]['rule']['description']}\n"
+        '''schema_descriptions = "\n".join([
+            f"- **{col}**: {parsed_query['schema'][col]['rule']}\n"
             f"  Indexed Fields: {', '.join(parsed_query['schema'][col].get('indexed_fields', []))}"
             for col in relevant_collections
         ])
+        '''
+        ic(schema_descriptions)
+        exit(0)
 
         system_prompt = f"""
             You are an advanced ArangoDB query assistant, generating **optimized AQL queries**

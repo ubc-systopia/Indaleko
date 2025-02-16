@@ -34,6 +34,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from db import IndalekoDBConfig
+from db.db_collection_metadata import IndalekoDBCollectionsMetadata
 from query.query_processing.nl_parser import NLParser
 from query.query_processing.query_translator.aql_translator import AQLTranslator
 from query.query_processing.query_history import QueryHistory
@@ -73,10 +74,14 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         config_data = self.get_config_data()
         config_file_path = os.path.join(config_data['ConfigDirectory'], config_data['DBConfigFile'])
         self.db_config = IndalekoDBConfig(config_file=config_file_path)
+        self.collections_metadata = IndalekoDBCollectionsMetadata(self.db_config)
         self.openai_key = self.get_api_key()
         self.llm_connector = OpenAIConnector(api_key=self.openai_key)
-        self.nl_parser = NLParser(llm_connector=self.llm_connector)
-        self.query_translator = AQLTranslator()
+        self.nl_parser = NLParser(
+            llm_connector=self.llm_connector,
+            collections_metadata=self.collections_metadata
+        )
+        self.query_translator = AQLTranslator(self.collections_metadata)
         self.query_history = QueryHistory()
         self.query_executor = AQLExecutor()
         self.metadata_analyzer = MetadataAnalyzer()
@@ -114,7 +119,9 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             # self.logging_service.log_query(user_query)
 
             # Process the query
-            parsed_query = self.nl_parser.parse(query=user_query, schema=self.schema)
+            parsed_query = self.nl_parser.parse(query=user_query)
+            ic(parsed_query)
+            exit(0)
             translated_query = self.query_translator.translate(
                 parsed_query,
                 selected_md_attributes=None,

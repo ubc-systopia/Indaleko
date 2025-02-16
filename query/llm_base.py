@@ -33,7 +33,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from query.query_processing.data_models.query_output import LLMQueryResponse
+from query.query_processing.data_models.query_output import LLMTranslateQueryResponse
 # pylint: enable=wrong-import-position
 
 
@@ -43,7 +43,7 @@ class IndalekoLLMBase(ABC):
     """
 
     @abstractmethod
-    def generate_query(self, prompt: str) -> LLMQueryResponse:
+    def generate_query(self, prompt: str) -> LLMTranslateQueryResponse:
         """
         Generate a query based on the given prompt.
 
