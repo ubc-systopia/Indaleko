@@ -113,6 +113,26 @@ class IndalekoCollectionIndex:
         }
     }
 
+    @staticmethod
+    def create_index_from_args(
+        collection: str,
+        index_type: str,
+        **kwargs: dict[str, str]
+    ) -> 'IndalekoCollectionIndex':
+        '''Create an index for the given collection.'''
+        if index_type not in IndalekoCollectionIndex.index_args:
+            raise ValueError('Invalid index type')
+        assert index_type != 'primary', 'Primary index is not supported'
+        args = {}
+        for key in IndalekoCollectionIndex.index_args[index_type]:
+            if key in kwargs:
+                args[key] = kwargs[key]
+        return IndalekoCollectionIndex(
+            collection=collection,
+            index_type=index_type,
+            **args
+        )
+
     def __init__(self,
                  **kwargs):
         """Parameters:

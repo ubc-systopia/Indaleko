@@ -17,6 +17,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+import json
 import os
 import sys
 
@@ -33,9 +34,12 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from db.db_collection_metadata import IndalekoDBCollectionsMetadata
-from query.query_processing.data_models.query_output import LLMTranslateQueryResponse
+# from query.query_processing.data_models.query_input import StructuredQuery
+# from query.query_processing.data_models.query_output import LLMTranslateQueryResponse
+from query.query_processing.data_models.translator_input import TranslatorInput
+from query.query_processing.data_models.translator_response import TranslatorOutput
 from query.query_processing.query_translator.translator_base import TranslatorBase
-from query.llm_base import IndalekoLLMBase
+# from query.llm_base import IndalekoLLMBase
 # pylint: enable=wrong-import-position
 
 
@@ -57,12 +61,8 @@ class AQLTranslator(TranslatorBase):
 
     def translate(
             self,
-            parsed_query: dict[str, Any],
-            selected_md_attributes: dict[str, Any],
-            additional_notes: str,
-            n_truth: int,
-            llm_connector: IndalekoLLMBase
-    ) -> str:
+            input_data: TranslatorInput
+    ) -> TranslatorOutput:
         """
         Translate a parsed query into an AQL query.
 
@@ -74,17 +74,23 @@ class AQLTranslator(TranslatorBase):
             str: The translated AQL query
         """
         # Use the LLM to help generate the AQL query
-        prompt = self._create_translation_prompt2(parsed_query, selected_md_attributes, additional_notes, n_truth)
-
-        ic('translate')
-        query_response = llm_connector.generate_query(prompt)
-        assert isinstance(query_response, LLMTranslateQueryResponse)
-        ic(prompt)
-        ic(query_response)
-        aql_statement = query_response.aql_query
-        assert self.validate_query(aql_statement, True), f"Generated AQL query is invalid: {aql_statement}"
-        ic(aql_statement)
-        return self.optimize_query(aql_statement)
+        assert isinstance(input_data, TranslatorInput)
+        prompt = self._create_translation_prompt2(input_data)
+        completion = input_data.Connector.get_completion(
+            context=prompt['system'],
+            question=prompt['user'],
+            schema=TranslatorOutput.model_json_schema()
+        )
+        performance_data = json.loads(completion.usage.model_dump_json())
+        response_data = json.loads(completion.choices[0].message.content)
+        print(json.dumps(response_data, indent=2))
+        return TranslatorOutput(
+            aql_query=response_data['aql_query'],
+            explanation=response_data['explanation'],
+            confidence=response_data['confidence'],
+            observations=response_data.get('observations', None),
+            performance_info=performance_data,
+        )
 
     def validate_query(self, query: str, explain=False) -> bool:
         """
@@ -305,77 +311,31 @@ class AQLTranslator(TranslatorBase):
 
     def _create_translation_prompt2(
             self,
-            parsed_query: dict[str, Any],
-            selected_md_attributes: dict[str, Any],
-            additional_notes: str,
-            n_truth_md: int,
-    ) -> dict[str, str]:
+            input_data: TranslatorInput
+    ) -> str:
         """
         Constructs a structured prompt for the LLM to generate an AQL query.
         """
-        ic(parsed_query.keys())
-        ic(selected_md_attributes)
-
-        relevant_collections = self._determine_relevant_collections(parsed_query, selected_md_attributes)
-        ic(relevant_collections)
-
-        schema_descriptions = ""
-        for col in relevant_collections:
-            schema_descriptions += f'Collection {col} has the following JSON '
-            schema_descriptions += f'data schema: {parsed_query['schema'][col]['rule']}\n'
-
-        # Fetch schema details for relevant collections
-        '''schema_descriptions = "\n".join([
-            f"- **{col}**: {parsed_query['schema'][col]['rule']}\n"
-            f"  Indexed Fields: {', '.join(parsed_query['schema'][col].get('indexed_fields', []))}"
-            for col in relevant_collections
-        ])
-        '''
-        ic(schema_descriptions)
-        exit(0)
-
+        user_prompt = input_data.Query.original_query
         system_prompt = f"""
-            You are an advanced ArangoDB query assistant, generating **optimized AQL queries**
-            for a **Unified Personal Index (UPI)** system. Your goal is to **create the most efficient
-            query possible**, prioritizing **indexed fields** and minimizing full scans.
-
-            ### **Database Schema**
-            The following collections are relevant for this query:
-            {schema_descriptions}
-
-            ### **Query Guidelines**
-            - Prefer **indexed fields** in `FILTER` conditions.
-            - Use **subqueries** when joining collections, but avoid joins if unnecessary.
-            - Ensure **only one `FOR` statement** in the final AQL query.
-            - If an attribute is missing an index, indicate this in the response.
-
-            ### **User Query**
-            "{parsed_query['original_query']}"
-
-            ### **Expected Response Format**
-            ```json
-            {{
-                "aql_query": "string",
-                "rationale": "string",
-                "alternatives_considered": [
-                    {{
-                        "query": "string",
-                        "reason_for_rejection": "string"
-                    }}
-                ],
-                "index_warnings": [
-                    {{
-                        "collection": "string",
-                        "field": "string",
-                        "recommendation": "string"
-                    }}
-                ]
-            }}
-            ```
-            Please provide a **single JSON object** following this format.
+        You are **Archivist**, an expert at working with Indaleko to find pertinent
+        digital objects (e.g., files).
+        **Indaleko** implements a unified personal index (UPI) system
+        that stores metadata about digital objects in an ArangoDB database.
+        Your task is to generate an optimized AQL query
+        that retrieves matching information based on the user query and selected
+        metadata attributes.
+        In forming this query, you will need to consider the schema of the database,
+        including the relevant collections
+        and their fields, as well as the needs of the user. Please take sufficient time to
+        return a query that is both efficient and accurate, as our primary goal is to
+        minimize the time our user spends looking for the specific information that they need
+        and to also minimize our user's abandonment rate.
+        The structured data that follows provides information about the database.
+        {input_data}
         """
 
         return {
             'system': system_prompt,
-            'user': parsed_query['original_query']
+            'user': user_prompt
         }

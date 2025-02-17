@@ -33,11 +33,17 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from db import IndalekoDBConfig
+from data_models.collection_metadata_data_model import IndalekoCollectionMetadataDataModel
+from data_models.db_index import IndalekoCollectionIndexDataModel
+from data_models.named_entity import NamedEntityCollection, IndalekoNamedEntityDataModel
+from db import IndalekoDBConfig, IndalekoDBCollections
 from db.db_collection_metadata import IndalekoDBCollectionsMetadata
+from query.query_processing.data_models.query_input import StructuredQuery
 from query.query_processing.nl_parser import NLParser
 from query.query_processing.query_translator.aql_translator import AQLTranslator
 from query.query_processing.query_history import QueryHistory
+from query.query_processing.data_models.parser_data import ParserResults
+from query.query_processing.data_models.translator_input import TranslatorInput
 from query.result_analysis.facet_generator import FacetGenerator
 from query.result_analysis.metadata_analyzer import MetadataAnalyzer
 from query.result_analysis.result_ranker import ResultRanker
@@ -113,25 +119,87 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             #
 
             # Get query from user
-            user_query = self.get_query()
+            try:
+                user_query = self.get_query()
+            except KeyboardInterrupt:
+                ic('Thank you for using Indaleko Query CLI')
+                ic('Have a lovely day!')
+                exit(0)
 
             # Log the query
             # self.logging_service.log_query(user_query)
 
             # Process the query
+            ic(f'Parsing query: {user_query}')
             parsed_query = self.nl_parser.parse(query=user_query)
-            ic(parsed_query)
-            exit(0)
-            translated_query = self.query_translator.translate(
-                parsed_query,
-                selected_md_attributes=None,
-                additional_notes=None,
-                n_truth=1,
-                llm_connector=self.llm_connector,
+            ParserResults.model_validate(parsed_query)
+
+            # Only support search for now.
+            assert parsed_query.Intent.intent == 'search', \
+                f"Expected 'search' intent, got '{parsed_query.Intent.intent}'"
+
+            ic(f'Query Type: {parsed_query.Intent.intent}')
+
+            # Map entities to database attributes
+            entity_mappings = self.map_entities(parsed_query.Entities)
+
+            # Use the categories to obtain the metadata attributes
+            # of the corresponding collection
+            collection_categories = [
+                entity.collection for entity in parsed_query.Categories.category_map
+            ]
+            collection_metadata = self.get_collection_metadata(collection_categories)
+
+            # Let's get the index data
+            indices = {}
+            for category in collection_categories:
+                collection_indices = self.db_config.db.collection(category).indexes()
+                for index in collection_indices:
+                    if category not in indices:
+                        indices[category] = []
+                    if index['type'] != 'primary':
+                        kwargs = {
+                            'Name': index['name'],
+                            'Type': index['type'],
+                            'Fields': index['fields'],
+                        }
+                        if 'unique' in index:
+                            kwargs['Unique'] = index['unique']
+                        if 'sparse' in index:
+                            kwargs['Sparse'] = index['sparse']
+                        if 'deduplicate' in index:
+                            kwargs['Deduplicate'] = index['deduplicate']
+                        indices[category].append(IndalekoCollectionIndexDataModel(**kwargs))
+
+            # Obtain information about the database based upon
+            # the parsed results
+            # self.logging_service.log_query_results(parsed_query)
+
+            # this is the original query translation that I am
+            # going to replace with the new query translation
+            # translated_query = self.query_translator.translate(
+            #     parsed_query,
+            #     selected_md_attributes=None,
+            #     additional_notes=None,
+            #     n_truth=1,
+            #     llm_connector=self.llm_connector,
+            # )
+            query_data = TranslatorInput(
+                Query=StructuredQuery(
+                    original_query=user_query,
+                    intent=parsed_query.Intent.intent,
+                    entities=entity_mappings,
+                    db_info=collection_metadata,
+                    db_indices=indices,
+                ),
+                Connector=self.llm_connector,
             )
 
+            translated_query = self.query_translator.translate(query_data)
+            print(translated_query.model_dump_json(indent=2))
+
             # Execute the query
-            raw_results = self.query_executor.execute(translated_query, self.db_config)
+            raw_results = self.query_executor.execute(translated_query.aql_query, self.db_config)
 
             # Analyze and refine results
             analyzed_results = self.metadata_analyzer.analyze(raw_results)
@@ -149,6 +217,58 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 break
 
         # self.logging_service.log_session_end()
+
+    def map_entities(self, entity_list: NamedEntityCollection) -> list[NamedEntityCollection]:
+        '''
+        Construct a new list that maps the entities into values from the NER collection.
+
+        Args:
+            entities (List[NamedEntityCollection]): The list of named entities to try mapping.
+
+        Returns:
+            List[NamedEntityCollection]: The list of named entities with mapped values.
+
+        If a named entity cannot be mapped, it is omitted from the returned list.  If it
+        can be mapped, the entry is replaced with the mapped value from the NER collection.
+        '''
+        mapped_entities = []
+        collection = self.db_config.db.collection(IndalekoDBCollections.Indaleko_Named_Entity_Collection)
+        if collection is None:
+            return NamedEntityCollection(entities=mapped_entities)
+        for entity in entity_list.entities:
+            if entity.name is None:
+                continue
+            docs = [doc for doc in collection.find({'name': entity.name})]
+            if docs is None or len(docs) == 0:
+                ic(f"NER mapping: Could not find entity: {entity.name}")
+                continue
+            if len(docs) > 1:
+                ic(f"NER mapping: Multiple entities found for: {entity.name}")
+                raise NotImplementedError("Multiple entities found, not handled yet")
+            doc = docs[0]
+            mapped_entities.append(
+                IndalekoNamedEntityDataModel(
+                    name=entity.name,
+                    uuid=doc.uuid,
+                    category=doc.category,
+                    description=doc.description,
+                    gis_location=doc.gis_location,
+                    device_id=doc.device_id,
+                )
+            )
+        return NamedEntityCollection(entities=mapped_entities)
+
+    def get_collection_metadata(self, categories: list[str]) -> list[IndalekoCollectionMetadataDataModel]:
+        '''Get the metadata for the collections based upon the selected categories.'''
+        if self.collections_metadata is None:
+            return []
+        collection_metadata = []
+        for category in categories:
+            metadata = self.collections_metadata.get_collection_metadata(category)
+            if metadata is None:
+                ic(f'Failed to get metadata for category: {category}')
+            collection_metadata.append(metadata)
+        return collection_metadata
 
     def get_query(self) -> str:
         '''Get a query from the user.'''

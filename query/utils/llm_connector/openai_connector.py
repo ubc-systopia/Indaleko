@@ -161,13 +161,14 @@ class OpenAIConnector(IndalekoLLMBase):
         )
         return response.choices[0].message['content'].strip()
 
-    def answer_question(self, context: str, question: str, schema: dict[str, Any]) -> str:
+    def answer_question(self, context: str, question: str, schema: dict[str, Any]) -> dict[str, Any]:
         """
         Answer a question based on the given context using OpenAI's model.
 
         Args:
             context (str): The context to base the answer on
             question (str): The question to answer
+            schema (dict[str, Any]): The schema for the response
 
         Returns:
             str: The answer to the question
@@ -195,4 +196,47 @@ class OpenAIConnector(IndalekoLLMBase):
                 }
             }
         )
+        ic(completion)
         return completion.choices[0].message.content
+
+    def get_completion(
+            self,
+            context: str,
+            question: str,
+            schema: dict[str, Any]
+    ) -> openai.types.chat.parsed_chat_completion.ParsedChatCompletion:
+        """
+        Answer a question based on the given context using OpenAI's model.
+
+        Args:
+            context (str): The context to base the answer on
+            question (str): The question to answer
+            schema (dict[str, Any]): The schema for the response
+
+        Returns:
+            str: The answer to the question
+        """
+        prompt = f"Context: {context}\n\n"
+        question = f"User query: {question}"
+        completion = self.client.beta.chat.completions.parse(
+            model=self.model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": prompt
+                },
+                {
+                    "role": "user",
+                    "content": question
+                }
+            ],
+            temperature=0,
+            response_format={
+                'type': 'json_schema',
+                'json_schema': {
+                    'name': 'OpenAIAnswerResponse',
+                    'schema': schema,
+                }
+            }
+        )
+        return completion

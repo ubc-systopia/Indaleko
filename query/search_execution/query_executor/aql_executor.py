@@ -57,8 +57,6 @@ class AQLExecutor(ExecutorBase):
         """
         assert isinstance(data_connector, IndalekoDBConfig), "Data connector must be an instance of IndalekoDBConfig"
         ic(query)
-        if not AQLExecutor.validate_query(query):
-            raise ValueError("Invalid AQL query")
         try:
             raw_results = data_connector.db.aql.execute(query)
             return AQLExecutor.format_results(raw_results)

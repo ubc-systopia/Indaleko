@@ -34,6 +34,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+from data_models.db_index import IndalekoCollectionIndexDataModel
 # pylint: enable=wrong-import-position
 
 
@@ -41,8 +42,6 @@ class CollectionInfo(BaseModel):
     '''This class contains important information about a collection.'''
     Name: str
     Description: str
-    IndexedFields: list[str]
-    Indices: list[str]
+    Indices: list[IndalekoCollectionIndexDataModel]
     Schema: dict[str, Any]
-    QueryGuidelines: str
-    RelevantQueries: list[str]
+    QueryGuidelines: list[str]

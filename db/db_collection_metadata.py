@@ -96,18 +96,6 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
         assert db_collection is not None, f'Failed to get collection {name}'
         description = db_collection.properties().get('description', "No description available")
         query_guidelines = [db_collection.properties().get('query_guidelines', "No guidelines provided")]
-        indexed_fields = []
-        for index in db_collection.indexes():
-            indexed_fields.append(
-                IndalekoCollectionIndexDataModel(
-                    Name=index['name'],
-                    Type=index['type'],
-                    Fields=index['fields'],
-                    Unique=index['unique'],
-                    Sparse=index['sparse'],
-                    Deduplicate=index.get('deduplicate'),
-                )
-            )
         schema = db_collection.properties().get('schema', {})
         if not schema:
             schema = {}
@@ -125,6 +113,7 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
         db_collection = self.db_config.db.collection(IndalekoDBCollections.Indaleko_Collection_Metadata)
         assert db_collection is not None, \
             f'Failed to get collection {IndalekoDBCollections.Indaleko_Collection_Metadata}'
+        ic(collection_name)
         entry = db_collection.get(collection_name)
         if not entry:
             return self.generate_new_collection_metadata(collection_name)
@@ -140,41 +129,27 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
         '''
         collection_data = {}
         for name, data in self.collections_metadata.items():
-            indexed_fields = []
-            for index in data.IndexedFields:
-                for field in index.Fields:
-                    indexed_fields.append(field)
+            collection = self.db_config.db.collection(name)
+            if collection is None:
+                ic(f'Failed to get collection {name}')
+                continue
+            indices = [
+                IndalekoCollectionIndexDataModel(
+                    Name=index.get('name'),
+                    Type=index.get('type'),
+                    Fields=index.get('fields'),
+                    Unique=index.get('unique'),
+                    Sparse=index.get('sparse'),
+                    Deduplicate=index.get('deduplicate'),
+                )
+                for index in collection.indexes()
+            ]
             collection_data[name] = CollectionInfo(
                 Name=name,
                 Description=data.Description,
-                IndexedFields=indexed_fields,
-                Indices=[indexed_field.Name for indexed_field in data.IndexedFields],
+                Indices=indices,
                 Schema=data.Schema,
                 QueryGuidelines=data.QueryGuidelines,
-                RelevantQueries=data.RelevantQueries,
-            )
-        return collection_data
-
-    def foo(self):
-        collection_data = {}
-        for provider in IndalekoActivityDataRegistrationService.get_provider_list():
-            collection_name = IndalekoActivityDataRegistrationService.\
-                lookup_activity_provider_collection(provider['Identifier'])
-            ic(collection_name)
-            ic(collection_name.name)
-            collection_metadata = self.get_collection_metadata(collection_name.name)
-            indexed_fields = []
-            for index in collection_metadata.IndexedFields:
-                for field in index.Fields:
-                    indexed_fields.append(field)
-            collection_data[collection_name] = CollectionInfo(
-                Name=collection_name.name,
-                Description=collection_metadata.Description,
-                IndexedFields=indexed_fields,
-                Indices=[indexed_field.Name for indexed_field in collection_metadata.IndexedFields],
-                Schema=collection_metadata.Schema,
-                QueryGuidelines=collection_metadata.QueryGuidelines,
-                RelevantQueries=collection_metadata.RelevantQueries,
             )
         return collection_data
 

@@ -40,6 +40,7 @@ from db.db_collection_metadata import IndalekoDBCollectionsMetadata
 from query.query_processing.data_models.query_output import LLMIntentQueryResponse, \
     LLMFilterConstraintQueryResponse, LLMIntentTypeEnum, LLMCollectionCategoryQueryResponse, \
     LLMCollectionCategoryEnum, LLMCollectionCategory
+from query.query_processing.data_models.parser_data import ParserResults
 from query.utils.llm_connector.openai_connector import OpenAIConnector
 # pylint: enable=wrong-import-position
 
@@ -69,7 +70,7 @@ class NLParser:
         self.collections_metadata = collections_metadata
         self.collection_data = self.collections_metadata.get_all_collections_metadata()
 
-    def parse(self, query: str) -> dict[str, Any]:
+    def parse(self, query: str) -> ParserResults:
         """
         Parse the natural language query into a structured format.
 
@@ -80,14 +81,28 @@ class NLParser:
             dict[str, Any]: A structured representation of the query
         """
         logging.info(f"Parsing query: {query}")
-        parsed_query = {
-            "original_query": query,
-            "categories": self._extract_categories(query),
-            "intent": self._detect_intent(query),
-            "entities": self._extract_entities(query),
-            #  "filters": self._extract_filters(query)
-        }
-        return parsed_query
+        ic('Extracting categories from query')
+        categories = self._extract_categories(query)
+        ic('Determing intent of query')
+        intent = self._detect_intent(query)
+        ic('Extracting entities from query')
+        entities = self._extract_entities(query)
+        assert isinstance(query, str), f'query is unexpected type {type(query)}'
+        assert isinstance(categories, LLMCollectionCategoryQueryResponse), \
+            f'categories is unexpected type {type(categories)}'
+        LLMCollectionCategoryQueryResponse.model_validate(categories)
+        assert isinstance(intent, LLMIntentQueryResponse), f'intent is unexpected type {type(intent)}'
+        LLMIntentQueryResponse.model_validate(intent)
+        assert isinstance(entities, NamedEntityCollection), f'entities is unexpected type {type(entities)}'
+        NamedEntityCollection.model_validate(entities)
+        results = ParserResults(
+            OriginalQuery=query,
+            Categories=categories,
+            Intent=intent,
+            Entities=entities,
+        )
+        ParserResults.model_validate(results)
+        return results
 
     def _detect_intent(self, query: str) -> LLMIntentQueryResponse:
         """
@@ -216,6 +231,7 @@ class NLParser:
 
         response = self.llm_connector.answer_question(prompt, query, category_response.model_json_schema())
         doc = json.loads(response)
+        ic(doc)
         data = LLMCollectionCategoryQueryResponse(**doc)
         return data
 

@@ -23,7 +23,7 @@ import sys
 from textwrap import dedent
 
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Any, Union
+from typing import Union
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -34,20 +34,6 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-positionfrom data_models.collection_info import CollectionInfo
 # pylint: enable=wrong-import-position
-
-
-class QueryFilter(BaseModel):
-    field: str
-    operation: str  # E.g., "=", ">", "<", "IN"
-    value: str
-
-
-class StructuredQuery(BaseModel):
-    original_query: str
-    intent: str  # "search", "filter", etc.
-    entities: dict[str, str]  # Extracted entities
-    filters: list[QueryFilter]
-    db_schema: dict[str, Any]  # Schema reference
 
 
 class LLMTranslateQueryResponse(BaseModel):
@@ -239,6 +225,17 @@ class LLMCollectionCategory(BaseModel):
                 'rationale',
                 'alternatives_considered'
             ],
+            "example": {
+                "category": "objects",
+                "collection": "objects",
+                "confidence": 0.95,
+                "rationale": "The collection contains objects.",
+                "alternatives_considered": [
+                    {
+                        "example": "this is an example, so it is static and nothing else was considered"
+                    }
+                ]
+            }
         }
 
 
@@ -255,3 +252,24 @@ class LLMCollectionCategoryQueryResponse(BaseModel):
         title='Feedback',
         description='General feedback on the collections.'
     )
+
+    class Config:
+
+        json_schema_extra = {
+            "example": {
+                "category_map": [
+                    {
+                        "category": "objects",
+                        "collection": "objects",
+                        "confidence": 0.95,
+                        "rationale": "The collection contains objects.",
+                        "alternatives_considered": [
+                            {
+                                "example": "this is an example, so it is static and nothing else was considered"
+                            }
+                        ]
+                    }
+                ],
+                "feedback": "This is feedback."
+            }
+        }

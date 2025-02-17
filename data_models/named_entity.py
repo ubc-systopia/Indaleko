@@ -61,10 +61,10 @@ class IndalekoNamedEntityDataModel(IndalekoBaseModel):
         '''Sample configuration data for the data model.'''
         json_schema_extra = {
             "example": {
-                    "name": "Tony",
-                    "uuid": "981a3522-c394-40b0-a82c-a9d7fa1f7e01",
-                    "category": IndalekoNamedEntityType.person,
-                    "description": "The user"
+                "name": "Tony",
+                "uuid": "981a3522-c394-40b0-a82c-a9d7fa1f7e01",
+                "category": IndalekoNamedEntityType.person,
+                "description": "The user"
             },
         }
 

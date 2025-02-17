@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from abc import ABC, abstractmethod
 import os
 import sys
+from typing import Any
 
 # from icecream import ic
 from typing import List
@@ -94,14 +95,39 @@ class IndalekoLLMBase(ABC):
         """
 
     @abstractmethod
-    def answer_question(self, context: str, question: str) -> str:
+    def answer_question(self, context: str, question: str, schema: dict[str, Any]) -> dict[str, Any]:
         """
         Answer a question based on the given context.
 
         Args:
             context (str): The context to base the answer on
             question (str): The question to answer
+            schema (dict[str, Any]): The schema for the response
 
         Returns:
             str: The answer to the question
+        """
+
+    @abstractmethod
+    def get_completion(
+            self,
+            context: str,
+            question: str,
+            schema: Any
+    ) -> Any:
+        """
+        Get a completion based on the given context.
+
+        Args:
+            context (str): The context to base the completion on
+            question (str): The question to answer
+            schema (Any): The schema (or a model) for the response
+
+        Returns:
+            Any: The completion
+
+        Note: This method allows returning extended information
+        from the LLM, but requires the caller understand the explicit
+        format of the response, which does obviate the point of this
+        abstraction layer somewhat.
         """

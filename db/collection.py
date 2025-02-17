@@ -114,6 +114,24 @@ class IndalekoCollection():
             f'self.collection is unexpected type {type(self.collection)}'
         return IndalekoCollection(ExistingCollection=self.collection)
 
+    def get_indices(self, name: str) -> list[IndalekoCollectionIndex]:
+        '''Return the index with the given name.'''
+        indices = []
+        collection = self.db_config.db.collection(name)
+        for index_data in collection.indexes():
+            if index_data.get('type') == 'primary':
+                continue  # Skip the primary index
+            type = index_data.get('type')
+            del index_data['type']
+            index = IndalekoCollectionIndex(
+                collection=collection,
+                type=type,
+                **index_data
+            )
+            indices.append(index)
+        exit(0)
+        return []
+
     @type_check
     def delete_collection(self, name: str) -> bool:
         '''Delete the collection with the given name.'''

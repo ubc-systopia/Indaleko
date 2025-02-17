@@ -1,6 +1,6 @@
-
 """
-This module defines the collection metadata data model for Indaleko.
+This module defines the common data model for input to
+query translators.
 
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason
@@ -18,10 +18,13 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+
 import os
 import sys
 
+from pydantic import BaseModel
 from typing import Union
+
 # from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -31,44 +34,26 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
-
 # pylint: disable=wrong-import-position
-from data_models.base import IndalekoBaseModel  # noqa: E402
+from query.llm_base import IndalekoLLMBase
+# from data_models.collection_metadata_data_model import IndalekoCollectionMetadataDataModel  # noqa: E402
+# from data_models.db_index import IndalekoCollectionIndexDataModel  # noqa: E402
+# from data_models.named_entity import NamedEntityCollection  # noqa: E402
+from query.query_processing.data_models.query_input import StructuredQuery  # noqa: E402
 # pylint: enable=wrong-import-position
 
 
-class IndalekoCollectionIndexDataModel(IndalekoBaseModel):
-    '''
-    This class defines the data model for Arango index metadata used
-    with collections in Indaleko.
-    '''
-    Name: str
-    Type: str
-    Fields: list[str]
-    Unique: Union[bool, None] = None
-    Sparse: Union[bool, None] = None
-    Deduplicate: Union[bool, None] = None
+class TranslatorInput(BaseModel):
+    '''Define the input data model for the translator.'''
+    Query: StructuredQuery
+    Connector: IndalekoLLMBase
+    # Note: I'm not sure what we are using these
+    # last few fields for.   I retain them, but
+    # we might want to remove them if they are
+    # not needed.
+    SelectedMetadataAttributes: Union[dict[str, str], None] = None
+    AdditionalNotes: Union[str, None] = None
+    NTruth: int = 1
 
     class Config:
-        '''
-        This class defines the configuration for the data model.
-        '''
-        json_schema_extra = {
-            "example": {
-                "Name": "primary",
-                "Type": "persistent",
-                "Fields": ["_key"],
-                "Unique": True,
-                "Sparse": False,
-                "Deduplicate": True
-            }
-        }
-
-
-def main():
-    '''This allows testing the data model.'''
-    IndalekoCollectionIndexDataModel.test_model_main()
-
-
-if __name__ == '__main__':
-    main()
+        arbitrary_types_allowed = True
