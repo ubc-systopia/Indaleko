@@ -43,6 +43,7 @@ class OpenAIConnector(IndalekoLLMBase):
     """
     Connector for OpenAI's language models.
     """
+    llm_name = 'OpenAI'
 
     def __init__(self, api_key: str, model: str = "gpt-4o"):
         """
@@ -54,6 +55,12 @@ class OpenAIConnector(IndalekoLLMBase):
         """
         self.model = model
         self.client = openai.OpenAI(api_key=api_key)
+
+    def get_llm_name(self) -> str:
+        '''
+        Get the name of the LLM.
+        '''
+        return self.llm_name
 
     def generate_query(self, prompt: str, temperature=0) -> LLMTranslateQueryResponse:
         """

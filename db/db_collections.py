@@ -63,7 +63,7 @@ class IndalekoDBCollections:
     Indaleko_User_Collection = 'Users'
     Indaleko_User_Relationship_Collection = 'UserRelationships'
     Indaleko_Performance_Data_Collection = 'PerformanceData'
-    Indaleko_Query_History_collection = 'QueryHistory'
+    Indaleko_Query_History_Collection = 'QueryHistory'
     Indaleko_SemanticData_Collection = 'SemanticData'
     Indaleko_Named_Entity_Collection = 'NamedEntities'
     Indaleko_Collection_Metadata = 'CollectionMetadata'
@@ -205,7 +205,7 @@ class IndalekoDBCollections:
             'indices': {
             }
         },
-        Indaleko_Query_History_collection: {
+        Indaleko_Query_History_Collection: {
             'internal': False,
             'schema': IndalekoQueryHistoryDataModel.get_arangodb_schema(),
             'edge': False,

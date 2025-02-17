@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import configparser
+from datetime import datetime, timezone
 import os
 import sys
 
@@ -38,6 +39,7 @@ from data_models.db_index import IndalekoCollectionIndexDataModel
 from data_models.named_entity import NamedEntityCollection, IndalekoNamedEntityDataModel
 from db import IndalekoDBConfig, IndalekoDBCollections
 from db.db_collection_metadata import IndalekoDBCollectionsMetadata
+from query.history.data_models.query_history import QueryHistoryData
 from query.query_processing.data_models.query_input import StructuredQuery
 from query.query_processing.nl_parser import NLParser
 from query.query_processing.query_translator.aql_translator import AQLTranslator
@@ -122,12 +124,13 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             try:
                 user_query = self.get_query()
             except KeyboardInterrupt:
-                ic('Thank you for using Indaleko Query CLI')
-                ic('Have a lovely day!')
-                exit(0)
+                print('Thank you for using Indaleko Query CLI')
+                print('Have a lovely day!')
+                return
 
             # Log the query
             # self.logging_service.log_query(user_query)
+            start_time = datetime.now(timezone.utc)
 
             # Process the query
             ic(f'Parsing query: {user_query}')
@@ -184,14 +187,15 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             #     n_truth=1,
             #     llm_connector=self.llm_connector,
             # )
+            structured_query = StructuredQuery(
+                original_query=user_query,
+                intent=parsed_query.Intent.intent,
+                entities=entity_mappings,
+                db_info=collection_metadata,
+                db_indices=indices,
+            )
             query_data = TranslatorInput(
-                Query=StructuredQuery(
-                    original_query=user_query,
-                    intent=parsed_query.Intent.intent,
-                    entities=entity_mappings,
-                    db_info=collection_metadata,
-                    db_indices=indices,
-                ),
+                Query=structured_query,
                 Connector=self.llm_connector,
             )
 
@@ -210,7 +214,23 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             self.display_results(ranked_results, facets)
 
             # Update query history
-            self.query_history.add(user_query, ranked_results)
+            end_time = datetime.now(timezone.utc)
+            time_diference = end_time - start_time
+            query_history = QueryHistoryData(
+                OriginalQuery=user_query,
+                ParsedResults=parsed_query,
+                LLMName=self.llm_connector.get_llm_name(),
+                LLMQuery=structured_query,
+                TranslatedOutput=translated_query,
+                RawResults=raw_results,
+                AnalyzedResults=analyzed_results,
+                Facets=facets,
+                RankedResults=ranked_results,
+                StartTimestamp=start_time,
+                EndTimestamp=end_time,
+                ElapsedTime=time_diference.total_seconds(),
+            )
+            self.query_history.add(query_history)
 
             # Check if user wants to continue
             if not self.continue_session():
@@ -319,7 +339,12 @@ def main():
     '''A CLI based query tool for Indaleko.'''
     ic('Starting Indaleko Query CLI')
     cli = IndalekoQueryCLI()
-    cli.run()
+    try:
+        cli.run()
+    except KeyboardInterrupt:
+        print('Thank you for using Indaleko Query CLI')
+        print('Have a lovely day!')
+        sys.exit(0)
 
 
 if __name__ == '__main__':

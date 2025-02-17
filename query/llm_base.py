@@ -44,6 +44,15 @@ class IndalekoLLMBase(ABC):
     """
 
     @abstractmethod
+    def get_llm_name(self) -> str:
+        """
+        Get the name of the LLM.
+
+        Returns:
+            str: The name of the LLM
+        """
+
+    @abstractmethod
     def generate_query(self, prompt: str) -> LLMTranslateQueryResponse:
         """
         Generate a query based on the given prompt.
