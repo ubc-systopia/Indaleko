@@ -112,13 +112,13 @@ class AmbientMusicData(BaseAmbientConditionDataModel):
         le=11
     )
 
-    @field_validator('playback_position_ms')
-    @classmethod
-    def validate_position(cls, value: int, values: Dict) -> int:
-        """Validate playback position is within track duration"""
-        if 'track_duration_ms' in values and value > values['track_duration_ms']:
-            raise ValueError("Playback position cannot exceed track duration")
-        return value
+    #@field_validator('playback_position_ms')
+    # @classmethod
+    # def validate_position(cls, value: int, values: Dict) -> int:
+    #     """Validate playback position is within track duration"""
+    #     if 'track_duration_ms' in values and value > values['track_duration_ms']:
+    #         raise ValueError("Playback position cannot exceed track duration")
+    #     return value
 
 
 class SpotifyAmbientData(AmbientMusicData):

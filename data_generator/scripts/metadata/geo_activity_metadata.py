@@ -61,6 +61,9 @@ class GeoActivityData(ActivityMetadata):
         # geo_activity_service = IndalekoActivityContextDataModel(Handle=uuid.uuid4(), Timestamp=geo_timestamp, Cursors=[longitude_data_provider, latitude_data_provider,accuracy_data_provider])
         return geo_activity_context
 
+    def get_saved_geolocation(self) -> Dict[str, float]:
+        return self.saved_geo_loc
+        
     def _generate_geo_context(self, is_truth_file: bool = True) -> Dict[str, Any]:
         """
         Generates a geographical activity context based on the location given:

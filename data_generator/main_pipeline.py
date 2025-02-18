@@ -49,11 +49,11 @@ class Validator():
         self.config = self.get_config_file('data_generator/config/dg_config.json')
         self.logger = ResultLogger(result_path=self.file_path )
 
-        try:
-            subprocess.run(["python3", "./db/db_config.py", "reset"], check=True)
-            subprocess.run(["python3", "./platforms/mac/machine_config.py", "--add"], check=True)
-        except subprocess.CalledProcessError as e:
-            raise e
+        # try:
+        #     subprocess.run(["python3", "./db/db_config.py", "reset"], check=True)
+        #     subprocess.run(["python3", "./platforms/mac/machine_config.py", "--add"], check=True)
+        # except subprocess.CalledProcessError as e:
+        #     raise e
 
         self.db_config = IndalekoDBConfig()
         self.db_config.setup_database(self.db_config.config['database']['database'],reset = False)
@@ -148,8 +148,25 @@ class Validator():
 
         # EXTRACT QUERY FROM CONFIG FILE:
         self.logger.log_process("extracting query from config...")
-        selected_md_attributes = self.query_extractor.extract(query = query, llm_connector = self.llm_connector)
-
+        # selected_md_attributes = self.query_extractor.extract(query = query, llm_connector = self.llm_connector)
+        selected_md_attributes = {
+    "Posix": {
+        "file.name": {
+            "extension": [
+                ".jpg",
+                ".jpeg"
+                ]
+        }, 
+        "timestamps": {"modified": {"starttime": "2025-01-29T00:00:00", "endtime": "2025-01-29T23:59:59", "command": "range"}}
+    },
+    "Activity": {
+        "geo_location": {
+            "location": "New York",
+            "command": "at",
+            "timestamp": "birthtime"
+        }
+    }
+}
         self.logger.log_process_result("selected_md_attributes", selected_md_attributes)
         self.add_result_to_dict("selected_md_attributes", selected_md_attributes)
 
@@ -238,11 +255,12 @@ class Validator():
         self.add_result_to_dict("geo_coord", geo_coordinates)
 
         #convert the time to posix timestamps for consistent AQL translation results:
-        converted_selected_md_attributes = self.data_generator.preprocess_dictionary_timestamps(selected_md_attributes, True)        
+        converted_selected_md_attributes = self.data_generator.preprocess_dictionary_timestamps(selected_md_attributes, True)   
+        ic(converted_selected_md_attributes)     
         self.logger.log_process("translating query to aql...")
         self.logger.log_process_result("converted_selected_md_attributes", converted_selected_md_attributes)
         self.add_result_to_dict("converted_selected_md_attributes", converted_selected_md_attributes)
-
+        exit()
         #GENERATE AQL TRANSLATION:
         translate_query_time, translated_query = self.time_operation(
             self.query_translator.translate, 

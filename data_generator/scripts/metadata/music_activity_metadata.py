@@ -11,6 +11,7 @@ from data_models.i_uuid import IndalekoUUIDDataModel
 from activity.collectors.ambient.music.music_data_model import AmbientMusicData
 from activity.collectors.ambient.music.spotify_data_model import SpotifyAmbientData
 from data_generator.scripts.metadata.activity_metadata import ActivityMetadata
+from icecream import ic
 
 class MusicActivityData(ActivityMetadata):
     """
@@ -104,13 +105,22 @@ class MusicActivityData(ActivityMetadata):
                 artist_name = music_dict["artist_name"]
             if "album_name" in music_dict and is_truth_file:
                 album_name = music_dict["album_name"]
-            if "playback_position_ms" in music_dict and is_truth_file:
-                playback_position_ms = music_dict["playback_position_ms"]
-            if "track_duration_ms" in music_dict and is_truth_file:
+            if "track_duration_ms" in music_dict and "playback_position_ms" in music_dict and is_truth_file:
                 track_duration_ms = music_dict["track_duration_ms"]
+                playback_position_ms = music_dict["playback_position_ms"]
+            if "track_duration_ms" not in music_dict and "playback_position_ms" in music_dict and is_truth_file:
+                playback_position_ms = music_dict["playback_position_ms"]
+                track_duration_ms = random.randint(playback_position_ms, MusicActivityData.TRACK_MAX_DURATION)
+            if "track_duration_ms" in music_dict and "playback_position_ms" not in music_dict and is_truth_file:
+                track_duration_ms = music_dict["track_duration_ms"]
+                playback_position_ms =  random.randint(0, track_duration_ms)
+            else:
+                playback_position_ms = random.randint(0, track_duration_ms)
             if "is_currently_playing" in music_dict and is_truth_file:
-                is_currently_playing = self._choose_random_element(is_truth_file, music_dict["is_currently_playing"], [True, False])
-
+                is_currently_playing = self._choose_random_element(is_truth_file, music_dict["is_currently_playing"], [True, False]) 
+        
+        ic(track_duration_ms)
+        ic(playback_position_ms)
         track_name_identifier = IndalekoUUIDDataModel(Identifier=uuid.uuid4(), Label="track_name")
         artist_name_identifier = IndalekoUUIDDataModel(Identifier=uuid.uuid4(), Label="artist_name")
         semantic_attributes = [

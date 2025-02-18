@@ -23,7 +23,7 @@ from data_generator.scripts.metadata.geo_activity_metadata import GeoActivityDat
 from data_generator.scripts.metadata.semantic_metadata import SemanticMetadata
 from collections import namedtuple
 
-# Define the named tuple outside the function
+# Named tuple for fetching results
 DataGeneratorResults = namedtuple('Results', [
     'record', 'semantics', 'geo_activity', 
     'temp_activity', 'music_activity', 'machine_config'
@@ -50,8 +50,8 @@ class Dataset_Generator():
         self.default_lower_filesize = default_lower_filesize
         self.default_upper_filesize = default_upper_filesize
 
-        self.earliest_endtime = []
-        self.earliest_starttime = []
+        # self.earliest_endtime = []
+        # self.earliest_starttime = []
 
         self.selected_AC_md = None
         self.selected_semantic_md = None
@@ -72,72 +72,72 @@ class Dataset_Generator():
         with open(json_path, 'w') as json_file:
             json.dump(dataset, json_file, indent=4)
     
-    def preprocess_dictionary_timestamps(self, selected_md_attributes: Dict[str, Any], to_timestamp: bool) -> Dict[str, Any]:
-        """
-        Convert time to posix timstamps given a dictionary to run data generator:
-        Args:
-            selected_md_attributes (Dict[str, Any]): The dictionary of attributes
-        Returns:
-            Dict[str, Any]: The converted attributes dictionary
-        """
-        new_md_attributes = copy.deepcopy(selected_md_attributes)
-        if "Posix" in new_md_attributes:        
-            posix = new_md_attributes["Posix"]
-            if "timestamps" in posix:
-                for timestamp_key, timestamp_data in posix["timestamps"].items():
-                    starttime, endtime = self._convert_time_timestamp(timestamp_data, to_timestamp)
-                    posix["timestamps"][timestamp_key]["starttime"] = starttime
-                    posix["timestamps"][timestamp_key]["endtime"] = endtime 
-                    if not to_timestamp:
-                        self._update_earliest_times(starttime, endtime)
+    # def preprocess_dictionary_timestamps(self, selected_md_attributes: Dict[str, Any], to_timestamp: bool) -> Dict[str, Any]:
+    #     """
+    #     Convert time to posix timstamps given a dictionary to run data generator:
+    #     Args:
+    #         selected_md_attributes (Dict[str, Any]): The dictionary of attributes
+    #     Returns:
+    #         Dict[str, Any]: The converted attributes dictionary
+    #     """
+    #     new_md_attributes = copy.deepcopy(selected_md_attributes)
+    #     if "Posix" in new_md_attributes:        
+    #         posix = new_md_attributes["Posix"]
+    #         if "timestamps" in posix:
+    #             for timestamp_key, timestamp_data in posix["timestamps"].items():
+    #                 starttime, endtime = self._convert_time_timestamp(timestamp_data, to_timestamp)
+    #                 posix["timestamps"][timestamp_key]["starttime"] = starttime
+    #                 posix["timestamps"][timestamp_key]["endtime"] = endtime 
+    #                 if not to_timestamp:
+    #                     self._update_earliest_times(starttime, endtime)
                     
-        return new_md_attributes
+    #     return new_md_attributes
 
-    # Helper function for convert_dictionary_times()
-    def _convert_time_timestamp(self, timestamps: dict, to_timestamp: bool) -> Tuple[Union[Any, datetime], Union[Any, datetime]]:
-        """
-        Converts the time from string to timestamps
-        """
+    # # Helper function for convert_dictionary_times()
+    # def _convert_time_timestamp(self, timestamps: dict, to_timestamp: bool) -> Tuple[Union[Any, datetime], Union[Any, datetime]]:
+    #     """
+    #     Converts the time from string to timestamps
+    #     """
 
-        starttime = timestamps["starttime"]
-        endtime = timestamps["endtime"]
-        if to_timestamp:
-            starttime = starttime.timestamp()
-            endtime = endtime.timestamp()
-        else: 
-            starttime = self._convert_str_datetime(starttime)
-            endtime = self._convert_str_datetime(endtime)
+    #     starttime = timestamps["starttime"]
+    #     endtime = timestamps["endtime"]
+    #     if to_timestamp:
+    #         starttime = starttime.timestamp()
+    #         endtime = endtime.timestamp()
+    #     else: 
+    #         starttime = self._convert_str_datetime(starttime)
+    #         endtime = self._convert_str_datetime(endtime)
 
-        return starttime, endtime
+    #     return starttime, endtime
 
-    def _update_earliest_times(self, starttime: datetime, endtime: datetime):
-        """
-        Updates and tracks the earliest start and end times.
-        """
-        self.earliest_endtime.append(endtime)
-        self.earliest_starttime.append(starttime)
+    # def _update_earliest_times(self, starttime: datetime, endtime: datetime):
+    #     """
+    #     Updates and tracks the earliest start and end times.
+    #     """
+    #     self.earliest_endtime.append(endtime)
+    #     self.earliest_starttime.append(starttime)
 
-        self.earliest_endtime.sort()
-        self.earliest_starttime.sort()
+    #     self.earliest_endtime.sort()
+    #     self.earliest_starttime.sort()
     
-    # general helper function for _generate_queried_timestamp() and _convert_time_timestamp():
-    def _convert_str_datetime(self, time: str) -> datetime:
-        """Converts a str date from "YYYY-MM-DD" to datetime; used within time generator functions"""
-        splittime = re.split("[-T:]", time)
-        year = int(splittime[0])
-        month = int(splittime[1])
-        day = int(splittime[2])
+    # # general helper function for _generate_queried_timestamp() and _convert_time_timestamp():
+    # def _convert_str_datetime(self, time: str) -> datetime:
+    #     """Converts a str date from "YYYY-MM-DD" to datetime; used within time generator functions"""
+    #     splittime = re.split("[-T:]", time)
+    #     year = int(splittime[0])
+    #     month = int(splittime[1])
+    #     day = int(splittime[2])
 
-        hour = int(splittime[3])
-        minute = int(splittime[4])
-        second = int(splittime[5])
+    #     hour = int(splittime[3])
+    #     minute = int(splittime[4])
+    #     second = int(splittime[5])
 
-        time = datetime(year, month, day, hour, minute, second)
+    #     time = datetime(year, month, day, hour, minute, second)
 
-        # if requested time is sooner than today's day, set it to the time to now
-        if time > datetime.now():
-            time = datetime.now()
-        return time
+    #     # if requested time is sooner than today's day, set it to the time to now
+    #     if time > datetime.now():
+    #         time = datetime.now()
+    #     return time
     
     def generate_metadata_dataset(self, selected_md_attributes):
         """Main function to generate metadata datasets"""
@@ -156,9 +156,9 @@ class Dataset_Generator():
             self.default_lower_filesize,
             self.default_upper_filesize,
             self.default_lower_timestamp,
-            self.default_upper_timestamp,
-            self.earliest_endtime,
-            self.earliest_starttime
+            self.default_upper_timestamp
+            # self.earliest_endtime,
+            # self.earliest_starttime
         )        
         self.temp_activity_generator = TempActivityData(self.selected_AC_md)
         self.music_activity_generator = MusicActivityData(self.selected_AC_md)
@@ -224,15 +224,9 @@ class Dataset_Generator():
                                                                                                 has_semantic_filler)
 
             timestamps = self.posix_generator.generate_timestamps_md(is_truth_file, truth_like, truthlike_attributes)
+            ic(timestamps)
             attribute =  self.posix_generator.generate_file_attributes(file_name, path, timestamps, file_size)
             record_data =  self.posix_generator.generate_record_data(IO_UUID, attribute)
-
-            # semantic_attributes = self.semantic_generator.create_semantic_attribute(file_name.split(".")[-1], 
-            #                                                                             timestamps["modified"].strftime("%Y-%m-%dT%H:%M:%S"), 
-            #                                                                             is_truth_file, truth_like, 
-            #                                                                             truthlike_attributes, 
-            #                                                                             has_semantic_filler)
-            
 
             i_object =  self.posix_generator.generate_metadata(record_data, IO_UUID, timestamps, URI, file_size, 
                                                                 None, key_name, 
@@ -312,30 +306,30 @@ class Dataset_Generator():
     
 
 def main():
-#     selected_md_attributes = {"Posix": {"file.name": {"extension": [".pdf", ".txt"]}, "timestamps": {"modified": {"starttime": "2025-01-29T00:00:00", "endtime": "2025-01-29T23:59:59", "command": "range"}, 
-#     "changed": {"starttime": "2025-01-31T00:00:00", "endtime": "2025-01-31T23:59:59", "command": "range"}}},
-#      "Semantic": {
-#         "Content_1": ("PageNumber", 20),
-#         "Content_2" : ("Paragraph", "jogging"),
-#         "Content_3" : ("Title", "EXERCISE")
-#     }
-# }
-    selected_md_attributes = {
-                            "Posix": {
-                                "file.directory": {
-                                    "location": "local",
-                                    "local_dir_name": "photos"
-                                }, 
-                                "file.name" :{
-                                    "extension": ['.jpg', '.png'],
-                                    "command": "exactly",
-                                    "pattern": "image"
-                                }
-                            },
-                            "Semantic": {
-                            },
-                            "Activity": {}
-                        }
+    selected_md_attributes = {"Posix": {"file.name": {"extension": [".pdf", ".txt"]}, "timestamps": {"modified": {"starttime": "2025-01-29T00:00:00", "endtime": "2025-01-29T23:59:59", "command": "range"}, 
+    "changed": {"starttime": "2025-01-31T00:00:00", "endtime": "2025-01-31T23:59:59", "command": "range"}}},
+     "Semantic": {
+        "Content_1": ("PageNumber", 20),
+        "Content_2" : ("Paragraph", "jogging"),
+        "Content_3" : ("Title", "EXERCISE")
+    }
+}
+    # selected_md_attributes = {
+    #                         "Posix": {
+    #                             "file.directory": {
+    #                                 "location": "local",
+    #                                 "local_dir_name": "photos"
+    #                             }, 
+    #                             "file.name" :{
+    #                                 "extension": ['.jpg', '.png'],
+    #                                 "command": "exactly",
+    #                                 "pattern": "image"
+    #                             }
+    #                         },
+    #                         "Semantic": {
+    #                         },
+    #                         "Activity": {}
+    #                     }
 #     selected_md_attributes = {
 #     "Posix": {},
 #     "Semantic": {
@@ -378,8 +372,13 @@ def main():
     with open(config_path, 'r') as file:
         config = json.load(file)
     data_generator = Dataset_Generator(config)
-    selected_md_attributes = data_generator.preprocess_dictionary_timestamps(selected_md_attributes, False)
+    #selected_md_attributes = data_generator.preprocess_dictionary_timestamps(selected_md_attributes, False)
     all_record, all_geo_activity, all_temp_activity, all_music_activity,  all_machine_config, all_semantics, metadata_stats = data_generator.generate_metadata_dataset(selected_md_attributes)
+    converted_selected_md_attributes = copy.deepcopy(selected_md_attributes)
+    ic(selected_md_attributes)
+    converted_selected_md_attributes["Posix"] = data_generator.posix_generator.preprocess_dictionary_timestamps( True)
+    ic(type(converted_selected_md_attributes["Posix"]["timestamps"]['modified']['endtime']))
+
     data_generator.write_json(all_semantics, "/Users/pearl/Indaleko_updated/Indaleko/data_generator/semantics_test.json")
     data_generator.write_json(all_record, "/Users/pearl/Indaleko_updated/Indaleko/data_generator/records_test.json")
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 {
     "output_json": "/Indaleko/data/",
-    "n_metadata_records": 20, 
+    "n_metadata_records": 10, 
     "n_matching_queries": 2,
-    "query":"What is the text based file that I created two days ago while I was busing to UBC?"
+    "query":"What are all the images I took at New York?"
 }

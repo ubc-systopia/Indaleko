@@ -8,7 +8,9 @@ import configparser
 import json 
 from icecream import ic
 from datetime import datetime
+import argparse
 
+import copy
 import click
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -34,7 +36,7 @@ class Validator():
     """
     This is the class for performing the validation for Indaleko
     """
-    def __init__(self) -> None:
+    def __init__(self, args) -> None:
         self.file_path = "./data_generator/results/"
         self.stored_file_path = self.file_path + "stored_metadata/"
         self.config_path =  './data_generator/config/'
@@ -52,14 +54,16 @@ class Validator():
         self.config = self.get_config_file(self.config_path + 'dg_config.json')
         self.logger = ResultLogger(result_path=self.file_path )
 
-        try:
-            subprocess.run(["python3", "./db/db_config.py", "reset"], check=True)
-            subprocess.run(["python3", "./platforms/mac/machine_config.py", "--add"], check=True)
-        except subprocess.CalledProcessError as e:
-            raise e
+        if not args.no_reset:
+            try:
+                subprocess.run(["python3", "./db/db_config.py", "reset"], check=True)
+                subprocess.run(["python3", "./storage/recorders/local/mac/recorder.py", "--arangoimport"], check=True)
+                subprocess.run(["python3", "./platforms/mac/machine_config.py", "--add"], check=True)
+            except subprocess.CalledProcessError as e:
+                raise e
 
         self.db_config = IndalekoDBConfig()
-        self.db_config.setup_database(self.db_config.config['database']['database'],reset = False)
+        self.db_config.setup_database(self.db_config.config['database']['database'])
         self.db_config.collections = IndalekoCollections()
 
         self.query_extractor = QueryExtractor()
@@ -165,14 +169,12 @@ class Validator():
         self.logger.log_process("building dictionary...")
         selected_md_attributes = self.query_extractor.extract(query = query, llm_connector = self.llm_connector)
         self.logger.log_process_result("selected_md_attributes", selected_md_attributes)
-        self.write_json(self.config_path, json_name, selected_md_attributes)
-
+        self.write_as_json(self.config_path, json_name, selected_md_attributes)
         dictionary_selection = click.prompt("Dictionary ready for evaluation, please type 1 to continue, otherwise type 0 to exit", type=int)
         if dictionary_selection != 1:
             sys.exit()
-        else:
-            selected_md_attributes = self.read_json(self.config_path + json_name)
-            return selected_md_attributes
+        selected_md_attributes = self.read_json(self.config_path + json_name)    
+        return selected_md_attributes
 
     def run(self) -> None:
         """
@@ -180,6 +182,7 @@ class Validator():
         """
         translated_query ={}
         query = self.config["query"]
+        ic(query)
         n_truth_md = self.config["n_matching_queries"]
         n_total_md = self.config["n_metadata_records"]
 
@@ -192,7 +195,6 @@ class Validator():
         if intial_selection == 1:
             print("Creating new dictionary...")
             selected_md_attributes = self.generate_dictionary(query)
-            
         elif intial_selection == 0:
             print("Using existing dictionary...")
             selected_md_attributes = self.read_json(self.config_path + "dictionary.json")  
@@ -201,11 +203,12 @@ class Validator():
             sys.exit()
 
         self.add_result_to_dict("selected_md_attributes", selected_md_attributes)
-        selected_md_attributes = self.data_generator.preprocess_dictionary_timestamps(selected_md_attributes, False)
+        #selected_md_attributes = self.data_generator.preprocess_dictionary_timestamps(selected_md_attributes, False)
 
         # GENERATE METADATA DATASET:        
         self.logger.log_process("generating record and activity metadata...")
-        generation_time, results = self.time_operation(self.data_generator.generate_metadata_dataset, selected_md_attributes=selected_md_attributes)
+        copy_selected_md = copy.deepcopy(selected_md_attributes)
+        generation_time, results = self.time_operation(self.data_generator.generate_metadata_dataset, selected_md_attributes=copy_selected_md)
        
         (
             all_records_md, 
@@ -218,12 +221,12 @@ class Validator():
         ) = results
 
         # save the resulting dataset to a json file for future reference
-        self.data_generator.write_json(all_records_md, self.stored_file_path + "all_records.json")
-        self.data_generator.write_json(all_geo_activity_md, self.stored_file_path + "all_geo_activity.json")
-        self.data_generator.write_json(all_music_activity_md, self.stored_file_path + "all_music_activity.json")
-        self.data_generator.write_json(all_temp_activity_md, self.stored_file_path + "all_temp_activity.json")
-        self.data_generator.write_json(all_machine_config_md, self.stored_file_path + "all_machine_config.json")
-        self.data_generator.write_json(all_semantics_md, self.stored_file_path + "all_semantics_config.json")
+        self.data_generator.write_json(all_records_md, self.stored_file_path + "records.json")
+        self.data_generator.write_json(all_geo_activity_md, self.stored_file_path + "geo_activity.json")
+        self.data_generator.write_json(all_music_activity_md, self.stored_file_path + "music_activity.json")
+        self.data_generator.write_json(all_temp_activity_md, self.stored_file_path + "temp_activity.json")
+        self.data_generator.write_json(all_machine_config_md, self.stored_file_path + "machine_config.json")
+        self.data_generator.write_json(all_semantics_md, self.stored_file_path + "semantics.json")
 
         self.logger.log_process_result("metadata_generation_time", generation_time)
         self.add_result_to_dict("metadata_stats", stats)
@@ -272,33 +275,40 @@ class Validator():
         #PREPARE FOR QUERY GENERATION:
         self.logger.log_process("preparing aql translation...")
         # retrieve the geo coordinates for the AQL translator:
-        translated_query["geo_coords"] = str(self.data_generator.geo_activity_generator.saved_geo_loc)
+        translated_query["geo_coords"] = str(self.data_generator.geo_activity_generator.get_saved_geolocation())
         self.add_result_to_dict("geo_coords", translated_query["geo_coords"])
-
+        
         #convert the time to posix timestamps for consistent AQL translation results:
-        translated_query["converted_selected_md_attributes"] = self.data_generator.preprocess_dictionary_timestamps(selected_md_attributes, True)        
+        self.data_generator.posix_generator.preprocess_dictionary_timestamps(True)
+        copy_selected_md["Posix"] = self.data_generator.posix_generator.selected_md
+        translated_query["converted_selected_md_attributes"] = copy_selected_md
+        ic(translated_query)
+        quit()
         self.logger.log_process("translating query to aql...")
         self.logger.log_process_result("converted_selected_md_attributes", translated_query["converted_selected_md_attributes"])
         self.add_result_to_dict("converted_selected_md_attributes", translated_query["converted_selected_md_attributes"])
-        
-        
-        
 
         # GENERATE QUERY:
-        txt_name = "AQL.json"
-        translate_query = click.prompt("Ready for AQL generation, please type 1 to use existing, otherwise type 0 to generate a new one", type=int)
-        if translate_query == 1:
-            translated_query["AQL"] = self.read_json(self.config_path + txt_name)
-        elif translate_query == 0:
-            translated_query["AQL"] = self.generate_query(query, n_truth_md, translated_query)
-            self.write_json(self.config_path, txt_name, translated_query)
+        query_info = "query_info.json"
+        aql_text = "AQL_query.aql"
 
-        aql_selection = click.prompt("AQL query ready for evaluation, please type 1 to continue, otherwise type 0 to exit", type=int)
+
+        translated_query["providers"] = self.dynamic_activity_providers
+        translate_query = click.prompt("Ready for AQL generation, please type 1 to use existing AQL, otherwise type 0 to generate a new one", type=int)
+        if translate_query == 1:
+            aql = self.read_aql(self.config_path + aql_text)
+        elif translate_query == 0:
+            aql = self.generate_query(query, n_truth_md, translated_query)
+        
+        self.write_as_json(self.config_path, query_info, translated_query)
+        self.write_as_aql(self.config_path, aql_text, aql)
+
+        aql_selection = click.prompt("AQL query ready for evaluation. Please review the AQL_query.aql file and query_info.json and make any necessary changes to the aql file. Type 1 to continue, otherwise type 0 to exit", type=int)
 
         if aql_selection != 1:
             sys.exit()
         
-        final_query = self.read_json(self.config_path + txt_name)["AQL"]
+        final_query = self.read_aql(self.config_path + aql_text)
         self.add_result_to_dict("aql_query", final_query)
 
         # RUN INDALEKO SEARCH
@@ -323,31 +333,38 @@ class Validator():
         self.add_result_to_dict("recall", recall)
         self.logger.log_process("precision and recall calculated")
         self.logger.log_process("DONE -- please check /data_generator/results/validator_result.log for the full results")
-        self.write_json(self.file_path, "Indaleko_search_result.json", raw_results)
-        
+        self.write_as_json(self.file_path, "Indaleko_search_result.json", raw_results)
+
+
+    def read_aql(self, aql_path):
+        with open(aql_path, "r") as f:
+            return f.read()
+    
     def read_json(self, json_path):
         with open(json_path, 'r') as file:
             data = json.load(file)
         return data
-    
-    def read_text(self, txt_path):
-        with open(txt_path, 'r') as file:
-            return file.read()
-    
-    def write_text(self, txt_path, text: str):
-        with open(txt_path, 'w') as file:
-            file.write(text)
 
+    def write_as_aql(self, path, title, aql_query):
+        with open(path+title, "w") as file:
+            file.write(aql_query)
 
-    def write_json(self, path, title, result_dict):
+    def write_as_json(self, path, title, result_dict):
         with open(path + title, 'w') as file:
             json.dump(result_dict, file, indent=4)
 
 def main() -> None:
     '''Main function for the validator tool'''
-    validator_tool = Validator()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--no_reset',
+                        '-nr',
+                        help='Prevents resetting of the database', action='store_true')
+    args = parser.parse_args()
+
+    validator_tool = Validator(args)
     total_epoch = validator_tool.time_operation(validator_tool.run)
     validator_tool.logger.log_final_result(total_epoch[0], validator_tool.result_dictionary)
+    
     
 
 if __name__ == '__main__':

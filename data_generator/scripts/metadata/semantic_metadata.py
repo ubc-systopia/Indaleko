@@ -199,7 +199,7 @@ class SemanticMetadata(Metadata):
             if "." not in content:
                 words = self.faker.words(nb = random.randint(2, 8))
                 content = self._insert_words_randomly(content, words) + "."
-                content = content.capitalize()
+                content = content[0].capitalize() + content[1:]
             return self._insert_words_randomly(content, sentences)
             
     def _insert_words_randomly(self, content, list_sentences) -> str:

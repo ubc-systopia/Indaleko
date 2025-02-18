@@ -10,7 +10,8 @@ from data_models.i_object import IndalekoObjectDataModel
 from data_models.record import IndalekoRecordDataModel
 from data_models.timestamp import IndalekoTimestampDataModel
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, Union
+import re
 from icecream import ic
 faker = Faker()
     
@@ -22,15 +23,18 @@ class PosixMetadata(Metadata):
     ALL_EXTENSIONS = [".pdf", ".doc",".docx", ".txt", ".rtf", ".xls", ".xlsx", ".csv", ".ppt", ".pptx", ".jpg", ".jpeg", ".png", ".gif", ".tif", ".mov", ".mp4", ".avi", ".mp3", ".wav", ".zip", ".rar"]
 
     def __init__(self, selected_POSIX_md, default_lower_filesize, default_upper_filesize, default_lower_timestamp, 
-                default_upper_timestamp, earliest_starttime, earliest_endtime):
+                default_upper_timestamp):
+        
         super().__init__(selected_POSIX_md)
+        self.earliest_endtime = [] 
+        self.earliest_starttime = []
+        selected_POSIX_md = self.preprocess_dictionary_timestamps(False)
         
         self.default_lower_filesize = default_lower_filesize
         self.default_upper_filesize = default_upper_filesize
         self.default_upper_timestamp = default_upper_timestamp
         self.default_lower_timestamp = default_lower_timestamp
-        self.earliest_starttime = earliest_starttime
-        self.earliest_endtime = earliest_endtime
+        
 
         self.saved_directory_path = self.initialize_local_dir()
 
@@ -337,7 +341,7 @@ class PosixMetadata(Metadata):
         latest_timestamp_of_three = None
         timestamps = {}
         # check whether the query is pertaining to specific timestamp queries
-        if "timestamps" in self.selected_md :
+        if "timestamps" in self.selected_md:
             query = self.selected_md ["timestamps"]
             selected_timestamps = set(query.keys())
             non_selected_timestamps = stamp_labels - selected_timestamps
@@ -613,3 +617,69 @@ class PosixMetadata(Metadata):
             + ''.join(random.choices('0123456789', k=4)) + "-" \
             + ''.join(random.choices('0123456789', k=12))
         return uuid
+
+    def preprocess_dictionary_timestamps(self, to_timestamp: bool) -> Dict[str, Any]:
+        """
+        Convert time to posix timstamps given a dictionary to run data generator:
+        Args:
+            selected_md_attributes (Dict[str, Any]): The dictionary of attributes
+        Returns:
+            Dict[str, Any]: The converted attributes dictionary
+        """
+        # posix_attributes = copy.deepcopy(posix_attributes)
+
+        if "timestamps" in self.selected_md:
+            for timestamp_key, timestamp_data in self.selected_md["timestamps"].items():
+                starttime, endtime = self._convert_time_timestamp(timestamp_data, to_timestamp)
+                self.selected_md["timestamps"][timestamp_key]["starttime"] = starttime
+                self.selected_md["timestamps"][timestamp_key]["endtime"] = endtime 
+                if not to_timestamp:
+                    self._update_earliest_times(starttime, endtime)
+            
+        return self.selected_md
+
+    # Helper function for convert_dictionary_times()
+    def _convert_time_timestamp(self, timestamps: dict, to_timestamp: bool) -> Tuple[Union[Any, datetime], Union[Any, datetime]]:
+        """
+        Converts the time from string to timestamps
+        """
+
+        starttime = timestamps["starttime"]
+        endtime = timestamps["endtime"]
+        if to_timestamp:
+            starttime = starttime.timestamp()
+            endtime = endtime.timestamp()
+        else: 
+            starttime = self._convert_str_datetime(starttime)
+            endtime = self._convert_str_datetime(endtime)
+
+        return starttime, endtime
+
+    def _update_earliest_times(self, starttime: datetime, endtime: datetime):
+        """
+        Updates and tracks the earliest start and end times.
+        """
+        self.earliest_endtime.append(endtime)
+        self.earliest_starttime.append(starttime)
+
+        self.earliest_endtime.sort()
+        self.earliest_starttime.sort()
+    
+    # general helper function for _generate_queried_timestamp() and _convert_time_timestamp():
+    def _convert_str_datetime(self, time: str) -> datetime:
+        """Converts a str date from "YYYY-MM-DD" to datetime; used within time generator functions"""
+        splittime = re.split("[-T:]", time)
+        year = int(splittime[0])
+        month = int(splittime[1])
+        day = int(splittime[2])
+
+        hour = int(splittime[3])
+        minute = int(splittime[4])
+        second = int(splittime[5])
+
+        time = datetime(year, month, day, hour, minute, second)
+
+        # if requested time is sooner than today's day, set it to the time to now
+        if time > datetime.now():
+            time = datetime.now()
+        return time
