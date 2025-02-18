@@ -19,11 +19,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import os
 import sys
-import uuid
 
 from typing import List, Union
 
-from pydantic import Field, BaseModel
+from pydantic import Field
 from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -35,41 +34,44 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
-from data_models.record import IndalekoRecordDataModel
 from data_models.identity_domain import IndalekoIdentityDomainDataModel
-from data_models.timestamp import IndalekoTimestampDataModel
-from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 from data_models.i_uuid import IndalekoUUIDDataModel
 # pylint: enable=wrong-import-position
+
 
 class IndalekoUserDataModel(IndalekoBaseModel):
     '''
     This class defines the data model for the User data information.
     '''
-    Identifier : IndalekoUUIDDataModel = Field(None,
-                                    title='Identifier',
-                                    description='The UUID assigned to this user.',
-                                    example='12345678-1234-5678-1234-567812345678')
+    Identifier: IndalekoUUIDDataModel = Field(
+        None,
+        title='Identifier',
+        description='The UUID assigned to this user.',
+        example='12345678-1234-5678-1234-567812345678'
+    )
 
-    Domains : List[IndalekoIdentityDomainDataModel] = Field(None,
-                                    title='Domains',
-                                    description='The identity domains having an association to this user.')
+    Domains: List[IndalekoIdentityDomainDataModel] = Field(
+        None,
+        title='Domains',
+        description='The identity domains having an association to this user.'
+    )
 
-    Description : Union[str, None] = Field(None,
-                                    title='Description',
-                                    description='Description of the user.',
-                                    examples=['Aki', None]
-                                    )
+    Description: Union[str, None] = Field(
+        None,
+        title='Description',
+        description='Description of the user.',
+        examples=['Aki', None]
+    )
 
     class Config:
         '''
         This class defines configuration data for the data model.
         '''
         json_schema_extra = {
-            "example" : {
-                "Identifier" : IndalekoUUIDDataModel.Config.json_schema_extra['example'],
-                "Domains" : [IndalekoIdentityDomainDataModel.Config.json_schema_extra['example']],
-                "Description" : "Human readable label for this user."
+            "example": {
+                "Identifier": IndalekoUUIDDataModel.Config.json_schema_extra['example'],
+                "Domains": [IndalekoIdentityDomainDataModel.Config.json_schema_extra['example']],
+                "Description": "Human readable label for this user."
             }
         }
 
@@ -78,6 +80,7 @@ def main():
     '''This allows testing the data model'''
     ic('Testing the UserDataModel')
     IndalekoUserDataModel.test_model_main()
+
 
 if __name__ == '__main__':
     main()

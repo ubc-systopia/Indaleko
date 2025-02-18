@@ -41,6 +41,7 @@ from data_models.activity_data_registration \
     import IndalekoActivityDataRegistrationDataModel
 # pylint: enable=wrong-import-position
 
+
 class IndalekoActivityDataRegistration:
     '''
     This class defines the activity data provider registration for the Indaleko
@@ -52,8 +53,9 @@ class IndalekoActivityDataRegistration:
     name = 'Activity Data Provider Registration'
     provider_prefix = 'ActivityProviderData_'
 
-    def __init__(self,
-                registration_data : Union[Dict[str, Any], IndalekoActivityDataRegistrationDataModel]):
+    def __init__(
+            self,
+            registration_data: Union[Dict[str, Any], IndalekoActivityDataRegistrationDataModel]):
         '''Initialize an activity data provider registration.'''
         self.registration_data = registration_data
         ic(registration_data)
@@ -72,7 +74,7 @@ class IndalekoActivityDataRegistration:
             )
 
     @staticmethod
-    def generate_activity_data_provider_collection_name(identifier : str) -> str:
+    def generate_activity_data_provider_collection_name(identifier: str) -> str:
         '''Return the name of the collection for the activity provider.'''
         assert isinstance(identifier, str), \
             f'Identifier {identifier} must be a string is {type(identifier)}'

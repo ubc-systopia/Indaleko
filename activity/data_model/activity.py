@@ -56,18 +56,23 @@ class IndalekoActivityDataModel(IndalekoBaseModel):
     providers.
 
     '''
-    Record : IndalekoRecordDataModel = Field(...,
-                                             title='Record',
-                                             description='The record for the activity data.')
+    Record: IndalekoRecordDataModel = Field(
+        ...,
+        title='Record',
+        description='The record for the activity data.'
+        )
 
-    Timestamp : datetime = Field(...,
-                            title='Timestamp',
-                            description='The timestamp when the activity data was collected.')
+    Timestamp: datetime = Field(
+        ...,
+        title='Timestamp',
+        description='The timestamp when the activity data was collected.'
+    )
 
-    SemanticAttributes : List[IndalekoSemanticAttributeDataModel] \
-        = Field(...,
-                title='SemanticAttributes',
-                description='The semantic attributes captured by the activity data provider.')
+    SemanticAttributes: List[IndalekoSemanticAttributeDataModel] = Field(
+        ...,
+        title='SemanticAttributes',
+        description='The semantic attributes captured by the activity data provider.'
+    )
 
     class Config:
         '''Sample configuration data for the data model.'''
@@ -83,6 +88,7 @@ class IndalekoActivityDataModel(IndalekoBaseModel):
 def main():
     '''This allows testing the data model'''
     IndalekoActivityDataModel.test_model_main()
+
 
 if __name__ == '__main__':
     main()

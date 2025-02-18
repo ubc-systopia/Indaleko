@@ -1,6 +1,42 @@
+'''
+This module defines the base data model for LLM connectors.
+
+Project Indaleko
+Copyright (C) 2024-2025 Tony Mason
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+'''
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List
+import os
+import sys
+from typing import Any
+
+# from icecream import ic
+from typing import List
+
+if os.environ.get('INDALEKO_ROOT') is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+        current_path = os.path.dirname(current_path)
+    os.environ['INDALEKO_ROOT'] = current_path
+    sys.path.append(current_path)
+
+# pylint: disable=wrong-import-position
+from query.query_processing.data_models.query_output import LLMTranslateQueryResponse
+# pylint: enable=wrong-import-position
+
 
 class IndalekoLLMBase(ABC):
     """
@@ -8,7 +44,16 @@ class IndalekoLLMBase(ABC):
     """
 
     @abstractmethod
-    def generate_query(self, prompt: str) -> str:
+    def get_llm_name(self) -> str:
+        """
+        Get the name of the LLM.
+
+        Returns:
+            str: The name of the LLM
+        """
+
+    @abstractmethod
+    def generate_query(self, prompt: str) -> LLMTranslateQueryResponse:
         """
         Generate a query based on the given prompt.
 
@@ -59,14 +104,39 @@ class IndalekoLLMBase(ABC):
         """
 
     @abstractmethod
-    def answer_question(self, context: str, question: str) -> str:
+    def answer_question(self, context: str, question: str, schema: dict[str, Any]) -> dict[str, Any]:
         """
         Answer a question based on the given context.
 
         Args:
             context (str): The context to base the answer on
             question (str): The question to answer
+            schema (dict[str, Any]): The schema for the response
 
         Returns:
             str: The answer to the question
+        """
+
+    @abstractmethod
+    def get_completion(
+            self,
+            context: str,
+            question: str,
+            schema: Any
+    ) -> Any:
+        """
+        Get a completion based on the given context.
+
+        Args:
+            context (str): The context to base the completion on
+            question (str): The question to answer
+            schema (Any): The schema (or a model) for the response
+
+        Returns:
+            Any: The completion
+
+        Note: This method allows returning extended information
+        from the LLM, but requires the caller understand the explicit
+        format of the response, which does obviate the point of this
+        abstraction layer somewhat.
         """

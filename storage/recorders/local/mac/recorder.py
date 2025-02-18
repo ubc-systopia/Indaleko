@@ -39,22 +39,15 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 # pylint: disable=wrong-import-position
-from data_models import IndalekoSourceIdentifierDataModel
-from db import IndalekoDBCollections, IndalekoDBConfig, IndalekoServiceManager
-from perf.perf_collector import IndalekoPerformanceDataCollector
-from perf.perf_recorder import IndalekoPerformanceDataRecorder
+from data_models import IndalekoRecordDataModel
+from db import IndalekoDBConfig, IndalekoServiceManager
 from platforms.mac.machine_config import IndalekoMacOSMachineConfig
 from platforms.unix import UnixFileAttributes
 from storage import IndalekoObject
 from storage.collectors.local.mac.collector import IndalekoMacLocalStorageCollector
-from storage.recorders.base import BaseStorageRecorder
 from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from storage.recorders.local.local_base import BaseLocalStorageRecorder
-from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
-from utils.misc.file_name_management import indaleko_file_name_prefix
 from utils.misc.data_management import encode_binary_data
-from utils.i_logging import IndalekoLogging
-from utils import IndalekoLogging
 # pylint: enable=wrong-import-position
 
 
@@ -194,8 +187,6 @@ class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
         else:
             oid = str(uuid.uuid4())
         kwargs = {
-            'source': self.source,
-            'raw_data': encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
             'URI': data['URI'],
             'ObjectIdentifier': oid,
             'Timestamps': [
@@ -225,13 +216,28 @@ class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
                 },
             ],
             'Size': data['st_size'],
-            'Attributes': data,
             'Machine': self.machine_config.machine_id,
+            'SemanticAttributes': self.map_posix_storage_attributes_to_semantic_attributes(data),
         }
-
         if 'st_mode' in data:
             kwargs['PosixFileAttributes'] = UnixFileAttributes.map_file_attributes(
                 data['st_mode'])
+        if 'st_ino' in data:
+            kwargs['LocalIdentifier'] = str(data['st_ino'])
+        if 'Name' in data:
+            kwargs['Label'] = data['Name']
+        if 'Path' in data:
+            kwargs['LocalPath'] = data['Path']
+        if 'timestamp' not in kwargs:
+            if isinstance(self.timestamp, str):
+                kwargs['timestamp'] = datetime.datetime.fromisoformat(self.timestamp)
+            else:
+                kwargs['timestamp'] = self.timestamp
+        kwargs['Record'] = IndalekoRecordDataModel(
+            SourceIdentifier=self.source,
+            Timestamp=kwargs['timestamp'],
+            Data=encode_binary_data(bytes(json.dumps(data).encode('utf-8')))
+        )
 
         return IndalekoObject(**kwargs)
 

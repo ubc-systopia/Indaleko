@@ -23,7 +23,7 @@ import os
 import sys
 import uuid
 
-from typing import Optional
+from typing import Optional, Union
 from pydantic import Field
 
 
@@ -38,19 +38,24 @@ if os.environ.get('INDALEKO_ROOT') is None:
 from data_models.base import IndalekoBaseModel
 # pylint: enable=wrong-import-position
 
+
 class IndalekoUUIDDataModel(IndalekoBaseModel):
     '''
     This class defines the UUID data model for Indaleko.
     '''
-    Identifier : uuid.UUID = Field(uuid.uuid4(),
-                                   title='Identifier',
-                                   description='The UUID for the record.',
-                                    example='12345678-1234-5678-1234-567812345678')
+    Identifier: Union[uuid.UUID, str] = Field(
+        uuid.uuid4(),
+        title='Identifier',
+        description='The UUID for the record.',
+        example='12345678-1234-5678-1234-567812345678'
+    )
 
-    Label : Optional[str] = Field(None,
-                                  title='Label',
-                                  description='A human-readable label for the UUID.',
-                                  example='This is a sample IndalekoUUID.')
+    Label: Optional[str] = Field(
+        None,
+        title='Label',
+        description='A human-readable label for the UUID.',
+        example='This is a sample IndalekoUUID.'
+    )
 
     class Config:
         json_schema_extra = {
@@ -64,6 +69,7 @@ class IndalekoUUIDDataModel(IndalekoBaseModel):
 def main():
     '''This allows testing the data model'''
     IndalekoUUIDDataModel.test_model_main()
+
 
 if __name__ == '__main__':
     main()

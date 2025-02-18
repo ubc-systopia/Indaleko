@@ -22,7 +22,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import argparse
 import logging
-import datetime
 import os
 import json
 import sys
@@ -38,13 +37,13 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 # from Indaleko import Indaleko
-from constants.values import IndalekoConstants
 from db.db_config import IndalekoDBConfig
 from db.collection_index import IndalekoCollectionIndex
 from db.collection import IndalekoCollection
 from db.db_collections import IndalekoDBCollections
 from utils.singleton import IndalekoSingleton
 # pylint: enable=wrong-import-position
+
 
 class IndalekoCollections(IndalekoSingleton):
     """
@@ -68,7 +67,7 @@ class IndalekoCollections(IndalekoSingleton):
                                                             definition=IndalekoDBCollections.Collections[name],
                                                             db=self.db_config,
                                                             reset=self.reset)
-            except arango.exceptions.CollectionConfigureError as error: # pylint: disable=no-member
+            except arango.exceptions.CollectionConfigureError as error:  # pylint: disable=no-member
                 logging.error('Failed to configure collection %s', name)
                 print(f'Failed to configure collection {name}')
                 print(error)
@@ -93,34 +92,6 @@ class IndalekoCollections(IndalekoSingleton):
             collection = collections.collections[name]
         return collection
 
-def real_main():
-    """Test the IndalekoCollections class."""
-    start_time = datetime.datetime.now(datetime.UTC).isoformat()
-    parser = argparse.ArgumentParser()
-    logfile = f'indalekocollections-test-{start_time.replace(":","-")}.log'
-    parser = argparse.ArgumentParser(
-        description='Set up and create the collections for the Indaleko database.')
-    parser.add_argument('--reset',
-                        '-r',
-                        help='Reset the database', action='store_true')
-    parser.add_argument('--config',
-                        '-c',
-                        help='Path to the config file', default=IndalekoConstants.default_db_config_file_name)
-    parser.add_argument('--log',
-                        '-l',
-                        help='Log file to use', default=logfile)
-    parser.add_argument('--logdir',
-                        help='Log directory to use',
-                        default='./logs')
-    args = parser.parse_args()
-    logging.basicConfig(filename=os.path.join(args.logdir, args.log),
-                        level=logging.DEBUG,
-                        format='%(asctime)s - %(levelname)s - %(message)s')
-    logging.info('Begin Indaleko Collections test at %s', start_time)
-    collections = IndalekoCollections()
-    end_time = datetime.datetime.now(datetime.UTC).isoformat()
-    logging.info('End Indaleko Collections test at %s', end_time)
-    assert collections is not None, 'Collections object should not be None'
 
 def extract_params() -> tuple:
     '''Extract the common parameters from the given keyword arguments.'''
@@ -128,12 +99,15 @@ def extract_params() -> tuple:
     for params in IndalekoCollectionIndex.index_args.values():
         common_params = common_params.intersection(params)
         common_params.intersection_update(params)
-    unique_params_by_index = {index : list(set(params) - common_params) for index, params in IndalekoCollectionIndex.index_args.items()}
+    unique_params_by_index = {
+        index: list(set(params) - common_params) for index, params in IndalekoCollectionIndex.index_args.items()
+    }
     return common_params, unique_params_by_index
+
 
 def main():
     '''Test the IndalekoCollections class.'''
-    #start_time = datetime.datetime.now(datetime.UTC).isoformat()
+    # start_time = datetime.datetime.now(datetime.UTC).isoformat()
     common_params, unique_params_by_index = extract_params()
     print(common_params)
     print(unique_params_by_index)
@@ -172,7 +146,7 @@ def main():
     if hasattr(args, 'fields'):
         args.fields = [field.strip() for field in pre_args.fields.split(',')]
     print(args)
-    index_args = {'collection' : args.collection}
+    index_args = {'collection': args.collection}
     for index_arg in common_params:
         if getattr(args, index_arg) is not None:
             index_args[index_arg] = getattr(args, index_arg)
@@ -181,6 +155,7 @@ def main():
             index_args[index_arg] = getattr(args, index_arg)
     print(index_args)
     print('TODO: add tests for the various type of indices')
+
 
 if __name__ == "__main__":
     main()

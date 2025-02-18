@@ -20,14 +20,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 import datetime
 import json
-import logging
-from pathlib import Path
 import os
 import uuid
 import sys
 
 from icecream import ic
-from typing import Any, Union, Callable
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -36,8 +33,8 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
-
 # pylint: disable=wrong-import-position
+from data_models import IndalekoRecordDataModel
 from db import IndalekoServiceManager
 from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 from platforms.unix import UnixFileAttributes
@@ -46,10 +43,10 @@ from storage import IndalekoObject
 from storage.collectors.local.windows.collector import IndalekoWindowsLocalStorageCollector
 from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from storage.recorders.local.local_base import BaseLocalStorageRecorder
-from utils.decorators import type_check
 from utils.misc.file_name_management import find_candidate_files
 from utils.misc.data_management import encode_binary_data
 # pylint: enable=wrong-import-position
+
 
 class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
     '''
@@ -59,11 +56,12 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
 
     windows_local_recorder_uuid = '429f1f3c-7a21-463f-b7aa-cd731bb202b1'
     windows_local_recorder_service = {
-        'service_name' : 'Windows Local Recorder',
-        'service_description' : 'This service records metadata collected from the local filesystems of a Windows machine.',
-        'service_version' : '1.0',
-        'service_type' : IndalekoServiceManager.service_type_storage_recorder,
-        'service_identifier' : windows_local_recorder_uuid,
+        'service_name': 'Windows Local Recorder',
+        'service_description':
+        'This service records metadata collected from the local filesystems of a Windows machine.',
+        'service_version': '1.0',
+        'service_type': IndalekoServiceManager.service_type_storage_recorder,
+        'service_identifier': windows_local_recorder_uuid,
     }
 
     windows_platform = IndalekoWindowsLocalStorageCollector.windows_platform
@@ -92,10 +90,9 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
         super().__init__(**kwargs)
         self.output_file = kwargs.get('output_file', self.generate_file_name())
         self.source = {
-            'Identifier' : self.windows_local_recorder_uuid,
-            'Version' : self.windows_local_recorder_service['service_version'],
+            'Identifier': self.windows_local_recorder_uuid,
+            'Version': self.windows_local_recorder_service['service_version'],
         }
-
 
     def find_collector_files(self) -> list:
         '''This function finds the files to record:
@@ -129,41 +126,45 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
         timestamps = []
         if 'st_birthtime' in data:
             timestamps.append({
-                'Label' : IndalekoObject.CREATION_TIMESTAMP,
-                'Value' : datetime.datetime.fromtimestamp(data['st_birthtime'],
-                                                          datetime.timezone.utc).isoformat(),
-                'Description' : 'Created',
+                'Label': IndalekoObject.CREATION_TIMESTAMP,
+                'Value': datetime.datetime.fromtimestamp(
+                    data['st_birthtime'],
+                    datetime.timezone.utc).isoformat(),
+                'Description': 'Created',
             })
         if 'st_mtime' in data:
             timestamps.append({
-                'Label' : IndalekoObject.MODIFICATION_TIMESTAMP,
-                'Value' : datetime.datetime.fromtimestamp(data['st_mtime'],
-                                                          datetime.timezone.utc).isoformat(),
-                'Description' : 'Modified',
+                'Label': IndalekoObject.MODIFICATION_TIMESTAMP,
+                'Value': datetime.datetime.fromtimestamp(
+                    data['st_mtime'],
+                    datetime.timezone.utc).isoformat(),
+                'Description': 'Modified',
             })
         if 'st_atime' in data:
             timestamps.append({
-                'Label' : IndalekoObject.ACCESS_TIMESTAMP,
-                'Value' : datetime.datetime.fromtimestamp(data['st_atime'],
-                                                          datetime.timezone.utc).isoformat(),
-                'Description' : 'Accessed',
+                'Label': IndalekoObject.ACCESS_TIMESTAMP,
+                'Value': datetime.datetime.fromtimestamp(
+                    data['st_atime'],
+                    datetime.timezone.utc).isoformat(),
+                'Description': 'Accessed',
             })
         if 'st_ctime' in data:
             timestamps.append({
-                'Label' : IndalekoObject.CHANGE_TIMESTAMP,
-                'Value' : datetime.datetime.fromtimestamp(data['st_ctime'],
-                                                          datetime.timezone.utc).isoformat(),
-                'Description' : 'Changed',
+                'Label': IndalekoObject.CHANGE_TIMESTAMP,
+                'Value': datetime.datetime.fromtimestamp(
+                    data['st_ctime'],
+                    datetime.timezone.utc).isoformat(),
+                'Description': 'Changed',
             })
         kwargs = {
-            'source' : self.source,
-            'raw_data' : encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
-            'URI' : data['URI'],
-            'ObjectIdentifier' : oid,
-            'Timestamps' : timestamps,
-            'Size' : data['st_size'],
-            'Attributes' : data,
-            'Machine' : self.machine_config.machine_id,
+            'source': self.source,
+            'raw_data': encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
+            'URI': data['URI'],
+            'ObjectIdentifier': oid,
+            'Timestamps': timestamps,
+            'Size': data['st_size'],
+            'Machine': self.machine_config.machine_id,
+            'SemanticAttributes': self.map_posix_storage_attributes_to_semantic_attributes(data),
         }
         if 'Volume GUID' in data:
             kwargs['Volume'] = data['Volume GUID']
@@ -178,13 +179,24 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
             kwargs['LocalIdentifier'] = str(data['st_ino'])
         if 'Name' in data:
             kwargs['Label'] = data['Name']
+        if 'Path' in data:
+            kwargs['LocalPath'] = data['Path']
+        else:
+            ic('\n***Warning: no path in data***\n')
+            # ic(data)
         if 'timestamp' not in kwargs:
             if isinstance(self.timestamp, str):
                 kwargs['timestamp'] = datetime.datetime.fromisoformat(self.timestamp)
             else:
                 kwargs['timestamp'] = self.timestamp
+        kwargs['Record'] = IndalekoRecordDataModel(
+            SourceIdentifier=self.source,
+            Timestamp=kwargs['timestamp'],
+            Data=encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
+        )
         indaleko_object = IndalekoObject(**kwargs)
         return indaleko_object
+
 
 def main():
     '''This is the CLI handler for the Windows local storage collector.'''
@@ -193,6 +205,7 @@ def main():
         IndalekoWindowsLocalStorageRecorder,
         IndalekoWindowsMachineConfig
     )
+
 
 if __name__ == '__main__':
     main()

@@ -41,54 +41,107 @@ from data_models.timestamp import IndalekoTimestampDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 # pylint: enable=wrong-import-position
 
+
 class IndalekoObjectDataModel(IndalekoBaseModel):
     '''
     This class defines the data model for the Indaleko object.
     '''
-    Record : IndalekoRecordDataModel = Field(None,
-                                    title='Record',
-                                    description='The record associated with the object.')
+    Record: IndalekoRecordDataModel = Field(
+        None,
+        title='Record',
+        description='The record associated with the object.'
+    )
 
-    URI : str = Field(None,
-                        title='URI',
-                        description='The URI for the object.')
+    URI: str = Field(
+        None,
+        title='URI',
+        description='The URI for the object.'
+    )
 
-    ObjectIdentifier : uuid.UUID = Field(uuid.uuid4(),
-                                         title='ObjectIdentifier',
-                                         description='The UUID representing this object.')
+    ObjectIdentifier: uuid.UUID = Field(
+        uuid.uuid4(),
+        title='ObjectIdentifier',
+        description='The UUID representing this object.')
 
-    Timestamps : List[IndalekoTimestampDataModel] = Field(None,
-                                    title='Timestamps',
-                                    description='The timestamps associated with the object.')
+    Timestamps: List[IndalekoTimestampDataModel] = Field(
+        None,
+        title='Timestamps',
+        description='The timestamps (if any) associated with the object.'
+    )
 
-    Size : int = Field(None,
-                        title='Size',
-                        description='The size of the object in bytes.')
+    Size: int = Field(
+        None,
+        title='Size',
+        description='Optional field: the size of the object in bytes (if applicable).')
 
-    SemanticAttributes : Union[List[IndalekoSemanticAttributeDataModel], None] \
-        = Field(None,
-                title='SemanticAttributes',
-                description='The semantic attributes related to this object by the storage service.')
+    SemanticAttributes: Union[List[IndalekoSemanticAttributeDataModel], None] = Field(
+        None,
+        title='SemanticAttributes',
+        description='The semantic attributes related to this object by the storage service.'
+    )
 
-    Label: Union[str, None] = Field(None,
-                                    title='Label',
-                                    description='The label associated with the object in the storage system.  This field is indexed.')
+    Label: Union[str, None] = Field(
+        None,
+        title='Label',
+        description='This is the base name of the storage object. This field is indexed.'
+    )
 
-    LocalIdentifier: Union[str, None] = Field(None,
-                                    title='LocalIdentifier',
-                                    description='The local identifier associated with the object in the storage system.  Typically this is the inode number or equivalent.')
+    LocalPath: str = Field(
+        ...,
+        title='LocalPath',
+        description="Local path to this storage object",
+    )
 
-    Volume : Union[uuid.UUID, None] = Field(None,
-                                            title='Volume',
-                                            description='The volume associated with the object.  This field is optional.')
+    LocalIdentifier: Union[str, None] = Field(
+        None,
+        title='LocalIdentifier',
+        description='The local identifier associated with the object in the storage system. '
+        'Typically this is the inode number or equivalent.'
+    )
 
-    PosixFileAttributes: Union[str, None] = Field(None,
-                                    title='PosixFileAttributes',
-                                    description='The POSIX file attributes associated with the object in the storage system (e.g., S_IFREG, S_IFDIR, etc.). This field is optional.')
+    Volume: Union[uuid.UUID, None] = Field(
+        None,
+        title='Volume',
+        description='The volume associated with the object.  This field is optional.'
+    )
 
-    WindowsFileAttributes : Union[str, None] = Field(None,
-                                    title='WindowsFileAttributes',
-                                    description='The Windows file attributes associated with the object in the storage system (e.g., FILE_ATTRIBUTE_READ_ONLY, FILE_ATTRIBUTE_ARCHIVE, etc.) This field is optional.')
+    PosixFileAttributes: Union[str, None] = Field(
+        None,
+        title='PosixFileAttributes',
+        description='The POSIX file attributes associated with the object in the storage system'
+        ' (e.g., S_IFREG, S_IFDIR, etc.). This field is optional.'
+    )
+
+    WindowsFileAttributes: Union[str, None] = Field(
+        None,
+        title='WindowsFileAttributes',
+        description='The Windows file attributes associated with the object in the storage system '
+        '(e.g., FILE_ATTRIBUTE_READ_ONLY, FILE_ATTRIBUTE_ARCHIVE, etc.) This field is optional.'
+    )
+
+    CamelCaseTokenizedName: Union[str, None] = Field(
+        None,
+        title='CamelCaseTokenizedName',
+        description='Name tokenization assuming CamelCase format.'
+    )
+
+    SnakeCaseTokenizedName: Union[str, None] = Field(
+        None,
+        title='SnakeCaseTokenizedName',
+        description='Name tokenization assuming snake_case format.'
+    )
+
+    NgramTokenizedName: Union[List[str], None] = Field(
+        None,
+        title='NgramTokenizedName',
+        description='Name tokenization using n-grams.'
+    )
+
+    SpaceTokenizedName: Union[List[str], None] = Field(
+        None,
+        title='SpaceTokenizedName',
+        description='Name tokenization using spaces.'
+    )
 
     class Config:
         json_schema_extra = {
@@ -101,8 +154,9 @@ class IndalekoObjectDataModel(IndalekoBaseModel):
                 "SemanticAttributes": [
                     IndalekoSemanticAttributeDataModel.Config.json_schema_extra['example']
                 ],
-                "Label": "This is a sample label",
-                "LocalIdentifier": "This is a sample local identifier",
+                "Label": "This is a sample file or directory name.",
+                "LocalPath": "D:\\dist",
+                "LocalIdentifier": "This is a sample local identifier (e.g., inode number).",
                 "Volume": "429f1f3c-7a21-463f-b7aa-cd731bb202b1",
                 "PosixFileAttributes": "S_IFREG",
                 "WindowsFileAttributes": "FILE_ATTRIBUTE_ARCHIVE",
@@ -114,6 +168,7 @@ def main():
     '''This allows testing the data model.'''
     ic('Testing IndalekoObjectDataModel')
     IndalekoObjectDataModel.test_model_main()
+
 
 if __name__ == '__main__':
     main()

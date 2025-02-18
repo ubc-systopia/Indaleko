@@ -35,6 +35,8 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 # pylint: disable=wrong-import-position
 # pylint: enable=wrong-import-position
+
+
 class ActivityDataCharacteristics:
 
     '''
@@ -57,7 +59,6 @@ class ActivityDataCharacteristics:
     # available for use beyond this point
     ACTIVITY_DATA_UNUSED = '651b3b00-23f3-45ae-8d0e-79454a61ff3a'
 
-
     _characteristic_prefix = 'ACTIVITY_DATA_'
 
     def __init__(self):
@@ -72,8 +73,8 @@ class ActivityDataCharacteristics:
     def get_activity_characteristics() -> dict:
         '''Get the characteristics of the provider'''
         return {
-            label : value for label, value in ActivityDataCharacteristics.__dict__.items()\
-                 if label.startswith(ActivityDataCharacteristics._characteristic_prefix)
+            label: value for label, value in ActivityDataCharacteristics.__dict__.items()
+            if label.startswith(ActivityDataCharacteristics._characteristic_prefix)
         }
 
     @staticmethod
@@ -81,12 +82,14 @@ class ActivityDataCharacteristics:
         '''Get the label for the provider'''
         return ActivityDataCharacteristics().uuid_to_label.get(identifier, None)
 
+
 def main():
     '''Main entry point for the module'''
     ic('ActivityDataCharacteristics module test.')
     for label, value in ActivityDataCharacteristics.get_activity_characteristics().items():
         ic(label, value)
         ic(ActivityDataCharacteristics.get_activity_label(value))
+
 
 if __name__ == '__main__':
     main()

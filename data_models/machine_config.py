@@ -20,9 +20,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+from uuid import UUID
 
 from icecream import ic
 from pydantic import Field
+from typing import Optional, Union
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -39,27 +41,38 @@ from platforms.data_models.software import Software as software
 from platforms.data_models.hardware import Hardware as hardware
 # pylint: enable=wrong-import-position
 
+
 class IndalekoMachineConfigDataModel(IndalekoBaseModel):
     '''
     This class defines the data model for the MachineConfig collection.
     '''
-    Record : IndalekoRecordDataModel = Field(...,
-                                    title='Record',
-                                    description='The record associated with the object.')
+    Record: IndalekoRecordDataModel = Field(
+        ...,
+        title='Record',
+        description='The record associated with the object.'
+    )
 
-    Captured : IndalekoTimestampDataModel = \
+    Captured: IndalekoTimestampDataModel = \
         Field(...,
               title='Captured',
               description='The timestamp of when this data was captured.')
 
-    Hardware : hardware = \
+    Hardware: hardware = \
         Field(...,
               title='Hardware',
               description='The hardware information for the machine.')
 
-    Software : software = Field(...,
-                                title='Software',
-                                description='The software information for the machine.')
+    Software: software = Field(
+        ...,
+        title='Software',
+        description='The software information for the machine.'
+    )
+
+    MachineUUID: Optional[Union[UUID, None]] = Field(
+        None,
+        title='Machine UUID',
+        description='The unique identifier for the machine.'
+    )
 
     class Config:
         '''Configuration for the machine config data model'''
@@ -68,14 +81,17 @@ class IndalekoMachineConfigDataModel(IndalekoBaseModel):
                 'Record': IndalekoRecordDataModel.Config.json_schema_extra['example'],
                 'Captured': IndalekoTimestampDataModel.Config.json_schema_extra['example'],
                 'Hardware': hardware.Config.json_schema_extra['example'],
-                'Software': software.Config.json_schema_extra['example']
+                'Software': software.Config.json_schema_extra['example'],
+                'MachineUUID': '5cc80ef1-0385-47c8-8491-fffa66261481'
             }
         }
+
 
 def main():
     '''Main function for the machine config data model'''
     ic('Testing Machine Config Data Model')
     IndalekoMachineConfigDataModel.test_model_main()
+
 
 if __name__ == '__main__':
     main()

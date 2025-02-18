@@ -26,11 +26,11 @@ import psutil
 import sys
 
 from datetime import datetime, timezone
-from typing import Dict, List, Any, Type, TypeVar, Union, Optional, Tuple, Annotated
+from typing import List, Type, TypeVar, Union, Tuple, Annotated
 from pathlib import Path
 from icecream import ic
 
-from pydantic import BaseModel, Field, AwareDatetime, field_validator, FieldValidationInfo, BeforeValidator, AfterValidator, ConfigDict
+from pydantic import BaseModel, Field, AwareDatetime, field_validator, FieldValidationInfo, BeforeValidator, ConfigDict
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -42,11 +42,13 @@ if os.environ.get('INDALEKO_ROOT') is None:
 T = TypeVar('T', bound='IndalekoCommandLineDataModel')
 
 # pylint: disable=wrong-import-position
-from utils import IndalekoLogging
-from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
-from utils.misc.file_name_management import generate_file_name
-from db import IndalekoDBConfig
+from utils import IndalekoLogging  # noqa: E402
+from utils.misc.directory_management import indaleko_default_config_dir, indaleko_default_data_dir, \
+    indaleko_default_log_dir  # noqa: E402
+from utils.misc.file_name_management import generate_file_name  # noqa: E402
+from db import IndalekoDBConfig  # noqa: E402
 # pylint: enable=wrong-import-position
+
 
 def check_directory(value: str) -> str:
     '''Check the directory to make sure it exists.'''
@@ -55,10 +57,12 @@ def check_directory(value: str) -> str:
         raise ValueError(f'Directory {value} does not exist.')
     return value
 
+
 def av(value: str) -> str:
     '''After validation for the directory.'''
     ic('av called')
     return value
+
 
 class IndalekoCommandLineDataModel(BaseModel):
     '''
@@ -68,35 +72,35 @@ class IndalekoCommandLineDataModel(BaseModel):
 
     model_config = ConfigDict(validate_default=True, validation_error_cause=True)
 
-    Platform : str = platform.system().casefold()
+    Platform: str = platform.system().casefold()
 
-    CommandLine : list = psutil.Process().cmdline()
+    CommandLine: list = psutil.Process().cmdline()
 
-    Timestamp : AwareDatetime = datetime.now(timezone.utc)
+    Timestamp: AwareDatetime = datetime.now(timezone.utc)
 
-    ConfigurationDir : Annotated[str, BeforeValidator(check_directory)] = indaleko_default_config_dir
+    ConfigurationDir: Annotated[str, BeforeValidator(check_directory)] = indaleko_default_config_dir
 
-    DBConfigurationFileChoices : List[str] = Field(default=[])
+    DBConfigurationFileChoices: List[str] = Field(default=[])
 
-    DBConfigurationFile : str = IndalekoDBConfig.default_db_config_file
+    DBConfigurationFile: str = IndalekoDBConfig.default_db_config_file
 
-    MachineConfigurationFile : Union[str, None] = None
+    MachineConfigurationFile: Union[str, None] = None
 
-    MachineConfigurationFileChoices : List[str] = []
+    MachineConfigurationFileChoices: List[str] = []
 
-    DataDir : str = indaleko_default_data_dir
+    DataDir: str = indaleko_default_data_dir
 
-    LogDir : str = indaleko_default_log_dir
+    LogDir: str = indaleko_default_log_dir
 
-    LoggingLevels : List[str] = IndalekoLogging.get_logging_levels()
+    LoggingLevels: List[str] = IndalekoLogging.get_logging_levels()
 
-    LogLevel : Union[int, None] = logging.DEBUG
+    LogLevel: Union[int, None] = logging.DEBUG
 
-    InputFileChoices : List[str] = []
+    InputFileChoices: List[str] = []
 
-    InputFile : Union[str,None] = None
+    InputFile: Union[str, None] = None
 
-    OutputFile : Union[str, None] = None
+    OutputFile: Union[str, None] = None
 
     def __init__(self, *args, **kwargs):
         '''Initialize the object.'''
@@ -104,7 +108,7 @@ class IndalekoCommandLineDataModel(BaseModel):
 
     @field_validator('Timestamp', mode='before')
     @classmethod
-    def validate_timestamp(cls : Type[T], value: AwareDatetime, info : FieldValidationInfo) -> AwareDatetime:
+    def validate_timestamp(cls: Type[T], value: AwareDatetime, info: FieldValidationInfo) -> AwareDatetime:
         '''Validate the timestamp.'''
         if value is None:
             value = datetime.now(timezone.utc)
@@ -117,7 +121,7 @@ class IndalekoCommandLineDataModel(BaseModel):
 
     @field_validator('ConfigurationDir', 'DataDir', 'LogDir', mode='before')
     @classmethod
-    def validate_dir(cls : Type[T], value: str, info : FieldValidationInfo) -> str:
+    def validate_dir(cls: Type[T], value: str, info: FieldValidationInfo) -> str:
         '''Validate the directory.'''
         if not os.path.exists(value):
             raise ValueError(f'Directory {value} does not exist.')
@@ -125,7 +129,7 @@ class IndalekoCommandLineDataModel(BaseModel):
 
     @field_validator('DBConfigurationFile', 'MachineConfigurationFile', 'InputFile', mode='before')
     @classmethod
-    def validate_configuration_file(cls : Type[T], value : str, info : FieldValidationInfo) -> str:
+    def validate_configuration_file(cls: Type[T], value: str, info: FieldValidationInfo) -> str:
         '''Validate the database configuration file.'''
         ic(value)
         ic(info)
@@ -136,10 +140,14 @@ class IndalekoCommandLineDataModel(BaseModel):
     @staticmethod
     def find_relevant_files(
         directory: str,
-        substrings : List[str] = ['indaleko', 'jsonl']) -> List[str]:
+        substrings: List[str] = ['indaleko', 'jsonl']
+    ) -> List[str]:
         '''Find files in the directory with the given suffix.'''
         directory_path = Path(directory)
-        return [str(file_path) for file_path in directory_path.iterdir() if all(substring in file_path.name for substring in substrings)]
+        return [
+            str(file_path) for file_path in directory_path.iterdir()
+            if all(substring in file_path.name for substring in substrings)
+        ]
 
     @staticmethod
     def default_output_file(**kwargs) -> str:
@@ -159,15 +167,21 @@ class IndalekoCommandLineDataModel(BaseModel):
         # First, let's process the directories
         pre_parser.add_argument('--platform',
                                 help='The platform of the system providing the data', default=cmd_data.Platform)
-        pre_parser.add_argument('--configdir',
-                            help='Path to the config directory',
-                            default=cmd_data.ConfigurationDir)
-        pre_parser.add_argument('--datadir',
-                            help='Path to the data directory',
-                            default=cmd_data.DataDir)
-        pre_parser.add_argument('--logdir',
-                            help='Path to the log directory',
-                            default=cmd_data.LogDir)
+        pre_parser.add_argument(
+            '--configdir',
+            help='Path to the config directory',
+            default=cmd_data.ConfigurationDir
+        )
+        pre_parser.add_argument(
+            '--datadir',
+            help='Path to the data directory',
+            default=cmd_data.DataDir
+        )
+        pre_parser.add_argument(
+            '--logdir',
+            help='Path to the log directory',
+            default=cmd_data.LogDir
+        )
         pre_args, _ = pre_parser.parse_known_args()
         data = cmd_data.model_dump()
         if pre_args.platform != cmd_data.Platform:
@@ -221,10 +235,10 @@ class IndalekoCommandLineDataModel(BaseModel):
         return pre_args, pre_parser, cmd_data
 
 
-
 def main():
     '''This allows testing the data model.'''
-    cmd_data = IndalekoCommandLineDataModel.parse_command_line()
+    IndalekoCommandLineDataModel.parse_command_line()
+
 
 if __name__ == '__main__':
     main()

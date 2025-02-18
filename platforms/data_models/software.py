@@ -37,23 +37,30 @@ if os.environ.get('INDALEKO_ROOT') is None:
 from data_models.base import IndalekoBaseModel
 # pylint: enable=wrong-import-position
 
+
 class Software(IndalekoBaseModel):
     '''Defines the machine Software information'''
-    OS : str = Field(...,
-                        title='OS',
-                        description='The operating system for the machine.')
+    OS: str = Field(
+        ...,
+        title='OS',
+        description='The operating system for the machine.'
+    )
 
-    Version : str = Field(...,
-                            title='Software Version',
-                            description='The version of the operating system.')
+    Version: str = Field(
+        ...,
+        title='Software Version',
+        description='The version of the operating system.'
+    )
 
-    Hostname : str = Field(...,
-                            title='Hostname',
-                            description='The hostname of the machine.')
+    Hostname: str = Field(
+        ...,
+        title='Hostname',
+        description='The hostname of the machine.')
 
-    Architecture : Union[str, None] = Field(...,
-                                            title='Architecture',
-                                            description='The architecture of the machine.')
+    Architecture: Union[str, None] = Field(
+        ...,
+        title='Architecture',
+        description='The architecture of the machine.')
 
     class Config:
         '''Configuration for the software data model'''
@@ -66,10 +73,12 @@ class Software(IndalekoBaseModel):
             }
         }
 
+
 def main():
     '''Main function for the software data model'''
     ic('Testing Software Data Model')
     Software.test_model_main()
+
 
 if __name__ == '__main__':
     main()

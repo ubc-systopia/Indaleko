@@ -25,7 +25,9 @@ import sys
 from pydantic import Field, field_validator, AwareDatetime
 from typing import Optional
 from datetime import datetime, timezone
-from icecream import ic
+
+
+# from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -34,9 +36,12 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
-from activity.collectors.location.data_models.location_data_model import BaseLocationDataModel
+# pylint: disable=wrong-import-position
+from data_models.location_data_model import BaseLocationDataModel
 from activity.collectors.location.data_models.windows_gps_satellite_data\
      import WindowsGPSLocationSatelliteDataModel
+# pylint: enable=wrong-import-position
+
 
 class WindowsGPSLocationDataModel(BaseLocationDataModel):
     '''This is the data model for the Windows GPS location service.'''
@@ -45,7 +50,10 @@ class WindowsGPSLocationDataModel(BaseLocationDataModel):
     point: Optional[str] = Field(None, description="A string representation of the point data")
     position_source: Optional[str] = Field(None, description="The source of the position data")
     position_source_timestamp: Optional[AwareDatetime] = Field(None, description="Timestamp of the position source")
-    satellite_data: Optional[WindowsGPSLocationSatelliteDataModel] = Field(None, description="Details about satellite data used for the position")
+    satellite_data: Optional[WindowsGPSLocationSatelliteDataModel] = Field(
+        None,
+        description="Details about satellite data used for the position"
+    )
     civic_address: Optional[str] = Field(None, description="Civic address for the location, if available")
     venue_data: Optional[str] = Field(None, description="Details about the venue data for the location, if available")
 
@@ -56,7 +64,6 @@ class WindowsGPSLocationDataModel(BaseLocationDataModel):
         if value.tzinfo is None:
             value = value.replace(tzinfo=timezone.utc)
         return value
-
 
     class Config:
         json_schema_extra = {
@@ -75,10 +82,10 @@ class WindowsGPSLocationDataModel(BaseLocationDataModel):
                 "position_source": "GPS",
                 "position_source_timestamp": "2023-09-21T10:31:00Z",
                 "satellite_data": WindowsGPSLocationSatelliteDataModel.Config.json_schema_extra['example'],
-                "civic_address" : None,
+                "civic_address": None,
                 "venue_data": None,
             },
-            "new_example" : {
+            "new_example": {
                 'accuracy': 209.0,
                 'altitude': 0.0,
                 'altitude_accuracy': None,
@@ -90,17 +97,20 @@ class WindowsGPSLocationDataModel(BaseLocationDataModel):
                 'point': 'POINT(49.28042203230194 -123.12734913090786)',
                 'position_source': 'GPS',
                 'position_source_timestamp': '2024-09-27T00:04:29.060275Z',
-                'satellite_data': {'geometric_dilution_of_precision': None,
-                                    'horizontal_dilution_of_precision': None,
-                                    'position_dilution_of_precision': None,
-                                    'time_dilution_of_precision': None,
-                                    'vertical_dilution_of_precision': None},
+                'satellite_data': {
+                    'geometric_dilution_of_precision': None,
+                    'horizontal_dilution_of_precision': None,
+                    'position_dilution_of_precision': None,
+                    'time_dilution_of_precision': None,
+                    'vertical_dilution_of_precision': None
+                },
                 'source': 'GPS',
                 'speed': None,
                 'timestamp': '2024-09-27T00:04:29.060275Z',
                 'venue_data': None
             }
         }
+
 
 def main():
     '''This allows testing the data model'''

@@ -43,6 +43,7 @@ from utils import IndalekoLogging
 from activity.collectors.base import CollectorBase
 # pylint: enable=wrong-import-position
 
+
 class AmbientCollector(CollectorBase):
     '''This is an ambient activity data provider for Indaleko.'''
 
@@ -53,9 +54,11 @@ class AmbientCollector(CollectorBase):
     @abstractmethod
     def get_ambient_condition_history(
         self,
-        start_time : datetime.datetime,
-        end_time : datetime.datetime) -> List[Dict[str, Any]]:
-        '''Get the location history for the location'''
+        start_time: datetime.datetime,
+        end_time: datetime.datetime
+    ) -> List[Dict[str, Any]]:
+        '''Get the ambient condition history'''
+
 
 def list_data_collectors_command(args: argparse.Namespace):
     '''List the data collectors available'''
@@ -75,8 +78,8 @@ def main():
                         help='Directory for log files')
 
     parser.add_argument('--log', type=str, default=None, help='Log file name')
-    parser.add_argument('--loglevel', type=int, default = logging.DEBUG,
-                        choices= IndalekoLogging.get_logging_levels(),
+    parser.add_argument('--loglevel', type=int, default=logging.DEBUG,
+                        choices=IndalekoLogging.get_logging_levels(),
                         help='Logging level')
     command_subparser = parser.add_subparsers(dest='command', help='Command to execute')
     parser_list = command_subparser.add_parser('list', help='List the data collectors available')
@@ -86,8 +89,9 @@ def main():
     parser_list.set_defaults(func=list_data_collectors_command)
     parser.set_defaults(func=list_data_collectors_command)
     parser.add_argument('--config', type=str, help='Configuration file for the location provider')
-    args=parser.parse_args()
+    args = parser.parse_args()
     args.func(args)
+
 
 if __name__ == '__main__':
     main()

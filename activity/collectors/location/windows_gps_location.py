@@ -9,8 +9,7 @@ import winsdk.windows.devices.geolocation as wdg
 
 from typing import List, Dict, Any
 
-
-from icecream import ic
+# from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -25,12 +24,13 @@ from activity.collectors.location.data_models.windows_gps_location_data_model im
 from activity.collectors.location.location_base import LocationCollector
 # pylint: enable=wrong-import-position
 
+
 class WindowsGPSLocation(LocationCollector):
     '''This is the Windows GPS Location Service'''
     def __init__(self):
         self._name = 'GPS Location Service'
         self._location = 'GPS Location'
-        self._provider_id = uuid.UUID('750fd846-b6cd-4c81-b774-53ba25905e29')
+        self._collector_id = uuid.UUID('750fd846-b6cd-4c81-b774-53ba25905e29')
         self.coords = self.get_coords()
 
     @staticmethod
@@ -46,19 +46,19 @@ class WindowsGPSLocation(LocationCollector):
         if isinstance(data.timestamp, str):
             data.timestamp = datetime.fromisoformat(data.timestamp)
         kwargs = {
-            'latitude' : data.latitude,
-            'longitude' : data.longitude,
-            'timestamp' : data.timestamp,
-            'source' : 'GPS',
-            'altitude' : getattr(data, 'altitude', None),
-            'accuracy' : getattr(data, 'accuracy', None),
-            'altitude_accuracy' : getattr(data, 'altitude_accuracy', None),
-            'is_remote_source' : False,
-            'point' : f'POINT({data.latitude} {data.longitude})',
-            'position_source' : 'GPS',
-            'position_source_timestamp' : data.timestamp,
-            'civic_address' : getattr(coords, 'civic_address', None),
-            'venue_data' : getattr(coords, 'venue_data', None)
+            'latitude': data.latitude,
+            'longitude': data.longitude,
+            'timestamp': data.timestamp,
+            'source': 'GPS',
+            'altitude': getattr(data, 'altitude', None),
+            'accuracy': getattr(data, 'accuracy', None),
+            'altitude_accuracy': getattr(data, 'altitude_accuracy', None),
+            'is_remote_source': False,
+            'point': f'POINT({data.latitude} {data.longitude})',
+            'position_source': 'GPS',
+            'position_source_timestamp': data.timestamp,
+            'civic_address': getattr(coords, 'civic_address', None),
+            'venue_data': getattr(coords, 'venue_data', None)
         }
         if hasattr(data, 'satellite_data'):
             kwargs['satellite_data'] = {}
@@ -71,30 +71,32 @@ class WindowsGPSLocation(LocationCollector):
         '''Get the provider characteristics'''
         return [
             ActivityDataCharacteristics.ACTIVITY_DATA_SPATIAL,
-            ActivityDataCharacteristics.PROVIDER_DEVICE_STATE_DATA,
+            ActivityDataCharacteristics.ACTIVITY_DATA_DEVICE_STATE,
         ]
 
-    def get_collectorr_name(self) -> str:
+    def get_collector_name(self) -> str:
         '''Get the provider name'''
         return self._name
 
     def get_provider_id(self) -> uuid.UUID:
         '''Get the provider ID'''
-        return self._provider_id
+        return self._collector_id
 
     def retrieve_data(self, data_type: str) -> str:
         '''Retrieve data from the provider'''
         raise NotImplementedError('This method is not implemented yet.')
 
-    def retrieve_temporal_data(self,
-                               reference_time : datetime.datetime,
-                               prior_time_window : datetime.timedelta,
-                               subsequent_time_window : datetime.timedelta,
-                               max_entries : int = 0) -> List[Dict]:
+    def retrieve_temporal_data(
+        self,
+        reference_time: datetime.datetime,
+        prior_time_window: datetime.timedelta,
+        subsequent_time_window: datetime.timedelta,
+        max_entries: int = 0
+    ) -> List[Dict]:
         '''Retrieve temporal data from the provider'''
         raise NotImplementedError('This method is not implemented yet.')
 
-    def get_cursor(self, activity_context : uuid. UUID) -> uuid.UUID:
+    def get_cursor(self, activity_context: uuid. UUID) -> uuid.UUID:
         '''Retrieve the current cursor for this data provider
            Input:
                 activity_context: the activity context into which this cursor is
@@ -138,8 +140,9 @@ class WindowsGPSLocation(LocationCollector):
 
     def get_location_history(
         self,
-        start_time : datetime.datetime,
-        end_time : datetime.datetime) -> List[Dict[str, Any]]:
+        start_time: datetime.datetime,
+        end_time: datetime.datetime
+    ) -> List[Dict[str, Any]]:
         '''Get the location history for the location'''
         raise NotImplementedError('This method is not implemented yet.')
         return []
@@ -148,8 +151,10 @@ class WindowsGPSLocation(LocationCollector):
         '''Get the distance between two locations'''
         raise NotImplementedError('This method is not implemented yet.')
 
+
 def main():
-    '''This is the interface for testing the foo.py module.'''
+    '''This is the interface for testing the module.'''
+
 
 if __name__ == '__main__':
     main()

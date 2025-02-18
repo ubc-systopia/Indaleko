@@ -22,9 +22,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
-from pydantic import BaseModel, Field
-from typing import Optional
-from datetime import datetime
 from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -34,7 +31,10 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
-from activity.collectors.location.data_models.location_data_model import BaseLocationDataModel
+# pylint: disable=wrong-import-position
+from data_models.location_data_model import BaseLocationDataModel
+# pylint: enable=wrong-import-position
+
 
 class WiFiLocationDataModel(BaseLocationDataModel):
     '''
@@ -44,6 +44,7 @@ class WiFiLocationDataModel(BaseLocationDataModel):
         '''
         This class defines the configuration for the WiFi-based location activity data provider.
         '''
+
 
 def main():
     '''This allows testing the data model'''
@@ -55,6 +56,6 @@ def main():
     assert data_check == data
     ic(WiFiLocationDataModel.get_arangodb_schema())
 
+
 if __name__ == '__main__':
     main()
-

@@ -1,7 +1,6 @@
 '''initializtion logic for the activity context system'''
 
 import os
-import importlib
 import sys
 
 # from icecream import ic
@@ -15,28 +14,36 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
-from data_models.activity_data_registration import IndalekoActivityDataRegistrationDataModel
-from data_models.i_object import IndalekoObjectDataModel
-from data_models.identity_domain import IndalekoIdentityDomainDataModel
-from data_models.machine_config import IndalekoMachineConfigDataModel
-from data_models.record import IndalekoRecordDataModel
-from data_models.relationship import IndalekoRelationshipDataModel
-from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
-from data_models.service import IndalekoServiceDataModel
-from data_models.source_identifier import IndalekoSourceIdentifierDataModel
-from data_models.timestamp import IndalekoTimestampDataModel
-from data_models.user_identity import IndalekoUserDataModel
-from data_models.i_uuid import IndalekoUUIDDataModel
-from data_models.i_perf import IndalekoPerformanceDataModel
+# pylint: disable=wrong-import-position
+from data_models.activity_data_registration import IndalekoActivityDataRegistrationDataModel  # noqa: E402
+from data_models.collection_metadata_data_model import IndalekoCollectionMetadataDataModel  # noqa: E402
+from data_models.i_object import IndalekoObjectDataModel  # noqa: E402
+from data_models.i_perf import IndalekoPerformanceDataModel  # noqa: E402
+from data_models.i_uuid import IndalekoUUIDDataModel  # noqa: E402
+from data_models.identity_domain import IndalekoIdentityDomainDataModel  # noqa: E402
+from data_models.machine_config import IndalekoMachineConfigDataModel  # noqa: E402
+from data_models.named_entity import IndalekoNamedEntityDataModel  # noqa: E402
+from data_models.query_history import IndalekoQueryHistoryDataModel  # noqa: E402
+from data_models.record import IndalekoRecordDataModel   # noqa: E402
+from data_models.relationship import IndalekoRelationshipDataModel  # noqa: E402
+from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel  # noqa: E402
+from data_models.service import IndalekoServiceDataModel  # noqa: E402
+from data_models.source_identifier import IndalekoSourceIdentifierDataModel  # noqa: E402
+from data_models.timestamp import IndalekoTimestampDataModel  # noqa: E402
+from data_models.user_identity import IndalekoUserDataModel   # noqa: E402
+# pylint: enable=wrong-import-position
 
 __version__ = '0.1.0'
 
 __all__ = [
     'IndalekoActivityDataRegistrationDataModel',
+    'IndalekoCollectionMetadataDataModel',
     'IndalekoIdentityDomainDataModel',
     'IndalekoObjectDataModel',
     'IndalekoMachineConfigDataModel',
+    'IndalekoNamedEntityDataModel',
     'IndalekoPerformanceDataModel',
+    'IndalekoQueryHistoryDataModel',
     'IndalekoRecordDataModel',
     'IndalekoRelationshipDataModel',
     'IndalekoSemanticAttributeDataModel',
@@ -44,5 +51,5 @@ __all__ = [
     'IndalekoSourceIdentifierDataModel',
     'IndalekoTimestampDataModel',
     'IndalekoUserDataModel',
-    'IndalekoUUIDDataModel'
+    'IndalekoUUIDDataModel',
 ]

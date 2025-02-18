@@ -1,6 +1,6 @@
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List
+
 
 class LLMBase(ABC):
     """
@@ -34,7 +34,7 @@ class LLMBase(ABC):
         """
 
     @abstractmethod
-    def extract_keywords(self, text: str, num_keywords: int = 5) -> List[str]:
+    def extract_keywords(self, text: str, num_keywords: int = 5) -> list[str]:
         """
         Extract keywords from the given text.
 
@@ -43,18 +43,18 @@ class LLMBase(ABC):
             num_keywords (int): The number of keywords to extract
 
         Returns:
-            List[str]: The extracted keywords
+            list[str]: The extracted keywords
         """
         pass
 
     @abstractmethod
-    def classify_text(self, text: str, categories: List[str]) -> str:
+    def classify_text(self, text: str, categories: list[str]) -> str:
         """
         Classify the given text into one of the provided categories.
 
         Args:
             text (str): The text to classify
-            categories (List[str]): The list of possible categories
+            categories (list[str]): The list of possible categories
 
         Returns:
             str: The predicted category

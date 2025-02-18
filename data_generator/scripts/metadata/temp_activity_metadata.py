@@ -1,6 +1,6 @@
 from typing import Dict
 import random
-import uuid 
+import uuid
 from datetime import datetime
 from data_models.record import IndalekoRecordDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
@@ -8,7 +8,7 @@ from data_models.i_uuid import IndalekoUUIDDataModel
 import string
 from typing import Any
 from activity.collectors.ambient.data_models.smart_thermostat import ThermostatSensorData
-from activity.collectors.ambient.smart_thermostat.ecobee import EcobeeAmbientData
+from activity.collectors.ambient.smart_thermostat.ecobee_data_model import EcobeeAmbientDataModel
 from data_generator.scripts.metadata.activity_metadata import ActivityMetadata
 
 class TempActivityData(ActivityMetadata):
@@ -18,18 +18,18 @@ class TempActivityData(ActivityMetadata):
     """
     def __init__(self, selected_AC_md):
         super().__init__(selected_AC_md)
-    
+
     def generate_metadata(self, record_kwargs: IndalekoRecordDataModel, timestamps: Dict[str, datetime], is_truth_file: bool, truth_like: bool, truthlike_attributes: list[str]) -> Any:
         is_truth_file=self._define_truth_attribute("ecobee_temp", is_truth_file, truth_like, truthlike_attributes)
         return self._generate_temp_metadata(record_kwargs, timestamps, is_truth_file)
 
     # Helper functions for creating ambient temperature activity context within generate_metadata():
-    def _generate_temp_metadata(self, record_kwargs: IndalekoRecordDataModel, timestamps: Dict[str, datetime], is_truth_file: bool) -> EcobeeAmbientData:
+    def _generate_temp_metadata(self, record_kwargs: IndalekoRecordDataModel, timestamps: Dict[str, datetime], is_truth_file: bool) -> EcobeeAmbientDataModel:
         allowed_chars = string.ascii_letters + string.digits
         device_id = ''.join(random.choices(allowed_chars, k=12))
         current_state = ['home','away','sleep', 'custom']
         smart_thermostat_data = self._generate_thermostat_sensor_data(is_truth_file, record_kwargs, timestamps)
-        ecobee_ac_md = EcobeeAmbientData(
+        ecobee_ac_md = EcobeeAmbientDataModel(
             **smart_thermostat_data.dict(),
             device_id= device_id,
             device_name= "ecobee",
@@ -37,7 +37,7 @@ class TempActivityData(ActivityMetadata):
             connected_sensors=random.randint(0,5)
         )
         return ecobee_ac_md
-   
+
     def _generate_thermostat_sensor_data(self, is_truth_file: bool, record_kwargs: IndalekoRecordDataModel, timestamps: Dict[str, datetime]) -> ThermostatSensorData:
         """returns the thermostat sensor data"""
         temp_lower_bound, temp_upper_bound = -50.0, 100.0
@@ -53,9 +53,9 @@ class TempActivityData(ActivityMetadata):
         hvac_mode = random.choice(hvac_modes)
         hvac_state = random.choice(hvac_states)
         fan_mode = random.choice(fan_modes)
-        
+
         if "ecobee_temp" in self.selected_md:
-            ecobee_dict = self.selected_md["ecobee_temp"] 
+            ecobee_dict = self.selected_md["ecobee_temp"]
             if "temperature" in ecobee_dict:
                 temperature = self._generate_number(is_truth_file, ecobee_dict["temperature"], temp_lower_bound, temp_upper_bound)
             if "humidity" in ecobee_dict:
@@ -68,7 +68,7 @@ class TempActivityData(ActivityMetadata):
                 hvac_state = self._choose_random_element(is_truth_file, ecobee_dict["hvac_state"], hvac_states)
             if "fan_mode" in ecobee_dict:
                 fan_mode = self._choose_random_element(is_truth_file, ecobee_dict["fan_mode"], fan_modes)
-        
+
         temperature_identifier = IndalekoUUIDDataModel(Identifier=uuid.uuid4(), Label="temperature")
         humidity_identifier = IndalekoUUIDDataModel(Identifier=uuid.uuid4(), Label="humidity")
         semantic_attributes = [
@@ -81,10 +81,10 @@ class TempActivityData(ActivityMetadata):
             Timestamp= timestamp,
             source = "ecobee",
             SemanticAttributes= semantic_attributes,
-            temperature= round(temperature, 1), 
-            humidity= round(humidity, 1), 
-            hvac_mode= hvac_mode, 
-            fan_mode= fan_mode, 
-            hvac_state=hvac_state, 
+            temperature= round(temperature, 1),
+            humidity= round(humidity, 1),
+            hvac_mode= hvac_mode,
+            fan_mode= fan_mode,
+            hvac_state=hvac_state,
             target_temperature=round(target_temp,1)
         )

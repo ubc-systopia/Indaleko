@@ -1,7 +1,6 @@
 '''
 This module provides a common cli for building utilities.
 
-Indaleko Windows Local Recorder
 Copyright (C) 2024-2025 Tony Mason
 
 This program is free software: you can redistribute it and/or modify
@@ -58,6 +57,7 @@ class IndalekoBaseCLI:
         machine_config = True
         configdir = db_config or machine_config
         input = True
+        offline = True
         output = True
         datadir = input or output
         logging = True
@@ -201,13 +201,21 @@ class IndalekoBaseCLI:
                 default=default_db_config,
                 help=f'Database configuration to use (default={default_db_config})'
             )
+            return self
+
+    def setup_offline_parser(self) -> 'IndalekoBaseCLI':
+        '''This method is used to set up the offline parser'''
+        pre_args, _ = self.pre_parser.parse_known_args()
+        if hasattr(pre_args, 'offline'):  # only process it once
+            return
+        if not hasattr(pre_args, 'offline'):
             self.pre_parser.add_argument(
                 '--offline',
                 default=self.config_data['Offline'],
                 action='store_true',
                 help='Offline mode (default=False)'
             )
-            return self
+        return self
 
     def setup_machine_config_parser(self) -> 'IndalekoBaseCLI':
         '''This method is used to set up the machine configuration parser'''
@@ -336,7 +344,7 @@ class IndalekoBaseCLI:
         if 'plt' not in input_file_keys and 'Platform' in self.config_data:
             input_file_keys['plt'] = self.config_data['Platform']
         # this needs to be  provided
-        assert 'svc' in input_file_keys, 'Service not found in input file keys'
+        assert 'svc' in input_file_keys, f'Service not found in input file keys: {input_file_keys}'
         self.config_data['InputFileChoices'] = self.handler_mixin.find_data_files(
             self.config_data['DataDirectory'],
             input_file_keys,

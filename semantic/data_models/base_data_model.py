@@ -18,7 +18,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
-import os 
+import os
 import sys
 
 from typing import List
@@ -26,7 +26,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from icecream import ic
-from pydantic import  Field, field_validator, AwareDatetime
+from pydantic import Field, field_validator, AwareDatetime
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -58,30 +58,36 @@ class BaseSemanticDataModel(IndalekoBaseModel):
     providers.
 
     '''
-    Record : IndalekoRecordDataModel = Field(...,
-                                             title='Record',
-                                             description='The record for the activity data.')
+    Record: IndalekoRecordDataModel = Field(
+        ...,
+        title='Record',
+        description='The record for the activity data.'
+    )
 
-    Timestamp : AwareDatetime = \
-        Field(...,
-              title='Timestamp',
-              description='The timestamp when the semantic data was collected.')
+    Timestamp: AwareDatetime = Field(
+        ...,
+        title='Timestamp',
+        description='The timestamp when the semantic data was collected.'
+    )
 
-    ObjectIdentifier: UUID = Field(...,
-                                   title = "ObjectIdentifier",
-                                   description= "ObjectIdentifier of the original source file")
+    ObjectIdentifier: UUID = Field(
+        ...,
+        title="ObjectIdentifier",
+        description="ObjectIdentifier of the original source file")
 
-    RelatedObjects : List[UUID] = \
-        Field(...,
-              title='RelatedObjects',
-              description='The UUIDs of storage objects related to this metadata.',
-              min_items=1)
+    RelatedObjects: List[UUID] = Field(
+        ...,
+        title='RelatedObjects',
+        description='The UUIDs of storage objects related to this metadata.',
+        min_items=1
+    )
 
-    SemanticAttributes : List[IndalekoSemanticAttributeDataModel] =\
-        Field(...,
-              title='SemanticAttributes',
-              description='The semantic attributes captured by the activity data provider.',
-              min_items=1)
+    SemanticAttributes: List[IndalekoSemanticAttributeDataModel] = Field(
+        ...,
+        title='SemanticAttributes',
+        description='The semantic attributes captured by the activity data provider.',
+        min_items=1
+    )
 
     @classmethod
     @field_validator('timestamp', mode='before')
@@ -93,51 +99,52 @@ class BaseSemanticDataModel(IndalekoBaseModel):
             value = value.replace(tzinfo=timezone.utc)
         return value
 
-
     class Config:
         '''Sample configuration data for the data model'''
         json_schema_extra = {
             "example": {
-                "Record" : {
-                    "SourceIdentifier" : {
-                        "Identifier" : "50c37415-53ff-4e81-9a8b-00a6f0ad2310", # uuid
-                        "Version" : "1.0",
+                "Record": {
+                    "SourceIdentifier": {
+                        "Identifier": "50c37415-53ff-4e81-9a8b-00a6f0ad2310",  # uuid
+                        "Version": "1.0",
                     },
-                    "Timestamp" : "2023-09-21T10:29:59Z",
-                    "Attributes" : {},
-                    "Data" : "xAA="
+                    "Timestamp": "2023-09-21T10:29:59Z",
+                    "Attributes": {},
+                    "Data": "xAA="
                 },
                 "Timestamp": "2023-09-21T10:30:00Z",
-                "ObjectIdentifier" : "5a833720-7293-47fe-b3b3-1296302956cd",
-                "RelatedObjects" : [
+                "ObjectIdentifier": "467de59f-fe7f-4cdd-b5b8-0256e090ed04",
+                "RelatedObjects": [
                     "5a833720-7293-47fe-b3b3-1296302956cd",
                 ],
-                "SemanticAttributes" : [
+                "SemanticAttributes": [
                     {
-                        "Identifier" :"filetype",
-                            # IndalekoUUIDDataModel(
-                            #     Identifier = 'b4a5a775-bba8-4697-91bf-4acf99927221',
-                            #     Label = "File Type"
-                            # ).serialize(),
-                        "Data" : "xB1hcHBsaWNhdGlvbi92bmQubXMtcG93ZXJwb2ludA=="
+                        "Identifier":
+                            IndalekoUUIDDataModel(
+                                Identifier='b4a5a775-bba8-4697-91bf-4acf99927221',
+                                Label="File Type"
+                            ).serialize(),
+                        "Data": "xB1hcHBsaWNhdGlvbi92bmQubXMtcG93ZXJwb2ludA=="
                     },
                     {
-                        "Identifier" : "language",
-                            # IndalekoUUIDDataModel(
-                            #     Identifier = 'af6eba9e-0993-4bab-a620-163d523e7850',
-                            #     Label = "Languages"
-                            # ).serialize(),
-                        "Data" : "xAJlbg=="
+                        "Identifier":
+                            IndalekoUUIDDataModel(
+                                Identifier='af6eba9e-0993-4bab-a620-163d523e7850',
+                                Label="Languages"
+                            ).serialize(),
+                        "Data": "xAJlbg=="
                     },
                 ]
             }
         }
+
 
 def main():
     '''This allows testing the data model'''
     ic(os.path.abspath(__file__))
     ic('Testing base_data_model.py')
     BaseSemanticDataModel.test_model_main()
+
 
 if __name__ == '__main__':
     main()

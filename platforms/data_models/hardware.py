@@ -23,7 +23,7 @@ import sys
 
 from icecream import ic
 from pydantic import Field
-from typing import Union, Optional
+from typing import Optional
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -36,23 +36,32 @@ if os.environ.get('INDALEKO_ROOT') is None:
 from data_models.base import IndalekoBaseModel
 # pylint: enable=wrong-import-position
 
+
 class Hardware(IndalekoBaseModel):
     '''Defines the machine Hardware information'''
-    CPU : str = Field(...,
-                        title='CPU',
-                        description='Processor Architecture.')
+    CPU: str = Field(
+        ...,
+        title='CPU',
+        description='Processor Architecture.'
+    )
 
-    Version : str = Field(...,
-                            title='Version',
-                            description='Version of the processor.')
+    Version: str = Field(
+        ...,
+        title='Version',
+        description='Version of the processor.'
+    )
 
-    Cores : Optional[int] = Field(None,
-                                  title='Cores',
-                                  description='Number of cores on the processor.')
+    Cores: Optional[int] = Field(
+        None,
+        title='Cores',
+        description='Number of cores on the processor.'
+    )
 
-    Threads : Optional[int] = Field(None,
-                                    title='Threads',
-                                    description='Number of threads on the processor.')
+    Threads: Optional[int] = Field(
+        None,
+        title='Threads',
+        description='Number of threads on the processor.'
+    )
 
     class Config:
         '''Configuration for the hardware data model'''
@@ -65,10 +74,12 @@ class Hardware(IndalekoBaseModel):
             }
         }
 
+
 def main():
     '''Main function for the software data model'''
     ic('Testing Software Data Model')
     Hardware.test_model_main()
+
 
 if __name__ == '__main__':
     main()

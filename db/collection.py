@@ -22,9 +22,9 @@ import arango
 import json
 import os
 import sys
-
 import arango.collection
 from icecream import ic
+
 from typing import Any, Dict, Sequence, Union
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -35,12 +35,11 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+from db.db_config import IndalekoDBConfig
+from db.collection_index import IndalekoCollectionIndex
 from utils.decorators import type_check
 # pylint: enable=wrong-import-position
 
-
-from db.db_config import IndalekoDBConfig
-from db.collection_index import IndalekoCollectionIndex
 
 class IndalekoCollection():
     """
@@ -81,9 +80,9 @@ class IndalekoCollection():
 
     @type_check
     def create_collection(self,
-                          name : str,
-                          config : dict,
-                          reset : bool = False) -> 'IndalekoCollection':
+                          name: str,
+                          config: dict,
+                          reset: bool = False) -> 'IndalekoCollection':
         """
         Create a collection in the database. If the collection already exists,
         return the existing collection. If reset is True, delete the existing
@@ -99,7 +98,7 @@ class IndalekoCollection():
             if 'schema' in config:
                 try:
                     self.collection.configure(schema=config['schema'])
-                except arango.exceptions.CollectionConfigureError as error: # pylint: disable=no-member
+                except arango.exceptions.CollectionConfigureError as error:  # pylint: disable=no-member
                     print(f'Failed to configure collection {name}')
                     print(error)
                     print('Schema:')
@@ -114,6 +113,24 @@ class IndalekoCollection():
         assert isinstance(self.collection, arango.collection.StandardCollection), \
             f'self.collection is unexpected type {type(self.collection)}'
         return IndalekoCollection(ExistingCollection=self.collection)
+
+    def get_indices(self, name: str) -> list[IndalekoCollectionIndex]:
+        '''Return the index with the given name.'''
+        indices = []
+        collection = self.db_config.db.collection(name)
+        for index_data in collection.indexes():
+            if index_data.get('type') == 'primary':
+                continue  # Skip the primary index
+            type = index_data.get('type')
+            del index_data['type']
+            index = IndalekoCollectionIndex(
+                collection=collection,
+                type=type,
+                **index_data
+            )
+            indices.append(index)
+        exit(0)
+        return []
 
     @type_check
     def delete_collection(self, name: str) -> bool:
@@ -144,7 +161,7 @@ class IndalekoCollection():
         """Given a list of keyword arguments, return a list of documents that match the criteria."""
         return [document for document in self.collection.find(kwargs)]
 
-    def insert(self, document: dict, overwrite : bool = False) -> Union[dict,bool]:
+    def insert(self, document: dict, overwrite: bool = False) -> Union[dict, bool]:
         """
         Insert a document into the collection.
 
@@ -168,7 +185,6 @@ class IndalekoCollection():
             print(json.dumps(document, indent=2))
             ic(e)
             return None
-
 
     @type_check
     def bulk_insert(self, documents: Sequence[Dict[str, Any]]) -> Union[None, list[Dict[str, Any]]]:
@@ -201,9 +217,11 @@ class IndalekoCollection():
         """Delete the document with the given key."""
         return self.collection.delete(key)
 
+
 def main():
     '''Test the IndalekoCollection class.'''
     print('IndalekoCollection: called.  No tests yet.')
+
 
 if __name__ == '__main__':
     main()

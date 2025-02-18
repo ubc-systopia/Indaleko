@@ -18,9 +18,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
-import importlib
 import os
-import platform
 import sys
 
 if os.environ.get('INDALEKO_ROOT') is None:
@@ -31,7 +29,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from activity.collectors.ambient.music.spotify import SpotifyAmbientData
+from activity.collectors.ambient.music.spotify_data_model import SpotifyAmbientData
 # pylint: enable=wrong-import-position
 
 # Define what should be available when importing from this package

@@ -23,7 +23,7 @@ import importlib
 import platform
 import sys
 
-from icecream import ic
+# from icecream import ic
 
 init_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -34,20 +34,19 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 # pylint: disable=wrong-import-position
-from activity.collectors.location.location_base import LocationCollector
-from activity.collectors.location.ip_location import IPLocation
-from activity.collectors.location.tile_location import TileLocation
-from activity.collectors.location.wifi_location import WiFiLocation
+from activity.collectors.location.location_base import LocationCollector  # noqa: E402
+from activity.collectors.location.ip_location import IPLocation  # noqa: E402
+from activity.collectors.location.tile_location import TileLocation  # noqa: E402
+from activity.collectors.location.wifi_location import WiFiLocation  # noqa: E402
 if platform.system() == 'Windows':
     WindowsGPSLocation = importlib.import_module('activity.collectors.location.windows_gps_location').WindowsGPSLocation
-from activity.collectors.known_semantic_attributes import KnownSemanticAttributes
 # pylint: enable=wrong-import-position
 
 __version__ = '0.1.0'
 
 # Discover and load all plugins
-#discovered_plugins = discover_plugins()
-#ic(discovered_plugins)
+# discovered_plugins = discover_plugins()
+# ic(discovered_plugins)
 
 # Make discovered plugins available when importing the package
 # globals().update(discovered_plugins)
@@ -58,12 +57,11 @@ __all__ = [
     'TileLocation',
     'WiFiLocation',
     'WindowsGPSLocation',
-    'KnownSemanticAttributes',
 ]
 
 
 # You could also provide a function to get all discovered plugins
-#def get_all_plugins():
+# def get_all_plugins():
 #    return discovered_plugins
 
-#print(discover_providers())
+# print(discover_providers())

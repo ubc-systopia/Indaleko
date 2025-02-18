@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 '''
 
+
 class IndalekoSingleton:
     '''This class is used to manage Indaleko singletons.'''
     _instance = None
@@ -31,9 +32,10 @@ class IndalekoSingleton:
         if cls._instance is None:
             try:
                 cls._instance = super(IndalekoSingleton, cls).__new__(cls, *args, **kwargs)
-            except TypeError: # in case base class doesn't take any arguments
+            except TypeError:  # in case base class doesn't take any arguments
                 cls._instance = super(IndalekoSingleton, cls).__new__(cls)
         return cls._instance
+
 
 def main():
     '''Test the IndalekoSingleton class.'''
@@ -41,6 +43,7 @@ def main():
     instance2 = IndalekoSingleton()
     assert instance1 == instance2, 'IndalekoSingleton is not a singleton.'
     print('IndalekoSingleton is a singleton.')
+
 
 if __name__ == '__main__':
     main()

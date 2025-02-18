@@ -23,7 +23,7 @@ import os
 import sys
 import uuid
 
-from icecream import ic
+# from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -39,7 +39,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # from IndalekoObjectDataModel import IndalekoObjectDataModel
 # from IndalekoRecordDataModel import IndalekoRecordDataModel
 # from IndalekoDataModel import IndalekoDataModel
-from data_models import IndalekoObjectDataModel, IndalekoRecordDataModel, IndalekoSourceIdentifierDataModel
+from data_models import IndalekoObjectDataModel
 from utils.misc.data_management import encode_binary_data
 # pylint: enable=wrong-import-position
 
@@ -62,39 +62,14 @@ class IndalekoObject:
         assert 'ObjectIdentifier' in kwargs, 'ObjectIdentifier is missing.'
         assert isinstance(kwargs['ObjectIdentifier'], str), 'ObjectIdentifier is not a string.'
         assert "None" != kwargs['ObjectIdentifier'], 'ObjectIdentifier is None.'
-        if 'Record' not in kwargs:
-            self.legacy_constructor()
-        else:
-            self.indaleko_object = IndalekoObjectDataModel.deserialize(
-                kwargs
-            )
+        assert 'Record' in kwargs, f'Record is missing: {kwargs}'
+        self.indaleko_object = IndalekoObjectDataModel.deserialize(
+            kwargs
+        )
         if self.indaleko_object.Timestamps is not None:
             for timestamp in self.indaleko_object.Timestamps:
                 if timestamp.Value.tzinfo is None:
                     timestamp.Value = timestamp.Value.replace(tzinfo=datetime.timezone.utc)
-
-    def legacy_constructor(self):
-        '''Create an object using the old format.'''
-        kwargs = self.args
-        # ic(kwargs)
-        record = IndalekoRecordDataModel(
-            Data=kwargs['raw_data'],
-            Attributes=kwargs['Attributes'],
-            SourceIdentifier=IndalekoSourceIdentifierDataModel(
-                Identifier=kwargs['source']['Identifier'],
-                Version=kwargs['source']['Version'],
-                Description=None
-            ),
-            Timestamp = kwargs.get('timestamp', datetime.datetime.now(datetime.UTC))
-        )
-        del kwargs['raw_data']
-        del kwargs['Attributes']
-        del kwargs['source']
-        if 'timestamp' in kwargs:
-           del kwargs['timestamp']
-        assert 'Record' not in kwargs, 'Record is still in kwargs - new style constructor.'
-        kwargs['Record'] = IndalekoRecordDataModel.serialize(record)
-        self.indaleko_object = IndalekoObjectDataModel.deserialize(kwargs)
 
     @staticmethod
     def deserialize(data: dict) -> 'IndalekoObject':
@@ -103,7 +78,7 @@ class IndalekoObject:
 
     def serialize(self) -> dict:
         '''Serialize the object to a dictionary.'''
-        doc = json.loads(self.indaleko_object.model_dump_json())
+        doc = json.loads(self.indaleko_object.model_dump_json(exclude_none=True, exclude_unset=True))
         doc['_key'] = self.args['ObjectIdentifier']
         return doc
 
@@ -111,18 +86,14 @@ class IndalekoObject:
         '''Return a dictionary representation of this object.'''
         return self.serialize()
 
-    @staticmethod
-    def create_indaleko_object(**kwargs) -> 'IndalekoObject':
-        '''Create an Indaleko Object from an old style description.'''
-        raise NotImplementedError('This method is not implemented.')
-
     def __getitem__(self, key):
         '''Get an item from the object.'''
-        return self.indaleko_object.Record.Attributes[key]
+        return getattr(self.indaleko_object, key)
 
     def __contains__(self, key):
         '''Check if an item is in the object.'''
-        return key in self.indaleko_object.Record.Attributes
+        return hasattr(self.indaleko_object, key)
+
 
 def main():
     """Test code for the IndalekoObject class."""
@@ -130,36 +101,24 @@ def main():
     source_uuid = str(uuid.uuid4())
     parser = argparse.ArgumentParser()
     parser.add_argument('--version', action='version', version='%(prog)s 1.0')
-    parser.add_argument('--source' , '-s', type=str, default=source_uuid, help='The source UUID of the data.')
+    parser.add_argument('--source', '-s', type=str, default=source_uuid, help='The source UUID of the data.')
     parser.add_argument('--raw-data', '-r', type=str, default=random_raw_data, help='The raw data to be stored.')
-    args = parser.parse_args()
+    parser.parse_args()
     data_object = {
         "Record": {
-            "Data": "xQL6xQL3eyJzdF9hdGltZSI6IDE2OTMyMjM0NTYuMzMzNDI4MSwgInN0X2F0aW1lX25zIjogMTY5MzIyMzQ1NjMzMzQyODEwMCwgInN0X2JpcnRodGltZSI6IDE2ODU4OTEyMjEuNTU5MTkxNywgInN0X2JpcnRodGltZV9ucyI6IDE2ODU4OTEyMjE1NTkxOTE3MDAsICJzdF9jdGltZSI6IDE2ODU4OTEyMjEuNTU5MTkxNywgInN0X2N0aW1lX25zIjogMTY4NTg5MTIyMTU1OTE5MTcwMCwgInN0X2RldiI6IDI3NTYzNDcwOTQ5NTU2NDk1OTksICJzdF9maWxlX2F0dHJpYnV0ZXMiOiAzMiwgInN0X2dpZCI6IDAsICJzdF9pbm8iOiAxMTI1ODk5OTEwMTE5ODMyLCAic3RfbW9kZSI6IDMzMjc5LCAic3RfbXRpbWUiOiAxNjg1ODkxMjIxLjU1OTcxNTcsICJzdF9tdGltZV9ucyI6IDE2ODU4OTEyMjE1NTk3MTU3MDAsICJzdF9ubGluayI6IDEsICJzdF9yZXBhcnNlX3RhZyI6IDAsICJzdF9zaXplIjogMTQxMDEyMCwgInN0X3VpZCI6IDAsICJOYW1lIjogInJ1ZnVzLTQuMS5leGUiLCAiUGF0aCI6ICJkOlxcZGlzdCIsICJVUkkiOiAiXFxcXD9cXFZvbHVtZXszMzk3ZDk3Yi0yY2E1LTExZWQtYjJmYy1iNDBlZGU5YTVhM2N9XFxkaXN0XFxydWZ1cy00LjEuZXhlIiwgIkluZGV4ZXIiOiAiMDc5M2I0ZDUtZTU0OS00Y2I2LTgxNzctMDIwYTczOGI2NmI3IiwgIlZvbHVtZSBHVUlEIjogIjMzOTdkOTdiLTJjYTUtMTFlZC1iMmZjLWI0MGVkZTlhNWEzYyIsICJPYmplY3RJZGVudGlmaWVyIjogIjJjNzNkNmU1LWVhYmEtNGYwYS1hY2YzLWUwMmM1MjlmMDk3YSJ9",
-            "Attributes": {
-                "st_atime": 1693223456.3334281,
-                "st_atime_ns": 1693223456333428100,
-                "st_birthtime": 1685891221.5591917,
-                "st_birthtime_ns": 1685891221559191700,
-                "st_ctime": 1685891221.5591917,
-                "st_ctime_ns": 1685891221559191700,
-                "st_dev": 2756347094955649599,
-                "st_file_attributes": 32,
-                "st_gid": 0,
-                "st_ino": 1125899910119832,
-                "st_mode": 33279,
-                "st_mtime": 1685891221.5597157,
-                "st_mtime_ns": 1685891221559715700,
-                "st_nlink": 1, "st_reparse_tag": 0,
-                "st_size": 1410120,
-                "st_uid": 0,
-                "Name": "rufus-4.1.exe",
-                "Path": "d:\\dist",
-                "URI": "\\\\?\\Volume{3397d97b-2ca5-11ed-b2fc-b40ede9a5a3c}\\dist\\rufus-4.1.exe",
-                "Indexer": "0793b4d5-e549-4cb6-8177-020a738b66b7",
-                "Volume GUID": "3397d97b-2ca5-11ed-b2fc-b40ede9a5a3c",
-                "ObjectIdentifier": "2c73d6e5-eaba-4f0a-acf3-e02c529f097a"
-            },
+            "Data": "xQL6xQL3eyJzdF9hdGltZSI6IDE2OTMyMjM0NTYuMzMzNDI4MSwgInN0X2F0aW1lX25zIjo"
+            "gMTY5MzIyMzQ1NjMzMzQyODEwMCwgInN0X2JpcnRodGltZSI6IDE2ODU4OTEyMjEuNTU5MTkxNywgIn"
+            "N0X2JpcnRodGltZV9ucyI6IDE2ODU4OTEyMjE1NTkxOTE3MDAsICJzdF9jdGltZSI6IDE2ODU4OTEyM"
+            "jEuNTU5MTkxNywgInN0X2N0aW1lX25zIjogMTY4NTg5MTIyMTU1OTE5MTcwMCwgInN0X2RldiI6IDI3"
+            "NTYzNDcwOTQ5NTU2NDk1OTksICJzdF9maWxlX2F0dHJpYnV0ZXMiOiAzMiwgInN0X2dpZCI6IDAsICJ"
+            "zdF9pbm8iOiAxMTI1ODk5OTEwMTE5ODMyLCAic3RfbW9kZSI6IDMzMjc5LCAic3RfbXRpbWUiOiAxNj"
+            "g1ODkxMjIxLjU1OTcxNTcsICJzdF9tdGltZV9ucyI6IDE2ODU4OTEyMjE1NTk3MTU3MDAsICJzdF9ub"
+            "GluayI6IDEsICJzdF9yZXBhcnNlX3RhZyI6IDAsICJzdF9zaXplIjogMTQxMDEyMCwgInN0X3VpZCI6"
+            "IDAsICJOYW1lIjogInJ1ZnVzLTQuMS5leGUiLCAiUGF0aCI6ICJkOlxcZGlzdCIsICJVUkkiOiAiXFx"
+            "cXD9cXFZvbHVtZXszMzk3ZDk3Yi0yY2E1LTExZWQtYjJmYy1iNDBlZGU5YTVhM2N9XFxkaXN0XFxydW"
+            "Z1cy00LjEuZXhlIiwgIkluZGV4ZXIiOiAiMDc5M2I0ZDUtZTU0OS00Y2I2LTgxNzctMDIwYTczOGI2N"
+            "mI3IiwgIlZvbHVtZSBHVUlEIjogIjMzOTdkOTdiLTJjYTUtMTFlZC1iMmZjLWI0MGVkZTlhNWEzYyIs"
+            "ICJPYmplY3RJZGVudGlmaWVyIjogIjJjNzNkNmU1LWVhYmEtNGYwYS1hY2YzLWUwMmM1MjlmMDk3YSJ9",
             "SourceIdentifier": {
                 "Identifier": "429f1f3c-7a21-463f-b7aa-cd731bb202b1",
                 "Version": "1.0", "Description": None
@@ -195,12 +154,22 @@ def main():
         "Volume": "3397d97b-2ca5-11ed-b2fc-b40ede9a5a3c",
         "UnixFileAttributes": "S_IFREG",
         "WindowsFileAttributes": "FILE_ATTRIBUTE_ARCHIVE",
-        "SemanticAttributes" : [],
-        "Label" : None,
-        "LocalIdentifier" : None
+        "SemanticAttributes": [
+            {"3fa47f24-b198-434d-b440-119ec5af4f7d": 2756347094955649599, },  # st_dev
+            {"64ec8b5a-78ba-4787-ba8d-cb033ec24116": 0, },  # st_gid
+            {"1bb62d33-0392-4ffe-af1d-5ebfc32afbb9": 33279, },  # st_mode
+            {"06677615-2957-4966-aab9-dde29660c334": 1, },  # st_nlink
+            {"7ebf1a92-94f9-40b0-8887-349c24f0e354": 0, },  # st_reparse_tag
+            {"1bd30cfc-9320-427d-bdde-60d9e8aa4400": 0, },  # st_uid
+            {"882d75c6-a424-4d8b-a938-c264a281204c": 1125899910119832, },  # st_ino
+        ],
+        "Label": "rufus-4.1.exe",
+        "LocalPath": "d:\\dist",
+        "LocalIdentifier": 1125899910119832
     }
     indaleko_object = IndalekoObject.deserialize(data_object)
     print(json.dumps(indaleko_object.serialize(), indent=2))
+
 
 if __name__ == "__main__":
     main()

@@ -23,8 +23,6 @@ import os
 import platform
 import sys
 
-from typing import Dict, Type
-
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
@@ -33,6 +31,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+from activity.collectors.base import CollectorBase
 from activity.collectors.location.location_base import LocationCollector
 from activity.collectors.location.ip_location import IPLocation
 from activity.collectors.location.tile_location import TileLocation
@@ -47,7 +46,22 @@ __all__ = [
     'IPLocation',
     'TileLocation',
     'WiFiLocation',
+    'WindowsGPSLocation',
     ]
 
 if platform.system() == 'Windows':
     __all__.append('WindowsGPSLocation')
+
+
+def activity_providers() -> list[CollectorBase]:
+    '''
+    This method retrieves the activity data providers in this module.
+    '''
+    providers = [
+        IPLocation,
+        TileLocation,
+        WiFiLocation,
+    ]
+    if platform.system() == 'Windows':
+        providers.append(WindowsGPSLocation)
+    return providers

@@ -32,30 +32,34 @@ if os.environ.get('INDALEKO_ROOT') is None:
 import utils.data_validation
 # pylint: enable=wrong-import-position
 
-def validate_iso_timestamp(source : str) -> bool:
+
+def validate_iso_timestamp(source: str) -> bool:
     """Given a string, ensure it is a valid ISO timestamp."""
     return utils.data_validation.validate_iso_timestamp(source)
 
-def generate_iso_timestamp(ts : datetime = None) -> str:
+
+def generate_iso_timestamp(ts: datetime = None) -> str:
     """Given a timestamp, convert it to an ISO timestamp."""
     if ts is None:
         ts = datetime.datetime.now(datetime.timezone.utc)
     assert isinstance(ts, datetime.datetime), f'ts must be a datetime, not {type(ts)}'
     return ts.isoformat()
 
-def extract_iso_timestamp_from_file_timestamp(file_timestamp : str) -> str:
+
+def extract_iso_timestamp_from_file_timestamp(file_timestamp: str) -> str:
     """Given a file timestamp, convert it to an ISO timestamp."""
-    ts = file_timestamp.replace('_','-').replace('#',':')
+    ts = file_timestamp.replace('_', '-').replace('#', ':')
     ts_check = datetime.datetime.fromisoformat(ts)
     if ts_check is None:
         raise ValueError('timestamp is not valid')
     return ts
 
-def generate_iso_timestamp_for_file(ts : str = None) -> str:
+
+def generate_iso_timestamp_for_file(ts: str = None) -> str:
     """Create an ISO timestamp for the current time."""
     if ts is None:
         ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
     ts_check = extract_iso_timestamp_from_file_timestamp(ts)
-    if ts_check != ts: # validate that the timestamp is reversible
+    if ts_check != ts:  # validate that the timestamp is reversible
         raise ValueError(f'timestamp mismatch {ts} != {ts_check}')
-    return f"-ts={ts.replace(':','#').replace('-','_')}"
+    return f"-ts={ts.replace(':', '#').replace('-', '_')}"

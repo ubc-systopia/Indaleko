@@ -67,11 +67,6 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from data_models.activity_data_registration \
-    import IndalekoActivityDataRegistrationDataModel
-from activity.data_model.activity \
-    import IndalekoActivityDataModel
-from platforms.data_models.machine_platform import MachinePlatform
 
 # from IndalekoObjectSchema import IndalekoObjectSchema
 # from IndalekoServiceSchema import IndalekoServiceSchema
@@ -81,7 +76,7 @@ from platforms.data_models.machine_platform import MachinePlatform
 # from IndalekoUserRelationshipSchema import IndalekoUserRelationshipSchema
 from utils.misc.directory_management import \
     indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
-#from utils.misc.file_name_management import indaleko_file_name_prefix
+# from utils.misc.file_name_management import indaleko_file_name_prefix
 import utils.data_validation
 from utils.i_logging import IndalekoLogging
 import utils.misc.file_name_management
@@ -92,14 +87,14 @@ from db.db_config import IndalekoDBConfig
 from db.db_collections import IndalekoDBCollections
 # pylint: enable=wrong-import-position
 
+
 class Indaleko:
     '''This class defines constants used by Indaleko.'''
     default_data_dir = indaleko_default_data_dir
     default_config_dir = indaleko_default_config_dir
     default_log_dir = indaleko_default_log_dir
 
-
-    default_db_timeout=IndalekoDBConfig.default_db_timeout
+    default_db_timeout = IndalekoDBConfig.default_db_timeout
 
     Indaleko_Object_Collection = IndalekoDBCollections.Indaleko_Object_Collection
     Indaleko_Relationship_Collection = IndalekoDBCollections.Indaleko_Relationship_Collection
@@ -113,52 +108,53 @@ class Indaleko:
     Indaleko_Prefix = utils.misc.file_name_management.indaleko_file_name_prefix
 
     @staticmethod
-    def validate_ip_address(ip : str) -> bool:
+    def validate_ip_address(ip: str) -> bool:
         """Given a string, verify that it is in fact a valid IP address."""
         return utils.data_validation.validate_ip_address(ip)
 
     @staticmethod
-    def validate_hostname(hostname : str) -> bool:
+    def validate_hostname(hostname: str) -> bool:
         """Given a string, verify that it is in fact a valid hostname."""
         return utils.data_validation.validate_hostname(hostname)
 
     @staticmethod
-    def create_secure_directories(directories : list = None) -> None:
+    def create_secure_directories(directories: list = None) -> None:
         '''Create secure directories for Indaleko.'''
         return utils.misc.directory_management.indaleko_create_secure_directories(directories)
 
     # @deprecated(reason='Use utils.validate_data.validate_uuid_string instead')
     @staticmethod
-    def validate_uuid_string(uuid_string : str) -> bool:
+    def validate_uuid_string(uuid_string: str) -> bool:
         """Given a string, verify that it is in fact a valid uuid."""
         return utils.data_validation.validate_uuid_string(uuid_string)
 
     @staticmethod
-    def validate_iso_timestamp(source : str) -> bool:
+    def validate_iso_timestamp(source: str) -> bool:
         """Given a string, ensure it is a valid ISO timestamp."""
         return utils.data_validation.validate_iso_timestamp(source)
 
     @staticmethod
-    def generate_iso_timestamp(ts : datetime = None) -> str:
+    def generate_iso_timestamp(ts: datetime = None) -> str:
         """Given a timestamp, convert it to an ISO timestamp."""
         return utils.misc.timestamp_management.generate_iso_timestamp(ts)
 
     @staticmethod
-    def generate_iso_timestamp_for_file(ts : str = None) -> str:
+    def generate_iso_timestamp_for_file(ts: str = None) -> str:
         """Create an ISO timestamp for the current time."""
         return utils.misc.timestamp_management.generate_iso_timestamp_for_file(ts)
 
     @staticmethod
-    def extract_iso_timestamp_from_file_timestamp(file_timestamp : str) -> str:
+    def extract_iso_timestamp_from_file_timestamp(file_timestamp: str) -> str:
         """Given a file timestamp, convert it to an ISO timestamp."""
         return utils.misc.timestamp_management.extract_iso_timestamp_from_file_timestamp(file_timestamp)
+
     @staticmethod
     def get_logging_levels() -> list:
         """Return a list of valid logging levels."""
         return IndalekoLogging.get_logging_levels()
 
     @staticmethod
-    def generate_final_name(args : list, **kwargs) -> str:
+    def generate_final_name(args: list, **kwargs) -> str:
         '''
         This is a helper function for generate_file_name, which throws
         a pylint error as having "too many branches".  An explicit args list
@@ -184,32 +180,38 @@ class Indaleko:
         return utils.misc.file_name_management.generate_file_name(**kwargs)
 
     @staticmethod
-    def extract_keys_from_file_name(file_name : str) -> dict:
+    def extract_keys_from_file_name(file_name: str) -> dict:
         '''
         Given a file name, extract the keys and values from the file name.
         '''
         return utils.misc.file_name_management.extract_keys_from_file_name(file_name)
 
     @staticmethod
-    def encode_binary_data(data : bytes) -> str:
+    def encode_binary_data(data: bytes) -> str:
         '''Encode binary data as a string.'''
         return utils.misc.data_management.encode_binary_data(data)
 
     @staticmethod
-    def decode_binary_data(data : str) -> bytes:
+    def decode_binary_data(data: str) -> bytes:
         '''Decode binary data from a string.'''
         return utils.misc.data_management.decode_binary_data(data)
 
     @staticmethod
-    def find_candidate_files(input_strings : list[str], directory : str) -> list[tuple[str,str]]:
+    def find_candidate_files(
+        input_strings: list[str],
+        directory: str
+    ) -> list[tuple[str, str]]:
         '''Given a directory location, find a list of candidate files that match
         the input strings.'''
         return utils.misc.file_name_management.find_candidate_files(input_strings, directory)
 
     @staticmethod
-    def print_candidate_files(candidates : list[tuple[str,str]]) -> None:
+    def print_candidate_files(
+        candidates: list[tuple[str, str]]
+    ) -> None:
         '''Print the candidate files in a nice format.'''
         return utils.misc.file_name_management.print_candidate_files(candidates)
+
 
 def main():
     """Test code for Indaleko.py"""
@@ -219,6 +221,7 @@ def main():
     print(name)
     print('Test 2: extract keys from file name')
     print(Indaleko.extract_keys_from_file_name(name))
+
 
 if __name__ == "__main__":
     main()

@@ -1,8 +1,4 @@
 '''This implements the IP Location Service'''
-
-
-
-
 import asyncio
 import configparser
 import datetime
@@ -29,6 +25,7 @@ from activity.characteristics import ActivityDataCharacteristics
 from activity.collectors.location.data_models.tile_location_data_model import TileLocationDataModel
 # pylint: enable=wrong-import-position
 
+
 class TileLocation(LocationCollector):
     '''This is the Tile Location Service'''
     def __init__(self):
@@ -39,7 +36,7 @@ class TileLocation(LocationCollector):
         self.tile_config = self.get_tile_config()
         self.tile_data = self.get_tile_data()
 
-    def get_tile_config(self, config_file : str = None) -> configparser.ConfigParser:
+    def get_tile_config(self, config_file: str = None) -> configparser.ConfigParser:
         '''Get the Tile configuration'''
         config = configparser.ConfigParser()
         if config_file is None:
@@ -49,7 +46,7 @@ class TileLocation(LocationCollector):
 
     def get_tile_data(self) -> List[TileLocationDataModel]:
         '''Get the Tile data'''
-        async def get_tile_data_async(email : str, password : str) -> dict:
+        async def get_tile_data_async(email: str, password: str) -> dict:
             async with ClientSession() as session:
                 api = await async_login(email, password, session)
                 tiles = await api.async_get_tiles()
@@ -64,25 +61,25 @@ class TileLocation(LocationCollector):
         for tile_id, tile_data in tiles.items():
             tile_data = tile_data.as_dict()
             kwargs = {
-                'latitude' : tile_data['latitude'],
-                'longitude' : tile_data['longitude'],
-                'altitude' : tile_data['altitude'],
-                'accuracy' : tile_data['accuracy'],
-                'timestamp' : tile_data['last_timestamp'],
-                'source' : str(self._provider_id),
-                'archetype' : tile_data['archetype'],
-                'dead' : tile_data['dead'],
-                'firmware_version' : tile_data['firmware_version'],
-                'hardware_version' : tile_data['hardware_version'],
-                'kind' : tile_data['kind'],
-                'lost' : tile_data['lost'],
-                'lost_timestamp' : tile_data['lost_timestamp'],
-                'name' : tile_data['name'],
-                'ring_state' : tile_data['ring_state'],
-                'tile_id' : tile_id,
-                'visible' : tile_data['visible'],
-                'voip_state' : tile_data['voip_state'],
-                'email' : self.tile_config['tile']['email']
+                'latitude': tile_data['latitude'],
+                'longitude': tile_data['longitude'],
+                'altitude': tile_data['altitude'],
+                'accuracy': tile_data['accuracy'],
+                'timestamp': tile_data['last_timestamp'],
+                'source': str(self._provider_id),
+                'archetype': tile_data['archetype'],
+                'dead': tile_data['dead'],
+                'firmware_version': tile_data['firmware_version'],
+                'hardware_version': tile_data['hardware_version'],
+                'kind': tile_data['kind'],
+                'lost': tile_data['lost'],
+                'lost_timestamp': tile_data['lost_timestamp'],
+                'name': tile_data['name'],
+                'ring_state': tile_data['ring_state'],
+                'tile_id': tile_id,
+                'visible': tile_data['visible'],
+                'voip_state': tile_data['voip_state'],
+                'email': self.tile_config['tile']['email']
             }
             return_data.append(TileLocationDataModel(**kwargs))
         return return_data
@@ -108,14 +105,14 @@ class TileLocation(LocationCollector):
         raise NotImplementedError('This method is not implemented yet.')
 
     def retrieve_temporal_data(self,
-                               reference_time : datetime.datetime,
-                               prior_time_window : datetime.timedelta,
-                               subsequent_time_window : datetime.timedelta,
-                               max_entries : int = 0) -> List[Dict]:
+                               reference_time: datetime.datetime,
+                               prior_time_window: datetime.timedelta,
+                               subsequent_time_window: datetime.timedelta,
+                               max_entries: int = 0) -> List[Dict]:
         '''Retrieve temporal data from the provider'''
         raise NotImplementedError('This method is not implemented yet.')
 
-    def get_cursor(self, activity_context : uuid. UUID) -> uuid.UUID:
+    def get_cursor(self, activity_context: uuid. UUID) -> uuid.UUID:
         '''Retrieve the current cursor for this data provider
            Input:
                 activity_context: the activity context into which this cursor is
@@ -159,8 +156,9 @@ class TileLocation(LocationCollector):
 
     def get_location_history(
         self,
-        start_time : datetime.datetime,
-        end_time : datetime.datetime) -> List[Dict[str, Any]]:
+        start_time: datetime.datetime,
+        end_time: datetime.datetime
+    ) -> List[Dict[str, Any]]:
         '''Get the location history for the location'''
         return []
 
@@ -168,10 +166,12 @@ class TileLocation(LocationCollector):
         '''Get the distance between two locations'''
         raise NotImplementedError('This method is not implemented yet.')
 
+
 def main():
     '''This is the interface for testing the Tile location module.'''
     tile_location = TileLocation()
     ic(tile_location.get_tile_data())
+
 
 if __name__ == '__main__':
     main()
