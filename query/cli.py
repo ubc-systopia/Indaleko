@@ -17,7 +17,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-
+import argparse
 import configparser
 from datetime import datetime, timezone
 import os
@@ -64,7 +64,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
     def __init__(self):
         '''Create an instance of the IndalekoQueryCLI class.'''
         cli_data = IndalekoBaseCliDataModel()
-        handler_mixin = IndalekoBaseCLI.default_handler_mixin
+        handler_mixin = IndalekoQueryCLI.query_handler_mixin
         features = IndalekoBaseCLI.cli_features(
             machine_config=False,
             input=False,
@@ -98,6 +98,39 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         self.prompt = 'Indaleko Search> '
         self.schema = self.build_schema_table()
 
+    class query_handler_mixin(IndalekoBaseCLI.default_handler_mixin):
+        '''Handler mixin for the CLI'''
+
+        @staticmethod
+        def get_pre_parser() -> Union[argparse.Namespace, None]:
+            '''
+            This method is used to get the pre-parser.  Callers can
+            set up switches/parameters before we add the common ones.
+
+            Note the default implementation here does not add any additional parameters.
+            '''
+            parser = argparse.ArgumentParser(add_help=False)
+            subparsers = parser.add_subparsers(
+                dest='command',
+                help='The mode in which to run the script (batch or interactive).'
+            )
+            subparsers.add_parser(
+                'interactive',
+                help='Run the query tool in interactive mode.'
+            )
+            batch_parser = subparsers.add_parser(
+                'batch',
+                help='Run the query tool in batch mode.'
+            )
+            batch_parser.add_argument(
+                'batch_input_file',
+                help='The file containing the batch input queries.'
+            )
+            parser.set_defaults(command='interactive')
+            return parser
+
+    query_cli_handler_mixin = query_handler_mixin
+
     def get_api_key(self, api_key_file: Union[str, None] = None) -> str:
         '''Get the API key from the config file'''
         if api_key_file is None:
@@ -116,16 +149,28 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         return openai_key
 
     def run(self):
+        batch = False
+        if self.args is None:
+            self.args = self.pre_parser.parse_args()
+        ic(self.args)
+        if self.args.command == 'batch':
+            with open(self.args.batch_input_file, 'rt') as batch_file:
+                batch_queries = batch_file.readlines()
+            batch = True
+
         while True:
             # Need UPI information about the database
             #
 
             # Get query from user
-            try:
+            if batch:
+                if len(batch_queries) == 0:
+                    break
+                user_query = batch_queries.pop(0).strip()
+            else:
                 user_query = self.get_query()
-            except KeyboardInterrupt:
-                print('Thank you for using Indaleko Query CLI')
-                print('Have a lovely day!')
+
+            if user_query.lower() in ['exit', 'quit', 'bye', 'leave']:
                 return
 
             # Log the query
@@ -338,13 +383,9 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 def main():
     '''A CLI based query tool for Indaleko.'''
     ic('Starting Indaleko Query CLI')
-    cli = IndalekoQueryCLI()
-    try:
-        cli.run()
-    except KeyboardInterrupt:
-        print('Thank you for using Indaleko Query CLI')
-        print('Have a lovely day!')
-        sys.exit(0)
+    IndalekoQueryCLI().run()
+    print('Thank you for using Indaleko Query CLI')
+    print('Have a lovely day!')
 
 
 if __name__ == '__main__':
