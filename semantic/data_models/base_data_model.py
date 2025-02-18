@@ -114,19 +114,19 @@ class BaseSemanticDataModel(IndalekoBaseModel):
                 ],
                 "SemanticAttributes" : [
                     {
-                        "Identifier" :
-                            {
-                                'Identifier': 'b4a5a775-bba8-4697-91bf-4acf99927221',
-                                'Label': "File Type"
-                            },
+                        "Identifier" :"filetype",
+                            # IndalekoUUIDDataModel(
+                            #     Identifier = 'b4a5a775-bba8-4697-91bf-4acf99927221',
+                            #     Label = "File Type"
+                            # ).serialize(),
                         "Data" : "xB1hcHBsaWNhdGlvbi92bmQubXMtcG93ZXJwb2ludA=="
                     },
                     {
-                        "Identifier" : 
-                            {
-                                'Identifier': 'af6eba9e-0993-4bab-a620-163d523e7850',
-                                'Label': "Languages"
-                            },
+                        "Identifier" : "language",
+                            # IndalekoUUIDDataModel(
+                            #     Identifier = 'af6eba9e-0993-4bab-a620-163d523e7850',
+                            #     Label = "Languages"
+                            # ).serialize(),
                         "Data" : "xAJlbg=="
                     },
                 ]
