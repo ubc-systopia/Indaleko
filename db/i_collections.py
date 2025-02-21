@@ -108,6 +108,7 @@ def extract_params() -> tuple:
 def main():
     '''Test the IndalekoCollections class.'''
     # start_time = datetime.datetime.now(datetime.UTC).isoformat()
+    IndalekoCollections()
     common_params, unique_params_by_index = extract_params()
     print(common_params)
     print(unique_params_by_index)

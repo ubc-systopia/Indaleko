@@ -106,10 +106,7 @@ class IndalekoCollection():
                     raise error
             if 'indices' in config:
                 for index in config['indices']:
-                    self.create_index(index,
-                                      config['indices'][index]['type'],
-                                      config['indices'][index]['fields'],
-                                      config['indices'][index]['unique'])
+                    self.create_index(index, **config['indices'][index])
         assert isinstance(self.collection, arango.collection.StandardCollection), \
             f'self.collection is unexpected type {type(self.collection)}'
         return IndalekoCollection(ExistingCollection=self.collection)
@@ -142,19 +139,12 @@ class IndalekoCollection():
         print(f'Collection {name} does exists, requesting deletion **')
         return True
 
-    @type_check
-    def create_index(self,
-                     name: str,
-                     index_type: str,
-                     fields: list,
-                     unique: bool) -> 'IndalekoCollection':
+    def create_index(self, name, **kwargs: dict[str, Any]) -> 'IndalekoCollection':
         """Create an index for the given collection."""
         self.indices[name] = IndalekoCollectionIndex(
             collection=self.collection,
-            name=name,
-            index_type=index_type,
-            fields=fields,
-            unique=unique)
+            **kwargs
+        )
         return self
 
     def find_entries(self, **kwargs):

@@ -489,6 +489,12 @@ def setup_command(args: argparse.Namespace) -> None:
         return
     logging.info('Database connection successful')
 
+    def __setup_db():
+        from i_collections import IndalekoCollections
+        IndalekoCollections()
+
+    __setup_db()
+
 
 def docker_reset() -> None:
     '''This resets the docker container and volume'''
@@ -508,10 +514,6 @@ def docker_reset() -> None:
     print('DB Reset: deleting volume '
           f"{config.config['database']['volume']}")
     indaleko_docker.delete_volume(config.config['database']['volume'])
-
-
-def indaleko_reset() -> None:
-    '''This resets the Indaleko database'''
 
 
 def reset_command(args: argparse.Namespace) -> None:

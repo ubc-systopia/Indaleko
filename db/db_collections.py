@@ -225,8 +225,9 @@ class IndalekoDBCollections:
                 },
                 'Location': {
                     'fields': ['gis_location'],
+                    'type': 'geo',
                     'unique': False,
-                    'type': 'geo'
+                    'geo_json': True
                 },
                 'Device': {
                     'fields': ['device_id'],

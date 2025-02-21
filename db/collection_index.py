@@ -134,6 +134,7 @@ class IndalekoCollectionIndex:
         )
 
     def __init__(self,
+                 collection,
                  **kwargs):
         """Parameters:
             This class is used to create indices for IndalekoCollection objects.
@@ -147,70 +148,12 @@ class IndalekoCollectionIndex:
 
             unique: if True, the index is unique
         """
-        if 'collection' not in kwargs:
-            raise ValueError('collection is a required parameter')
-        self.collection = kwargs['collection']
-        if 'fields' not in kwargs:
-            raise ValueError('fields is a required parameter')
-        if not isinstance(kwargs['fields'], list):
-            raise ValueError('fields must be a list')
-        self.fields = kwargs['fields']
-        self.unique = None
-        if 'unique' in kwargs:
-            self.unique = kwargs['unique']
-        if 'index_type' not in kwargs:
-            raise ValueError('index_type is a required parameter')
-        self.index_type = kwargs['index_type']
-        self.sparse = None
-        if 'sparse' in kwargs:
-            self.sparse = kwargs['sparse']
-        self.expiry_time = None
-        if 'expiry_time' in kwargs:
-            self.expiry_time = kwargs['expiry_time']
-        self.name = None
-        if 'name' in kwargs:
-            self.name = kwargs['name']
-        self.deduplicate = None
-        if 'deduplicate' in kwargs:
-            self.deduplicate = kwargs['deduplicate']
-        if 'in_background' in kwargs:
-            self.in_background = kwargs['in_background']
-        # There are two parameters that are common to all index types:
-        # fields (the fields being indexed) and name (the name of the index).
-        args = {'fields': self.fields}
-        if self.name is not None:
-            args['name'] = self.name
-        if self.index_type == 'hash':
-            if self.unique is not None:
-                args['unique'] = self.unique
-            if self.sparse is not None:
-                args['sparse'] = self.sparse
-            if self.deduplicate is not None:
-                args['deduplicate'] = self.deduplicate
-            if self.in_background is not None:
-                args['in_background'] = self.in_background
-            self.index = self.collection.add_hash_index(**args)  # pylint: disable=unexpected-keyword-arg
-        elif self.index_type == 'persistent':
-            self.index = self.collection.add_persistent_index(fields=self.fields,
-                                                              unique=self.unique)
-        elif self.index_type == 'geo':
-            args = {}
-            args['type'] = 'geo'
-            args['fields'] = self.fields
-            args['geoJson'] = getattr(self, 'geo_json', True)
-            self.index = self.collection.ensureIndex(args)
-        elif self.index_type == 'fulltext':
-            self.index = self.collection.add_fulltext_index(fields=self.fields,
-                                                            unique=self.unique)
-        elif self.index_type == 'skiplist':
-            self.index = self.collection.add_skiplist_index(fields=self.fields,
-                                                            unique=self.unique)
-        elif self.index_type == 'ttl':
-            self.index = self.collection.add_ttl_index(fields=self.fields,
-                                                       unique=self.unique)
-        else:
-            raise ValueError('Invalid index type')
-        ic(f'Created index {self.index}')
+        self.collection = collection
+        ic(kwargs)
+        assert kwargs.get('type') is not None, 'type is a required parameter'
+        assert kwargs.get('fields') is not None, 'fields is a required parameter'
+        self.index = self.collection.add_index(data=kwargs, formatter=False)
+        ic(f'Created index for collection {self.collection}: {self.index}')
 
 
 def main():
