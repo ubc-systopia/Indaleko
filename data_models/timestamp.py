@@ -24,9 +24,9 @@ import sys
 import uuid
 
 from pydantic import Field, AwareDatetime, field_validator
-from typing import Optional, Dict, Any
+from typing import Optional
 from datetime import datetime, timezone
-from icecream import ic
+# from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -44,19 +44,26 @@ class IndalekoTimestampDataModel(IndalekoBaseModel):
     '''
     This class defines the UUID data model for Indaleko.
     '''
-    Label : uuid.UUID = Field(...,
-                              title='Label',
-                              description='UUID representing the semantic meaning of this timestamp.',
-                              example='12345678-1234-5678-1234-567812345678')
-    Value : AwareDatetime = Field(datetime.now(timezone.utc),
-                             title='Value',
-                             description='The timestamp value.',
-                             example='2024-01-01T00:00:00Z')
+    Label: uuid.UUID = Field(
+        ...,
+        title='Label',
+        description='UUID representing the semantic meaning of this timestamp.',
+        example='12345678-1234-5678-1234-567812345678'
+    )
 
-    Description : Optional[str] = Field(None,
-                                  title='Description',
-                                  description='A human-readable label for the UUID.',
-                                  example='This is a sample timestamp.')
+    Value: AwareDatetime = Field(
+        datetime.now(timezone.utc),
+        title='Value',
+        description='The timestamp value.',
+        example='2024-01-01T00:00:00Z'
+    )
+
+    Description: Optional[str] = Field(
+        None,
+        title='Description',
+        description='A human-readable label for the UUID.',
+        example='This is a sample timestamp.'
+    )
 
     class Config:
         json_schema_extra = {
@@ -79,6 +86,7 @@ class IndalekoTimestampDataModel(IndalekoBaseModel):
 def main():
     '''This allows testing the data model'''
     IndalekoTimestampDataModel.test_model_main()
+
 
 if __name__ == '__main__':
     main()

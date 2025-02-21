@@ -23,7 +23,7 @@ import os
 import sys
 
 from pydantic import Field, field_validator, AwareDatetime
-from typing import Optional
+from typing import Optional, Union
 from datetime import datetime, timezone
 
 
@@ -50,7 +50,7 @@ class WindowsGPSLocationDataModel(BaseLocationDataModel):
     point: Optional[str] = Field(None, description="A string representation of the point data")
     position_source: Optional[str] = Field(None, description="The source of the position data")
     position_source_timestamp: Optional[AwareDatetime] = Field(None, description="Timestamp of the position source")
-    satellite_data: Optional[WindowsGPSLocationSatelliteDataModel] = Field(
+    satellite_data: Union[WindowsGPSLocationSatelliteDataModel, None] = Field(
         None,
         description="Details about satellite data used for the position"
     )

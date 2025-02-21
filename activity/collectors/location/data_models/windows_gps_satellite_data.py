@@ -21,7 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
-from pydantic import Field
+from pydantic import Field, BaseModel
 from typing import Optional
 
 # from icecream import ic
@@ -34,11 +34,10 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from data_models.location_data_model import BaseLocationDataModel
 # pylint: enable=wrong-import-position
 
 
-class WindowsGPSLocationSatelliteDataModel(BaseLocationDataModel):
+class WindowsGPSLocationSatelliteDataModel(BaseModel):
     geometric_dilution_of_precision: Optional[float]\
         = Field(None, description="Geometric dilution of precision")
     horizontal_dilution_of_precision: Optional[float]\

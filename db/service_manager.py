@@ -133,7 +133,12 @@ class IndalekoServiceManager(IndalekoSingleton):
             db=self.db_config.db
         )
         self.service_collection.add_schema(IndalekoServiceManager.Schema)
-        self.service_collection.create_index('name', 'persistent', ['Name'], unique=True)
+        self.service_collection.create_index(
+            name='service name',
+            fields=['Name'],
+            type='persistent',
+            unique=True
+        )
         return self.service_collection
 
     def lookup_service_by_name(self, name: str) -> dict:
