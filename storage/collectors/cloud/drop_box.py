@@ -78,7 +78,8 @@ class IndalekoDropboxCloudStorageCollector(BaseCloudStorageCollector):
 
     collector_data = IndalekoStorageCollectorDataModel(
         PlatformName=dropbox_platform,
-        ServiceFileName=indaleko_dropbox_collector_service_name,
+        ServiceRegistrationName=indaleko_dropbox_collector_service_name,
+        ServiceFileName=dropbox_collector_name,
         ServiceUUID=uuid.UUID(indaleko_dropbox_collector_uuid),
         ServiceVersion=indaleko_dropbox_collector_service_version,
         ServiceDescription=indaleko_dropbox_collector_service_description,

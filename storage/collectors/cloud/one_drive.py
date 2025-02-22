@@ -77,7 +77,8 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
 
     collector_data = IndalekoStorageCollectorDataModel(
         PlatformName=onedrive_platform,
-        ServiceFileName=indaleko_onedrive_collector_service_name,
+        ServiceRegistrationName=indaleko_onedrive_collector_service_name,
+        ServiceFileName=onedrive_collector_name,
         ServiceUUID=UUID(indaleko_onedrive_collector_uuid),
         ServiceVersion=indaleko_onedrive_collector_service_version,
         ServiceDescription=indaleko_onedrive_collector_service_description,

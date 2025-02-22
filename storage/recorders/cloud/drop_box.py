@@ -68,7 +68,8 @@ class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
 
     recorder_data = IndalekoStorageRecorderDataModel(
         PlatformName=dropbox_platform,
-        ServiceName=dropbox_recorder,
+        ServiceRegistrationName=dropbox_recorder_service['service_name'],
+        ServiceFileName=dropbox_recorder,
         ServiceUUID=uuid.UUID(dropbox_recorder_uuid),
         ServiceVersion=dropbox_recorder_service['service_version'],
         ServiceDescription=dropbox_recorder_service['service_description'],
