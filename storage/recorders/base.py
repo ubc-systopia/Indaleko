@@ -112,10 +112,11 @@ class BaseStorageRecorder:
     )
 
     recorder_data = IndalekoStorageRecorderDataModel(
-        RecorderServiceName=storage_recorder_service_name,
-        RecorderServiceUUID=storage_recorder_uuid,
-        RecorderServiceVersion=storage_recorder_service_version,
-        RecorderServiceDescription=storage_recorder_service_description,
+        ServiceRegistrationName=storage_recorder_service_name,
+        ServiceFileName=recorder_name,
+        ServiceUUID=storage_recorder_uuid,
+        ServiceVersion=storage_recorder_service_version,
+        ServiceDescription=storage_recorder_service_description,
     )
 
     def __init__(self: 'BaseStorageRecorder', **kwargs: dict) -> None:
@@ -169,7 +170,7 @@ class BaseStorageRecorder:
         self.config_dir = kwargs.get('config_dir', indaleko_default_config_dir)
         self.log_dir = kwargs.get('log_dir', indaleko_default_log_dir)
         self.recorder_service = IndalekoServiceManager().register_service(
-            service_name=self.get_recorder_service_name(),
+            service_name=self.get_recorder_service_registration_name(),
             service_id=str(self.get_recorder_service_uuid()),
             service_version=self.get_recorder_service_version(),
             service_description=self.get_recorder_service_description(),
@@ -195,56 +196,36 @@ class BaseStorageRecorder:
     @classmethod
     def get_recorder_platform_name(cls: 'BaseStorageRecorder') -> str:
         '''This function returns the platform name for the recorder.'''
-        if hasattr(cls, 'recorder_data'):
-            return cls.recorder_data.RecorderPlatformName
-        else:
-            return cls.recorder_platform
+        return cls.recorder_data.PlatformName
 
     @classmethod
-    def get_recorder_service_name(cls) -> str:
+    def get_recorder_service_registration_name(cls) -> str:
         '''This function returns the service name for the recorder.'''
-        if hasattr(cls, 'recorder_data'):
-            return cls.recorder_data.RecorderServiceName
-        else:
-            ic('Warning, no recorder_data, returning indaleko_service_name')
-            return cls.storage_recorder_service_name
+        return cls.recorder_data.ServiceRegistrationName
+
+    @classmethod
+    def get_recorder_service_file_name(cls) -> str:
+        return cls.recorder_data.ServiceFileName
 
     @classmethod
     def get_recorder_service_uuid(cls) -> uuid.UUID:
         '''This function returns the service UUID for the recorder.'''
-        if hasattr(cls, 'recorder_data'):
-            return cls.recorder_data.RecorderServiceUUID
-        else:
-            ic(f'Warning, no recorder_data, returning {uuid.UUID('00000000-0000-0000-0000-000000000000')}')
-            return uuid.UUID('00000000-0000-0000-0000-000000000000')
+        return cls.recorder_data.ServiceUUID
 
     @classmethod
     def get_recorder_service_version(cls) -> str:
         '''This function returns the service version for the recorder.'''
-        if hasattr(cls, 'recorder_data'):
-            return cls.recorder_data.RecorderServiceVersion
-        else:
-            ic('Warning, no recorder_data, returning 1.0')
-            return cls.storage_recorder_service_version
+        return cls.recorder_data.ServiceVersion
 
     @classmethod
     def get_recorder_service_description(cls) -> str:
         '''This function returns the service description for the recorder.'''
-        if hasattr(cls, 'recorder_data'):
-            return cls.recorder_data.RecorderServiceDescription
-        else:
-            ic('Warning, no recorder_data, returning indaleko_service_description')
-            return cls.storage_recorder_service_description
+        return cls.recorder_data.ServiceDescription
 
     @classmethod
     def get_recorder_service_type(cls) -> str:
         '''This function returns the service type for the recorder.'''
-        if hasattr(cls, 'recorder_data'):
-            return cls.recorder_data.RecorderServiceType
-        else:
-            service_type = IndalekoServiceManager.service_type_storage_recorder
-            ic(f'Warning, no recorder_data, returning {service_type}')
-            return service_type
+        return cls.recorder_data.ServiceType
 
     @classmethod
     def get_recorder_file_service_name(cls) -> str:
@@ -515,8 +496,8 @@ class BaseStorageRecorder:
     def build_edges(self) -> None:
         '''Build the edges between files and directories.'''
         source_id = IndalekoSourceIdentifierDataModel(
-            Identifier=str(self.recorder_data.RecorderServiceUUID),
-            Version=self.recorder_data.RecorderServiceVersion,
+            Identifier=str(self.recorder_data.ServiceUUID),
+            Version=self.recorder_data.ServiceVersion,
         )
         for item in self.dir_data + self.file_data:
             assert 'LocalPath' in item, f'Path not in item: {item.indaleko_object}'
@@ -813,6 +794,7 @@ class BaseStorageRecorder:
         assert len(self.dir_data) + len(self.file_data) > 0, 'No data to record'
         self.build_dirmap()
         self.build_edges()
+        assert self.recorder_platform
         kwargs = {
             'platform': self.recorder_platform,
             'service': self.get_recorder_file_service_name(),
@@ -834,10 +816,10 @@ def main():
     # Now parse the arguments
     recorder = BaseStorageRecorder(
         recorder_data=IndalekoStorageRecorderDataModel(
-            RecorderServiceName=BaseStorageRecorder.indaleko_generic_storage_recorder_service_name,
-            RecorderServiceUUID=BaseStorageRecorder.indaleko_generic_storage_recorder_uuid,
-            RecorderServiceVersion=BaseStorageRecorder.indaleko_generic_storage_recorder_service_version,
-            RecorderServiceDescription=BaseStorageRecorder.indaleko_generic_storage_recorder_service_description,
+            ServiceName=BaseStorageRecorder.indaleko_generic_storage_recorder_service_name,
+            ServiceUUID=BaseStorageRecorder.indaleko_generic_storage_recorder_uuid,
+            ServiceVersion=BaseStorageRecorder.indaleko_generic_storage_recorder_service_version,
+            ServiceDescription=BaseStorageRecorder.indaleko_generic_storage_recorder_service_description,
         ),
         service_name=BaseStorageRecorder.indaleko_generic_storage_recorder_service_name,
         service_id=BaseStorageRecorder.indaleko_generic_storage_recorder_uuid_str,

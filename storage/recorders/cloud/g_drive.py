@@ -35,6 +35,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 # pylint: disable=wrong-import-position
+from data_models import IndalekoRecordDataModel
 from db import IndalekoServiceManager
 from platforms.unix import UnixFileAttributes
 from platforms.windows_attributes import IndalekoWindows
@@ -65,11 +66,12 @@ class IndalekoGDriveCloudStorageRecorder(BaseCloudStorageRecorder):
     gdrive_recorder = 'recorder'
 
     recorder_data = IndalekoStorageRecorderDataModel(
-        RecorderPlatformName=gdrive_platform,
-        RecorderServiceName=gdrive_recorder,
-        RecorderServiceUUID=uuid.UUID(gdrive_recorder_uuid),
-        RecorderServiceVersion=gdrive_recorder_service['service_version'],
-        RecorderServiceDescription=gdrive_recorder_service['service_description'],
+        PlatformName=gdrive_platform,
+        ServiceRegistrationName=gdrive_recorder_service['service_name'],
+        ServiceFileName=gdrive_recorder,
+        ServiceUUID=uuid.UUID(gdrive_recorder_uuid),
+        ServiceVersion=gdrive_recorder_service['service_version'],
+        ServiceDescription=gdrive_recorder_service['service_description'],
     )
 
     def __init__(self, **kwargs: dict) -> None:
@@ -116,7 +118,7 @@ class IndalekoGDriveCloudStorageRecorder(BaseCloudStorageRecorder):
         '''Given an Indaleko object, return a valid local path to the object'''
         if 'parents' in obj:  # use parent if there is one
             return obj['parents'][0]
-        return self.root_dir['id']  # otherwise use the root directory
+        return self.root_dir.indaleko_object.LocalIdentifier  # otherwise use the root directory
 
     def build_dirmap(self) -> None:
         '''
@@ -124,13 +126,24 @@ class IndalekoGDriveCloudStorageRecorder(BaseCloudStorageRecorder):
         specific to Google Drive.
         '''
         # First: build the directory map from the list of known directories.
-        self.dirmap = {item['id']: item.args['ObjectIdentifier'] for item in self.dir_data}
+        self.dirmap = {
+            item.indaleko_object.LocalIdentifier: item.indaleko_object.ObjectIdentifier for item in self.dir_data
+        }
         for item in self.file_data:
             # now, walk through all the files
-            parent_id = item['Path']
+            if item.indaleko_object.LocalPath is not None:
+                continue
+            doc = item.indaleko_object.serialize()
+            ic(doc)
+            ic(item.args)
+            exit(0)
+            parent_id = item.indaleko_object.LocalPath
             # use the ID in the path field if we have info on it.
             # otherwise, just use the root directory.
-            item.args['Path'] = self.root_dir['id'] if parent_id == '/' else parent_id
+            doc = item.indaleko_object.serialize()
+            if 'parents' in doc:
+                parent_id = doc['parents'][0]
+            item.args['Path'] = self.root_dir.indaleko_object.LocalIdentifier if parent_id == '/' else parent_id
 
     def normalize_collector_data(self, data: dict) -> dict:
         '''
@@ -178,45 +191,41 @@ class IndalekoGDriveCloudStorageRecorder(BaseCloudStorageRecorder):
         if not self.root_dir:
             path = data['id']  # root directory
         else:
-            path = self.root_dir['id']
+            path = self.root_dir.indaleko_object.LocalIdentifier
         if 'parents' in data:
             path = data['parents'][0]
         name = data['name']
         data['Path'] = path
         data['Name'] = name
         kwargs = {
-            'source': self.source,
-            'raw_data': encode_binary_data(bytes(json.dumps(data), 'utf-8')),
+            'Record': IndalekoRecordDataModel(
+                SourceIdentifier=self.source,
+                Timestamp=self.timestamp,
+                Data=encode_binary_data(bytes(json.dumps(data), 'utf-8')),
+            ),
             'URI': data.get('webViewLink', None),
-            'Path': path,
-            'Name': name,
             'ObjectIdentifier': str(oid),
             'Timestamps': timestamps,
             'Size': int(data.get('size', 0)),
-            'Attributes': data,
+            'SemanticAttributes': None,  # add some perhaps?
             'Label': name,
-        }
-        kwargs['PosixFileAttributes'] = \
-            UnixFileAttributes.map_file_attributes(
+            'LocalPath': path,
+            'LocalIdentifier': data.get('id', None),
+            'Volume': None,
+            'PosixFileAttributes': UnixFileAttributes.map_file_attributes(
                 self.map_gdrive_attributes_to_unix_attributes(data)
-            )
-        kwargs['WindowsFileAttributes'] = \
-            IndalekoWindows.map_file_attributes(
+            ),
+            'WindowsFileAttributes': IndalekoWindows.map_file_attributes(
                 self.map_gdrive_attributes_to_windows_attributes(data)
-            )
-        if 'timestamp' not in kwargs:
-            if isinstance(self.timestamp, str):
-                kwargs['timestamp'] = datetime.datetime.fromisoformat(self.timestamp)
-            else:
-                assert isinstance(self.timestamp, datetime.datetime)
-                kwargs['timestamp'] = self.timestamp
-        assert kwargs.get('Path')
+            ),
+        }
         obj = IndalekoObject(**kwargs)
         if not self.root_dir:
             self.root_dir = obj
-            self.id_map[data['id']] = obj
+            assert hasattr(self.root_dir.indaleko_object, 'LocalIdentifier')
+            self.id_map[self.root_dir.indaleko_object.LocalIdentifier] = obj
         elif data['capabilities']['canAddChildren']:
-            self.id_map[data['id']] = obj
+            self.id_map[self.root_dir.indaleko_object.LocalIdentifier] = obj
         return obj
 
     @staticmethod

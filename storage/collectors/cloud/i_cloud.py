@@ -83,11 +83,11 @@ class IndalekoICloudStorageCollector(BaseCloudStorageCollector):
     }
 
     collector_data = IndalekoStorageCollectorDataModel(
-        CollectorPlatformName=icloud_platform,
-        CollectorServiceName=icloud_collector_name,
-        CollectorServiceUUID=uuid.UUID(indaleko_icloud_collector_uuid),
-        CollectorServiceVersion=indaleko_icloud_collector_service_version,
-        CollectorServiceDescription=indaleko_icloud_collector_service_description
+        PlatformName=icloud_platform,
+        ServiceFileName=icloud_collector_name,
+        ServiceUUID=uuid.UUID(indaleko_icloud_collector_uuid),
+        ServiceVersion=indaleko_icloud_collector_service_version,
+        ServiceDescription=indaleko_icloud_collector_service_description
     )
 
     def __init__(self, **kwargs):

@@ -68,11 +68,13 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
     windows_local_recorder_name = 'fs_recorder'
 
     recorder_data = IndalekoStorageRecorderDataModel(
-        RecorderPlatformName=windows_platform,
-        RecorderServiceName=windows_local_recorder_name,
-        RecorderServiceUUID=uuid.UUID(windows_local_recorder_uuid),
-        RecorderServiceVersion=windows_local_recorder_service['service_version'],
-        RecorderServiceDescription=windows_local_recorder_service['service_description'],
+        PlatformName=windows_platform,
+        ServiceRegistrationName=windows_local_recorder_service['service_name'],
+        ServiceFileName=windows_local_recorder_name,
+        ServiceName=windows_local_recorder_name,
+        ServiceUUID=uuid.UUID(windows_local_recorder_uuid),
+        ServiceVersion=windows_local_recorder_service['service_version'],
+        ServiceDescription=windows_local_recorder_service['service_description'],
     )
 
     def __init__(self, **kwargs) -> None:

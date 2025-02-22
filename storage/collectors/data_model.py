@@ -42,32 +42,43 @@ from constants import IndalekoConstants
 
 class IndalekoStorageCollectorDataModel(BaseModel):
     '''Defines the base data model for the storage collectors'''
-    CollectorPlatformName: Optional[Union[str, None]] = Field(
+    PlatformName: Optional[Union[str, None]] = Field(
         None,
         title='PlatformName',
         description='The name of the platform (e.g., Linux, Windows, etc.) if any (default=None).'
     )
-    CollectorServiceName: str = Field(
+
+    ServiceRegistrationName: str = Field(
         ...,
-        title='CollectorName',
-        description='The service name of the collector.'
+        title='ServiceRegistrationName',
+        description='The service name used when registering this collector in the database.'
     )
-    CollectorServiceUUID: UUID = Field(
+
+    ServiceFileName: str = Field(
         ...,
-        title='CollectorUUID',
+        title='ServiceFileName',
+        description='The service name of the collector for file name generation.'
+    )
+
+    ServiceUUID: UUID = Field(
+        ...,
+        title='ServiceUUID',
         description='The UUID of the collector.'
     )
-    CollectorServiceVersion: str = Field(
+
+    ServiceVersion: str = Field(
         ...,
         title='CollectorVersion',
         description='The version of the collector.'
     )
-    CollectorServiceDescription: str = Field(
+
+    ServiceDescription: str = Field(
         ...,
         title='CollectorDescription',
         description='The description of the collector.'
     )
-    CollectorServiceType: str = Field(
+
+    ServiceType: str = Field(
         IndalekoConstants.service_type_storage_collector,
         title='CollectorType',
         description=f'The type of the collector. (default is {IndalekoConstants.service_type_storage_collector})')
@@ -76,12 +87,13 @@ class IndalekoStorageCollectorDataModel(BaseModel):
         '''Configuration for the base CLI data model'''
         json_schema_extra = {
             'example': {
-                'CollectorPlatformName': 'Linux',
-                'CollectorServiceName': 'Linux Local Collector',
-                'CollectorServiceUUID': uuid4(),
-                'CollectorServiceVersion': '1.0',
-                'CollectorServiceDescription': 'This service collects local filesystem metadata of a Linux machine.',
-                'CollectorServiceType': IndalekoConstants.service_type_storage_collector  # same as default
+                'PlatformName': 'Linux',
+                'ServiceRegistrationName': 'Linux Local Collector',
+                'ServiceFileName': 'collector',
+                'ServiceUUID': uuid4(),
+                'ServiceVersion': '1.0',
+                'ServiceDescription': 'This service collects local filesystem metadata of a Linux machine.',
+                'ServiceType': IndalekoConstants.service_type_storage_collector  # same as default
             }
         }
 

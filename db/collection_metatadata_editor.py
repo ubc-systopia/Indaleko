@@ -150,7 +150,7 @@ class IndalekoCollectorMetadataCLI(IndalekoBaseCLI):
     def __init__(self):
         '''Create an instance of the IndalekoCollectorMetadataCLI class.'''
         cli_data = IndalekoBaseCliDataModel(
-            Service=IndalekoCollectorMetadataCLI.service_name,
+            RegistrationServiceName=IndalekoCollectorMetadataCLI.service_name,
             Platform=self.platform_name,
             InputFileKeys={'svc': 'backup'}
         )

@@ -57,11 +57,12 @@ class BaseStorageCollector:
     the collectors.
     '''
     default_collector_data = IndalekoStorageCollectorDataModel(
-        CollectorPlatformName=None,
-        CollectorServiceName='Indaleko Generic Collector',
-        CollectorServiceUUID=uuid.UUID('4a80a080-9cc9-4856-bf43-7b646557ac2d'),
-        CollectorServiceVersion='1.0',
-        CollectorServiceDescription='Base Indaleko storage collector. Do not use.',
+        PlatformName=None,
+        ServiceRegistrationName='Indaleko Generic Collector',
+        ServiceFileName='collector',
+        ServiceUUID=uuid.UUID('4a80a080-9cc9-4856-bf43-7b646557ac2d'),
+        ServiceVersion='1.0',
+        ServiceDescription='Base Indaleko storage collector. Do not use.',
     )
 
     # define the parameters for the generic collector service.  These should be
@@ -105,7 +106,7 @@ class BaseStorageCollector:
         if 'collector_data' in kwargs:
             self.collector_data = kwargs['collector_data']
         assert hasattr(self, 'collector_data'), 'collector_data must either be passed in or created in derived class'
-        self.platform = kwargs.get('platform', self.collector_data.CollectorPlatformName)
+        self.platform = kwargs.get('platform', self.collector_data.PlatformName)
         self.file_prefix = kwargs.get('file_prefix', BaseStorageCollector.default_file_prefix).replace('-', '_')
         self.file_suffix = kwargs.get('file_suffix', BaseStorageCollector.default_file_suffix).replace('-', '_')
         self.data_dir = kwargs.get('data_dir', indaleko_default_data_dir)
@@ -142,7 +143,7 @@ class BaseStorageCollector:
             if self.collector_service is None:
                 self.collector_service = IndalekoServiceManager()\
                     .register_service(
-                    service_name=self.get_collector_service_name(),
+                    service_name=self.get_collector_service_registration_name(),
                     service_id=str(self.get_collector_service_identifier()),
                     service_description=self.get_collector_service_description(),
                     service_version=self.get_collector_service_version(),
@@ -161,37 +162,37 @@ class BaseStorageCollector:
     @classmethod
     def get_collector_platform_name(cls) -> Union[str, None]:
         '''This function returns the collector platform, or None if not applicable.'''
-        return cls.collector_data.CollectorPlatformName
+        return cls.collector_data.PlatformName
 
     @classmethod
-    def get_collector_name(cls) -> str:
-        '''This function returns the collector name.'''
-        return cls.collector_data.CollectorPlatformName
+    def get_collector_service_registration_name(cls) -> str:
+        '''This function returns the service name for registration'''
+        return cls.collector_data.ServiceRegistrationName
 
     @classmethod
-    def get_collector_service_name(cls) -> str:
-        '''This function returns the service name.'''
-        return cls.collector_data.CollectorServiceName
+    def get_collector_service_file_name(cls) -> str:
+        '''This function returns the service name for file construction.'''
+        return cls.collector_data.ServiceFileName
 
     @classmethod
     def get_collector_service_description(cls) -> str:
         '''This function returns the service description.'''
-        return cls.collector_data.CollectorServiceDescription
+        return cls.collector_data.ServiceDescription
 
     @classmethod
     def get_collector_service_version(cls) -> str:
         '''This function returns the service version.'''
-        return cls.collector_data.CollectorServiceVersion
+        return cls.collector_data.ServiceVersion
 
     @classmethod
     def get_collector_service_type(cls) -> str:
         '''This function returns the service type.'''
-        return cls.collector_data.CollectorServiceType
+        return cls.collector_data.ServiceType
 
     @classmethod
     def get_collector_service_identifier(cls) -> uuid.UUID:
         '''This function returns the service identifier.'''
-        return cls.collector_data.CollectorServiceUUID
+        return cls.collector_data.ServiceUUID
 
     @classmethod
     def get_collector_cli_handler_mixin(cls):
@@ -225,9 +226,9 @@ class BaseStorageCollector:
     def generate_collector_file_name(self: 'BaseStorageCollector', **kwargs) -> str:
         '''Generate a file name for the Linux local collector'''
         if 'platform' not in kwargs:
-            kwargs['platform'] = self.collector_data.CollectorPlatformName
+            kwargs['platform'] = self.collector_data.PlatformName
         if 'collector_name' not in kwargs:
-            kwargs['collector_name'] = self.collector_data.CollectorServiceName
+            kwargs['collector_name'] = self.collector_data.ServiceRegistrationFileName
         if 'machine_id' not in kwargs:
             if not hasattr(self, 'machine_id'):
                 ic(f'type(cls): {type(self)}')

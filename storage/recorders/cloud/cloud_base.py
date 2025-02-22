@@ -67,6 +67,7 @@ class BaseCloudStorageRecorder(BaseStorageRecorder):
         self.dirmap = {}
         self.dir_edges = []
         self.collector_data = []
+        self.recorder_platform = kwargs.get('platform')
 
     def find_collector_files(self) -> list:
         '''
@@ -113,6 +114,7 @@ class BaseCloudStorageRecorder(BaseStorageRecorder):
         args = keys['args']  # must be there.
         cli = keys['cli']  # must be there.
         config_data = cli.get_config_data()
+        ic(config_data)
         debug = hasattr(args, 'debug') and args.debug
         if debug:
             ic(config_data)
@@ -215,10 +217,11 @@ class BaseCloudStorageRecorder(BaseStorageRecorder):
         '''This is the CLI handler for cloud storage recorders.'''
         runner = IndalekoCLIRunner(
             cli_data=IndalekoBaseCliDataModel(
-                Service=recorder_class.get_recorder_service_name(),
+                RegistrationServiceName=recorder_class.get_recorder_service_file_name(),
+                FileServiceName=recorder_class.get_recorder_service_file_name(),
                 InputFileKeys={
                     'plt': collector_class.get_collector_platform_name(),
-                    'svc': collector_class.get_collector_service_name(),
+                    'svc': collector_class.get_collector_service_file_name(),
                 },
                 Platform=recorder_class.cloud_recorder_mixin.get_platform_name(),
             ),
@@ -226,7 +229,7 @@ class BaseCloudStorageRecorder(BaseStorageRecorder):
             features=IndalekoBaseCLI.cli_features(
                 machine_config=False,
             ),
-            Run=BaseCloudStorageRecorder.local_run,
+            Run=recorder_class.local_run,
             RunParameters={
                 'CollectorClass': collector_class,
                 'RecorderClass': recorder_class,

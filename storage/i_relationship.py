@@ -176,15 +176,17 @@ class IndalekoRelationship:
                 Data=item.Data
             ) for item in self.relationships
         ]
+        obj1 = str(self.object1.object)
+        obj2 = str(self.object2.object)
         relationship_data = IndalekoRelationshipDataModel(
             Record=self.record,
-            Objects=[self.object1.object, self.object2.object],
+            Objects=[obj1, obj2],
             Relationships=reldata,
         )
         doc = json.loads(relationship_data.model_dump_json(exclude_none=True))
         doc['_key'] = str(uuid.uuid4())
-        doc['_from'] = self.object1.collection + '/' + self.object1.object
-        doc['_to'] = self.object2.collection + '/' + self.object2.object
+        doc['_from'] = self.object1.collection + '/' + obj1
+        doc['_to'] = self.object2.collection + '/' + obj2
         return doc
 
     @staticmethod

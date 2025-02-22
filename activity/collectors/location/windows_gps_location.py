@@ -61,7 +61,6 @@ class WindowsGPSLocation(LocationCollector):
             'venue_data': getattr(coords, 'venue_data', None)
         }
         if hasattr(data, 'satellite_data'):
-            ic(data.satellite_data)
             kwargs['satellite_data'] = {}
             for attr in dir(data.satellite_data):
                 if not attr.startswith('_'):

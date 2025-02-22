@@ -69,11 +69,11 @@ class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
     mac_local_recorder = 'mac_local_recorder'
 
     recorder_data = IndalekoStorageRecorderDataModel(
-        RecorderPlatformName=mac_platform,
-        RecorderServiceName = mac_local_recorder,
-        RecorderServiceUUID = uuid.UUID(mac_local_recorder_uuid),
-        RecorderServiceVersion = mac_local_recorder_service['service_version'],
-        RecorderServiceDescription = mac_local_recorder_service['service_description'],
+        PlatformName=mac_platform,
+        ServiceName = mac_local_recorder,
+        ServiceUUID = uuid.UUID(mac_local_recorder_uuid),
+        ServiceVersion = mac_local_recorder_service['service_version'],
+        ServiceDescription = mac_local_recorder_service['service_description'],
     )
 
     def __init__(self, reset_collection=False, objects_file="", relations_file="", **kwargs) -> None:

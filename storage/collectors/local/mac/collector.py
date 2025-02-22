@@ -70,11 +70,11 @@ class IndalekoMacLocalStorageCollector(BaseLocalStorageCollector):
     }
 
     collector_data = IndalekoStorageCollectorDataModel(
-        CollectorPlatformName = mac_platform,
-        CollectorServiceName = mac_local_collector_name,
-        CollectorServiceDescription = indaleko_mac_local_collector_service_description,
-        CollectorServiceUUID = uuid.UUID(indaleko_mac_local_collector_uuid),
-        CollectorServiceVersion = indaleko_mac_local_collector_service_version,
+        PlatformName = mac_platform,
+        ServiceFileName = mac_local_collector_name,
+        ServiceDescription = indaleko_mac_local_collector_service_description,
+        ServiceUUID = uuid.UUID(indaleko_mac_local_collector_uuid),
+        ServiceVersion = indaleko_mac_local_collector_service_version,
     )
 
     def __init__(self, **kwargs):

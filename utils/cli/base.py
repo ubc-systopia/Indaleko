@@ -73,7 +73,7 @@ class IndalekoBaseCLI:
                     raise AttributeError(f'Unknown attribute: {key}')
 
     def __init__(self,
-                 cli_data: IndalekoBaseCliDataModel = IndalekoBaseCliDataModel(),
+                 cli_data: IndalekoBaseCliDataModel,
                  handler_mixin: Union[IndalekoHandlermixin, None] = None,
                  features: Union['IndalekoBaseCLI.cli_features', None] = None) -> None:
         """
@@ -83,6 +83,7 @@ class IndalekoBaseCLI:
                 service_class: Type of the service (BaseStorageCollector or BaseStorageRecorder subclass)
                 machine_config_class: Type of machine configuration (IndalekoMachineConfig subclass)
         """
+        assert cli_data, 'cli_data must be provided'
         self.features = features
         if not self.features:
             self.features = IndalekoBaseCLI.cli_features()  # default features
@@ -274,7 +275,7 @@ class IndalekoBaseCLI:
         '''This method is used to set up the output parser'''
         if self.features.machine_config and not hasattr(self.pre_parser, 'machine_config'):
             self.setup_machine_config_parser()
-        if not self.config_data.get('Service'):
+        if not self.config_data.get('FileServiceName'):
             ic(f'Output file name not generated due to no service name {self.config_data}')
             return  # there can be no output file without a service name
         pre_args, _ = self.pre_parser.parse_known_args()
@@ -302,7 +303,7 @@ class IndalekoBaseCLI:
 
     def setup_performance_parser(self) -> 'IndalekoBaseCLI':
         '''This method is used to set up the performance parser'''
-        if not self.config_data.get('Service'):
+        if not self.config_data.get('FileServiceName'):
             return  # there can be no perf data without a service name
         self.pre_parser.add_argument(
             '--performance_file',
@@ -364,15 +365,23 @@ class IndalekoBaseCLI:
             )
             pre_args, _ = self.pre_parser.parse_known_args()
             self.config_data['InputFileKeys'] = self.handler_mixin.extract_filename_metadata(pre_args.inputfile)
+        else:
+            self.pre_parser.add_argument(
+                '--inputfile',
+                default=None,
+                help='Input file to use'
+            )
         # default timestamp is: 1) from the file, 2) from the config, 3) current time
+        pre_args, _ = self.pre_parser.parse_known_args()
         timestamp = self.config_data['InputFileKeys'].get('timestamp', None)
         if not timestamp:
             timestamp = datetime.now(timezone.utc).isoformat()
-        self.pre_parser.add_argument(
-            '--timestamp',
-            type=str,
-            default=timestamp,
-            help=f'Timestamp to use (default={timestamp})')
+        if not hasattr(pre_args, 'timestamp'):
+            self.pre_parser.add_argument(
+                '--timestamp',
+                type=str,
+                default=timestamp,
+                help=f'Timestamp to use (default={timestamp})')
         pre_args, _ = self.pre_parser.parse_known_args()
         try:
             timestamp = datetime.fromisoformat(self.config_data['Timestamp'])
@@ -488,7 +497,7 @@ class IndalekoBaseCLI:
             pass in configuration data.'''
             kwargs = {
                 'platform': keys['Platform'],
-                'service': keys['Service'],
+                'service': keys['FileServiceName'],
                 'timestamp': keys['Timestamp'],
             }
             if 'MachineConfigFileKeys' in keys and 'machine' in keys['MachineConfigFileKeys']:
@@ -505,7 +514,7 @@ class IndalekoBaseCLI:
         def generate_log_file_name(keys: dict[str, str]) -> str:
             '''This method is used to generate a log file name'''
             kwargs = {
-                'service': keys['Service'],
+                'service': keys['FileServiceName'],
                 'timestamp': keys['Timestamp'],
             }
             if 'Platform' in keys:
@@ -524,7 +533,7 @@ class IndalekoBaseCLI:
             This method is used to generate a performance file name.
             '''
             kwargs = {
-                'service': keys['Service'] + '_perf',
+                'service': keys['FileServiceName'] + '_perf',
                 'timestamp': keys['Timestamp'],
             }
             if 'Platform' in keys:

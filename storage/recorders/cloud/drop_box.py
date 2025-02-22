@@ -36,6 +36,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+from data_models import IndalekoRecordDataModel
 from db import IndalekoServiceManager
 from platforms.unix import UnixFileAttributes
 from platforms.windows_attributes import IndalekoWindows
@@ -66,11 +67,11 @@ class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
     dropbox_recorder = 'recorder'
 
     recorder_data = IndalekoStorageRecorderDataModel(
-        RecorderPlatformName=dropbox_platform,
-        RecorderServiceName=dropbox_recorder,
-        RecorderServiceUUID=uuid.UUID(dropbox_recorder_uuid),
-        RecorderServiceVersion=dropbox_recorder_service['service_version'],
-        RecorderServiceDescription=dropbox_recorder_service['service_description'],
+        PlatformName=dropbox_platform,
+        ServiceName=dropbox_recorder,
+        ServiceUUID=uuid.UUID(dropbox_recorder_uuid),
+        ServiceVersion=dropbox_recorder_service['service_version'],
+        ServiceDescription=dropbox_recorder_service['service_description'],
     )
 
     def __init__(self, **kwargs) -> None:
@@ -152,18 +153,17 @@ class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
         timestamps = [
             {
                 'Label': IndalekoObject.MODIFICATION_TIMESTAMP,
-                'Value': data['client_modified'],
+                'Value': data.get('client_modified', self.timestamp),
                 'Description': 'Client Modified'
             },
             {
                 'Label': IndalekoObject.CHANGE_TIMESTAMP,
-                'Value': data['server_modified'],
+                'Value': data.get('server_modified', self.timestamp),
                 'Description': 'Server Modified'
-            },
+            }
         ]
-        size = data['size']
-        name = data['name']
-        data['Name'] = name
+        size = data.get('size', 0)
+        name = data.get('name', '')
         path = data['path_display']
         if path == '/' and name == '':
             pass  # root directory
@@ -183,30 +183,28 @@ class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
             ic(path)
             raise ValueError('Path does not end with child name')
         assert path
-        data['Path'] = path
+        local_id = data.get('id')
+        if local_id and local_id.startswith('id:'):
+            local_id = local_id[3:]
         kwargs = {
-            'source': self.source,
-            'raw_data': encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
+            'Record': IndalekoRecordDataModel(
+                SourceIdentifier=self.source,
+                Timestamp=self.timestamp,
+                Data=encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
+            ),
             'URI': 'https://www.dropbox.com/home' + data['path_display'],
-            'Path': path,
-            'Name': name,
             'ObjectIdentifier': data['ObjectIdentifier'],
             'Timestamps': timestamps,
             'Size': size,
-            'Attributes': data,
+            'SemanticAttributes': None,  # add some perhaps?
             'Label': name,
+            'LocalPath': path,
+            'LocalIdentifier': local_id,
+            'Volume': None,
             'PosixFileAttributes': UnixFileAttributes.map_file_attributes(unix_file_attributes),
             'WindowsFileAttributes': IndalekoWindows.map_file_attributes(windows_file_attributes),
         }
         obj = IndalekoObject(**kwargs)
-        if 'Path' not in obj:
-            ic(obj)
-            ic(obj.indaleko_object)
-            ic(data)
-            ic(path)
-            ic(name)
-            ic(obj.args)
-            exit(0)
         return obj
 
 

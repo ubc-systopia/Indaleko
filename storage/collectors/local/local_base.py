@@ -204,7 +204,7 @@ class BaseLocalStorageCollector(BaseStorageCollector):
         '''This is the CLI handler for local storage collectors.'''
         IndalekoCLIRunner(
             cli_data=IndalekoBaseCliDataModel(
-                Service=collector_class.get_collector_service_name(),
+                RegistrationServiceName=collector_class.get_collector_service_file_name(),
             ),
             handler_mixin=collector_class.get_collector_cli_handler_mixin(),
             features=IndalekoBaseCLI.cli_features(input=False),

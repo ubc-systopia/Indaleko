@@ -124,6 +124,7 @@ class IndalekoCLIRunner:
 
     def run(self) -> None:
         self.setup()
+        ic(self.args)
         if self.runner_data.Run:
             if self.args.debug:
                 ic('Run')

@@ -42,11 +42,11 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 class IndalekoCLIRunnerData(BaseModel):
     '''This class provides a common CLI runner'''
-    GetPreParser : Union[Callable[..., Union[argparse.ArgumentParser, None]], None] = None
-    SetupLogging : Callable[..., None]
-    LoadConfiguration : Callable[..., bool]
-    AddParameters : Union[Callable[..., argparse.ArgumentParser], None] = None
-    PerformanceConfiguration : Callable[..., bool]
+    GetPreParser: Union[Callable[..., Union[argparse.ArgumentParser, None]], None] = None
+    SetupLogging: Callable[..., None]
+    LoadConfiguration: Callable[..., bool]
+    AddParameters: Union[Callable[..., argparse.ArgumentParser], None] = None
+    PerformanceConfiguration: Callable[..., bool]
     Run: Callable[..., None]
     RunParameters: dict[str, Any] = {}
     PerformanceRecording: Callable[..., None]

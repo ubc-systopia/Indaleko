@@ -76,11 +76,11 @@ class IndalekoOneDriveCloudStorageCollector(BaseCloudStorageCollector):
     }
 
     collector_data = IndalekoStorageCollectorDataModel(
-        CollectorPlatformName=onedrive_platform,
-        CollectorServiceName=onedrive_collector_name,
-        CollectorServiceUUID=UUID(indaleko_onedrive_collector_uuid),
-        CollectorServiceVersion=indaleko_onedrive_collector_service_version,
-        CollectorServiceDescription=indaleko_onedrive_collector_service_description,
+        PlatformName=onedrive_platform,
+        ServiceFileName=indaleko_onedrive_collector_service_name,
+        ServiceUUID=UUID(indaleko_onedrive_collector_uuid),
+        ServiceVersion=indaleko_onedrive_collector_service_version,
+        ServiceDescription=indaleko_onedrive_collector_service_description,
     )
 
     class MicrosoftGraphCredentials:

@@ -50,7 +50,7 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
     This is the class that collects metadata from Windows local file systems.
     '''
     windows_platform = 'Windows'
-    windows_local_collector_name = 'fs_collector'
+    windows_local_collector_name = 'collector'
 
     indaleko_windows_local_collector_uuid = '0793b4d5-e549-4cb6-8177-020a738b66b7'
     indaleko_windows_local_collector_service_name = 'Windows Local collector'
@@ -60,11 +60,12 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
     indaleko_windows_local_collector_service_type = IndalekoServiceManager.service_type_storage_collector
 
     collector_data = IndalekoStorageCollectorDataModel(
-        CollectorPlatformName=windows_platform,
-        CollectorServiceName=windows_local_collector_name,
-        CollectorServiceUUID=uuid.UUID(indaleko_windows_local_collector_uuid),
-        CollectorServiceVersion=indaleko_windows_local_collector_service_version,
-        CollectorServiceDescription=indaleko_windows_local_collector_service_description
+        PlatformName=windows_platform,
+        ServiceRegistrationName=indaleko_windows_local_collector_service_name,
+        ServiceFileName=windows_local_collector_name,
+        ServiceUUID=uuid.UUID(indaleko_windows_local_collector_uuid),
+        ServiceVersion=indaleko_windows_local_collector_service_version,
+        ServiceDescription=indaleko_windows_local_collector_service_description
     )
 
     indaleko_windows_local_collector_service = {
@@ -119,7 +120,7 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
         if 'platform' not in kwargs:
             kwargs['platform'] = IndalekoWindowsLocalStorageCollector.windows_platform
         if 'collector_name' not in kwargs:
-            kwargs['collector_name'] = IndalekoWindowsLocalStorageCollector.get_collector_service_name()
+            kwargs['collector_name'] = IndalekoWindowsLocalStorageCollector.get_collector_service_registration_name()
         if 'machine_id' not in kwargs:
             kwargs['machine_id'] = uuid.UUID(self.machine_config.machine_id).hex
         if 'storage_description' not in kwargs and getattr(self, 'storage'):

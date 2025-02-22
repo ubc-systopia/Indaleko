@@ -36,6 +36,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 # pylint: disable=wrong-import-position
+from data_models import IndalekoRecordDataModel
 from db import IndalekoServiceManager
 from platforms.unix import UnixFileAttributes
 from platforms.windows_attributes import IndalekoWindows
@@ -65,11 +66,12 @@ class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
     onedrive_recorder = 'recorder'
 
     recorder_data = IndalekoStorageRecorderDataModel(
-        RecorderPlatformName=onedrive_platform,
-        RecorderServiceName=onedrive_recorder,
-        RecorderServiceUUID=uuid.UUID(onedrive_recorder_uuid),
-        RecorderServiceVersion=onedrive_recorder_service['service_version'],
-        RecorderServiceDescription=onedrive_recorder_service['service_description'],
+        PlatformName=onedrive_platform,
+        ServiceRegistrationName=onedrive_recorder_service['service_name'],
+        ServiceFileName=onedrive_recorder,
+        ServiceUUID=uuid.UUID(onedrive_recorder_uuid),
+        ServiceVersion=onedrive_recorder_service['service_version'],
+        ServiceDescription=onedrive_recorder_service['service_description'],
     )
 
     def __init__(self, **kwargs: dict) -> None:
@@ -208,15 +210,20 @@ class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
         else:
             raise ValueError('Unknown file type')
         kwargs = {
-            'source': self.source,
-            'raw_data': encode_binary_data(bytes(json.dumps(data), 'utf-8-sig')),
+            'Record': IndalekoRecordDataModel(
+                SourceIdentifier=self.source,
+                Timestamp=self.timestamp,
+                Data=encode_binary_data(bytes(json.dumps(data).encode('utf-8'))),
+            ),
             'URI': data.get('webUrl', None),
-            'Path': path,
             'ObjectIdentifier': str(oid),
             'Timestamps': timestamps,
             'Size': int(data.get('size', 0)),
-            'Attributes': data,
+            'SemanticAttributes': None,
             'Label': data.get('name', None),
+            'LocalPath': path,
+            'LocalIdentifier': data.get('id', None),
+            'Volume': None,
             'PosixFileAttributes': UnixFileAttributes.map_file_attributes(unix_file_attributes),
             'WindowsFileAttributes': IndalekoWindows.map_file_attributes(windows_file_attributes),
         }

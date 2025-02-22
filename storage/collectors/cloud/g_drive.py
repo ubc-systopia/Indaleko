@@ -69,11 +69,12 @@ class IndalekoGDriveCloudStorageCollector(BaseCloudStorageCollector):
     indaleko_gdrive_collector_service_type = IndalekoServiceManager.service_type_storage_collector
 
     collector_data = IndalekoStorageCollectorDataModel(
-        CollectorPlatformName=gdrive_platform,
-        CollectorServiceName=gdrive_collector_name,
-        CollectorServiceUUID=UUID(indaleko_gdrive_collector_uuid),
-        CollectorServiceVersion=indaleko_gdrive_collector_service_version,
-        CollectorServiceDescription=indaleko_gdrive_collector_service_description,
+        PlatformName=gdrive_platform,
+        ServiceRegistrationName=indaleko_gdrive_collector_service_name,
+        ServiceFileName=gdrive_collector_name,
+        ServiceUUID=UUID(indaleko_gdrive_collector_uuid),
+        ServiceVersion=indaleko_gdrive_collector_service_version,
+        ServiceDescription=indaleko_gdrive_collector_service_description,
     )
 
     SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly',

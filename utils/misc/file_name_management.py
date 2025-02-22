@@ -20,7 +20,7 @@ import os
 import platform
 import sys
 
-# from icecream import ic
+from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -48,6 +48,7 @@ def generate_final_name(args: list, **kwargs) -> str:
     prefix = args[0]
     target_platform = args[1]
     service = args[2]
+    assert ' ' not in service, f'service must not contain spaces: {service}'
     ts = args[3]
     suffix = args[4]
     max_len = args[5]
@@ -95,6 +96,7 @@ def generate_file_name(**kwargs) -> str:
             raise ValueError('max_len must be an integer')
         del kwargs['max_len']
     if 'platform' not in kwargs:
+        ic(kwargs)
         target_platform = None
     else:
         target_platform = kwargs['platform']

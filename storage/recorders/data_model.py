@@ -42,20 +42,43 @@ from constants import IndalekoConstants
 
 class IndalekoStorageRecorderDataModel(BaseModel):
     '''Defines the base data model for the storage recorders'''
-    RecorderPlatformName: Optional[Union[str, None]] = \
+    PlatformName: Optional[Union[str, None]] = \
         Field(None,
               title='PlatformName',
               description='The name of the platform (e.g., Linux, Windows, etc.) if any (default=None).'
               )
-    RecorderServiceName: str = Field(..., title='RecorderName', description='The service name of the recorder.')
-    RecorderServiceUUID: UUID = Field(..., title='RecorderUUID', description='The UUID of the recorder.')
-    RecorderServiceVersion: str = Field(..., title='RecorderVersion', description='The version of the recorder.')
-    RecorderServiceDescription: str = Field(
+
+    ServiceRegistrationName: str = Field(
         ...,
-        title='RecorderDescription',
+        title='ServiceRegistrationName',
+        description='The service name used when registering this recorder in the database.'
+    )
+
+    ServiceFileName: str = Field(
+        ...,
+        title='ServiceFileName',
+        description='The service name to use when building file names.'
+    )
+
+    ServiceUUID: UUID = Field(
+        ...,
+        title='ServiceUUID',
+        description='The UUID of the recorder.'
+    )
+
+    ServiceVersion: str = Field(
+        ...,
+        title='ServiceVersion',
+        description='The version of the recorder.'
+    )
+
+    ServiceDescription: str = Field(
+        ...,
+        title='ServiceDescription',
         description='The description of the recorder.'
     )
-    RecorderServiceType: str = Field(
+
+    ServiceType: str = Field(
         IndalekoConstants.service_type_storage_recorder,
         title='RecorderType',
         description=f'The type of the recorder. (default is {IndalekoConstants.service_type_storage_recorder})'
@@ -65,12 +88,13 @@ class IndalekoStorageRecorderDataModel(BaseModel):
         '''Configuration for the base CLI data model'''
         json_schema_extra = {
             'example': {
-                'RecorderPlatformName': 'Linux',
-                'RecorderServiceName': 'Linux Local Recorder',
-                'RecorderServiceUUID': uuid4(),
-                'RecorderServiceVersion': '1.0',
-                'RecorderServiceDescription': 'This service record local filesystem metadata of a Linux machine.',
-                'RecorderServiceType': IndalekoConstants.service_type_storage_recorder  # same as default
+                'PlatformName': 'Linux',
+                'ServiceRegistrationName': 'Linux Local Recorder',
+                'ServiceFileName': 'recorder',
+                'ServiceUUID': uuid4(),
+                'ServiceVersion': '1.0',
+                'ServiceDescription': 'This service record local filesystem metadata of a Linux machine.',
+                'ServiceType': IndalekoConstants.service_type_storage_recorder  # same as default
             }
         }
 

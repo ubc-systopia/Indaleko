@@ -54,120 +54,154 @@ class IndalekoBaseCliDataModel(IndalekoBaseModel):
         title='Timestamp',
         description='The timestamp for the data.'
     )
-    Service: Union[str, None] = Field(
-        None,
-        title='Service',
-        description='The service being run.')
+
+    RegistrationServiceName: str = Field(
+        ...,
+        title='RegistrationServiceName',
+        description='The registration service name of the running service.')
+
+    FileServiceName: str = Field(
+        ...,
+        title='FileServiceName',
+        description='The file service name of the running service.'
+    )
+
     Platform: Optional[Union[str, None]] = Field(
         default_factory=lambda: platform.system(),
         title='Platform',
         description='The platform for the machine.'
     )
+
     MachineConfigChoices: List[str] = Field(
         default_factory=list,
         title='MachineConfigChoices',
         description='Available machine configuration files.'
     )
+
     MachineConfigFile: Optional[Union[str, None]] = Field(
         None,
         title='MachineConfigFile',
         description='The selected machine configuration file.'
     )
+
     MachineConfigFileKeys: Optional[Dict[str, Any]] = Field(
         default_factory=dict,
         title='MachineConfigFileKeys',
         description='Keys for the machine configuration file.'
     )
+
     StorageId: Optional[UUID] = None
+
     UserID: Optional[str] = None
+
     ConfigDirectory: str = indaleko_default_config_dir
+
     DataDirectory: str = indaleko_default_data_dir
+
     LogDirectory: str = indaleko_default_log_dir
+
     InputFileKeys: Optional[Dict[str, Any]] = Field(
         default_factory=dict,
         title='InputFileKeys',
         description='Keys for the input file.'
     )
+
     InputFileChoices: Optional[List[str]] = Field(
         default_factory=list,
         title='InputFileChoices',
         description='Available input files.'
     )
+
     InputFile: Optional[str] = Field(
         None,
         title='InputFile',
         description='The selected input file.'
     )
+
     InputFileKeys: Optional[dict[str, str]] = Field(
         default_factory=dict,
         title='InputFileKeys',
         description='Keys for input files.'
     )
+
     OutputFile: Optional[str] = Field(
         None,
         title='OutputFile',
         description='The output file.'
     )
+
     OutputFileKeys: Optional[list[str]] = Field(
         default_factory=list,
         title='OutputFileKeys',
         description='Keys for output files.'
     )
+
     LogFile: Optional[str] = Field(
         None,
         title='LogFile',
         description='The log file.'
     )
+
     LogLevel: int = Field(
         logging.DEBUG,
         title='LogLevel',
         description='Logging level.'
     )
+
     Offline: Optional[Union[bool, None]] = Field(
         None,
         title='Offline',
         description='Run in offline mode.'
     )
+
     DBConfigChoices: Optional[List[str]] = Field(
         default_factory=list,
         title='DBConfigChoices',
         description='Available database configuration files.'
     )
+
     DBConfigFile: str = Field(
         IndalekoConstants.default_db_config_file_name,
         title='DBConfigFile',
         description='Database configuration file.'
     )
+
     FilePrefix: str = Field(
         indaleko_file_name_prefix,
         title='FilePrefix',
         description='Prefix for file names.'
     )
+
     FileSuffix: str = Field(
         "",
         title='FileSuffix',
         description='Suffix for file names.'
     )
+
     FileKeys: Dict[str, str] = Field(
         default_factory=dict,
         title='FileKeys',
         description='These are keys and their values for identifying relevant files.'
     )
+
     PerformanceDataFile: Optional[Union[str, None]] = Field(
         None,
         title='PerformanceDataFile',
         description='The file to which performance data is written.'
     )
+
     RecordPerformanceInDB: Optional[Union[bool, None]] = Field(
         None,
         title='RecordPerformanceInDB',
         description='Record performance data in the database.'
     )
+
     AdditionalPreOptions: Dict[str, Any] = Field(
         default_factory=dict,
         title='AdditionalOptions',
         description='Additional CLI options (added first)'
     )
+
     AdditionalPostOptions: Dict[str, Any] = Field(
         default_factory=dict,
         title='AdditionalOptions',

@@ -69,11 +69,11 @@ class IndalekoLinuxLocalStorageRecorder(BaseLocalStorageRecorder):
     linux_local_recorder = 'local_fs_recorder'
 
     recorder_data = IndalekoStorageRecorderDataModel(
-        RecorderPlatformName = linux_platform,
-        RecorderServiceName = linux_local_recorder,
-        RecorderServiceUUID = uuid.UUID(linux_local_recorder_uuid),
-        RecorderServiceVersion = linux_local_recorder_service['service_version'],
-        RecorderServiceDescription = linux_local_recorder_service['service_description'],
+        PlatformName = linux_platform,
+        ServiceName = linux_local_recorder,
+        ServiceUUID = uuid.UUID(linux_local_recorder_uuid),
+        ServiceVersion = linux_local_recorder_service['service_version'],
+        ServiceDescription = linux_local_recorder_service['service_description'],
     )
 
 

@@ -24,7 +24,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import gc
 import inspect
-import logging
 import os
 from pathlib import Path
 import psutil
@@ -217,10 +216,11 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
         '''This is the CLI handler for local storage recorders.'''
         runner = IndalekoCLIRunner(
             cli_data=IndalekoBaseCliDataModel(
-                Service=recorder_class.get_recorder_service_name(),
+                RegistrationServiceName=recorder_class.get_recorder_service_registration_name(),
+                FileServiceName=recorder_class.get_recorder_service_file_name(),
                 InputFileKeys={
                     'plt': collector_class.get_collector_platform_name(),
-                    'svc': collector_class.get_collector_service_name(),
+                    'svc': collector_class.get_collector_service_file_name(),
                 },
             ),
             handler_mixin=recorder_class.local_recorder_mixin,
@@ -245,7 +245,7 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
         kwargs = {
             'machine': self.machine_id,
             'platform': getattr(self, 'platform', self.get_recorder_platform_name()),
-            'service': self.recorder_data.RecorderServiceName,
+            'service': self.recorder_data.ServiceFileName,
             'collection': IndalekoDBCollections.Indaleko_Object_Collection,
             'timestamp': self.timestamp,
             'output_dir': self.data_dir,

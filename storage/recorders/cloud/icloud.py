@@ -68,11 +68,11 @@ class IndalekoICloudStorageRecorder(BaseCloudStorageRecorder):
     platform = icloud_platform
 
     recorder_data = IndalekoStorageRecorderDataModel(
-        RecorderPlatformName=icloud_platform,
-        RecorderServiceName=icloud_recorder_service['service_name'],
-        RecorderServiceUUID=uuid.UUID(icloud_recorder_uuid),
-        RecorderServiceVersion=icloud_recorder_service['service_version'],
-        RecorderServiceDescription=icloud_recorder_service['service_description'],
+        PlatformName=icloud_platform,
+        ServiceName=icloud_recorder_service['service_name'],
+        ServiceUUID=uuid.UUID(icloud_recorder_uuid),
+        ServiceVersion=icloud_recorder_service['service_version'],
+        ServiceDescription=icloud_recorder_service['service_description'],
     )
 
     def __init__(self, **kwargs) -> None:

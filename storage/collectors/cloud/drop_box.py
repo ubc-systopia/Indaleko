@@ -70,18 +70,18 @@ class IndalekoDropboxCloudStorageCollector(BaseCloudStorageCollector):
 
     indaleko_dropbox_collector_service = {
         'service_name': indaleko_dropbox_collector_service_name,
-        'service_description': indaleko_dropbox_collector_service_description,
+        'service_description': indaleko_dropbox_collector_service_name,
         'service_version': indaleko_dropbox_collector_service_version,
         'service_type': indaleko_dropbox_collector_service_type,
         'service_identifier': indaleko_dropbox_collector_uuid,
     }
 
     collector_data = IndalekoStorageCollectorDataModel(
-        CollectorPlatformName=dropbox_platform,
-        CollectorServiceName=dropbox_collector_name,
-        CollectorServiceUUID=uuid.UUID(indaleko_dropbox_collector_uuid),
-        CollectorServiceVersion=indaleko_dropbox_collector_service_version,
-        CollectorServiceDescription=indaleko_dropbox_collector_service_description,
+        PlatformName=dropbox_platform,
+        ServiceFileName=indaleko_dropbox_collector_service_name,
+        ServiceUUID=uuid.UUID(indaleko_dropbox_collector_uuid),
+        ServiceVersion=indaleko_dropbox_collector_service_version,
+        ServiceDescription=indaleko_dropbox_collector_service_description,
     )
 
     def __init__(self, **kwargs):
