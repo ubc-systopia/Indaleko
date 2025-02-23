@@ -151,6 +151,7 @@ class IndalekoCollectorMetadataCLI(IndalekoBaseCLI):
         '''Create an instance of the IndalekoCollectorMetadataCLI class.'''
         cli_data = IndalekoBaseCliDataModel(
             RegistrationServiceName=IndalekoCollectorMetadataCLI.service_name,
+            FileServiceName='editor',
             Platform=self.platform_name,
             InputFileKeys={'svc': 'backup'}
         )
