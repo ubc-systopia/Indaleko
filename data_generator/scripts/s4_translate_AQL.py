@@ -3,13 +3,29 @@
 from typing import Dict, Any
 from query.query_processing.query_translator.translator_base import TranslatorBase
 from data_generator.scripts.metadata.semantic_metadata import SemanticMetadata
+from icecream import ic
+from db.db_collection_metadata import IndalekoDBCollectionsMetadata
+
 
 class AQLQueryConverter(TranslatorBase):
     """
     Translator for converting parsed queries to AQL (ArangoDB Query Language).
     """
+    STATIC_COLLECTIONS = ["Objects", "Semantic"]
+    def __init__(self, db_schema: dict):
+        """
+        Initialize the AQL translator.
 
-    def translate(self, parsed_query: Dict[str, Any], selected_md_attributes: Dict[str, Any], dynamic_activity_providers:dict[str], additional_notes: str, n_truth: int, llm_connector: Any) -> str:
+        Args:
+            collections_metadata: Metadata for the collections in the database.
+        """
+        self.db_schema = db_schema
+        # self.db_collections_metadata = collections_metadata
+        # self.db_config = self.db_collections_metadata.db_config
+        # self.collection_data = self.db_collections_metadata.get_all_collections_metadata()
+
+    def translate(self, selected_md_attributes: Dict[str, Any], collections:dict[str], 
+    geo_coordinates: str, n_truth: int, llm_connector: Any) -> str:
         """
         Translate a parsed query into an AQL query.
 
@@ -21,15 +37,15 @@ class AQLQueryConverter(TranslatorBase):
             str: The translated AQL query
         """
         # Use the LLM to help generate the AQL query
-        prompt = self._create_translation_prompt(parsed_query, selected_md_attributes, dynamic_activity_providers, additional_notes, n_truth)
+        prompt = self._create_translation_prompt(selected_md_attributes, collections, geo_coordinates, n_truth)
         aql_query = llm_connector.generate_query(prompt)
-        aql_statement = aql_query.message.content
+        aql_statement = aql_query.aql_query
         assert self.validate_query(aql_statement), "Generated AQL query is invalid"
         aql_statement = aql_statement[aql_statement.index('FOR'):] # trim preamble
-        assert aql_statement.endswith('```'), "Code block not found at the end of the generated AQL query"
-        aql_statement = aql_statement[:aql_statement.rindex('```')-1] # trim postamble
-        return self.optimize_query(aql_statement)
-
+        # assert aql_statement.endswith('```'), "Code block not found at the end of the generated AQL query"
+        # aql_statement = aql_statement[:aql_statement.rindex('```')-1] # trim postamble
+        return aql_statement
+        
     def validate_query(self, query: str) -> bool:
         """
         Validate the translated AQL query.
@@ -57,8 +73,114 @@ class AQLQueryConverter(TranslatorBase):
         # Implement query optimization logic
         # This is a placeholder implementation
         return query
+    
+    def _generate_collection_mapping(self) -> dict[str, str]:
+        """
+        Dynamically generates a mapping of keywords to collections based on CollectionMetadata.
 
-    def _create_translation_prompt(self, parsed_query: Dict[str, Any], selected_md_attributes:Dict[str, Any],dynamic_activity_providers: dict[str], additional_notes: str, n_truth_md: int) -> str:
+        Args:
+            db: ArangoDB database connection.
+
+        Returns:
+            dict[str, str]: A mapping of keywords to their relevant collections.
+        """
+        collection_mapping = {}
+
+        # Fetch all collection metadata from CollectionMetadata
+        for data in self.collection_data:
+            ic(dir(data))
+
+        collection_mapping = {
+            'file': 'Objects',
+            'files': 'Objects',
+            'directory': 'Objects',
+            'directories': 'Objects',
+            'images': 'Objects',
+            'created': 'Objects',
+            'modified': 'Objects',
+            'accessed': 'Objects',
+            'changed': 'Objects',
+            'size': 'Objects',
+            'name': 'Objects',
+            'path': 'Objects',
+            'about': 'Semantic',
+            'title': 'Semantic',
+        }
+        return collection_mapping
+
+    def _determine_relevant_collections(
+            self,
+            query: str,
+    ) -> dict[str, str]:
+        """
+        Dynamically determine the relevant collections based on the user query.
+
+        Args:
+            parsed_query (dict[str, Any]): The parsed user query.
+            selected_md_attributes (dict[str, Any]): Extracted metadata attributes.
+
+        Returns:
+            List[str]: A list of relevant collections for AQL generation.
+        """
+
+        # relevant_collections = set()
+
+        # Step 1: Fetch dynamic keyword → collection mapping from CollectionMetadata
+        # collection_mapping = self._generate_collection_mapping()
+        # collection_mapping = AQLQueryConverter.STATIC_COLLECTIONS
+
+        # # Step 2: Extract keywords from user query
+        user_query_text = query.lower().split()
+        # # Step 3: Identify collections based on static metadata
+        # for word in user_query_text:
+        #     if word in collection_mapping:
+        #         relevant_collections.add(collection_mapping[word])
+        # relevant_collections.add(self.STATIC_COLLECTIONS)
+        relevant_collections_dict = {item: item for item in self.STATIC_COLLECTIONS}
+
+        # Step 4: Identify if the query requires activity tracking
+        needs_activity_data = any(
+            keyword in user_query_text for keyword in [
+                "edited",
+                "viewed",
+                "accessed",
+                "created",
+                "deleted",
+                "location",
+                "timestamp",
+                "at",
+                "in",
+                "from",
+                "temperature",
+                "music", 
+                "listened"]
+            )
+        if needs_activity_data:
+            # Step 5: Query `ActivityDataProviders` to find available sources
+            activity_providers = self.db_config.db.aql.execute(
+                """
+                FOR provider IN ActivityDataProviders
+                COLLECT description = provider.Description INTO group
+                RETURN { 
+                    Description: description, 
+                    Identifiers: (FOR g IN group RETURN CONCAT("ActivityProviderData_", g.provider.Identifier)) 
+                }
+                """
+            )
+            provider_collections = {item["Description"]: item["Identifiers"] for item in activity_providers}
+
+            # Step 6: Add available provider collections to the relevant collections list
+            relevant_collections_dict.update(provider_collections)
+
+            # Step 7: Ensure ActivityContext is included (acts as an index/cursor)
+            relevant_collections_dict["ActivityContext"] = "ActivityContext"
+
+        return relevant_collections_dict
+
+    
+
+    def _create_translation_prompt(self, selected_md_attributes:Dict[str, Any], collections: dict[str], 
+    geo_coordinates: str, n_truth: int) -> str:
         """
         Create a prompt for the LLM to generate an AQL query.
 
@@ -70,95 +192,152 @@ class AQLQueryConverter(TranslatorBase):
         """
         # Implement prompt creation logic
         system_prompt = """
-            You are an assistant that generates ArangoDB queries for a Unified Personal Index (UPI) system. The UPI stores metadata about digital objects 
-            (e.g., files, directories) in an ArangoDB database. Given a dictionary called selected_md_attributes, generate the corresponding 
-            AQL query that retrieves matching information.
-            The schema includes 4 main collections:
-             1) {GeoActivity}: the GeoActivity that stores metadata related to the geographical context of activities. It includes the location field.
-             2) {MusicActivity} : the MusicActivity that stores music related activity context.
-             3) {TempActivity} : the TempActivity that stores temperature related activity context.
-             4) Objects: Stores information about posix information only ("Posix" of the dictionary). Do not search up semantics within Objects
-             5) SemanticData: Stores information about the semantic data of the file ("Semantic" of the dictionary)
-             
-            You need to search through all five collections (GeoActivity, MusicActivity, TempActivity, Objects, Semantics) to verify if an item satisfies the necessary 
-            conditions across these different contexts. First, identify the Semantic, GeoActivity, MusicActivity, TempActivity, Objects data via its Record.SourceIdentifier.Identifier. 
-            When looking through multiple collections at once, properly quote these long collection names with `` like `{GeoActivity}` and make sure to check that 
-            their identifiers are the same e.g., FILTER musicActivity.Record.SourceIdentifier.Identifier == semantic.Record.SourceIdentifier.Identifier
-            FILTER semantic.Record.SourceIdentifier.Identifier == Objects.Record.SourceIdentifier.Identifier.
-            If 'geo_location' is specified in selected_md_attributes, search within the {GeoActivity} and compare longitude and latitude with the {geo_coords} . 
-            If 'ambient_music' is specified in selected_md_attributes, search within the {MusicActivity}. 
-            If 'ecobee_temp' is specified in selected_md_attributes, search within {TempActivity}. The item is uniquely identified by its Identifier, which is stored within the SourceIdentifier field of the Records in each collection. 
-            You don't necessarily have to check the Objects collection to check the Posix metadata, since all activity collections should have a Record attribute. 
-            For the {MusicActivity} or the {TempActivity}, you can access the attributes directly by doing: musicActivity.attribute_specified or tempActivity.attribute_specified 
-            instead of the SemanticAttributes like for geo_location. Ex.) tempActivity.temperature to access temperature for temperature activity or musicActivity.track_name 
-            to access the track name. 
+        You are an assistant that generates ArangoDB queries for a Unified Personal Index 
+        (UPI) system. The UPI stores metadata about digital objects (e.g., files, directories) 
+        in an ArangoDB database. Given a dictionary called selected_md_attributes, generate the 
+        corresponding AQL query that retrieves matching information.
 
-            Important Instructions:
-            Use TO_NUMBER when doing any comparisons with numbers or floats like temperature, humidity, track_duration_ms, playback_position_ms, PageNumber, etc.
-            In selected_md_attributes['Posix']:
-                If "file.name" is specified, include it in the query as object.Record.Attributes.Name.
-                If "file.size" is specified, use object.Record.Attributes.st_size.
-                If "file.directory" is specified, use the Path in object.Record.Attributes.Path.
-                If "location" is specified in selected_md_attributes, include logic to filter paths based on: "google_drive": /file/d/, "dropbox": /s/...?dl=0, 
-                "icloud": /iclouddrive/, "local": paths that contain the local_dir_name specified in selected_md_attributes.
+        The schema includes 4 main collections:
+        1) {GeoActivity}: Stores metadata related to the geographical context of activities, 
+        including the location field.
+        2) {MusicActivity}: Stores music-related activity context.
+        3) {TempActivity}: Stores temperature-related activity context.
+        4) Objects: Stores Posix metadata ("Posix" of the dictionary). Do not search for 
+        semantics within Objects.
+        5) SemanticData: Stores information about the semantic data of the file ("Semantic" 
+        of the dictionary).
 
-            Do not include path filters in the query unless they are explicitly specified in the selected_md_attributes dictionary.
-            You don't have to check for whether an identifier doesn't contain data in a specific collection, all identifiers should have an associated data within all
-            collections. The timestamp in geo_location, ambient_music and ecobee_temp is the time when the activity context was collected. 
-            The timestamp in the Posix is when the file was modified, changed, accessed or created; you don't have to convert the timestamps, just use the posix 
-            timestamp as is e.g.)  when given {'Posix': {'timestamps': {'birthtime': {'starttime': 1736064000.0 , 'endtime': 1736064000.0 , 'command': 'equal'}}}, 
-            Activity': {geo_location: {'location': 'Victoria', 'command': 'at', 'timestamp': 'birthtime'}} aql query is: FILTER TO_NUMBER(activity.Timestamp) == 1736064000.0 
-            To match coordinates, find SemanticAttributes with an Identifier.Label of "Longitude" and ensure the Data matches the given longitude, and similarly for latitude.
-            For geo_location, when command is "within", check that the coordinates are within the value specified in "km" relative to the given longitude and latitude coordinates. 
-            Given coordinates {"latitude": [-123.40000, -123.113952], "longitude": [49.000,49.2608724], "altitude":0} 
-            translated_query = "FOR record IN `ActivityProviderData_da...` LET longitude = FIRST(FOR attr IN object.SemanticAttributes 
-            FILTER attr.Identifier.Label == 'Longitude' RETURN attr.Data) LET latitude = FIRST(FOR attr IN object.SemanticAttributes FILTER attr.Identifier.Label == 'Latitude' RETURN attr.Data) 
-            FILTER longitude >= -123.400 AND longitude <= -123.113952 FILTER latitude >= 49.000 AND latitude <= 49.2608724 RETURN record"
+        The collections you should search for are listed in {dynamic_activity_providers}. 
+        First, identify the collection (Semantic, GeoActivity, MusicActivity, TempActivity, 
+        Objects) via its Record.SourceIdentifier.Identifier. Properly quote the ActivityDataProvider 
+        collection names with `` (e.g., `{GeoActivity}`) and ensure that their identifiers match. 
+        For example:
+        - FILTER musicActivity.Record.SourceIdentifier.Identifier == 
+        semantic.Record.SourceIdentifier.Identifier
+        - FILTER semantic.Record.SourceIdentifier.Identifier == 
+        Objects.Record.SourceIdentifier.Identifier
 
-            Always checkc for the extension if specified in file.name.
-            If the number of truth attributes is greater than one and in the dictionary and the file name command is 'exactly' with a local directory specified, make sure
-            to add % in command as there could be files with duplicate names in the same directory: {'Posix': {'file.name': {'pattern': 'photo', 'command': 'exactly', 
-            'extension': ['.jpg']}, 'file.directory': {'location': 'local', 'local_dir_name': 'vacation'}}} should give aql: record.Record.Attributes.Name LIKE 'photo%.pdf'.
-            OR 'photo(%).pdf'; instead of record.Record.Attributes.Name LIKE 'photo.pdf', you should compare the path separately to see if it's stored in vacation. If number of attributes is one, just use record.Record.Attributes.Name LIKE 'photo.pdf.
-            The file.name also specifies the extenstion of the file, if none specified assume that any can be used e.g., {'Posix': {'file.name': {'pattern': 'photo', 'command': 'exactly'}}
-            use record.Record.Attributes.Name LIKE 'photo%'
+        If 'geo_location' is specified in selected_md_attributes, search within the 
+        {GeoActivity} collection that has the corresponding SourceIdentifier.Identifier. 
+        Ignore collections in the list that don’t have the identifier, and compare longitude 
+        and latitude with the {geo_coords}. 
 
-            For the semantics attribute, the attr.Identifier for semantics should be the key of what's in Content_# of the dictionary and the attr.Data is the value of that key. 
-            Make sure to access the semantic.SemanticAttributes to access the list of semantic attributes and all of these attributes should be in the semantic attributes list. 
-            For {BUTTON_TAGS} the associated data can only be true (as boolean value).
-            Use LIKE '%data%' to check whether a word is contained in any of these semantic attributes:  {LONG_TAG}, {LIST_TAGS}, "CodeSnippet", "Formula", "EmailAddress", "Link", 
-            for {IMAGE_TAGS} use LIKE 'data%' and check that either the capitalized or the uncapitalized exists (compare both capitalized and uncapitalized),
-            and for others check their exact values. PageBreaks should always have value: "--- PAGE BREAK ---".
-            Ex.) "Semantic": {"Content_1": ["PageNumber", 20], "Content_2": ["Subtitle", "jogging"]} is equal to: 
-            FOR object IN SemanticData
-            LET text1Attr = FIRST(
-                FOR attr IN object.SemanticAttributes
-                FILTER attr.Identifier == 'PageNumber' AND TO_NUMBER(attr.Data) == 20 (notice how it's attr.Identifier not attr.Indeitifer.Label)
-                RETURN 1
-            )
-            LET type2Attr = FIRST(
-                FOR attr IN object.SemanticAttributes
-                FILTER attr.Identifier == 'Paragraph' AND (attr.Data LIKE '%jogging%' OR attr.Data LIKE '%Jogging%')
-                RETURN 1
-            )
-            FILTER text1Attr != NULL AND type2Attr != NULL AND textAttr != NULL
-            RETURN object 
-            For queries involving title of a file, you can either search within any collection's record.Record.Attributes.Name or search in object.SemanticAttributes.Identifier.Label where object is from Objects.  
-            Ex.) {'Posix': {'file.name': {'pattern': 'presentation', 'command': 'equal'}}, 'Semantic': {}, 'Activity': {'ecobee_temp': {'temperature': {'start': 20.0,
-            'end': 20.0, 'command': 'equal'}, 'timestamp': 'birthtime'}}} then to get the file name, we would just search within the tempActivity.Record.Attributes.Name.
-            
-            When comparing timestamps in the Record table, ensure that timestamps with a prefix of st_ are converted to number (use TO_NUMBER) 
-            When matching file names, names should have an extension at the end, so use 'LIKE' command not ==.
-            Make sure to return just one of the whole object tempActivity, object, geoActivity, musicActivity; don't use object.any_attribute. Do not return the same 
-            object multiple times, just once. Make sure to incorporate all attributes from the given dictionary into the aql statement. Escape any ' with a backslash
-            ex.) if we want to find a Name containing "1990's news" -> FILTER object.Record.Attributes.Name LIKE '%1990\'s news%.pdf'. The query should only include 
-            the AQL code in a single line, with no additional explanations or comments. You must return one single code block that with '``` at the start and '``` at the end and that contains a FOR and
-            a RETURN ... statement. Do not create additional attributes not found in the dictionary. Make sure to check all posix, semantic, and activity contexts in the aql query given the Dictionary below. \n""" + \
-            "\n Number of truth attributes:" + str(n_truth_md) + "\n Schema:" + str(parsed_query['schema'])
+        If 'ambient_music' is specified in selected_md_attributes, search within the 
+        {MusicActivity} collection that has the corresponding SourceIdentifier.Identifier. 
 
-        system_prompt = system_prompt.replace("{GeoActivity}", dynamic_activity_providers["GeoActivity"]).replace("{TempActivity}", dynamic_activity_providers["TempActivity"]).replace("{MusicActivity}", dynamic_activity_providers["MusicActivity"])\
-        .replace("{geo_coords}", additional_notes).replace("{BUTTON_TAGS}", str(SemanticMetadata.BUTTON_TAGS)).replace("{LONG_TAG}", str(SemanticMetadata.LONG_TAGS)).replace("{LIST_TAGS}", str(SemanticMetadata.LIST_TAGS)).replace("{IMAGE_TAGS}", str(SemanticMetadata.IMAGE_TAGS))
-        # user_prompt = parsed_query['original_query']
+        If 'ecobee_temp' is specified in selected_md_attributes, search within the 
+        {TempActivity} collection that has the corresponding SourceIdentifier.Identifier. 
+        The item is uniquely identified by its Identifier, stored in the SourceIdentifier 
+        field of Records in each collection. 
+
+        You don't necessarily have to check the Objects collection for Posix metadata, as all 
+        activity collections should have a Record attribute. For {MusicActivity} or {TempActivity}, 
+        access the attributes directly (e.g., musicActivity.track_name or tempActivity.temperature) 
+        instead of using the SemanticAttributes, as for geo_location.
+
+        Important Instructions:
+        - Use TO_NUMBER when comparing numbers or floats (e.g., temperature, humidity, 
+        track_duration_ms, playback_position_ms, PageNumber, etc.)
+        - In selected_md_attributes['Posix']:
+        - If "file.name" is specified, include it in the query as object.Record.Attributes.Name.
+        - If "file.size" is specified, use object.Record.Attributes.st_size.
+        - If "file.directory" is specified, use the Path in object.Record.Attributes.Path.
+        - If "location" is specified, filter paths based on: "google_drive": /file/d/, 
+            "dropbox": /s/...?dl=0, "icloud": /iclouddrive/, "local": paths containing 
+            the local_dir_name specified.
+
+        Do not include path filters in the query unless explicitly specified in selected_md_attributes. 
+
+        The timestamp in geo_location, ambient_music, and ecobee_temp corresponds to the time 
+        the activity context was collected. The timestamp in Posix corresponds to when the file 
+        was modified, changed, accessed, or created. You don't have to convert timestamps; just 
+        use the Posix timestamp as-is. For example:
+        - {'Posix': {'timestamps': {'birthtime': {'starttime': 1736064000.0, 
+            'endtime': 1736064000.0, 'command': 'equal'}}}, 
+        - Activity': {geo_location: {'location': 'Victoria', 'command': 'at', 
+        'timestamp': 'birthtime'}}} should produce the query:
+        - FILTER TO_NUMBER(activity.Timestamp) == 1736064000.0
+
+        To match coordinates, find SemanticAttributes with an Identifier.Label of "Longitude" 
+        and ensure the Data matches the given longitude, and similarly for latitude.
+
+        For geo_location with the "within" command, check if the coordinates are within 
+        the specified distance in "km" relative to the given longitude and latitude. Example query:
+        - FOR record IN `ActivityProviderData_da...` 
+        LET longitude = FIRST(FOR attr IN object.SemanticAttributes 
+        FILTER attr.Identifier.Label == 'Longitude' RETURN attr.Data) 
+        LET latitude = FIRST(FOR attr IN object.SemanticAttributes 
+        FILTER attr.Identifier.Label == 'Latitude' RETURN attr.Data) 
+        FILTER longitude >= -123.400 AND longitude <= -123.113952 
+        FILTER latitude >= 49.000 AND latitude <= 49.2608724 
+        RETURN record
+
+        Always check the extension if specified in file.name.
+
+        If there are multiple truth attributes in the dictionary and the file name command 
+        is 'exactly' with a local directory specified, make sure to add `%` to the command 
+        for files with duplicate names in the same directory:
+        - {'Posix': {'file.name': {'pattern': 'photo', 'command': 'exactly', 
+        'extension': ['.jpg']}, 'file.directory': {'location': 'local', 
+        'local_dir_name': 'vacation'}}} should produce:
+        - record.Record.Attributes.Name LIKE 'photo%.pdf' OR 'photo(%).pdf'
+
+        If the number of attributes is one, use:
+        - record.Record.Attributes.Name LIKE 'photo.pdf'
+
+        The file.name specifies the file extension. If none is specified, assume any 
+        extension is acceptable. For example:
+        - {'Posix': {'file.name': {'pattern': 'photo', 'command': 'exactly'}}}
+        should produce:
+        - record.Record.Attributes.Name LIKE 'photo%'
+
+        For semantic attributes, access the attributes in object.SemanticAttributes, 
+        where attr.Identifier is the key of the dictionary (e.g., "Content_1", "Content_2") 
+        and attr.Data is the value.
+
+        For {BUTTON_TAGS}, the associated data can only be true (as a boolean value). 
+        Use LIKE '%data%' for semantic attributes such as {LONG_TAG}, {LIST_TAGS}, 
+        "CodeSnippet", "Formula", "EmailAddress", "Link", and for {IMAGE_TAGS}, use LIKE 
+        'data%' (check both capitalized and uncapitalized). 
+
+        For PageBreaks, the value should always be "--- PAGE BREAK ---".
+
+        For example:
+        - "Semantic": {"Content_1": ["PageNumber", 20], "Content_2": ["Subtitle", "jogging"]}
+        should produce:
+        - FOR object IN SemanticData
+            LET text1Attr = FIRST(FOR attr IN object.SemanticAttributes 
+            FILTER attr.Identifier == 'PageNumber' AND TO_NUMBER(attr.Data) == 20 
+            RETURN 1)
+            LET type2Attr = FIRST(FOR attr IN object.SemanticAttributes 
+            FILTER attr.Identifier == 'Paragraph' AND (attr.Data LIKE '%jogging%' OR 
+            attr.Data LIKE '%Jogging%') RETURN 1)
+            FILTER text1Attr != NULL AND type2Attr != NULL
+            RETURN object
+
+        When comparing timestamps, ensure that timestamps with a prefix of "st_" are converted 
+        to numbers (use TO_NUMBER). When matching file names, use the 'LIKE' command instead of '=='.
+
+        Return only one of the whole object (tempActivity, object, geoActivity, musicActivity). 
+        Do not return the same object multiple times.
+
+        Incorporate all attributes from the given dictionary into the AQL statement. Escape any 
+        single quotes with a backslash (e.g., if searching for a name containing "1990's news", 
+        use: FILTER object.Record.Attributes.Name LIKE '%1990\'s news%.pdf').
+
+        The query should include only the AQL code in a single line, with no additional explanations 
+        or comments. Return the code in a single block wrapped with "json```" at the start and 
+        '```' at the end and add \n for newlines.
+        """ +  "\n Number of truth attributes: " + str(n_truth) \
+            + "\n Schema: " + str(self.db_schema)
+
+        system_prompt = system_prompt.replace("{geo_coords}", geo_coordinates).\
+            replace("{BUTTON_TAGS}", str(SemanticMetadata.BUTTON_TAGS)).\
+                replace("{LONG_TAG}", str(SemanticMetadata.LONG_TAGS)).\
+                    replace("{LIST_TAGS}", str(SemanticMetadata.LIST_TAGS)).\
+                        replace("{IMAGE_TAGS}", str(SemanticMetadata.IMAGE_TAGS)).\
+                            replace("{dynamic_activity_providers}", str(collections))
+
         user_prompt = "Dictionary: " + str(selected_md_attributes)
 
         return {

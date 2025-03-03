@@ -18,7 +18,8 @@ if os.environ.get('INDALEKO_ROOT') is None:
         current_path = os.path.dirname(current_path)
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
-    
+from db.i_collections import IndalekoDBCollections
+from query.cli import IndalekoQueryCLI
 from data_generator.scripts.s1_metadata_generator import Dataset_Generator
 from data_generator.scripts.s2_store_test_Indaleko import MetadataStorer
 from data_generator.scripts.s3_translate_query import QueryExtractor
@@ -26,11 +27,12 @@ from data_generator.scripts.s4_translate_AQL import AQLQueryConverter
 from data_generator.scripts.s5_get_precision_and_recall import ResultCalculator
 from db.db_config import IndalekoDBConfig
 from db.i_collections import IndalekoCollections
-from query import NLParser, QueryHistory, AQLExecutor, OpenAIConnector
+from query import NLParser, AQLExecutor, OpenAIConnector
 from data_generator.scripts.s6_log_result import ResultLogger
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 import subprocess
+
 from db.db_collection_metadata import IndalekoDBCollectionsMetadata
 
 class Validator():
@@ -53,16 +55,17 @@ class Validator():
         metadata_path.mkdir(parents=True, exist_ok=True)
 
         self.config = self.get_config_file(self.config_path + 'dg_config.json')
+        self.db_schema = self.read_json(self.config_path + 'schema.json')
         self.logger = ResultLogger(result_path=self.file_path)
         self.db_config = IndalekoDBConfig()
         self.db_config.setup_database(self.db_config.config['database']['database'])
+        # subprocess.run(["python3", "./db/db_config.py", "reset"], check=True)
 
         # if not args.no_reset:
         #     try:
-        #         self.db_config.reset_command()
-        #         # subprocess.run(["python3", "./db/db_config.py", "reset"], check=True)
-        #         subprocess.run(["python3", "./storage/recorders/local/mac/recorder.py", "--arangoimport"], check=True)
+        #         # self.db_config.reset_command()
         #         subprocess.run(["python3", "./platforms/mac/machine_config.py", "--add"], check=True)
+        #         subprocess.run(["python3", "./storage/recorders/local/mac/recorder.py", "--arangoimport"], check=True)
         #     except subprocess.CalledProcessError as e:
         #         raise e
 
@@ -75,14 +78,13 @@ class Validator():
 
         self.openai_key = self.get_api_key(api_path)
         self.llm_connector = OpenAIConnector(api_key=self.openai_key)
-        self.collections_md = IndalekoDBCollectionsMetadata(self.db_config)
-        self.nl_parser = NLParser(self.llm_connector, self.collections_md)
-        self.query_translator = AQLQueryConverter()
+        self.cli = IndalekoQueryCLI()
         self.query_executor = AQLExecutor()
+        self.collections_md = IndalekoDBCollectionsMetadata()
 
         self.dynamic_activity_providers = {}
         self.result_dictionary = {}
-        self.schema = self.read_json('data_generator/config/schema.json')
+        # self.schema = self.read_json('data_generator/config/schema.json')
     
     def time_operation(self, operation, **kwargs) -> tuple[str, Any]:
         """
@@ -142,25 +144,13 @@ class Validator():
         """
         self.result_dictionary[key] = value
     
-    def generate_query(self, query: str, n_truth_md: int, query_attributes) -> str:
-        # PARSE QUERY
-        # Adapted from IndalekoSearch.py
-        # NOTE: parser hasn't yet been implemented so takes the query + schema and puts in dictionary format
-        parse_query_time, parsed_query = self.time_operation(
-            self.nl_parser.parse, 
-            query=query)
-
-        self.logger.log_process("parsing query...")
-        ic(f"Parse time: {parse_query_time}")
-        self.logger.log_process_result("parsed_query", parse_query_time) 
-
+    def generate_query(self, n_truth_md: int, query_attributes) -> str:
         #GENERATE AQL TRANSLATION:
         translate_query_time, translated_query = self.time_operation(
             self.query_translator.translate, 
-            parsed_query=parsed_query, 
             selected_md_attributes=query_attributes["converted_selected_md_attributes"], 
-            dynamic_activity_providers=self.dynamic_activity_providers,
-            additional_notes=query_attributes["geo_coords"], 
+            collections=query_attributes["providers"],
+            geo_coordinates=query_attributes["geo_coords"], 
             n_truth = n_truth_md,
             llm_connector=self.llm_connector)
         self.logger.log_process_result("translated_aql", translate_query_time, translated_query)
@@ -169,7 +159,11 @@ class Validator():
     def generate_dictionary(self, query:str):
         json_name = "dictionary.json"
         self.logger.log_process("building dictionary...")
-        selected_md_attributes = self.query_extractor.extract(query = query, llm_connector = self.llm_connector)
+        self.nl_parser = NLParser(self.llm_connector, self.collections_md)
+        ner_metadata = self.nl_parser._extract_entities(query)
+        entities = self.cli.map_entities(ner_metadata)
+
+        selected_md_attributes = self.query_extractor.extract(query = query, named_entities = entities, llm_connector = self.llm_connector)
         self.logger.log_process_result("selected_md_attributes", selected_md_attributes)
         self.write_as_json(self.config_path, json_name, selected_md_attributes)
         dictionary_selection = click.prompt("Dictionary ready for evaluation, please type 1 to continue, otherwise type 0 to exit", type=int)
@@ -182,7 +176,7 @@ class Validator():
         """
         Run function for the validator tool
         """
-        translated_query ={}
+        translated_query = {}
         query = self.config["query"]
         ic(query)
         n_truth_md = self.config["n_matching_queries"]
@@ -192,6 +186,8 @@ class Validator():
         self.add_result_to_dict("query", query)
         self.add_result_to_dict("n_total_truth", n_truth_md)
         self.add_result_to_dict("n_metadata", n_total_md)
+
+        original_data_number = self.get_files_collections()
 
         intial_selection = click.prompt("Create new dictionary (1) or use existing (0)", type=int)
         if intial_selection == 1:
@@ -277,10 +273,9 @@ class Validator():
         ic(f"Storing time for machine config metadata: {machine_config_storage_time}")
         self.logger.log_process_result("stored machine config:", machine_config_storage_time[0])
 
-
-        collections = self.collections_md.__activity_data_provider_collection_handler()
-        ic(collections)
-        quit()
+        self.collections_md = IndalekoDBCollectionsMetadata(self.db_config)
+        self.nl_parser = NLParser(self.llm_connector, self.collections_md)
+        # self.query_translator = AQLTranslator(self.collections_md)
 
         #PREPARE FOR QUERY GENERATION:
         self.logger.log_process("preparing aql translation...")
@@ -300,14 +295,14 @@ class Validator():
         # GENERATE QUERY:
         query_info = "query_info.json"
         aql_text = "AQL_query.aql"
-
+        self.query_translator = AQLQueryConverter(self.db_schema)
 
         translated_query["providers"] = self.dynamic_activity_providers
         translate_query = click.prompt("Ready for AQL generation, please type 1 to use existing AQL, otherwise type 0 to generate a new one", type=int)
         if translate_query == 1:
             aql = self.read_aql(self.config_path + aql_text)
         elif translate_query == 0:
-            aql = self.generate_query(query, n_truth_md, translated_query)
+            aql = self.generate_query(n_truth_md, translated_query)
         
         self.write_as_json(self.config_path, query_info, translated_query)
         self.write_as_aql(self.config_path, aql_text, aql)
@@ -329,21 +324,40 @@ class Validator():
         )
         self.logger.log_process_result("Indaleko search completed", execute_time)
 
-        # CALCULATE PRECISION AND RECALL
+
+        # CALCULATE PRECISION AND RECALL -- add base storage stats as well
         self.logger.log_process("calculating precision and recall")
-        calculation_time, calculation_result = self.time_operation(self.result_calculator.run, raw_results=raw_results, theoretical_truth_n=n_truth_md)
-        n_actual_truth_md, precision, recall =  calculation_result[0], calculation_result[1], calculation_result[2]
+        calculation_time, calculation_result = self.time_operation(self.result_calculator.run, 
+                                                                    truth_list = self.data_generator.truth_list, 
+                                                                    filler_list = self.data_generator.filler_list, 
+                                                                    raw_results = raw_results, 
+                                                                    n_truth_md = n_truth_md)
+        truth_number, filler_number, original_number, precision, recall =  calculation_result[0], calculation_result[1], calculation_result[2], calculation_result[3], calculation_result[4]
         self.logger.log_process_result("calculated precision and recall", calculation_time, f"precision: {precision}, recall: {recall}")
         
         self.add_result_to_dict("uuid_returned", self.result_calculator.selected_uuid)
-        self.add_result_to_dict("actual_n_total_truth", n_actual_truth_md)
-        self.add_result_to_dict("actual_n_metadata", len(raw_results))
+        self.add_result_to_dict("db_number", original_data_number)
+        self.add_result_to_dict("truth_number", truth_number)
+        self.add_result_to_dict("filler_number", filler_number)
+        self.add_result_to_dict("original_number", original_number)
+        self.add_result_to_dict("metadata_number", len(raw_results))
         self.add_result_to_dict("precision", precision)
         self.add_result_to_dict("recall", recall)
         self.logger.log_process("precision and recall calculated")
         self.logger.log_process("DONE -- please check /data_generator/results/validator_result.log for the full results")
         self.write_as_json(self.file_path, "Indaleko_search_result.json", raw_results)
-
+    
+    def get_files_collections(self): 
+        total = 0
+        for collection in self.db_config.db.collections():
+            name = collection["name"]
+            ic(name)
+            collection_count = self.db_config.db.aql.execute(f"""
+                RETURN COLLECTION_COUNT('{name}')
+            """).next()
+            ic(collection_count)
+            total += collection_count
+        return total
 
     def read_aql(self, aql_path):
         with open(aql_path, "r") as f:

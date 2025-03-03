@@ -49,6 +49,8 @@ class Dataset_Generator():
         self.default_upper_timestamp = default_upper_timestamp
         self.default_lower_filesize = default_lower_filesize
         self.default_upper_filesize = default_upper_filesize
+        self.truth_list = []
+        self.filler_list = []
 
         # self.earliest_endtime = []
         # self.earliest_starttime = []
@@ -204,9 +206,16 @@ class Dataset_Generator():
             return []
         else:
             return list(dictionary.keys())
+    
+    def _add_truth_names(self, file_name: str, is_truth_file: bool):
+        if is_truth_file:
+            self.truth_list.append(file_name)
+        else:
+            self.filler_list.append(file_name)
+
 
     def _generate_metadata(self, current_filenum: int, max_num: int, key: str, is_truth_file: bool, truth_like: bool) -> DataGeneratorResults:
-        """Generates the target metadata with the specified attributes based on the nubmer of matching queries from config:"""
+        """Generates the target metadata with the specified attributes based on the number of matching queries from config:"""
         all_metadata, all_semantics, all_geo_activity, all_temp_activity, all_music_activity, all_machine_configs = [], [], [], [], [], []
 
         for file_num in range(1, max_num):
@@ -222,6 +231,8 @@ class Dataset_Generator():
                                                                                                 truthlike_attributes, 
                                                                                                 self.has_semantic_truth, 
                                                                                                 has_semantic_filler)
+            
+            self._add_truth_names(IO_UUID, is_truth_file)
 
             timestamps = self.posix_generator.generate_timestamps_md(is_truth_file, truth_like, truthlike_attributes)
             ic(timestamps)
@@ -230,7 +241,8 @@ class Dataset_Generator():
 
             i_object =  self.posix_generator.generate_metadata(record_data, IO_UUID, timestamps, URI, file_size, 
                                                                 None, key_name, 
-                                                                current_filenum + file_num)
+                                                                current_filenum + file_num,
+                                                                path)
             name, extension = file_name.split(".")
             semantic = self.semantic_generator.generate_metadata(record_data, IO_UUID, extension, 
                                                                                         timestamps["modified"].strftime("%Y-%m-%dT%H:%M:%S"), name,
@@ -308,12 +320,10 @@ class Dataset_Generator():
 def main():
     selected_md_attributes = {"Posix": {"file.name": {"extension": [".pdf", ".txt"]}, "timestamps": {"modified": {"starttime": "2025-01-29T00:00:00", "endtime": "2025-01-29T23:59:59", "command": "range"}, 
     "changed": {"starttime": "2025-01-31T00:00:00", "endtime": "2025-01-31T23:59:59", "command": "range"}}},
-     "Semantic": {
-        "Content_1": ("PageNumber", 20),
-        "Content_2" : ("Paragraph", "jogging"),
-        "Content_3" : ("Title", "EXERCISE")
+     "Activity": {
+        "geo_location": {"location": {"latitude": 48.8566, "longitude": 2.3522}, "command": "at", "timestamp": "birthtime"}
+        }
     }
-}
     # selected_md_attributes = {
     #                         "Posix": {
     #                             "file.directory": {
@@ -380,6 +390,8 @@ def main():
     ic(type(converted_selected_md_attributes["Posix"]["timestamps"]['modified']['endtime']))
 
     data_generator.write_json(all_semantics, "/Users/pearl/Indaleko_updated/Indaleko/data_generator/semantics_test.json")
+    data_generator.write_json(all_geo_activity, "/Users/pearl/Indaleko_updated/Indaleko/data_generator/geo_activity.json")
+
     data_generator.write_json(all_record, "/Users/pearl/Indaleko_updated/Indaleko/data_generator/records_test.json")
 if __name__ == '__main__':
     main()

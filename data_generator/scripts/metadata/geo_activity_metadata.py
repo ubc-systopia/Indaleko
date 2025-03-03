@@ -163,49 +163,67 @@ class GeoActivityData(ActivityMetadata):
         return location_dict
 
     # helper for _generate_geo_context()
-    def _save_location(self, geo_location: str, geo_command: str) -> Dict[str, float]:
+    def _save_location(self, geo_location: str | dict, geo_command: str) -> Dict[str, float]:
         """
         Saves the geographical location specified in the selected_md_attributes; run once
         """
-        geo_py = Nominatim(user_agent="Geo Location Metadata Generator")
-        location = geo_py.geocode(geo_location, timeout=1000)
+        if (isinstance(geo_location, str)):
+            geo_py = Nominatim(user_agent="Geo Location Metadata Generator")
+            location = geo_py.geocode(geo_location, timeout=1000)
 
-        latitude = location.latitude
-        longitude = location.longitude
-        altitude = location.altitude
+            latitude = location.latitude
+            longitude = location.longitude
+            altitude = location.altitude
 
-        # save a list of longitude and latitude values if command is within
-        if geo_command == 'within':
-            kilometer_range = self.selected_md["geo_location"]["km"]
-            north_bound = geodesic(kilometers = kilometer_range).destination((latitude, longitude), bearing=0).latitude
-            south_bound = geodesic(kilometers = kilometer_range).destination((latitude, longitude), bearing=180).latitude
-            east_bound = geodesic(kilometers = kilometer_range).destination((latitude, longitude), bearing=90).longitude
-            west_bound = geodesic(kilometers = kilometer_range).destination((latitude, longitude), bearing=270).longitude
-            latitude = [south_bound, north_bound]
-            longitude = [west_bound, east_bound]
-        
+            # save a list of longitude and latitude values if command is within
+            if geo_command == 'within':
+                kilometer_range = self.selected_md["geo_location"]["km"]
+                north_bound = geodesic(kilometers = kilometer_range).destination((latitude, longitude), bearing=0).latitude
+                south_bound = geodesic(kilometers = kilometer_range).destination((latitude, longitude), bearing=180).latitude
+                east_bound = geodesic(kilometers = kilometer_range).destination((latitude, longitude), bearing=90).longitude
+                west_bound = geodesic(kilometers = kilometer_range).destination((latitude, longitude), bearing=270).longitude
+                latitude = [south_bound, north_bound]
+                longitude = [west_bound, east_bound]
+        elif (isinstance(geo_location, dict)):
+            latitude = geo_location["latitude"]
+            longitude = geo_location["longitude"]
+            altitude = geo_location.get("altitude", 0)
+            
         return {"latitude": latitude, "longitude": longitude, "altitude": altitude}
         
     def _generate_WindowsGPSLocation(self, geo_activity_context: Dict[str, float], timestamp: datetime) -> Dict[str, Any]:
         """
         Generate the Windows GPS location in the form of a dictionary
         """
+        source_list = [ "GPS", "IP" ] 
         latitude = geo_activity_context["latitude"]
         longitude = geo_activity_context["longitude"]
         altitude = geo_activity_context["altitude"]
+        source = random.choice(source_list)
 
         windowsGPS_satellite_location = WindowsGPSLocationSatelliteDataModel(geometric_dilution_of_precision=random.uniform(1, 10), 
                                                                             horizontal_dilution_of_precision=random.uniform(1, 10), 
                                                                             position_dilution_of_precision=random.uniform(1, 10), 
                                                                             time_dilution_of_precision=random.uniform(1, 10), 
-                                                                            vertical_dilution_of_precision=random.uniform(1, 10)
+                                                                            vertical_dilution_of_precision=random.uniform(1, 10),
+                                                                            latitude=latitude,
+                                                                            longitude=longitude,
+                                                                            altitude=altitude,
+                                                                            timestamp=timestamp,
+                                                                            source=source
                                                                             )
 
         no_windowsGPS_satellite_location = WindowsGPSLocationSatelliteDataModel(geometric_dilution_of_precision=None, 
                                                                                 horizontal_dilution_of_precision=None, 
                                                                                 position_dilution_of_precision=None, 
                                                                                 time_dilution_of_precision=None, 
-                                                                                vertical_dilution_of_precision=None)
+                                                                                vertical_dilution_of_precision=None,
+                                                                                latitude=latitude,
+                                                                                longitude=longitude,
+                                                                                altitude=altitude,
+                                                                                timestamp=timestamp,
+                                                                                source=source
+                                                                            )
 
         GPS_location_dict = WindowsGPSLocationDataModel(latitude =latitude,
                                                         longitude=longitude,

@@ -39,19 +39,22 @@ class PosixMetadata(Metadata):
         self.saved_directory_path = self.initialize_local_dir()
 
     def generate_metadata(self, record_data: IndalekoRecordDataModel, IO_UUID: str, timestamps: Dict[str, str], URI: str, file_size: int, 
-                      semantic_attributes_data: list[Dict[str, Any]], key_name: str, local_identifier: str) -> IndalekoObjectDataModel:
-        return self._generate_i_object_data(record_data, IO_UUID, timestamps, URI, file_size, semantic_attributes_data, key_name, local_identifier)
+                      semantic_attributes_data: list[Dict[str, Any]], key_name: str, local_identifier: str, path: str) -> IndalekoObjectDataModel:
+        return self._generate_i_object_data(record_data, IO_UUID, timestamps, URI, file_size, semantic_attributes_data, key_name, local_identifier, path)
 
 
     def generate_file_info(self, current_filenum: int, n: int, is_truth_file: bool, truth_like: bool, truthlike_attributes: list[str], has_semantic_truth, 
                         has_semantic_filler: bool) -> Tuple[int, str, str, str, str]:
         """Generates the information required for the posix metadata"""
-        file_size = self._generate_file_size(is_truth_file=self._define_truth_attribute("file.size", is_truth_file, truth_like, truthlike_attributes))
-        file_name = self._generate_file_name(is_truth_file=self._define_truth_attribute("file.name", is_truth_file, truth_like, truthlike_attributes), 
-                                            has_semantic_truth=has_semantic_truth, has_semantic_filler=has_semantic_filler)
-        path, URI, updated_filename = self._generate_dir_location(file_name, is_truth_file=self._define_truth_attribute("file.directory", is_truth_file, 
-                                    truth_like, truthlike_attributes))
-        IO_UUID = self._create_metadata_UUID(current_filenum + n, is_truth_file=is_truth_file)
+        is_truth_size = self._define_truth_attribute("file.size", is_truth_file, truth_like, truthlike_attributes) 
+        is_truth_name = self._define_truth_attribute("file.name", is_truth_file, truth_like, truthlike_attributes) 
+        is_truth_dir = self._define_truth_attribute("file.directory", is_truth_file, truth_like, truthlike_attributes)
+
+        file_size = self._generate_file_size(is_truth_size)
+        file_name = self._generate_file_name(is_truth_name, has_semantic_truth, has_semantic_filler)
+        path, URI, updated_filename = self._generate_dir_location(file_name, is_truth_dir)
+        IO_UUID = self._create_metadata_UUID(current_filenum + n, is_truth_file)
+        
         return file_size, updated_filename, path, URI, IO_UUID
 
             
@@ -89,7 +92,7 @@ class PosixMetadata(Metadata):
                 Data = self._generate_random_data())
 
     def _generate_i_object_data(self, record_data: IndalekoRecordDataModel, IO_UUID: str, timestamps: Dict[str, str], URI: str, file_size: int, 
-                            semantic_attributes_data: list[Dict[str, Any]], key_name: str, local_identifier: str) -> IndalekoObjectDataModel:
+                            semantic_attributes_data: list[Dict[str, Any]], key_name: str, local_identifier: str, local_path: str) -> IndalekoObjectDataModel:
         """Returns the Indaleko object created form the data model"""
         timestamp_data = self._create_timestamp_data(IO_UUID, timestamps)
         
@@ -101,6 +104,7 @@ class PosixMetadata(Metadata):
                 Size = file_size, 
                 SemanticAttributes= None,
                 Label = key_name, 
+                LocalPath= local_path, 
                 LocalIdentifier=str(local_identifier),
                 Volume=uuid.uuid4(),
                 PosixFileAttributes="S_IFREG",
