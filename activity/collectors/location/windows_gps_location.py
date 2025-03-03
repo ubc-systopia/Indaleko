@@ -9,7 +9,7 @@ import winsdk.windows.devices.geolocation as wdg
 
 from typing import List, Dict, Any
 
-# from icecream import ic
+from icecream import ic
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -61,10 +61,12 @@ class WindowsGPSLocation(LocationCollector):
             'venue_data': getattr(coords, 'venue_data', None)
         }
         if hasattr(data, 'satellite_data'):
+            ic(data.satellite_data)
             kwargs['satellite_data'] = {}
             for attr in dir(data.satellite_data):
                 if not attr.startswith('_'):
                     kwargs['satellite_data'][attr] = getattr(data.satellite_data, attr)
+        ic(kwargs)
         return WindowsGPSLocationDataModel(**kwargs)
 
     def get_collector_characteristics(self) -> List[ActivityDataCharacteristics]:

@@ -90,6 +90,16 @@ class IndalekoDBCollections:
                     'unique': False,
                     'type': 'persistent'
                 },
+                'file name': {
+                    'fields': ['Label'],
+                    'unique': False,
+                    'type': 'persistent'
+                },
+                'timestamps': {
+                    'fields': ['Timestamps.Label', 'Timestamps.Value'],
+                    'unique': False,
+                    'type': 'persistent'
+                },
             },
         },
         Indaleko_Relationship_Collection: {
@@ -225,8 +235,9 @@ class IndalekoDBCollections:
                 },
                 'Location': {
                     'fields': ['gis_location'],
+                    'type': 'geo',
                     'unique': False,
-                    'type': 'geo'
+                    'geo_json': True
                 },
                 'Device': {
                     'fields': ['device_id'],

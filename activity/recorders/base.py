@@ -60,7 +60,7 @@ class RecorderBase(ABC):
 
     @abstractmethod
     def get_recorder_name(self) -> str:
-        '''Get the name of the provider'''
+        '''Get the name of the recorder'''
 
     @abstractmethod
     def get_collector_class_model(self) -> dict[str, type]:

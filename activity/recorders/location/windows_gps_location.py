@@ -178,6 +178,76 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
     def get_recorder_characteristics(self):
         return self.collector.get_collector_characteristics()
 
+    def get_recorder_name(self) -> str:
+        '''Get the name of the recorder'''
+        return 'windows_gps_location'
+
+    def get_collector_class_model(self) -> dict[str, type]:
+        '''Get the class models for the collector(s) used by this recorder.'''
+        return {
+            'WindowsGPSLocation': WindowsGPSLocationDataModel
+        }
+
+    def get_recorder_id(self) -> uuid.UUID:
+        '''Get the UUID for the recorder'''
+        return self.identifier
+
+    def process_data(self, data):
+        '''Process the collected data'''
+        return data
+
+    def store_data(self, data):
+        '''Store the processed data'''
+        ksa = KnownSemanticAttributes
+        assert isinstance(data, WindowsGPSLocationDataModel), \
+            f'current_data is not a WindowsGPSLocationDataModel {type(data)}'
+        ic(type(data))
+        latest_db_data = self.get_latest_db_update()
+        if not self.has_data_changed(data, latest_db_data):
+            ic('Data has not changed, return last DB record')
+            return latest_db_data
+        # the data has changed enough for us to record it.
+        ic('Data has changed, record in the database')
+        source_identifier = IndalekoSourceIdentifierDataModel(
+            Identifier=self.identifier,
+            Version=self.version,
+            Description=self.description
+        )
+        semantic_attributes = [
+            IndalekoSemanticAttributeDataModel(
+                Identifier=IndalekoUUIDDataModel(
+                    Identifier=ksa.ACTIVITY_DATA_LOCATION_LATITUDE,
+                    Version='1',
+                    Description='Latitude'
+                ),
+                Data=data.latitude,
+            ),
+            IndalekoSemanticAttributeDataModel(
+                Identifier=IndalekoUUIDDataModel(
+                    Identifier=ksa.ACTIVITY_DATA_LOCATION_LONGITUDE,
+                    Version='1',
+                    Description='Longitude'
+                ),
+                Data=data.longitude,
+            ),
+            IndalekoSemanticAttributeDataModel(
+                Identifier=IndalekoUUIDDataModel(
+                    Identifier=ksa.ACTIVITY_DATA_LOCATION_ACCURACY,
+                    Version='1',
+                    Description='Accuracy'
+                ),
+                Data=data.accuracy,
+            )
+        ]
+        ic(type(data))
+        doc = BaseLocationDataRecorder.build_location_activity_document(
+            source_data=source_identifier,
+            location_data=data,
+            semantic_attributes=semantic_attributes
+        )
+        self.collection.insert(doc)
+        return ic(data)
+
 
 def main():
     '''Main entry point for the Windows GPS Location Recorder.'''
