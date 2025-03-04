@@ -116,7 +116,7 @@ class AmbientMusicData(BaseAmbientConditionDataModel):
     @classmethod
     def validate_position(cls, value: int, values: Dict) -> int:
         """Validate playback position is within track duration"""
-        if 'track_duration_ms' in values and value > values['track_duration_ms']:
+        if "playback_position_ms" in values.data and value > values.data['track_duration_ms']:
             raise ValueError("Playback position cannot exceed track duration")
         return value
 
