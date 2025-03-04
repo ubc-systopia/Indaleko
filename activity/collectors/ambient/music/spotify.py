@@ -33,7 +33,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from activity.collectors.ambient.music.music_data_model import SpotifyAmbientData
+from activity.collectors.ambient.music.spotify_data_model import SpotifyAmbientData
 from activity.collectors.ambient.base import AmbientCollector
 # pylint: enable=wrong-import-position
 
@@ -63,7 +63,8 @@ class SpotifyMusicCollector(AmbientCollector):
         Collect Spotify data.
         """
         ic('Collecting Spotify data')
-        playback = self.sp.current_playback()
+        # playback = self.sp.current_playback()
+        playback = None
         if playback:
             raw_data = {
                 "track_name": playback['item']['name'],
