@@ -47,7 +47,7 @@ class BaseAmbientConditionDataModel(IndalekoActivityDataModel):
         @staticmethod
         def generate_example():
             '''Generate an example for the data model'''
-            example = IndalekoActivityDataModel.Config.json_schema_extra
+            example = IndalekoActivityDataModel.Config.json_schema_extra['example']
             example["source"] = "Spotify"
             return example
 
