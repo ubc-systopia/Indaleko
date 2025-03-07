@@ -20,10 +20,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-from typing import Any, Dict
+from typing import Any, Dict, List
 import spotipy
+import uuid
 from spotipy.oauth2 import SpotifyOAuth
 from icecream import ic
+from dotenv import load_dotenv
+from datetime import datetime, timedelta
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -35,6 +38,10 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # pylint: disable=wrong-import-position
 from activity.collectors.ambient.music.spotify_data_model import SpotifyAmbientData
 from activity.collectors.ambient.base import AmbientCollector
+from data_models.record import IndalekoRecordDataModel
+from data_models.source_identifier import IndalekoSourceIdentifierDataModel
+from activity.characteristics import ActivityDataCharacteristics
+from Indaleko import Indaleko
 # pylint: enable=wrong-import-position
 
 
@@ -43,13 +50,20 @@ class SpotifyMusicCollector(AmbientCollector):
     This class provides a utility for acquiring Spotify data.
     """
 
-    def __init__(self, client_id: str, client_secret: str, redirect_uri: str, **kwargs):
+    identifier = uuid.UUID('8f367cb7-b574-4c10-99f7-bf83b235cef9')
+    version = '1.0.0'
+    description = 'Spotify Ambient Music Collector'
+
+    def __init__(self, **kwargs):
         """Initialize the object."""
         super().__init__(**kwargs)
-        self.data = SpotifyAmbientData()
-        self.sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=client_id,
-                                                            client_secret=client_secret,
-                                                            redirect_uri=redirect_uri,
+        # Your Spotify API Authentication Token here:
+        client_id = ""
+        client_secret = ""
+        redirect_uri = ""
+        self.sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id = client_id,
+                                                            client_secret= client_secret,
+                                                            redirect_uri=  redirect_uri,
                                                             scope="user-read-playback-state"))
         self.authenticate()
 
@@ -58,13 +72,45 @@ class SpotifyMusicCollector(AmbientCollector):
         ic('Authenticating with Spotify API')
         self.sp.current_user()
 
-    def collect_data(self) -> None:
+    def get_ambient_condition_history(self, start_time, end_time):
+        raise NotImplementedError('This method is not implemented yet.')
+    
+    def get_ambient_condition_name(self):
+        raise NotImplementedError('This method is not implemented yet.')
+    
+    def get_collector_characteristics(self) -> List[ActivityDataCharacteristics]:
+        '''Get the provider characteristics'''
+        return [
+            ActivityDataCharacteristics.ACTIVITY_DATA_SPOTIFY
+        ]
+    
+    def get_collector_name(self):
+        raise NotImplementedError('This method is not implemented yet.')
+    
+    def get_cursor(self, activity_context):
+        raise NotImplementedError('This method is not implemented yet.')
+    
+    def get_description(self):
+        return self.description
+    
+    def get_json_schema(self) -> dict:
+        return SpotifyAmbientData(**SpotifyAmbientData.Config.json_schema_extra['example']).model_json_schema()
+    
+    def get_provider_id(self):
+        raise NotImplementedError('This method is not implemented yet.')
+    
+    def retrieve_data(self, data_id):
+        raise NotImplementedError('This method is not implemented yet.')
+    
+    def cache_duration(self) -> timedelta:
+        raise timedelta(minutes=10)
+
+    def collect_data(self) -> SpotifyAmbientData:
         """
         Collect Spotify data.
         """
         ic('Collecting Spotify data')
-        # playback = self.sp.current_playback()
-        playback = None
+        playback = self.sp.current_playback()
         if playback:
             raw_data = {
                 "track_name": playback['item']['name'],
@@ -84,14 +130,32 @@ class SpotifyMusicCollector(AmbientCollector):
                 "context_type": playback['context']['type'] if playback['context'] else None,
                 "context_id": playback['context']['uri'] if playback['context'] else None
             }
-            self.data.process_spotify_data(raw_data)
+            return self.process_data(raw_data)
+        else:
+            return None
 
-    def process_data(self, data: Any) -> Dict[str, Any]:
+    def process_data(self, data: Any) -> SpotifyAmbientData:
         """
-        Process the collected data.
+        Process the collected data and turn it into a SpotifyAmbientData.
         """
         ic('Processing Spotify data')
-        return self.data.dict()
+        data["Timestamp"] = datetime.now().isoformat()
+
+        source_identifier = IndalekoSourceIdentifierDataModel(
+            Identifier=self.identifier,
+            Version=self.version,
+            Description=self.description
+        )
+
+        data["Record"] = IndalekoRecordDataModel(
+                SourceIdentifier=source_identifier,
+                Timestamp = data["Timestamp"],
+                Data = Indaleko.encode_binary_data(data)
+            )
+        data["SemanticAttributes"] = []
+        data["source"] = "spotify"
+
+        return SpotifyAmbientData(**data)
 
     def store_data(self, data: Dict[str, Any]) -> None:
         """
@@ -136,10 +200,7 @@ class SpotifyMusicCollector(AmbientCollector):
 def main():
     """Main entry point for the Spotify Music Collector."""
     ic('Starting Spotify Music Collector')
-    client_id = "YOUR_SPOTIFY_CLIENT_ID"
-    client_secret = "YOUR_SPOTIFY_CLIENT_SECRET"
-    redirect_uri = "YOUR_SPOTIFY_REDIRECT_URI"
-    collector = SpotifyMusicCollector(client_id=client_id, client_secret=client_secret, redirect_uri=redirect_uri)
+    collector = SpotifyMusicCollector()
     collector.collect_data()
     latest = collector.get_latest_db_update()
     ic(latest)
