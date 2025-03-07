@@ -106,7 +106,7 @@ class QueryExtractor():
             },
             "Activity": {
                 "geo_location": {
-                    "location": "str",
+                    "location": "str" or {longitude: int, latitude: int},
                     "command": "at, within",
                     "km": "int (only when command is 'within' convert to km if necessary)",
                     "timestamp": "str (one of 'birthtime', 'modified', 'changed', or 'accessed')"

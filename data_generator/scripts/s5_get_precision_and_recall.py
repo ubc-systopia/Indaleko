@@ -1,5 +1,10 @@
 from icecream import ic
 import math
+from collections import namedtuple
+
+Results = namedtuple(
+    'Results', ['truth_number', 'filler_number', 'original_number', 'precision', 'recall', 'returned_uuid']
+)
 
 class ResultCalculator():
     """
@@ -9,39 +14,33 @@ class ResultCalculator():
         """
         Initializes the calculator.
         """
-        self.selected_uuid = []
-        self.selected_metadata = []
+        pass
     
-    def calculate_stats(self, list_truth: list[str], list_filler: list[str], raw_results:list[str]) -> int:
+    def calculate_stats(self, list_truth: list[str], list_filler: list[str], raw_results:list[str]) -> tuple[int, int, list[str]]:
         '''
         Calculates the number of truth metadata given the raw_results based on UUID
         Args: 
             raw_results (list[str]): items returned by the Indaleko search result
         Returns:
-            int: the total number of truth metadata returned by Indaleko
+            int: the total number of truth, filler metdata and the list of returned uuid
         '''
         truth_set = set()
         filler_set = set()
+        selected_uuid = []
+
 
         for result in raw_results:
             uuid = result['result']['Record']['SourceIdentifier']['Identifier']
-            self.selected_uuid.append(uuid)
-            self.selected_metadata.append(result['result'])
+            selected_uuid.append(uuid)
             
-            assert uuid not in truth_set, "Result contains duplicate objects."
-            assert uuid not in filler_set, "Result contains duplicate objects."
-
-            # if uuid.startswith("c"):
+            assert uuid not in truth_set, "Search result contains duplicate objects."
+            assert uuid not in filler_set, "Search result contains duplicate objects."
 
             if uuid in list_truth:
                 truth_set.add(uuid)
             elif uuid in list_filler:
                 filler_set.add(uuid)
-        ic(list_truth)
-        ic(list_filler)
-        ic(truth_set)
-        ic(filler_set)
-        return len(truth_set), len(filler_set)
+        return len(truth_set), len(filler_set), selected_uuid
     
     def calculate_precision(self, total_n_truth: int, total_n_results: int) -> float:
         '''
@@ -70,7 +69,7 @@ class ResultCalculator():
         return total_n_truth / n_truth_metadata
     
     
-    def run(self, truth_list: list[str], filler_list: list[str], raw_results: list[str], n_truth_md: int) -> tuple[int, int, int]:
+    def run(self, truth_list: list[str], filler_list: list[str], raw_results: list[str], n_truth_md: int) -> Results:
         '''
             Main function to calculate precision and recall
             Args: 
@@ -79,12 +78,10 @@ class ResultCalculator():
             Returns:
                 tuple[int, int, int]: recall, precision
         '''
-        n_truth_number, n_filler_number = self.calculate_stats(truth_list, filler_list, raw_results)
+        n_truth_number, n_filler_number, selected_uuid = self.calculate_stats(truth_list, filler_list, raw_results)
         total_returned_n = len(raw_results)
         original_number = total_returned_n - n_truth_number - n_filler_number
 
-
         precision = self.calculate_precision(n_truth_number, total_returned_n)
         recall = self.calculate_recall(n_truth_number, n_truth_md)
-
-        return n_truth_number, n_filler_number, original_number, precision, recall
+        return Results(n_truth_number, n_filler_number, original_number, precision, recall, selected_uuid)

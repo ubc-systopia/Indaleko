@@ -49,11 +49,9 @@ class Dataset_Generator():
         self.default_upper_timestamp = default_upper_timestamp
         self.default_lower_filesize = default_lower_filesize
         self.default_upper_filesize = default_upper_filesize
+
         self.truth_list = []
         self.filler_list = []
-
-        # self.earliest_endtime = []
-        # self.earliest_starttime = []
 
         self.selected_AC_md = None
         self.selected_semantic_md = None
@@ -73,100 +71,33 @@ class Dataset_Generator():
         """
         with open(json_path, 'w') as json_file:
             json.dump(dataset, json_file, indent=4)
-    
-    # def preprocess_dictionary_timestamps(self, selected_md_attributes: Dict[str, Any], to_timestamp: bool) -> Dict[str, Any]:
-    #     """
-    #     Convert time to posix timstamps given a dictionary to run data generator:
-    #     Args:
-    #         selected_md_attributes (Dict[str, Any]): The dictionary of attributes
-    #     Returns:
-    #         Dict[str, Any]: The converted attributes dictionary
-    #     """
-    #     new_md_attributes = copy.deepcopy(selected_md_attributes)
-    #     if "Posix" in new_md_attributes:        
-    #         posix = new_md_attributes["Posix"]
-    #         if "timestamps" in posix:
-    #             for timestamp_key, timestamp_data in posix["timestamps"].items():
-    #                 starttime, endtime = self._convert_time_timestamp(timestamp_data, to_timestamp)
-    #                 posix["timestamps"][timestamp_key]["starttime"] = starttime
-    #                 posix["timestamps"][timestamp_key]["endtime"] = endtime 
-    #                 if not to_timestamp:
-    #                     self._update_earliest_times(starttime, endtime)
-                    
-    #     return new_md_attributes
 
-    # # Helper function for convert_dictionary_times()
-    # def _convert_time_timestamp(self, timestamps: dict, to_timestamp: bool) -> Tuple[Union[Any, datetime], Union[Any, datetime]]:
-    #     """
-    #     Converts the time from string to timestamps
-    #     """
-
-    #     starttime = timestamps["starttime"]
-    #     endtime = timestamps["endtime"]
-    #     if to_timestamp:
-    #         starttime = starttime.timestamp()
-    #         endtime = endtime.timestamp()
-    #     else: 
-    #         starttime = self._convert_str_datetime(starttime)
-    #         endtime = self._convert_str_datetime(endtime)
-
-    #     return starttime, endtime
-
-    # def _update_earliest_times(self, starttime: datetime, endtime: datetime):
-    #     """
-    #     Updates and tracks the earliest start and end times.
-    #     """
-    #     self.earliest_endtime.append(endtime)
-    #     self.earliest_starttime.append(starttime)
-
-    #     self.earliest_endtime.sort()
-    #     self.earliest_starttime.sort()
-    
-    # # general helper function for _generate_queried_timestamp() and _convert_time_timestamp():
-    # def _convert_str_datetime(self, time: str) -> datetime:
-    #     """Converts a str date from "YYYY-MM-DD" to datetime; used within time generator functions"""
-    #     splittime = re.split("[-T:]", time)
-    #     year = int(splittime[0])
-    #     month = int(splittime[1])
-    #     day = int(splittime[2])
-
-    #     hour = int(splittime[3])
-    #     minute = int(splittime[4])
-    #     second = int(splittime[5])
-
-    #     time = datetime(year, month, day, hour, minute, second)
-
-    #     # if requested time is sooner than today's day, set it to the time to now
-    #     if time > datetime.now():
-    #         time = datetime.now()
-    #     return time
-    
-    def generate_metadata_dataset(self, selected_md_attributes):
-        """Main function to generate metadata datasets"""
-
-        # set dictionaries for each metadata:
+    def initialize_dict(self, selected_md_attributes):
         self.selected_POSIX_md = selected_md_attributes.get("Posix", {})
         self.selected_AC_md = selected_md_attributes.get("Activity", {})
         self.selected_semantic_md = selected_md_attributes.get("Semantic", {})
 
-        if self.selected_semantic_md:
-            self.has_semantic_truth = True
-
-        # intialize metadata generators:
         self.posix_generator = PosixMetadata(
             self.selected_POSIX_md,
             self.default_lower_filesize,
             self.default_upper_filesize,
             self.default_lower_timestamp,
             self.default_upper_timestamp
-            # self.earliest_endtime,
-            # self.earliest_starttime
         )        
         self.temp_activity_generator = TempActivityData(self.selected_AC_md)
         self.music_activity_generator = MusicActivityData(self.selected_AC_md)
         self.geo_activity_generator = GeoActivityData(self.selected_AC_md)
         self.semantic_generator = SemanticMetadata(self.selected_semantic_md)
         self.machine_config_generator = MachineConfigMetadata()
+
+    
+    def generate_metadata_dataset(self, selected_md_attributes: dict[str, Any], save_files: bool, path: str):
+        """Main function to generate metadata datasets"""
+
+        # set dictionaries for each metadata:
+        self.initialize_dict(selected_md_attributes)
+        if self.selected_semantic_md:
+            self.has_semantic_truth = True
 
         # calculate the total number of truth metadata attributes
         self.truth_attributes = (self._return_key_attributes(self.selected_POSIX_md) + 
@@ -184,6 +115,7 @@ class Dataset_Generator():
             self.truth_like_num = random.randint(0, remaining_files)
         else:
             self.truth_like_num = 0
+            
         filler_num = remaining_files - self.truth_like_num
         truth = self._generate_metadata(0, self.n_matching_queries+1, 'Truth File', True, False)
         filler = self._generate_metadata(self.truth_like_num,  filler_num +1, 'Filler File', False, False)
@@ -196,7 +128,16 @@ class Dataset_Generator():
         all_music_activity = truth.music_activity + truth_like_filler.music_activity + filler.music_activity
         all_machine_config = truth.machine_config + truth_like_filler.machine_config + filler.machine_config
 
-        metadata_stats = {"truth": self.n_matching_queries, "filler": remaining_files, "truth-like": self.truth_like_num}
+        metadata_stats = {"truth": self.n_matching_queries, "filler": remaining_files, "truth_like": self.truth_like_num}
+
+        if(save_files):
+            # save the resulting dataset to a json file for future reference
+            self.write_json(all_record, path + "records.json")
+            self.write_json(all_geo_activity, path + "geo_activity.json")
+            self.write_json(all_music_activity, path + "music_activity.json")
+            self.write_json(all_temp_activity, path + "temp_activity.json")
+            self.write_json(all_machine_config, path + "machine_config.json")
+            self.write_json(all_semantics, path + "semantics.json")
 
         return all_record, all_geo_activity, all_temp_activity, all_music_activity,  all_machine_config, all_semantics, metadata_stats
 
@@ -245,7 +186,8 @@ class Dataset_Generator():
                                                                 path)
             name, extension = file_name.split(".")
             semantic = self.semantic_generator.generate_metadata(record_data, IO_UUID, extension, 
-                                                                                        timestamps["modified"].strftime("%Y-%m-%dT%H:%M:%S"), name,
+                                                                                        timestamps["modified"].strftime("%Y-%m-%dT%H:%M:%S"), 
+                                                                                        name,
                                                                                         is_truth_file, truth_like, 
                                                                                         truthlike_attributes, 
                                                                                         has_semantic_filler)
@@ -308,7 +250,6 @@ class Dataset_Generator():
                 if set(Metadata.TEXT_FILE_EXTENSIONS) == set(true_extension):
                     return True
         return False
-                
     
     def _check_semantic_available(self, selected_truth_attributes: list[str], is_all_text: bool) -> bool:
         """check if semantic avaiable in the truth like filler metadata"""
@@ -324,60 +265,6 @@ def main():
         "geo_location": {"location": {"latitude": 48.8566, "longitude": 2.3522}, "command": "at", "timestamp": "birthtime"}
         }
     }
-    # selected_md_attributes = {
-    #                         "Posix": {
-    #                             "file.directory": {
-    #                                 "location": "local",
-    #                                 "local_dir_name": "photos"
-    #                             }, 
-    #                             "file.name" :{
-    #                                 "extension": ['.jpg', '.png'],
-    #                                 "command": "exactly",
-    #                                 "pattern": "image"
-    #                             }
-    #                         },
-    #                         "Semantic": {
-    #                         },
-    #                         "Activity": {}
-    #                     }
-#     selected_md_attributes = {
-#     "Posix": {},
-#     "Semantic": {
-#         "Content_1": [
-#             "Title",
-#             "hi"
-#         ],
-#         "Content_2": [
-#             "Paragraph",
-#             "happy girl"
-#         ],
-#         "Content_3": [
-#             "Subheadline",
-#             "sad"
-#         ],
-#         "Content_4": [
-#             "Image",
-#             "sun"
-#         ],
-#         "Content_5": [
-#             "CodeSnippet",
-#             "let x = 1;"
-#         ],
-#         "Content_6": [
-#             "PageNumber",
-#             20        ],
-#         "Content_7": [
-#         "CheckBoxChecked",
-#         True        ], 
-#         "Content_8": [
-#         "Address",
-#         "Vancouver, BC"        ],
-#         "Content_9": [
-#         "EmailAddress",
-#         "helooo@gmail.com"        ]
-#     },
-#     "Activity": {}
-# }
     config_path = "data_generator/config/dg_config.json"
     with open(config_path, 'r') as file:
         config = json.load(file)
