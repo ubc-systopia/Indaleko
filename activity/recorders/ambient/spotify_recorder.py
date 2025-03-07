@@ -59,9 +59,11 @@ class SpotifyRecorder(RecorderBase):
     '''This module defines a utility for acquiring Spotify data and
     recording it in the database.'''
 
-    identifier = uuid.UUID('6ea66ced-5a54-4cba-a421-50d5671021cb')
-    version = '1.0.0'
-    description = 'Spotify Ambient Music Recorder'
+    source_data = {
+            "Identifier":uuid.UUID('6ea66ced-5a54-4cba-a421-50d5671021cb'),
+            "Version":'1.0.0',
+            "Description":'Spotify Ambient Music Recorder'
+        }
 
     semantic_attributes_supported = {
         KnownSemanticAttributes.ACTIVITY_DATA_AMBIENT_SPOTIFY_TRACK_NAME: 'track_name',
@@ -77,14 +79,14 @@ class SpotifyRecorder(RecorderBase):
         self.db_config = IndalekoDBConfig()
         assert self.db_config is not None, 'Failed to get the database configuration'
         source_identifier = IndalekoSourceIdentifierDataModel(
-            Identifier=self.identifier,
-            Version=self.version,
-            Description=self.description
+            Identifier=self.source_data['Identifier'],
+            Version=self.source_data['Version'],
+            Description=self.source_data['Description']
         )
         record_kwargs = {
-            'Identifier': str(self.identifier),
-            'Version': self.version,
-            'Description': self.description,
+            'Identifier': str(self.source_data['Identifier']),
+            'Version': self.source_data['Version'],
+            'Description': self.source_data['Description'],
             'Record': IndalekoRecordDataModel(
                 SourceIdentifier=source_identifier,
                 Timestamp=datetime.now(),
@@ -94,19 +96,20 @@ class SpotifyRecorder(RecorderBase):
         }
         self.provider_registrar = IndalekoActivityDataRegistrationService()
         assert self.provider_registrar is not None, 'Failed to get the provider registrar'
-        collector_data = self.provider_registrar.lookup_provider_by_identifier(str(self.identifier))
+        collector_data = self.provider_registrar.lookup_provider_by_identifier(str(self.source_data['Identifier']))
         if collector_data is None:
             ic('Registering the provider')
             collector_data, collection = self.provider_registrar.register_provider(**record_kwargs)
         else:
             ic('Provider already registered')
             collection = IndalekoActivityDataRegistrationService\
-                .lookup_activity_provider_collection(str(self.identifier))
+                .lookup_activity_provider_collection(str(self.source_data['Identifier']))
 
         ic(collector_data)
         ic(collection)
         self.collector_data = collector_data
-        self.collector = SpotifyMusicCollector() # This line of code is probably the only unique line in the constructor.
+
+        self.collector = SpotifyMusicCollector() 
         self.collection = collection
 
 
@@ -123,7 +126,7 @@ class SpotifyRecorder(RecorderBase):
         } 
 
     def get_recorder_id(self) -> uuid.UUID:
-        return self.identifier
+        return self.source_data['Identifier']
     
     def get_cursor(self, activity_context: uuid.UUID) -> uuid.UUID:
         '''
@@ -161,7 +164,7 @@ class SpotifyRecorder(RecorderBase):
         return None
 
     def get_description(self) -> str:
-        return self.description
+        return self.source_data['Description']
 
     def get_json_schema(self) -> dict:
         '''
@@ -182,46 +185,47 @@ class SpotifyRecorder(RecorderBase):
         return data
     
     def store_data(self, current_data: Dict[str, Any]) -> None:
-        ksa = KnownSemanticAttributes
 
-        assert isinstance(current_data, SpotifyAmbientData), \
-            f'current_data is not a SpotifyAmbientData'
+        if (current_data is None):
+            ic("No active Spotify music is playing")
+            doc = self.build_spotify_activity_document(
+                spotify_data=None,
+                semantic_attributes=[]
+            )
         
-        latest_db_data = self.get_latest_db_update()
-        if not self.has_data_changed(current_data, latest_db_data):
-            ic('Data has not changed, return last DB record')
-            return latest_db_data
-        
-        source_identifier = IndalekoSourceIdentifierDataModel(
-            Identifier=self.identifier,
-            Version=self.version,
-            Description=self.description
-        )
+        else:
+            assert isinstance(current_data, SpotifyAmbientData), \
+                f'current_data is not a SpotifyAmbientData'
+            
+            latest_db_data = self.get_latest_db_update()
+            if not self.has_data_changed(latest_db_data, current_data):
+                ic('Data has not changed, return last DB record')
+                return ic(latest_db_data)
 
-        semantic_attributes = []
-        for key, value in self.semantic_attributes_supported:
-            semantic_attributes.append(
-                IndalekoSemanticAttributeDataModel(
-                    Identifier= IndalekoUUIDDataModel(
-                        Identifier= key,
-                        Version = "1",
-                        Description = value
-                    ),
-                    Data = getattr(current_data, value)
+            semantic_attributes = []
+            for key, value in self.semantic_attributes_supported.items():
+                semantic_attributes.append(
+                    IndalekoSemanticAttributeDataModel(
+                        Identifier= IndalekoUUIDDataModel(
+                            Identifier= key,
+                            Version = "1",
+                            Description = value
+                        ),
+                        Data = getattr(current_data, value)
+                    )
                 )
+
+            # Build activity document
+            doc = self.build_spotify_activity_document(
+                spotify_data = current_data,
+                semantic_attributes = semantic_attributes
             )
 
-        # Build activity document
-        doc = self.build_spotify_activity_document(
-            source_data = source_identifier,
-            spotify_data = current_data,
-            semantic_attributes = semantic_attributes
-        )
         # Insert document into collection
         self.collection.insert(doc)
         return ic(current_data)
 
-    def get_latest_db_update(self) -> Dict[str, Any]:
+    def get_latest_db_update(self) -> SpotifyAmbientData:
         assert isinstance(self.collection, IndalekoCollection), \
             f'collection is not an IndalekoCollection {type(self.collection)}'
         
@@ -240,14 +244,20 @@ class SpotifyRecorder(RecorderBase):
             return None
         assert len(entries) == 1, f'Too many results {len(entries)}'
         doc =  entries[0]
+        if len(doc['SemanticAttributes']) == 0:
+            return None
         current_data = Indaleko.decode_binary_data(doc['Record']['Data'])
+        current_data['Record'] = doc['Record']
+        current_data['SemanticAttributes'] = doc['SemanticAttributes']
+        current_data['source'] = 'spotify'
         ic(current_data)
-        return SpotifyAmbientData.deserialize(current_data)
+        return SpotifyAmbientData(**current_data)
 
     def has_data_changed(self, 
                          data1: SpotifyAmbientData, 
                          data2: SpotifyAmbientData) -> bool:
-        '''Check if the song has changed.
+        '''Check if the song name has changed, or if the time difference
+        between the two records is greater than the duration of the song
         
             Input:
                 data1: the first data object
@@ -257,19 +267,27 @@ class SpotifyRecorder(RecorderBase):
                 True if the song has changed, False otherwise.
         
         '''
-        # TODO
-        return True
+        if (data1 is None and data2 is None):
+            return False
+        if (data1 is None or data2 is None):
+            return True
+
+        if (data1.track_id != data2.track_id):
+            return True
+        diff = data2.Timestamp - data1.Timestamp
+        if (diff.total_seconds()*1000 > data1.track_duration_ms):
+            return True
+        
+        return False
 
     def update_data(self) -> None:
-        # current_data = SpotifyMusicCollector.collect_data()
-        current_data = SpotifyMusicCollector.get_latest_db_update()
+        current_data = self.collector.collect_data()
         self.store_data(current_data)
         
-    
 
     def build_spotify_activity_document(
-        source_data: Union[IndalekoSourceIdentifierDataModel, dict],
-        spotify_data: Union[SpotifyAmbientData, dict],
+        self,
+        spotify_data: Union[SpotifyAmbientData, dict, None],
         semantic_attributes: List[IndalekoSemanticAttributeDataModel]
     ) -> dict:
         '''
@@ -290,22 +308,28 @@ class SpotifyRecorder(RecorderBase):
             insert the record into the database.
         '''
 
-        assert isinstance(source_data, IndalekoSourceIdentifierDataModel) \
-            or isinstance(source_data, dict), \
-            f'source_data is not an IndalekoSourceIdentifierDataModel or dict {type(source_data)}'
+        if (spotify_data is None):
+            # If there is no active spotify music playing at time of collection
+
+            timestamp = datetime.now().isoformat()
+            encoded_data = ''
+        else:
+            assert isinstance(spotify_data, SpotifyAmbientData) or isinstance(spotify_data, dict), \
+                f'location_data is not a BaseLocationDataModel or dict {type(spotify_data)}'
+            
+            assert isinstance(semantic_attributes, List), \
+                f'semantic_attributes is not a List {type(semantic_attributes)}'
+            
+            # Note that T is captialized in Timestamp
+            timestamp = spotify_data.Timestamp
+            encoded_data = spotify_data.Record.Data
+
         
-        assert isinstance(spotify_data, SpotifyAmbientData) or isinstance(spotify_data, dict), \
-            f'location_data is not a BaseLocationDataModel or dict {type(spotify_data)}'
-        
-        assert isinstance(semantic_attributes, List), \
-            f'semantic_attributes is not a List {type(semantic_attributes)}'
-        # Note that T is captialized in Timestamp
-        timestamp = spotify_data['Timestamp']
         activity_data_args = {
             'Record': IndalekoRecordDataModel(
-                SourceIdentifier=source_data,
+                SourceIdentifier=self.source_data,
                 Timestamp = timestamp,
-                Data = Indaleko.encode_binary_data(spotify_data)
+                Data = encoded_data
             ),
             'Timestamp': timestamp,
             'SemanticAttributes': semantic_attributes
@@ -321,7 +345,7 @@ def main():
     recorder = SpotifyRecorder()
     recorder.update_data()
     latest = recorder.get_latest_db_update()
-    ic(latest)
+    # ic(latest)
     ic(recorder.get_description())
     ic('Finished Spotify Ambient Music Recorder')
     ic(recorder.get_recorder_characteristics())
