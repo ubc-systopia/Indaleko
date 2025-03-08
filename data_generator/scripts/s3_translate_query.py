@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 from typing import Dict, Any
 from icecream import ic
 import json
@@ -92,11 +91,15 @@ class QueryExtractor():
                 "file.size": {
                     "target_min": int (in bytes so if in GB, multiply by 1e+9 to get bytes, if necessary),
                     "target_max": int,
-                    "command": "equal", "range", "greater_than", "greater_than_equal", "less_than", "less_than_equal"
+                    "command": one of [
+                        "equal", "range", "greater_than", "greater_than_equal", "less_than", "less_than_equal"
+                    ]
                 },
                 "file.directory": {
-                    "location": str ("google_drive", "dropbox", "icloud", "local"; must be stated local if local_dir_name specified),
-                    "local_dir_name": str (provide name for local directories only; create a directory name if none provided)
+                    "location": str ("google_drive", "dropbox", "icloud", "local" 
+                                    must be stated local if local_dir_name specified),
+                    "local_dir_name": str (provide name for local directories only; 
+                                            create a directory name if none provided)
                 }
             },
             "Semantic": {
@@ -138,9 +141,10 @@ class QueryExtractor():
                     "playback_position_ms": int (ms [0, track_duration_ms]),
                     "track_duration_ms": int (in milliseconds bound by [10000, 300000]),
                     "is_currently_playing": bool,
-                    "source": str (one of 'spotify', 'youtube music', 'apple music'; if 'spotify' can specify device_type),
-                    "device_type": str only populated when source is 'spotify' (device the music was streamed) one of 
-                    ("Computer"|"Smartphone"|"Speaker"|"TV"|"Game_Console"|"Automobile"|"Unknown"),
+                    "source": str (one of 'spotify', 'youtube music', 'apple music';
+                                    'spotify' can specify device_type),
+                    "device_type": str only populated when source is 'spotify' (device the music was streamed) 
+                    one of ("Computer"|"Smartphone"|"Speaker"|"TV"|"Game_Console"|"Automobile"|"Unknown"),
                     "timestamp": str one of ['birthtime', 'modified', 'changed', 'accessed']
                 }
             }
@@ -148,7 +152,8 @@ class QueryExtractor():
         """
         return dictionary.replace("{TEXT_TAGS}", str(SemanticMetadata.AVAIL_TEXT_TAGS))
 
-    def _create_extraction_prompt(self, query: str, selected_md_schema: str, named_entities: NamedEntityCollection) -> Dict:
+    def _create_extraction_prompt(self, query: str, selected_md_schema: str, 
+    named_entities: NamedEntityCollection) -> Dict:
         """
         Create a prompt for the LLM to generate an  query.
         Args:
@@ -252,7 +257,6 @@ class QueryExtractor():
                     replace("{IMAGE_TAGS}", str(SemanticMetadata.IMAGE_TAGS)).\
                         replace("{AVAIL_TEXT_TAGS}", str(SemanticMetadata.AVAIL_TEXT_TAGS)).\
                             replace("{named_entities}", str(named_entities))
-        ic(named_entities)
 
         user_prompt = query
         return {

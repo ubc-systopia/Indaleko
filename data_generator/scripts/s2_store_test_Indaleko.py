@@ -1,4 +1,3 @@
-import json
 import uuid
 import os
 import sys
@@ -14,7 +13,6 @@ from activity.recorders.registration_service import IndalekoActivityDataRegistra
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from data_models.record import IndalekoRecordDataModel
 from datetime import datetime
-from icecream import ic
 
 '''
 MetadataStorer for moving the metadata dataset onto the Indaleko DB
@@ -39,7 +37,8 @@ class MetadataStorer():
         """
         collections.get_collection(collection_name).delete_collection(collection_name)
 
-    def add_records_to_collection(self, collections: IndalekoCollections, collection_name: str, records: list, key_required=False) -> None:
+    def add_records_to_collection(self, collections: IndalekoCollections, collection_name: str, 
+        records: list, key_required=False) -> None:
         """
         Adds each metadata into the specified collection
         Args: 
@@ -50,7 +49,6 @@ class MetadataStorer():
         for record in records:
             if key_required:
                 record['_key'] = str(uuid.uuid4())
-            ic(collections)
             collections.get_collection(collection_name).insert(record)
             print(f'Inserted {record} into {collection_name}')
 
@@ -78,9 +76,9 @@ class MetadataStorer():
                 Data=''
             )
         }
-        activity_registration_service, collection = self.activity_data_registrar.register_provider(**record_kwargs)
-        ic(activity_registration_service)
-        ic(collection)
+        activity_registration_service, collection = self.activity_data_registrar.\
+            register_provider(**record_kwargs)
+
         return activity_registration_service, collection
 
     def add_records_with_activity_provider(self, collection: IndalekoCollection, activity_contexts: dict) -> None:
@@ -91,30 +89,3 @@ class MetadataStorer():
         """
         for activity in activity_contexts:
             collection.insert(activity)
-            
-
-# convert the json file to a list of metadata 
-def convert_json_file(json_file: str) -> dict:
-    """
-    Testing purposes: convert json to dictionary
-    """
-    with open(json_file, 'r') as file:
-        print("here")
-        dataset = json.load(file)
-    return dataset
-
-
-def main():
-    collections = IndalekoCollections()
-    storer = MetadataStorer()
-    # records = "/Indaleko/data_generator/results/all_records.json"
-    # record_dataset = convert_json_file(records)
-    # storer.add_records_to_collection(collections, "Objects", record_dataset)
-    activities = "/Users/pearl/Indaleko_updated/Indaleko/data_generator/results/stored_metadata/all_semantics_config.json"
-    activity_dataset = convert_json_file(activities)
-    # storer.add_records_to_collection(collections, "TempActivityContext", activity_dataset)
-    storer.add_records_to_collection(collections, "SemanticData", activity_dataset, key_required = True)
-
-
-if __name__ == '__main__':
-    main()

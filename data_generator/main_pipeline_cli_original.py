@@ -240,7 +240,6 @@ class Validator():
         # CALCULATE PRECISION, RECALL AND OTHER STATISTICS
         self.generate_stats(raw_results)
         self.write_as_json(self.file_path, "Indaleko_search_result.json", raw_results)
-        self.logger.log_process("DONE -- please check /data_generator/results/validator_result.log for the full results")
     
     def generate_query(self, query_attributes: dict[str, Any]) -> str:
         """
@@ -451,7 +450,8 @@ def main() -> None:
     validator_tool = Validator(args)
     total_epoch = validator_tool.time_operation(validator_tool.run)
     validator_tool.logger.log_final_result(total_epoch[0], validator_tool.result_dictionary)
-    
+    print("DONE -- please check /data_generator/results/validator_result.log for the full results")
+
     
 
 if __name__ == '__main__':

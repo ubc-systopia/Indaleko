@@ -21,10 +21,22 @@ class MachineConfigMetadata(Metadata):
 
     def _generate_machine_metadata(self, record: IndalekoRecordDataModel) -> IndalekoMachineConfigDataModel:
         """
-        Generate the machine configuration for the given Indaleko record using the example hardware and software information
+        Generate the machine configuration for the given Indaleko record
         """
-        timestamp = IndalekoTimestampDataModel(Label=uuid.uuid4(), Value=datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"), Description="Captured Timestamp")
+        timestamp = IndalekoTimestampDataModel(
+            Label=uuid.uuid4(), 
+            Value=datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"), 
+            Description="Captured Timestamp"
+        )
+
         hardware = Hardware.Config.json_schema_extra['example']
         software = Software.Config.json_schema_extra['example']
-        machine_config = IndalekoMachineConfigDataModel(Record=record, Captured=timestamp, Hardware=hardware, Software=software)
+
+        machine_config = IndalekoMachineConfigDataModel(
+            Record=record, 
+            Captured=timestamp, 
+            Hardware=hardware, 
+            Software=software
+        )
+
         return machine_config

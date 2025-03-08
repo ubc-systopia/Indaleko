@@ -55,6 +55,7 @@ class GeoActivityData(ActivityMetadata):
         #timestamp is set to when the activity data is collected
         geo_activity_context = IndalekoActivityDataModel(Record = record_kwargs, Timestamp=geo_timestamp, SemanticAttributes=semantic_attributes)
 
+        #UNUSED data providers
         # longitude_data_provider = ActivityDataModel(Provider = uuid.uuid4(), ProviderReference=UUID_longitude)
         # latitude_data_provider = ActivityDataModel(Provider = uuid.uuid4(), ProviderReference=UUID_latitude)
         # accuracy_data_provider = ActivityDataModel(Provider = uuid.uuid4(), ProviderReference=UUID_accuracy)
