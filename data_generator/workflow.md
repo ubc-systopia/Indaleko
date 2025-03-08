@@ -1,6 +1,27 @@
 # Workflow of Pipeline
 
 ![alt text](workflow_diagram.jpg)
+# Workflow of Pipeline
+
+## Set Up Instructions:
+To run the pipeline, ensure that you have access to an OpenAI API key. Store the secret key in the `Indaleko/config/openai-key.ini` file.
+
+If not already installed, install:
+* [Geopy](https://geopy.readthedocs.io/en/stable/)
+  ```sh
+  pip install geopy
+  ```
+* [Faker](https://faker.readthedocs.io/en/master/)
+  ```sh
+  pip install Faker
+  ```
+
+## Running the Pipeline:
+* Run:
+  ```sh
+  python Indaleko/data_generator/main_pipeline.py
+  ```
+* You can add `--no_reset` to skip resetting before running the pipeline.
 
 ## Script Locations
 
@@ -91,4 +112,3 @@ Stored in the database and used for querying:
   - **Machine config files**
 
 Each JSON file contains lists of dictionaries where each entry represents a metadata record conforming to data models provided in the repository.
-
