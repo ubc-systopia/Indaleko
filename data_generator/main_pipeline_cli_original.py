@@ -9,9 +9,9 @@ import json
 from icecream import ic
 from datetime import datetime, timezone
 import argparse
-
 import copy
 import click
+
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
@@ -23,7 +23,7 @@ from data_models.location_data_model import BaseLocationDataModel
 from data_models.named_entity import IndalekoNamedEntityDataModel, NamedEntityCollection, example_entities, IndalekoNamedEntityType
 from db.i_collections import IndalekoDBCollections
 from query.cli import IndalekoQueryCLI
-from data_generator.scripts.s1_metadata_generator import Dataset_Generator
+from data_generator.scripts.s1_metadata_generator import Dataset_Generator, MetadataResults
 from data_generator.scripts.s2_store_test_Indaleko import MetadataStorer
 from data_generator.scripts.s3_translate_query import QueryExtractor
 from data_generator.scripts.s4_translate_AQL import AQLQueryConverter
@@ -35,13 +35,7 @@ from data_generator.scripts.s6_log_result import ResultLogger
 from pathlib import Path
 from typing import Any
 import subprocess
-from collections import namedtuple
 from data_generator.scripts.s5_get_precision_and_recall import Results
-
-MetadataResults = namedtuple('MetadataResults', [
-    'all_records_md', 'all_geo_activity_md', 'all_temp_activity_md', 
-    'all_music_activity_md', 'all_machine_config_md', 'all_semantics_md', 'stats'
-])
 
 from db.db_collection_metadata import IndalekoDBCollectionsMetadata
 
@@ -69,13 +63,13 @@ class Validator():
         self.db_config = IndalekoDBConfig()
         self.db_config.setup_database(self.db_config.config['database']['database'])
 
-        if not args.no_reset:
-            try:
-                subprocess.run(["python3", "./db/db_config.py", "reset"], check=True)
-                subprocess.run(["python3", "./platforms/mac/machine_config.py", "--add"], check=True)
-                subprocess.run(["python3", "./storage/recorders/local/mac/recorder.py", "--arangoimport"], check=True)
-            except subprocess.CalledProcessError as e:
-                raise e
+        # if not args.no_reset:
+        #     try:
+        #         subprocess.run(["python3", "./db/db_config.py", "reset"], check=True)
+        #         subprocess.run(["python3", "./platforms/mac/machine_config.py", "--add"], check=True)
+        #         subprocess.run(["python3", "./storage/recorders/local/mac/recorder.py", "--arangoimport"], check=True)
+        #     except subprocess.CalledProcessError as e:
+        #         raise e
 
         self.db_config.collections = IndalekoCollections()
         self.query_extractor = QueryExtractor()
@@ -93,7 +87,6 @@ class Validator():
 
         self.dynamic_activity_providers = {}
         self.result_dictionary = {}
-        # self.schema = self.read_json('data_generator/config/schema.json')
     
     def time_operation(self, operation, **kwargs) -> tuple[str, Any]:
         """
@@ -218,20 +211,31 @@ class Validator():
         self.write_as_json(self.config_path, query_info, translated_query)
         self.write_as_aql(self.config_path, aql_text, aql)
 
-        # ASK FOR AQL QUERY REVIEW:
-        aql_selection = click.prompt(
-            "Please review the AQL_query.aql file and query_info.json and make any necessary changes. \
-            \n Type (1) to continue, or any number to exit", 
-            type=int)
+        # ENSURES THAT AQL FORMAT IS CORRECT SYNTAX:
+        is_valid_query = False 
 
-        if aql_selection != 1:
-            sys.exit()
-        
-        final_query = self.read_aql(self.config_path + aql_text)
-        self.add_result_to_dict("aql_query", final_query)
+        while(not is_valid_query):
+            try:
+                # ASK FOR AQL QUERY REVIEW:
+                aql_selection = click.prompt(
+                    "Please review the AQL_query.aql file and query_info.json and make any necessary changes. \
+                    \n Type (1) to continue, or any number to exit", 
+                    type=int)
 
-        # RUN INDALEKO SEARCH
-        raw_results = self.run_search(final_query)
+                if aql_selection != 1:
+                    sys.exit()
+                
+                final_query = self.read_aql(self.config_path + aql_text)
+
+                # RUN INDALEKO SEARCH
+                raw_results = self.run_search(final_query)
+                is_valid_query = True
+                self.add_result_to_dict("aql_query", final_query)
+
+            except Exception as e:
+                self.logger.log_process(e)
+                print("Error in AQL query.")
+
         self.add_result_to_dict("metadata_number", len(raw_results)) 
 
         updated_data_number = self.get_files_collections()
@@ -250,7 +254,7 @@ class Validator():
             selected_md_attributes=query_attributes["converted_selected_md_attributes"], 
             collections=query_attributes["providers"],
             geo_coordinates=query_attributes["geo_coords"], 
-            n_truth = self.n_truth_md,
+            n_truth = self.expected_truth_number,
             llm_connector=self.llm_connector)
         self.logger.log_process_result("translated_aql", translate_query_time, translated_query)
         return translated_query
@@ -278,11 +282,11 @@ class Validator():
         """
         Process the config file:
         """
-        self.n_truth_md = self.config["n_matching_queries"]
+        self.expected_truth_number = self.config["n_matching_queries"]
         self.n_total_md = self.config["n_metadata_records"]
 
         self.logger.log_config(self.config)
-        self.add_result_to_dict("n_total_truth", self.n_truth_md)
+        self.add_result_to_dict("n_total_truth", self.expected_truth_number)
         self.add_result_to_dict("n_metadata", self.n_total_md)
 
     def _store_general_metadata(self, collection_name, data, key_required = True):
@@ -375,7 +379,7 @@ class Validator():
                                                                     truth_list = self.data_generator.truth_list, 
                                                                     filler_list = self.data_generator.filler_list, 
                                                                     raw_results = raw_results, 
-                                                                    n_truth_md = self.n_truth_md)
+                                                                    expected_truth_number = self.expected_truth_number)
         results: Results = calculation_result
         self.add_result_to_dict("results", results)
         # self.add_result_to_dict("uuid_returned", results.returned_uuid)

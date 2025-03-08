@@ -15,9 +15,12 @@ class TempActivityData(ActivityMetadata):
     Subclass for ActivityMetadata.
     Used to generate Temperature Activity Context based on EcobeeAmbientData
     """
-    CURRENT_STATE = ['home','away','sleep', 'custom']
+
     LOWER_TEMP, UPPER_TEMP = -50.0, 100.0
     LOWER_HUMIDITY, UPPER_HUMIDITY = 0.0, 100.0
+    NUMBER_SENSOR_MIN, NUMBER_SENSOR_MAX = 0, 5
+     
+    CURRENT_STATE = ['home','away','sleep', 'custom']
     HVAC_MODES = ["heat", "cool", "auto", "off"]
     HVAC_STATES = ["heating", "cooling", "fan", "idle"]
     FAN_MODES = ["auto", "on", "scheduled"]
@@ -42,7 +45,7 @@ class TempActivityData(ActivityMetadata):
             device_id= device_id,
             device_name= "ecobee",
             current_climate=random.choice(self.CURRENT_STATE),
-            connected_sensors=random.randint(0,5)
+            connected_sensors=random.randint(self.NUMBER_SENSOR_MIN, self.NUMBER_SENSOR_MAX)
         )
         return ecobee_ac_md
 

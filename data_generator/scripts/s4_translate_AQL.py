@@ -78,14 +78,14 @@ class AQLQueryConverter(TranslatorBase):
         # This is a placeholder implementation
         return query
 
-    def _create_translation(self, selected_md_attributes:Dict[str, Any], collections: Dict[str], 
+    def _create_translation(self, selected_md_attributes:Dict[str, Any], collections: Dict[str, str], 
     geo_coordinates: str, n_truth: int) -> str:
         """
         Create a prompt for the LLM to generate an AQL query.
 
         Args:
             selected_md_attributes (Dict[str, Any]): The dictionary created for dataset generation,
-            collections (Dict[str]): the collections that are used to create the metadata
+            collections (Dict[str, str]): the collections that are used to create the metadata
             geo_coordinates (str): geo coordinate specifying longitude/latitude of truth metadata (if any)
             n_truth (int): number of truth metadata 
 
@@ -247,7 +247,7 @@ class AQLQueryConverter(TranslatorBase):
         }
 
     # UNUSED: for use with static schema
-    def _create_translation_prompt_statically(self, selected_md_attributes:Dict[str, Any], collections: Dict[str], 
+    def _create_translation_prompt_statically(self, selected_md_attributes:Dict[str, Any], collections: Dict[str, str], 
     geo_coordinates: str, n_truth: int) -> str:
         """
         Create a prompt for the LLM to generate an AQL query.

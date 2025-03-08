@@ -4,13 +4,16 @@ from datetime import datetime
 from logging import Logger
 from icecream import ic
 
-SPACER = "--------------------------------------------------------------------------------------------"
 
 class ResultLogger:
+    
     """
     A service for logging the result of the metadata generator.
     Adapted from LoggingService from logging_service.py
     """
+
+    SPACER = "--------------------------------------------------------------------------------------------"
+
 
     def __init__(self, result_path: str) -> None:
         """
@@ -107,21 +110,20 @@ class ResultLogger:
         self.result_logger.info(f" Number of Files Originally in the DB: {results['db_number']}")
         self.result_logger.info(f" Total Metadata Generated: {results['n_metadata']}")
         self.result_logger.info(f" Total Truth Metadata Queried: {results['n_total_truth']}")
-        self.result_logger.info(f" Number of Files After Metadata Generation: {results['db_number_update']} - \
-                               ({results['n_metadata']} x 6 collections + 3 activity providers)")
-        self.result_logger.info(SPACER)
+        self.result_logger.info(f" Number of Files After Metadata Generation ({results['n_metadata']} x 6 collections + 3 activity providers): {results['db_number_update']}")
+        self.result_logger.info(self.SPACER)
         self.result_logger.info("Metadata Generation:")
         self.result_logger.info(f" Truth Files Made: {results['metadata_stats']['truth']}")
         self.result_logger.info(f" Filler Files Made: {results['metadata_stats']['filler']}")        
         self.result_logger.info(f" Of the Filler Files, Truth-like Filler Files: {results['metadata_stats']['truth_like']}")
-        self.result_logger.info(SPACER)
+        self.result_logger.info(self.SPACER)
         self.result_logger.info("Indaleko Results:")
         self.result_logger.info(f" Actual Metadata Returned: {results['metadata_number']}")     
         self.result_logger.info(f" Actual Truth Metadata Returned: {results['results'].truth_number}")
         self.result_logger.info(f" Filler Metadata Returned: {results['results'].filler_number}")
         self.result_logger.info(f" Metadata Returned From User's Database: {results['results'].original_number}")
         self.result_logger.info(f" UUID of Indaleko Objects Returned: {results['results'].returned_uuid}")
-        self.result_logger.info(SPACER)
+        self.result_logger.info(self.SPACER)
         self.result_logger.info("Summary Stats:")
         self.result_logger.info(f" Total epoch: {total_epoch}")
         self.result_logger.info(f" Precision: {results['results'].precision}")

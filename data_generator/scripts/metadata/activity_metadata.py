@@ -3,8 +3,7 @@ import random
 from datetime import datetime
 from data_models.record import IndalekoRecordDataModel
 from data_generator.scripts.metadata.metadata import Metadata
-
-timestamp_types = ["birthtime", "modified", "accessed", "changed"]
+from icecream import ic
 
 class ActivityMetadata(Metadata):
     """
@@ -23,8 +22,11 @@ class ActivityMetadata(Metadata):
         """
         Generate the activity context timestamp
         """
+        timestamp_types = ["birthtime", "modified", "accessed", "changed"]
+
         if activity_type in self.selected_md and "timestamp" in self.selected_md[activity_type]:
             time_query = self.selected_md[activity_type]["timestamp"]
+            ic(time_query)
             if is_truth_file:
                 return timestamps[time_query].strftime("%Y-%m-%dT%H:%M:%SZ")
             else:
