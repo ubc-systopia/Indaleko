@@ -11,7 +11,7 @@ from activity.data_model.activity import IndalekoActivityDataModel
 from activity.collectors.location.data_models.windows_gps_location_data_model import WindowsGPSLocationDataModel
 from activity.collectors.location.data_models.windows_gps_satellite_data import WindowsGPSLocationSatelliteDataModel
 from data_generator.scripts.metadata.activity_metadata import ActivityMetadata
-
+from icecream import ic
 class GeoActivityData(ActivityMetadata):
     DEFAULT_MIN_ALT = -10
     DEFAULT_MAX_ALT = 1000
@@ -79,6 +79,7 @@ class GeoActivityData(ActivityMetadata):
             # run only once to initialize the saved location
             if not self.saved_geo_loc:
                 self.saved_geo_loc = self._save_location(geo_location, geo_command)
+                ic(self.saved_geo_loc)
             if geo_command == "at":
                 if is_truth_file:
                     #geo location generator that given a city, generates longitude and latitude

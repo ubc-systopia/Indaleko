@@ -10,6 +10,9 @@ class ActivityMetadata(Metadata):
     Abstract class for Activity Metadata.
     Consists of helper functions for activity context subclasses
     """
+
+    TIMESTAMPS = ["birthtime", "modified", "accessed", "changed"]
+
     def __init__(self, selected_AC_md):
         super().__init__(selected_AC_md)
     
@@ -22,11 +25,9 @@ class ActivityMetadata(Metadata):
         """
         Generate the activity context timestamp
         """
-        timestamp_types = ["birthtime", "modified", "accessed", "changed"]
-
+        timestamp_types = self.TIMESTAMPS.copy()
         if activity_type in self.selected_md and "timestamp" in self.selected_md[activity_type]:
             time_query = self.selected_md[activity_type]["timestamp"]
-            ic(time_query)
             if is_truth_file:
                 return timestamps[time_query].strftime("%Y-%m-%dT%H:%M:%SZ")
             else:
@@ -42,4 +43,4 @@ class ActivityMetadata(Metadata):
         else:
             attributes = attribute_lists.copy()
             attributes.remove(truth_attribute)
-            return random.choice(attribute_lists)
+            return random.choice(attributes)

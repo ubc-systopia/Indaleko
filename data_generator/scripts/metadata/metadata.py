@@ -31,7 +31,6 @@ class Metadata(ABC):
         General function to check and return a value (int or float) that is not within 
         the specified target range.
         """
-
         if target_min - delta >= default_min and target_max + delta <= default_max:
             return random.choice([
                 random_func(default_min, target_min - delta),

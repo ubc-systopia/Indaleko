@@ -62,13 +62,13 @@ class Validator():
         self.db_config = IndalekoDBConfig()
         self.db_config.setup_database(self.db_config.config['database']['database'])
 
-        if not args.no_reset:
-            try:
-                subprocess.run(["python3", "./db/db_config.py", "reset"], check=True)
-                subprocess.run(["python3", "./platforms/mac/machine_config.py", "--add"], check=True)
-                subprocess.run(["python3", "./storage/recorders/local/mac/recorder.py", "--arangoimport"], check=True)
-            except subprocess.CalledProcessError as e:
-                raise e
+        # if not args.no_reset:
+        #     try:
+        #         subprocess.run(["python3", "./db/db_config.py", "reset"], check=True)
+        #         subprocess.run(["python3", "./platforms/mac/machine_config.py", "--add"], check=True)
+        #         subprocess.run(["python3", "./storage/recorders/local/mac/recorder.py", "--arangoimport"], check=True)
+        #     except subprocess.CalledProcessError as e:
+        #         raise e
 
         self.db_config.collections = IndalekoCollections()
         self.query_extractor = QueryExtractor()

@@ -352,7 +352,6 @@ def main():
         config = json.load(file)
     data_generator = Dataset_Generator(config)
     result = data_generator.generate_metadata_dataset(selected_md_attributes)
-    ic(result.all_records_md)
 
 if __name__ == '__main__':
     main()
