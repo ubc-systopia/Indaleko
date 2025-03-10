@@ -107,7 +107,8 @@ class MusicActivityData(ActivityMetadata):
         )
         playback_position_ms = random.randint(0, track_duration_ms)
         source = random.choice(self.MUSIC_SOURCES)
-        is_currently_playing = random.choice([True, False])
+        bool_values = [True, False]
+        is_playing = random.choice(bool_values)
 
         if "ambient_music" in self.selected_md:
             music_dict = self.selected_md["ambient_music"]
@@ -118,7 +119,7 @@ class MusicActivityData(ActivityMetadata):
                 track_name = music_dict.get("track_name", track_name)
                 artist_name = music_dict.get("artist_name", artist_name)
                 album_name = music_dict.get("album_name", album_name)
-
+                is_playing = music_dict.get("is_playing", is_playing)
                 track_duration_ms = music_dict.get("track_duration_ms", track_duration_ms)
                 playback_position_ms = music_dict.get("playback_position_ms", playback_position_ms)
 
@@ -126,10 +127,7 @@ class MusicActivityData(ActivityMetadata):
                     playback_position_ms = random.randint(0, track_duration_ms)
                 elif "playback_position_ms" in music_dict and "track_duration_ms" not in music_dict:
                     track_duration_ms = random.randint(playback_position_ms, MusicActivityData.TRACK_MAX_DURATION)
-
-                is_currently_playing = self._choose_random_element(
-                    is_truth_file, music_dict.get("is_currently_playing", [True, False]), [True, False]
-                )
+                
 
         # generate semantic attributes
         semantic_attributes = [
@@ -149,7 +147,7 @@ class MusicActivityData(ActivityMetadata):
             track_name=track_name,
             artist_name=artist_name,
             album_name=album_name,
-            is_playing=is_currently_playing,
+            is_playing=is_playing,
             playback_position_ms=playback_position_ms,
             track_duration_ms=track_duration_ms,
         )

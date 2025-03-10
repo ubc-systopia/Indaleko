@@ -287,65 +287,66 @@ class Dataset_Generator():
     
 
 def main():
-    selected_md_attributes = {
-    "Posix": {
-        "file.name": {
-            "pattern": "essay",
-            "command": "exactly",
-            "extension": [
-                ".pdf"
-            ]
-        },
-        "file.size": {
-            "target_min": 200000000,
-            "target_max": 200000009,
-            "command": "range"
-        },
-        "file.directory": {
-            "location": "local",
-            "local_dir_name": "papers"
-        }
-    },
-    "Semantic": {
-        "Content_1": [
-            "Title",
-            "CPSC 300 Essay"
-        ],
-        "Content_2": [
-            "Subheadline",
-            "Into"
-        ]
-    },
-    "Activity": {
-        "geo_location": {
-            "location": "Langley, BC",
-            "command": "at",
-            "timestamp": "birthtime"
-        },
-        "ecobee_temp": {
-            "temperature": {
-                "start": 15.0,
-                "end": 15.0,
-                "command": "equal",
-            },
-            "humidity": {"start":10, "end":12,"command":"range"},
-            "target_temp":{"start":10, "end":10,"command":"equal"},
-            "Hvac_mode": "on",
-            "Hvac_state":"",
-            "timestamp": "birthtime"
-        },
-        "ambient_music": {
-            "track_name": "Happy",
-            "artist_name": "Will",
-            "playback_position_ms": 2000,
-            "track_duration_ms": 30000,
-            "is_currently_playing": True,
-            "album_name":"H",
-            "source":"youtube music",
-            "timestamp": "birthtime"
-        }
-    }
-}
+    selected_md_attributes = {"Posix": {"file.name": {"extension": [".pdf", ".doc", ".docx", ".txt", ".rtf"]}}, "Semantic": {}, "Activity": {"ambient_music": {"album_name": "Hamilton", "source": "spotify", "timestamp": "birthtime"}}}
+#     {
+#     "Posix": {
+#         "file.name": {
+#             "pattern": "essay",
+#             "command": "exactly",
+#             "extension": [
+#                 ".pdf"
+#             ]
+#         },
+#         "file.size": {
+#             "target_min": 200000000,
+#             "target_max": 200000009,
+#             "command": "range"
+#         },
+#         "file.directory": {
+#             "location": "local",
+#             "local_dir_name": "papers"
+#         }
+#     },
+#     "Semantic": {
+#         "Content_1": [
+#             "Title",
+#             "CPSC 300 Essay"
+#         ],
+#         "Content_2": [
+#             "Subheadline",
+#             "Into"
+#         ]
+#     },
+#     "Activity": {
+#         "geo_location": {
+#             "location": "Langley, BC",
+#             "command": "at",
+#             "timestamp": "birthtime"
+#         },
+#         "ecobee_temp": {
+#             "temperature": {
+#                 "start": 15.0,
+#                 "end": 15.0,
+#                 "command": "equal",
+#             },
+#             "humidity": {"start":10, "end":12,"command":"range"},
+#             "target_temp":{"start":10, "end":10,"command":"equal"},
+#             "Hvac_mode": "on",
+#             "Hvac_state":"",
+#             "timestamp": "birthtime"
+#         },
+#         "ambient_music": {
+#             "track_name": "Happy",
+#             "artist_name": "Will",
+#             "playback_position_ms": 2000,
+#             "track_duration_ms": 30000,
+#             "is_currently_playing": True,
+#             "album_name":"H",
+#             "source":"youtube music",
+#             "timestamp": "birthtime"
+#         }
+#     }
+# }
 
     config_path = "data_generator/config/dg_config.json"
     with open(config_path, 'r') as file:

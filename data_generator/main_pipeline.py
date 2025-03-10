@@ -173,7 +173,7 @@ class Validator():
         self.add_result_to_dict("db_number", original_data_number)
        
         # GENERATE DICTIONARY FOR GENERATOR:   
-        intial_selection = click.prompt("Create new dictionary (1) or use existing (0)", type=int)
+        intial_selection = click.prompt("Type (1) to create a new dictionary or (0) to use existing", type=int)
         if intial_selection == 1:
             selected_md_attributes = self.generate_dictionary(query)
 
@@ -200,7 +200,7 @@ class Validator():
         aql_text = "AQL_query.aql"
         self.query_translator = AQLQueryConverter(self.db_schema, self.collections_md)
 
-        translate_query = click.prompt("Ready for AQL generation, please (1) to generate a new AQL or (0) to use existing", type=int)
+        translate_query = click.prompt("Ready for AQL generation. Type (1) to generate a new AQL or (0) to use existing.", type=int)
         if translate_query == 0:
             aql = self.read_aql(self.config_path + aql_text)
             
