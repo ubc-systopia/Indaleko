@@ -216,7 +216,7 @@
             "WindowsFileAttributes": "FILE_ATTRIBUTE_ARCHIVE"
     },
     
-    "Semantics": {
+    "SemanticData": {
     "Record" : {
         "SourceIdentifier" : {
             "Identifier" : "uuid for the semantics",

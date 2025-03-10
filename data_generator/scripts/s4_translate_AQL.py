@@ -162,7 +162,7 @@ class AQLQueryConverter(TranslatorBase):
         'timestamp': 'birthtime'}}} should produce the query:
         - FILTER TO_NUMBER(object.Record.Attributes.st_birthtime) == 1736064000.0 AND FILTER TO_NUMBER(activity.Timestamp) == 1736064000.0
 
-        To match coordinates, find SemanticAttributes with an Identifier.Label of "Longitude" 
+        For only the geo_location, to match coordinates, find SemanticAttributes with an Identifier.Label of "Longitude" 
         and ensure the Data matches the given longitude, and similarly for latitude.
 
         For geo_location with the "within" command, check if the coordinates are within 
@@ -196,7 +196,8 @@ class AQLQueryConverter(TranslatorBase):
         - record.Record.Attributes.Name LIKE 'photo%'
 
         For semantic attributes, access the attributes in object.SemanticAttributes, 
-        where attr.Identifier is the key of the dictionary (e.g., "Content_1", "Content_2") 
+        where attr.Identifier is the key of the dictionary (e.g., "Content_1", "Content_2",
+        there is no need to access attr.Identifier.Label) 
         and attr.Data is the value.
 
         For {BUTTON_TAGS}, the associated data can only be true (as a boolean value). 
@@ -228,7 +229,8 @@ class AQLQueryConverter(TranslatorBase):
 
         The query should include only the AQL code in a single line, with no additional explanations 
         or comments. Return the code in a single block wrapped with "json```" at the start and 
-        '```' at the end and add \n for better readability where appropriate within the code.
+        '```' at the end. You must add \n for better readability where appropriate within the code i.e.
+        insert newlines between LET statements, FILTER conditions, and the RETURN statement.
         """ +  "\n Number of truth attributes: " + str(n_truth) \
             + "\n Schema: " + str(self.dynamic_db_schema)
 
@@ -363,9 +365,9 @@ class AQLQueryConverter(TranslatorBase):
         should produce:
         - record.Record.Attributes.Name LIKE 'photo%'
 
-        For semantic attributes, access the attributes in object.SemanticAttributes, 
-        where attr.Identifier is the key of the dictionary (e.g., "Content_1", "Content_2") 
-        and attr.Data is the value.
+        For semantic attributes, access the attributes in semantic.SemanticAttributes, 
+        where attr.Identifier is the key of 
+        the dictionary (e.g., "Content_1", "Content_2") and attr.Data is the value.
 
         For {BUTTON_TAGS}, the associated data can only be true (as a boolean value). 
         Use LIKE '%data%' for semantic attributes such as {LONG_TAG}, {LIST_TAGS}, 

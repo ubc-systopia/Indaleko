@@ -62,13 +62,13 @@ class Validator():
         self.db_config = IndalekoDBConfig()
         self.db_config.setup_database(self.db_config.config['database']['database'])
 
-        # if not args.no_reset:
-        #     try:
-        #         subprocess.run(["python3", "./db/db_config.py", "reset"], check=True)
-        #         subprocess.run(["python3", "./platforms/mac/machine_config.py", "--add"], check=True)
-        #         subprocess.run(["python3", "./storage/recorders/local/mac/recorder.py", "--arangoimport"], check=True)
-        #     except subprocess.CalledProcessError as e:
-        #         raise e
+        if not args.no_reset:
+            try:
+                subprocess.run(["python3", "./db/db_config.py", "reset"], check=True)
+                subprocess.run(["python3", "./platforms/mac/machine_config.py", "--add"], check=True)
+                subprocess.run(["python3", "./storage/recorders/local/mac/recorder.py", "--arangoimport"], check=True)
+            except subprocess.CalledProcessError as e:
+                raise e
 
         self.db_config.collections = IndalekoCollections()
         self.query_extractor = QueryExtractor()
@@ -381,7 +381,6 @@ class Validator():
                                                                     expected_truth_number = self.expected_truth_number)
         results: Results = calculation_result
         self.add_result_to_dict("results", results)
-        # self.add_result_to_dict("uuid_returned", results.returned_uuid)
         self.logger.log_process("precision and recall calculated")
         self.logger.log_process_result("calculated precision and recall", calculation_time, f"precision: {results.precision}, recall: {results.recall}")
     
