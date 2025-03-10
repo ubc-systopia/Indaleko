@@ -74,8 +74,8 @@ class QueryExtractor():
         {
             "Posix": {
                 "file.name": {
-                    "pattern": "str (word contained in file name)",
-                    "command": ("starts", "ends", "contains", "exactly"),
+                    "pattern": str (word contained in file name),
+                    "command": one of ["starts", "ends", "contains", "exactly"] (must be populated if pattern exists),
                     "extension": [
                         ".pdf", ".doc", ".docx", ".txt", ".rtf", ".xls", ".xlsx", ".csv",
                         ".ppt", ".pptx", ".jpg", ".jpeg", ".png", ".gif", ".tif", ".mov", 

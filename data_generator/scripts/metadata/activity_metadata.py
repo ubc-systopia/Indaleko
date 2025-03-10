@@ -40,5 +40,6 @@ class ActivityMetadata(Metadata):
         if is_truth_file:
             return truth_attribute
         else:
-            attribute_lists.remove(truth_attribute)
+            attributes = attribute_lists.copy()
+            attributes.remove(truth_attribute)
             return random.choice(attribute_lists)

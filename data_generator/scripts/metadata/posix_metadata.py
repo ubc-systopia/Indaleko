@@ -178,17 +178,18 @@ class PosixMetadata(Metadata):
         Args: is_truth_file (bool): the type of file it is
              self.selected_md{file.name: {"pattern":str, "command":str, "extension":str}}
             commands include: "starts", "ends", "contains"
-        Return (str): returns the file name 
+        Return (str): returns the file name with extension attached
         """
         command, pattern = "", ""
         true_extension = None
         n_filler_letters = random.randint(1, 10)
         file_extension = self.ALL_EXTENSIONS.copy()
+        default_command = "exactly"
         #if the file name is part of the query, extract the appropriate attributes and generate title
         if "file.name" in self.selected_md :
             if "pattern" in self.selected_md ["file.name"]:
                 pattern = self.selected_md ["file.name"]["pattern"]
-                command = self.selected_md ["file.name"]["command"]
+                command = self.selected_md["file.name"].get("command", default_command)
                 avail_text_file_extension = Metadata.TEXT_FILE_EXTENSIONS
 
             if "extension" in self.selected_md ["file.name"]:
@@ -541,21 +542,21 @@ class PosixMetadata(Metadata):
                 if is_truth_file:
                     return random.choice(target_min)
                 else:
-                    return self._check_return_value_within_range(target_min[0], target_min[-1], random.randint, 1)
+                    return self._check_return_value_within_range(self.default_lower_filesize, self.default_upper_filesize, target_min[0], target_min[-1], random.randint, 1)
 
             # if the target_min/max is not a list but is the same as the target_max then just choose that file size
             elif target_min == target_max and command == "equal":
                 if is_truth_file:
                     return target_min
                 else:
-                    return self._check_return_value_within_range(target_min, target_min, random.randint, 1)
+                    return self._check_return_value_within_range(self.default_lower_filesize, self.default_upper_filesize, target_min, target_min, random.randint, 1)
 
             #if command specifies getting the range between two values
             elif target_min != target_max and command == "range":
                 if is_truth_file:
                     return random.randint(target_min, target_max)
                 else:
-                    return self._check_return_value_within_range(target_min, target_max,  random.randint, 1)
+                    return self._check_return_value_within_range(self.default_lower_filesize, self.default_upper_filesize, target_min, target_max,  random.randint, 1)
 
             # if command specifies a file greater than a certain size
             elif isinstance(target_max, int) and "greater" in command:
