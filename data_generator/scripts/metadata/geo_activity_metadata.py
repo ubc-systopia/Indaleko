@@ -171,11 +171,17 @@ class GeoActivityData(ActivityMetadata):
         """
         if (isinstance(geo_location, str)):
             geo_py = Nominatim(user_agent="Geo Location Metadata Generator")
-            location = geo_py.geocode(geo_location, timeout=1000)
-
-            latitude = location.latitude
-            longitude = location.longitude
-            altitude = location.altitude
+            try:
+                location = geo_py.geocode(geo_location, timeout=10)
+                if location is None:
+                    raise ValueError(f"no location found for {geo_location}")
+                latitude = location.latitude
+                longitude = location.longitude
+                altitude = location.altitude
+                
+            except Exception as e:
+                print(f"Geocoding error: {e}")
+                return None
 
             # save a list of longitude and latitude values if command is within
             if geo_command == 'within':

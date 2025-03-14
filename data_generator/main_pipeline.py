@@ -202,10 +202,12 @@ class Validator():
 
         translate_query = click.prompt("Ready for AQL generation. Type (1) to generate a new AQL or (0) to use existing.", type=int)
         if translate_query == 0:
-            aql = self.read_aql(self.config_path + aql_text)
-            
+            aql = self.read_aql(self.config_path + aql_text)  
         elif translate_query == 1:
             aql = self.generate_query(translated_query)
+        else:
+            print("Invalid input. Exiting.")
+            sys.exit()
         
         self.write_as_json(self.config_path, query_info, translated_query)
         self.write_as_aql(self.config_path, aql_text, aql)
@@ -265,12 +267,21 @@ class Validator():
         json_name = "dictionary.json"
         self.logger.log_process("building dictionary...")
         self.nl_parser = NLParser(self.llm_connector, self.collections_md)
+
+        # get relevant NER data for geolocation:
         ner_metadata = self.nl_parser._extract_entities(query)
         entities = self.cli.map_entities(ner_metadata)
-
-        selected_md_attributes = self.query_extractor.extract(query = query, named_entities = entities, llm_connector = self.llm_connector)
-        self.logger.log_process_result("selected_md_attributes", selected_md_attributes)
+        dictionary_generation_time, selected_md_attributes = self.time_operation(
+            self.query_extractor.extract, 
+            query = query, 
+            named_entities = entities, 
+            llm_connector = self.llm_connector
+        )
+        self.logger.log_process_result("translated_query", dictionary_generation_time, selected_md_attributes)
+        # selected_md_attributes = self.query_extractor.extract(query = query, named_entities = entities, llm_connector = self.llm_connector)
+        # self.logger.log_process_result("selected_md_attributes", selected_md_attributes)
         self.write_as_json(self.config_path, json_name, selected_md_attributes)
+
         dictionary_selection = click.prompt("Dictionary ready for evaluation, please type 1 to continue, otherwise type 0 to exit", type=int)
         if dictionary_selection != 1:
             sys.exit()

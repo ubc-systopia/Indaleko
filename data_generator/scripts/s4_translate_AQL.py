@@ -147,20 +147,19 @@ class AQLQueryConverter(TranslatorBase):
 
         Do not include path filters in the query unless explicitly specified in selected_md_attributes.
 
-        When comparing timestamps, ensure that timestamps with a prefix of "st_" are converted 
-        to numbers (use TO_NUMBER).
-
         The timestamp in Objects correspond to the time  within Record.Attributes.st_birthtime, st_mtime, etc.
 
-        But for timestamps in geo_location, ambient_music, and ecobee_temp, Semantics corresponds to the time 
-        the activity context was collected. The timestamp in Posix corresponds to when the file 
-        was modified, changed, accessed, or created. You don't have to convert timestamps; just 
-        use the Posix timestamp as-is. For example:
+        The timestamp in Posix corresponds to when the file was modified, changed, accessed, or created. 
+        You don't have to convert timestamps; just use the Posix timestamp as-is. 
+        So when comparing timestamps, ensure that timestamps with a prefix of "st_" are converted 
+        to numbers first (use TO_NUMBER).
+        Example:
         - {'Posix': {'timestamps': {'birthtime': {'starttime': 1736064000.0, 
             'endtime': 1736064000.0, 'command': 'equal'}}}, 
         - Activity': {geo_location: {'location': 'Victoria', 'command': 'at', 
         'timestamp': 'birthtime'}}} should produce the query:
-        - FILTER TO_NUMBER(object.Record.Attributes.st_birthtime) == 1736064000.0 AND FILTER TO_NUMBER(activity.Timestamp) == 1736064000.0
+        - FILTER TO_NUMBER(object.Record.Attributes.st_birthtime) == 1736064000.0 AND 
+            FILTER TO_NUMBER(activity.Timestamp) == 1736064000.0
 
         For only the geo_location, to match coordinates, find SemanticAttributes with an Identifier.Label of "Longitude" 
         and ensure the Data matches the given longitude, and similarly for latitude.
@@ -177,7 +176,7 @@ class AQLQueryConverter(TranslatorBase):
         FILTER latitude >= 49.000 AND latitude <= 49.2608724 \n
         RETURN record
 
-        Always check the extension if specified in file.name.
+        Always check the type of the extension specified in the file.name using LIKE.
         If there are multiple truth attributes in the dictionary and the file name command 
         is 'exactly' with a local directory specified, make sure to add `%` to the command 
         for files with duplicate names in the same directory:
@@ -195,9 +194,9 @@ class AQLQueryConverter(TranslatorBase):
         should produce:
         - record.Record.Attributes.Name LIKE 'photo%'
 
-        For semantic attributes, access the attributes in object.SemanticAttributes, 
-        where attr.Identifier is the key of the dictionary (e.g., "Content_1", "Content_2",
-        there is no need to access attr.Identifier.Label) 
+        For semantic attributes, access the attributes in sem.SemanticAttributes within the 
+        SemanticData collection, where attr.Identifier is the key of the dictionary 
+        (e.g., "Content_1", "Content_2", there is no need to access attr.Identifier.Label) 
         and attr.Data is the value.
 
         For {BUTTON_TAGS}, the associated data can only be true (as a boolean value). 
@@ -210,17 +209,17 @@ class AQLQueryConverter(TranslatorBase):
         For example:
         - "Semantic": {"Content_1": ["PageNumber", 20], "Content_2": ["Subtitle", "jogging"]}
         should produce:
-        - FOR object IN SemanticData \n
-            LET text1Attr = FIRST(FOR attr IN object.SemanticAttributes \n
+        - FOR sem IN SemanticData \n
+            LET text1Attr = FIRST(FOR attr IN sem.SemanticAttributes \n
             FILTER attr.Identifier == 'PageNumber' AND TO_NUMBER(attr.Data) == 20 
             RETURN 1) \n
-            LET type2Attr = FIRST(FOR attr IN object.SemanticAttributes \n
+            LET type2Attr = FIRST(FOR attr IN sem.SemanticAttributes \n
             FILTER attr.Identifier == 'Paragraph' AND (attr.Data LIKE '%jogging%' OR \n
             attr.Data LIKE '%Jogging%') RETURN 1) \n
             FILTER text1Attr != NULL AND type2Attr != NULL \n
-            RETURN object
+            RETURN sem
 
-        Return only one of the whole object (tempActivity, object, geoActivity, musicActivity). 
+        Return just one of (tempActivity, object, geoActivity, musicActivity). 
         Do not return the same object multiple times.
 
         Incorporate all attributes from the given dictionary into the AQL statement. Escape any 
@@ -322,20 +321,11 @@ class AQLQueryConverter(TranslatorBase):
 
         Do not include path filters in the query unless explicitly specified in selected_md_attributes. 
 
-        The timestamp in geo_location, ambient_music, and ecobee_temp corresponds to the time 
-        the activity context was collected. The timestamp in Posix corresponds to when the file 
-        was modified, changed, accessed, or created. You don't have to convert timestamps; just 
-        use the Posix timestamp as-is. For example:
-        - {'Posix': {'timestamps': {'birthtime': {'starttime': 1736064000.0, 
-            'endtime': 1736064000.0, 'command': 'equal'}}}, 
-        - Activity': {geo_location: {'location': 'Victoria', 'command': 'at', 
-        'timestamp': 'birthtime'}}} should produce the query:
-        - FILTER TO_NUMBER(activity.Timestamp) == 1736064000.0
-
         To match coordinates, find SemanticAttributes with an Identifier.Label of "Longitude" 
         and ensure the Data matches the given longitude, and similarly for latitude.
 
-        For geo_location with the "within" command, check if the coordinates are within 
+        For geo_location with the "at" command, just use == to check longitude and latitude.
+        With the "within" command, check if the coordinates are within 
         the specified distance in "km" relative to the given longitude and latitude. Example query:
         - FOR record IN `ActivityProviderData_da...` 
         LET longitude = FIRST(FOR attr IN object.SemanticAttributes 
@@ -400,7 +390,9 @@ class AQLQueryConverter(TranslatorBase):
         use: FILTER object.Record.Attributes.Name LIKE '%1990\'s news%.pdf').
 
         The query should include only the AQL code in a single line, with no additional explanations 
-        or comments. Return the code in a single block wrapped with "json```" at the start and 
+        or comments. Return only a single object found e.g., RETURN object it shouldn't be something like
+        RETURN {object, tempActivity}. 
+        Return the code in a single block wrapped with "json```" at the start and 
         '```' at the end and add \n for newlines.
         """ +  "\n Number of truth attributes: " + str(n_truth) \
             + "\n Schema: " + str(self.db_schema)

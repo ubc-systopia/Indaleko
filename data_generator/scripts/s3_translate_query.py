@@ -140,7 +140,7 @@ class QueryExtractor():
                     "artist_name": str,
                     "playback_position_ms": int (ms [0, track_duration_ms]),
                     "track_duration_ms": int (in milliseconds bound by [10000, 300000]),
-                    "is_currently_playing": bool,
+                    "is_playing": bool,
                     "source": str (one of 'spotify', 'youtube music', 'apple music';
                                     'spotify' can specify device_type),
                     "device_type": str only populated when source is 'spotify' (device the music was streamed) 
@@ -225,6 +225,9 @@ class QueryExtractor():
         If any type of timestamp from modified, changed, and accessed specify a 
         starttime / endtime pair not within the birthtime, raise an error.
 
+        The 'geo_location' is for any geographical location key word. Convert 
+        any of these keyword to format "City, Country or Province/State" 
+        and put as a value of geographical activity's location key.
         If there is a query that uses keywords for location e.g., home, work, 
         someone's place, then replace that keyword with a reasonable location 
         within BC if not in the {named_entities} e.g., file I created at home -> 
@@ -239,8 +242,9 @@ class QueryExtractor():
         was collected at that location, so there should be a timestamp for any geo_location 
         populated. This goes for the ecobee_temp and ambient_music. For example, what is 
         the photo I took yesterday when I was in Vancouver?: "Activity": {"geo_location": 
-        {"location": "Vancouver", "command": "at", "timestamp": "birthtime"}}. Return 
-        this dictionary as a JSON object inside `LLMTranslateQueryResponse.message.content`, 
+        {"location": "Vancouver, BC", "command": "at", "timestamp": "birthtime"}}. 
+        
+        Return this dictionary as a JSON object inside `LLMTranslateQueryResponse.message.content`, 
         using the format: 
         ```json 
         {"Posix": {}, "Semantic": {}, "Activity": {}}

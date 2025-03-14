@@ -30,6 +30,7 @@ class ResultCalculator():
         selected_uuid = []
 
         for result in raw_results:
+            print(result)
             uuid = result['result']['Record']['SourceIdentifier']['Identifier']
             selected_uuid.append(uuid)
             

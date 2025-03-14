@@ -95,6 +95,7 @@ class ResultLogger:
         Logs summary of results including:
             - the query
             - total epoch
+            - total number of files in th DB before and after generation
             - number of truth files queried
             - total number of metadata queried
             - total files returned by Indaleko
@@ -102,7 +103,7 @@ class ResultLogger:
 
         Args: 
             config(dict) : 
-                total epoch (str) : the total epoch taken for the entire validation process
+                total epoch (str) : the total epoch taken for the entire user interaction
                 results (dict) : a dictionary consisting of all requires elements to create the summary
         '''
         self.result_logger.info("SUMMARY OF RESULT:")

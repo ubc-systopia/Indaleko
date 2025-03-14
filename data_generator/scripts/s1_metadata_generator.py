@@ -287,72 +287,94 @@ class Dataset_Generator():
     
 
 def main():
-    selected_md_attributes = {"Posix": {"file.name": {"extension": [".pdf", ".doc", ".docx", ".txt", ".rtf"]}}, "Semantic": {}, "Activity": {"ambient_music": {"album_name": "Hamilton", "source": "spotify", "timestamp": "birthtime"}}}
-#     {
-#     "Posix": {
-#         "file.name": {
-#             "pattern": "essay",
-#             "command": "exactly",
-#             "extension": [
-#                 ".pdf"
-#             ]
-#         },
-#         "file.size": {
-#             "target_min": 200000000,
-#             "target_max": 200000009,
-#             "command": "range"
-#         },
-#         "file.directory": {
-#             "location": "local",
-#             "local_dir_name": "papers"
-#         }
-#     },
-#     "Semantic": {
-#         "Content_1": [
-#             "Title",
-#             "CPSC 300 Essay"
-#         ],
-#         "Content_2": [
-#             "Subheadline",
-#             "Into"
-#         ]
-#     },
-#     "Activity": {
-#         "geo_location": {
-#             "location": "Langley, BC",
-#             "command": "at",
-#             "timestamp": "birthtime"
-#         },
-#         "ecobee_temp": {
-#             "temperature": {
-#                 "start": 15.0,
-#                 "end": 15.0,
-#                 "command": "equal",
-#             },
-#             "humidity": {"start":10, "end":12,"command":"range"},
-#             "target_temp":{"start":10, "end":10,"command":"equal"},
-#             "Hvac_mode": "on",
-#             "Hvac_state":"",
-#             "timestamp": "birthtime"
-#         },
-#         "ambient_music": {
-#             "track_name": "Happy",
-#             "artist_name": "Will",
-#             "playback_position_ms": 2000,
-#             "track_duration_ms": 30000,
-#             "is_currently_playing": True,
-#             "album_name":"H",
-#             "source":"youtube music",
-#             "timestamp": "birthtime"
-#         }
-#     }
-# }
+    selected_md_attributes = {
+    "Posix": {
+        "file.name": {
+            "pattern": "essay",
+            "command": "exactly",
+            "extension": [
+                ".pdf"
+            ]
+        },
+        "file.size": {
+            "target_min": 200000000,
+            "target_max": 200000009,
+            "command": "range"
+        },
+        "file.directory": {
+            "location": "local",
+            "local_dir_name": "papers"
+        }
+    },"Semantic": {
+        "Content_1": [
+            "Title",
+            "CPSC 300 Essay"
+        ],
+        "Content_2": [
+            "Link",
+            "Intro"
+        ], 
+        "Content_3": [
+            "EmailAddress",
+            "j@gmail.com"
+        ],
+        "Content_4": [
+            "Form",
+            "apple: pie"
+        ], "Content_5": [
+            "PageNumber",
+            5
+        ], "Content_6": [
+            "Checked",
+            True
+        ], "Content_7": [
+            "Image",
+            "duck.png"
+        ], "Content_8": [
+            "Text",
+            "I went to the mall yesterday to buy a ......"
+        ], "Content_9": [
+            "Address",
+            "Vancouver, BC"
+        ]
+        },
+    "Activity": {
+        "geo_location": {
+            "location": "Langley, BC",
+            "command": "at"
+        },
+        "ecobee_temp": {
+            "temperature": {
+                "start": 15.0,
+                "end": 15.0,
+                "command": "equal",
+            },
+            "humidity": {"start":10, "end":12,"command":"range"},
+            "target_temp":{"start":10, "end":10,"command":"equal"},
+            "hvac_mode": "heat",
+            "hvac_state":"heating",
+            "fan_mode": "auto",
+            "timestamp": "birthtime"
+        },
+        "ambient_music": {
+            "track_name": "Happy",
+            "artist_name": "Will",
+            "playback_position_ms": 2000,
+            "track_duration_ms": 30000,
+            "is_playing": True,
+            "album_name":"H",
+            "source":"youtube music",
+            "timestamp": "birthtime"
+        }
+    }
+}
 
     config_path = "data_generator/config/dg_config.json"
     with open(config_path, 'r') as file:
         config = json.load(file)
     data_generator = Dataset_Generator(config)
     result = data_generator.generate_metadata_dataset(selected_md_attributes)
+    ic(result.all_semantics_md)
 
 if __name__ == '__main__':
     main()
