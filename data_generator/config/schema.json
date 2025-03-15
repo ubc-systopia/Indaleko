@@ -232,9 +232,7 @@
     ],
     "SemanticAttributes": [
         {
-            "Identifier": {
-                "Identifier": "label"
-            },
+            "Identifier": "label",
             "Data": "the semantic data"
         }
     ]

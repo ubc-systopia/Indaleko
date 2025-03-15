@@ -21,10 +21,24 @@ If not already installed, install:
   ```sh
   python Indaleko/data_generator/main_pipeline.py
   ```
-* You can add `--no_reset` to skip resetting before running the pipeline.
+* You can add `--no_reset` to skip resetting the DB before running the pipeline i.e., keeps data from the previous run (used mostly for debugging or testing).
+
+### Running a Query for the First Time:
+1. Change any parameters within `/config/dg_config.json`.
+2. Type 1 to generate new dictionary when prompted. Check dictionary and type 1 for data generation.
+3. Type 1 to generate new AQL when prompted. Check AQL with reference to `/config/query_info.json` and type 1 when ready.
+4. View progress using `/results/validator_progress.log` and the final results in `/results/validator_result.log`.
+5. To see all the data generated, refer to `/results/stored_metadata/` or `/results/Indaleko_search_result.json` for the queried objects.
+
+### Running a Query with Different Selectivity:
+1. Change only the 'n_matching_queries' parameter in `/config/dg_config.json`.
+2. Type 0 to generate dataset from previous dictionary made.
+3. Type 0 to use previous AQL. Update any activity collection names using the `/config/query_info.json file`.
+4. Type 1 to submit query when ready.
+4. View progress using `/results/validator_progress.log` and the final results in `/results/validator_result.log`.
+5. To see all the data generated, refer to `/results/stored_metadata/` or `/results/Indaleko_search_result.json` for the queried objects.
 
 ## Script Locations
-
 - **Indaleko/data_generator/s1_metadata_generator.py**  
   Creates the metadata with the given config file.
 - **Indaleko/data_generator/s2_store_metadata.py**  
