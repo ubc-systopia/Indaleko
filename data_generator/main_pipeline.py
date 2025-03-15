@@ -6,7 +6,6 @@ Required files:
 import os, shutil, sys
 import configparser
 import json 
-from icecream import ic
 from datetime import datetime, timezone
 import argparse
 import copy
@@ -45,8 +44,8 @@ class Validator():
     def __init__(self, args) -> None:
         self.file_path = "./data_generator/results/"
         self.stored_file_path = self.file_path + "stored_metadata/"
-        self.config_path =  './data_generator/config/'
-        api_path = './config/openai-key.ini'
+        self.config_path = './data_generator/config/'
+        api_path = Path('./config/openai-key.ini')
 
         path = Path(self.file_path)
         if path.exists():
@@ -77,6 +76,7 @@ class Validator():
         self.result_calculator = ResultCalculator()
 
         self.openai_key = self.get_api_key(api_path)
+        
         self.llm_connector = OpenAIConnector(api_key=self.openai_key)
         self.query_executor = AQLExecutor()
         # self.insert_ner_metadata_test()

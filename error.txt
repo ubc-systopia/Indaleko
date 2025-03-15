@@ -1,0 +1,9 @@
+DB Reset: stopping container arango-indaleko-20241025125604
+DB Reset: deleting container arango-indaleko-20241025125604
+DB Reset: deleting volume indaleko-db-1-20241025125604
+Setting up new database configuration
+Initialize Docker ArangoDB
+Create container arango-indaleko-20241025125604 with volume indaleko-db-1-20241025125604
+Created container arango-indaleko-20241025125604 with volume indaleko-db-1-20241025125604
+Start container arango-indaleko-20241025125604
+Connect to database

@@ -1,0 +1,9 @@
+FOR object IN Objects
+LET sem = FIRST(FOR sem IN SemanticData FILTER sem.Record.SourceIdentifier.Identifier == object.Record.SourceIdentifier.Identifier
+LET titleAttr = FIRST(FOR attr IN sem.SemanticAttributes FILTER attr.Identifier == 'Title' AND (attr.Data LIKE '%Economics Essay%' OR attr.Data LIKE '%economics essay%') RETURN 1)
+FILTER titleAttr != NULL RETURN sem)
+LET musicActivity = FIRST(FOR musicActivity IN `ActivityProviderData_d6d89318-6ff2-4291-bc7d-59b06a320a7d` FILTER musicActivity.Record.SourceIdentifier.Identifier == object.Record.SourceIdentifier.Identifier
+FILTER musicActivity.artist_name == 'Mozart' AND musicActivity.is_playing == true AND musicActivity.source == 'spotify' RETURN musicActivity)
+FILTER TO_NUMBER(object.Record.Attributes.st_size) > 20000000
+FILTER sem != NULL AND musicActivity != NULL
+RETURN object

@@ -132,7 +132,7 @@ class IndalekoCollectionIndex:
         ic(kwargs)
         assert kwargs.get('type') is not None, 'type is a required parameter'
         assert kwargs.get('fields') is not None, 'fields is a required parameter'
-        self.index = self.collection.add_index(data=kwargs, formatter=False)
+        self.index = self.collection._add_index(data=kwargs)
         ic(f'Created index for collection {self.collection}: {self.index}')
 
 

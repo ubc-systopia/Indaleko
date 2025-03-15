@@ -311,14 +311,17 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 ic(f"NER mapping: Multiple entities found for: {entity.name}")
                 raise NotImplementedError("Multiple entities found, not handled yet")
             doc = docs[0]
+            ic(docs)
+            ic(doc)
+
             mapped_entities.append(
                 IndalekoNamedEntityDataModel(
                     name=entity.name,
-                    uuid=doc.uuid,
-                    category=doc.category,
-                    description=doc.description,
-                    gis_location=doc.gis_location,
-                    device_id=doc.device_id,
+                    uuid=doc["uuid"],
+                    category=doc["category"],
+                    description=doc["description"],
+                    gis_location=doc["gis_location"],
+                    device_id=doc["device_id"],
                 )
             )
         return NamedEntityCollection(entities=mapped_entities)

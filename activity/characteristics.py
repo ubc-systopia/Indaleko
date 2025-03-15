@@ -56,8 +56,8 @@ class ActivityDataCharacteristics:
     ACTIVITY_DATA_SOCIAL_INTERACTION = '8c848e18-dd2b-4cc4-901f-7c32036eda4f'
     ACTIVITY_DATA_DEVICE_STATE = '8c7ac170-fe89-4d42-8ae1-de4c3c998917'
     ACTIVITY_DATA_ENVIRONMENTAL = '96b30aa4-635e-45e9-b3f2-1763c59a877a'
+    ACTIVITY_DATA_SPOTIFY = '651b3b00-23f3-45ae-8d0e-79454a61ff3a'
     # available for use beyond this point
-    ACTIVITY_DATA_UNUSED = '651b3b00-23f3-45ae-8d0e-79454a61ff3a'
 
     _characteristic_prefix = 'ACTIVITY_DATA_'
 

@@ -16,6 +16,13 @@ If not already installed, install:
   pip install Faker
   ```
 
+* [click](https://pypi.org/project/click/)
+  ```sh
+  pip install click
+  ```
+
+  
+
 ## Running the Pipeline:
 * Run:
   ```sh

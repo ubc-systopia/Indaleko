@@ -39,6 +39,8 @@ from db.db_collection_metadata import IndalekoDBCollectionsMetadata
 from query.query_processing.data_models.translator_input import TranslatorInput
 from query.query_processing.data_models.translator_response import TranslatorOutput
 from query.query_processing.query_translator.translator_base import TranslatorBase
+from query.query_processing.data_models.parser_data import ParserResults
+
 # from query.llm_base import IndalekoLLMBase
 # pylint: enable=wrong-import-position
 
@@ -243,14 +245,22 @@ class AQLTranslator(TranslatorBase):
             'files': 'Objects',
             'directory': 'Objects',
             'directories': 'Objects',
+            'created': 'Objects',
+            'modified': 'Objects',
+            'accessed': 'Objects',
+            'changed': 'Objects',
+            'size': 'Objects',
+            'name': 'Objects',
+            'path': 'Objects',
+            'about': 'Semantic',
+            'title': 'Semantic',
         }
         return collection_mapping
 
     def _determine_relevant_collections(
             self,
-            parsed_query: dict[str, Any],
-            selected_md_attributes: dict[str, Any],
-    ) -> list[str]:
+            parsed_query: ParserResults,
+    ) -> dict[str, str]:
         """
         Dynamically determine the relevant collections based on the user query.
 
@@ -268,12 +278,15 @@ class AQLTranslator(TranslatorBase):
         collection_mapping = self._generate_collection_mapping()
 
         # Step 2: Extract keywords from user query
-        user_query_text = parsed_query.get("original_query", "").lower().split()
+        user_query_text = parsed_query.OriginalQuery.lower().split()
+        ic(user_query_text)
 
         # Step 3: Identify collections based on static metadata
         for word in user_query_text:
             if word in collection_mapping:
                 relevant_collections.add(collection_mapping[word])
+
+        relevant_collections_dict = {item: item for item in relevant_collections}
 
         # Step 4: Identify if the query requires activity tracking
         needs_activity_data = any(
@@ -284,23 +297,33 @@ class AQLTranslator(TranslatorBase):
                 "created",
                 "deleted",
                 "location",
-                "timestamp"]
+                "timestamp",
+                "at",
+                "in",
+                "from",
+                "temperature",
+                "music"]
             )
-
+        ic(needs_activity_data)
         if needs_activity_data:
             # Step 5: Query `ActivityDataProviders` to find available sources
             activity_providers = self.db_config.db.aql.execute(
-                "FOR provider IN ActivityDataProviders RETURN provider.Name"
+                """
+                FOR provider IN ActivityDataProviders
+                COLLECT description = provider.Description INTO group
+                RETURN { Description: description, Identifiers: group[*].provider.Identifier }
+                """
             )
-            provider_collections = list(activity_providers)
+            provider_collections = {item["Description"]: "ActivityProviderData_"+ item["Identifiers"] for item in activity_providers}
 
             # Step 6: Add available provider collections to the relevant collections list
-            relevant_collections.update(provider_collections)
+            relevant_collections_dict.update(provider_collections)
 
             # Step 7: Ensure ActivityContext is included (acts as an index/cursor)
-            relevant_collections.add("ActivityContext")
+            relevant_collections_dict["ActivityContext"] = "ActivityContext"
+            ic(provider_collections)
 
-        return list(relevant_collections)
+        return relevant_collections
 
     def _create_translation_prompt2(
             self,

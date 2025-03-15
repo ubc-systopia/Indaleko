@@ -1,6 +1,6 @@
 {
     "output_json": "/Indaleko/data/",
-    "n_metadata_records": 10, 
-    "n_matching_queries": 2,
-    "query":"What are all the images I took at New York?"
+    "n_metadata_records": 100, 
+    "n_matching_queries": 100,
+    "query":"I was writing my essay on economics while listening to Mozart and I’ve written over 20MB"
 }
