@@ -5,10 +5,12 @@ from icecream import ic
 import json
 from datetime import datetime
 
-class QueryExtractor():
+
+class QueryExtractor:
     """
     Translator for converting parsed queries to populate the self.selected_md_attributes dictionary.
     """
+
     def __init__(self) -> None:
         """
         Initializes the Query Extractor.
@@ -28,7 +30,7 @@ class QueryExtractor():
         query_result = llm_connector.generate_query(prompt)
         query_statement = query_result.message.content
         assert self.validate_query(query_statement), query_statement
-        json_string = query_statement.strip('```json').strip()
+        json_string = query_statement.strip("```json").strip()
         selected_md_attributes = json.loads(json_string)
         return selected_md_attributes
 
@@ -40,7 +42,7 @@ class QueryExtractor():
         Returns:
             bool: True if the dictionary is valid, False otherwise
         """
-        return '```json' in dictionary and "error" not in dictionary
+        return "```json" in dictionary and "error" not in dictionary
 
     def _get_schema(self) -> str:
         """
@@ -76,7 +78,7 @@ class QueryExtractor():
         """
         Create a prompt for the LLM to generate an  query.
         Args:
-            query: str the query 
+            query: str the query
         Returns:
             str: The prompt for the LLM
         """
@@ -120,10 +122,9 @@ class QueryExtractor():
             If any of the above constraints are broken, return an error message as a string "error:..." specifying the specific error. 
             """
         # adding the current date since LLM has difficulties getting today's date
-        system_prompt = system_prompt.replace("{curr_date}", str(datetime.now())).replace("{selected_md_schema}", selected_md_schema)
+        system_prompt = system_prompt.replace(
+            "{curr_date}", str(datetime.now())
+        ).replace("{selected_md_schema}", selected_md_schema)
 
         user_prompt = query
-        return {
-            'system' : system_prompt,
-            'user' : user_prompt
-        }
+        return {"system": system_prompt, "user": user_prompt}

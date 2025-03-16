@@ -1,4 +1,4 @@
-'''
+"""
 This module defines the base data model for LLM connectors.
 
 Project Indaleko
@@ -16,7 +16,7 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
 
 from abc import ABC, abstractmethod
 import os
@@ -26,15 +26,16 @@ from typing import Any
 # from icecream import ic
 from typing import List
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from query.query_processing.data_models.query_output import LLMTranslateQueryResponse
+
 # pylint: enable=wrong-import-position
 
 
@@ -104,7 +105,9 @@ class IndalekoLLMBase(ABC):
         """
 
     @abstractmethod
-    def answer_question(self, context: str, question: str, schema: dict[str, Any]) -> dict[str, Any]:
+    def answer_question(
+        self, context: str, question: str, schema: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Answer a question based on the given context.
 
@@ -118,12 +121,7 @@ class IndalekoLLMBase(ABC):
         """
 
     @abstractmethod
-    def get_completion(
-            self,
-            context: str,
-            question: str,
-            schema: Any
-    ) -> Any:
+    def get_completion(self, context: str, question: str, schema: Any) -> Any:
         """
         Get a completion based on the given context.
 

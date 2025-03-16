@@ -1,4 +1,4 @@
-'''
+"""
 Init functionality for the ambient condition activity data providers.
 
 Project Indaleko
@@ -16,23 +16,24 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
 
 import os
 import sys
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from activity.collectors.ambient.music.spotify_data_model import SpotifyAmbientData
+
 # pylint: enable=wrong-import-position
 
 # Define what should be available when importing from this package
 __all__ = [
-    'SpotifyAmbientData',
-    ]
+    "SpotifyAmbientData",
+]

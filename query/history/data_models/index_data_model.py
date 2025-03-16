@@ -17,6 +17,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+
 """
 This module defines the data model for the Indaleko data object.
 
@@ -44,11 +45,11 @@ from typing import List, Optional, Dict, Any
 from pydantic import Field, AwareDatetime
 from icecream import ic
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 
@@ -56,51 +57,65 @@ if os.environ.get('INDALEKO_ROOT') is None:
 from data_models.base import IndalekoBaseModel
 from data_models.record import IndalekoRecordDataModel
 from data_models.i_uuid import IndalekoUUIDDataModel
+
 # pylint: enable=wrong-import-position
 
+
 class IndalekoIndexDataModel(IndalekoBaseModel):
-    '''
+    """
     This class defines the data model for the indices and
     relationships to queries and metadata fields.
-    '''
-    IndexId : IndalekoUUIDDataModel = Field(None,
-                                    title='IndexId',
-                                    description='The UUID for the index.')
+    """
 
-    FieldName : str = Field(None,
-                            title='FieldName',
-                            description='The name of the field the index is associated with.')
+    IndexId: IndalekoUUIDDataModel = Field(
+        None, title="IndexId", description="The UUID for the index."
+    )
 
-    IndexType : str = Field(None,
-                            title='IndexType',
-                            description='The type of index (e.g., single, composite, geo, full-text).')
+    FieldName: str = Field(
+        None,
+        title="FieldName",
+        description="The name of the field the index is associated with.",
+    )
 
-    CreationDate : AwareDatetime = Field(None,
-                                         title='CreationDate',
-                                         description='The timestamp of when the index was created.')
+    IndexType: str = Field(
+        None,
+        title="IndexType",
+        description="The type of index (e.g., single, composite, geo, full-text).",
+    )
 
-    LastUsed : Optional[AwareDatetime] = Field(None,
-                                            title='LastUsed',
-                                            description='The timestamp of when the index was last accessed.')
+    CreationDate: AwareDatetime = Field(
+        None,
+        title="CreationDate",
+        description="The timestamp of when the index was created.",
+    )
 
-    UsageCount : int = Field(0,
-                             title='UsageCount',
-                             description='Number of queries that used this index.')
+    LastUsed: Optional[AwareDatetime] = Field(
+        None,
+        title="LastUsed",
+        description="The timestamp of when the index was last accessed.",
+    )
 
-    OverheadCost : Optional[float] = Field(None,
-                                           title='OverheadCost',
-                                           description='Overhead cost of maintaining this index.')
+    UsageCount: int = Field(
+        0, title="UsageCount", description="Number of queries that used this index."
+    )
 
-    ArchivedImpact : Optional[Dict[str, Any]] = Field(default_factory=dict,
-                                                      title='ArchivedImpact',
-                                                      description="Impact on archived queries")
+    OverheadCost: Optional[float] = Field(
+        None,
+        title="OverheadCost",
+        description="Overhead cost of maintaining this index.",
+    )
 
+    ArchivedImpact: Optional[Dict[str, Any]] = Field(
+        default_factory=dict,
+        title="ArchivedImpact",
+        description="Impact on archived queries",
+    )
 
     class Config:
         json_schema_extra = {
             "example": {
-                "Record": IndalekoRecordDataModel.Config.json_schema_extra['example'],
-                "IndexId": IndalekoUUIDDataModel.Config.json_schema_extra['example'],
+                "Record": IndalekoRecordDataModel.Config.json_schema_extra["example"],
+                "IndexId": IndalekoUUIDDataModel.Config.json_schema_extra["example"],
                 "FieldName": "Field1",
                 "IndexType": "Single",
                 "CreationDate": "2024-07-30T23:38:48.319654+00:00",
@@ -108,17 +123,20 @@ class IndalekoIndexDataModel(IndalekoBaseModel):
                 "UsageCount": 0,
                 "OverheadCost": 0.0,
                 "ArchivedImpact": {
-                    "QueryIdentifier": IndalekoUUIDDataModel.Config.json_schema_extra['example'],
+                    "QueryIdentifier": IndalekoUUIDDataModel.Config.json_schema_extra[
+                        "example"
+                    ],
                     "Impact": 0.0,
-                }
+                },
             }
         }
 
 
 def main():
-    '''This allows testing the data model.'''
-    ic('Testing IndalekoObjectDataModel')
+    """This allows testing the data model."""
+    ic("Testing IndalekoObjectDataModel")
     IndalekoIndexDataModel.test_model_main()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

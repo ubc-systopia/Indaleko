@@ -1,4 +1,4 @@
-'''
+"""
 This module defines the data model for location services.
 
 Project Indaleko
@@ -16,7 +16,7 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
 
 import os
 import sys
@@ -26,32 +26,39 @@ from datetime import datetime, timezone
 
 from pydantic import Field, field_validator, AwareDatetime
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
+
 # pylint: enable=wrong-import-position
 
 
 class BaseLocationDataModel(IndalekoBaseModel):
     latitude: float = Field(..., description="Latitude coordinate of the location")
     longitude: float = Field(..., description="Longitude coordinate of the location")
-    altitude: Optional[float] = Field(None, description="Altitude of the location, if available")
+    altitude: Optional[float] = Field(
+        None, description="Altitude of the location, if available"
+    )
     accuracy: Optional[float] = Field(None, description="Accuracy of the location data")
     heading: Optional[float] = Field(None, description="Heading/direction of movement")
     speed: Optional[float] = Field(None, description="Speed of movement")
-    timestamp: AwareDatetime = Field(..., description="Timestamp when the location was recorded")
-    source: str = Field(..., description="Source of the location data, e.g., 'GPS', 'IP', etc.")
+    timestamp: AwareDatetime = Field(
+        ..., description="Timestamp when the location was recorded"
+    )
+    source: str = Field(
+        ..., description="Source of the location data, e.g., 'GPS', 'IP', etc."
+    )
 
     @classmethod
-    @field_validator('timestamp', mode='before')
+    @field_validator("timestamp", mode="before")
     def ensure_timezone(cls, value: datetime):
-        '''Ensure that the timestamp is in explicit UTC timezone'''
+        """Ensure that the timestamp is in explicit UTC timezone"""
         if isinstance(value, str):
             value = datetime.fromisoformat(value)
         if value.tzinfo is None:
@@ -68,15 +75,15 @@ class BaseLocationDataModel(IndalekoBaseModel):
                 "heading": 270.0,
                 "speed": 10.5,
                 "timestamp": "2023-09-21T10:30:00Z",
-                "source": "GPS"
+                "source": "GPS",
             }
         }
 
 
 def main():
-    '''This allows testing the data model'''
+    """This allows testing the data model"""
     BaseLocationDataModel.test_model_main()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -1,4 +1,4 @@
-'''
+"""
 This module defines known semantic attributes for collaboration activity data
 providers.
 
@@ -17,8 +17,9 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
-'''initializtion logic for the activity context system'''
+"""
+
+"""initializtion logic for the activity context system"""
 
 import os
 import sys
@@ -27,39 +28,46 @@ from icecream import ic
 
 init_path = os.path.dirname(os.path.abspath(__file__))
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from semantic.characteristics import SemanticDataCharacteristics
 import semantic.collectors.semantic_attributes as semantic_attributes
+
 # pylint: enable=wrong-import-position
 
+
 class IndalekoUnstructuredData:
-    '''
+    """
     This is a class object for managing unstructured data in the Indaleko system.
-    '''
+    """
 
     def __init__(self, **kwargs):
-        '''Initialize a new instance of the IndalekoUnstructuredData class object.'''
+        """Initialize a new instance of the IndalekoUnstructuredData class object."""
         for key, value in kwargs.items():
             setattr(self, key, value)
         self.semantic_characteristics = SemanticDataCharacteristics()
         # TODO: add semantic values?
-        ic('IndalekoUnstructuredData initialized.')
+        ic("IndalekoUnstructuredData initialized.")
 
     def get_semantic_characteristics(self):
-        '''Get the semantic characteristics for the unstructured data.'''
+        """Get the semantic characteristics for the unstructured data."""
         return self.semantic_characteristics
-    
+
 
 def main():
-    attributes = [attr for attr, value in semantic_attributes.__dict__.items() if not attr.startswith('__')]
+    attributes = [
+        attr
+        for attr, value in semantic_attributes.__dict__.items()
+        if not attr.startswith("__")
+    ]
     ic(attributes)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

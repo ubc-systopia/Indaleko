@@ -1,4 +1,4 @@
-'''
+"""
 This module defines the docker database support.
 
 Project Indaleko
@@ -16,7 +16,8 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
+
 from datetime import datetime, timezone
 import os
 import sys
@@ -24,18 +25,22 @@ import sys
 from icecream import ic
 from typing import Union
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from constants import IndalekoConstants
 from db import IndalekoDBConfig
-from data_models.db_config import IndalekoDBConfigDataModel, IndalekoDBConfigUserDataModel, \
-    IndalekoDBConfigDockerConfigurationDataModel
+from data_models.db_config import (
+    IndalekoDBConfigDataModel,
+    IndalekoDBConfigUserDataModel,
+    IndalekoDBConfigDockerConfigurationDataModel,
+)
+
 # from utils import IndalekoDocker, IndalekoLogging, IndalekoSingleton
 # from utils.data_validation import validate_ip_address, validate_hostname
 # from utils.misc.directory_management import indaleko_default_config_dir
@@ -44,69 +49,67 @@ from data_models.db_config import IndalekoDBConfigDataModel, IndalekoDBConfigUse
 
 
 class IndalekoDBDocker:
-    '''
+    """
     Class used to manage docker installations of the database.
-    '''
+    """
 
     def __init__(
-        self,
-        config_data: Union[None, IndalekoDBConfigDataModel] = None
+        self, config_data: Union[None, IndalekoDBConfigDataModel] = None
     ) -> None:
-        '''
+        """
         Set up the docker configuration for the database.
 
         * config_data: the configuration data for the installation, if any.
 
         If no configuration data is provided, a docker based configuration
         will be created.
-        '''
+        """
         self.config_data = config_data
         if config_data is None:
             self.generate_new_config()
 
     def generate_new_config(self) -> None:
-        '''Generate a new configuration for the docker database.'''
+        """Generate a new configuration for the docker database."""
         self.config_data = IndalekoDBDocker.generate_docker_config()
 
     @staticmethod
     def generate_docker_config(
-        hostname: str = 'localhost',
+        hostname: str = "localhost",
         port: int = 8529,
         ssl: bool = False,
         timestamp: datetime = datetime.now(timezone.utc),
     ) -> IndalekoDBConfigDataModel:
-        '''Generate a new docker configuration.'''
+        """Generate a new docker configuration."""
         new_config_data = {
-            'Timestamp': timestamp,
-            'Docker': True,
-            'Local': False,
-            'Name': IndalekoConstants.project_name,
-            'AdminUser': IndalekoDBConfigUserDataModel(
-                Name='root',
-                Password=IndalekoDBConfig.generate_random_password()
+            "Timestamp": timestamp,
+            "Docker": True,
+            "Local": False,
+            "Name": IndalekoConstants.project_name,
+            "AdminUser": IndalekoDBConfigUserDataModel(
+                Name="root", Password=IndalekoDBConfig.generate_random_password()
             ),
-            'DBUser': IndalekoDBConfigUserDataModel(
+            "DBUser": IndalekoDBConfigUserDataModel(
                 Name=IndalekoDBConfig.generate_random_username(),
                 Password=IndalekoDBConfig.generate_random_password(),
             ),
-            'DockerConfiguration': IndalekoDBConfigDockerConfigurationDataModel(
-                ContainerName=f'arango-{IndalekoConstants.default_prefix}-'
-                              f'{timestamp.strftime('%Y%m%d%H%M%S')}',
-                VolumeName=f'{IndalekoConstants.default_prefix}-db-1-'
-                           f'{timestamp.strftime('%Y%m%d%H%M%S')}',
+            "DockerConfiguration": IndalekoDBConfigDockerConfigurationDataModel(
+                ContainerName=f"arango-{IndalekoConstants.default_prefix}-"
+                f"{timestamp.strftime('%Y%m%d%H%M%S')}",
+                VolumeName=f"{IndalekoConstants.default_prefix}-db-1-"
+                f"{timestamp.strftime('%Y%m%d%H%M%S')}",
             ),
-            'Hostname': hostname,
-            'Port': port,
+            "Hostname": hostname,
+            "Port": port,
         }
         if ssl:
-            new_config_data['SSL'] = True
+            new_config_data["SSL"] = True
         return IndalekoDBConfigDataModel(**new_config_data)
 
 
 def main():
-    '''Construct a new docker configuration for the database.'''
-    ic('Not yet implemented')
+    """Construct a new docker configuration for the database."""
+    ic("Not yet implemented")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

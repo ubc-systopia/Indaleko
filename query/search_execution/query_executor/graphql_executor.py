@@ -1,6 +1,6 @@
-
 from typing import List, Dict, Any
 from .executor_base import ExecutorBase
+
 
 class GraphQLExecutor(ExecutorBase):
     """

@@ -28,18 +28,20 @@ from typing import get_type_hints, Any
 
 from icecream import ic
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 # pylint: enable=wrong-import-position
 
+
 def type_check(func):
-    '''Adds type checking to a function based on type hints.'''
+    """Adds type checking to a function based on type hints."""
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         hints = get_type_hints(func)
@@ -50,37 +52,51 @@ def type_check(func):
                 if arg_type is Any:
                     continue  # Skip type checking for Any
                 if not isinstance(all_args[arg], arg_type):
-                    if hasattr(arg_type, '__origin__') and arg_type.__origin__ is Union:
-                        if not any(isinstance(all_args[arg], t) for t in arg_type.__args__):
-                            raise TypeError(f"Argument '{arg}' must be of type {arg_type}, not {type(all_args[arg])}")
+                    if hasattr(arg_type, "__origin__") and arg_type.__origin__ is Union:
+                        if not any(
+                            isinstance(all_args[arg], t) for t in arg_type.__args__
+                        ):
+                            raise TypeError(
+                                f"Argument '{arg}' must be of type {arg_type}, not {type(all_args[arg])}"
+                            )
                     else:
-                        raise TypeError(f"Argument '{arg}' must be of type {arg_type}, not {type(all_args[arg])}")
+                        raise TypeError(
+                            f"Argument '{arg}' must be of type {arg_type}, not {type(all_args[arg])}"
+                        )
         return func(*args, **kwargs)
+
     return wrapper
+
 
 # Test functions
 @type_check
 def test_func_int(x: int):
     return x
 
+
 @type_check
 def test_func_str(s: str):
     return s
+
 
 @type_check
 def test_func_union(x: Union[int, str]):
     return x
 
+
 @type_check
 def test_func_any(x: Any):
     return x
 
+
 @type_check
-def test_func_class_instance(x: 'MyClass'):
+def test_func_class_instance(x: "MyClass"):
     return x
+
 
 class MyClass:
     pass
+
 
 def run_tests():
     # Correct calls
@@ -115,8 +131,10 @@ def run_tests():
 
     print("All tests passed!")
 
+
 def main():
     run_tests()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

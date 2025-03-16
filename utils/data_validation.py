@@ -25,57 +25,61 @@ import socket
 import sys
 import uuid
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 # pylint: enable=wrong-import-position
 
+
 @staticmethod
-def validate_ip_address(ip : str) -> bool:
+def validate_ip_address(ip: str) -> bool:
     """Given a string, verify that it is in fact a valid IP address."""
     if not isinstance(ip, str):
-        print(f'ip is not a string it is a {type(ip)}')
+        print(f"ip is not a string it is a {type(ip)}")
         return False
     try:
         ipaddress.ip_address(ip)
         return True
     except ValueError:
-        print('ip is not valid')
+        print("ip is not valid")
         return False
 
+
 @staticmethod
-def validate_hostname(hostname : str) -> bool:
+def validate_hostname(hostname: str) -> bool:
     """Given a string, verify that it is in fact a valid hostname."""
     if not isinstance(hostname, str):
-        print(f'hostname is not a string it is a {type(hostname)}')
+        print(f"hostname is not a string it is a {type(hostname)}")
         return False
     try:
         socket.gethostbyname(hostname)
         return True
     except socket.error:
-        print('hostname is not valid')
+        print("hostname is not valid")
         return False
 
+
 @staticmethod
-def validate_uuid_string(uuid_string : str) -> bool:
+def validate_uuid_string(uuid_string: str) -> bool:
     """Given a string, verify that it is in fact a valid uuid."""
     if not isinstance(uuid_string, str):
-        print(f'uuid is not a string it is a {type(uuid_string)}')
+        print(f"uuid is not a string it is a {type(uuid_string)}")
         return False
     try:
         uuid.UUID(uuid_string)
         return True
     except ValueError:
-        print('uuid is not valid')
+        print("uuid is not valid")
         return False
 
+
 @staticmethod
-def validate_iso_timestamp(source : str) -> bool:
+def validate_iso_timestamp(source: str) -> bool:
     """Given a string, ensure it is a valid ISO timestamp."""
     valid = True
     if not isinstance(source, str):

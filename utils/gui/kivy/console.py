@@ -1,4 +1,4 @@
-'''
+"""
 This script is used to construct a GUI for working with Indaleko.
 
 Project Indaleko
@@ -16,7 +16,8 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
+
 import os
 import sys
 
@@ -33,28 +34,31 @@ from kivy.uix.scrollview import ScrollView
 from kivy.uix.widget import Widget
 import logging
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from db.db_config import IndalekoDBConfig
 from utils import IndalekoDocker
+
 # pylint: enable=wrong-import-position
 
-indaleko_icon_file = os.path.join(os.environ['INDALEKO_ROOT'], 'figures', 'indaleko-fantasy.png')
+indaleko_icon_file = os.path.join(
+    os.environ["INDALEKO_ROOT"], "figures", "indaleko-fantasy.png"
+)
 
 
 class MainScreen(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.orientation = 'vertical'  # Main screen layout, top to bottom
+        self.orientation = "vertical"  # Main screen layout, top to bottom
 
         # Adding Top Banner
-        top_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=100)
+        top_layout = BoxLayout(orientation="horizontal", size_hint_y=None, height=100)
         self.icon = Image(source=indaleko_icon_file, size_hint=(0.2, 1))
         top_layout.add_widget(self.icon)
         self.main_label = Label(text="Indaleko Database Utility", size_hint=(0.8, 1))
@@ -62,10 +66,10 @@ class MainScreen(BoxLayout):
         self.add_widget(top_layout)  # Adds the top banner to the screen
 
         # Adding Main Content Area (Left buttons + Right interaction area)
-        main_content_layout = BoxLayout(orientation='horizontal')
+        main_content_layout = BoxLayout(orientation="horizontal")
 
         # Adding Left Side Button Menu (Utility buttons)
-        left_layout = BoxLayout(orientation='vertical', size_hint_x=None, width=150)
+        left_layout = BoxLayout(orientation="vertical", size_hint_x=None, width=150)
         left_layout.padding = [10, 10, 10, 10]  # Add padding to make it visually better
         left_layout.spacing = 10  # Add some spacing between buttons
 
@@ -87,27 +91,35 @@ class MainScreen(BoxLayout):
             self.search_button.bind(on_press=self.on_search_button_press)
             left_layout.add_widget(self.search_button)
 
-            self.maintenance_button = Button(text="Maintenance", size_hint_y=None, height=50)
+            self.maintenance_button = Button(
+                text="Maintenance", size_hint_y=None, height=50
+            )
             self.maintenance_button.bind(on_press=self.on_maintenance_button_press)
             left_layout.add_widget(self.maintenance_button)
 
         # Add a spacer widget to push buttons to the top
         left_layout.add_widget(Widget())
 
-        main_content_layout.add_widget(left_layout)  # Adds the button menu to the left side
+        main_content_layout.add_widget(
+            left_layout
+        )  # Adds the button menu to the left side
 
         # Adding Right-Side Interaction Area
         self.interaction_area = ScrollView(size_hint=(1, 1))
         self.interaction_content = Label(text="Select an option from the left menu.")
         self.interaction_area.add_widget(self.interaction_content)
-        main_content_layout.add_widget(self.interaction_area)  # Adds the interaction area to the right side
+        main_content_layout.add_widget(
+            self.interaction_area
+        )  # Adds the interaction area to the right side
 
         # Add the main content area to the main screen layout
         self.add_widget(main_content_layout)
 
     def on_create_button_press(self, instance):
         # Logic for when the "Create" button is pressed
-        self.interaction_content.text = "Starting database creation...\nRunning pre-flight checks..."
+        self.interaction_content.text = (
+            "Starting database creation...\nRunning pre-flight checks..."
+        )
         # Here you'd add the code for checking prerequisites and creating the database
 
     def on_import_button_press(self, instance):
@@ -121,8 +133,10 @@ class MainScreen(BoxLayout):
     def on_file_selected(self, filechooser, selection, touch):
         if selection:
             selected_file = selection[0]
-            logging.info(f'Selected file: {selected_file}')
-            self.interaction_content.text = f"Importing configuration from: {selected_file}"
+            logging.info(f"Selected file: {selected_file}")
+            self.interaction_content.text = (
+                f"Importing configuration from: {selected_file}"
+            )
             # Placeholder for the import logic
             # Implement logic here to load the configuration and update Indaleko setup
             self.interaction_area.clear_widgets()
@@ -131,10 +145,12 @@ class MainScreen(BoxLayout):
     def on_search_button_press(self, instance):
         # Logic for when the "Search" button is pressed
         self.interaction_area.clear_widgets()
-        search_layout = BoxLayout(orientation='vertical')
+        search_layout = BoxLayout(orientation="vertical")
 
         # Search Input Area
-        self.query_input = TextInput(hint_text="Enter search query here...", size_hint=(1, 0.1))
+        self.query_input = TextInput(
+            hint_text="Enter search query here...", size_hint=(1, 0.1)
+        )
         search_layout.add_widget(self.query_input)
 
         # Search Button
@@ -143,7 +159,9 @@ class MainScreen(BoxLayout):
         search_layout.add_widget(self.search_button_execute)
 
         # Result Display Area
-        self.result_label = Label(text="Results will be shown here.", size_hint=(1, 0.7))
+        self.result_label = Label(
+            text="Results will be shown here.", size_hint=(1, 0.7)
+        )
         search_layout.add_widget(self.result_label)
 
         self.interaction_area.add_widget(search_layout)
@@ -164,9 +182,7 @@ class MainScreen(BoxLayout):
         self.interaction_area.add_widget(self.interaction_content)
 
     def show_error_popup(self, message):
-        popup = Popup(title='Error',
-                      content=Label(text=message),
-                      size_hint=(0.6, 0.4))
+        popup = Popup(title="Error", content=Label(text=message), size_hint=(0.6, 0.4))
         popup.open()
 
 
@@ -174,9 +190,11 @@ class IndalekoApp(App):
     def build(self):
         return MainScreen()
 
+
 def main():
-    '''Main entry point for the Indaleko Kivy Console'''
+    """Main entry point for the Indaleko Kivy Console"""
     IndalekoApp().run()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

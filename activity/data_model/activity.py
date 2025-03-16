@@ -28,22 +28,23 @@ from pydantic import Field
 
 # from icecream import ic
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
 from data_models.record import IndalekoRecordDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoActivityDataModel(IndalekoBaseModel):
-    '''
+    """
     This class defines the common model used by activity data providers in the
     Indaleko Project.
 
@@ -55,40 +56,42 @@ class IndalekoActivityDataModel(IndalekoBaseModel):
     includes all of the semantic fields that are defined by the activity data
     providers.
 
-    '''
+    """
+
     Record: IndalekoRecordDataModel = Field(
-        ...,
-        title='Record',
-        description='The record for the activity data.'
-        )
+        ..., title="Record", description="The record for the activity data."
+    )
 
     Timestamp: datetime = Field(
         ...,
-        title='Timestamp',
-        description='The timestamp when the activity data was collected.'
+        title="Timestamp",
+        description="The timestamp when the activity data was collected.",
     )
 
     SemanticAttributes: List[IndalekoSemanticAttributeDataModel] = Field(
         ...,
-        title='SemanticAttributes',
-        description='The semantic attributes captured by the activity data provider.'
+        title="SemanticAttributes",
+        description="The semantic attributes captured by the activity data provider.",
     )
 
     class Config:
-        '''Sample configuration data for the data model.'''
+        """Sample configuration data for the data model."""
+
         json_schema_extra = {
             "example": {
                 "Record": IndalekoRecordDataModel.get_json_example(),
                 "Timestamp": "2024-01-01T00:00:00Z",
-                "SemanticAttributes": [IndalekoSemanticAttributeDataModel.get_json_example()],
+                "SemanticAttributes": [
+                    IndalekoSemanticAttributeDataModel.get_json_example()
+                ],
             }
         }
 
 
 def main():
-    '''This allows testing the data model'''
+    """This allows testing the data model"""
     IndalekoActivityDataModel.test_model_main()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

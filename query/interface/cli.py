@@ -1,4 +1,4 @@
-'''
+"""
 Indaleko Search CLI
 
 Project Indaleko
@@ -16,17 +16,19 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
+
 from icecream import ic
 
 from typing import List, Dict, Any
 
+
 class CLI:
     def __init__(self):
-        '''
+        """
         This implements a simple command-line interface for the user to
         interact with Indaleko.
-        '''
+        """
         self.prompt = "Indaleko Search> "
 
     def initialize(self) -> None:
@@ -59,8 +61,8 @@ class CLI:
         ic(len(results))
         if len(results) < 10:
             for i, result in enumerate(results, 1):
-                doc = result['original']['result']
-                ic(doc['Record']['Attributes']['Path'])
+                doc = result["original"]["result"]
+                ic(doc["Record"]["Attributes"]["Path"])
 
         if facets:
             print("Suggested refinements:")
@@ -74,8 +76,10 @@ class CLI:
         Returns:
             bool: True if the user wants to continue, False otherwise
         """
-        response = input("Do you want to perform another search? (y/n): ").strip().lower()
-        return response == 'y'
+        response = (
+            input("Do you want to perform another search? (y/n): ").strip().lower()
+        )
+        return response == "y"
 
     def display_error(self, error_message: str) -> None:
         """
@@ -98,7 +102,9 @@ class CLI:
         """
         while True:
             try:
-                selection = input("Enter the number of a result to see more details (or press Enter to skip): ")
+                selection = input(
+                    "Enter the number of a result to see more details (or press Enter to skip): "
+                )
                 if not selection:
                     return -1
                 selection = int(selection)
@@ -139,7 +145,9 @@ class CLI:
 
         while True:
             try:
-                selection = input("Enter the number of a facet to refine your search (or press Enter to skip): ")
+                selection = input(
+                    "Enter the number of a facet to refine your search (or press Enter to skip): "
+                )
                 if not selection:
                     return ""
                 selection = int(selection)

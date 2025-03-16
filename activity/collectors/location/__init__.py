@@ -1,4 +1,4 @@
-'''
+"""
 Init functionality for the location activity data providers.
 
 Project Indaleko
@@ -16,18 +16,18 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
 
 import importlib
 import os
 import platform
 import sys
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
@@ -36,32 +36,35 @@ from activity.collectors.location.location_base import LocationCollector
 from activity.collectors.location.ip_location import IPLocation
 from activity.collectors.location.tile_location import TileLocation
 from activity.collectors.location.wifi_location import WiFiLocation
-if platform.system() == 'Windows':
-    WindowsGPSLocation = importlib.import_module('activity.collectors.location.windows_gps_location').WindowsGPSLocation
+
+if platform.system() == "Windows":
+    WindowsGPSLocation = importlib.import_module(
+        "activity.collectors.location.windows_gps_location"
+    ).WindowsGPSLocation
 # pylint: enable=wrong-import-position
 
 # Define what should be available when importing from this package
 __all__ = [
-    'LocationCollector',
-    'IPLocation',
-    'TileLocation',
-    'WiFiLocation',
-    'WindowsGPSLocation',
-    ]
+    "LocationCollector",
+    "IPLocation",
+    "TileLocation",
+    "WiFiLocation",
+    "WindowsGPSLocation",
+]
 
-if platform.system() == 'Windows':
-    __all__.append('WindowsGPSLocation')
+if platform.system() == "Windows":
+    __all__.append("WindowsGPSLocation")
 
 
 def activity_providers() -> list[CollectorBase]:
-    '''
+    """
     This method retrieves the activity data providers in this module.
-    '''
+    """
     providers = [
         IPLocation,
         TileLocation,
         WiFiLocation,
     ]
-    if platform.system() == 'Windows':
+    if platform.system() == "Windows":
         providers.append(WindowsGPSLocation)
     return providers

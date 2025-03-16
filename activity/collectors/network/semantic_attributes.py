@@ -1,4 +1,4 @@
-'''
+"""
 This module defines known semantic attributes for network activity data
 providers.
 
@@ -17,7 +17,7 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
 
-ADP_NETWORK_IPV4_ADDRESS = 'd56bb969-82b0-4426-8fd2-09c43bebfbdf'
-ADP_NETWORK_IPV6_ADDRESS = '509d30ab-cf70-4171-a428-d7dd55610d49'
+ADP_NETWORK_IPV4_ADDRESS = "d56bb969-82b0-4426-8fd2-09c43bebfbdf"
+ADP_NETWORK_IPV6_ADDRESS = "509d30ab-cf70-4171-a428-d7dd55610d49"

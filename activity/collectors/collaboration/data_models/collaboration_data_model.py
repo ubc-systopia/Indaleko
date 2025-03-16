@@ -1,4 +1,4 @@
-'''
+"""
 This module defines the base data model for ambient data collectors
 and recorders.
 
@@ -17,7 +17,7 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
 
 import os
 import sys
@@ -25,34 +25,35 @@ import sys
 from pydantic import Field
 from icecream import ic
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from activity.data_model.activity import IndalekoActivityDataModel
+
 # pylint: enable=wrong-import-position
 
 
 class BaseCollaborationDataModel(IndalekoActivityDataModel):
-    '''This is the base data model for the collaboration data'''
+    """This is the base data model for the collaboration data"""
 
     CollaborationType: str = Field(
         ...,
-        title='CollaborationType',
-        description='The type of collaboration (e-mail, file sharing, messaging, etc.)',
+        title="CollaborationType",
+        description="The type of collaboration (e-mail, file sharing, messaging, etc.)",
     )
 
     class Config:
-        '''Sample configuration for the data model'''
+        """Sample configuration for the data model"""
 
         @staticmethod
         def generate_example():
-            '''Generate an example for the data model'''
-            example = IndalekoActivityDataModel.Config.json_schema_extra['example']
+            """Generate an example for the data model"""
+            example = IndalekoActivityDataModel.Config.json_schema_extra["example"]
             example["CollaborationType"] = "file sharing"
             return example
 
@@ -63,10 +64,10 @@ class BaseCollaborationDataModel(IndalekoActivityDataModel):
 
 
 def main():
-    '''This allows testing the data model'''
+    """This allows testing the data model"""
     ic(BaseCollaborationDataModel.Config.json_schema_extra)
     BaseCollaborationDataModel.test_model_main()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

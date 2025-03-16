@@ -1,6 +1,6 @@
-
 from typing import Dict, Any
 from .translator_base import TranslatorBase
+
 
 class GraphQLTranslator(TranslatorBase):
     """
@@ -67,4 +67,6 @@ class GraphQLTranslator(TranslatorBase):
             str: The prompt for the LLM
         """
         # Implement prompt creation logic
-        return f"Translate the following parsed query into a GraphQL query: {parsed_query}"
+        return (
+            f"Translate the following parsed query into a GraphQL query: {parsed_query}"
+        )

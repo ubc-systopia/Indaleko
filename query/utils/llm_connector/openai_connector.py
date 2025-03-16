@@ -1,4 +1,4 @@
-'''
+"""
 This module defines the base data model for semantic metadata recorders.
 
 Project Indaleko
@@ -16,7 +16,7 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
 
 import json
 import os
@@ -26,16 +26,17 @@ import openai
 from icecream import ic
 from typing import Any
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from query.query_processing.data_models.query_output import LLMTranslateQueryResponse
 from query.llm_base import IndalekoLLMBase
+
 # pylint: enable=wrong-import-position
 
 
@@ -43,7 +44,8 @@ class OpenAIConnector(IndalekoLLMBase):
     """
     Connector for OpenAI's language models.
     """
-    llm_name = 'OpenAI'
+
+    llm_name = "OpenAI"
 
     def __init__(self, api_key: str, model: str = "gpt-4o"):
         """
@@ -57,9 +59,9 @@ class OpenAIConnector(IndalekoLLMBase):
         self.client = openai.OpenAI(api_key=api_key)
 
     def get_llm_name(self) -> str:
-        '''
+        """
         Get the name of the LLM.
-        '''
+        """
         return self.llm_name
 
     def generate_query(self, prompt: str, temperature=0) -> LLMTranslateQueryResponse:
@@ -72,31 +74,25 @@ class OpenAIConnector(IndalekoLLMBase):
         Returns:
             str: The generated query
         """
-        ic('Submitting prompt to OpenAI')
+        ic("Submitting prompt to OpenAI")
         response_schema = LLMTranslateQueryResponse.model_json_schema()
         completion = self.client.beta.chat.completions.parse(
             model=self.model,
             messages=[
-                {
-                    "role": "system",
-                    "content": prompt['system']
-                },
-                {
-                    'role': 'user',
-                    'content': prompt['user']
-                }
+                {"role": "system", "content": prompt["system"]},
+                {"role": "user", "content": prompt["user"]},
             ],
             temperature=temperature,
             # response_format=OpenAIQueryResponse
             response_format={
-                'type':  'json_schema',
-                'json_schema': {
-                    'name': 'OpenAIQueryResponse',
-                    'schema': response_schema
-                }
-            }
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "OpenAIQueryResponse",
+                    "schema": response_schema,
+                },
+            },
         )
-        ic('Received response from OpenAI')
+        ic("Received response from OpenAI")
         doc = json.loads(completion.choices[0].message.content)
         response = LLMTranslateQueryResponse(**doc)
         return response
@@ -116,13 +112,15 @@ class OpenAIConnector(IndalekoLLMBase):
         response = self.client.beta.chat.completions.parse(
             model=self.model,
             messages=[
-                {"role": "system",
-                 "content": "You are a helpful assistant that facilitates finding relevant "
-                            "files in a unified personal index of storage."},
-                {"role": "user", "content": prompt}
-            ]
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant that facilitates finding relevant "
+                    "files in a unified personal index of storage.",
+                },
+                {"role": "user", "content": prompt},
+            ],
         )
-        return response.choices[0].message['content'].strip()
+        return response.choices[0].message["content"].strip()
 
     def extract_keywords(self, text: str, num_keywords: int = 5) -> list[str]:
         """
@@ -139,11 +137,14 @@ class OpenAIConnector(IndalekoLLMBase):
         response = openai.ChatCompletion.create(
             model=self.model,
             messages=[
-                {"role": "system", "content": "You are a helpful assistant that extracts keywords from text."},
-                {"role": "user", "content": prompt}
-            ]
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant that extracts keywords from text.",
+                },
+                {"role": "user", "content": prompt},
+            ],
         )
-        keywords = response.choices[0].message['content'].strip().split(',')
+        keywords = response.choices[0].message["content"].strip().split(",")
         return [keyword.strip() for keyword in keywords[:num_keywords]]
 
     def classify_text(self, text: str, categories: list[str]) -> str:
@@ -162,13 +163,18 @@ class OpenAIConnector(IndalekoLLMBase):
         response = openai.ChatCompletion.create(
             model=self.model,
             messages=[
-                {"role": "system", "content": "You are a helpful assistant that classifies text."},
-                {"role": "user", "content": prompt}
-            ]
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant that classifies text.",
+                },
+                {"role": "user", "content": prompt},
+            ],
         )
-        return response.choices[0].message['content'].strip()
+        return response.choices[0].message["content"].strip()
 
-    def answer_question(self, context: str, question: str, schema: dict[str, Any]) -> dict[str, Any]:
+    def answer_question(
+        self, context: str, question: str, schema: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Answer a question based on the given context using OpenAI's model.
 
@@ -185,32 +191,23 @@ class OpenAIConnector(IndalekoLLMBase):
         completion = self.client.beta.chat.completions.parse(
             model=self.model,
             messages=[
-                {
-                    "role": "system",
-                    "content": prompt
-                },
-                {
-                    "role": "user",
-                    "content": question
-                }
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": question},
             ],
             temperature=0,
             response_format={
-                'type': 'json_schema',
-                'json_schema': {
-                    'name': 'OpenAIAnswerResponse',
-                    'schema': schema,
-                }
-            }
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "OpenAIAnswerResponse",
+                    "schema": schema,
+                },
+            },
         )
         ic(completion)
         return completion.choices[0].message.content
 
     def get_completion(
-            self,
-            context: str,
-            question: str,
-            schema: dict[str, Any]
+        self, context: str, question: str, schema: dict[str, Any]
     ) -> openai.types.chat.parsed_chat_completion.ParsedChatCompletion:
         """
         Answer a question based on the given context using OpenAI's model.
@@ -228,22 +225,16 @@ class OpenAIConnector(IndalekoLLMBase):
         completion = self.client.beta.chat.completions.parse(
             model=self.model,
             messages=[
-                {
-                    "role": "system",
-                    "content": prompt
-                },
-                {
-                    "role": "user",
-                    "content": question
-                }
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": question},
             ],
             temperature=0,
             response_format={
-                'type': 'json_schema',
-                'json_schema': {
-                    'name': 'OpenAIAnswerResponse',
-                    'schema': schema,
-                }
-            }
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "OpenAIAnswerResponse",
+                    "schema": schema,
+                },
+            },
         )
         return completion

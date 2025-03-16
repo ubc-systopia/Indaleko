@@ -25,27 +25,30 @@ import uuid
 from typing import List, Union, Optional
 from icecream import ic
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
 from constants import IndalekoConstants
+
 # pylint: enable=wrong-import-position
 
+
 class IndalekoServiceIdentifierDataModel(IndalekoBaseModel):
-    '''This is the data model for the Indaleko service identifier'''
+    """This is the data model for the Indaleko service identifier"""
+
     # Name : str = Field(..., title='Name', description='This is the service name.')
 
-    Name : Optional[Union[str, None]]
-    Identifier : Union[uuid.UUID, str]
-    Version : str
-    Description : Union[str, None]
-    ServiceType : str
+    Name: Optional[Union[str, None]]
+    Identifier: Union[uuid.UUID, str]
+    Version: str
+    Description: Union[str, None]
+    ServiceType: str
 
     class Config:
         json_schema_extra = {
@@ -54,14 +57,16 @@ class IndalekoServiceIdentifierDataModel(IndalekoBaseModel):
                 "Identifier": "7c43729e-a7f6-431b-aa58-17fc29f124b8",
                 "Version": "1.0.0",
                 "ServiceType": IndalekoConstants.service_type_storage_collector,
-                "Description": "Example Collector Service"
+                "Description": "Example Collector Service",
             }
         }
 
-def main():
-    '''This allows testing the service data model'''
-    ic('Testing Service Data Model')
-    ic(IndalekoServiceIdentifierDataModel.Config.json_schema_extra['example'])
 
-if __name__ == '__main__':
+def main():
+    """This allows testing the service data model"""
+    ic("Testing Service Data Model")
+    ic(IndalekoServiceIdentifierDataModel.Config.json_schema_extra["example"])
+
+
+if __name__ == "__main__":
     main()

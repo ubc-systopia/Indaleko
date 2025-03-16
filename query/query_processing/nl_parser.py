@@ -27,21 +27,31 @@ from textwrap import dedent
 from icecream import ic
 from typing import Any
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from data_models.named_entity import IndalekoNamedEntityType, example_entities, NamedEntityCollection
+from data_models.named_entity import (
+    IndalekoNamedEntityType,
+    example_entities,
+    NamedEntityCollection,
+)
 from db.db_collection_metadata import IndalekoDBCollectionsMetadata
-from query.query_processing.data_models.query_output import LLMIntentQueryResponse, \
-    LLMFilterConstraintQueryResponse, LLMIntentTypeEnum, LLMCollectionCategoryQueryResponse, \
-    LLMCollectionCategoryEnum, LLMCollectionCategory
+from query.query_processing.data_models.query_output import (
+    LLMIntentQueryResponse,
+    LLMFilterConstraintQueryResponse,
+    LLMIntentTypeEnum,
+    LLMCollectionCategoryQueryResponse,
+    LLMCollectionCategoryEnum,
+    LLMCollectionCategory,
+)
 from query.query_processing.data_models.parser_data import ParserResults
 from query.utils.llm_connector.openai_connector import OpenAIConnector
+
 # pylint: enable=wrong-import-position
 
 
@@ -53,9 +63,9 @@ class NLParser:
     def __init__(
         self,
         llm_connector: OpenAIConnector,
-        collections_metadata: IndalekoDBCollectionsMetadata
+        collections_metadata: IndalekoDBCollectionsMetadata,
     ):
-        '''
+        """
         Initialize the parser.
 
         Args:
@@ -64,7 +74,7 @@ class NLParser:
 
         The connector is used for communicating with the language model, and the collections_metadata
         is used for obtaining information about the shape of the database, which can be used to parse the query.
-        '''
+        """
         # Initialize any necessary components or models
         self.llm_connector = llm_connector
         self.collections_metadata = collections_metadata
@@ -81,19 +91,24 @@ class NLParser:
             dict[str, Any]: A structured representation of the query
         """
         logging.info(f"Parsing query: {query}")
-        ic('Extracting categories from query')
+        ic("Extracting categories from query")
         categories = self._extract_categories(query)
-        ic('Determing intent of query')
+        ic("Determing intent of query")
         intent = self._detect_intent(query)
-        ic('Extracting entities from query')
+        ic("Extracting entities from query")
         entities = self._extract_entities(query)
-        assert isinstance(query, str), f'query is unexpected type {type(query)}'
-        assert isinstance(categories, LLMCollectionCategoryQueryResponse), \
-            f'categories is unexpected type {type(categories)}'
+        assert isinstance(query, str), f"query is unexpected type {type(query)}"
+        assert isinstance(
+            categories, LLMCollectionCategoryQueryResponse
+        ), f"categories is unexpected type {type(categories)}"
         LLMCollectionCategoryQueryResponse.model_validate(categories)
-        assert isinstance(intent, LLMIntentQueryResponse), f'intent is unexpected type {type(intent)}'
+        assert isinstance(
+            intent, LLMIntentQueryResponse
+        ), f"intent is unexpected type {type(intent)}"
         LLMIntentQueryResponse.model_validate(intent)
-        assert isinstance(entities, NamedEntityCollection), f'entities is unexpected type {type(entities)}'
+        assert isinstance(
+            entities, NamedEntityCollection
+        ), f"entities is unexpected type {type(entities)}"
         NamedEntityCollection.model_validate(entities)
         results = ParserResults(
             OriginalQuery=query,
@@ -122,7 +137,9 @@ class NLParser:
             intent="search",
             rationale="because this is a search tool, the default intent is search",
             alternatives_considered=[
-                {"example": "this is an example, so it is static and nothing else was considered"}
+                {
+                    "example": "this is an example, so it is static and nothing else was considered"
+                }
             ],
             suggestion="No suggestions, this is an optimal process in my opinion"
             "Like Mary Poppins, practically perfect in every way. (laugh)",
@@ -154,7 +171,9 @@ class NLParser:
         # Validate the intent
         if data.intent not in typical_intents:
             logging.warning(f"Unrecognized intent: {data.intent}")
-            data.intent = "unknown"  # Default to "unknown" if the intent is not recognized
+            data.intent = (
+                "unknown"  # Default to "unknown" if the intent is not recognized
+            )
         logging.info(ic(f"Detected intent: {data.intent}"))
         return data
 
@@ -171,13 +190,13 @@ class NLParser:
             the database collection name, and a description of the collection.
         """
         # ic(self.collection_data)
-        ic(type(self.collection_data['Objects']))
+        ic(type(self.collection_data["Objects"]))
 
         category_response = LLMCollectionCategoryQueryResponse(
             category_map=[
                 LLMCollectionCategory(
                     category=LLMCollectionCategoryEnum.OBJECTS,
-                    collection=self.collection_data['Objects'].Name,
+                    collection=self.collection_data["Objects"].Name,
                     confidence=0.6,
                     rationale="This seems to be related to storage objects.",
                     alternatives_considered=[],  # No alternatives considered
@@ -189,14 +208,15 @@ class NLParser:
                         "job of not being lazy and "
                         "omitting these descriptions? Who am I to judge?  I'm just a computer program.  I don't have "
                         "feelings.  I'm just a bunch of code.  "
-                    )
+                    ),
                 ),
             ],
             feedback=dedent(
                 "The query includes questions about the temperature in the room and the music playing, "
                 "which are not represented by any of the activity collections.  You might want to consider adding "
                 "activity data providers to gather that information and expose that information via activity "
-                "collections. "),
+                "collections. "
+            ),
         )
 
         # define existing category types
@@ -229,7 +249,9 @@ class NLParser:
             "ao that we can work together to improve the quality of the results. "
         )
 
-        response = self.llm_connector.answer_question(prompt, query, category_response.model_json_schema())
+        response = self.llm_connector.answer_question(
+            prompt, query, category_response.model_json_schema()
+        )
         doc = json.loads(response)
         ic(doc)
         data = LLMCollectionCategoryQueryResponse(**doc)
@@ -272,18 +294,16 @@ class NLParser:
 
         # Use the LLM connector to get the entities
         response = self.llm_connector.answer_question(
-            prompt,
-            query,
-            example_entities.model_json_schema()
+            prompt, query, example_entities.model_json_schema()
         )
         entities = json.loads(response)
         logging.info(ic(f"Extracted entities: {entities}"))
         return NamedEntityCollection(**entities)
 
     def _extract_filters(self, query: str) -> dict[str, Any]:
-        '''
+        """
         This is a dummy function that returns a hard-coded filter for now.
-        '''
+        """
         return {}
 
     def _extract_filters2(self, query: str) -> dict[str, Any]:
@@ -303,7 +323,8 @@ class NLParser:
         typical_constraints = ["before", "after", "between", "equals", "contains"]
 
         schema = LLMFilterConstraintQueryResponse(
-            **LLMFilterConstraintQueryResponse.Config.json_schema_extra['example']).model_json_schema()
+            **LLMFilterConstraintQueryResponse.Config.json_schema_extra["example"]
+        ).model_json_schema()
         # Create a prompt for the LLM
         prompt = (
             "You are a personal digital archivist helping this tool (Indaleko) assist a human user in finding "

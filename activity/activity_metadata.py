@@ -1,4 +1,4 @@
-'''
+"""
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason
 
@@ -14,42 +14,43 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
+
 import os
 import sys
 import json
 from textwrap import dedent
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 from activity.data_model.activity import IndalekoActivityDataModel
 from activity.collectors.known_semantic_attributes import KnownSemanticAttributes
-from data_models.collection_metadata_data_model import IndalekoCollectionMetadataDataModel
+from data_models.collection_metadata_data_model import (
+    IndalekoCollectionMetadataDataModel,
+)
 from utils import IndalekoSingleton
 
 
 class ActivityCollectionMetadata(IndalekoSingleton):
-    '''Provides structured metadata guidance for activity data collections.'''
+    """Provides structured metadata guidance for activity data collections."""
 
     @staticmethod
     def build_semantic_attribute_description() -> str:
         attributes = []
         for category, value in KnownSemanticAttributes.get_all_attributes().items():
             for key, detail in value.items():
-                attributes.append({
-                    "SemanticLabel": key,
-                    "UUID": detail,
-                    "Category": category
-                })
+                attributes.append(
+                    {"SemanticLabel": key, "UUID": detail, "Category": category}
+                )
         return json.dumps(attributes, indent=4)
 
     default_metadata = IndalekoCollectionMetadataDataModel(
-        key='ActivityData',
+        key="ActivityData",
         Description=dedent(
             """
             ## Activity Data Collection Overview
@@ -71,8 +72,9 @@ class ActivityCollectionMetadata(IndalekoSingleton):
             ### Semantic Attributes
             The following attributes describe key data points collected from activity providers:
             """
-        ) + '\n' + build_semantic_attribute_description(),
-
+        )
+        + "\n"
+        + build_semantic_attribute_description(),
         QueryGuidelines=[
             dedent(
                 """
@@ -95,16 +97,15 @@ class ActivityCollectionMetadata(IndalekoSingleton):
                 """
             )
         ],
-
-        Schema=IndalekoActivityDataModel.get_json_schema()
+        Schema=IndalekoActivityDataModel.get_json_schema(),
     )
 
 
 def main():
-    '''Main entry point for the module.'''
+    """Main entry point for the module."""
     metadata = ActivityCollectionMetadata()
     print(metadata.default_metadata.model_dump_json(indent=4))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

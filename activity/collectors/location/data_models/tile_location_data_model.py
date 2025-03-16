@@ -1,4 +1,4 @@
-'''
+"""
 This module defines the data model for the tile tracker location
 activity data provider.
 
@@ -17,29 +17,32 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
+
 import os
 import sys
 
 from pydantic import Field, field_validator, AwareDatetime
 from typing import Optional
 from datetime import datetime, timezone
+
 # from icecream import ic
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from data_models.location_data_model import BaseLocationDataModel
+
 # pylint: enable=wrong-import-position
 
 
 class TileLocationDataModel(BaseLocationDataModel):
-    '''
+    """
     This class defines the data model for the Tile-based location activity data
     provider.  Fields visible from the data provider are:
         'accuracy', # already in base class
@@ -62,23 +65,32 @@ class TileLocationDataModel(BaseLocationDataModel):
         'uuid', # unique identifier for the Tile device: note, this isn't a UUID.
         'visible', # boolean indicating if the Tile device is visible (in app?)
         'voip_state' # state of the voip connection (only seen 'OFFLINE')
-    '''
+    """
+
     tile_id: str = Field(..., description="Unique identifier for the Tile device")
     archetype: Optional[str] = Field(None, description="Archetype of the Tile device")
-    dead: bool = Field(False, description="Boolean indicating if the Tile device is dead")
+    dead: bool = Field(
+        False, description="Boolean indicating if the Tile device is dead"
+    )
     firmware_version: Optional[str] = Field(None, description="Version of the firmware")
     hardware_version: Optional[str] = Field(None, description="Version of the hardware")
     kind: Optional[str] = Field(None, description="Kind of Tile device")
-    lost: bool = Field(False, description="Boolean indicating if the Tile device is lost")
-    lost_timestamp: Optional[AwareDatetime] = Field(None, description="Timestamp when the Tile device was lost")
+    lost: bool = Field(
+        False, description="Boolean indicating if the Tile device is lost"
+    )
+    lost_timestamp: Optional[AwareDatetime] = Field(
+        None, description="Timestamp when the Tile device was lost"
+    )
     name: str = Field(..., description="User defined name for the Tile device")
     ring_state: Optional[str] = Field(None, description="Current ring state")
-    visible: bool = Field(False, description="Boolean indicating if the Tile device is visible")
+    visible: bool = Field(
+        False, description="Boolean indicating if the Tile device is visible"
+    )
     voip_state: Optional[str] = Field(None, description="State of the voip connection")
     email: str = Field(..., description="Email address associated with the Tile device")
 
     @classmethod
-    @field_validator('lost_timestamp', mode='before')
+    @field_validator("lost_timestamp", mode="before")
     def ensure_timezone(cls, value: datetime):
         if isinstance(value, str):
             value = datetime.fromisoformat(value)
@@ -87,7 +99,8 @@ class TileLocationDataModel(BaseLocationDataModel):
         return value
 
     class Config:
-        '''Define configuraiton info for the data model'''
+        """Define configuraiton info for the data model"""
+
         json_schema_extra = {
             "example": {
                 "latitude": 49.2827,
@@ -110,15 +123,15 @@ class TileLocationDataModel(BaseLocationDataModel):
                 "tile_id": "77736942235f491e",
                 "visible": True,
                 "voip_state": "OFFLINE",
-                "email": "aki@null.com"
+                "email": "aki@null.com",
             }
         }
 
 
 def main():
-    '''This allows testing the data model'''
+    """This allows testing the data model"""
     TileLocationDataModel.test_model_main()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

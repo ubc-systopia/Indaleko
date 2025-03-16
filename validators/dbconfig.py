@@ -1,13 +1,19 @@
 class DBConfig:
     def __init__(self, db_config):
         # Make sure we have all the correct args
-        self.__user_name = 'user_name'
-        self.__user_password = 'user_password'
-        self.__host = 'host'
-        self.__port = 'port'
-        self.__db = 'database'
+        self.__user_name = "user_name"
+        self.__user_password = "user_password"
+        self.__host = "host"
+        self.__port = "port"
+        self.__db = "database"
 
-        for key in [self.__user_name, self.__user_password, self.__host, self.__port, self.__db]:
+        for key in [
+            self.__user_name,
+            self.__user_password,
+            self.__host,
+            self.__port,
+            self.__db,
+        ]:
             assert key in db_config, f"Couldn't find '{key}' in the config"
 
         self.db_config = db_config
@@ -28,4 +34,8 @@ class DBConfig:
         return self.db_config[self.__db]
 
     def __str__(self):
-        return ', '.join(f'{key}={value}' for key, value in self.__dict__.items() if not key.startswith('_'))
+        return ", ".join(
+            f"{key}={value}"
+            for key, value in self.__dict__.items()
+            if not key.startswith("_")
+        )

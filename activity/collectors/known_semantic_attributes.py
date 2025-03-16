@@ -1,4 +1,4 @@
-'''
+"""
 This module defines the data model for the WiFi based location
 activity data provider.
 
@@ -17,7 +17,7 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
 
 import importlib
 import os
@@ -25,37 +25,38 @@ import sys
 
 from icecream import ic
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 
 class KnownSemanticAttributes:
-    '''
+    """
     This class dynamically constructs definitions of the known semantic
     attributes from each of the provider types.  In this way, we can distribute
     the definition process, yet end up with a unified list.
-    '''
+    """
+
     _initialized = False
     _attributes_by_provider_type = {}
     _attributes_by_uuid = {}
-    _short_prefix = 'ADP_'
-    full_prefix = 'ACTIVITY_DATA'
+    _short_prefix = "ADP_"
+    full_prefix = "ACTIVITY_DATA"
 
     _modules_to_load = {
-        'collaboration': 'activity.collectors.collaboration.semantic_attributes',
-        'location': 'activity.collectors.location.semantic_attributes',
-        'network': 'activity.collectors.network.semantic_attributes',
-        'storage': 'activity.collectors.storage.semantic_attributes'
+        "collaboration": "activity.collectors.collaboration.semantic_attributes",
+        "location": "activity.collectors.location.semantic_attributes",
+        "network": "activity.collectors.network.semantic_attributes",
+        "storage": "activity.collectors.storage.semantic_attributes",
     }
 
     @classmethod
     def _initialize(cls):
-        '''Dynamically construct the list of known activity data provider
-        semantic attributes'''
+        """Dynamically construct the list of known activity data provider
+        semantic attributes"""
         if cls._initialized:
             return
         cls._initialized = True
@@ -66,9 +67,11 @@ class KnownSemanticAttributes:
             for label, value in module.__dict__.items():
                 if label.startswith(KnownSemanticAttributes._short_prefix):
                     full_label = KnownSemanticAttributes.full_prefix + label[3:]
-                    assert not hasattr(cls, full_label), f"Duplicate definition of {full_label}"
+                    assert not hasattr(
+                        cls, full_label
+                    ), f"Duplicate definition of {full_label}"
                     setattr(cls, full_label, value)
-                    provider_type = label.rsplit('_', maxsplit=2)[-2]
+                    provider_type = label.rsplit("_", maxsplit=2)[-2]
                     if provider_type not in cls._attributes_by_provider_type:
                         cls._attributes_by_provider_type[provider_type] = {}
                     cls._attributes_by_provider_type[provider_type][full_label] = value
@@ -76,13 +79,13 @@ class KnownSemanticAttributes:
 
     @staticmethod
     def safe_import(name: str, quiet: bool = False):
-        '''Given a module name, load it and then extract the important data from it'''
+        """Given a module name, load it and then extract the important data from it"""
         module = None
         try:
             module = importlib.import_module(name)
         except ImportError as e:
             if not quiet:
-                ic(f'Import module {name} failed {e}')
+                ic(f"Import module {name} failed {e}")
         return module
 
     def __init__(self):
@@ -92,12 +95,12 @@ class KnownSemanticAttributes:
 
     @staticmethod
     def get_attribute_by_uuid(uuid_value):
-        '''Get the attribute by the UUID'''
+        """Get the attribute by the UUID"""
         return KnownSemanticAttributes._attributes_by_uuid.get(uuid_value)
 
     @staticmethod
     def get_all_attributes() -> dict[str, dict[str, str]]:
-        '''Get all of the known attributes'''
+        """Get all of the known attributes"""
         return KnownSemanticAttributes._attributes_by_provider_type
 
 
@@ -105,11 +108,11 @@ KnownSemanticAttributes._initialize()
 
 
 def main():
-    '''Main function for the module'''
-    ic('Starting')
+    """Main function for the module"""
+    ic("Starting")
     ic(dir(KnownSemanticAttributes))
     ic(KnownSemanticAttributes._attributes_by_uuid)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -25,21 +25,22 @@ import sys
 from typing import Any, Union
 from pydantic import Field
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
 from data_models.i_uuid import IndalekoUUIDDataModel
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoSemanticAttributeDataModel(IndalekoBaseModel):
-    '''
+    """
     This class defines the UUID data model for Indaleko.
 
     A "semantic attribute" is a top level concept of something that has a
@@ -53,34 +54,36 @@ class IndalekoSemanticAttributeDataModel(IndalekoBaseModel):
     then all records with the same UUID give the same meaning to that field.  In
     this way, we allow Indaleko to index these values without understanding the
     meaning of them.
-    '''
+    """
+
     Identifier: Union[str, IndalekoUUIDDataModel] = Field(
         ...,
-        title='Identifier',
-        description='The UUID specific to this type of semantic attribute.',
-        example='12345678-1234-5678-1234-567812345678'
+        title="Identifier",
+        description="The UUID specific to this type of semantic attribute.",
+        example="12345678-1234-5678-1234-567812345678",
     )
 
     Data: Union[Any, None] = Field(
         None,
-        title='Data',
-        description='The data associated with this semantic attribute.'
+        title="Data",
+        description="The data associated with this semantic attribute.",
     )
 
     class Config:
-        '''Sample configuration data for the data model'''
+        """Sample configuration data for the data model"""
+
         json_schema_extra = {
             "example": {
                 "Identifier": IndalekoUUIDDataModel.get_json_example(),
-                "Data": "foo.lua"
+                "Data": "foo.lua",
             }
         }
 
 
 def main():
-    '''This allows testing the data model'''
+    """This allows testing the data model"""
     IndalekoSemanticAttributeDataModel.test_model_main()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

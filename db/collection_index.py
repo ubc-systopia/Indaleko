@@ -1,4 +1,4 @@
-'''
+"""
 IndalekoCollectionIndex: This module is used to manage index creation for
 IndalekoCollection objects.
 
@@ -17,17 +17,18 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
+
 import os
 import sys
 
 from icecream import ic
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
@@ -35,111 +36,104 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 class IndalekoCollectionIndex:
-    '''Manages an index for an IndalekoCollection object.'''
+    """Manages an index for an IndalekoCollection object."""
 
     index_args = {
-        'hash': {
-            'fields': str,
-            'name': str,
-            'unique': bool,
-            'sparse': bool,
-            'deduplicate': bool,
-            'in_background': bool
+        "hash": {
+            "fields": str,
+            "name": str,
+            "unique": bool,
+            "sparse": bool,
+            "deduplicate": bool,
+            "in_background": bool,
         },
-        'skip_list': {
-            'fields': str,
-            'name': str,
-            'unique': bool,
-            'sparse': bool,
-            'deduplicate': bool,
-            'in_background': bool
+        "skip_list": {
+            "fields": str,
+            "name": str,
+            "unique": bool,
+            "sparse": bool,
+            "deduplicate": bool,
+            "in_background": bool,
         },
-        'geo_index': {
-            'fields': str,
-            'name': str,
-            'geo_json': bool,
-            'in_background': bool,
-            'legacyPolygons': bool
+        "geo_index": {
+            "fields": str,
+            "name": str,
+            "geo_json": bool,
+            "in_background": bool,
+            "legacyPolygons": bool,
         },
-        'fulltext': {
-            'fields': str,
-            'name': str,
-            'min_length': int,
-            'in_background': bool
+        "fulltext": {
+            "fields": str,
+            "name": str,
+            "min_length": int,
+            "in_background": bool,
         },
-        'persistent': {
-            'fields': str,
-            'name': str,
-            'unique': bool,
-            'sparse': bool,
-            'in_background': bool,
-            'storedValues': list,
-            'cacheEnabled': bool
+        "persistent": {
+            "fields": str,
+            "name": str,
+            "unique": bool,
+            "sparse": bool,
+            "in_background": bool,
+            "storedValues": list,
+            "cacheEnabled": bool,
         },
-        'ttl': {
-            'fields': str,
-            'name': str,
-            'expiry_time': int,
-            'in_background': bool
+        "ttl": {"fields": str, "name": str, "expiry_time": int, "in_background": bool},
+        "inverted": {
+            "fields": str,
+            "name": str,
+            "inBackground": bool,
+            "parallelism": int,
+            "primarySort": list,
+            "storedValues": list,
+            "analyzer": str,
+            "features": list,
+            "includeAllFields": bool,
+            "trackListPositions": bool,
+            "searchField": str,
+            "primaryKeyCache": bool,
+            "cache": bool,
         },
-        'inverted': {
-            'fields': str,
-            'name': str,
-            'inBackground': bool,
-            'parallelism': int,
-            'primarySort': list,
-            'storedValues': list,
-            'analyzer': str,
-            'features': list,
-            'includeAllFields': bool,
-            'trackListPositions': bool,
-            'searchField': str,
-            'primaryKeyCache': bool,
-            'cache': bool
+        "zkd": {
+            "fields": str,
+            "name": str,
+            "field_value_types": list,
+            "unique": bool,
+            "in_background": bool,
         },
-        'zkd': {
-            'fields': str,
-            'name': str,
-            'field_value_types': list,
-            'unique': bool,
-            'in_background': bool
+        "mdi": {
+            "fields": str,
+            "name": str,
+            "field_value_types": list,
+            "unique": bool,
+            "in_background": bool,
         },
-        'mdi': {
-            'fields': str,
-            'name': str,
-            'field_value_types': list,
-            'unique': bool,
-            'in_background': bool
-        }
     }
 
-    def __init__(self,
-                 collection,
-                 **kwargs):
+    def __init__(self, collection, **kwargs):
         """Parameters:
-            This class is used to create indices for IndalekoCollection objects.
+        This class is used to create indices for IndalekoCollection objects.
 
-            collection: this points to the ArangoDB collection object to use for
-                        this index.
+        collection: this points to the ArangoDB collection object to use for
+                    this index.
 
-            index_type: 'persistent' or 'hash'
+        index_type: 'persistent' or 'hash'
 
-            fields: list of fields to be indexed
+        fields: list of fields to be indexed
 
-            unique: if True, the index is unique
+        unique: if True, the index is unique
         """
         self.collection = collection
         ic(kwargs)
-        assert kwargs.get('type') is not None, 'type is a required parameter'
-        assert kwargs.get('fields') is not None, 'fields is a required parameter'
+        assert kwargs.get("type") is not None, "type is a required parameter"
+        assert kwargs.get("fields") is not None, "fields is a required parameter"
         self.index = self.collection.add_index(data=kwargs, formatter=False)
-        ic(f'Created index for collection {self.collection}: {self.index}')
+        ic(f"Created index for collection {self.collection}: {self.index}")
 
 
 def main():
-    '''Test the IndalekoCollectionIndex class.'''
-    print('IndalekoCollectionIndex: called.  No tests yet.')
+    """Test the IndalekoCollectionIndex class."""
+    print("IndalekoCollectionIndex: called.  No tests yet.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

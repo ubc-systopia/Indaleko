@@ -1,4 +1,4 @@
-'''
+"""
 This module is used to provide a simple conversational interface for the
 Indaleko search tool.
 
@@ -17,7 +17,8 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
+
 import argparse
 import configparser
 import os
@@ -28,20 +29,33 @@ from icecream import ic
 from IndalekoDBConfig import IndalekoDBConfig
 from IndalekoSchema import IndalekoSchema
 
-from query import CLI, NLParser, AQLTranslator, QueryHistory, AQLExecutor, MetadataAnalyzer, FacetGenerator, ResultRanker, OpenAIConnector, LoggingService
-class IndalekoSearch():
-    '''
+from query import (
+    CLI,
+    NLParser,
+    AQLTranslator,
+    QueryHistory,
+    AQLExecutor,
+    MetadataAnalyzer,
+    FacetGenerator,
+    ResultRanker,
+    OpenAIConnector,
+    LoggingService,
+)
+
+
+class IndalekoSearch:
+    """
     This is a class object for performing specific searches in the Indaleko database.
-    '''
+    """
 
     def __init__(self, **kwargs):
-        '''Initialize a new instance of the IndalekoSearch class object.'''
+        """Initialize a new instance of the IndalekoSearch class object."""
         for key, value in kwargs.items():
             setattr(self, key, value)
-        if not hasattr(self, 'db_config'):
+        if not hasattr(self, "db_config"):
             self.db_config = IndalekoDBConfig()
         schema_table = IndalekoSchema.build_from_db()
-        if hasattr(schema_table, 'schema'):
+        if hasattr(schema_table, "schema"):
             self.db_info = schema_table.schema
         else:
             raise ValueError("Schema table not found")
@@ -56,17 +70,15 @@ class IndalekoSearch():
         self.openai_key = self.get_api_key()
         self.llm_connector = OpenAIConnector(api_key=self.openai_key)
 
-        ic('IndalekoSearch initialized, Database connection instantiated.')
-
+        ic("IndalekoSearch initialized, Database connection instantiated.")
 
     @staticmethod
-    def get_api_key(api_key_file : str = 'config/openai-key.ini') -> str:
-        '''Get the API key from the config file'''
-        assert os.path.exists(api_key_file), \
-            f"API key file ({api_key_file}) not found"
+    def get_api_key(api_key_file: str = "config/openai-key.ini") -> str:
+        """Get the API key from the config file"""
+        assert os.path.exists(api_key_file), f"API key file ({api_key_file}) not found"
         config = configparser.ConfigParser()
-        config.read(api_key_file, encoding='utf-8-sig')
-        openai_key = config['openai']['api_key']
+        config.read(api_key_file, encoding="utf-8-sig")
+        openai_key = config["openai"]["api_key"]
         if openai_key is None:
             raise ValueError("OpenAI API key not found in config file")
         if openai_key[0] == '"' or openai_key[0] == "'":
@@ -77,7 +89,7 @@ class IndalekoSearch():
 
     @staticmethod
     def time_operation(operation, **kwargs) -> datetime:
-        '''Given a function, return the time and results of the operation'''
+        """Given a function, return the time and results of the operation"""
         ic(type(operation))
         start_time = datetime.now()
         results = operation(**kwargs)
@@ -85,9 +97,8 @@ class IndalekoSearch():
         operation_time = end_time - start_time
         return str(operation_time), results
 
-
-    def run(self, logging_service : LoggingService = None) -> None:
-        '''Main function for the search tool.'''
+    def run(self, logging_service: LoggingService = None) -> None:
+        """Main function for the search tool."""
         while True:
             # Get query from user
             user_query_time, user_query = self.time_operation(self.interface.get_query)
@@ -98,20 +109,25 @@ class IndalekoSearch():
             # self.logging_service.log_query(user_query)
 
             # Process the query
-            parse_query_time, parsed_query = self.time_operation(self.nl_parser.parse, query=user_query, schema=self.db_info)
+            parse_query_time, parsed_query = self.time_operation(
+                self.nl_parser.parse, query=user_query, schema=self.db_info
+            )
             ic(f"Parsed query: {parsed_query}")
             ic(f"Parse time: {parse_query_time}")
-            translate_query_time, translated_query = \
-                self.time_operation(self.query_translator.translate, parsed_query=parsed_query, llm_connector=self.llm_connector)
+            translate_query_time, translated_query = self.time_operation(
+                self.query_translator.translate,
+                parsed_query=parsed_query,
+                llm_connector=self.llm_connector,
+            )
             ic(f"Translated query: {translated_query}")
             ic(f"Translation time: {translate_query_time}")
             # Execute the query
             execute_time, raw_results = self.time_operation(
                 self.query_executor.execute,
                 query=translated_query,
-                data_connector=self.db_config
+                data_connector=self.db_config,
             )
-            #ic(f"Raw results: {raw_results}")
+            # ic(f"Raw results: {raw_results}")
             ic(f"Execution time: {execute_time}")
 
             # Analyze and refine results
@@ -130,13 +146,13 @@ class IndalekoSearch():
                 break
 
 
-
 def main() -> None:
-    '''Main function for the IndalekoSearch module.'''
-    parser = argparse.ArgumentParser(description='Indaleko Search Tool')
+    """Main function for the IndalekoSearch module."""
+    parser = argparse.ArgumentParser(description="Indaleko Search Tool")
     args = parser.parse_args()
     search_tool = IndalekoSearch(args=args)
     search_tool.run()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

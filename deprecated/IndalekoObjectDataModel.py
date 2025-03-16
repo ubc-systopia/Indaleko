@@ -1,4 +1,4 @@
-'''
+"""
 This module defines the database schema for any database record conforming to
 the Indaleko Record requirements.
 
@@ -17,7 +17,8 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
+
 import json
 import jsonschema
 import apischema
@@ -33,126 +34,151 @@ from icecream import ic
 from IndalekoDataModel import IndalekoDataModel, IndalekoUUID
 from IndalekoRecordDataModel import IndalekoRecordDataModel
 
+
 class IndalekoObjectDataModel(IndalekoRecordDataModel):
-    '''This is the data model for the Indaleko Object type.'''
+    """This is the data model for the Indaleko Object type."""
+
     @dataclass
     class IndalekoObject:
-        '''Define data format for the Indaleko Object.'''
-        Record : IndalekoRecordDataModel.IndalekoRecord
+        """Define data format for the Indaleko Object."""
 
-        URI : Annotated[
+        Record: IndalekoRecordDataModel.IndalekoRecord
+
+        URI: Annotated[
             str,
             apischema.schema(description="The URI for the object."),
-            apischema.metadata.required
+            apischema.metadata.required,
         ]
 
-        ObjectIdentifier : Annotated[
+        ObjectIdentifier: Annotated[
             UUID,
             apischema.schema(description="UUID representing this object."),
-            apischema.metadata.required
+            apischema.metadata.required,
         ]
 
-        Timestamps : Annotated[
+        Timestamps: Annotated[
             List[IndalekoDataModel.Timestamp],
             apischema.schema(description="The timestamps for the object."),
-            apischema.metadata.required
+            apischema.metadata.required,
         ]
 
-        Size : Annotated[
-            int,
-            apischema.schema(description="The size of the object in bytes.")
+        Size: Annotated[
+            int, apischema.schema(description="The size of the object in bytes.")
         ]
 
-        SemanticAttributes : Annotated[
+        SemanticAttributes: Annotated[
             Optional[List[IndalekoDataModel.SemanticAttribute]],
-            apischema.schema(description="The semantic attributes for the object.")
+            apischema.schema(description="The semantic attributes for the object."),
         ] = field(default_factory=list)
 
-        Label : Annotated[
+        Label: Annotated[
             Optional[str],
-            apischema.schema(description="The object label (like a file name).")
+            apischema.schema(description="The object label (like a file name)."),
         ] = None
 
-        LocalIdentifier : Annotated[
+        LocalIdentifier: Annotated[
             Optional[str],
-            apischema.schema(description="The local identifier used "\
-                             "by the storage system to find this, such "\
-                                "as a UUID or inode number."),
+            apischema.schema(
+                description="The local identifier used "
+                "by the storage system to find this, such "
+                "as a UUID or inode number."
+            ),
         ] = None
 
-        Volume : Annotated[
+        Volume: Annotated[
             Optional[UUID],
-            apischema.schema(description="The volume UUID where the object is located."),
+            apischema.schema(
+                description="The volume UUID where the object is located."
+            ),
         ] = field(default=None)
 
-        PosixFileAttributes : Annotated[
+        PosixFileAttributes: Annotated[
             Optional[str],
             apischema.schema(description="The POSIX file attributes for the object."),
         ] = field(default=None)
 
-        WindowsFileAttributes : Annotated[
+        WindowsFileAttributes: Annotated[
             Optional[str],
             apischema.schema(description="The Windows file attributes for the object."),
         ] = field(default=None)
 
         @staticmethod
-        def deserialize(data: dict) -> 'IndalekoObjectDataModel.IndalekoObject':
-            '''Deserialize a dictionary to an object.'''
-            return apischema.deserialize(IndalekoObjectDataModel.IndalekoObject,
-                                         data,
-                                         additional_properties=True)
+        def deserialize(data: dict) -> "IndalekoObjectDataModel.IndalekoObject":
+            """Deserialize a dictionary to an object."""
+            return apischema.deserialize(
+                IndalekoObjectDataModel.IndalekoObject, data, additional_properties=True
+            )
 
         @staticmethod
         def serialize(data) -> dict:
-            '''Serialize the object to a dictionary.'''
-            candidate = apischema.serialize(IndalekoObjectDataModel.IndalekoObject,
-                                            data,
-                                            additional_properties=True,
-                                            exclude_none=True,
-                                            exclude_unset=True),
+            """Serialize the object to a dictionary."""
+            candidate = (
+                apischema.serialize(
+                    IndalekoObjectDataModel.IndalekoObject,
+                    data,
+                    additional_properties=True,
+                    exclude_none=True,
+                    exclude_unset=True,
+                ),
+            )
             return candidate
 
-
-
     @staticmethod
-    def get_indaleko_object(object_identifier : UUID) -> 'IndalekoObjectDataModel.IndalekoObject':
-        '''Return an Indaleko Object.'''
+    def get_indaleko_object(
+        object_identifier: UUID,
+    ) -> "IndalekoObjectDataModel.IndalekoObject":
+        """Return an Indaleko Object."""
         return IndalekoObjectDataModel.IndalekoObject(
             Record=None,
-            Label='Test Object',
-            URI='http://www.example.com',
-            ObjectIdentifier=IndalekoUUID(object_identifier, 'Test Object'),
-            LocalIdentifier='1',
-            Timestamps=[IndalekoDataModel.Timestamp(
-                UUID('12345678-1234-5678-1234-567812345678'),
-                datetime.now(UTC),
-                'Test Timestamp')],
+            Label="Test Object",
+            URI="http://www.example.com",
+            ObjectIdentifier=IndalekoUUID(object_identifier, "Test Object"),
+            LocalIdentifier="1",
+            Timestamps=[
+                IndalekoDataModel.Timestamp(
+                    UUID("12345678-1234-5678-1234-567812345678"),
+                    datetime.now(UTC),
+                    "Test Timestamp",
+                )
+            ],
             Size=1024,
-            SemanticAttributes=[IndalekoDataModel\
-                                .get_semantic_attribute(\
-                                    IndalekoUUID(UUID('12345678-1234-5678-1234-567812345678'),
-                                                 'Test Attribute'))]
-            )
+            SemanticAttributes=[
+                IndalekoDataModel.get_semantic_attribute(
+                    IndalekoUUID(
+                        UUID("12345678-1234-5678-1234-567812345678"), "Test Attribute"
+                    )
+                )
+            ],
+        )
 
     @staticmethod
     def get_queries() -> list:
-        '''Return the queries for the Indaleko Object.'''
+        """Return the queries for the Indaleko Object."""
         return [IndalekoObjectDataModel.get_indaleko_object]
 
     @staticmethod
     def get_types() -> list:
-        '''Return the types for the Indaleko Object.'''
+        """Return the types for the Indaleko Object."""
         return [IndalekoObjectDataModel.IndalekoObject]
 
+
 def main():
-    '''Test code for IndalekoObjectDataModel.'''
-    ic('GraphQL Schema:')
-    ic(print_schema(graphql_schema(query=IndalekoObjectDataModel.get_queries(),
-                                      types=IndalekoObjectDataModel.get_types())))
-    unpack_schema = deserialization_schema(IndalekoObjectDataModel.IndalekoObject,
-                                           additional_properties=True)
-    pack_schema = serialization_schema(IndalekoObjectDataModel.IndalekoObject,
-                                       additional_properties=True)
+    """Test code for IndalekoObjectDataModel."""
+    ic("GraphQL Schema:")
+    ic(
+        print_schema(
+            graphql_schema(
+                query=IndalekoObjectDataModel.get_queries(),
+                types=IndalekoObjectDataModel.get_types(),
+            )
+        )
+    )
+    unpack_schema = deserialization_schema(
+        IndalekoObjectDataModel.IndalekoObject, additional_properties=True
+    )
+    pack_schema = serialization_schema(
+        IndalekoObjectDataModel.IndalekoObject, additional_properties=True
+    )
     json_unpack_schema = json.dumps(unpack_schema, indent=2)
     print(json_unpack_schema)
     json_pack_schema = json.dumps(pack_schema, indent=2)
@@ -175,7 +201,8 @@ def main():
                 "st_mode": 33279,
                 "st_mtime": 1685891221.5597157,
                 "st_mtime_ns": 1685891221559715700,
-                "st_nlink": 1, "st_reparse_tag": 0,
+                "st_nlink": 1,
+                "st_reparse_tag": 0,
                 "st_size": 1410120,
                 "st_uid": 0,
                 "Name": "rufus-4.1.exe",
@@ -183,13 +210,14 @@ def main():
                 "URI": "\\\\?\\Volume{3397d97b-2ca5-11ed-b2fc-b40ede9a5a3c}\\dist\\rufus-4.1.exe",
                 "Indexer": "0793b4d5-e549-4cb6-8177-020a738b66b7",
                 "Volume GUID": "3397d97b-2ca5-11ed-b2fc-b40ede9a5a3c",
-                "ObjectIdentifier": "2c73d6e5-eaba-4f0a-acf3-e02c529f097a"
+                "ObjectIdentifier": "2c73d6e5-eaba-4f0a-acf3-e02c529f097a",
             },
             "SourceIdentifier": {
                 "Identifier": "429f1f3c-7a21-463f-b7aa-cd731bb202b1",
-                "Version": "1.0", "Description": None
+                "Version": "1.0",
+                "Description": None,
             },
-            "Timestamp": "2024-07-30T23:38:48.319654+00:00"
+            "Timestamp": "2024-07-30T23:38:48.319654+00:00",
         },
         "_key": "2c73d6e5-eaba-4f0a-acf3-e02c529f097a",
         "URI": "\\\\?\\Volume{3397d97b-2ca5-11ed-b2fc-b40ede9a5a3c}\\dist\\rufus-4.1.exe",
@@ -198,32 +226,32 @@ def main():
             {
                 "Label": "6b3f16ec-52d2-4e9b-afd0-e02a875ec6e6",
                 "Value": "2023-06-04T15:07:01.559192+00:00",
-                "Description": "Created"
+                "Description": "Created",
             },
             {
                 "Label": "434f7ac1-f71a-4cea-a830-e2ea9a47db5a",
                 "Value": "2023-06-04T15:07:01.559716+00:00",
-                "Description": "Modified"
+                "Description": "Modified",
             },
             {
                 "Label": "581b5332-4d37-49c7-892a-854824f5d66f",
                 "Value": "2023-08-28T11:50:56.333428+00:00",
-                "Description": "Accessed"
+                "Description": "Accessed",
             },
             {
                 "Label": "3bdc4130-774f-4e99-914e-0bec9ee47aab",
                 "Value": "2023-06-04T15:07:01.559192+00:00",
-                "Description": "Changed"
-            }
+                "Description": "Changed",
+            },
         ],
         "Size": 1410120,
         "Machine": "2e169bb7-0024-4dc1-93dc-18b7d2d28190",
         "Volume": "3397d97b-2ca5-11ed-b2fc-b40ede9a5a3c",
         "UnixFileAttributes": "S_IFREG",
         "WindowsFileAttributes": "FILE_ATTRIBUTE_ARCHIVE",
-        "SemanticAttributes" : [],
-        "Label" : None,
-        "LocalIdentifier" : None
+        "SemanticAttributes": [],
+        "Label": None,
+        "LocalIdentifier": None,
     }
     indaleko_object = IndalekoObjectDataModel.IndalekoObject.deserialize(data_object)
     IndalekoObjectDataModel.IndalekoObject.serialize(indaleko_object)
@@ -231,12 +259,13 @@ def main():
     try:
         jsonschema.validate(instance=data_object, schema=unpack_schema)
     except jsonschema.exceptions.ValidationError as error:
-        print(f'Validation error: {error.message}')
+        print(f"Validation error: {error.message}")
 
     try:
         jsonschema.validate(instance=data_object, schema=pack_schema)
     except jsonschema.exceptions.ValidationError as error:
-        print(f'Validation error: {error.message}')
+        print(f"Validation error: {error.message}")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

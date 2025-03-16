@@ -1,4 +1,4 @@
-'''
+"""
 This implements the base class for semantic data collectors.
 
 Project Indaleko
@@ -16,7 +16,7 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
 
 # standard imports
 import os
@@ -26,53 +26,52 @@ from abc import ABC, abstractmethod
 from typing import List, Dict
 from icecream import ic
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # Indaleko imports
 # pylint: disable=wrong-import-position
 from semantic.characteristics import SemanticDataCharacteristics
+
 # pylint: enable=wrong-import-position
 
 
 class SemanticCollector(ABC):
-    '''
+    """
     Base class for semantic data collectors.
 
     This class defines the common interface for semantic data collectors.
-    '''
+    """
 
     def __init__(self, **kwargs):
-        '''Initialize the semantic data collector'''
-
+        """Initialize the semantic data collector"""
 
     @abstractmethod
     def get_collector_characteristics(self) -> List[SemanticDataCharacteristics]:
-        '''
+        """
         This call returns the characteristics of the semantic data provider.  This is
         intended to be used to help users understand the data provider and to
         help the system understand how to interact with the data provider.
 
         Returns:
             Dict: A dictionary containing the characteristics of the provider.
-        '''
-
+        """
 
     @abstractmethod
     def get_collector_name(self) -> str:
-        '''Get the name of the collector'''
+        """Get the name of the collector"""
 
     @abstractmethod
     def get_collector_id(self) -> str:
-        '''Get the UUID for the collector'''
+        """Get the UUID for the collector"""
 
     @abstractmethod
     def retrieve_data(self, data_id: str) -> Dict:
-        '''
+        """
         This call retrieves the data associated with the provided data_id.
 
         Args:
@@ -80,19 +79,21 @@ class SemanticCollector(ABC):
 
         Returns:
             Dict: The data associated with the data_id
-        '''
+        """
 
     @abstractmethod
     def get_collector_description(self) -> str:
-        '''Get the description of the collector'''
+        """Get the description of the collector"""
 
     @abstractmethod
     def get_json_schema(self) -> dict:
-        '''Get the JSON schema for the collector'''
+        """Get the JSON schema for the collector"""
+
 
 def main():
-    '''This is a test interface for the semantic collector base'''
-    ic('SemanticCollector test interface')
+    """This is a test interface for the semantic collector base"""
+    ic("SemanticCollector test interface")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

@@ -1,4 +1,4 @@
-'''
+"""
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason
 
@@ -15,7 +15,8 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-'''
+"""
+
 import json
 import os
 import sys
@@ -25,37 +26,43 @@ from textwrap import dedent
 
 # from icecream import ic
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from data_models.collection_metadata_data_model import IndalekoCollectionMetadataDataModel
+from data_models.collection_metadata_data_model import (
+    IndalekoCollectionMetadataDataModel,
+)
 from db import IndalekoDBCollections
 from storage.i_object import IndalekoObject
 from utils import IndalekoSingleton
+
 # pylint: enable=wrong-import-position
 
 
 class ObjectCollectionMetadata(IndalekoSingleton):
-    '''This class provides a basic (default) implementation of the object collection metadata.'''
+    """This class provides a basic (default) implementation of the object collection metadata."""
 
     @staticmethod
     def get_timestamp_map() -> str:
-        return json.dumps({
-            IndalekoObject.CREATION_TIMESTAMP: "Creation Timestamp",
-            IndalekoObject.MODIFICATION_TIMESTAMP: "Modification Timestamp",
-            IndalekoObject.ACCESS_TIMESTAMP: "Access Timestamp",
-            IndalekoObject.CHANGE_TIMESTAMP: "Change Timestamp"
-        }, indent=4)
+        return json.dumps(
+            {
+                IndalekoObject.CREATION_TIMESTAMP: "Creation Timestamp",
+                IndalekoObject.MODIFICATION_TIMESTAMP: "Modification Timestamp",
+                IndalekoObject.ACCESS_TIMESTAMP: "Access Timestamp",
+                IndalekoObject.CHANGE_TIMESTAMP: "Change Timestamp",
+            },
+            indent=4,
+        )
 
     default_metadata = IndalekoCollectionMetadataDataModel(
         key=IndalekoDBCollections.Indaleko_Object_Collection,
         Description=dedent(
-            f'''
+            f"""
             ## Object Collection Overview
             An **object** in Indaleko refers to a **storage object** - typically a **file** or **directory**.
 
@@ -80,11 +87,11 @@ class ObjectCollectionMetadata(IndalekoSingleton):
             ```json
             {get_timestamp_map()}
             ```
-            '''
-            ),
+            """
+        ),
         QueryGuidelines=[
             dedent(
-                '''
+                """
                 ## Query Guidelines
                 - **Primary Key**: `ObjectIdentifier` uniquely identifies each object and is
                   equivalent to `_key` in ArangoDB.
@@ -93,7 +100,7 @@ class ObjectCollectionMetadata(IndalekoSingleton):
                 **Full-Text Search Fields** (e.g., `CamelCaseTokenizedName`, `SnakeCaseTokenizedName`,
                 `NgramTokenizedName`) **should NOT be used** in standard queries. These exist for
                 potential future enhancements but are currently unindexed.
-                '''
+                """
             ),
             dedent(
                 """
@@ -105,34 +112,34 @@ class ObjectCollectionMetadata(IndalekoSingleton):
                 """
             ),
             dedent(
-                'The Label field corresponds to the name that has been applied to the object in the underlying '
-                'storage system.'
-                'It is case preserved, though for case-insensitive systems this will not be relevant.'
-                'When asked to find a file by name, title, label, etc., this is the field to use. '
-                'It should always be indexed.'
+                "The Label field corresponds to the name that has been applied to the object in the underlying "
+                "storage system."
+                "It is case preserved, though for case-insensitive systems this will not be relevant."
+                "When asked to find a file by name, title, label, etc., this is the field to use. "
+                "It should always be indexed."
             ),
             dedent(
-                'The Timestamps field is a list of timestamps associated with the object. '
-                'The label associated with the timestamp '
-                'is a UUID, the definitions of which should be provided to you separately. '
-                'These timestamps are maintained in ISO8601 '
-                'format, with ArangoDB having a strict requirement they have a time zone specifier.'
+                "The Timestamps field is a list of timestamps associated with the object. "
+                "The label associated with the timestamp "
+                "is a UUID, the definitions of which should be provided to you separately. "
+                "These timestamps are maintained in ISO8601 "
+                "format, with ArangoDB having a strict requirement they have a time zone specifier."
             ),
             dedent(
-                'The SemanticAttributes field is a list of descriptive elements that provide semantic labels '
-                'to the normalized storage data associated with the file.  Presently, this mostly consists '
-                'of metadata typically found in POSIX compliant systems, which are not likely to be used as '
-                'part of a search unless the user explicitly requests it. '
+                "The SemanticAttributes field is a list of descriptive elements that provide semantic labels "
+                "to the normalized storage data associated with the file.  Presently, this mostly consists "
+                "of metadata typically found in POSIX compliant systems, which are not likely to be used as "
+                "part of a search unless the user explicitly requests it. "
             ),
             dedent(
-                'The Size field is the size of the object in bytes.  This field is optional, as not all storage '
-                'services provide this information.  For directories, this value may, or may not be valid, depending '
-                'on the storage service.  For files, this value should be assumed accurate.'
+                "The Size field is the size of the object in bytes.  This field is optional, as not all storage "
+                "services provide this information.  For directories, this value may, or may not be valid, depending "
+                "on the storage service.  For files, this value should be assumed accurate."
             ),
             dedent(
-                'The LocalIdentifier field is the identifier used by the storage system to reference the object. '
-                'For POSIX compliant systems, this is typically the inode number.  This field is optional, '
-                'as not all storage services provide this information.'
+                "The LocalIdentifier field is the identifier used by the storage system to reference the object. "
+                "For POSIX compliant systems, this is typically the inode number.  This field is optional, "
+                "as not all storage services provide this information."
             ),
             dedent(
                 """
@@ -144,43 +151,43 @@ class ObjectCollectionMetadata(IndalekoSingleton):
                 """
             ),
             dedent(
-                'The PosixFileAttributes field is the POSIX file attributes associated with the object. '
-                'It is represented by strings representing the S_IF* values.  This field is optional, '
-                'but frequently present. '
-                'One common use of this field is to identify directories, as storage recorders attempt '
-                'to normalize S_IFDIR from '
-                'different storage systems into a common value.'
+                "The PosixFileAttributes field is the POSIX file attributes associated with the object. "
+                "It is represented by strings representing the S_IF* values.  This field is optional, "
+                "but frequently present. "
+                "One common use of this field is to identify directories, as storage recorders attempt "
+                "to normalize S_IFDIR from "
+                "different storage systems into a common value."
             ),
             dedent(
-                'The WindowsFileAttributes field is the Windows file attributes associated with the object. '
-                'This field is optional, but present for Windows local storage recorders.  It could be used '
-                'to identify Windows specific attributes, such as reparse points, etc.'
+                "The WindowsFileAttributes field is the Windows file attributes associated with the object. "
+                "This field is optional, but present for Windows local storage recorders.  It could be used "
+                "to identify Windows specific attributes, such as reparse points, etc."
             ),
             dedent(
-                'CamelCaseTokenizedName is a field that is generated by the system to provide a '
-                'tokenized variant of the '
-                'name of the file object.  While not presently used, the goal of this field is '
-                'to allow full text style searches '
-                'to be performed on the name of the object. This field should be ignored for purposes '
-                'of query generation.'
+                "CamelCaseTokenizedName is a field that is generated by the system to provide a "
+                "tokenized variant of the "
+                "name of the file object.  While not presently used, the goal of this field is "
+                "to allow full text style searches "
+                "to be performed on the name of the object. This field should be ignored for purposes "
+                "of query generation."
             ),
             dedent(
-                'SnakeCaseTokenizedName is a field that is generated by the system to provide a '
-                'tokenized variant of the name of the file object.  While not presently used, the '
-                'goal of this field is to allow full text style searches to be performed on the name '
-                'of the object. This field should be ignored for purposes of query generation.'
+                "SnakeCaseTokenizedName is a field that is generated by the system to provide a "
+                "tokenized variant of the name of the file object.  While not presently used, the "
+                "goal of this field is to allow full text style searches to be performed on the name "
+                "of the object. This field should be ignored for purposes of query generation."
             ),
             dedent(
-                'NgramTokenizedName is a field that is generated by the system to provide a tokenized '
-                'variant of the name of the file object.  While not presently used, the goal of this field '
-                'is to allow full text style searches to be performed on the name of the object. This field '
-                'should be ignored for purposes of query generation.'
+                "NgramTokenizedName is a field that is generated by the system to provide a tokenized "
+                "variant of the name of the file object.  While not presently used, the goal of this field "
+                "is to allow full text style searches to be performed on the name of the object. This field "
+                "should be ignored for purposes of query generation."
             ),
             dedent(
-                'SpaceTokenizedName is a field that is generated by the system to provide a tokenized '
-                'variant of the name of the file object.  While not presently used, the goal of this field '
-                'is to allow full text style searches to be performed on the name of the object. This field '
-                'should be ignored for purposes of query generation.'
+                "SpaceTokenizedName is a field that is generated by the system to provide a tokenized "
+                "variant of the name of the file object.  While not presently used, the goal of this field "
+                "is to allow full text style searches to be performed on the name of the object. This field "
+                "should be ignored for purposes of query generation."
             ),
             dedent(
                 """
@@ -208,18 +215,20 @@ class ObjectCollectionMetadata(IndalekoSingleton):
                 """}
                 ```
                 """
-                ),
+            ),
         ],
-        Schema=IndalekoDBCollections.Collections[IndalekoDBCollections.Indaleko_Object_Collection]['schema']
+        Schema=IndalekoDBCollections.Collections[
+            IndalekoDBCollections.Indaleko_Object_Collection
+        ]["schema"],
     )
 
 
 def main():
-    '''Main entry point for the module.'''
+    """Main entry point for the module."""
     metadata = ObjectCollectionMetadata()
     print(metadata.default_metadata.model_dump_json(indent=4))
     # print(metadata.default_metadata.Description)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

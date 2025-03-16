@@ -18,6 +18,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+
 from datetime import datetime
 import os
 import sys
@@ -27,11 +28,11 @@ from typing import Union
 
 # from icecream import ic
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
@@ -47,6 +48,7 @@ class TranslatorOutput(BaseModel):
     """
     Define the output data model for the translator.
     """
+
     aql_query: str
     explanation: str
     confidence: float
@@ -68,9 +70,9 @@ class TranslatorOutput(BaseModel):
                     "translation_time": 0.123,
                     "token_budget": 150,
                     "input_tokens": 75,
-                    "output_tokens": 50
+                    "output_tokens": 50,
                 },
                 "additional_notes": "Have a nice day!",
-                "timestamp": "2025-02-17T12:34:56.789Z"
+                "timestamp": "2025-02-17T12:34:56.789Z",
             }
         }

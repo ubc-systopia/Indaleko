@@ -2,12 +2,13 @@ import time
 import pydgraph
 import uuid
 
-client_stub = pydgraph.DgraphClientStub('localhost:9080')
+client_stub = pydgraph.DgraphClientStub("localhost:9080")
 client = pydgraph.DgraphClient(client_stub)
 
-schema = 'name: string @index(exact) .'
+schema = "name: string @index(exact) ."
 op = pydgraph.Operation(schema=schema)
 client.alter(op)
+
 
 def old_arango_stuff():
     # ArangoDB connection settings
@@ -22,8 +23,12 @@ def old_arango_stuff():
 
     # Connect to ArangoDB
     client = ArangoClient()
-    db = client.db(arango_db_name, username=arango_username,
-                password=arango_password, auth_method='basic')
+    db = client.db(
+        arango_db_name,
+        username=arango_username,
+        password=arango_password,
+        auth_method="basic",
+    )
 
     # Start with a clean collection each run
     if db.has_collection(arango_collection_name):
@@ -35,7 +40,7 @@ def old_arango_stuff():
 
     # Generate and insert UUIDs
     uuids = [str(uuid.uuid4()) for _ in range(num_uuids)]
-    dummy_files = [{'objectid': uuid, 'creator': 'tony'} for uuid in uuids]
+    dummy_files = [{"objectid": uuid, "creator": "tony"} for uuid in uuids]
     result = collection.insert_many(dummy_files)
 
     end_time = time.time()

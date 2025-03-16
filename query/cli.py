@@ -17,6 +17,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+
 import argparse
 import configparser
 from datetime import datetime, timezone
@@ -26,15 +27,17 @@ import sys
 from icecream import ic
 from typing import Union, Any
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from data_models.collection_metadata_data_model import IndalekoCollectionMetadataDataModel
+from data_models.collection_metadata_data_model import (
+    IndalekoCollectionMetadataDataModel,
+)
 from data_models.db_index import IndalekoCollectionIndexDataModel
 from data_models.named_entity import NamedEntityCollection, IndalekoNamedEntityDataModel
 from db import IndalekoDBConfig, IndalekoDBCollections
@@ -53,16 +56,17 @@ from query.search_execution.query_executor.aql_executor import AQLExecutor
 from query.utils.llm_connector.openai_connector import OpenAIConnector
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoQueryCLI(IndalekoBaseCLI):
-    '''This class represents the base class for Indaleko Queries.'''
+    """This class represents the base class for Indaleko Queries."""
 
-    service_name = 'IndalekoQueryCLI'
+    service_name = "IndalekoQueryCLI"
 
     def __init__(self):
-        '''Create an instance of the IndalekoQueryCLI class.'''
+        """Create an instance of the IndalekoQueryCLI class."""
         cli_data = IndalekoBaseCliDataModel()
         handler_mixin = IndalekoQueryCLI.query_handler_mixin
         features = IndalekoBaseCLI.cli_features(
@@ -75,19 +79,19 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             platform=False,
         )
         super().__init__(
-            cli_data=cli_data,
-            handler_mixin=handler_mixin,
-            features=features
+            cli_data=cli_data, handler_mixin=handler_mixin, features=features
         )
         config_data = self.get_config_data()
-        config_file_path = os.path.join(config_data['ConfigDirectory'], config_data['DBConfigFile'])
+        config_file_path = os.path.join(
+            config_data["ConfigDirectory"], config_data["DBConfigFile"]
+        )
         self.db_config = IndalekoDBConfig(config_file=config_file_path)
         self.collections_metadata = IndalekoDBCollectionsMetadata(self.db_config)
         self.openai_key = self.get_api_key()
         self.llm_connector = OpenAIConnector(api_key=self.openai_key)
         self.nl_parser = NLParser(
             llm_connector=self.llm_connector,
-            collections_metadata=self.collections_metadata
+            collections_metadata=self.collections_metadata,
         )
         self.query_translator = AQLTranslator(self.collections_metadata)
         self.query_history = QueryHistory()
@@ -95,51 +99,49 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         self.metadata_analyzer = MetadataAnalyzer()
         self.facet_generator = FacetGenerator()
         self.result_ranker = ResultRanker()
-        self.prompt = 'Indaleko Search> '
+        self.prompt = "Indaleko Search> "
         self.schema = self.build_schema_table()
 
     class query_handler_mixin(IndalekoBaseCLI.default_handler_mixin):
-        '''Handler mixin for the CLI'''
+        """Handler mixin for the CLI"""
 
         @staticmethod
         def get_pre_parser() -> Union[argparse.Namespace, None]:
-            '''
+            """
             This method is used to get the pre-parser.  Callers can
             set up switches/parameters before we add the common ones.
 
             Note the default implementation here does not add any additional parameters.
-            '''
+            """
             parser = argparse.ArgumentParser(add_help=False)
             subparsers = parser.add_subparsers(
-                dest='command',
-                help='The mode in which to run the script (batch or interactive).'
+                dest="command",
+                help="The mode in which to run the script (batch or interactive).",
             )
             subparsers.add_parser(
-                'interactive',
-                help='Run the query tool in interactive mode.'
+                "interactive", help="Run the query tool in interactive mode."
             )
             batch_parser = subparsers.add_parser(
-                'batch',
-                help='Run the query tool in batch mode.'
+                "batch", help="Run the query tool in batch mode."
             )
             batch_parser.add_argument(
-                'batch_input_file',
-                help='The file containing the batch input queries.'
+                "batch_input_file", help="The file containing the batch input queries."
             )
-            parser.set_defaults(command='interactive')
+            parser.set_defaults(command="interactive")
             return parser
 
     query_cli_handler_mixin = query_handler_mixin
 
     def get_api_key(self, api_key_file: Union[str, None] = None) -> str:
-        '''Get the API key from the config file'''
+        """Get the API key from the config file"""
         if api_key_file is None:
-            api_key_file = os.path.join(self.config_data['ConfigDirectory'], 'openai-key.ini')
-        assert os.path.exists(api_key_file), \
-            f"API key file ({api_key_file}) not found"
+            api_key_file = os.path.join(
+                self.config_data["ConfigDirectory"], "openai-key.ini"
+            )
+        assert os.path.exists(api_key_file), f"API key file ({api_key_file}) not found"
         config = configparser.ConfigParser()
-        config.read(api_key_file, encoding='utf-8-sig')
-        openai_key = config['openai']['api_key']
+        config.read(api_key_file, encoding="utf-8-sig")
+        openai_key = config["openai"]["api_key"]
         if openai_key is None:
             raise ValueError("OpenAI API key not found in config file")
         if openai_key[0] == '"' or openai_key[0] == "'":
@@ -153,8 +155,8 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         if self.args is None:
             self.args = self.pre_parser.parse_args()
         ic(self.args)
-        if self.args.command == 'batch':
-            with open(self.args.batch_input_file, 'rt') as batch_file:
+        if self.args.command == "batch":
+            with open(self.args.batch_input_file, "rt") as batch_file:
                 batch_queries = batch_file.readlines()
             batch = True
 
@@ -170,7 +172,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             else:
                 user_query = self.get_query()
 
-            if user_query.lower() in ['exit', 'quit', 'bye', 'leave']:
+            if user_query.lower() in ["exit", "quit", "bye", "leave"]:
                 return
 
             # Log the query
@@ -178,15 +180,16 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             start_time = datetime.now(timezone.utc)
 
             # Process the query
-            ic(f'Parsing query: {user_query}')
+            ic(f"Parsing query: {user_query}")
             parsed_query = self.nl_parser.parse(query=user_query)
             ParserResults.model_validate(parsed_query)
 
             # Only support search for now.
-            assert parsed_query.Intent.intent == 'search', \
-                f"Expected 'search' intent, got '{parsed_query.Intent.intent}'"
+            assert (
+                parsed_query.Intent.intent == "search"
+            ), f"Expected 'search' intent, got '{parsed_query.Intent.intent}'"
 
-            ic(f'Query Type: {parsed_query.Intent.intent}')
+            ic(f"Query Type: {parsed_query.Intent.intent}")
 
             # Map entities to database attributes
             entity_mappings = self.map_entities(parsed_query.Entities)
@@ -205,19 +208,21 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 for index in collection_indices:
                     if category not in indices:
                         indices[category] = []
-                    if index['type'] != 'primary':
+                    if index["type"] != "primary":
                         kwargs = {
-                            'Name': index['name'],
-                            'Type': index['type'],
-                            'Fields': index['fields'],
+                            "Name": index["name"],
+                            "Type": index["type"],
+                            "Fields": index["fields"],
                         }
-                        if 'unique' in index:
-                            kwargs['Unique'] = index['unique']
-                        if 'sparse' in index:
-                            kwargs['Sparse'] = index['sparse']
-                        if 'deduplicate' in index:
-                            kwargs['Deduplicate'] = index['deduplicate']
-                        indices[category].append(IndalekoCollectionIndexDataModel(**kwargs))
+                        if "unique" in index:
+                            kwargs["Unique"] = index["unique"]
+                        if "sparse" in index:
+                            kwargs["Sparse"] = index["sparse"]
+                        if "deduplicate" in index:
+                            kwargs["Deduplicate"] = index["deduplicate"]
+                        indices[category].append(
+                            IndalekoCollectionIndexDataModel(**kwargs)
+                        )
 
             # Obtain information about the database based upon
             # the parsed results
@@ -248,7 +253,9 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             print(translated_query.model_dump_json(indent=2))
 
             # Execute the query
-            raw_results = self.query_executor.execute(translated_query.aql_query, self.db_config)
+            raw_results = self.query_executor.execute(
+                translated_query.aql_query, self.db_config
+            )
 
             # Analyze and refine results
             analyzed_results = self.metadata_analyzer.analyze(raw_results)
@@ -283,8 +290,10 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 
         # self.logging_service.log_session_end()
 
-    def map_entities(self, entity_list: NamedEntityCollection) -> list[NamedEntityCollection]:
-        '''
+    def map_entities(
+        self, entity_list: NamedEntityCollection
+    ) -> list[NamedEntityCollection]:
+        """
         Construct a new list that maps the entities into values from the NER collection.
 
         Args:
@@ -295,15 +304,17 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 
         If a named entity cannot be mapped, it is omitted from the returned list.  If it
         can be mapped, the entry is replaced with the mapped value from the NER collection.
-        '''
+        """
         mapped_entities = []
-        collection = self.db_config.db.collection(IndalekoDBCollections.Indaleko_Named_Entity_Collection)
+        collection = self.db_config.db.collection(
+            IndalekoDBCollections.Indaleko_Named_Entity_Collection
+        )
         if collection is None:
             return NamedEntityCollection(entities=mapped_entities)
         for entity in entity_list.entities:
             if entity.name is None:
                 continue
-            docs = [doc for doc in collection.find({'name': entity.name})]
+            docs = [doc for doc in collection.find({"name": entity.name})]
             if docs is None or len(docs) == 0:
                 ic(f"NER mapping: Could not find entity: {entity.name}")
                 continue
@@ -323,20 +334,22 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             )
         return NamedEntityCollection(entities=mapped_entities)
 
-    def get_collection_metadata(self, categories: list[str]) -> list[IndalekoCollectionMetadataDataModel]:
-        '''Get the metadata for the collections based upon the selected categories.'''
+    def get_collection_metadata(
+        self, categories: list[str]
+    ) -> list[IndalekoCollectionMetadataDataModel]:
+        """Get the metadata for the collections based upon the selected categories."""
         if self.collections_metadata is None:
             return []
         collection_metadata = []
         for category in categories:
             metadata = self.collections_metadata.get_collection_metadata(category)
             if metadata is None:
-                ic(f'Failed to get metadata for category: {category}')
+                ic(f"Failed to get metadata for category: {category}")
             collection_metadata.append(metadata)
         return collection_metadata
 
     def get_query(self) -> str:
-        '''Get a query from the user.'''
+        """Get a query from the user."""
         return input(self.prompt).strip()
 
     def display_results(self, results: list[dict[str, Any]], facets: list[str]) -> None:
@@ -355,8 +368,8 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         ic(len(results))
         if len(results) < 10:
             for i, result in enumerate(results, 1):
-                doc = result['original']['result']
-                ic(doc['Record']['Attributes']['Path'])
+                doc = result["original"]["result"]
+                ic(doc["Record"]["Attributes"]["Path"])
 
         if facets:
             print("Suggested refinements:")
@@ -364,29 +377,29 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 print(f"- {facet}")
 
     def continue_session(self) -> bool:
-        '''Check if the user wants to continue the session.'''
-        return input('Do you want to continue? [Y/N] ').strip().lower() in ['y', 'yes']
+        """Check if the user wants to continue the session."""
+        return input("Do you want to continue? [Y/N] ").strip().lower() in ["y", "yes"]
 
     def build_schema_table(self):
-        '''Build the schema table.'''
+        """Build the schema table."""
         schema = {}
         for collection in self.db_config.db.collections():
-            name = collection['name']
-            if name.startswith('_'):
+            name = collection["name"]
+            if name.startswith("_"):
                 continue
             doc = self.db_config.db.collection(name)
             properties = doc.properties()
-            schema[name] = properties['schema']
+            schema[name] = properties["schema"]
         return schema
 
 
 def main():
-    '''A CLI based query tool for Indaleko.'''
-    ic('Starting Indaleko Query CLI')
+    """A CLI based query tool for Indaleko."""
+    ic("Starting Indaleko Query CLI")
     IndalekoQueryCLI().run()
-    print('Thank you for using Indaleko Query CLI')
-    print('Have a lovely day!')
+    print("Thank you for using Indaleko Query CLI")
+    print("Have a lovely day!")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

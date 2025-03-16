@@ -2,7 +2,8 @@ import os
 import datetime
 import argparse
 
-def count_files_and_directories(path : str, getstats : bool = False) -> tuple:
+
+def count_files_and_directories(path: str, getstats: bool = False) -> tuple:
     total_files = 0
     total_dirs = 0
     file_sizes = 0
@@ -22,7 +23,8 @@ def count_files_and_directories(path : str, getstats : bool = False) -> tuple:
                 try:
                     stat_data = os.stat(file_path)
                     timestamp = datetime.datetime.fromtimestamp(
-                        stat_data.stat_info.st_ctime)
+                        stat_data.stat_info.st_ctime
+                    )
                     if timestamp < oldest_file:
                         oldest_file = timestamp
                     if timestamp > newest_file:
@@ -36,7 +38,8 @@ def count_files_and_directories(path : str, getstats : bool = False) -> tuple:
                 try:
                     stat_data = os.stat(dir_path)
                     timestamp = datetime.datetime.fromtimestamp(
-                        stat_data.stat_info.st_ctime)
+                        stat_data.stat_info.st_ctime
+                    )
                     if timestamp < oldest_dir:
                         oldest_dir = timestamp
                     if timestamp > newest_dir:
@@ -50,9 +53,16 @@ def count_files_and_directories(path : str, getstats : bool = False) -> tuple:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('topdir')
-    parser.add_argument('--label', type=str, help="Add a descriptive label to the output", default="")
-    parser.add_argument('--dostat', action='store_true', default=False, help='Perform file stat while enumerating')
+    parser.add_argument("topdir")
+    parser.add_argument(
+        "--label", type=str, help="Add a descriptive label to the output", default=""
+    )
+    parser.add_argument(
+        "--dostat",
+        action="store_true",
+        default=False,
+        help="Perform file stat while enumerating",
+    )
     args = parser.parse_args()
     start = datetime.datetime.utcnow()
     file_count, dir_count = count_files_and_directories(args.topdir, args.dostat)
@@ -64,9 +74,13 @@ def main():
     end = datetime.datetime.utcnow()
     execution_time = end - start
     if count > 0:
-        print('Enumerated {} in {} time ({} seconds per entry)'.format(
-            count, execution_time, execution_time.total_seconds() / count))
+        print(
+            "Enumerated {} in {} time ({} seconds per entry)".format(
+                count, execution_time, execution_time.total_seconds() / count
+            )
+        )
     # TODO: write this to a json file
+
 
 if __name__ == "__main__":
     main()
@@ -88,5 +102,8 @@ def scratch():
     end = datetime.datetime.utcnow()
     execution_time = end - start
     if count > 0:
-        print('Enumerated {} in {} time ({} seconds per entry)'.format(
-            count, execution_time, execution_time.total_seconds() / count))
+        print(
+            "Enumerated {} in {} time ({} seconds per entry)".format(
+                count, execution_time, execution_time.total_seconds() / count
+            )
+        )

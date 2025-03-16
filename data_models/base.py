@@ -28,28 +28,29 @@ from typing import Dict, Any, Type, TypeVar
 from pydantic import BaseModel
 from icecream import ic
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
-T = TypeVar('T', bound='IndalekoBaseModel')
+T = TypeVar("T", bound="IndalekoBaseModel")
 
 
 class IndalekoBaseModel(BaseModel):
-    '''
+    """
     This expands upon the base model and provides common methods that we use in meshing the
     Pydanic data model with ArangoDB and our usuage model.
-    '''
+    """
+
     def serialize(self) -> Dict[str, Any]:
-        '''Serialize the object to a dictionary'''
-        return self.model_dump(mode='json', exclude_unset=True, exclude_none=True)
+        """Serialize the object to a dictionary"""
+        return self.model_dump(mode="json", exclude_unset=True, exclude_none=True)
 
     @classmethod
     def deserialize(cls: Type[T], data: Dict[str, Any]) -> T:
-        '''Deserialize the object from a dictionary'''
+        """Deserialize the object from a dictionary"""
         if isinstance(data, str):
             return cls(**json.loads(data))
         elif isinstance(data, dict):
@@ -59,8 +60,10 @@ class IndalekoBaseModel(BaseModel):
 
     @classmethod
     def get_json_example(cls: Type[T]) -> dict:
-        '''This will return a JSON compatible encoding as a python dictionary'''
-        return json.loads(cls(**cls.Config.json_schema_extra['example']).model_dump_json())
+        """This will return a JSON compatible encoding as a python dictionary"""
+        return json.loads(
+            cls(**cls.Config.json_schema_extra["example"]).model_dump_json()
+        )
 
     @classmethod
     def get_example(cls: Type[T]) -> T:
@@ -68,33 +71,33 @@ class IndalekoBaseModel(BaseModel):
 
     @classmethod
     def build_arangodb_doc(cls: Type[T], _key: uuid.UUID = uuid.uuid4()) -> dict:
-        '''
+        """
         Builds a dictionary that can be used to insert the data into ArangoDB.
         If a key is provided, it will be used, otherwise a random UUID is generated.
-        '''
+        """
         data = json.loads(cls.model_dump_json())
-        assert '_key' not in data, f"Key already exists in data: {data}"
-        data['_key'] = str(_key)
+        assert "_key" not in data, f"Key already exists in data: {data}"
+        data["_key"] = str(_key)
         return json.dumps(data)
 
     @classmethod
     def get_json_schema(cls: Type[T]) -> dict:
-        '''Returns the JSON schema for the data model in Python dictionary format.'''
+        """Returns the JSON schema for the data model in Python dictionary format."""
         return cls.get_example().model_json_schema()
 
     @classmethod
     def get_arangodb_schema(cls: Type[T]) -> dict:
-        '''Returns the JSON schema for the data model in the format required by ArangoDB'''
+        """Returns the JSON schema for the data model in the format required by ArangoDB"""
         return {
             "message": "Unfortunately, your data did not conform to the schema.",
             "level": "strict",
             "type": "json",
-            "rule": cls.get_json_schema()
+            "rule": cls.get_json_schema(),
         }
 
     @classmethod
     def test_model_main(cls: Type[T]) -> None:
-        '''This function can be used to do basic testing of the data model.'''
+        """This function can be used to do basic testing of the data model."""
         data = cls.get_example()
         ic(data)
         ic(dir(data))
@@ -106,9 +109,9 @@ class IndalekoBaseModel(BaseModel):
 
 
 def main():
-    '''This allows testing the data model.'''
-    ic('Currently no test code for IndalekoBaseModel')
+    """This allows testing the data model."""
+    ic("Currently no test code for IndalekoBaseModel")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

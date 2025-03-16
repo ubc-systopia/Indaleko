@@ -1,4 +1,4 @@
-'''
+"""
 This module defines the database schema for the MachineConfig collection.
 
 Project Indaleko
@@ -16,7 +16,7 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
 
 import os
 import sys
@@ -26,59 +26,58 @@ from typing import Union
 from icecream import ic
 from pydantic import Field
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
+
 # pylint: enable=wrong-import-position
 
 
 class Software(IndalekoBaseModel):
-    '''Defines the machine Software information'''
+    """Defines the machine Software information"""
+
     OS: str = Field(
-        ...,
-        title='OS',
-        description='The operating system for the machine.'
+        ..., title="OS", description="The operating system for the machine."
     )
 
     Version: str = Field(
         ...,
-        title='Software Version',
-        description='The version of the operating system.'
+        title="Software Version",
+        description="The version of the operating system.",
     )
 
     Hostname: str = Field(
-        ...,
-        title='Hostname',
-        description='The hostname of the machine.')
+        ..., title="Hostname", description="The hostname of the machine."
+    )
 
     Architecture: Union[str, None] = Field(
-        ...,
-        title='Architecture',
-        description='The architecture of the machine.')
+        ..., title="Architecture", description="The architecture of the machine."
+    )
 
     class Config:
-        '''Configuration for the software data model'''
+        """Configuration for the software data model"""
+
         json_schema_extra = {
-            'example': {
-                'OS': 'Linux',
-                'Version': '5.4.0-1043-aws',
-                'Hostname': 'ip-10-0-0-1',
-                'Architecture': 'x86_64'
+            "example": {
+                "OS": "Linux",
+                "Version": "5.4.0-1043-aws",
+                "Hostname": "ip-10-0-0-1",
+                "Architecture": "x86_64",
             }
         }
 
 
 def main():
-    '''Main function for the software data model'''
-    ic('Testing Software Data Model')
+    """Main function for the software data model"""
+    ic("Testing Software Data Model")
     Software.test_model_main()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -8,7 +8,7 @@ neo4j_username = "neo4j"
 neo4j_password = None
 
 # Number of UUIDs to generate and insert
-num_uuids = 10 # 0000
+num_uuids = 10  # 0000
 
 batch_size = 10
 
@@ -24,7 +24,7 @@ with driver.session() as session:
     for i in range(0, num_uuids, batch_size):
         batch_uuids = [str(uuid.uuid4()) for _ in range(batch_size)]
         query = "UNWIND $batch AS uuid CREATE (:DataObject {value: uuid})"
-        print(query,batch_uuids)
+        print(query, batch_uuids)
         result = session.run(query, batch=batch_uuids)
         # Check the result (optional)
         summary = result.consume()
@@ -37,5 +37,5 @@ end_time = time.time()
 elapsed_time = end_time - start_time
 
 print("UUIDs inserted:", num_uuids)
-print('Successful node creation count: ', successful_create_count)
+print("Successful node creation count: ", successful_create_count)
 print("Elapsed time:", elapsed_time, "seconds")

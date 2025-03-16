@@ -1,4 +1,4 @@
-'''
+"""
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason
 
@@ -15,7 +15,8 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-'''
+"""
+
 import argparse
 import os
 import uuid
@@ -32,25 +33,29 @@ from IndalekoObjectDataModel import IndalekoObjectDataModel
 from IndalekoRecordDataModel import IndalekoRecordDataModel
 from IndalekoDataModel import IndalekoDataModel
 
+
 class IndalekoObject:
-    '''
+    """
     An IndalekoObject represents a single object (file/directory) in the Indaleko system.
-    '''
+    """
+
     Schema = IndalekoObjectSchema().get_json_schema()
 
-    '''UUIDs we associate with specific timestamps that we capture'''
-    CREATION_TIMESTAMP = '6b3f16ec-52d2-4e9b-afd0-e02a875ec6e6'
-    MODIFICATION_TIMESTAMP = '434f7ac1-f71a-4cea-a830-e2ea9a47db5a'
-    ACCESS_TIMESTAMP = '581b5332-4d37-49c7-892a-854824f5d66f'
-    CHANGE_TIMESTAMP = '3bdc4130-774f-4e99-914e-0bec9ee47aab'
+    """UUIDs we associate with specific timestamps that we capture"""
+    CREATION_TIMESTAMP = "6b3f16ec-52d2-4e9b-afd0-e02a875ec6e6"
+    MODIFICATION_TIMESTAMP = "434f7ac1-f71a-4cea-a830-e2ea9a47db5a"
+    ACCESS_TIMESTAMP = "581b5332-4d37-49c7-892a-854824f5d66f"
+    CHANGE_TIMESTAMP = "3bdc4130-774f-4e99-914e-0bec9ee47aab"
 
     def __init__(self, **kwargs):
-        '''Initialize the object.'''
+        """Initialize the object."""
         self.args = kwargs
-        assert 'ObjectIdentifier' in kwargs, 'ObjectIdentifier is missing.'
-        assert isinstance(kwargs['ObjectIdentifier'], str), 'ObjectIdentifier is not a string.'
-        assert "None" != kwargs['ObjectIdentifier'], 'ObjectIdentifier is None.'
-        if 'Record' not in kwargs:
+        assert "ObjectIdentifier" in kwargs, "ObjectIdentifier is missing."
+        assert isinstance(
+            kwargs["ObjectIdentifier"], str
+        ), "ObjectIdentifier is not a string."
+        assert "None" != kwargs["ObjectIdentifier"], "ObjectIdentifier is None."
+        if "Record" not in kwargs:
             self.legacy_constructor()
         else:
             self.indaleko_object = IndalekoObjectDataModel.IndalekoObject.deserialize(
@@ -59,77 +64,98 @@ class IndalekoObject:
         if self.indaleko_object.Timestamps is not None:
             for timestamp in self.indaleko_object.Timestamps:
                 if timestamp.Value.tzinfo is None:
-                    timestamp.Value = timestamp.Value.replace(tzinfo=datetime.timezone.utc)
+                    timestamp.Value = timestamp.Value.replace(
+                        tzinfo=datetime.timezone.utc
+                    )
 
     def legacy_constructor(self):
-        '''Create an object using the old format.'''
+        """Create an object using the old format."""
         kwargs = self.args
         # ic(kwargs)
         record = IndalekoRecordDataModel.IndalekoRecord(
-            Data=kwargs['raw_data'],
-            Attributes=kwargs['Attributes'],
+            Data=kwargs["raw_data"],
+            Attributes=kwargs["Attributes"],
             SourceIdentifier=IndalekoDataModel.SourceIdentifier(
-                Identifier=kwargs['source']['Identifier'],
-                Version=kwargs['source']['Version'],
-                Description=None
+                Identifier=kwargs["source"]["Identifier"],
+                Version=kwargs["source"]["Version"],
+                Description=None,
             ),
-            Timestamp = kwargs.get('timestamp', datetime.datetime.now(datetime.UTC))
+            Timestamp=kwargs.get("timestamp", datetime.datetime.now(datetime.UTC)),
         )
-        del kwargs['raw_data']
-        del kwargs['Attributes']
-        del kwargs['source']
-        if 'timestamp' in kwargs:
-           del kwargs['timestamp']
-        assert 'Record' not in kwargs, 'Record is still in kwargs - new style constructor.'
-        kwargs['Record'] = IndalekoRecordDataModel.IndalekoRecord.serialize(record)
-        #ic(kwargs['Record'])
+        del kwargs["raw_data"]
+        del kwargs["Attributes"]
+        del kwargs["source"]
+        if "timestamp" in kwargs:
+            del kwargs["timestamp"]
+        assert (
+            "Record" not in kwargs
+        ), "Record is still in kwargs - new style constructor."
+        kwargs["Record"] = IndalekoRecordDataModel.IndalekoRecord.serialize(record)
+        # ic(kwargs['Record'])
         try:
-            self.indaleko_object = IndalekoObjectDataModel.IndalekoObject.deserialize(kwargs)
+            self.indaleko_object = IndalekoObjectDataModel.IndalekoObject.deserialize(
+                kwargs
+            )
         except apischema.validation.errors.ValidationError as e:
             ic(e)
             ic(kwargs)
             raise e
 
     @staticmethod
-    def deserialize(data: dict) -> 'IndalekoObject':
-        '''Deserialize a dictionary to an object.'''
+    def deserialize(data: dict) -> "IndalekoObject":
+        """Deserialize a dictionary to an object."""
         return IndalekoObject(**data)
 
     def serialize(self) -> dict:
-        '''Serialize the object to a dictionary.'''
-        serialized_data = IndalekoObjectDataModel.IndalekoObject.serialize(self.indaleko_object)
+        """Serialize the object to a dictionary."""
+        serialized_data = IndalekoObjectDataModel.IndalekoObject.serialize(
+            self.indaleko_object
+        )
         if isinstance(serialized_data, tuple):
-            assert len(serialized_data) == 1, 'Serialized data is a multi-entry tuple.'
+            assert len(serialized_data) == 1, "Serialized data is a multi-entry tuple."
             serialized_data = serialized_data[0]
         if isinstance(serialized_data, dict):
-            serialized_data['_key'] = self.args['ObjectIdentifier']
+            serialized_data["_key"] = self.args["ObjectIdentifier"]
         return serialized_data
 
     def to_dict(self):
-        '''Return a dictionary representation of this object.'''
+        """Return a dictionary representation of this object."""
         return self.serialize()
 
     @staticmethod
-    def create_indaleko_object(**kwargs) -> 'IndalekoObject':
-        '''Create an Indaleko Object from an old style description.'''
-        raise NotImplementedError('This method is not implemented.')
+    def create_indaleko_object(**kwargs) -> "IndalekoObject":
+        """Create an Indaleko Object from an old style description."""
+        raise NotImplementedError("This method is not implemented.")
 
     def __getitem__(self, key):
-        '''Get an item from the object.'''
+        """Get an item from the object."""
         return self.indaleko_object.Record.Attributes[key]
 
     def __contains__(self, key):
-        '''Check if an item is in the object.'''
+        """Check if an item is in the object."""
         return key in self.indaleko_object.Record.Attributes
+
 
 def main():
     """Test code for the IndalekoObject class."""
     random_raw_data = Indaleko.encode_binary_data(os.urandom(64))
     source_uuid = str(uuid.uuid4())
     parser = argparse.ArgumentParser()
-    parser.add_argument('--version', action='version', version='%(prog)s 1.0')
-    parser.add_argument('--source' , '-s', type=str, default=source_uuid, help='The source UUID of the data.')
-    parser.add_argument('--raw-data', '-r', type=str, default=random_raw_data, help='The raw data to be stored.')
+    parser.add_argument("--version", action="version", version="%(prog)s 1.0")
+    parser.add_argument(
+        "--source",
+        "-s",
+        type=str,
+        default=source_uuid,
+        help="The source UUID of the data.",
+    )
+    parser.add_argument(
+        "--raw-data",
+        "-r",
+        type=str,
+        default=random_raw_data,
+        help="The raw data to be stored.",
+    )
     args = parser.parse_args()
     data_object = {
         "Record": {
@@ -148,7 +174,8 @@ def main():
                 "st_mode": 33279,
                 "st_mtime": 1685891221.5597157,
                 "st_mtime_ns": 1685891221559715700,
-                "st_nlink": 1, "st_reparse_tag": 0,
+                "st_nlink": 1,
+                "st_reparse_tag": 0,
                 "st_size": 1410120,
                 "st_uid": 0,
                 "Name": "rufus-4.1.exe",
@@ -156,13 +183,14 @@ def main():
                 "URI": "\\\\?\\Volume{3397d97b-2ca5-11ed-b2fc-b40ede9a5a3c}\\dist\\rufus-4.1.exe",
                 "Indexer": "0793b4d5-e549-4cb6-8177-020a738b66b7",
                 "Volume GUID": "3397d97b-2ca5-11ed-b2fc-b40ede9a5a3c",
-                "ObjectIdentifier": "2c73d6e5-eaba-4f0a-acf3-e02c529f097a"
+                "ObjectIdentifier": "2c73d6e5-eaba-4f0a-acf3-e02c529f097a",
             },
             "SourceIdentifier": {
                 "Identifier": "429f1f3c-7a21-463f-b7aa-cd731bb202b1",
-                "Version": "1.0", "Description": None
+                "Version": "1.0",
+                "Description": None,
             },
-            "Timestamp": "2024-07-30T23:38:48.319654+00:00"
+            "Timestamp": "2024-07-30T23:38:48.319654+00:00",
         },
         "URI": "\\\\?\\Volume{3397d97b-2ca5-11ed-b2fc-b40ede9a5a3c}\\dist\\rufus-4.1.exe",
         "ObjectIdentifier": "2c73d6e5-eaba-4f0a-acf3-e02c529f097a",
@@ -170,37 +198,39 @@ def main():
             {
                 "Label": "6b3f16ec-52d2-4e9b-afd0-e02a875ec6e6",
                 "Value": "2023-06-04T15:07:01.559192+00:00",
-                "Description": "Created"
+                "Description": "Created",
             },
             {
                 "Label": "434f7ac1-f71a-4cea-a830-e2ea9a47db5a",
                 "Value": "2023-06-04T15:07:01.559716+00:00",
-                "Description": "Modified"
+                "Description": "Modified",
             },
             {
                 "Label": "581b5332-4d37-49c7-892a-854824f5d66f",
                 "Value": "2023-08-28T11:50:56.333428+00:00",
-                "Description": "Accessed"
+                "Description": "Accessed",
             },
             {
                 "Label": "3bdc4130-774f-4e99-914e-0bec9ee47aab",
                 "Value": "2023-06-04T15:07:01.559192+00:00",
-                "Description": "Changed"
-            }
+                "Description": "Changed",
+            },
         ],
         "Size": 1410120,
         "Machine": "2e169bb7-0024-4dc1-93dc-18b7d2d28190",
         "Volume": "3397d97b-2ca5-11ed-b2fc-b40ede9a5a3c",
         "UnixFileAttributes": "S_IFREG",
         "WindowsFileAttributes": "FILE_ATTRIBUTE_ARCHIVE",
-        "SemanticAttributes" : [],
-        "Label" : None,
-        "LocalIdentifier" : None
+        "SemanticAttributes": [],
+        "Label": None,
+        "LocalIdentifier": None,
     }
     indaleko_object = IndalekoObject.deserialize(data_object)
     print(json.dumps(indaleko_object.serialize(), indent=2))
-    assert IndalekoObjectSchema.is_valid_object(indaleko_object.serialize()),\
-        'Object is not valid.'
+    assert IndalekoObjectSchema.is_valid_object(
+        indaleko_object.serialize()
+    ), "Object is not valid."
+
 
 if __name__ == "__main__":
     main()

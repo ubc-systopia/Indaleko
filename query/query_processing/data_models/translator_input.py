@@ -27,24 +27,27 @@ from typing import Union
 
 # from icecream import ic
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from query.llm_base import IndalekoLLMBase
+
 # from data_models.collection_metadata_data_model import IndalekoCollectionMetadataDataModel  # noqa: E402
 # from data_models.db_index import IndalekoCollectionIndexDataModel  # noqa: E402
 # from data_models.named_entity import NamedEntityCollection  # noqa: E402
 from query.query_processing.data_models.query_input import StructuredQuery  # noqa: E402
+
 # pylint: enable=wrong-import-position
 
 
 class TranslatorInput(BaseModel):
-    '''Define the input data model for the translator.'''
+    """Define the input data model for the translator."""
+
     Query: StructuredQuery
     Connector: IndalekoLLMBase
     # Note: I'm not sure what we are using these
