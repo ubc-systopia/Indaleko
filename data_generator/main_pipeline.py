@@ -6,8 +6,7 @@ Required files:
 import os, shutil, sys
 import configparser
 import json 
-from datetime import datetime, timezone
-import argparse
+from datetime import datetime
 import copy
 import click
 
@@ -18,8 +17,6 @@ if os.environ.get('INDALEKO_ROOT') is None:
     os.environ['INDALEKO_ROOT'] = current_path
     sys.path.append(current_path)
 
-from data_models.location_data_model import BaseLocationDataModel
-from data_models.named_entity import IndalekoNamedEntityDataModel, NamedEntityCollection, example_entities, IndalekoNamedEntityType
 from query.cli import IndalekoQueryCLI
 from data_generator.scripts.s1_metadata_generator import Dataset_Generator, MetadataResults
 from data_generator.scripts.s2_store_metadata import MetadataStorer
@@ -32,42 +29,37 @@ from query import NLParser, AQLExecutor, OpenAIConnector
 from data_generator.scripts.s6_log_result import ResultLogger
 from pathlib import Path
 from typing import Any
-import subprocess
+from icecream import ic
+# import subprocess
 from data_generator.scripts.s5_get_precision_and_recall import Results
 
 from db.db_collection_metadata import IndalekoDBCollectionsMetadata
 
-class Validator():
+class DataGenerator():
     """
     This is the class for performing the validation for Indaleko
     """
-    def __init__(self, args) -> None:
-        self.file_path = "./data_generator/results/"
-        self.stored_file_path = self.file_path + "stored_metadata/"
-        self.config_path = './data_generator/config/'
-        api_path = Path('./config/openai-key.ini')
+    def __init__(self) -> None:
+        self.base_path = Path(current_path)
+        self.file_path = self.base_path / "data_generator" / "results"
+        self.stored_file_path = self.file_path / "stored_metadata"
+        self.config_path = self.base_path / "data_generator" / "config"
+        api_path = self.base_path / "config" / "openai-key.ini"
 
-        path = Path(self.file_path)
-        if path.exists():
-            shutil.rmtree(path)
-        path.mkdir(parents=True, exist_ok=True)
+        # Remove and recreate results directory
+        if self.file_path.exists():
+            shutil.rmtree(self.file_path)
+        self.file_path.mkdir(parents=True, exist_ok=True)
 
-        metadata_path = Path(self.stored_file_path)
-        metadata_path.mkdir(parents=True, exist_ok=True)
+        # Ensure stored_metadata directory exists
+        self.stored_file_path.mkdir(parents=True, exist_ok=True)
 
-        self.config = self.get_config_file(self.config_path + 'dg_config.json')
-        self.db_schema = self.read_json(self.config_path + 'schema.json')
+        # Read config files
+        self.config = self.get_config_file(self.config_path / "dg_config.json")
+        self.db_schema = self.read_json(self.config_path / "schema.json")
         self.logger = ResultLogger(result_path=self.file_path)
         self.db_config = IndalekoDBConfig()
         self.db_config.setup_database(self.db_config.config['database']['database'])
-
-        if not args.no_reset:
-            try:
-                subprocess.run(["python3", "./db/db_config.py", "reset"], check=True)
-                subprocess.run(["python3", "./platforms/mac/machine_config.py", "--add"], check=True)
-                subprocess.run(["python3", "./storage/recorders/local/mac/recorder.py", "--arangoimport"], check=True)
-            except subprocess.CalledProcessError as e:
-                raise e
 
         self.db_config.collections = IndalekoCollections()
         self.query_extractor = QueryExtractor()
@@ -144,21 +136,6 @@ class Validator():
             value (str): The value to add to the dictionary
         """
         self.result_dictionary[key] = value
-    
-    def insert_ner_metadata_test(self) -> None:
-        ner_example = IndalekoNamedEntityDataModel(
-        name="Paris",
-        category=IndalekoNamedEntityType.location,
-        description="Capital of France",
-        gis_location=BaseLocationDataModel(
-            source='defined',
-            timestamp=datetime.now(timezone.utc),
-            latitude=48.8566,
-            longitude=2.3522,
-            )
-        )
-        ner_example = [json.loads(ner_example.json())]
-        self._store_general_metadata("NamedEntities", ner_example, key_required = False)
 
     def run(self) -> None:
         """
@@ -178,7 +155,7 @@ class Validator():
             selected_md_attributes = self.generate_dictionary(query)
 
         elif intial_selection == 0:
-            selected_md_attributes = self.read_json(self.config_path + "dictionary.json")  
+            selected_md_attributes = self.read_json(self.config_path / "dictionary.json")  
         else:
             print("Invalid input. Exiting.")
             sys.exit()
@@ -202,7 +179,7 @@ class Validator():
 
         translate_query = click.prompt("Ready for AQL generation. Type (1) to generate a new AQL or (0) to use existing.", type=int)
         if translate_query == 0:
-            aql = self.read_aql(self.config_path + aql_text)  
+            aql = self.read_aql(self.config_path / aql_text)  
         elif translate_query == 1:
             aql = self.generate_query(translated_query)
         else:
@@ -226,7 +203,7 @@ class Validator():
                 if aql_selection != 1:
                     sys.exit()
                 
-                final_query = self.read_aql(self.config_path + aql_text)
+                final_query = self.read_aql(self.config_path / aql_text)
 
                 # RUN INDALEKO SEARCH
                 raw_results = self.run_search(final_query)
@@ -285,7 +262,7 @@ class Validator():
         dictionary_selection = click.prompt("Dictionary ready for evaluation, please type 1 to continue, otherwise type 0 to exit", type=int)
         if dictionary_selection != 1:
             sys.exit()
-        selected_md_attributes = self.read_json(self.config_path + json_name)    
+        selected_md_attributes = self.read_json(self.config_path / json_name)    
         return selected_md_attributes
 
     def process_config(self):
@@ -442,24 +419,19 @@ class Validator():
         """
         Write AQL with path specified:
         """
-        with open(path+title, "w") as file:
+        with open(path / title, "w") as file:
             file.write(aql_query)
 
     def write_as_json(self, path, title, result_dict):
         """
         Write JSON with path specified:
         """
-        with open(path + title, 'w') as file:
+        with open(path / title, 'w') as file:
             json.dump(result_dict, file, indent=4)
 
 def main() -> None:
     '''Main function for the validator tool'''
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--no_reset',
-                        '-nr',
-                        help='Prevents resetting of the database', action='store_true')
-    args = parser.parse_args()
-    validator_tool = Validator(args)
+    validator_tool = DataGenerator()
     total_epoch = validator_tool.time_operation(validator_tool.run)
     validator_tool.logger.log_final_result(total_epoch[0], validator_tool.result_dictionary)
     print("DONE -- please check /data_generator/results/validator_result.log for the full results")
