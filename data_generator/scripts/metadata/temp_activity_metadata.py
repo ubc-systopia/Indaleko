@@ -11,6 +11,7 @@ from activity.collectors.ambient.smart_thermostat.ecobee_data_model import Ecobe
 from data_generator.scripts.metadata.activity_metadata import ActivityMetadata
 
 class TempActivityData(ActivityMetadata):
+    
     """
     Subclass for ActivityMetadata.
     Used to generate Temperature Activity Context based on EcobeeAmbientData

@@ -9,10 +9,12 @@ from data_generator.scripts.metadata.metadata import Metadata
 from typing import Any
 
 class MachineConfigMetadata(Metadata):
+
     """
     Subclass for Metadata.
     Generates Machine Configuration Metadata based on the given Indaleko Records
     """
+    
     def __init__(self, selected_md=None):
         super().__init__(selected_md)
 

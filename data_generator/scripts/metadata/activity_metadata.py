@@ -3,9 +3,9 @@ import random
 from datetime import datetime
 from data_models.record import IndalekoRecordDataModel
 from data_generator.scripts.metadata.metadata import Metadata
-from icecream import ic
 
 class ActivityMetadata(Metadata):
+
     """
     Abstract class for Activity Metadata.
     Consists of helper functions for activity context subclasses

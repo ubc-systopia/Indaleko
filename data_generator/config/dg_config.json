@@ -1,6 +1,5 @@
 {
-    "output_json": "/Indaleko/data/",
     "n_metadata_records": 100, 
-    "n_matching_queries": 100,
-    "query":"I was writing my essay on economics while listening to Mozart and I’ve written over 20MB"
+    "n_matching_queries": 10,
+    "query":"All the pdf files I edited yesterday."
 }

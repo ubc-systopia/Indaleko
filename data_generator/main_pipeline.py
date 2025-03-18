@@ -36,10 +36,13 @@ from data_generator.scripts.s5_get_precision_and_recall import Results
 from db.db_collection_metadata import IndalekoDBCollectionsMetadata
 
 class DataGenerator():
+
     """
-    This is the class for performing the validation for Indaleko
+    This is the main class to run the data generator.
     """
+
     def __init__(self) -> None:
+        # Set paths:
         self.base_path = Path(current_path)
         self.file_path = self.base_path / "data_generator" / "results"
         self.stored_file_path = self.file_path / "stored_metadata"
@@ -56,11 +59,11 @@ class DataGenerator():
 
         # Read config files
         self.config = self.get_config_file(self.config_path / "dg_config.json")
-        self.db_schema = self.read_json(self.config_path / "schema.json")
         self.logger = ResultLogger(result_path=self.file_path)
         self.db_config = IndalekoDBConfig()
         self.db_config.setup_database(self.db_config.config['database']['database'])
 
+        # Initialize different modules required
         self.db_config.collections = IndalekoCollections()
         self.query_extractor = QueryExtractor()
         self.data_generator = Dataset_Generator(self.config)
@@ -71,7 +74,6 @@ class DataGenerator():
         
         self.llm_connector = OpenAIConnector(api_key=self.openai_key)
         self.query_executor = AQLExecutor()
-        # self.insert_ner_metadata_test()
         self.collections_md = IndalekoDBCollectionsMetadata()
         self.cli = IndalekoQueryCLI()
 
@@ -175,7 +177,7 @@ class DataGenerator():
         # GENERATE/SUBMIT AQL QUERY:
         query_info = "query_info.json"
         aql_text = "AQL_query.aql"
-        self.query_translator = AQLQueryConverter(self.db_schema, self.collections_md)
+        self.query_translator = AQLQueryConverter(self.collections_md)
 
         translate_query = click.prompt("Ready for AQL generation. Type (1) to generate a new AQL or (0) to use existing.", type=int)
         if translate_query == 0:
@@ -245,7 +247,7 @@ class DataGenerator():
         self.logger.log_process("building dictionary...")
         self.nl_parser = NLParser(self.llm_connector, self.collections_md)
 
-        # get relevant NER data for geolocation:
+        # Get relevant NER data for geolocation:
         ner_metadata = self.nl_parser._extract_entities(query)
         entities = self.cli.map_entities(ner_metadata)
         dictionary_generation_time, selected_md_attributes = self.time_operation(
@@ -255,8 +257,6 @@ class DataGenerator():
             llm_connector = self.llm_connector
         )
         self.logger.log_process_result("translated_query", dictionary_generation_time, selected_md_attributes)
-        # selected_md_attributes = self.query_extractor.extract(query = query, named_entities = entities, llm_connector = self.llm_connector)
-        # self.logger.log_process_result("selected_md_attributes", selected_md_attributes)
         self.write_as_json(self.config_path, json_name, selected_md_attributes)
 
         dictionary_selection = click.prompt("Dictionary ready for evaluation, please type 1 to continue, otherwise type 0 to exit", type=int)
@@ -392,11 +392,9 @@ class DataGenerator():
         total = 0
         for collection in self.db_config.db.collections():
             name = collection["name"]
-            ic(name)
             collection_count = self.db_config.db.aql.execute(f"""
                 RETURN COLLECTION_COUNT('{name}')
             """).next()
-            ic(collection_count)
             total += collection_count
         return total
 

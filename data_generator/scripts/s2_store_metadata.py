@@ -18,9 +18,11 @@ from datetime import datetime
 MetadataStorer for moving the metadata dataset onto the Indaleko DB
 '''
 class MetadataStorer():
+
     """
     A service for storing the metadata created
     """
+    
     def __init__(self) -> None:
         """
         Initialize the metadata storer service.

@@ -9,9 +9,11 @@ import re
 
 
 class QueryExtractor():
+
     """
     Translator for converting parsed queries to populate the self.selected_md_attributes dictionary.
     """
+    
     def __init__(self) -> None:
         """
         Initializes the Query Extractor.

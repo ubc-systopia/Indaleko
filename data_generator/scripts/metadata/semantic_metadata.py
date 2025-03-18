@@ -8,7 +8,6 @@ from semantic.data_models.base_data_model import BaseSemanticDataModel
 from data_generator.scripts.metadata.metadata import Metadata
 
 class SemanticMetadata(Metadata):
-    faker = Faker()
     
     """
     Subclass for Semantic Metadata.
@@ -49,6 +48,8 @@ class SemanticMetadata(Metadata):
     # should be generated:
     IMAGE_TAGS = ['Image', 'Picture', 'Figure'] 
     TEXT_BASED_FILES = ["pdf", "doc", "docx", "txt", "rtf", "csv", "xls", "xlsx", "ppt", "pptx"] 
+    
+    faker = Faker()
 
     def __init__(self, selected_semantic_md):
         super().__init__(selected_semantic_md)

@@ -2,8 +2,6 @@ import logging
 import json
 from datetime import datetime
 from logging import Logger
-from icecream import ic
-
 
 class ResultLogger:
     
@@ -25,9 +23,9 @@ class ResultLogger:
         progress_formatting = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         result_formatting = '%(message)s'
 
-        self.progress_logger = self.create_logger(result_path + "validator_progress.log", 
+        self.progress_logger = self.create_logger(result_path / "validator_progress.log", 
                                 "ProgressLogger", progress_formatting)
-        self.result_logger = self.create_logger(result_path + "validator_result.log", "ResultLogger", 
+        self.result_logger = self.create_logger(result_path / "validator_result.log", "ResultLogger", 
                                 result_formatting)
         
     def create_logger(self, log_file, logger_name, formatting) -> Logger:

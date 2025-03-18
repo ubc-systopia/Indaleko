@@ -7,9 +7,11 @@ Results = namedtuple(
 )
 
 class ResultCalculator():
+
     """
     A service for calculating the precision and recall of the search 
     """
+    
     def __init__(self) -> None:
         """
         Initializes the calculator.

@@ -14,10 +14,12 @@ from data_generator.scripts.metadata.activity_metadata import ActivityMetadata
 
 
 class MusicActivityData(ActivityMetadata):
+
     """
     Subclass for ActivityMetadata.
     Used to generate Music Activity Context based on AmbientMusicData and SpotifyAmbientData data models
     """
+    
     TRACK_MIN_DURATION = 10000
     TRACK_MAX_DURATION = 300000
     MUSIC_SOURCES = ["spotify", "youtube music", "apple music"]

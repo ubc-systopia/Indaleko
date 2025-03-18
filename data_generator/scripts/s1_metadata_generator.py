@@ -34,9 +34,11 @@ MetadataResults = namedtuple('MetadataResults', [
 
 
 class Dataset_Generator():
+
     """
     Metadata Dataset Generator for given dictionary
     """
+    
     def __init__(self, config: dict, 
                 default_lower_timestamp = datetime(2000, 10, 25), 
                 default_upper_timestamp = datetime.now(), 
@@ -50,7 +52,6 @@ class Dataset_Generator():
             default_upper_timestamp (datetime): the datetime speciying the upper bound for timestamp generation
         """
         self.n_metadata_records = config["n_metadata_records"]
-        self.metadata_json = config["output_json"]
         self.n_matching_queries = config["n_matching_queries"]
         self.default_lower_timestamp = default_lower_timestamp
         self.default_upper_timestamp = default_upper_timestamp
@@ -72,11 +73,11 @@ class Dataset_Generator():
         self.machine_config_generator = None
         self.has_semantic_truth = False
     
-    def write_json(self, dataset: dict, json_path: str) -> None:
+    def write_json(self, dataset: dict, path, json_path: str) -> None:
         """
         Writes the generated metadata to a json file
         """
-        with open(json_path, 'w') as json_file:
+        with open(path / json_path, 'w') as json_file:
             json.dump(dataset, json_file, indent=4)
 
     def initialize_dict(self, selected_md_attributes):
@@ -141,12 +142,12 @@ class Dataset_Generator():
 
         if(save_files):
             # save the resulting dataset to a json file for future reference
-            self.write_json(all_record, path + "records.json")
-            self.write_json(all_geo_activity, path + "geo_activity.json")
-            self.write_json(all_music_activity, path + "music_activity.json")
-            self.write_json(all_temp_activity, path + "temp_activity.json")
-            self.write_json(all_machine_config, path + "machine_config.json")
-            self.write_json(all_semantics, path + "semantics.json")
+            self.write_json(all_record, path, "records.json")
+            self.write_json(all_geo_activity, path, "geo_activity.json")
+            self.write_json(all_music_activity, path, "music_activity.json")
+            self.write_json(all_temp_activity, path, "temp_activity.json")
+            self.write_json(all_machine_config, path, "machine_config.json")
+            self.write_json(all_semantics, path, "semantics.json")
         
         results = MetadataResults(
             all_record, all_geo_activity, all_temp_activity, all_music_activity, 
@@ -288,86 +289,13 @@ class Dataset_Generator():
 
 def main():
     selected_md_attributes = {
-    "Posix": {
-        "file.name": {
-            "pattern": "essay",
-            "command": "exactly",
-            "extension": [
-                ".pdf"
-            ]
-        },
-        "file.size": {
-            "target_min": 200000000,
-            "target_max": 200000009,
-            "command": "range"
-        },
-        "file.directory": {
-            "location": "local",
-            "local_dir_name": "papers"
-        }
-    },"Semantic": {
-        "Content_1": [
-            "Title",
-            "CPSC 300 Essay"
-        ],
-        "Content_2": [
-            "Link",
-            "Intro"
-        ], 
-        "Content_3": [
-            "EmailAddress",
-            "j@gmail.com"
-        ],
-        "Content_4": [
-            "Form",
-            "apple: pie"
-        ], "Content_5": [
-            "PageNumber",
-            5
-        ], "Content_6": [
-            "Checked",
-            True
-        ], "Content_7": [
-            "Image",
-            "duck.png"
-        ], "Content_8": [
-            "Text",
-            "I went to the mall yesterday to buy a ......"
-        ], "Content_9": [
-            "Address",
-            "Vancouver, BC"
-        ]
-        },
-    "Activity": {
-        "geo_location": {
-            "location": "Langley, BC",
-            "command": "at"
-        },
-        "ecobee_temp": {
-            "temperature": {
-                "start": 15.0,
-                "end": 15.0,
-                "command": "equal",
-            },
-            "humidity": {"start":10, "end":12,"command":"range"},
-            "target_temp":{"start":10, "end":10,"command":"equal"},
-            "hvac_mode": "heat",
-            "hvac_state":"heating",
-            "fan_mode": "auto",
-            "timestamp": "birthtime"
-        },
-        "ambient_music": {
-            "track_name": "Happy",
-            "artist_name": "Will",
-            "playback_position_ms": 2000,
-            "track_duration_ms": 30000,
-            "is_playing": True,
-            "album_name":"H",
-            "source":"youtube music",
-            "timestamp": "birthtime"
+        "Activity": {
+            "ambient_music": {
+                "track_name": "Happy",
+                "timestamp": "birthtime"
+            }
         }
     }
-}
 
     config_path = "data_generator/config/dg_config.json"
     with open(config_path, 'r') as file:
