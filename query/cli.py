@@ -67,7 +67,10 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 
     def __init__(self):
         """Create an instance of the IndalekoQueryCLI class."""
-        cli_data = IndalekoBaseCliDataModel()
+        cli_data = IndalekoBaseCliDataModel(
+            RegistrationServiceName=IndalekoQueryCLI.service_name,
+            FileServiceName=IndalekoQueryCLI.service_name,
+        )
         handler_mixin = IndalekoQueryCLI.query_handler_mixin
         features = IndalekoBaseCLI.cli_features(
             machine_config=False,
@@ -185,10 +188,9 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             ParserResults.model_validate(parsed_query)
 
             # Only support search for now.
-            assert (
-                parsed_query.Intent.intent == "search"
-            ), f"Expected 'search' intent, got '{parsed_query.Intent.intent}'"
-
+            if parsed_query.Intent.intent != "search":
+                print(f"Only search queries are supported. Intent inferred is {parsed_query.Intent.intent}")
+                print('Defaulting to "search" for now.')
             ic(f"Query Type: {parsed_query.Intent.intent}")
 
             # Map entities to database attributes

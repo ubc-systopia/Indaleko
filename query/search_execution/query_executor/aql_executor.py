@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import os
+from arango.exceptions import AQLQueryExecuteError
 import sys
 
 from typing import Any
@@ -69,6 +70,11 @@ class AQLExecutor(ExecutorBase):
             )
             ic("Terminating")
             sys.exit(1)
+        except AQLQueryExecuteError as e:
+            ic(
+                f"An error occurred while executing the AQL query:\n\tquery: {query}\n\tException: {e}"
+            )
+            raw_results = [{'result': f'Exception: {str(e)}'}]
 
     @staticmethod
     def validate_query(query: str) -> bool:

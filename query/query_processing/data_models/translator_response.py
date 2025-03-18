@@ -24,7 +24,7 @@ import os
 import sys
 
 from pydantic import BaseModel
-from typing import Union
+from typing import Union, Any
 
 # from icecream import ic
 
@@ -53,7 +53,7 @@ class TranslatorOutput(BaseModel):
     explanation: str
     confidence: float
     observations: Union[str, None] = None
-    performance_info: dict[str, any] = {}
+    performance_info: dict[str, Any] = {}
     additional_notes: Union[str, None] = None
     timestamp: datetime = datetime.now()
 
