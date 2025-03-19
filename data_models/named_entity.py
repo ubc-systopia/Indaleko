@@ -36,7 +36,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
-from data_models.location_data_model import BaseLocationDataModel
+from data_models.location_data_model import LocationDataModel
 
 # pylint: enable=wrong-import-position
 
@@ -56,7 +56,7 @@ class IndalekoNamedEntityDataModel(IndalekoBaseModel):
     uuid: UUID = uuid4()
     category: IndalekoNamedEntityType
     description: Optional[str] = None
-    gis_location: Optional[BaseLocationDataModel] = None  # GIS location for places
+    gis_location: Optional[LocationDataModel] = None  # GIS location for places
     device_id: Optional[UUID] = None  # Device identifier for things
 
     class Config:
@@ -100,7 +100,7 @@ example_entities = NamedEntityCollection(
             name="Paris",
             category=IndalekoNamedEntityType.location,
             description="Capital of France",
-            gis_location=BaseLocationDataModel(
+            gis_location=LocationDataModel(
                 source="defined",
                 timestamp=datetime.now(timezone.utc),
                 latitude=48.8566,

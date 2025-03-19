@@ -15,7 +15,6 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from activity.data_model.activity import IndalekoActivityDataModel  # noqa: E402
 from activity.collectors.base import CollectorBase  # noqa: E402
 from activity.characteristics import ActivityDataCharacteristics  # noqa: E402
 
@@ -37,4 +36,4 @@ recorders = [
 
 __version__ = "0.1.0"
 
-__all__ = ["IndalekoActivityDataModel", "CollectorBase", "ActivityDataCharacteristics"]
+__all__ = ["CollectorBase", "ActivityDataCharacteristics"]

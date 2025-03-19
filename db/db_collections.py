@@ -35,7 +35,6 @@ from data_models import (
     IndalekoIdentityDomainDataModel,
     IndalekoObjectDataModel,
     IndalekoMachineConfigDataModel,
-    IndalekoNamedEntityDataModel,
     IndalekoPerformanceDataModel,
     IndalekoQueryHistoryDataModel,
     IndalekoRelationshipDataModel,
@@ -44,7 +43,8 @@ from data_models import (
     IndalekoCollectionMetadataDataModel,
 )
 
-from activity import IndalekoActivityDataModel
+from data_models.named_entity import IndalekoNamedEntityDataModel
+from activity.data_model.activity import IndalekoActivityDataModel
 from semantic.data_models.base_data_model import BaseSemanticDataModel
 
 # pylint: enable=wrong-import-position

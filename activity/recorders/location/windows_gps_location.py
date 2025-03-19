@@ -37,7 +37,6 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from Indaleko import Indaleko
 from db.db_config import IndalekoDBConfig
 from activity.collectors.known_semantic_attributes import KnownSemanticAttributes
 
@@ -54,6 +53,7 @@ from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from data_models.i_uuid import IndalekoUUIDDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 from location_data_recorder import BaseLocationDataRecorder
+from utils.misc.data_management import decode_binary_data
 
 # pylint: enable=wrong-import-position
 
@@ -116,30 +116,31 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
             collection = IndalekoActivityDataRegistrationService.lookup_activity_provider_collection(
                 str(self.identifier)
             )
-        ic(collector_data)
         ic(collection)
         self.collector_data = collector_data
         self.collector = WindowsGPSLocation()
         self.collection = collection
 
-    def get_latest_db_update(self) -> Union[WindowsGPSLocation, None]:
+    def get_latest_db_update(self) -> Union[WindowsGPSLocationDataModel, None]:
         """Get the latest update from the database."""
         doc = BaseLocationDataRecorder.get_latest_db_update_dict(self.collection)
-        if doc is None:
-            return None
-        current_data = Indaleko.decode_binary_data(doc["Record"]["Data"])
-        ic(current_data)
-        return WindowsGPSLocationDataModel.deserialize(current_data)
+        data = decode_binary_data(doc['Record']['Data'])
+        cleaned_data = {}
+        for key, value in data.items():
+            if value is not None:
+                cleaned_data[key] = value
+        location_data = WindowsGPSLocationDataModel.deserialize(cleaned_data)
+        ic(location_data)
+        return location_data
 
     def update_data(self) -> Union[WindowsGPSLocationDataModel, None]:
         """Update the data in the database."""
         ksa = KnownSemanticAttributes
         current_data = WindowsGPSLocation().get_coords()
-        ic(type(current_data))
+        ic(current_data)
         assert isinstance(
             current_data, WindowsGPSLocationDataModel
         ), f"current_data is not a WindowsGPSLocationDataModel {type(current_data)}"
-        ic(type(current_data))
         latest_db_data = self.get_latest_db_update()
         if not self.has_data_changed(current_data, latest_db_data):
             ic("Data has not changed, return last DB record")
@@ -158,7 +159,7 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
                     Version="1",
                     Description="Latitude",
                 ),
-                Data=current_data.latitude,
+                Data=current_data.Location.latitude,
             ),
             IndalekoSemanticAttributeDataModel(
                 Identifier=IndalekoUUIDDataModel(
@@ -166,7 +167,7 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
                     Version="1",
                     Description="Longitude",
                 ),
-                Data=current_data.longitude,
+                Data=current_data.Location.longitude,
             ),
             IndalekoSemanticAttributeDataModel(
                 Identifier=IndalekoUUIDDataModel(
@@ -174,10 +175,9 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
                     Version="1",
                     Description="Accuracy",
                 ),
-                Data=current_data.accuracy,
+                Data=current_data.Location.accuracy,
             ),
         ]
-        ic(type(current_data))
         doc = BaseLocationDataRecorder.build_location_activity_document(
             source_data=source_identifier,
             location_data=current_data,

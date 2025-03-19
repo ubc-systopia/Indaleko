@@ -236,7 +236,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             #     parsed_query,
             #     selected_md_attributes=None,
             #     additional_notes=None,
-            #     n_truth=1,
+            #     n_truth=1,dir
             #     llm_connector=self.llm_connector,
             # )
             structured_query = StructuredQuery(

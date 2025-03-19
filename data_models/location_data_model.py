@@ -34,12 +34,12 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+from activity.data_model.activity import IndalekoActivityDataModel
 from data_models.base import IndalekoBaseModel
-
 # pylint: enable=wrong-import-position
 
 
-class BaseLocationDataModel(IndalekoBaseModel):
+class LocationDataModel(IndalekoBaseModel):
     latitude: float = Field(..., description="Latitude coordinate of the location")
     longitude: float = Field(..., description="Longitude coordinate of the location")
     altitude: Optional[float] = Field(
@@ -55,17 +55,8 @@ class BaseLocationDataModel(IndalekoBaseModel):
         ..., description="Source of the location data, e.g., 'GPS', 'IP', etc."
     )
 
-    @classmethod
-    @field_validator("timestamp", mode="before")
-    def ensure_timezone(cls, value: datetime):
-        """Ensure that the timestamp is in explicit UTC timezone"""
-        if isinstance(value, str):
-            value = datetime.fromisoformat(value)
-        if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
-        return value
-
     class Config:
+        '''Sample configuration for the data model'''
         json_schema_extra = {
             "example": {
                 "latitude": 49.2827,
@@ -80,8 +71,41 @@ class BaseLocationDataModel(IndalekoBaseModel):
         }
 
 
+class BaseLocationDataModel(IndalekoActivityDataModel):
+
+    Location: LocationDataModel = Field(
+        ...,
+        title="Location",
+        description="The location data."
+    )
+
+    @classmethod
+    @field_validator("timestamp", mode="before")
+    def ensure_timezone(cls, value: datetime):
+        """Ensure that the timestamp is in explicit UTC timezone"""
+        if isinstance(value, str):
+            value = datetime.fromisoformat(value)
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value
+
+    class Config:
+
+        @staticmethod
+        def generate_example():
+            """Generate an example for the data model"""
+            example = IndalekoActivityDataModel.Config.json_schema_extra["example"]
+            example["Location"] = LocationDataModel.Config.json_schema_extra["example"]
+            return example
+
+        json_schema_extra = {
+            "example": generate_example(),
+        }
+
+
 def main():
     """This allows testing the data model"""
+    LocationDataModel.test_model_main()
     BaseLocationDataModel.test_model_main()
 
 

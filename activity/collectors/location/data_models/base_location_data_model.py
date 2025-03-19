@@ -1,5 +1,5 @@
 """
-Init functionality for the activity data providers.
+This module defines the data model for location services.
 
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason
@@ -21,9 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
-# from icecream import ic
-
-init_path = os.path.dirname(os.path.abspath(__file__))
+from pydantic import Field
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -31,24 +29,39 @@ if os.environ.get("INDALEKO_ROOT") is None:
         current_path = os.path.dirname(current_path)
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
+
 # pylint: disable=wrong-import-position
+from activity.data_model.activity import IndalekoActivityDataModel
+from data_models.location_data_model import LocationDataModel
 # pylint: enable=wrong-import-position
 
-__version__ = "0.1.0"
 
-# Discover and load all plugins
-# discovered_plugins = discover_plugins()
-# ic(discovered_plugins)
+class BaseLocationDataModel(IndalekoActivityDataModel):
 
-# Make discovered plugins available when importing the package
-# globals().update(discovered_plugins)
+    Location: LocationDataModel = Field(
+        ...,
+        title="Location",
+        description="The location data."
+    )
 
-__all__ = [
-]
+    class Config:
+
+        @staticmethod
+        def generate_example():
+            """Generate an example for the data model"""
+            example = IndalekoActivityDataModel.Config.json_schema_extra["example"]
+            example["Location"] = LocationDataModel.Config.json_schema_extra["example"]
+            return example
+
+        json_schema_extra = {
+            "example": generate_example(),
+        }
 
 
-# You could also provide a function to get all discovered plugins
-# def get_all_plugins():
-#    return discovered_plugins
+def main():
+    """This allows testing the data model"""
+    BaseLocationDataModel.test_model_main()
 
-# print(discover_providers())
+
+if __name__ == "__main__":
+    main()

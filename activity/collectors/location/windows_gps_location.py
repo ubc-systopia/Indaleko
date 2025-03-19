@@ -24,6 +24,9 @@ from activity.collectors.location.data_models.windows_gps_location_data_model im
     WindowsGPSLocationDataModel,
 )
 from activity.collectors.location.location_base import LocationCollector
+from data_models.location_data_model import LocationDataModel
+from data_models.record import IndalekoRecordDataModel
+from utils.misc.data_management import encode_binary_data
 
 # pylint: enable=wrong-import-position
 
@@ -34,6 +37,7 @@ class WindowsGPSLocation(LocationCollector):
     def __init__(self):
         self._name = "GPS Location Service"
         self._location = "GPS Location"
+        self._version = '1.0.0'
         self._collector_id = uuid.UUID("750fd846-b6cd-4c81-b774-53ba25905e29")
         self.coords = self.get_coords()
 
@@ -49,26 +53,37 @@ class WindowsGPSLocation(LocationCollector):
         data = coords.coordinate
         if isinstance(data.timestamp, str):
             data.timestamp = datetime.fromisoformat(data.timestamp)
-        kwargs = {
-            "latitude": data.latitude,
-            "longitude": data.longitude,
-            "timestamp": data.timestamp,
-            "source": "GPS",
-            "altitude": getattr(data, "altitude", None),
-            "accuracy": getattr(data, "accuracy", None),
-            "altitude_accuracy": getattr(data, "altitude_accuracy", None),
-            "is_remote_source": False,
-            "point": f"POINT({data.latitude} {data.longitude})",
-            "position_source": "GPS",
-            "position_source_timestamp": data.timestamp,
-            "civic_address": getattr(coords, "civic_address", None),
-            "venue_data": getattr(coords, "venue_data", None),
-        }
+        satellite_data = None
         if hasattr(data, "satellite_data"):
-            kwargs["satellite_data"] = {}
+            satellite_data = {}
             for attr in dir(data.satellite_data):
                 if not attr.startswith("_"):
-                    kwargs["satellite_data"][attr] = getattr(data.satellite_data, attr)
+                    satellite_data[attr] = getattr(data.satellite_data, attr)
+        location = LocationDataModel(
+            latitude=data.latitude,
+            longitude=data.longitude,
+            altitude=getattr(data, "altitude", None),
+            accuracy=getattr(data, "accuracy", None),
+            heading=getattr(data, "heading", None),
+            speed=getattr(data, "speed", None),
+            timestamp=data.timestamp,
+            satellite_data=satellite_data,
+            source="GPS",
+        )
+        kwargs = {
+            'Record': IndalekoRecordDataModel(
+                SourceIdentifier={
+                    'Identifier': self._collector_id,
+                    'Version': self._version,
+                    'Description': self._name,
+                },
+                Timestamp=data.timestamp,
+                Data=encode_binary_data(location.model_dump_json()),
+            ),
+            'Timestamp': data.timestamp,
+            'SemanticAttributes': [],
+            'Location': location,
+        }
         ic(kwargs)
         return WindowsGPSLocationDataModel(**kwargs)
 

@@ -22,6 +22,7 @@ import json
 import math
 import os
 import sys
+from textwrap import dedent
 import uuid
 
 from datetime import datetime, timedelta
@@ -165,10 +166,11 @@ class BaseLocationDataRecorder(RecorderBase):
             data2, BaseLocationDataModel
         ), f"data2 is not a BaseLocationDataModel {type(data2)}"
         distance = BaseLocationDataRecorder.compute_distance(
-            data1.latitude, data1.longitude, data2.latitude, data2.longitude
+            data1.Location.latitude, data1.Location.longitude,
+            data2.Location.latitude, data2.Location.longitude
         )
         time_delta = BaseLocationDataRecorder.compute_time_difference(
-            data1.timestamp, data2.timestamp
+            data1.Location.timestamp, data2.Location.timestamp
         )
         return (
             distance > self.min_movement_change_required
@@ -243,8 +245,7 @@ class BaseLocationDataRecorder(RecorderBase):
         if isinstance(location_data, BaseLocationDataModel):
             location_data = json.loads(location_data.model_dump_json())
         assert len(semantic_attributes) > 0, "No semantic attributes provided"
-        timestamp = location_data["timestamp"]
-        ic(location_data)
+        timestamp = location_data['Location']["timestamp"]
         activity_data_args = {
             "Record": IndalekoRecordDataModel(
                 SourceIdentifier=source_data,
@@ -405,7 +406,11 @@ class BaseLocationDataRecorder(RecorderBase):
             provider_description += self.provider.get_description()
         semantic_attributes = "\n"
         for semantic_attribute in self.get_provider_semantic_attributes():
-            semantic_attributes += f"""\n{KnownSemanticAttributes.get_attribute_by_uuid(semantic_attribute)} : {semantic_attribute}"""
+            semantic_attributes += dedent(
+                f"""\n
+                {KnownSemanticAttributes.get_attribute_by_uuid(semantic_attribute)} :
+                {semantic_attribute}"""
+            )
         provider_description += f"""\n
             It stores its data inside the
             {self.collection.name} collection. It exports semantic
