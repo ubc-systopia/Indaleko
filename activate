@@ -1,3 +1,0 @@
-export PATH="/usr/local/bin:$PATH"
-export PATH=$PATH:/User/pearl/Downloads/arangodb3-client-macos-3.11.8_x86_64/bin
-
