@@ -371,7 +371,10 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         if len(results) < 10:
             for i, result in enumerate(results, 1):
                 doc = result["original"]["result"]
-                ic(doc["Record"]["Attributes"]["Path"])
+                if isinstance(doc, int):
+                    ic(f"Result {i}: {doc}")
+                else:
+                    ic(doc["Record"]["Attributes"]["Path"])
 
         if facets:
             print("Suggested refinements:")
