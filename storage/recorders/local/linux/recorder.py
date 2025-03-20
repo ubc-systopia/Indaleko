@@ -19,7 +19,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import argparse
 import datetime
 import logging
 import os
@@ -27,7 +26,7 @@ import json
 import sys
 import uuid
 
-from icecream import ic
+# from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -45,9 +44,11 @@ from platforms.unix import UnixFileAttributes
 from storage import IndalekoObject
 from storage.collectors.local.linux.collector import IndalekoLinuxLocalStorageCollector
 from storage.recorders.base import BaseStorageRecorder
-from storage.recorders.local.local_base import BaseLocalStorageRecorder
-from utils.misc.data_management import encode_binary_data
 from storage.recorders.data_model import IndalekoStorageRecorderDataModel
+from storage.recorders.local.local_base import BaseLocalStorageRecorder
+from storage.recorders.tokenization import tokenize_filename
+from utils.misc.data_management import encode_binary_data
+from utils.misc.file_name_management import generate_file_name
 
 # pylint: enable=wrong-import-position
 
@@ -212,7 +213,19 @@ class IndalekoLinuxLocalStorageRecorder(BaseLocalStorageRecorder):
             Timestamp=kwargs["timestamp"],
             Data=encode_binary_data(bytes(json.dumps(data).encode("utf-8"))),
         )
-        return IndalekoObject(**kwargs)
+        indaleko_object = IndalekoObject(**kwargs)
+
+        # Apply filename tokenization for improved search
+        if "Label" in kwargs and kwargs["Label"]:
+            # Generate tokenizations
+            tokenized = tokenize_filename(kwargs["Label"])
+
+            # Apply tokenizations to the object
+            for key, value in tokenized.items():
+                setattr(indaleko_object.indaleko_object, key, value)
+                indaleko_object.args[key] = value
+
+        return indaleko_object
 
     @staticmethod
     def generate_log_file_name(**kwargs) -> str:
@@ -224,7 +237,7 @@ class IndalekoLinuxLocalStorageRecorder(BaseLocalStorageRecorder):
             del kwargs["target_dir"]
         if "suffix" not in kwargs:
             kwargs["suffix"] = "log"
-        file_name = utils.misc.file_name_management.generate_file_name(**kwargs)
+        file_name = generate_file_name(**kwargs)
         if target_dir is not None:
             file_name = os.path.join(target_dir, file_name)
         return file_name

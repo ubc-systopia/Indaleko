@@ -46,6 +46,7 @@ from storage.collectors.local.windows.collector import (
 )
 from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from storage.recorders.local.local_base import BaseLocalStorageRecorder
+from storage.recorders.tokenization import tokenize_filename
 from utils.misc.file_name_management import find_candidate_files
 from utils.misc.data_management import encode_binary_data
 
@@ -61,7 +62,8 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
     windows_local_recorder_uuid = "429f1f3c-7a21-463f-b7aa-cd731bb202b1"
     windows_local_recorder_service = {
         "service_name": "Windows Local Recorder",
-        "service_description": "This service records metadata collected from the local filesystems of a Windows machine.",
+        "service_description":
+        "This service records metadata collected from the local filesystems of a Windows machine.",
         "service_version": "1.0",
         "service_type": IndalekoServiceManager.service_type_storage_recorder,
         "service_identifier": windows_local_recorder_uuid,
@@ -218,6 +220,27 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
             Data=encode_binary_data(bytes(json.dumps(data).encode("utf-8"))),
         )
         indaleko_object = IndalekoObject(**kwargs)
+
+        # Apply filename tokenization for improved search
+        if "Label" in kwargs and kwargs["Label"]:
+            # Import tokenization function from our utility module
+
+            # Generate tokenizations
+            tokenized = tokenize_filename(kwargs["Label"])
+
+            # Apply tokenizations to the object
+            for key, value in tokenized.items():
+                setattr(indaleko_object.indaleko_object, key, value)
+                indaleko_object.args[key] = value
+
+            # Generate tokenizations
+            tokenized = tokenize_filename(kwargs["Label"])
+
+            # Apply tokenizations to the object
+            for key, value in tokenized.items():
+                setattr(indaleko_object.indaleko_object, key, value)
+                indaleko_object.args[key] = value
+
         return indaleko_object
 
 
