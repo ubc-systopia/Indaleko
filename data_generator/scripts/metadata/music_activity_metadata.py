@@ -173,10 +173,10 @@ class MusicActivityData(ActivityMetadata):
         )
         semantic_attributes = [
             IndalekoSemanticAttributeDataModel(
-                Identifier=track_name_identifier, Data=track_name
+                Identifier=track_name_identifier, Value=track_name
             ),
             IndalekoSemanticAttributeDataModel(
-                Identifier=artist_name_identifier, Data=artist_name
+                Identifier=artist_name_identifier, Value=artist_name
             ),
         ]
 

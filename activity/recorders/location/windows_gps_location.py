@@ -159,7 +159,7 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
                     Version="1",
                     Description="Latitude",
                 ),
-                Data=current_data.Location.latitude,
+                Value=current_data.Location.latitude,
             ),
             IndalekoSemanticAttributeDataModel(
                 Identifier=IndalekoUUIDDataModel(
@@ -167,7 +167,7 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
                     Version="1",
                     Description="Longitude",
                 ),
-                Data=current_data.Location.longitude,
+                Value=current_data.Location.longitude,
             ),
             IndalekoSemanticAttributeDataModel(
                 Identifier=IndalekoUUIDDataModel(
@@ -175,7 +175,7 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
                     Version="1",
                     Description="Accuracy",
                 ),
-                Data=current_data.Location.accuracy,
+                Value=current_data.Location.accuracy,
             ),
         ]
         doc = BaseLocationDataRecorder.build_location_activity_document(
@@ -230,7 +230,7 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
                     Version="1",
                     Description="Latitude",
                 ),
-                Data=data.latitude,
+                Value=data.latitude,
             ),
             IndalekoSemanticAttributeDataModel(
                 Identifier=IndalekoUUIDDataModel(
@@ -238,7 +238,7 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
                     Version="1",
                     Description="Longitude",
                 ),
-                Data=data.longitude,
+                Value=data.longitude,
             ),
             IndalekoSemanticAttributeDataModel(
                 Identifier=IndalekoUUIDDataModel(
@@ -246,7 +246,7 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
                     Version="1",
                     Description="Accuracy",
                 ),
-                Data=data.accuracy,
+                Value=data.accuracy,
             ),
         ]
         ic(type(data))

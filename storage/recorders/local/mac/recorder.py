@@ -26,10 +26,11 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+from textwrap import dedent
 import uuid
 
 from typing import Union
-from icecream import ic
+# from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -43,7 +44,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from data_models import IndalekoRecordDataModel
 from db import IndalekoDBConfig, IndalekoServiceManager
 from platforms.mac.machine_config import IndalekoMacOSMachineConfig
-from platforms.unix import UnixFileAttributes
+from platforms.posix import IndalekoPosix
 from storage import IndalekoObject
 from storage.collectors.local.mac.collector import IndalekoMacLocalStorageCollector
 from storage.recorders.data_model import IndalekoStorageRecorderDataModel
@@ -228,7 +229,7 @@ class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
             ),
         }
         if "st_mode" in data:
-            kwargs["PosixFileAttributes"] = UnixFileAttributes.map_file_attributes(
+            kwargs["PosixFileAttributes"] = IndalekoPosix.map_file_attributes(
                 data["st_mode"]
             )
         if "st_ino" in data:
@@ -283,8 +284,18 @@ class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
             ("relations.jsonl", "Relationships"),
         ]:
             self.__run_docker_cmd(
-                f'docker exec -t {container_name} arangoimport --file {dest}/{filename} --type "jsonl" --collection "{collection_name}" --server.username "{
-                                  server_username}" --server.password "{server_password}" --server.database "{server_database}" --overwrite {overwrite}'
+                dedent(
+                    f"""
+                    docker exec -t {container_name} arangoimport
+                    --file {dest}/{filename}
+                    --type "jsonl"
+                    --collection "{collection_name}"
+                    --server.username "{server_username}"
+                    --server.password "{server_password}"
+                    --server.database "{server_database}"
+                    --overwrite {overwrite}
+                    """
+                                                      )
             )
 
     def __run_docker_cmd(self, cmd):

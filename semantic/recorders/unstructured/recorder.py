@@ -107,7 +107,7 @@ class UnstructuredRecorder:
         filetype = first_element["metadata"]["filetype"]
 
         return IndalekoSemanticAttributeDataModel(
-            Identifier=self.get_attribute_identifier("filetype"), Data=filetype
+            Identifier=self.get_attribute_identifier("filetype"), Value=filetype
         )
 
     def extract_filename_attribute(
@@ -120,7 +120,7 @@ class UnstructuredRecorder:
         filename = first_element["metadata"]["filename"]
 
         return IndalekoSemanticAttributeDataModel(
-            Identifier=self.get_attribute_identifier("filename"), Data=filename
+            Identifier=self.get_attribute_identifier("filename"), Value=filename
         )
 
     def extract_language_attribute_list(
@@ -135,7 +135,7 @@ class UnstructuredRecorder:
         for language in languages:
             language_list.append(
                 IndalekoSemanticAttributeDataModel(
-                    Identifier=self.get_attribute_identifier("language"), Data=language
+                    Identifier=self.get_attribute_identifier("language"), Value=language
                 )
             )
 
@@ -168,7 +168,7 @@ class UnstructuredRecorder:
         for element in elements:
             semantic_attribute = IndalekoSemanticAttributeDataModel(
                 Identifier=self.get_attribute_identifier(element["type"]),
-                Data=element["text"],
+                Value=element["text"],
                 # Data = {
                 #     "text": element['text'],
                 #     # "metadata": element["metadata"] #May be redundant

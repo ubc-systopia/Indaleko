@@ -38,15 +38,14 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from data_models import IndalekoRecordDataModel
 from db import IndalekoServiceManager
 from platforms.windows.machine_config import IndalekoWindowsMachineConfig
-from platforms.unix import UnixFileAttributes
+from platforms.posix import IndalekoPosix
 from platforms.windows_attributes import IndalekoWindows
-from storage import IndalekoObject
+from storage.i_object import IndalekoObject
 from storage.collectors.local.windows.collector import (
     IndalekoWindowsLocalStorageCollector,
 )
 from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from storage.recorders.local.local_base import BaseLocalStorageRecorder
-from storage.recorders.tokenization import tokenize_filename
 from utils.misc.file_name_management import find_candidate_files
 from utils.misc.data_management import encode_binary_data
 
@@ -176,6 +175,9 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
                     "Description": "Changed",
                 }
             )
+        semantic_attributes = self.map_posix_storage_attributes_to_semantic_attributes(data)
+        if data.get('st_file_attributes', 0) & IndalekoPosix.FILE_ATTRIBUTES["S_IFREG"]:
+            semantic_attributes += self.map_suffix_to_mime_type(data['URI'])
         kwargs = {
             "source": self.source,
             "raw_data": encode_binary_data(bytes(json.dumps(data).encode("utf-8"))),
@@ -184,16 +186,14 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
             "Timestamps": timestamps,
             "Size": data["st_size"],
             "Machine": self.machine_config.machine_id,
-            "SemanticAttributes":
-            self.map_posix_storage_attributes_to_semantic_attributes(data)
-            + self.map_suffix_to_mime_type(data['URI']),
+            "SemanticAttributes": semantic_attributes,
         }
         if "Volume GUID" in data:
             kwargs["Volume"] = data["Volume GUID"]
         elif data["URI"].startswith("\\\\?\\Volume{"):
             kwargs["Volume"] = data["URI"][11:47]
         if "st_mode" in data:
-            kwargs["PosixFileAttributes"] = UnixFileAttributes.map_file_attributes(
+            kwargs["PosixFileAttributes"] = IndalekoPosix.map_file_attributes(
                 data["st_mode"]
             )
         if "st_file_attributes" in data:
@@ -219,29 +219,7 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
             Timestamp=kwargs["timestamp"],
             Data=encode_binary_data(bytes(json.dumps(data).encode("utf-8"))),
         )
-        indaleko_object = IndalekoObject(**kwargs)
-
-        # Apply filename tokenization for improved search
-        if "Label" in kwargs and kwargs["Label"]:
-            # Import tokenization function from our utility module
-
-            # Generate tokenizations
-            tokenized = tokenize_filename(kwargs["Label"])
-
-            # Apply tokenizations to the object
-            for key, value in tokenized.items():
-                setattr(indaleko_object.indaleko_object, key, value)
-                indaleko_object.args[key] = value
-
-            # Generate tokenizations
-            tokenized = tokenize_filename(kwargs["Label"])
-
-            # Apply tokenizations to the object
-            for key, value in tokenized.items():
-                setattr(indaleko_object.indaleko_object, key, value)
-                indaleko_object.args[key] = value
-
-        return indaleko_object
+        return IndalekoObject(**kwargs)
 
 
 def main():

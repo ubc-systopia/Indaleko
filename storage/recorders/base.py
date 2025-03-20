@@ -87,7 +87,7 @@ from utils.misc.file_name_management import (
     extract_keys_from_file_name,
 )
 from data_models import IndalekoSemanticAttributeDataModel
-from storage import IndalekoObject
+from storage.i_object import IndalekoObject
 from storage.known_attributes import KnownStorageAttributes
 from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from storage.i_relationship import IndalekoRelationship
@@ -449,7 +449,7 @@ class BaseStorageRecorder:
             # No extension, return application/octet-stream as default
             return [
                 IndalekoSemanticAttributeDataModel(
-                    Identifier=KnownStorageAttributes.STORAGE_ATTRIBUTES_SUFFIX_MIME_TYPE,
+                    Identifier=KnownStorageAttributes.STORAGE_ATTRIBUTES_MIMETYPE_FROM_SUFFIX,
                     Value="application/octet-stream"
                 )
             ]

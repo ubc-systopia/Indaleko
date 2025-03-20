@@ -94,7 +94,7 @@ class SemanticMetadata(Metadata):
                         Identifier=IndalekoUUIDDataModel(
                             Identifier=semantic_UUID, Label=label
                         ),
-                        Data=context,
+                        Value=context,
                     )
                     list_semantic_attribute.append(semantic_attribute.dict())
             else:
@@ -102,7 +102,7 @@ class SemanticMetadata(Metadata):
                     Identifier=IndalekoUUIDDataModel(
                         Identifier=semantic_UUID, Label=content
                     ),
-                    Data=content,
+                    Value=content,
                 )
                 list_semantic_attribute.append(semantic_attribute.dict())
         return list_semantic_attribute

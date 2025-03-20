@@ -209,7 +209,7 @@ class IndalekoRelationship:
         ), "relationships must be a dictionary."
         reldata = [
             IndalekoSemanticAttributeDataModel(
-                Identifier=item.Identifier, Data=item.Data
+                Identifier=item.Identifier, Value=item.Value
             )
             for item in self.relationships
         ]

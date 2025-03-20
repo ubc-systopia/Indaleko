@@ -63,7 +63,7 @@ class IndalekoSemanticAttributeDataModel(IndalekoBaseModel):
         example="12345678-1234-5678-1234-567812345678",
     )
 
-    Data: Union[Any, None] = Field(
+    Value: Union[Any, None] = Field(
         None,
         title="Data",
         description="The data associated with this semantic attribute.",

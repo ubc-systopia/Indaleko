@@ -127,10 +127,10 @@ class TempActivityData(ActivityMetadata):
         )
         semantic_attributes = [
             IndalekoSemanticAttributeDataModel(
-                Identifier=temperature_identifier, Data=temperature
+                Identifier=temperature_identifier, Value=temperature
             ),
             IndalekoSemanticAttributeDataModel(
-                Identifier=humidity_identifier, Data=humidity
+                Identifier=humidity_identifier, Value=humidity
             ),
         ]
 

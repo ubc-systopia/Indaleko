@@ -41,6 +41,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # from IndalekoRecordDataModel import IndalekoRecordDataModel
 # from IndalekoDataModel import IndalekoDataModel
 from data_models import IndalekoObjectDataModel
+from storage.recorders.tokenization import tokenize_filename
 from utils.misc.data_management import encode_binary_data
 
 # pylint: enable=wrong-import-position
@@ -68,6 +69,11 @@ class IndalekoObject:
         ), "ObjectIdentifier is not a string."
         assert "None" != kwargs["ObjectIdentifier"], "ObjectIdentifier is None."
         assert "Record" in kwargs, f"Record is missing: {kwargs}"
+        if kwargs.get('Label'):
+            tokenized = tokenize_filename(kwargs.get('Label'))
+            for key, value in tokenized.items():
+                if key not in kwargs:
+                    kwargs[key] = value
         self.indaleko_object = IndalekoObjectDataModel.deserialize(kwargs)
         if self.indaleko_object.Timestamps is not None:
             for timestamp in self.indaleko_object.Timestamps:

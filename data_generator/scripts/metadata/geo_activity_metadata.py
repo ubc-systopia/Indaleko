@@ -69,13 +69,13 @@ class GeoActivityData(ActivityMetadata):
 
         semantic_attributes = [
             IndalekoSemanticAttributeDataModel(
-                Identifier=longitude, Data=activity_geo_md.longitude
+                Identifier=longitude, Value=activity_geo_md.longitude
             ),
             IndalekoSemanticAttributeDataModel(
-                Identifier=latitude, Data=activity_geo_md.latitude
+                Identifier=latitude, Value=activity_geo_md.latitude
             ),
             IndalekoSemanticAttributeDataModel(
-                Identifier=accuracy, Data=activity_geo_md.accuracy
+                Identifier=accuracy, Value=activity_geo_md.accuracy
             ),
         ]
 
