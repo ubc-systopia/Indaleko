@@ -48,6 +48,7 @@ import datetime
 import logging
 import json
 import jsonlines
+import mimetypes
 import os
 from pathlib import Path
 import uuid
@@ -375,7 +376,7 @@ class BaseStorageRecorder:
             ), "Collection is not an IndalekoCollection"
         count = 0
         while count < len(data):
-            chunk = data[count : count + chunk_size]
+            chunk = data[count: count + chunk_size]
             count += chunk_size
             assert chunk
 
@@ -421,6 +422,57 @@ class BaseStorageRecorder:
         if not isinstance(self.collector_data, list):
             raise ValueError("collector_data is not a list")
         self.input_count = len(self.collector_data)
+
+    @staticmethod
+    def map_suffix_to_mime_type(filename: str) -> list[IndalekoSemanticAttributeDataModel]:
+        """
+        Maps a file's suffix to an estimated MIME type and returns it as a semantic attribute.
+
+        This provides a quick estimation of file type without examining file contents.
+        For more accurate MIME type detection, content-based analysis should be used.
+
+        Args:
+            filename: The filename (with extension) to analyze
+
+        Returns:
+            A list containing a semantic attribute with the estimated MIME type
+        """
+
+        # Ensure mimetypes is initialized with standard types
+        mimetypes.init()
+
+        # Extract file extension and convert to lowercase
+        _, ext = os.path.splitext(filename)
+        ext = ext.lower()
+
+        if not ext:
+            # No extension, return application/octet-stream as default
+            return [
+                IndalekoSemanticAttributeDataModel(
+                    Identifier=KnownStorageAttributes.STORAGE_ATTRIBUTES_SUFFIX_MIME_TYPE,
+                    Value="application/octet-stream"
+                )
+            ]
+
+        # Get MIME type from extension
+        guessed_type, _ = mimetypes.guess_type(filename)
+
+        # If we couldn't determine a type, use a generic default based on extension presence
+        if guessed_type is None:
+            guessed_type = "application/octet-stream"
+
+        # Add both the detected MIME type and the raw suffix
+        # (without the dot) as semantic attributes
+        return [
+            IndalekoSemanticAttributeDataModel(
+                Identifier=KnownStorageAttributes.STORAGE_ATTRIBUTES_SUFFIX_MIME_TYPE,
+                Value=guessed_type
+            ),
+            IndalekoSemanticAttributeDataModel(
+                Identifier=KnownStorageAttributes.STORAGE_ATTRIBUTES_FILE_SUFFIX,
+                Value=ext[1:] if ext.startswith('.') else ext
+            )
+        ]
 
     @staticmethod
     def build_storage_relationship(

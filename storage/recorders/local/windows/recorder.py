@@ -184,9 +184,9 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
             "Timestamps": timestamps,
             "Size": data["st_size"],
             "Machine": self.machine_config.machine_id,
-            "SemanticAttributes": self.map_posix_storage_attributes_to_semantic_attributes(
-                data
-            ),
+            "SemanticAttributes":
+            self.map_posix_storage_attributes_to_semantic_attributes(data)
+            + self.map_suffix_to_mime_type(data['URI']),
         }
         if "Volume GUID" in data:
             kwargs["Volume"] = data["Volume GUID"]
