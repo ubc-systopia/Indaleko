@@ -45,7 +45,7 @@ from data_models import IndalekoRecordDataModel
 from db import IndalekoDBConfig, IndalekoServiceManager
 from platforms.mac.machine_config import IndalekoMacOSMachineConfig
 from platforms.posix import IndalekoPosix
-from storage import IndalekoObject
+from storage.i_object import IndalekoObject
 from storage.collectors.local.mac.collector import IndalekoMacLocalStorageCollector
 from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from storage.recorders.local.local_base import BaseLocalStorageRecorder
@@ -73,7 +73,8 @@ class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
 
     recorder_data = IndalekoStorageRecorderDataModel(
         PlatformName=mac_platform,
-        ServiceName=mac_local_recorder,
+        ServiceRegistrationName=mac_local_recorder_service['service_name'],
+        ServiceFileName=mac_local_recorder,
         ServiceUUID=uuid.UUID(mac_local_recorder_uuid),
         ServiceVersion=mac_local_recorder_service["service_version"],
         ServiceDescription=mac_local_recorder_service["service_description"],

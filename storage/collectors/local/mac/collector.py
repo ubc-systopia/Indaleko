@@ -19,8 +19,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import argparse
-import datetime
 import inspect
 import os
 import logging
@@ -83,6 +81,7 @@ class IndalekoMacLocalStorageCollector(BaseLocalStorageCollector):
 
     collector_data = IndalekoStorageCollectorDataModel(
         PlatformName=mac_platform,
+        ServiceRegistrationName=indaleko_mac_local_collector_service_name,
         ServiceFileName=mac_local_collector_name,
         ServiceDescription=indaleko_mac_local_collector_service_description,
         ServiceUUID=uuid.UUID(indaleko_mac_local_collector_uuid),
