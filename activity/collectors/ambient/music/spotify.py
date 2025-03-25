@@ -43,6 +43,10 @@ from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from activity.characteristics import ActivityDataCharacteristics
 from Indaleko import Indaleko
 
+from data_models.record import IndalekoRecordDataModel
+from data_models.source_identifier import IndalekoSourceIdentifierDataModel
+from activity.characteristics import ActivityDataCharacteristics
+from Indaleko import Indaleko
 # pylint: enable=wrong-import-position
 
 
@@ -58,10 +62,7 @@ class SpotifyMusicCollector(AmbientCollector):
     def __init__(self, **kwargs):
         """Initialize the object."""
         super().__init__(**kwargs)
-        # Your Spotify API Authentication Token here:
-        client_id = ""
-        client_secret = ""
-        redirect_uri = ""
+
         self.sp = spotipy.Spotify(
             auth_manager=SpotifyOAuth(
                 client_id=client_id,
@@ -70,16 +71,7 @@ class SpotifyMusicCollector(AmbientCollector):
                 scope="user-read-playback-state"
             )
         )
-        self.authenticate()
-
-    def authenticate(self) -> None:
-        """Authenticate with the Spotify API."""
-        ic("Authenticating with Spotify API")
-        self.sp.current_user()
-
-    def get_ambient_condition_history(self, start_time, end_time):
-        raise NotImplementedError('This method is not implemented yet.')
-
+    
     def get_ambient_condition_name(self):
         raise NotImplementedError('This method is not implemented yet.')
 
