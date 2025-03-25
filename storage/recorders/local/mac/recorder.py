@@ -190,44 +190,55 @@ class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
             oid = data["ObjectIdentifier"]
         else:
             oid = str(uuid.uuid4())
-        kwargs = {
-            "URI": data["URI"],
-            "ObjectIdentifier": oid,
-            "Timestamps": [
+        timestamps = []
+        if "st_birthtime" in data:
+            timestamps.append(
                 {
                     "Label": IndalekoObject.CREATION_TIMESTAMP,
                     "Value": datetime.datetime.fromtimestamp(
                         data["st_birthtime"], datetime.timezone.utc
                     ).isoformat(),
                     "Description": "Created",
-                },
+                }
+            )
+        if "st_mtime" in data:
+            timestamps.append(
                 {
                     "Label": IndalekoObject.MODIFICATION_TIMESTAMP,
                     "Value": datetime.datetime.fromtimestamp(
                         data["st_mtime"], datetime.timezone.utc
                     ).isoformat(),
                     "Description": "Modified",
-                },
+                }
+            )
+        if "st_atime" in data:
+            timestamps.append(
                 {
                     "Label": IndalekoObject.ACCESS_TIMESTAMP,
                     "Value": datetime.datetime.fromtimestamp(
                         data["st_atime"], datetime.timezone.utc
                     ).isoformat(),
                     "Description": "Accessed",
-                },
+                }
+            )
+        if "st_ctime" in data:
+            timestamps.append(
                 {
                     "Label": IndalekoObject.CHANGE_TIMESTAMP,
                     "Value": datetime.datetime.fromtimestamp(
                         data["st_ctime"], datetime.timezone.utc
                     ).isoformat(),
                     "Description": "Changed",
-                },
-            ],
+                }
+            )
+        semantic_attributes = self.map_posix_storage_attributes_to_semantic_attributes(data)
+        kwargs = {
+            "URI": data["URI"],
+            "ObjectIdentifier": oid,
+            "Timestamps": timestamps,
             "Size": data["st_size"],
             "Machine": self.machine_config.machine_id,
-            "SemanticAttributes": self.map_posix_storage_attributes_to_semantic_attributes(
-                data
-            ),
+            "SemanticAttributes": semantic_attributes,
         }
         if "st_mode" in data:
             kwargs["PosixFileAttributes"] = IndalekoPosix.map_file_attributes(

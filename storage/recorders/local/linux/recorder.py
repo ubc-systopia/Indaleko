@@ -26,7 +26,7 @@ import json
 import sys
 import uuid
 
-# from icecream import ic
+from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -184,17 +184,13 @@ class IndalekoLinuxLocalStorageRecorder(BaseLocalStorageRecorder):
                 }
             )
         semantic_attributes = self.map_posix_storage_attributes_to_semantic_attributes(data)
-        if data.get('st_file_attributes', 0) & IndalekoPosix.FILE_ATTRIBUTES["S_IFREG"]:
-            semantic_attributes += self.map_suffix_to_mime_type(data['URI'])
         kwargs = {
             "URI": data["URI"],
             "ObjectIdentifier": oid,
             "Timestamps": timestamps,
             "Size": data["st_size"],
             "Machine": self.machine_config.machine_id,
-            "SemanticAttributes": self.map_posix_storage_attributes_to_semantic_attributes(
-                data
-            ),
+            "SemanticAttributes": semantic_attributes,
         }
         if "st_mode" in data:
             kwargs["PosixFileAttributes"] = IndalekoPosix.map_file_attributes(

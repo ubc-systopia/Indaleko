@@ -465,13 +465,40 @@ class BaseStorageRecorder:
         # (without the dot) as semantic attributes
         return [
             IndalekoSemanticAttributeDataModel(
-                Identifier=KnownStorageAttributes.STORAGE_ATTRIBUTES_SUFFIX_MIME_TYPE,
+                Identifier=KnownStorageAttributes.STORAGE_ATTRIBUTES_MIMETYPE_FROM_SUFFIX,
                 Value=guessed_type
             ),
             IndalekoSemanticAttributeDataModel(
                 Identifier=KnownStorageAttributes.STORAGE_ATTRIBUTES_FILE_SUFFIX,
                 Value=ext[1:] if ext.startswith('.') else ext
             )
+        ]
+
+    @staticmethod
+    def map_name_to_semantic_attributes(
+        filename: str
+    ) -> list[IndalekoSemanticAttributeDataModel]:
+        """
+        Maps a file's name to semantic attributes.
+
+        Args:
+            filename (str): _description_
+
+        Raises:
+            ValueError: _description_
+            ValueError: _description_
+            NotImplementedError: _description_
+            NotImplementedError: _description_
+
+        Returns:
+            list[IndalekoSemanticAttributeDataModel]: _description_
+        """
+        assert isinstance(filename, str), "filename is not a string"
+        return [
+            {
+                "Identifier": KnownStorageAttributes.STORAGE_ATTRIBUTES_LOWERCASE_FILE_NAME,
+                "Value": filename.lower(),
+            },
         ]
 
     @staticmethod
@@ -915,6 +942,11 @@ class BaseStorageRecorder:
                     Value=posix_attributes["st_inode"],
                 )
             )
+        file_name = posix_attributes.get('Name')
+        if file_name:
+            semantic_attributes.extend(BaseStorageRecorder.map_name_to_semantic_attributes(file_name))
+            if 'st_mode' in posix_attributes:
+                semantic_attributes.extend(BaseStorageRecorder.map_suffix_to_mime_type(file_name))
         return semantic_attributes
 
     def record(self) -> None:
