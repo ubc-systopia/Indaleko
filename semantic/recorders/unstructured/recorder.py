@@ -1,4 +1,4 @@
-'''
+"""
 This module handles processing and recording data from the Unstructured
 Semantic data collector.
 
@@ -17,7 +17,7 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
 
 import os
 import sys
@@ -29,11 +29,11 @@ from uuid import UUID
 from icecream import ic
 from typing import Any, Union, Callable, List, Set
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 
@@ -49,93 +49,102 @@ from utils.misc.data_management import encode_binary_data
 import semantic.collectors.semantic_attributes as known_semantic_attributes
 
 
-
 class UnstructuredRecorder:
-    '''
+    """
     This class handles the recording of semantic data produced by
     the Unstructured collector stored in a jsonl file.
-    '''
+    """
 
-    semantic_recorder_uuid = '31764240-1397-4cd2-9c74-b332a0ff1b72'
+    semantic_recorder_uuid = "31764240-1397-4cd2-9c74-b332a0ff1b72"
 
-    input_file = os.path.join(Indaleko.default_data_dir,'semantic\\unstructured_outputs.jsonl')
-    output_file = os.path.join(Indaleko.default_data_dir,'semantic\\unstructured_recorder.jsonl')
+    input_file = os.path.join(
+        Indaleko.default_data_dir, "semantic\\unstructured_outputs.jsonl"
+    )
+    output_file = os.path.join(
+        Indaleko.default_data_dir, "semantic\\unstructured_recorder.jsonl"
+    )
     semantic_recording_date = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
     attributes_by_uuid = {}
     attributes_by_label = {}
 
     def __init__(self) -> None:
-        
+
         for label, value in known_semantic_attributes.__dict__.items():
             if label.startswith(known_semantic_attributes.PREFIX):
                 self.attributes_by_uuid[value] = label
                 self.attributes_by_label[label] = value
 
-    
     def create_semantic_record(self, unstructured_obj_line) -> IndalekoRecordDataModel:
-        '''
-        Creates a Record for the current 
-        '''
+        """
+        Creates a Record for the current
+        """
         return IndalekoRecordDataModel(
-            SourceIdentifier= {'Identifier': self.semantic_recorder_uuid, 
-                            'Version': '1.1'},
-            Data = encode_binary_data(unstructured_obj_line.encode("utf-8"))
+            SourceIdentifier={
+                "Identifier": self.semantic_recorder_uuid,
+                "Version": "1.1",
+            },
+            Data=encode_binary_data(unstructured_obj_line.encode("utf-8")),
         )
-
 
     def create_semantic_related_objects(self, unstructured_obj) -> List[UUID]:
-        '''
-        Extracts the ObjectIdentifier of the original source file that was 
+        """
+        Extracts the ObjectIdentifier of the original source file that was
         processed by Unstructured.
 
-        May need to add the UUIDs of other files that contain similar 
-        semantic contents 
-        '''
+        May need to add the UUIDs of other files that contain similar
+        semantic contents
+        """
         return [unstructured_obj["ObjectIdentifier"]]
-    
-    def extract_filetype_attribute(self, elements) -> IndalekoSemanticAttributeDataModel:
-        '''
+
+    def extract_filetype_attribute(
+        self, elements
+    ) -> IndalekoSemanticAttributeDataModel:
+        """
         Extracts the filetype attribute from the first Element's metadata
-        '''
+        """
         first_element = elements[0]
-        filetype = first_element['metadata']['filetype']
+        filetype = first_element["metadata"]["filetype"]
 
         return IndalekoSemanticAttributeDataModel(
-            Identifier = self.get_attribute_identifier('filetype'),
-            Data = filetype
+            Identifier=self.get_attribute_identifier("filetype"), Value=filetype
         )
 
-    def extract_filename_attribute(self, elements) -> IndalekoSemanticAttributeDataModel:
-        '''
+    def extract_filename_attribute(
+        self, elements
+    ) -> IndalekoSemanticAttributeDataModel:
+        """
         Extracts the filename attribute from the first Element's metadata
-        '''
+        """
         first_element = elements[0]
-        filename = first_element['metadata']['filename']
+        filename = first_element["metadata"]["filename"]
 
         return IndalekoSemanticAttributeDataModel(
-            Identifier= self.get_attribute_identifier('filename'),
-            Data= filename
+            Identifier=self.get_attribute_identifier("filename"), Value=filename
         )
 
-    def extract_language_attribute_list(self, languages: Set) -> List[IndalekoSemanticAttributeDataModel]:
-        '''
-        Takes in a Set of all languages detected in the file. 
+    def extract_language_attribute_list(
+        self, languages: Set
+    ) -> List[IndalekoSemanticAttributeDataModel]:
+        """
+        Takes in a Set of all languages detected in the file.
         Returns a list of SemanticAttributes where one object
         references one language only
-        '''
+        """
         language_list = []
         for language in languages:
-            language_list.append(IndalekoSemanticAttributeDataModel(
-                Identifier= self.get_attribute_identifier('language'),
-                Data = language
-            ))
+            language_list.append(
+                IndalekoSemanticAttributeDataModel(
+                    Identifier=self.get_attribute_identifier("language"), Value=language
+                )
+            )
 
         return language_list
-    
 
-    def normalize_semantic_attributes(self, unstructured_obj) -> list[IndalekoSemanticAttributeDataModel]:
-        '''
+    def normalize_semantic_attributes(
+        self, unstructured_obj
+    ) -> list[IndalekoSemanticAttributeDataModel]:
+        """
         Given an entry, representing the unstructured elements of one file,
         normalize the elements in the entry by doing the following:
 
@@ -143,13 +152,13 @@ class UnstructuredRecorder:
             2. Identify the unique languages contained in the file, and store
                 each language as one SemanticAttribute
             3. Convert each element into a SemanticAttribute where the Identifier
-                is one of the Element types specified by Unstructured, and the 
+                is one of the Element types specified by Unstructured, and the
                 Data is the "text" field in each Element, which is guarenteed to be present
-        
-        This returns a list of IndalekoSemanticAttributes.      
-        '''
 
-        elements = unstructured_obj['Unstructured']
+        This returns a list of IndalekoSemanticAttributes.
+        """
+
+        elements = unstructured_obj["Unstructured"]
         attributes = []
         languages = set()
 
@@ -158,22 +167,22 @@ class UnstructuredRecorder:
 
         for element in elements:
             semantic_attribute = IndalekoSemanticAttributeDataModel(
-                Identifier= self.get_attribute_identifier(element['type']),
-                Data = element['text']
+                Identifier=self.get_attribute_identifier(element["type"]),
+                Value=element["text"],
                 # Data = {
                 #     "text": element['text'],
                 #     # "metadata": element["metadata"] #May be redundant
                 # }
             )
 
-            languages.update(element['metadata']['languages'])
+            languages.update(element["metadata"]["languages"])
             attributes.append(semantic_attribute)
 
         attributes.extend(self.extract_language_attribute_list(languages))
 
         return attributes
 
-    def get_attribute_identifier(self, label:str):
+    def get_attribute_identifier(self, label: str):
 
         return label
 
@@ -183,59 +192,57 @@ class UnstructuredRecorder:
         #             Identifier = self.attributes_by_label[id],
         #             Label=label
         #         )
-    
-    
 
-    def map_attributes(self, attributes:list[IndalekoSemanticAttributeDataModel]) -> None:
-        '''
+    def map_attributes(
+        self, attributes: list[IndalekoSemanticAttributeDataModel]
+    ) -> None:
+        """
         Given a list of SemanticAttributes, iterate through each attribute and
         replace the Identifier (originally an Unstructured Label) with the UUID
         that maps to it. Essentially, this function separates the meaning of the label
-        from the data storage. 
+        from the data storage.
 
         See semantic.collectors.semantic_attributes for the list of labels
-        '''
+        """
 
         prefix = known_semantic_attributes.PREFIX
         for attr in attributes:
-            id = prefix + '_' + attr.Identifier.upper()
+            id = prefix + "_" + attr.Identifier.upper()
             attr.Identifier = self.attributes_by_label[id]
         return
-    
 
     def record(self) -> None:
-
-        '''
+        """
         Main function that reads the output JSONL file from unstructured and normalizes
-        the elements of all the files. 
+        the elements of all the files.
 
         The output of this function is written into another JSONL file and is ready
         for upload onto the ArangoDB instance
-        '''
+        """
 
         # Read the JSONL file and convert to JSON
-        with open(self.output_file, 'w', encoding='utf-8') as jsonl_output:
-            with open(self.input_file, 'r', encoding='utf-8') as jsonl_file:
+        with open(self.output_file, "w", encoding="utf-8") as jsonl_output:
+            with open(self.input_file, "r", encoding="utf-8") as jsonl_file:
                 for line in jsonl_file:
                     unstructured_obj = json.loads(line)
 
                     semantic_record = self.create_semantic_record(line)
                     timestamp = self.semantic_recording_date
-                    related_objects = self.create_semantic_related_objects(unstructured_obj)
+                    related_objects = self.create_semantic_related_objects(
+                        unstructured_obj
+                    )
                     # map_attributes(attributes) # Comment this line out if you want to see meaning of labels
                     attributes = self.normalize_semantic_attributes(unstructured_obj)
 
                     i_semantic_attribute = BaseSemanticDataModel(
-                        Record= semantic_record,
-                        Timestamp= timestamp,
-                        ObjectIdentifier= related_objects[0],
-                        RelatedObjects= related_objects,
-                        SemanticAttributes= attributes
+                        Record=semantic_record,
+                        Timestamp=timestamp,
+                        ObjectIdentifier=related_objects[0],
+                        RelatedObjects=related_objects,
+                        SemanticAttributes=attributes,
                     )
 
-                    jsonl_output.write(i_semantic_attribute.model_dump_json() + '\n')
-    
-
+                    jsonl_output.write(i_semantic_attribute.model_dump_json() + "\n")
 
 
 def main():
@@ -257,5 +264,5 @@ def main():
     # parser.set_defaults(func = None)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

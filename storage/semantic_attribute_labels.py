@@ -1,4 +1,4 @@
-'''
+"""
 This module defines known semantic attributes for the storage providers in
 the Indaleko Project. The model allows a storage provider to generate
 new/unknown semantic attributes as needed, but there is no expectations that
@@ -22,7 +22,7 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
 
 import os
 import sys
@@ -30,60 +30,63 @@ import uuid
 
 from icecream import ic
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from utils.singleton import IndalekoSingleton
 from storage.known_attributes import KnownStorageAttributes
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoStorageDataProvidersKnownStorageAttributes(IndalekoSingleton):
-    '''
+    """
     This class defines known semantic attributes for the storage providers
     providers.
-    '''
+    """
 
     def __init__(self):
-        '''Initialize the known semantic attributes for the activity data
-        providers.'''
+        """Initialize the known semantic attributes for the activity data
+        providers."""
         if self._initialized:
             return
         self.uuid_to_label = {}
         ksa = KnownStorageAttributes()
         for label, value in ksa.__dict__.items():
             if label.startswith(KnownStorageAttributes.full_prefix):
-                setattr(self, label+'_UUID', uuid.UUID(value))
+                setattr(self, label + "_UUID", uuid.UUID(value))
                 self.uuid_to_label[value] = label
         self._initialized = True
 
     @staticmethod
     def get_known_semantic_attributes():
-        '''Get the known semantic attributes for the activity data providers'''
+        """Get the known semantic attributes for the activity data providers"""
         return {
-            label: value for label, value in KnownStorageAttributes.
-            __dict__.items() if label.startswith('KnownStorageAttributes.full_prefix')
+            label: value
+            for label, value in KnownStorageAttributes.__dict__.items()
+            if label.startswith("KnownStorageAttributes.full_prefix")
         }
 
     @staticmethod
     def get_provider_label(identifier: uuid.UUID):
-        '''Get the label for the provider'''
-        return IndalekoStorageDataProvidersKnownStorageAttributes()\
-            .uuid_to_label.get(identifier, None)
+        """Get the label for the provider"""
+        return IndalekoStorageDataProvidersKnownStorageAttributes().uuid_to_label.get(
+            identifier, None
+        )
 
 
 def main():
-    '''Test code for the known semantic attributes'''
+    """Test code for the known semantic attributes"""
     known_semantic_attributes = IndalekoStorageDataProvidersKnownStorageAttributes()
     print(known_semantic_attributes.get_known_semantic_attributes())
     ic(known_semantic_attributes.__dict__)
     ic(KnownStorageAttributes.__dict__)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

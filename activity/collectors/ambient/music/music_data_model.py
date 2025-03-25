@@ -23,15 +23,18 @@ import sys
 from typing import Optional, List, Dict
 from pydantic import Field, field_validator, AwareDatetime
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from activity.collectors.ambient.data_models.ambient_data_model import BaseAmbientConditionDataModel
+from activity.collectors.ambient.data_models.ambient_data_model import (
+    BaseAmbientConditionDataModel,
+)
+
 # pylint: enable=wrong-import-position
 
 
@@ -40,88 +43,63 @@ class AmbientMusicData(BaseAmbientConditionDataModel):
     Base model for ambient music data collection. This model captures
     the essential elements of music playback regardless of source.
     """
-    # Track information
-    track_name: str = Field(
-        ...,
-        description="Name of the currently playing track"
-    )
 
-    artist_name: str = Field(
-        ...,
-        description="Name of the track's primary artist"
-    )
+    # Track information
+    track_name: str = Field(..., description="Name of the currently playing track")
+
+    artist_name: str = Field(..., description="Name of the track's primary artist")
 
     album_name: Optional[str] = Field(
-        None,
-        description="Name of the album (if applicable)"
+        None, description="Name of the album (if applicable)"
     )
 
     # Playback state
-    is_playing: bool = Field(
-        ...,
-        description="Whether music is currently playing"
-    )
+    is_playing: bool = Field(..., description="Whether music is currently playing")
 
     playback_position_ms: int = Field(
-        ...,
-        description="Current playback position in milliseconds",
-        ge=0
+        ..., description="Current playback position in milliseconds", ge=0
     )
 
     track_duration_ms: int = Field(
-        ...,
-        description="Total track duration in milliseconds",
-        gt=0
+        ..., description="Total track duration in milliseconds", gt=0
     )
 
     volume_percent: Optional[int] = Field(
-        None,
-        description="Current volume level as percentage",
-        ge=0,
-        le=100
+        None, description="Current volume level as percentage", ge=0, le=100
     )
 
     # Additional track metadata
     genre: Optional[List[str]] = Field(
-        None,
-        description="Musical genres associated with the track"
+        None, description="Musical genres associated with the track"
     )
 
-    release_date: Optional[str] = Field(
-        None,
-        description="Release date of the track"
-    )
+    release_date: Optional[str] = Field(None, description="Release date of the track")
 
     is_explicit: Optional[bool] = Field(
-        None,
-        description="Whether the track contains explicit content"
+        None, description="Whether the track contains explicit content"
     )
 
     # Audio features
-    tempo: Optional[float] = Field(
-        None,
-        description="Track tempo in BPM",
-        ge=0,
-        le=300
-    )
+    tempo: Optional[float] = Field(None, description="Track tempo in BPM", ge=0, le=300)
 
     key: Optional[int] = Field(
         None,
         description="Musical key of the track (-1 to 11, where -1 represents no key detected)",
         ge=-1,
-        le=11
+        le=11,
     )
 
-    @field_validator('playback_position_ms')
+    @field_validator("playback_position_ms")
     @classmethod
     def validate_position(cls, value: int, values: Dict) -> int:
         """Validate playback position is within track duration"""
         if "playback_position_ms" in values.data and value > values.data['track_duration_ms']:
             raise ValueError("Playback position cannot exceed track duration")
         return value
-
+      
     class Config:
         """Configuration and example data for the ambient music data model"""
+
         json_schema_extra = {
             "example": {
                 # Include base model fields
@@ -132,14 +110,14 @@ class AmbientMusicData(BaseAmbientConditionDataModel):
                 "album_name": "A Night at the Opera",
                 "is_playing": True,
                 "playback_position_ms": 120000,  # 2 minutes into the song
-                "track_duration_ms": 354000,     # 5:54 total length
+                "track_duration_ms": 354000,  # 5:54 total length
                 "volume_percent": 65,
                 "genre": ["Rock", "Progressive Rock"],
                 "release_date": "1975-10-31",
                 "is_explicit": False,
                 "tempo": 72.5,
                 "key": 0,  # C major
-                "source": "music_player"
+                "source": "music_player",
             }
         }
 
@@ -150,5 +128,5 @@ def main():
     AmbientMusicData.test_model_main()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

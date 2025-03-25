@@ -68,7 +68,10 @@ class InputReader(IReader):
             _, stderr = process.communicate()  # Wait for the process to finish
 
             if process.returncode != 0:
-                yield (1, f"Command exited with non-zero code: {process.returncode}; stderr: {stderr}")
+                yield (
+                    1,
+                    f"Command exited with non-zero code: {process.returncode}; stderr: {stderr}",
+                )
         except Exception as e:
             yield (1, f"Error: {str(e)}")
 
@@ -78,7 +81,9 @@ class FileInputReader(IReader):
         from os import path
 
         self.input_filepath = input_file_path
-        assert path.exists(self.input_filepath), f'the input file does not exists at {self.input_filepath}'
+        assert path.exists(
+            self.input_filepath
+        ), f"the input file does not exists at {self.input_filepath}"
 
     def run(self):
         with open(self.input_filepath) as input_file:
@@ -88,7 +93,7 @@ class FileInputReader(IReader):
 
 class TrSpaces(IOperator):
     def execute(self, input_tuple: tuple[int, str]):
-        return (0, re.sub(r'\s+', ' ', input_tuple[1]))
+        return (0, re.sub(r"\s+", " ", input_tuple[1]))
 
 
 class ToList(IOperator):
@@ -111,7 +116,7 @@ class ToList(IOperator):
 
     """
 
-    def __init__(self, sep=' ', remove_empty_fields=False):
+    def __init__(self, sep=" ", remove_empty_fields=False):
         """
         Initialize ToList with the provided parameters.
 
@@ -123,7 +128,7 @@ class ToList(IOperator):
             AssertionError: If sep is an empty string or if input_tuple is not a tuple.
 
         """
-        assert len(sep) > 0, 'sep cannot be empty; got empty sep'
+        assert len(sep) > 0, "sep cannot be empty; got empty sep"
 
         self.sep = sep
         self.remove_empty_fields = remove_empty_fields
@@ -138,26 +143,35 @@ class ToList(IOperator):
             tuple: A tuple containing status code and resulting list after conversion.
 
         """
-        assert isinstance(input_tuple, tuple), f'input is not a tuple; got {
-            input_tuple}, type of {input_tuple}'
+        assert isinstance(
+            input_tuple, tuple
+        ), f"input is not a tuple; got {
+            input_tuple}, type of {input_tuple}"
         self.status, self.input_str = input_tuple
 
         if self.status == 0:
-            fields = [f for f in self.input_str.split(self.sep) if (
-                self.remove_empty_fields and len(f) > 0) or not self.remove_empty_fields]
+            fields = [
+                f
+                for f in self.input_str.split(self.sep)
+                if (self.remove_empty_fields and len(f) > 0)
+                or not self.remove_empty_fields
+            ]
 
             # merge the errorno, i.e. [ERRNO]; see man fs_usage
             start, end = -1, -1
             for i, token in enumerate(fields):
-                if start == -1 and token == '[':
-                    start = i+1
-                elif (start != -1 and end == -1) and token.endswith(']'):
-                    end = i+1
+                if start == -1 and token == "[":
+                    start = i + 1
+                elif (start != -1 and end == -1) and token.endswith("]"):
+                    end = i + 1
                     break
 
             if start != -1 and end != -1:
-                fields = fields[:start-1] + \
-                    ['[' + ' '.join(fields[start:end])] + fields[end:]
+                fields = (
+                    fields[: start - 1]
+                    + ["[" + " ".join(fields[start:end])]
+                    + fields[end:]
+                )
 
             return (0, fields)
         return (1, [])
@@ -217,7 +231,11 @@ class FilterField(IOperator):
         """
 
         self.status, self.input_list = input_tuple
-        if self.status == 0 and len(self.input_list) > self.position and len(self.input_list) != 0:
+        if (
+            self.status == 0
+            and len(self.input_list) > self.position
+            and len(self.input_list) != 0
+        ):
             if self.contains_value in self.input_list[self.position]:
                 return (0, self.input_list)
             return (1, self.input_list)
@@ -254,7 +272,9 @@ class FilterFields(IOperator):
         self.queries = queries
         self.exact_match = exact_match
 
-    def execute(self, input_tuple: tuple[int, typing.List[str]]) -> tuple[int, typing.List[str]]:
+    def execute(
+        self, input_tuple: tuple[int, typing.List[str]]
+    ) -> tuple[int, typing.List[str]]:
         """
         Execute the filtering process based on provided parameters.
 
@@ -269,7 +289,9 @@ class FilterFields(IOperator):
         exact_match = self.exact_match
         if status == 0 and len(input_list) > self.pos:
             for q in self.queries:
-                if (exact_match and q.strip() == input_list[self.pos].strip()) or (not exact_match and q in input_list[self.pos]):
+                if (exact_match and q.strip() == input_list[self.pos].strip()) or (
+                    not exact_match and q in input_list[self.pos]
+                ):
                     return (0, input_list)
             return (1, input_list)
         else:
@@ -282,10 +304,10 @@ class Canonize:
     from system call data.
     """
 
-    fid_pattern = r'F=(-?\d+).*'
+    fid_pattern = r"F=(-?\d+).*"
     time_spent_pattern = r"\d+\.\d+"
-    no_path_syscalls = ('write', 'read', 'close')
-    no_fid_syscalls = ('mkdir', 'rename')
+    no_path_syscalls = ("write", "read", "close")
+    no_fid_syscalls = ("mkdir", "rename")
 
     def __init__(self):
         """
@@ -303,7 +325,7 @@ class Canonize:
         Returns:
             str: Cleaned string.
         """
-        return word.strip('[').strip(']')
+        return word.strip("[").strip("]")
 
     def extract_fd(self, word: str) -> str:
         """
@@ -315,7 +337,7 @@ class Canonize:
         Returns:
             str: Extracted file descriptor or None if not found.
         """
-        if (fid_match := re.search(Canonize.fid_pattern, word)):
+        if fid_match := re.search(Canonize.fid_pattern, word):
             return fid_match.group(1)
         return None
 
@@ -329,12 +351,14 @@ class Canonize:
         Returns:
             int: Index of the time spent pattern, or -1 if not found.
         """
-        for i in range(len(arr)-1, -1, -1):
+        for i in range(len(arr) - 1, -1, -1):
             if re.fullmatch(Canonize.time_spent_pattern, arr[i]):
                 return i
         return -1
 
-    def extract_path_pid_procname(self, arr: typing.List[str], syscall: str) -> typing.Tuple[str, str, str]:
+    def extract_path_pid_procname(
+        self, arr: typing.List[str], syscall: str
+    ) -> typing.Tuple[str, str, str]:
         """
         Extracts path, PID, and process name from the given array based on the syscall.
 
@@ -348,16 +372,15 @@ class Canonize:
         path, pid, procname = None, None, None
 
         # Find pid; the last element has a pid attached to it
-        _, pid = arr[-1].rsplit('.', 1)
+        _, pid = arr[-1].rsplit(".", 1)
 
         # Find time spent index
         tspent_index = self.find_tspent_index(arr)
-        assert tspent_index != - \
-            1, f'cannot find a timespent index for input {arr[1]}'
+        assert tspent_index != -1, f"cannot find a timespent index for input {arr[1]}"
 
         # Check if it has a W; see man fs_usage
         has_w = False
-        if arr[tspent_index+1].lower().strip() == 'w':
+        if arr[tspent_index + 1].lower().strip() == "w":
             tspent_index += 1
             has_w = True
 
@@ -373,20 +396,24 @@ class Canonize:
                 token = arr[i]
 
                 # Skip (----) and [---] fields which are related to the open and error numbers
-                if (token.startswith('(') and token.endswith(')')) or \
-                        (token.startswith('[') and token.endswith(']')) or \
-                        (token.startswith('B=') or token.startswith("F=")):
+                if (
+                    (token.startswith("(") and token.endswith(")"))
+                    or (token.startswith("[") and token.endswith("]"))
+                    or (token.startswith("B=") or token.startswith("F="))
+                ):
                     beg_idx = i
                     break
             if beg_idx is None and syscall in Canonize.no_fid_syscalls:
                 beg_idx = -1
-            assert beg_idx is not None, f'cannot find the beg index in {
-                arr[:search_idx+1]}'
-            path = ' '.join(arr[beg_idx+1:search_idx])
+            assert (
+                beg_idx is not None
+            ), f"cannot find the beg index in {
+                arr[:search_idx+1]}"
+            path = " ".join(arr[beg_idx + 1 : search_idx])
 
         # Find procname
         # Anything after tspent_index to the end contains the procname; we should remove the '.pid' from the end of it
-        procname = ' '.join(arr[tspent_index+1:])[:-(len(pid)+1)]
+        procname = " ".join(arr[tspent_index + 1 :])[: -(len(pid) + 1)]
 
         return (path, pid, procname)
 
@@ -412,7 +439,8 @@ class Canonize:
             ret.append(fd)
 
             path, pid, procname = self.extract_path_pid_procname(
-                details, action.lower())
+                details, action.lower()
+            )
             if path:
                 ret.append(path)
             if procname:

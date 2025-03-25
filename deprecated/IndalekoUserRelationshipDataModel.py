@@ -1,4 +1,4 @@
-'''
+"""
 This module defines the database schema for the MachineConfig collection.
 
 Project Indaleko
@@ -16,7 +16,8 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
+
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Annotated, List
@@ -31,151 +32,170 @@ from IndalekoDataModel import IndalekoDataModel
 from IndalekoRecordDataModel import IndalekoRecordDataModel
 from IndalekoUserDataModel import IndalekoUserDataModel
 
+
 class IndalekoUserRelationshipDataModel(IndalekoRecordDataModel):
-    '''
+    """
     This defines the data model for user relationships (which means use to
     group and user to domain, but could be generalized.)
-    '''
+    """
 
     @dataclass
     class UserIdentity:
-        '''
+        """
         A User can have multiple identities: same user, different
         identities.
-        '''
+        """
+
         Identities: Annotated[
             List[IndalekoUserDataModel.UserData],
             schema(description="The user's identities."),
-            required
+            required,
         ]
 
     @staticmethod
-    def get_user_identities() -> 'IndalekoUserRelationshipDataModel.UserIdentity':
-        '''Return the user identity.'''
+    def get_user_identities() -> "IndalekoUserRelationshipDataModel.UserIdentity":
+        """Return the user identity."""
         return IndalekoUserRelationshipDataModel.UserIdentity(
-            Identities=[
-                IndalekoUserDataModel.get_user_data()
-            ]
+            Identities=[IndalekoUserDataModel.get_user_data()]
         )
 
     @dataclass
     class GroupIdentity:
-        '''
+        """
         There is a relationship concept known as a group, so we define the
         group identity data here.
-        '''
-        Domain : Annotated[
+        """
+
+        Domain: Annotated[
             IndalekoUserDataModel.UserDomain,
             schema(description="The security domain that defines this group."),
-            required
+            required,
         ]
 
-        Description : Annotated[
-            str,
-            schema(description="A human readable description of the group.")
+        Description: Annotated[
+            str, schema(description="A human readable description of the group.")
         ]
 
     @staticmethod
-    def get_group_identity() -> 'IndalekoUserRelationshipDataModel.GroupIdentity':
-        '''Return the group identity.'''
+    def get_group_identity() -> "IndalekoUserRelationshipDataModel.GroupIdentity":
+        """Return the group identity."""
         return IndalekoUserRelationshipDataModel.GroupIdentity(
             Domain=IndalekoUserDataModel.get_user_domain(),
-            Description='This is a test record'
+            Description="This is a test record",
         )
 
     @dataclass
     class UserRelationship:
-        '''
+        """
         Define the relationship between a user and a group.
-        '''
-        User : Annotated[
+        """
+
+        User: Annotated[
             IndalekoUserDataModel.UserData,
             schema(description="The user in the relationship."),
-            required
+            required,
         ]
 
-        Group : Annotated[
-            'IndalekoUserRelationshipDataModel.GroupIdentity',
+        Group: Annotated[
+            "IndalekoUserRelationshipDataModel.GroupIdentity",
             schema(description="The group in the relationship."),
-            required
+            required,
         ]
-
 
     @staticmethod
-    def get_user_relationship() -> 'IndalekoUserRelationshipDataModel.UserRelationship':
-        '''Return the user relationship.'''
+    def get_user_relationship() -> "IndalekoUserRelationshipDataModel.UserRelationship":
+        """Return the user relationship."""
         return IndalekoUserRelationshipDataModel.UserRelationship(
             User=IndalekoUserDataModel.get_user_data(),
-            Group=IndalekoUserRelationshipDataModel.get_group_identity()
+            Group=IndalekoUserRelationshipDataModel.get_group_identity(),
         )
-
 
     @dataclass
     class EntityRelationship:
-
-        '''
+        """
         Define the relationship between a user entities:
             - user to group
             - group to users
-        '''
-        Identity1 : Annotated[
+        """
+
+        Identity1: Annotated[
             IndalekoDataModel.IndalekoUUID,
             schema(description="The first element in the relationship."),
-            required
+            required,
         ]
 
-        Identity2 : Annotated[
+        Identity2: Annotated[
             IndalekoDataModel.IndalekoUUID,
             schema(description="The second element in the relationship."),
-            required
+            required,
         ]
 
-        RelationshipType : Annotated[
+        RelationshipType: Annotated[
             IndalekoDataModel.IndalekoUUID,
             schema(description="The UUID that defines the type of relationship."),
-            required
+            required,
         ]
 
-        Metadata : Annotated[
+        Metadata: Annotated[
             List[IndalekoDataModel.SemanticAttribute],
             schema(description="Metadata associated with this relationship."),
-            required
+            required,
         ]
 
-        Description : Annotated[
-            str,
-            schema(description="A human readable description of the relationship.")
+        Description: Annotated[
+            str, schema(description="A human readable description of the relationship.")
         ]
 
     @staticmethod
-    def get_entity_relationship() -> 'IndalekoUserRelationshipDataModel.EntityRelationship':
-        '''Return the entity relationship.'''
+    def get_entity_relationship() -> (
+        "IndalekoUserRelationshipDataModel.EntityRelationship"
+    ):
+        """Return the entity relationship."""
         return IndalekoUserRelationshipDataModel.EntityRelationship(
-            Identity1=IndalekoDataModel.get_source_identifier(UUID('12345678-1234-5678-1234-567812345678')),
-            Identity2=IndalekoDataModel.get_source_identifier(UUID('12345678-1234-5678-1234-567812345678')),
-            RelationshipType=IndalekoDataModel.get_source_identifier(UUID('12345678-1234-5678-1234-567812345678')),
+            Identity1=IndalekoDataModel.get_source_identifier(
+                UUID("12345678-1234-5678-1234-567812345678")
+            ),
+            Identity2=IndalekoDataModel.get_source_identifier(
+                UUID("12345678-1234-5678-1234-567812345678")
+            ),
+            RelationshipType=IndalekoDataModel.get_source_identifier(
+                UUID("12345678-1234-5678-1234-567812345678")
+            ),
             Metadata=[IndalekoDataModel.get_semantic_attribute()],
-            Description='This is a test record'
+            Description="This is a test record",
         )
 
     @staticmethod
     def get_queries() -> List:
-        return [IndalekoUserRelationshipDataModel.get_user_identities,
-                IndalekoUserRelationshipDataModel.get_group_identity,
-                IndalekoUserRelationshipDataModel.get_entity_relationship,
-                IndalekoUserRelationshipDataModel.get_user_relationship]
+        return [
+            IndalekoUserRelationshipDataModel.get_user_identities,
+            IndalekoUserRelationshipDataModel.get_group_identity,
+            IndalekoUserRelationshipDataModel.get_entity_relationship,
+            IndalekoUserRelationshipDataModel.get_user_relationship,
+        ]
 
     @staticmethod
     def get_types() -> List:
-        return [IndalekoUserRelationshipDataModel.UserIdentity,
-                IndalekoUserRelationshipDataModel.GroupIdentity,
-                IndalekoUserRelationshipDataModel.UserRelationship,
-                IndalekoUserRelationshipDataModel.EntityRelationship]
+        return [
+            IndalekoUserRelationshipDataModel.UserIdentity,
+            IndalekoUserRelationshipDataModel.GroupIdentity,
+            IndalekoUserRelationshipDataModel.UserRelationship,
+            IndalekoUserRelationshipDataModel.EntityRelationship,
+        ]
+
 
 def main():
-    '''Test the IndalekoUserRelationshipDataModel data model.'''
-    print('GraphQL Schema:')
-    print(print_schema(graphql_schema(query=IndalekoUserRelationshipDataModel.get_queries(),
-                                      types=IndalekoUserRelationshipDataModel.get_types())))
+    """Test the IndalekoUserRelationshipDataModel data model."""
+    print("GraphQL Schema:")
+    print(
+        print_schema(
+            graphql_schema(
+                query=IndalekoUserRelationshipDataModel.get_queries(),
+                types=IndalekoUserRelationshipDataModel.get_types(),
+            )
+        )
+    )
+
+
 if __name__ == "__main__":
     main()

@@ -1,8 +1,8 @@
-
 import logging
 from typing import Dict, Any
 import json
 from datetime import datetime
+
 
 class LoggingService:
     """
@@ -20,7 +20,9 @@ class LoggingService:
         self.logger = logging.getLogger("UPILogger")
         self.logger.setLevel(level)
 
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
 
         file_handler = logging.FileHandler(log_file)
         file_handler.setFormatter(formatter)
@@ -41,7 +43,7 @@ class LoggingService:
         log_data = {
             "event": "user_query",
             "query": query,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
         if metadata:
             log_data.update(metadata)
@@ -61,7 +63,7 @@ class LoggingService:
             "query": query,
             "num_results": num_results,
             "execution_time": execution_time,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
         self.logger.info(json.dumps(log_data))
 
@@ -78,7 +80,7 @@ class LoggingService:
             "event": "error",
             "error_message": error_message,
             "error_type": error_type,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
         if stack_trace:
             log_data["stack_trace"] = stack_trace
@@ -96,7 +98,7 @@ class LoggingService:
             "event": "system_metric",
             "metric_name": metric_name,
             "metric_value": metric_value,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
         self.logger.info(json.dumps(log_data))
 
@@ -111,7 +113,7 @@ class LoggingService:
         log_data = {
             "event": "user_action",
             "action": action,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
         if metadata:
             log_data.update(metadata)

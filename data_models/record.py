@@ -25,52 +25,55 @@ from typing import Dict, Any, Union
 
 from datetime import datetime, timezone
 from pydantic import Field, field_validator, AwareDatetime
+
 # from icecream import ic
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from data_models.base import IndalekoBaseModel
 from utils.misc.data_management import encode_binary_data
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoRecordDataModel(IndalekoBaseModel):
-    '''
+    """
     This class defines the UUID data model for Indaleko.
-    '''
+    """
+
     SourceIdentifier: IndalekoSourceIdentifierDataModel = Field(
         ...,
-        title='SourceIdentifier',
-        description='The source identifier for the record (e.g., for provenance).'
+        title="SourceIdentifier",
+        description="The source identifier for the record (e.g., for provenance).",
     )
 
     Timestamp: AwareDatetime = Field(
         datetime.now(timezone.utc),
-        title='Timestamp',
-        description='Record creation timestamp.'
+        title="Timestamp",
+        description="Record creation timestamp.",
     )
 
     Attributes: Union[Dict[str, Any], None] = Field(
         None,
-        title='Attributes',
-        description='Optional field, do not rely upon its contents or presence.'
-        'Attributes from the metadata source.'
+        title="Attributes",
+        description="Optional field, do not rely upon its contents or presence."
+        "Attributes from the metadata source.",
     )
 
     Data: str = Field(
-        default=encode_binary_data(b''),
-        title='Data',
-        description='The raw (uninterpreted) data from the original source.'
+        default=encode_binary_data(b""),
+        title="Data",
+        description="The raw (uninterpreted) data from the original source.",
     )
 
-    @field_validator('Timestamp', mode='before')
+    @field_validator("Timestamp", mode="before")
     @classmethod
     def ensure_timezone(cls, value: datetime):
         if isinstance(value, str):
@@ -80,7 +83,8 @@ class IndalekoRecordDataModel(IndalekoBaseModel):
         return value
 
     class Config:
-        '''Sample configuration data for the data model.'''
+        """Sample configuration data for the data model."""
+
         json_schema_extra = {
             "example": {
                 "SourceIdentifier": {
@@ -103,15 +107,15 @@ class IndalekoRecordDataModel(IndalekoBaseModel):
                 "V4ZXIiOiAiMDc5M2I0ZDUtZTU0OS00Y2I2LTgxNzctMDIwYTczOGI2NmI3IiwgIlZvbH"
                 "VtZSBHVUlEIjogIjMzOTdkOTdiLTJjYTUtMTFlZC1iMmZjLWI0MGVkZTlhNWEzYyIsIC"
                 "JPYmplY3RJZGVudGlmaWVyIjogIjJjNzNkNmU1LWVhYmEtNGYwYS1hY2YzLWUwMmM1Mj"
-                "lmMDk3YSJ9"
+                "lmMDk3YSJ9",
             }
         }
 
 
 def main():
-    '''This allows testing the data model'''
+    """This allows testing the data model"""
     IndalekoRecordDataModel.test_model_main()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

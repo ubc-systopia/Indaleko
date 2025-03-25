@@ -1,4 +1,4 @@
-'''
+"""
 This module defines the ActivityDataCharacteristics class.  This class is used to
 describe the characteristics of activity data.  This is intended to be used to
 help the system understand how to interact with the activity data.
@@ -18,7 +18,7 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
 
 import os
 import sys
@@ -26,11 +26,11 @@ import uuid
 
 from icecream import ic
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
@@ -38,8 +38,7 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 class ActivityDataCharacteristics:
-
-    '''
+    """
     Define the provider characteristics available for a data provider.
     '''
     ACTIVITY_DATA_TEMPORAL = '521e13be-096e-4068-8f2a-4c162bd6a3fb'
@@ -59,37 +58,41 @@ class ActivityDataCharacteristics:
     ACTIVITY_DATA_SPOTIFY = '651b3b00-23f3-45ae-8d0e-79454a61ff3a'
     # available for use beyond this point
 
-    _characteristic_prefix = 'ACTIVITY_DATA_'
+    _characteristic_prefix = "ACTIVITY_DATA_"
 
     def __init__(self):
-        '''Initialize the provider characteristics'''
+        """Initialize the provider characteristics"""
         self.uuid_to_label = {}
         for label, value in ActivityDataCharacteristics.__dict__.items():
             if label.startswith(ActivityDataCharacteristics._characteristic_prefix):
-                setattr(self, label+'_UUID', uuid.UUID(value))
+                setattr(self, label + "_UUID", uuid.UUID(value))
                 self.uuid_to_label[value] = label
 
     @staticmethod
     def get_activity_characteristics() -> dict:
-        '''Get the characteristics of the provider'''
+        """Get the characteristics of the provider"""
         return {
-            label: value for label, value in ActivityDataCharacteristics.__dict__.items()
+            label: value
+            for label, value in ActivityDataCharacteristics.__dict__.items()
             if label.startswith(ActivityDataCharacteristics._characteristic_prefix)
         }
 
     @staticmethod
     def get_activity_label(identifier: uuid.UUID) -> str:
-        '''Get the label for the provider'''
+        """Get the label for the provider"""
         return ActivityDataCharacteristics().uuid_to_label.get(identifier, None)
 
 
 def main():
-    '''Main entry point for the module'''
-    ic('ActivityDataCharacteristics module test.')
-    for label, value in ActivityDataCharacteristics.get_activity_characteristics().items():
+    """Main entry point for the module"""
+    ic("ActivityDataCharacteristics module test.")
+    for (
+        label,
+        value,
+    ) in ActivityDataCharacteristics.get_activity_characteristics().items():
         ic(label, value)
         ic(ActivityDataCharacteristics.get_activity_label(value))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

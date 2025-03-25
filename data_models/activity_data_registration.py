@@ -26,56 +26,63 @@ import uuid
 from pydantic import Field
 from icecream import ic
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
-
 
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
 from data_models.record import IndalekoRecordDataModel
+
 # pylint: enable=wrong-import-position
 
+
 class IndalekoActivityDataRegistrationDataModel(IndalekoBaseModel):
-    '''
+    """
     This class defines the activity data provider registration for the
     Indaleko system.
-    '''
-    Identifier : uuid.UUID = Field(...,
-                              title='Identifier',
-                              description='The UUID for the activity data provider.')
+    """
 
-    Version : str = Field(...,
-                           title='Version',
-                           description='The version of the activity data provider.')
+    Identifier: uuid.UUID = Field(
+        ..., title="Identifier", description="The UUID for the activity data provider."
+    )
 
-    Description : str = Field(...,
-                                title='Description',
-                                description='A description of the activity data provider.')
+    Version: str = Field(
+        ..., title="Version", description="The version of the activity data provider."
+    )
 
-    Record : IndalekoRecordDataModel = Field(...,
-                                            title='Record',
-                                            description='Standard data record format.')
+    Description: str = Field(
+        ...,
+        title="Description",
+        description="A description of the activity data provider.",
+    )
+
+    Record: IndalekoRecordDataModel = Field(
+        ..., title="Record", description="Standard data record format."
+    )
 
     class Config:
-        '''Sample configuration data for the data model.'''
+        """Sample configuration data for the data model."""
+
         json_schema_extra = {
             "example": {
                 "Identifier": "429f1f3c-7a21-463f-b7aa-cd731bb202b1",
                 "Version": "1.0",
                 "Description": "This is a sample activity data provider registration.",
-                "Record": IndalekoRecordDataModel.Config.json_schema_extra['example'],
+                "Record": IndalekoRecordDataModel.Config.json_schema_extra["example"],
             }
         }
 
+
 def main():
-    '''This allows testing the data model.'''
-    ic('Testing IndalekoActivityDataRegistrationDataModel')
+    """This allows testing the data model."""
+    ic("Testing IndalekoActivityDataRegistrationDataModel")
     IndalekoActivityDataRegistrationDataModel.test_model_main()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

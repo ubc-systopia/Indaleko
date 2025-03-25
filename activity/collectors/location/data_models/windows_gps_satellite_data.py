@@ -1,4 +1,4 @@
-'''
+"""
 This module defines the data model for the Windows GPS based location
 activity data provider.
 
@@ -17,7 +17,8 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
+
 import os
 import sys
 
@@ -26,11 +27,11 @@ from typing import Optional
 
 # from icecream import ic
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
@@ -38,16 +39,21 @@ if os.environ.get('INDALEKO_ROOT') is None:
 
 
 class WindowsGPSLocationSatelliteDataModel(BaseModel):
-    geometric_dilution_of_precision: Optional[float]\
-        = Field(None, description="Geometric dilution of precision")
-    horizontal_dilution_of_precision: Optional[float]\
-        = Field(None, description="Horizontal dilution of precision")
-    vertical_dilution_of_precision: Optional[float]\
-        = Field(None, description="Vertical dilution of precision")
-    position_dilution_of_precision: Optional[float]\
-        = Field(None, description="Position dilution of precision")
-    time_dilution_of_precision: Optional[float]\
-        = Field(None, description="Time dilution of precision")
+    geometric_dilution_of_precision: Optional[float] = Field(
+        None, description="Geometric dilution of precision"
+    )
+    horizontal_dilution_of_precision: Optional[float] = Field(
+        None, description="Horizontal dilution of precision"
+    )
+    vertical_dilution_of_precision: Optional[float] = Field(
+        None, description="Vertical dilution of precision"
+    )
+    position_dilution_of_precision: Optional[float] = Field(
+        None, description="Position dilution of precision"
+    )
+    time_dilution_of_precision: Optional[float] = Field(
+        None, description="Time dilution of precision"
+    )
 
     class Config:
         json_schema_extra = {
@@ -62,9 +68,9 @@ class WindowsGPSLocationSatelliteDataModel(BaseModel):
 
 
 def main():
-    '''This allows testing the data model.'''
+    """This allows testing the data model."""
     WindowsGPSLocationSatelliteDataModel.test_model_main()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

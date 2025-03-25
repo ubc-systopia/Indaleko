@@ -1,4 +1,3 @@
-
 import platform
 import sys
 import subprocess
@@ -67,13 +66,13 @@ class CommandBuilder:
 
 def run_commands(commands: typing.List[Command]):
     # Create necessary folders
-    folders_to_create = ['./config', './data', './logs']
+    folders_to_create = ["./config", "./data", "./logs"]
     for folder in folders_to_create:
         os.makedirs(folder, exist_ok=True)
 
     for command in commands:
         try:
-            print('>> running', command.build())
+            print(">> running", command.build())
             subprocess.run(command.build().to_list(), check=True)
         except subprocess.CalledProcessError as e:
             print(f"Error running command: '{command}'")
@@ -85,46 +84,47 @@ def main():
     # Check Python version
     check_python_version()
 
-    if platform.system() != 'Darwin':
-        print('Only supports MacOS for now')
+    if platform.system() != "Darwin":
+        print("Only supports MacOS for now")
         exit(1)
-
 
     # Set up arguments parser
     parser = argparse.ArgumentParser(description="Runs Indaleko on MacOS")
     parser.add_argument("--path", help="Path provided by the user to index")
     parser.add_argument(
-        "--reset", help="Drops the old collections before ingesting data", action="store_true")
+        "--reset",
+        help="Drops the old collections before ingesting data",
+        action="store_true",
+    )
     args = parser.parse_args()
 
     prereq_commands = [
         CommandBuilder("docker").add_arg("ps"),
-        CommandBuilder("pip").add_arg("install").add_arg(
-            "-r", "requirements.txt")
+        CommandBuilder("pip").add_arg("install").add_arg("-r", "requirements.txt"),
     ]
-    build_db_commands = [
-        CommandBuilder("python").add_arg('dbsetup.py')
-    ]
+    build_db_commands = [CommandBuilder("python").add_arg("dbsetup.py")]
 
     build_machine_config_commands = [
-        CommandBuilder("python").add_arg(
-            'MacHardwareInfoGenerator.py').add_arg('-d', './config').add_arg('--skip'),
-        CommandBuilder("sleep").add_arg('10'),
-        CommandBuilder("python").add_arg(
-            'IndalekoMacMachineConfig.py').add_arg('--add')
+        CommandBuilder("python")
+        .add_arg("MacHardwareInfoGenerator.py")
+        .add_arg("-d", "./config")
+        .add_arg("--skip"),
+        CommandBuilder("sleep").add_arg("10"),
+        CommandBuilder("python")
+        .add_arg("IndalekoMacMachineConfig.py")
+        .add_arg("--add"),
     ]
 
     index_commands = [
-        CommandBuilder("python").add_arg(
-            'IndalekoMacLocalIndexer.py').add_arg('--path', args.path),
-        CommandBuilder("sleep").add_arg('10')
+        CommandBuilder("python")
+        .add_arg("IndalekoMacLocalIndexer.py")
+        .add_arg("--path", args.path),
+        CommandBuilder("sleep").add_arg("10"),
     ]
 
-    ingest_commands = [
-        CommandBuilder("python").add_arg('IndalekoMacLocalIngester.py')
-    ]
+    ingest_commands = [CommandBuilder("python").add_arg("IndalekoMacLocalIngester.py")]
     if args.reset:
-        ingest_commands[0].add_arg('--reset')
+        ingest_commands[0].add_arg("--reset")
 
     # Run the commands
     run_commands(prereq_commands)

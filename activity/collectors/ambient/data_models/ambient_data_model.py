@@ -1,4 +1,4 @@
-'''
+"""
 This module defines the base data model for ambient data collectors
 and recorders.
 
@@ -17,32 +17,36 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
 
 import os
 import sys
 
 from pydantic import Field
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from activity.data_model.activity import IndalekoActivityDataModel
+
 # pylint: enable=wrong-import-position
 
 
 class BaseAmbientConditionDataModel(IndalekoActivityDataModel):
-    '''This is the base data model for ambient condition data'''
-    source: str = Field(...,
-                        description="Source of the location data, e.g., 'Sensor', 'Music App', etc.")
+    """This is the base data model for ambient condition data"""
+
+    source: str = Field(
+        ...,
+        description="Source of the location data, e.g., 'Sensor', 'Music App', etc.",
+    )
 
     class Config:
-        '''Sample configuration for the data model'''
+        """Sample configuration for the data model"""
 
         @staticmethod
         def generate_example():
@@ -58,9 +62,9 @@ class BaseAmbientConditionDataModel(IndalekoActivityDataModel):
 
 
 def main():
-    '''This allows testing the data model'''
+    """This allows testing the data model"""
     BaseAmbientConditionDataModel.test_model_main()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

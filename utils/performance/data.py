@@ -18,6 +18,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+
 import json
 import os
 import sys
@@ -26,21 +27,24 @@ import time
 from icecream import ic
 from typing import Callable, Any
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from data_models.i_perf import IndalekoPerformanceDataModel
 from data_models import IndalekoRecordDataModel
 from utils.misc.data_management import encode_binary_data
+
 # pylint: enable=wrong-import-position
 
+
 class IndalekoPerformance:
-    '''This class provides a set of utility functions for collecting performance data.'''
+    """This class provides a set of utility functions for collecting performance data."""
+
 
 from typing import Callable, Any, Tuple, Dict
 from pydantic import BaseModel
@@ -51,14 +55,18 @@ import time
 
 
 class PerformanceData:
-    '''
+    """
     This class builds a performance data object for Indaleko.
-    '''
-    def __init__(self,
-        task_func: Callable[..., Any],  # A callable that takes any arguments and returns any type
+    """
+
+    def __init__(
+        self,
+        task_func: Callable[
+            ..., Any
+        ],  # A callable that takes any arguments and returns any type
         *args: Any,  # Positional arguments to be passed to the task_func
-        **kwargs: Dict[str, Any]  # Keyword arguments to be passed to the task_func
-        ):
+        **kwargs: Dict[str, Any],  # Keyword arguments to be passed to the task_func
+    ):
         """
         Measures performance data for the given task function.
 
@@ -102,23 +110,32 @@ class PerformanceData:
         # Optional: Measure file sizes if applicable
         input_file = kwargs.get("input_file")
         output_file = kwargs.get("output_file")
-        input_size = os.path.getsize(input_file) if input_file and os.path.exists(input_file) else None
-        output_size = os.path.getsize(output_file) if output_file and os.path.exists(output_file) else None
+        input_size = (
+            os.path.getsize(input_file)
+            if input_file and os.path.exists(input_file)
+            else None
+        )
+        output_size = (
+            os.path.getsize(output_file)
+            if output_file and os.path.exists(output_file)
+            else None
+        )
 
         attributes = {
-            'start time' : start_time.isoformat(),
-            'end time' : end_time.isoformat(),
-            'elapsed time' : float(end_clock - start_clock),
-            'user cpu time' : float(end_user_time - start_user_time),
-            'system cpu time' : float(end_system_time - start_system_time),
-            'input size' : input_size,
-            'output size' : output_size,
-            'peak memory usage' : max(start_memory, end_memory),
-            'io read bytes' : end_io_counters.read_bytes - start_io_counters.read_bytes,
-            'io write bytes' : end_io_counters.write_bytes - start_io_counters.write_bytes,
-            'thread count' : end_thread_count,
-            'error count' : error_count,
-            'result' : self.result,
+            "start time": start_time.isoformat(),
+            "end time": end_time.isoformat(),
+            "elapsed time": float(end_clock - start_clock),
+            "user cpu time": float(end_user_time - start_user_time),
+            "system cpu time": float(end_system_time - start_system_time),
+            "input size": input_size,
+            "output size": output_size,
+            "peak memory usage": max(start_memory, end_memory),
+            "io read bytes": end_io_counters.read_bytes - start_io_counters.read_bytes,
+            "io write bytes": end_io_counters.write_bytes
+            - start_io_counters.write_bytes,
+            "thread count": end_thread_count,
+            "error count": error_count,
+            "result": self.result,
         }
 
         self.performance_data = IndalekoPerformanceDataModel(
@@ -135,7 +152,9 @@ class PerformanceData:
             SystemCPUTime=end_system_time - start_system_time,
             InputSize=input_size,
             OutputSize=output_size,
-            PeakMemoryUsage=max(start_memory, end_memory),  # Simplified peak measurement
+            PeakMemoryUsage=max(
+                start_memory, end_memory
+            ),  # Simplified peak measurement
             IOReadBytes=end_io_counters.read_bytes - start_io_counters.read_bytes,
             IOWriteBytes=end_io_counters.write_bytes - start_io_counters.write_bytes,
             ThreadCount=end_thread_count,
@@ -144,40 +163,45 @@ class PerformanceData:
         )
 
     def get_performance_data(self) -> IndalekoPerformanceDataModel:
-        '''
+        """
         Returns the performance data object.
-        '''
+        """
         return self.performance_data
 
     def get_result(self) -> Any:
-        '''
+        """
         Returns the result of the task function.
-        '''
+        """
         return self.result
 
     def serialize(self) -> Dict[str, Any]:
-        '''
+        """
         Serialize the performance data to a dictionary.
-        '''
+        """
         return json.loads(self.performance_data.model_dump_json())
 
-def test_task(wait_time : int = 5) -> int:
-    '''
+
+def test_task(wait_time: int = 5) -> int:
+    """
     A simple test task function.
-    '''
+    """
     time.sleep(wait_time)
     return wait_time
 
+
 def main():
-    '''
+    """
     This is the test code for the IndalekoPerformance class.
-    '''
+    """
     source_identifier = {
-        'Identifier' : '388adf3b-8a89-4fe5-80cf-a57c6edb52a6',
-        'Version' : '1.0',
+        "Identifier": "388adf3b-8a89-4fe5-80cf-a57c6edb52a6",
+        "Version": "1.0",
     }
-    perf_data = PerformanceData(test_task, wait_time=3, source_identifier=source_identifier)
+    perf_data = PerformanceData(
+        test_task, wait_time=3, source_identifier=source_identifier
+    )
     ic(perf_data.serialize())
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

@@ -1,5 +1,5 @@
-
 from typing import List, Dict, Any
+
 
 class FacetGenerator:
     """
@@ -24,7 +24,7 @@ class FacetGenerator:
         facets.extend(self._generate_date_facets(analyzed_results))
         facets.extend(self._generate_metadata_facets(analyzed_results))
 
-        return facets[:self.max_facets]
+        return facets[: self.max_facets]
 
     def _generate_type_facets(self, results: List[Dict[str, Any]]) -> List[str]:
         """

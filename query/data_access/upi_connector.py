@@ -1,13 +1,15 @@
-
 from typing import List, Dict, Any
 from arango import ArangoClient
+
 
 class UPIConnector:
     """
     Connector for the Unified Personal Index (UPI) data store using ArangoDB.
     """
 
-    def __init__(self, host: str, port: int, username: str, password: str, database: str):
+    def __init__(
+        self, host: str, port: int, username: str, password: str, database: str
+    ):
         """
         Initialize the UPI connector.
 
@@ -18,10 +20,12 @@ class UPIConnector:
             password (str): ArangoDB password
             database (str): Name of the database to use
         """
-        self.client = ArangoClient(hosts=f'http://{host}:{port}')
+        self.client = ArangoClient(hosts=f"http://{host}:{port}")
         self.db = self.client.db(database, username=username, password=password)
 
-    def execute_aql(self, query: str, bind_vars: Dict[str, Any] = None) -> List[Dict[str, Any]]:
+    def execute_aql(
+        self, query: str, bind_vars: Dict[str, Any] = None
+    ) -> List[Dict[str, Any]]:
         """
         Execute an AQL query on the UPI data store.
 
@@ -55,7 +59,7 @@ class UPIConnector:
                 modified: file.modified
             }
         """
-        return self.execute_aql(query, bind_vars={'filename': f'%{filename}%'})
+        return self.execute_aql(query, bind_vars={"filename": f"%{filename}%"})
 
     def insert_file(self, file_info: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -67,7 +71,7 @@ class UPIConnector:
         Returns:
             Dict[str, Any]: The inserted file record
         """
-        collection = self.db.collection('files')
+        collection = self.db.collection("files")
         return collection.insert(file_info)
 
     def update_file(self, file_id: str, file_info: Dict[str, Any]) -> Dict[str, Any]:
@@ -81,8 +85,8 @@ class UPIConnector:
         Returns:
             Dict[str, Any]: The updated file record
         """
-        collection = self.db.collection('files')
-        return collection.update({'_key': file_id}, file_info)
+        collection = self.db.collection("files")
+        return collection.update({"_key": file_id}, file_info)
 
     def delete_file(self, file_id: str) -> bool:
         """
@@ -94,8 +98,8 @@ class UPIConnector:
         Returns:
             bool: True if the file was successfully deleted, False otherwise
         """
-        collection = self.db.collection('files')
-        return collection.delete({'_key': file_id})
+        collection = self.db.collection("files")
+        return collection.delete({"_key": file_id})
 
     def close(self):
         """

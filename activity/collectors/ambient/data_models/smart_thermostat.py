@@ -23,15 +23,18 @@ import sys
 from typing import Optional
 from pydantic import Field, field_validator
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from activity.collectors.ambient.data_models.ambient_data_model import BaseAmbientConditionDataModel
+from activity.collectors.ambient.data_models.ambient_data_model import (
+    BaseAmbientConditionDataModel,
+)
+
 # pylint: enable=wrong-import-position
 
 
@@ -40,6 +43,7 @@ class ThermostatSensorData(BaseAmbientConditionDataModel):
     Data model for smart thermostat sensor data, specifically designed with
     ecobee-like capabilities in mind but generalizable to other smart thermostats.
     """
+
     # Core temperature readings
     temperature: float = Field(
         ...,
@@ -49,53 +53,39 @@ class ThermostatSensorData(BaseAmbientConditionDataModel):
     )
 
     humidity: Optional[float] = Field(
-        None,
-        description="Relative humidity percentage",
-        ge=0.0,
-        le=100.0
+        None, description="Relative humidity percentage", ge=0.0, le=100.0
     )
 
     # System state information
     hvac_mode: str = Field(
-        ...,
-        description="Current HVAC system mode",
-        pattern="^(heat|cool|auto|off)$"
+        ..., description="Current HVAC system mode", pattern="^(heat|cool|auto|off)$"
     )
 
     hvac_state: str = Field(
         ...,
         description="Current HVAC running state",
-        pattern="^(heating|cooling|fan|idle)$"
+        pattern="^(heating|cooling|fan|idle)$",
     )
 
     fan_mode: str = Field(
-        ...,
-        description="Fan operation mode",
-        pattern="^(auto|on|scheduled)$"
+        ..., description="Fan operation mode", pattern="^(auto|on|scheduled)$"
     )
 
     # Target/Set points
     target_temperature: float = Field(
-        ...,
-        description="Target temperature in Celsius",
-        ge=-50.0,
-        le=100.0
+        ..., description="Target temperature in Celsius", ge=-50.0, le=100.0
     )
 
     # Optional enhanced sensor data
     occupancy_detected: Optional[bool] = Field(
-        None,
-        description="Whether occupancy is detected in the sensor's area"
+        None, description="Whether occupancy is detected in the sensor's area"
     )
 
     air_quality: Optional[int] = Field(
-        None,
-        description="Air quality index (if available)",
-        ge=0,
-        le=500
+        None, description="Air quality index (if available)", ge=0, le=500
     )
 
-    @field_validator('temperature', 'target_temperature')
+    @field_validator("temperature", "target_temperature")
     @classmethod
     def validate_temperature(cls, value: float) -> float:
         """Validate temperature is within reasonable bounds"""
@@ -105,6 +95,7 @@ class ThermostatSensorData(BaseAmbientConditionDataModel):
 
     class Config:
         """Configuration and example data for the thermostat sensor model"""
+
         json_schema_extra = {
             "example": {
                 **BaseAmbientConditionDataModel.Config.json_schema_extra["example"],
@@ -116,13 +107,15 @@ class ThermostatSensorData(BaseAmbientConditionDataModel):
                 "target_temperature": 22.0,
                 "occupancy_detected": True,
                 "air_quality": 95,
-                "source": "ecobee"
+                "source": "ecobee",
             }
         }
+
 
 def main():
     """This allows testing the data model"""
     ThermostatSensorData.test_model_main()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

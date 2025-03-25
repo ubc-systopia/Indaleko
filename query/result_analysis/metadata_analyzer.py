@@ -1,5 +1,5 @@
-
 from typing import List, Dict, Any
+
 
 class MetadataAnalyzer:
     """
@@ -22,7 +22,7 @@ class MetadataAnalyzer:
                 "original": result,
                 "extracted_metadata": self._extract_metadata(result),
                 "content_summary": self._summarize_content(result),
-                "relevance_score": self._calculate_relevance(result)
+                "relevance_score": self._calculate_relevance(result),
             }
             analyzed_results.append(analyzed_result)
         return analyzed_results

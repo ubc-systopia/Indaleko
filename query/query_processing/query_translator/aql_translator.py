@@ -17,6 +17,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+
 import json
 import os
 import sys
@@ -25,20 +26,22 @@ from typing import Any
 
 from icecream import ic
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from db.db_collection_metadata import IndalekoDBCollectionsMetadata
+
 # from query.query_processing.data_models.query_input import StructuredQuery
 # from query.query_processing.data_models.query_output import LLMTranslateQueryResponse
 from query.query_processing.data_models.translator_input import TranslatorInput
 from query.query_processing.data_models.translator_response import TranslatorOutput
 from query.query_processing.query_translator.translator_base import TranslatorBase
+
 # from query.llm_base import IndalekoLLMBase
 # pylint: enable=wrong-import-position
 
@@ -57,12 +60,11 @@ class AQLTranslator(TranslatorBase):
         """
         self.db_collections_metadata = collections_metadata
         self.db_config = self.db_collections_metadata.db_config
-        self.collection_data = self.db_collections_metadata.get_all_collections_metadata()
+        self.collection_data = (
+            self.db_collections_metadata.get_all_collections_metadata()
+        )
 
-    def translate(
-            self,
-            input_data: TranslatorInput
-    ) -> TranslatorOutput:
+    def translate(self, input_data: TranslatorInput) -> TranslatorOutput:
         """
         Translate a parsed query into an AQL query.
 
@@ -77,18 +79,18 @@ class AQLTranslator(TranslatorBase):
         assert isinstance(input_data, TranslatorInput)
         prompt = self._create_translation_prompt2(input_data)
         completion = input_data.Connector.get_completion(
-            context=prompt['system'],
-            question=prompt['user'],
-            schema=TranslatorOutput.model_json_schema()
+            context=prompt["system"],
+            question=prompt["user"],
+            schema=TranslatorOutput.model_json_schema(),
         )
         performance_data = json.loads(completion.usage.model_dump_json())
         response_data = json.loads(completion.choices[0].message.content)
         print(json.dumps(response_data, indent=2))
         return TranslatorOutput(
-            aql_query=response_data['aql_query'],
-            explanation=response_data['explanation'],
-            confidence=response_data['confidence'],
-            observations=response_data.get('observations', None),
+            aql_query=response_data["aql_query"],
+            explanation=response_data["explanation"],
+            confidence=response_data["confidence"],
+            observations=response_data.get("observations", None),
             performance_info=performance_data,
         )
 
@@ -102,8 +104,18 @@ class AQLTranslator(TranslatorBase):
         Returns:
             bool: True if the query is valid, False otherwise
         """
-        required_fields = [".Size", ".Label", ".URI", ".Timestamp", ".SemanticAttributes"]
-        result = "FOR" in query and "RETURN" in query and any(field in query for field in required_fields)
+        required_fields = [
+            ".Size",
+            ".Label",
+            ".URI",
+            ".Timestamp",
+            ".SemanticAttributes",
+        ]
+        result = (
+            "FOR" in query
+            and "RETURN" in query
+            and any(field in query for field in required_fields)
+        )
 
         if explain and not result:
             explanation = []
@@ -112,7 +124,9 @@ class AQLTranslator(TranslatorBase):
             if "RETURN" not in query:
                 explanation.append("Missing 'RETURN' clause.")
             if not any(keyword in query for keyword in required_fields):
-                explanation.append(f"No instance of any required field {" ".join(required_fields)}.")
+                explanation.append(
+                    f"No instance of any required field {" ".join(required_fields)}."
+                )
             ic("Invalid AQL query:", query, explanation)
         return result
 
@@ -131,11 +145,12 @@ class AQLTranslator(TranslatorBase):
         return query
 
     def _create_translation_prompt(
-            self,
-            parsed_query: dict[str, Any],
-            selected_md_attributes: dict[str, Any],
-            additional_notes: str,
-            n_truth_md: int) -> str:
+        self,
+        parsed_query: dict[str, Any],
+        selected_md_attributes: dict[str, Any],
+        additional_notes: str,
+        n_truth_md: int,
+    ) -> str:
         """
         Create a prompt for the LLM to generate an AQL query.
 
@@ -146,7 +161,8 @@ class AQLTranslator(TranslatorBase):
             str: The prompt for the LLM
         """
         # Implement prompt creation logic
-        system_prompt = """
+        system_prompt = (
+            """
             You are an assistant that generates ArangoDB queries for a Unified Personal Index (UPI) system.
             The UPI stores metadata about digital objects (e.g., files, directories) in an ArangoDB database.
             Given a user query and a dictionary called selected_md_attributes, generate the corresponding AQL
@@ -214,20 +230,18 @@ class AQLTranslator(TranslatorBase):
             an extension at the end, so use 'LIKE' command not ==.
             Make sure to incorporate all attributes from the given dictionary into the aql statement.
             The query should only include the AQL code, without any additional explanations or  comments.
-            You must return one single code block enclosed in '```'s with only one FOR and RETURN statement.\n""" + \
-            f"""
+            You must return one single code block enclosed in '```'s with only one FOR and RETURN statement.\n"""
+            + f"""
             Dictionary of attributes: {str(selected_md_attributes)}
             Number of truth attributes: {str(n_truth_md)}
             Additional Notes: {additional_notes}
             Schema: {str(parsed_query['schema'])}
             """
+        )
 
-        user_prompt = parsed_query['original_query']
+        user_prompt = parsed_query["original_query"]
 
-        return {
-            'system': system_prompt,
-            'user': user_prompt
-        }
+        return {"system": system_prompt, "user": user_prompt}
 
     def _generate_collection_mapping(self) -> dict[str, str]:
         """
@@ -246,17 +260,17 @@ class AQLTranslator(TranslatorBase):
             ic(dir(data))
 
         collection_mapping = {
-            'file': 'Objects',
-            'files': 'Objects',
-            'directory': 'Objects',
-            'directories': 'Objects',
+            "file": "Objects",
+            "files": "Objects",
+            "directory": "Objects",
+            "directories": "Objects",
         }
         return collection_mapping
 
     def _determine_relevant_collections(
-            self,
-            parsed_query: dict[str, Any],
-            selected_md_attributes: dict[str, Any],
+        self,
+        parsed_query: dict[str, Any],
+        selected_md_attributes: dict[str, Any],
     ) -> list[str]:
         """
         Dynamically determine the relevant collections based on the user query.
@@ -284,15 +298,17 @@ class AQLTranslator(TranslatorBase):
 
         # Step 4: Identify if the query requires activity tracking
         needs_activity_data = any(
-            keyword in user_query_text for keyword in [
+            keyword in user_query_text
+            for keyword in [
                 "edited",
                 "viewed",
                 "accessed",
                 "created",
                 "deleted",
                 "location",
-                "timestamp"]
-            )
+                "timestamp",
+            ]
+        )
 
         if needs_activity_data:
             # Step 5: Query `ActivityDataProviders` to find available sources
@@ -309,10 +325,7 @@ class AQLTranslator(TranslatorBase):
 
         return list(relevant_collections)
 
-    def _create_translation_prompt2(
-            self,
-            input_data: TranslatorInput
-    ) -> str:
+    def _create_translation_prompt2(self, input_data: TranslatorInput) -> str:
         """
         Constructs a structured prompt for the LLM to generate an AQL query.
         """
@@ -335,7 +348,4 @@ class AQLTranslator(TranslatorBase):
         {input_data}
         """
 
-        return {
-            'system': system_prompt,
-            'user': user_prompt
-        }
+        return {"system": system_prompt, "user": user_prompt}

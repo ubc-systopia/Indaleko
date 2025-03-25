@@ -25,53 +25,64 @@ import uuid
 from typing import Optional
 
 from pydantic import Field
+
 # from icecream import ic
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
+
 # pylint: enable=wrong-import-position
 
+
 class IndalekoSourceIdentifierDataModel(IndalekoBaseModel):
-    '''
+    """
     This class defines the UUID data model for Indaleko.
-    '''
-    Identifier : uuid.UUID = Field(...,
-                                   title='Identifier',
-                                   description='The UUID for the record.',
-                                    example='12345678-1234-5678-1234-567812345678')
+    """
 
-    Version : str = Field(...,
-                          title='Version',
-                          description='The version of the source identifier.',
-                          example='3.1')
+    Identifier: uuid.UUID = Field(
+        ...,
+        title="Identifier",
+        description="The UUID for the record.",
+        example="12345678-1234-5678-1234-567812345678",
+    )
 
-    Description : Optional[str] = Field(None,
-                                  title='Description',
-                                  description='A human-readable description of the data source.',
-                                  example='This is a sample IndalekoSourceIdentifierDataModel.')
+    Version: str = Field(
+        ...,
+        title="Version",
+        description="The version of the source identifier.",
+        example="3.1",
+    )
+
+    Description: Optional[str] = Field(
+        None,
+        title="Description",
+        description="A human-readable description of the data source.",
+        example="This is a sample IndalekoSourceIdentifierDataModel.",
+    )
 
     class Config:
-        '''Sample configuration data for the data model.'''
+        """Sample configuration data for the data model."""
+
         json_schema_extra = {
             "example": {
                 "Identifier": "12345678-1234-5678-1234-567812345678",
                 "Version": "3.1",
-                "Description": "This is a sample IndalekoSourceIdentifierDataModel."
+                "Description": "This is a sample IndalekoSourceIdentifierDataModel.",
             }
         }
 
 
 def main():
-    '''This allows testing the data model'''
+    """This allows testing the data model"""
     IndalekoSourceIdentifierDataModel.test_model_main()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

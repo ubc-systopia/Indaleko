@@ -25,15 +25,18 @@ import sys
 from typing import Optional
 from pydantic import Field
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from activity.collectors.collaboration.data_models.collaboration_data_model import BaseCollaborationDataModel
+from activity.collectors.collaboration.data_models.collaboration_data_model import (
+    BaseCollaborationDataModel,
+)
+
 # pylint: enable=wrong-import-position
 
 
@@ -44,36 +47,37 @@ class DiscordDataModel(BaseCollaborationDataModel):
 
     SharedFileName: Optional[str] = Field(
         None,
-        title='SharedFileName',
-        description='The original name of the shared file.',
+        title="SharedFileName",
+        description="The original name of the shared file.",
     )
 
     SharedFileURI: Optional[str] = Field(
         None,
-        title='SharedFileURI',
-        description='The URI of the shared file.',
+        title="SharedFileURI",
+        description="The URI of the shared file.",
     )
 
     GuildID: Optional[str] = Field(
         None,
-        title='GuildID',
-        description='The ID of the guild where the message was posted.',
+        title="GuildID",
+        description="The ID of the guild where the message was posted.",
     )
 
     ChannelID: Optional[str] = Field(
         None,
-        title='ChannelID',
-        description='The ID of the channel where the message was posted.',
+        title="ChannelID",
+        description="The ID of the channel where the message was posted.",
     )
 
     MessageURI: Optional[str] = Field(
         None,
-        title='MessageURI',
-        description='The URI of the original message.',
+        title="MessageURI",
+        description="The URI of the original message.",
     )
 
     class Config:
         """Configuration and example data for the Discord data model"""
+
         json_schema_extra = {
             "example": {
                 **BaseCollaborationDataModel.Config.json_schema_extra["example"],
@@ -92,5 +96,5 @@ def main():
     DiscordDataModel.test_model_main()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -1,4 +1,4 @@
-'''
+"""
 Init functionality for the storage data providers.
 
 Project Indaleko
@@ -16,7 +16,7 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
 
 import os
 import importlib
@@ -27,31 +27,32 @@ from icecream import ic
 
 init_path = os.path.dirname(os.path.abspath(__file__))
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from constants.values import IndalekoConstants
+
 # pylint: enable=wrong-import-position
 
-__version__ = '0.1.0'
+__version__ = "0.1.0"
 
 # Discover and load all plugins
-#discovered_plugins = discover_plugins()
-#ic(discovered_plugins)
+# discovered_plugins = discover_plugins()
+# ic(discovered_plugins)
 
 # Make discovered plugins available when importing the package
 # globals().update(discovered_plugins)
 
-__all__ = ['IndalekoConstants']
+__all__ = ["IndalekoConstants"]
 
 
 # You could also provide a function to get all discovered plugins
-#def get_all_plugins():
+# def get_all_plugins():
 #    return discovered_plugins
 
-#print(discover_providers())
+# print(discover_providers())

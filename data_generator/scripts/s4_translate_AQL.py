@@ -5,12 +5,21 @@ from query.query_processing.query_translator.translator_base import TranslatorBa
 
 from icecream import ic
 
+
 class AQLQueryConverter(TranslatorBase):
     """
     Translator for converting parsed queries to AQL (ArangoDB Query Language).
     """
 
-    def translate(self, parsed_query: Dict[str, Any], selected_md_attributes: Dict[str, Any], dynamic_activity_providers:dict[str], additional_notes: str, n_truth: int, llm_connector: Any) -> str:
+    def translate(
+        self,
+        parsed_query: Dict[str, Any],
+        selected_md_attributes: Dict[str, Any],
+        dynamic_activity_providers: dict[str],
+        additional_notes: str,
+        n_truth: int,
+        llm_connector: Any,
+    ) -> str:
         """
         Translate a parsed query into an AQL query.
 
@@ -22,13 +31,23 @@ class AQLQueryConverter(TranslatorBase):
             str: The translated AQL query
         """
         # Use the LLM to help generate the AQL query
-        prompt = self._create_translation_prompt(parsed_query, selected_md_attributes, dynamic_activity_providers, additional_notes, n_truth)
+        prompt = self._create_translation_prompt(
+            parsed_query,
+            selected_md_attributes,
+            dynamic_activity_providers,
+            additional_notes,
+            n_truth,
+        )
         aql_query = llm_connector.generate_query(prompt)
         aql_statement = aql_query.message.content
         assert self.validate_query(aql_statement), "Generated AQL query is invalid"
-        aql_statement = aql_statement[aql_statement.index('FOR'):] # trim preamble
-        assert aql_statement.endswith('```'), "Code block not found at the end of the generated AQL query"
-        aql_statement = aql_statement[:aql_statement.rindex('```')-1] # trim postamble
+        aql_statement = aql_statement[aql_statement.index("FOR") :]  # trim preamble
+        assert aql_statement.endswith(
+            "```"
+        ), "Code block not found at the end of the generated AQL query"
+        aql_statement = aql_statement[
+            : aql_statement.rindex("```") - 1
+        ]  # trim postamble
         return self.optimize_query(aql_statement)
 
     def validate_query(self, query: str) -> bool:
@@ -41,9 +60,14 @@ class AQLQueryConverter(TranslatorBase):
         Returns:
             bool: True if the query is valid, False otherwise
         """
-        all_valid = ("FOR" in query and "RETURN" in query) and (".Record" in query or ".SemanticAttributes" in query or ".Timestamp" in query or ".Size" in query or ".URI" in query)
+        all_valid = ("FOR" in query and "RETURN" in query) and (
+            ".Record" in query
+            or ".SemanticAttributes" in query
+            or ".Timestamp" in query
+            or ".Size" in query
+            or ".URI" in query
+        )
         return all_valid
-
 
     def optimize_query(self, query: str) -> str:
         """
@@ -59,7 +83,14 @@ class AQLQueryConverter(TranslatorBase):
         # This is a placeholder implementation
         return query
 
-    def _create_translation_prompt(self, parsed_query: Dict[str, Any], selected_md_attributes:Dict[str, Any],dynamic_activity_providers: dict[str], additional_notes: str, n_truth_md: int) -> str:
+    def _create_translation_prompt(
+        self,
+        parsed_query: Dict[str, Any],
+        selected_md_attributes: Dict[str, Any],
+        dynamic_activity_providers: dict[str],
+        additional_notes: str,
+        n_truth_md: int,
+    ) -> str:
         """
         Create a prompt for the LLM to generate an AQL query.
 
@@ -70,7 +101,8 @@ class AQLQueryConverter(TranslatorBase):
             str: The prompt for the LLM
         """
         # Implement prompt creation logic
-        system_prompt = """
+        system_prompt = (
+            """
             You are an assistant that generates ArangoDB queries for a Unified Personal Index (UPI) system. The UPI stores metadata about digital objects 
             (e.g., files, directories) in an ArangoDB database. Given a dictionary called selected_md_attributes, generate the corresponding 
             AQL query that retrieves matching information.
@@ -144,14 +176,22 @@ class AQLQueryConverter(TranslatorBase):
             object multiple times, just once. Make sure to incorporate all attributes from the given dictionary into the aql statement. Escape any ' with a backslash
             ex.) if we want to find a Name containing "1990's news" -> FILTER object.Record.Attributes.Name LIKE '%1990\'s news%.pdf'. The query should only include 
             the AQL code in a single line, with no additional explanations or comments. You must return one single code block that with '``` at the start and '``` at the end and that contains a FOR and
-            a RETURN ... statement. Do not create additional attributes not found in the dictionary. \n""" + \
-            "\n Number of truth attributes:" + str(n_truth_md) + "\n Schema:" + str(parsed_query['schema'])
+            a RETURN ... statement. Do not create additional attributes not found in the dictionary. \n"""
+            + "\n Number of truth attributes:"
+            + str(n_truth_md)
+            + "\n Schema:"
+            + str(parsed_query["schema"])
+        )
 
-        system_prompt = system_prompt.replace("{GeoActivity}", dynamic_activity_providers["GeoActivity"]).replace("{TempActivity}", dynamic_activity_providers["TempActivity"]).replace("{MusicActivity}", dynamic_activity_providers["MusicActivity"]).replace("{geo_coords}", additional_notes)
+        system_prompt = (
+            system_prompt.replace(
+                "{GeoActivity}", dynamic_activity_providers["GeoActivity"]
+            )
+            .replace("{TempActivity}", dynamic_activity_providers["TempActivity"])
+            .replace("{MusicActivity}", dynamic_activity_providers["MusicActivity"])
+            .replace("{geo_coords}", additional_notes)
+        )
         # user_prompt = parsed_query['original_query']
         user_prompt = "Dictionary: " + str(selected_md_attributes)
 
-        return {
-            'system' : system_prompt,
-            'user' : user_prompt
-        }
+        return {"system": system_prompt, "user": user_prompt}

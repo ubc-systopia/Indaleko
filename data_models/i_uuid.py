@@ -27,49 +27,51 @@ from typing import Optional, Union
 from pydantic import Field
 
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoUUIDDataModel(IndalekoBaseModel):
-    '''
+    """
     This class defines the UUID data model for Indaleko.
-    '''
+    """
+
     Identifier: Union[uuid.UUID, str] = Field(
         uuid.uuid4(),
-        title='Identifier',
-        description='The UUID for the record.',
-        example='12345678-1234-5678-1234-567812345678'
+        title="Identifier",
+        description="The UUID for the record.",
+        example="12345678-1234-5678-1234-567812345678",
     )
 
     Label: Optional[str] = Field(
         None,
-        title='Label',
-        description='A human-readable label for the UUID.',
-        example='This is a sample IndalekoUUID.'
+        title="Label",
+        description="A human-readable label for the UUID.",
+        example="This is a sample IndalekoUUID.",
     )
 
     class Config:
         json_schema_extra = {
             "example": {
                 "Identifier": "12345678-1234-5678-1234-567812345678",
-                "Label": "This is a sample IndalekoUUID."
+                "Label": "This is a sample IndalekoUUID.",
             }
         }
 
 
 def main():
-    '''This allows testing the data model'''
+    """This allows testing the data model"""
     IndalekoUUIDDataModel.test_model_main()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

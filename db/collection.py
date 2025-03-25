@@ -1,4 +1,4 @@
-'''
+"""
 This module is used to manage specific collection objects in Indaleko.
 
 Project Indaleko
@@ -16,7 +16,7 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
 
 import arango
 import json
@@ -27,62 +27,66 @@ from icecream import ic
 
 from typing import Any, Dict, Sequence, Union
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from db.db_config import IndalekoDBConfig
 from db.collection_index import IndalekoCollectionIndex
 from utils.decorators import type_check
+
 # pylint: enable=wrong-import-position
 
 
-class IndalekoCollection():
+class IndalekoCollection:
     """
     An IndalekoCollection object is used to manage a collection of documents in the
     Indaleko database.
     """
 
     def __init__(self, **kwargs):
-        if 'ExistingCollection' in kwargs:
-            self.collection = kwargs['ExistingCollection']
-            assert isinstance(self.collection, arango.collection.StandardCollection), \
-                f'self.collection is unexpected type {type(self.collection)}'
+        if "ExistingCollection" in kwargs:
+            self.collection = kwargs["ExistingCollection"]
+            assert isinstance(
+                self.collection, arango.collection.StandardCollection
+            ), f"self.collection is unexpected type {type(self.collection)}"
             self.name = self.collection.name
             self.definition = self.collection.properties()
-            self.db_config = kwargs.get('db', IndalekoDBConfig())
+            self.db_config = kwargs.get("db", IndalekoDBConfig())
             self.collection_name = self.name
             self.indices = {}
             return
-        if 'name' not in kwargs:
-            raise ValueError('name is a required parameter')
-        self.name = kwargs['name']
-        self.definition = kwargs.get('definition', None)
-        self.db_config = kwargs.get('db', None)
+        if "name" not in kwargs:
+            raise ValueError("name is a required parameter")
+        self.name = kwargs["name"]
+        self.definition = kwargs.get("definition", None)
+        self.db_config = kwargs.get("db", None)
         self.db_config.start()
-        self.reset = kwargs.get('reset', False)
-        self.max_chunk_size = kwargs.get('max_chunk_size', 1000)
+        self.reset = kwargs.get("reset", False)
+        self.max_chunk_size = kwargs.get("max_chunk_size", 1000)
         self.collection_name = self.name
         self.indices = {}
         if self.definition is None:
-            raise ValueError('Dynamic collection does not exist')
-        assert isinstance(self.definition, dict), 'Collection definition must be a dictionary'
-        assert 'schema' in self.definition, 'Collection must have a schema'
-        assert 'edge' in self.definition, 'Collection must have an edge flag'
-        assert 'indices' in self.definition, 'Collection must have indices'
-        assert isinstance(self.db_config, IndalekoDBConfig), \
-            'db must be None or an IndalekoDBConfig object'
+            raise ValueError("Dynamic collection does not exist")
+        assert isinstance(
+            self.definition, dict
+        ), "Collection definition must be a dictionary"
+        assert "schema" in self.definition, "Collection must have a schema"
+        assert "edge" in self.definition, "Collection must have an edge flag"
+        assert "indices" in self.definition, "Collection must have indices"
+        assert isinstance(
+            self.db_config, IndalekoDBConfig
+        ), "db must be None or an IndalekoDBConfig object"
         self.create_collection(self.collection_name, self.definition, reset=self.reset)
 
     @type_check
-    def create_collection(self,
-                          name: str,
-                          config: dict,
-                          reset: bool = False) -> 'IndalekoCollection':
+    def create_collection(
+        self, name: str, config: dict, reset: bool = False
+    ) -> "IndalekoCollection":
         """
         Create a collection in the database. If the collection already exists,
         return the existing collection. If reset is True, delete the existing
@@ -92,38 +96,41 @@ class IndalekoCollection():
             if not reset:
                 self.collection = self.db_config.db.collection(name)
             else:
-                raise NotImplementedError('delete existing collection not implemented')
+                raise NotImplementedError("delete existing collection not implemented")
         else:
-            self.collection = self.db_config.db.create_collection(name, edge=config['edge'])
-            if 'schema' in config:
+            self.collection = self.db_config.db.create_collection(
+                name, edge=config["edge"]
+            )
+            if "schema" in config:
                 try:
-                    self.collection.configure(schema=config['schema'])
-                except arango.exceptions.CollectionConfigureError as error:  # pylint: disable=no-member
-                    print(f'Failed to configure collection {name}')
+                    self.collection.configure(schema=config["schema"])
+                except (
+                    arango.exceptions.CollectionConfigureError
+                ) as error:  # pylint: disable=no-member
+                    print(f"Failed to configure collection {name}")
                     print(error)
-                    print('Schema:')
-                    print(json.dumps(config['schema'], indent=2))
+                    print("Schema:")
+                    print(json.dumps(config["schema"], indent=2))
                     raise error
-            if 'indices' in config:
-                for index in config['indices']:
-                    self.create_index(index, **config['indices'][index])
-        assert isinstance(self.collection, arango.collection.StandardCollection), \
-            f'self.collection is unexpected type {type(self.collection)}'
+            if "indices" in config:
+                for index in config["indices"]:
+                    self.create_index(index, **config["indices"][index])
+        assert isinstance(
+            self.collection, arango.collection.StandardCollection
+        ), f"self.collection is unexpected type {type(self.collection)}"
         return IndalekoCollection(ExistingCollection=self.collection)
 
     def get_indices(self, name: str) -> list[IndalekoCollectionIndex]:
-        '''Return the index with the given name.'''
+        """Return the index with the given name."""
         indices = []
         collection = self.db_config.db.collection(name)
         for index_data in collection.indexes():
-            if index_data.get('type') == 'primary':
+            if index_data.get("type") == "primary":
                 continue  # Skip the primary index
-            type = index_data.get('type')
-            del index_data['type']
+            type = index_data.get("type")
+            del index_data["type"]
             index = IndalekoCollectionIndex(
-                collection=collection,
-                type=type,
-                **index_data
+                collection=collection, type=type, **index_data
             )
             indices.append(index)
         exit(0)
@@ -131,19 +138,18 @@ class IndalekoCollection():
 
     @type_check
     def delete_collection(self, name: str) -> bool:
-        '''Delete the collection with the given name.'''
+        """Delete the collection with the given name."""
         if not self.db_config.db.has_collection(name):
-            print(f'Collection {name} does not exist **')
+            print(f"Collection {name} does not exist **")
             return False
         self.db_config.db.delete_collection(name)
-        print(f'Collection {name} does exists, requesting deletion **')
+        print(f"Collection {name} does exists, requesting deletion **")
         return True
 
-    def create_index(self, name, **kwargs: dict[str, Any]) -> 'IndalekoCollection':
+    def create_index(self, name, **kwargs: dict[str, Any]) -> "IndalekoCollection":
         """Create an index for the given collection."""
         self.indices[name] = IndalekoCollectionIndex(
-            collection=self.collection,
-            **kwargs
+            collection=self.collection, **kwargs
         )
         return self
 
@@ -170,48 +176,50 @@ class IndalekoCollection():
         try:
             return self.collection.insert(document, overwrite=overwrite)
         except arango.exceptions.DocumentInsertError as e:
-            ic(f'Insert failure for document into collection {self.name}')
+            ic(f"Insert failure for document into collection {self.name}")
             ic(document)
             print(json.dumps(document, indent=2))
             ic(e)
             return None
 
     @type_check
-    def bulk_insert(self, documents: Sequence[Dict[str, Any]]) -> Union[None, list[Dict[str, Any]]]:
-        '''Insert a list of documents into the collection in batches.'''
+    def bulk_insert(
+        self, documents: Sequence[Dict[str, Any]]
+    ) -> Union[None, list[Dict[str, Any]]]:
+        """Insert a list of documents into the collection in batches."""
         errors = []
         for i in range(0, len(documents), self.max_chunk_size):
-            batch = documents[i:i + self.max_chunk_size]
+            batch = documents[i : i + self.max_chunk_size]
             try:
                 result = self.collection.insert_many(batch)
-                batch_errors = [doc for doc in result if doc.get('error')]
+                batch_errors = [doc for doc in result if doc.get("error")]
                 errors.extend(batch_errors)
             except arango.exceptions.DocumentInsertError as e:
-                ic(f'Bulk insert failure for documents into collection {self.name}')
+                ic(f"Bulk insert failure for documents into collection {self.name}")
                 ic(batch)
                 print(json.dumps(batch, indent=2))
                 ic(e)
                 raise e
         return errors if errors else None
 
-    def add_schema(self, schema: dict) -> 'IndalekoCollection':
+    def add_schema(self, schema: dict) -> "IndalekoCollection":
         """Add a schema to the collection."""
         self.collection.configure(schema=schema)
         return self
 
     def get_schema(self) -> dict:
         """Return the schema for the collection."""
-        return self.collection.properties().get('schema', {})
+        return self.collection.properties().get("schema", {})
 
-    def delete(self, key: str) -> 'IndalekoCollection':
+    def delete(self, key: str) -> "IndalekoCollection":
         """Delete the document with the given key."""
         return self.collection.delete(key)
 
 
 def main():
-    '''Test the IndalekoCollection class.'''
-    print('IndalekoCollection: called.  No tests yet.')
+    """Test the IndalekoCollection class."""
+    print("IndalekoCollection: called.  No tests yet.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

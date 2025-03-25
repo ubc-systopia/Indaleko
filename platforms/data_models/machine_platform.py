@@ -1,4 +1,4 @@
-'''
+"""
 This module defines the platform definition use by the machine configuration data model.
 
 Project Indaleko
@@ -16,7 +16,7 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
 
 import os
 import sys
@@ -24,49 +24,48 @@ import sys
 from icecream import ic
 from pydantic import Field
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
 import platforms.data_models.hardware as hardware
 import platforms.data_models.software as software
+
 # pylint: enable=wrong-import-position
 
 
 class MachinePlatform(IndalekoBaseModel):
-    '''Defines the platform (hardware and software) information'''
+    """Defines the platform (hardware and software) information"""
+
     Software: software.Software = Field(
-        ...,
-        title='Software',
-        description='The software information for the machine.'
+        ..., title="Software", description="The software information for the machine."
     )
 
     Hardware: hardware.Hardware = Field(
-        ...,
-        title='Hardware',
-        description='The hardware information for the machine.'
+        ..., title="Hardware", description="The hardware information for the machine."
     )
 
     class Config:
-        '''Configuration for the hardware data model'''
+        """Configuration for the hardware data model"""
+
         json_schema_extra = {
-            'example': {
-                'Software': software.Software.Config.json_schema_extra['example'],
-                'Hardware': hardware.Hardware.Config.json_schema_extra['example']
+            "example": {
+                "Software": software.Software.Config.json_schema_extra["example"],
+                "Hardware": hardware.Hardware.Config.json_schema_extra["example"],
             }
         }
 
 
 def main():
-    '''Main function for the software data model'''
-    ic('Testing Software Data Model')
+    """Main function for the software data model"""
+    ic("Testing Software Data Model")
     MachinePlatform.test_model_main()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

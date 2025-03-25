@@ -26,11 +26,11 @@ from typing import List, Union, Dict, Any
 from pydantic import Field
 from icecream import ic
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
@@ -39,27 +39,31 @@ from data_models.service_identifier import IndalekoServiceIdentifierDataModel
 
 # pylint: enable=wrong-import-position
 
+
 class IndalekoServiceDataModel(IndalekoServiceIdentifierDataModel):
-    '''This is the data model for the Indaleko service definition.'''
+    """This is the data model for the Indaleko service definition."""
 
-    Record : IndalekoRecordDataModel = Field(None,
-                                    title='Record',
-                                    description='The record associated with the object.')
-
+    Record: IndalekoRecordDataModel = Field(
+        None, title="Record", description="The record associated with the object."
+    )
 
     class Config:
         json_schema_extra = {
             "example": {
-                "Record": IndalekoRecordDataModel.Config.json_schema_extra['example'],
-                **IndalekoServiceIdentifierDataModel.Config.json_schema_extra['example']
+                "Record": IndalekoRecordDataModel.Config.json_schema_extra["example"],
+                **IndalekoServiceIdentifierDataModel.Config.json_schema_extra[
+                    "example"
+                ],
             }
         }
 
+
 def main():
-    '''This allows testing the service data model'''
-    ic('Testing Service Data Model')
-    ic(IndalekoServiceDataModel.Config.json_schema_extra['example'])
+    """This allows testing the service data model"""
+    ic("Testing Service Data Model")
+    ic(IndalekoServiceDataModel.Config.json_schema_extra["example"])
     # IndalekoServiceDataModel.test_model_main()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

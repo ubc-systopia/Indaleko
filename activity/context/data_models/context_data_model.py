@@ -18,6 +18,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+
 import os
 import sys
 import uuid
@@ -26,21 +27,22 @@ from typing import List
 from pydantic import Field, field_validator, AwareDatetime
 from datetime import datetime, timezone
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from activity.context.data_models.activity_data import ActivityDataModel
 from data_models.base import IndalekoBaseModel
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoActivityContextDataModel(IndalekoBaseModel):
-    '''
+    """
     This class defines the data model for the activity context in the Indaleko
     Project.
 
@@ -73,26 +75,25 @@ class IndalekoActivityContextDataModel(IndalekoBaseModel):
 
     An _activity handle_ is a UUID, which serves as a reference to the data
     object ("activity context") in the database.
-    '''
+    """
+
     Handle: uuid.UUID = Field(
-        ...,
-        title='Handle',
-        description='The activity context handle.'
+        ..., title="Handle", description="The activity context handle."
     )
 
     Timestamp: AwareDatetime = Field(
         ...,
-        title='Timestamp',
-        description='The timestamp when the activity context was created.'
+        title="Timestamp",
+        description="The timestamp when the activity context was created.",
     )
 
     Cursors: List[ActivityDataModel] = Field(
         ...,
-        title='ActivityData',
-        description='The activity data associated with the activity context.'
+        title="ActivityData",
+        description="The activity data associated with the activity context.",
     )
 
-    @field_validator('Timestamp', mode='before')
+    @field_validator("Timestamp", mode="before")
     def ensure_timezone(cls, value: datetime):
         if isinstance(value, str):
             value = datetime.fromisoformat(value)
@@ -101,24 +102,25 @@ class IndalekoActivityContextDataModel(IndalekoBaseModel):
         return value
 
     class Config:
-        '''Configuration for the class.'''
+        """Configuration for the class."""
+
         json_schema_extra = {
-            'example': {
-                'Handle': uuid.uuid4(),
-                'Timestamp': '2024-01-01T00:00:00Z',
-                'Cursors': [
-                    ActivityDataModel.Config.json_schema_extra['example'],
-                    ActivityDataModel.Config.json_schema_extra['example'],
-                    ActivityDataModel.Config.json_schema_extra['example'],
-                ]
+            "example": {
+                "Handle": uuid.uuid4(),
+                "Timestamp": "2024-01-01T00:00:00Z",
+                "Cursors": [
+                    ActivityDataModel.Config.json_schema_extra["example"],
+                    ActivityDataModel.Config.json_schema_extra["example"],
+                    ActivityDataModel.Config.json_schema_extra["example"],
+                ],
             }
         }
 
 
 def main():
-    '''Test code for IndalekoActivityContextDataModel.'''
+    """Test code for IndalekoActivityContextDataModel."""
     IndalekoActivityContextDataModel.test_model_main()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

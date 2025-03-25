@@ -55,6 +55,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+
 import argparse
 import datetime
 import glob
@@ -66,16 +67,19 @@ import socket
 import uuid
 import sys
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from utils.misc.directory_management import \
-    indaleko_default_config_dir, indaleko_create_secure_directories
+from utils.misc.directory_management import (
+    indaleko_default_config_dir,
+    indaleko_create_secure_directories,
+)
+
 # pylint: enable=wrong-import-position
 
 
@@ -98,7 +102,7 @@ class MacHardwareInfoGenerator:
         }
         cpu_info = {
             "Name": self.get_cpu_name(),
-            "Cores": psutil.cpu_count(logical=False)
+            "Cores": psutil.cpu_count(logical=False),
         }
         volume_info = self.get_volume_info()
         hostname = socket.gethostname()
@@ -107,13 +111,14 @@ class MacHardwareInfoGenerator:
             "OperatingSystem": os_info,
             "CPU": cpu_info,
             "VolumeInfo": volume_info,
-            "Hostname" : hostname
+            "Hostname": hostname,
         }
         return config_data
 
     def get_cpu_name(self):
         try:
             import platform
+
             return platform.processor()
         except Exception as e:
             print(f"Error getting CPU name: {e}")
@@ -130,7 +135,7 @@ class MacHardwareInfoGenerator:
                     "UniqueId": volume.device,
                     "VolumeName": volume.device.split("/")[-1],
                     "Size": self.convert_bytes(usage.total),
-                    "Filesystem": volume.fstype
+                    "Filesystem": volume.fstype,
                 }
                 volume_info.append(volume_data)
             except Exception as e:
@@ -153,47 +158,52 @@ def find_all_config_files(dir_path):
     files = [os.path.basename(f) for f in files]
 
     # Define the pattern
-    pattern = r'macos-hardware-info-(.*?)-(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d{6}Z)'
+    pattern = r"macos-hardware-info-(.*?)-(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d{6}Z)"
 
     # Filter the files based on the pattern and sort them
     sorted_files = sorted(
         (f for f in files if re.match(pattern, f)),
         key=lambda f: datetime.datetime.strptime(
-            re.search(pattern, f).group(2), '%Y-%m-%dT%H-%M-%S.%fZ')
+            re.search(pattern, f).group(2), "%Y-%m-%dT%H-%M-%S.%fZ"
+        ),
     )
 
     # Now sorted_files contains the sorted list of filenames
     if len(sorted_files):
-        print('found the following files in ', dir_path)
+        print("found the following files in ", dir_path)
         for file in sorted_files:
             print(file)
-        return os.path.join(dir_path,  sorted_files[-1])
+        return os.path.join(dir_path, sorted_files[-1])
     return []
 
 
 def save_config_to_file(config_data, file_path):
-    with open(file_path, 'w', encoding='utf-8') as file:
+    with open(file_path, "w", encoding="utf-8") as file:
         json.dump(config_data, file, indent=4)
 
 
 def main():
-    indaleko_create_secure_directories() # make sure they exist.
-    parser = argparse.ArgumentParser('Generating Mac Hardware Info Generator', 'python MacHardwareInfoGenerator.py --dir save_at_path')
-    parser.add_argument('--save-to-dir',
-                        '-d',
-                        default=indaleko_default_config_dir,
-                        type=str,
-                        help=f'path to the directory we want to save the directory (default={indaleko_default_config_dir})')
+    indaleko_create_secure_directories()  # make sure they exist.
+    parser = argparse.ArgumentParser(
+        "Generating Mac Hardware Info Generator",
+        "python MacHardwareInfoGenerator.py --dir save_at_path",
+    )
+    parser.add_argument(
+        "--save-to-dir",
+        "-d",
+        default=indaleko_default_config_dir,
+        type=str,
+        help=f"path to the directory we want to save the directory (default={indaleko_default_config_dir})",
+    )
     args = parser.parse_args()
 
     if not os.path.isdir(args.save_to_dir):
-        print(f'Given dir path is not valid, got: {args.save_to_dir}')
+        print(f"Given dir path is not valid, got: {args.save_to_dir}")
         return
 
     generator = MacHardwareInfoGenerator()
 
-    timestamp = datetime.datetime.now(
-        datetime.UTC).strftime('%Y-%m-%dT%H-%M-%S.%fZ')
+    timestamp = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H-%M-%S.%fZ")
     guid = uuid.uuid4().__str__()
 
     config_data = generator.generate_config(str(guid))
@@ -219,7 +229,8 @@ def main():
     #                   latest_config_file}. Saving a new config ...")
 
     file_path = os.path.join(
-        args.save_to_dir, f'macos-hardware-info-{guid}-{timestamp}.json')
+        args.save_to_dir, f"macos-hardware-info-{guid}-{timestamp}.json"
+    )
     save_config_to_file(config_data, file_path)
 
     print(f"Configuration saved to: {file_path}")

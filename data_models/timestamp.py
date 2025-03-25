@@ -26,43 +26,46 @@ import uuid
 from pydantic import Field, AwareDatetime, field_validator
 from typing import Optional
 from datetime import datetime, timezone
+
 # from icecream import ic
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoTimestampDataModel(IndalekoBaseModel):
-    '''
+    """
     This class defines the UUID data model for Indaleko.
-    '''
+    """
+
     Label: uuid.UUID = Field(
         ...,
-        title='Label',
-        description='UUID representing the semantic meaning of this timestamp.',
-        example='12345678-1234-5678-1234-567812345678'
+        title="Label",
+        description="UUID representing the semantic meaning of this timestamp.",
+        example="12345678-1234-5678-1234-567812345678",
     )
 
     Value: AwareDatetime = Field(
         datetime.now(timezone.utc),
-        title='Value',
-        description='The timestamp value.',
-        example='2024-01-01T00:00:00Z'
+        title="Value",
+        description="The timestamp value.",
+        example="2024-01-01T00:00:00Z",
     )
 
     Description: Optional[str] = Field(
         None,
-        title='Description',
-        description='A human-readable label for the UUID.',
-        example='This is a sample timestamp.'
+        title="Description",
+        description="A human-readable label for the UUID.",
+        example="This is a sample timestamp.",
     )
 
     class Config:
@@ -70,11 +73,11 @@ class IndalekoTimestampDataModel(IndalekoBaseModel):
             "example": {
                 "Label": "12345678-1234-5678-1234-567812345678",
                 "Value": "2024-01-01T00:00:00Z",
-                "Description": "This is a sample IndalekoUUID."
+                "Description": "This is a sample IndalekoUUID.",
             }
         }
 
-    @field_validator('Value', mode='before')
+    @field_validator("Value", mode="before")
     def ensure_timezone(cls, value: datetime):
         if isinstance(value, str):
             value = datetime.fromisoformat(value)
@@ -84,9 +87,9 @@ class IndalekoTimestampDataModel(IndalekoBaseModel):
 
 
 def main():
-    '''This allows testing the data model'''
+    """This allows testing the data model"""
     IndalekoTimestampDataModel.test_model_main()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -1,4 +1,4 @@
-'''
+"""
 This module defines the common database schema for Relationship Data.
 
 Project Indaleko
@@ -16,7 +16,7 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
 
 import os
 import sys
@@ -26,11 +26,11 @@ from typing import Tuple, List
 from icecream import ic
 from pydantic import Field
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
@@ -40,39 +40,52 @@ from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 from data_models.record import IndalekoRecordDataModel
 from platforms.data_models.software import Software as software
 from platforms.data_models.hardware import Hardware as hardware
+
 # pylint: enable=wrong-import-position
 
+
 class IndalekoRelationshipDataModel(IndalekoBaseModel):
-    '''This is the definition of the relationship data model.'''
-    Record : IndalekoRecordDataModel = Field(None,
-                                    title='Record',
-                                    description='The record associated with the object.')
+    """This is the definition of the relationship data model."""
 
-    Objects : Tuple[str, str] = Field(None,
-                                    title='Objects',
-                                    description='The objects in the relationship.')
+    Record: IndalekoRecordDataModel = Field(
+        None, title="Record", description="The record associated with the object."
+    )
 
-    Relationships : List[IndalekoSemanticAttributeDataModel] = Field(None,
-                                    title='Relationship',
-                                    description='The relationships between the objects.')
+    Objects: Tuple[str, str] = Field(
+        None, title="Objects", description="The objects in the relationship."
+    )
+
+    Relationships: List[IndalekoSemanticAttributeDataModel] = Field(
+        None, title="Relationship", description="The relationships between the objects."
+    )
 
     class Config:
-        '''Sample configuration data for the relationship model'''
+        """Sample configuration data for the relationship model"""
+
         json_schema_extra = {
-            "example" : {
-                "Record" : IndalekoRecordDataModel.Config.json_schema_extra['example'],
-                "Objects" : ('12345678-1234-5678-1234-567812345678', '12345678-1234-5678-1234-567812345678'),
-                "Relationships" : [
-                    IndalekoSemanticAttributeDataModel.Config.json_schema_extra['example'],
-                    IndalekoSemanticAttributeDataModel.Config.json_schema_extra['example']
-                ]
+            "example": {
+                "Record": IndalekoRecordDataModel.Config.json_schema_extra["example"],
+                "Objects": (
+                    "12345678-1234-5678-1234-567812345678",
+                    "12345678-1234-5678-1234-567812345678",
+                ),
+                "Relationships": [
+                    IndalekoSemanticAttributeDataModel.Config.json_schema_extra[
+                        "example"
+                    ],
+                    IndalekoSemanticAttributeDataModel.Config.json_schema_extra[
+                        "example"
+                    ],
+                ],
             }
         }
 
+
 def main():
-    '''This allows testing the data model.'''
-    ic('Testing IndalekoRelationshipDataModel')
+    """This allows testing the data model."""
+    ic("Testing IndalekoRelationshipDataModel")
     IndalekoRelationshipDataModel().test_model_main()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

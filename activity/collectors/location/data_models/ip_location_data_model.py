@@ -1,4 +1,4 @@
-'''
+"""
 This module defines the data model for the ip location
 activity data provider.
 
@@ -17,7 +17,7 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
 
 import os
 import sys
@@ -27,31 +27,53 @@ from typing import Optional, Union
 from ipaddress import IPv4Address, IPv6Address
 from icecream import ic
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from data_models.location_data_model import BaseLocationDataModel
+
 # pylint: enable=wrong-import-position
 
 
 class IPLocationDataModel(BaseLocationDataModel):
-    '''This is the data model for the ip location service.'''
-    ip_address: Union[IPv4Address, IPv6Address] = Field(..., description="The public facing IP address for the device")
+    """This is the data model for the ip location service."""
+
+    ip_address: Union[IPv4Address, IPv6Address] = Field(
+        ..., description="The public facing IP address for the device"
+    )
     city: Optional[str] = Field(None, description="City inferred from the IP address")
-    country: Optional[str] = Field(None, description="Country inferred from the IP address")
-    country_code: Optional[str] = Field(None, description="ISO country code inferred from the IP address")
-    region: Optional[str] = Field(None, description="Region or state inferred from the IP address")
-    region_name: Optional[str] = Field(None, description="Full name of the region or state")
-    postal_code: Optional[str] = Field(None, description="Postal or ZIP code inferred from the IP address")
-    isp: Optional[str] = Field(None, description="Internet Service Provider associated with the IP address")
-    org: Optional[str] = Field(None, description="Organization associated with the IP address")
-    as_name: Optional[str] = Field(None, description="Autonomous System (AS) associated with the IP address")
-    timezone: Optional[str] = Field(None, description="Timezone of the inferred location")
+    country: Optional[str] = Field(
+        None, description="Country inferred from the IP address"
+    )
+    country_code: Optional[str] = Field(
+        None, description="ISO country code inferred from the IP address"
+    )
+    region: Optional[str] = Field(
+        None, description="Region or state inferred from the IP address"
+    )
+    region_name: Optional[str] = Field(
+        None, description="Full name of the region or state"
+    )
+    postal_code: Optional[str] = Field(
+        None, description="Postal or ZIP code inferred from the IP address"
+    )
+    isp: Optional[str] = Field(
+        None, description="Internet Service Provider associated with the IP address"
+    )
+    org: Optional[str] = Field(
+        None, description="Organization associated with the IP address"
+    )
+    as_name: Optional[str] = Field(
+        None, description="Autonomous System (AS) associated with the IP address"
+    )
+    timezone: Optional[str] = Field(
+        None, description="Timezone of the inferred location"
+    )
 
     class Config:
         json_schema_extra = {
@@ -80,9 +102,9 @@ class IPLocationDataModel(BaseLocationDataModel):
 
 
 def main():
-    '''This allows testing the data model'''
+    """This allows testing the data model"""
     data = IPLocationDataModel(
-        **IPLocationDataModel.Config.json_schema_extra['example']
+        **IPLocationDataModel.Config.json_schema_extra["example"]
     )
     ic(data)
     serial_data = data.serialize()
@@ -91,5 +113,5 @@ def main():
     ic(IPLocationDataModel.get_arangodb_schema())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

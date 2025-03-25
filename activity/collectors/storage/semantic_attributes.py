@@ -1,4 +1,4 @@
-'''
+"""
 This module defines known semantic attributes for collaboration activity data
 providers.
 
@@ -17,8 +17,8 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
 
-ADP_MACHINE_IDENTITY = 'ff5c27ea-a319-46c9-9d7b-161ff9a0e6ca'
-ADP_OBJECT_URI = 'f45a6642-e5d0-4de0-9736-c9d2d77e2a12'
-ADP_STORAGE_IDENTITY = 'df17c079-4d6d-4b9b-ad98-04dd37d05907'
+ADP_MACHINE_IDENTITY = "ff5c27ea-a319-46c9-9d7b-161ff9a0e6ca"
+ADP_OBJECT_URI = "f45a6642-e5d0-4de0-9736-c9d2d77e2a12"
+ADP_STORAGE_IDENTITY = "df17c079-4d6d-4b9b-ad98-04dd37d05907"

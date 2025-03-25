@@ -55,15 +55,16 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+
 import datetime
 import os
 import sys
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
@@ -74,8 +75,12 @@ if os.environ.get('INDALEKO_ROOT') is None:
 # from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
 # from IndalekoUserSchema import IndalekoUserSchema
 # from IndalekoUserRelationshipSchema import IndalekoUserRelationshipSchema
-from utils.misc.directory_management import \
-    indaleko_default_config_dir, indaleko_default_data_dir, indaleko_default_log_dir
+from utils.misc.directory_management import (
+    indaleko_default_config_dir,
+    indaleko_default_data_dir,
+    indaleko_default_log_dir,
+)
+
 # from utils.misc.file_name_management import indaleko_file_name_prefix
 import utils.data_validation
 from utils.i_logging import IndalekoLogging
@@ -85,11 +90,13 @@ import utils.misc.timestamp_management
 import utils.misc.data_management
 from db.db_config import IndalekoDBConfig
 from db.db_collections import IndalekoDBCollections
+
 # pylint: enable=wrong-import-position
 
 
 class Indaleko:
-    '''This class defines constants used by Indaleko.'''
+    """This class defines constants used by Indaleko."""
+
     default_data_dir = indaleko_default_data_dir
     default_config_dir = indaleko_default_config_dir
     default_log_dir = indaleko_default_log_dir
@@ -97,13 +104,23 @@ class Indaleko:
     default_db_timeout = IndalekoDBConfig.default_db_timeout
 
     Indaleko_Object_Collection = IndalekoDBCollections.Indaleko_Object_Collection
-    Indaleko_Relationship_Collection = IndalekoDBCollections.Indaleko_Relationship_Collection
+    Indaleko_Relationship_Collection = (
+        IndalekoDBCollections.Indaleko_Relationship_Collection
+    )
     Indaleko_Service_Collection = IndalekoDBCollections.Indaleko_Service_Collection
-    Indaleko_MachineConfig_Collection = IndalekoDBCollections.Indaleko_MachineConfig_Collection
-    Indaleko_ActivityDataProvider_Collection = IndalekoDBCollections.Indaleko_ActivityDataProvider_Collection
-    Indaleko_ActivityContext_Collection = IndalekoDBCollections.Indaleko_ActivityContext_Collection
+    Indaleko_MachineConfig_Collection = (
+        IndalekoDBCollections.Indaleko_MachineConfig_Collection
+    )
+    Indaleko_ActivityDataProvider_Collection = (
+        IndalekoDBCollections.Indaleko_ActivityDataProvider_Collection
+    )
+    Indaleko_ActivityContext_Collection = (
+        IndalekoDBCollections.Indaleko_ActivityContext_Collection
+    )
     Indaleko_User_Collection = IndalekoDBCollections.Indaleko_User_Collection
-    Indaleko_User_Relationship_Collection = IndalekoDBCollections.Indaleko_User_Relationship_Collection
+    Indaleko_User_Relationship_Collection = (
+        IndalekoDBCollections.Indaleko_User_Relationship_Collection
+    )
 
     Indaleko_Prefix = utils.misc.file_name_management.indaleko_file_name_prefix
 
@@ -119,8 +136,10 @@ class Indaleko:
 
     @staticmethod
     def create_secure_directories(directories: list = None) -> None:
-        '''Create secure directories for Indaleko.'''
-        return utils.misc.directory_management.indaleko_create_secure_directories(directories)
+        """Create secure directories for Indaleko."""
+        return utils.misc.directory_management.indaleko_create_secure_directories(
+            directories
+        )
 
     # @deprecated(reason='Use utils.validate_data.validate_uuid_string instead')
     @staticmethod
@@ -146,7 +165,11 @@ class Indaleko:
     @staticmethod
     def extract_iso_timestamp_from_file_timestamp(file_timestamp: str) -> str:
         """Given a file timestamp, convert it to an ISO timestamp."""
-        return utils.misc.timestamp_management.extract_iso_timestamp_from_file_timestamp(file_timestamp)
+        return (
+            utils.misc.timestamp_management.extract_iso_timestamp_from_file_timestamp(
+                file_timestamp
+            )
+        )
 
     @staticmethod
     def get_logging_levels() -> list:
@@ -155,18 +178,18 @@ class Indaleko:
 
     @staticmethod
     def generate_final_name(args: list, **kwargs) -> str:
-        '''
+        """
         This is a helper function for generate_file_name, which throws
         a pylint error as having "too many branches".  An explicit args list
         threw a "too many arguments" error, so this is a compromise - send in a
         list, and then unpack it manually. Why this is better is a mystery of
         the faith.
-         '''
+        """
         return utils.misc.file_name_management.generate_final_name(args, **kwargs)
 
     @staticmethod
     def generate_file_name(**kwargs) -> str:
-        '''
+        """
         Given a key/value store of labels and values, this generates a file
         name in a common format.
         Special labels:
@@ -176,50 +199,49 @@ class Indaleko:
               ingester, etc.)
             * timestamp: timestamp to use in the file name
             * suffix: string to append to the file name
-        '''
+        """
         return utils.misc.file_name_management.generate_file_name(**kwargs)
 
     @staticmethod
     def extract_keys_from_file_name(file_name: str) -> dict:
-        '''
+        """
         Given a file name, extract the keys and values from the file name.
-        '''
+        """
         return utils.misc.file_name_management.extract_keys_from_file_name(file_name)
 
     @staticmethod
     def encode_binary_data(data: bytes) -> str:
-        '''Encode binary data as a string.'''
+        """Encode binary data as a string."""
         return utils.misc.data_management.encode_binary_data(data)
 
     @staticmethod
     def decode_binary_data(data: str) -> bytes:
-        '''Decode binary data from a string.'''
+        """Decode binary data from a string."""
         return utils.misc.data_management.decode_binary_data(data)
 
     @staticmethod
     def find_candidate_files(
-        input_strings: list[str],
-        directory: str
+        input_strings: list[str], directory: str
     ) -> list[tuple[str, str]]:
-        '''Given a directory location, find a list of candidate files that match
-        the input strings.'''
-        return utils.misc.file_name_management.find_candidate_files(input_strings, directory)
+        """Given a directory location, find a list of candidate files that match
+        the input strings."""
+        return utils.misc.file_name_management.find_candidate_files(
+            input_strings, directory
+        )
 
     @staticmethod
-    def print_candidate_files(
-        candidates: list[tuple[str, str]]
-    ) -> None:
-        '''Print the candidate files in a nice format.'''
+    def print_candidate_files(candidates: list[tuple[str, str]]) -> None:
+        """Print the candidate files in a nice format."""
         return utils.misc.file_name_management.print_candidate_files(candidates)
 
 
 def main():
     """Test code for Indaleko.py"""
     Indaleko.create_secure_directories()
-    print('Test 1: generate a file name')
-    name = Indaleko.generate_file_name(platform='test', service='test')
+    print("Test 1: generate a file name")
+    name = Indaleko.generate_file_name(platform="test", service="test")
     print(name)
-    print('Test 2: extract keys from file name')
+    print("Test 2: extract keys from file name")
     print(Indaleko.extract_keys_from_file_name(name))
 
 

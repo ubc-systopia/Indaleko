@@ -1,4 +1,4 @@
-'''
+"""
 This module defines the base data model for LLM connectors.
 
 Project Indaleko
@@ -16,7 +16,8 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
+
 from datetime import datetime, timezone
 import json
 import os
@@ -25,11 +26,11 @@ from textwrap import dedent
 
 from typing import List, Dict, Any
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
@@ -38,6 +39,7 @@ from data_models.query_history import IndalekoQueryHistoryDataModel
 from query.history.data_models.query_history import QueryHistoryData  # noqa: E402
 from db import IndalekoDBConfig, IndalekoDBCollections  # noqa: E402
 from utils.misc.data_management import encode_binary_data  # noqa: E402
+
 # pylint: enable=wrong-import-position
 
 
@@ -51,7 +53,7 @@ class QueryHistory:
     query_history_description = dedent("""Captured query history for Indaleko.""")
 
     def __init__(self, db_config: IndalekoDBConfig = IndalekoDBConfig()):
-        '''Set up the query history'''
+        """Set up the query history"""
         self.db_config = db_config
         self.query_history_collection = self.db_config.db.collection(
             IndalekoDBCollections.Indaleko_Query_History_Collection
@@ -77,14 +79,13 @@ class QueryHistory:
                 Data=encode_binary_data(
                     bytes(
                         query_history.model_dump_json(
-                            exclude_none=True,
-                            exclude_unset=True
+                            exclude_none=True, exclude_unset=True
                         ),
-                        'utf-8'
+                        "utf-8",
                     )
                 ),
             ),
-            QueryHistory=query_history
+            QueryHistory=query_history,
         )
         doc = json.loads(query_history.model_dump_json())
         self.query_history_collection.insert(doc)
@@ -102,9 +103,7 @@ class QueryHistory:
         return [
             IndalekoQueryHistoryDataModel(**doc).QueryHistory
             for doc in self.query_history_collection.find(
-                {},
-                sort=[('Record.Timestamp', -1)],
-                limit=n
+                {}, sort=[("Record.Timestamp", -1)], limit=n
             )
         ]
 
@@ -115,7 +114,11 @@ class QueryHistory:
         Returns:
             Dict[str, Any]: The last query and its results, or None if history is empty
         """
-        return self.get_recent_queries(1)[0] if self.query_history_collection.count() > 0 else None
+        return (
+            self.get_recent_queries(1)[0]
+            if self.query_history_collection.count() > 0
+            else None
+        )
 
     def clear(self) -> None:
         """

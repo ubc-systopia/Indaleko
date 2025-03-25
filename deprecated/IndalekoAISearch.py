@@ -25,47 +25,51 @@ from enum import Enum
 
 from Indaleko import Indaleko
 
-class IndalekoAISearch:
-    '''This class provides the front-end interface for using an AI agent'''
 
-    default_url = 'http://localhost:1234/v1'
-    default_api_key = 'lm-studio'
+class IndalekoAISearch:
+    """This class provides the front-end interface for using an AI agent"""
+
+    default_url = "http://localhost:1234/v1"
+    default_api_key = "lm-studio"
     default_categories = []
 
     class Collection(str, Enum):
         Objects = Indaleko.Indaleko_Object_Collection
         Relationships = Indaleko.Indaleko_Relationship_Collection
-        Machines = 'MachineConfig'
+        Machines = "MachineConfig"
 
     class object_columns(str, Enum):
-        uri = 'URI'
-        label = 'Label'
-        object_identifier = 'ObjectIdentifier'
-        size = 'Size'
-        timestamps = 'Timestamps'
+        uri = "URI"
+        label = "Label"
+        object_identifier = "ObjectIdentifier"
+        size = "Size"
+        timestamps = "Timestamps"
 
     class relationship_columns(str, Enum):
-        object1 = 'Object1'
-        object2 = 'Object2'
-        relationship_type = 'Relationship'
+        object1 = "Object1"
+        object2 = "Object2"
+        relationship_type = "Relationship"
 
     class machineconfig_columns(str, Enum):
-        machine_name = 'MachineName'
-        machine_type = 'MachineType'
-        machine_config = 'MachineConfig'
+        machine_name = "MachineName"
+        machine_type = "MachineType"
+        machine_config = "MachineConfig"
 
     def __init__(self, **kwargs):
-        '''Initialize the AI agent'''
-        self.base_url = kwargs.get('base_url', IndalekoAISearch.default_url)
-        self.api_key = kwargs.get('api_key', IndalekoAISearch.default_api_key)
-        self.categories = kwargs.get('categories', [])
+        """Initialize the AI agent"""
+        self.base_url = kwargs.get("base_url", IndalekoAISearch.default_url)
+        self.api_key = kwargs.get("api_key", IndalekoAISearch.default_api_key)
+        self.categories = kwargs.get("categories", [])
         self.client = OpenAI(base_url=self.base_url, api_key=self.api_key)
 
 
 def main():
-    '''Main entry point for the program'''
-    ai_agent = IndalekoAISearch(base_url="http://localhost:1234/v1", api_key="lm-studio")
+    """Main entry point for the program"""
+    ai_agent = IndalekoAISearch(
+        base_url="http://localhost:1234/v1", api_key="lm-studio"
+    )
     print(ai_agent.client)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

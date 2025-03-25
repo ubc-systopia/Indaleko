@@ -1,4 +1,3 @@
-
 """
 This module defines the query history data model for Indaleko.
 
@@ -26,34 +25,36 @@ from textwrap import dedent
 from pydantic import Field
 from typing import Any
 
-if os.environ.get('INDALEKO_ROOT') is None:
+if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, 'Indaleko.py')):
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
-    os.environ['INDALEKO_ROOT'] = current_path
+    os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel  # noqa: E402
 from data_models.record import IndalekoRecordDataModel  # noqa: E402
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoQueryHistoryDataModel(IndalekoBaseModel):
-    '''
+    """
     This class defines the data model for the Indaleko query history.
-    '''
+    """
+
     Record: IndalekoRecordDataModel = Field(
         ...,
-        title='Record',
-        description='The record associated with the performance data.'
+        title="Record",
+        description="The record associated with the performance data.",
     )
 
     # This has to be an "Any" to avoid re-entrancy issues with the data model.
     # see query.history.data_models.query_history.QueryHistoryData
     QueryHistory: Any = Field(
         None,
-        title='QueryHistory',
+        title="QueryHistory",
         description=dedent(
             """
             The query history data. If omitted, the query history
@@ -61,23 +62,24 @@ class IndalekoQueryHistoryDataModel(IndalekoBaseModel):
             as the Data element in the Record conforms to this
             schema (or a successor schema - use the version number.)
             """
-        )
+        ),
     )
 
     class Config:
-        '''Sample configuration data for the data model.'''
+        """Sample configuration data for the data model."""
+
         json_schema_extra = {
             "example": {
-                "Record": IndalekoRecordDataModel.Config.json_schema_extra['example'],
-                "QueryHistory": {}
+                "Record": IndalekoRecordDataModel.Config.json_schema_extra["example"],
+                "QueryHistory": {},
             }
         }
 
 
 def main():
-    '''This allows testing the data model.'''
+    """This allows testing the data model."""
     IndalekoQueryHistoryDataModel.test_model_main()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
