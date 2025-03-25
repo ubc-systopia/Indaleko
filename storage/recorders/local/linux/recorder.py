@@ -41,7 +41,7 @@ from data_models import IndalekoRecordDataModel
 from db import IndalekoServiceManager
 from platforms.linux.machine_config import IndalekoLinuxMachineConfig
 from platforms.posix import IndalekoPosix
-from storage import IndalekoObject
+from storage.i_object import IndalekoObject
 from storage.collectors.local.linux.collector import IndalekoLinuxLocalStorageCollector
 from storage.recorders.base import BaseStorageRecorder
 from storage.recorders.data_model import IndalekoStorageRecorderDataModel
@@ -72,7 +72,8 @@ class IndalekoLinuxLocalStorageRecorder(BaseLocalStorageRecorder):
 
     recorder_data = IndalekoStorageRecorderDataModel(
         PlatformName=linux_platform,
-        ServiceName=linux_local_recorder,
+        ServiceRegistrationName=linux_local_recorder_service["service_name"],
+        ServiceFileName=linux_local_recorder,
         ServiceUUID=uuid.UUID(linux_local_recorder_uuid),
         ServiceVersion=linux_local_recorder_service["service_version"],
         ServiceDescription=linux_local_recorder_service["service_description"],
