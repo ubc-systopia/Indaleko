@@ -90,6 +90,7 @@ class IndalekoICloudStorageCollector(BaseCloudStorageCollector):
 
     collector_data = IndalekoStorageCollectorDataModel(
         PlatformName=icloud_platform,
+        ServiceRegistrationName=indaleko_icloud_collector_service_name,
         ServiceFileName=icloud_collector_name,
         ServiceUUID=uuid.UUID(indaleko_icloud_collector_uuid),
         ServiceVersion=indaleko_icloud_collector_service_version,

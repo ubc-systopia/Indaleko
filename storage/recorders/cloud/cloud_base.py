@@ -45,7 +45,7 @@ from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.runner import IndalekoCLIRunner
 from storage.collectors import BaseStorageCollector
-from storage.recorders import BaseStorageRecorder
+from storage.recorders.base import BaseStorageRecorder
 
 # pylint: enable=wrong-import-position
 

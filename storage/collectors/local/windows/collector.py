@@ -57,7 +57,8 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
 
     indaleko_windows_local_collector_uuid = "0793b4d5-e549-4cb6-8177-020a738b66b7"
     indaleko_windows_local_collector_service_name = "Windows Local collector"
-    indaleko_windows_local_collector_service_description = "This service collects metadata from the local filesystems of a Windows machine."
+    indaleko_windows_local_collector_service_description = \
+        "This service collects metadata from the local Windows filesystems."
     indaleko_windows_local_collector_service_version = "1.0"
     indaleko_windows_local_collector_service_type = (
         IndalekoServiceManager.service_type_storage_collector
@@ -231,12 +232,33 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
         return (stat_dict, last_uri, last_drive)
 
     def collect(self) -> list:
+        self.last_debug_entry = 'None'
+        try:
+            self.collect_internal()
+        except KeyboardInterrupt as e:
+            logging.warning("Keyboard interrupt received, stopping collection")
+            ic("Keyboard interrupt received, stopping collection")
+            ic(self.last_debug_entry)
+            ic(self.dir_count)
+            ic(self.file_count)
+            ic(self.error_count)
+            raise e
+        return self.data
+
+    def collect_internal(self) -> list:
         data = []
         last_drive = None
         last_uri = None
+        counter = 0
+        progress_frequency = 1000
         for root, dirs, files in os.walk(self.path):
             for name in dirs + files:
                 entry = self.build_stat_dict(name, root, last_uri, last_drive)
+                self.last_debug_entry = entry
+                counter += 1
+                if counter % progress_frequency == 0:
+                    ic(f"Processed {counter} entries (dir={self.dir_count}, files={self.file_count})."
+                       f"Last entry: {entry[0].get('Path')}\n")
                 if entry is None:
                     self.not_found_count += 1
                     continue

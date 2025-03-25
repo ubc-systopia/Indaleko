@@ -19,11 +19,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import os
-import importlib
-import platform
 import sys
 
-from icecream import ic
+# from icecream import ic
 
 init_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -35,8 +33,6 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from storage.collectors.base import BaseStorageCollector
-from storage.i_relationship import IndalekoRelationship
 
 # IndalekoIndexer = BaseStorageCollector # Legacy name support (for now)
 

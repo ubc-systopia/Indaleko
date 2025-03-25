@@ -41,7 +41,7 @@ from data_models import IndalekoRecordDataModel
 from db import IndalekoServiceManager
 from platforms.unix import UnixFileAttributes
 from platforms.windows_attributes import IndalekoWindows
-from storage import IndalekoObject
+from storage.i_object import IndalekoObject
 from storage.collectors.cloud.drop_box import IndalekoDropboxCloudStorageCollector
 from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from storage.recorders.cloud.cloud_base import BaseCloudStorageRecorder
