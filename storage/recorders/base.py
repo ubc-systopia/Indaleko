@@ -87,8 +87,8 @@ from utils.misc.file_name_management import (
     extract_keys_from_file_name,
 )
 from data_models import IndalekoSemanticAttributeDataModel
+from data_models.storage_semantic_attributes import StorageSemanticAttributes
 from storage.i_object import IndalekoObject
-from storage.known_attributes import KnownStorageAttributes
 from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from storage.i_relationship import IndalekoRelationship
 
@@ -449,7 +449,7 @@ class BaseStorageRecorder:
             # No extension, return application/octet-stream as default
             return [
                 IndalekoSemanticAttributeDataModel(
-                    Identifier=KnownStorageAttributes.STORAGE_ATTRIBUTES_MIMETYPE_FROM_SUFFIX,
+                    Identifier=StorageSemanticAttributes.STORAGE_ATTRIBUTES_MIMETYPE_FROM_SUFFIX,
                     Value="application/octet-stream"
                 )
             ]
@@ -465,13 +465,40 @@ class BaseStorageRecorder:
         # (without the dot) as semantic attributes
         return [
             IndalekoSemanticAttributeDataModel(
-                Identifier=KnownStorageAttributes.STORAGE_ATTRIBUTES_SUFFIX_MIME_TYPE,
+                Identifier=StorageSemanticAttributes.STORAGE_ATTRIBUTES_MIMETYPE_FROM_SUFFIX,
                 Value=guessed_type
             ),
             IndalekoSemanticAttributeDataModel(
-                Identifier=KnownStorageAttributes.STORAGE_ATTRIBUTES_FILE_SUFFIX,
+                Identifier=StorageSemanticAttributes.STORAGE_ATTRIBUTES_SUFFIX,
                 Value=ext[1:] if ext.startswith('.') else ext
             )
+        ]
+
+    @staticmethod
+    def map_name_to_semantic_attributes(
+        filename: str
+    ) -> list[IndalekoSemanticAttributeDataModel]:
+        """
+        Maps a file's name to semantic attributes.
+
+        Args:
+            filename (str): _description_
+
+        Raises:
+            ValueError: _description_
+            ValueError: _description_
+            NotImplementedError: _description_
+            NotImplementedError: _description_
+
+        Returns:
+            list[IndalekoSemanticAttributeDataModel]: _description_
+        """
+        assert isinstance(filename, str), "filename is not a string"
+        return [
+            {
+                "Identifier": StorageSemanticAttributes.STORAGE_ATTRIBUTES_LOWERCASE_FILE_NAME,
+                "Value": filename.lower(),
+            },
         ]
 
     @staticmethod
@@ -869,52 +896,57 @@ class BaseStorageRecorder:
         if "st_dev" in posix_attributes:
             semantic_attributes.append(
                 IndalekoSemanticAttributeDataModel(
-                    Identifier=KnownStorageAttributes.STORAGE_ATTRIBUTES_DEVICE,
+                    Identifier=StorageSemanticAttributes.STORAGE_ATTRIBUTES_DEVICE,
                     Value=posix_attributes["st_dev"],
                 )
             )
         if "st_gid" in posix_attributes:
             semantic_attributes.append(
                 IndalekoSemanticAttributeDataModel(
-                    Identifier=KnownStorageAttributes.STORAGE_ATTRIBUTES_GID,
+                    Identifier=StorageSemanticAttributes.STORAGE_ATTRIBUTES_GID,
                     Value=posix_attributes["st_gid"],
                 )
             )
         if "st_mode" in posix_attributes:
             semantic_attributes.append(
                 IndalekoSemanticAttributeDataModel(
-                    Identifier=KnownStorageAttributes.STORAGE_ATTRIBUTES_MODE,
+                    Identifier=StorageSemanticAttributes.STORAGE_ATTRIBUTES_MODE,
                     Value=posix_attributes["st_mode"],
                 )
             )
         if "st_nlink" in posix_attributes:
             semantic_attributes.append(
                 IndalekoSemanticAttributeDataModel(
-                    Identifier=KnownStorageAttributes.STORAGE_ATTRIBUTES_NLINK,
+                    Identifier=StorageSemanticAttributes.STORAGE_ATTRIBUTES_NLINK,
                     Value=posix_attributes["st_nlink"],
                 )
             )
         if "st_reparse_tag" in posix_attributes:
             semantic_attributes.append(
                 IndalekoSemanticAttributeDataModel(
-                    Identifier=KnownStorageAttributes.STORAGE_ATTRIBUTES_REPARSE_TAG,
+                    Identifier=StorageSemanticAttributes.STORAGE_ATTRIBUTES_REPARSE_TAG,
                     Value=posix_attributes["st_reparse_tag"],
                 )
             )
         if "st_uid" in posix_attributes:
             semantic_attributes.append(
                 IndalekoSemanticAttributeDataModel(
-                    Identifier=KnownStorageAttributes.STORAGE_ATTRIBUTES_UID,
+                    Identifier=StorageSemanticAttributes.STORAGE_ATTRIBUTES_UID,
                     Value=posix_attributes["st_uid"],
                 )
             )
         if "st_inode" in posix_attributes:
             semantic_attributes.append(
                 IndalekoSemanticAttributeDataModel(
-                    Identifier=KnownStorageAttributes.STORAGE_ATTRIBUTES_INODE,
+                    Identifier=StorageSemanticAttributes.STORAGE_ATTRIBUTES_INODE,
                     Value=posix_attributes["st_inode"],
                 )
             )
+        file_name = posix_attributes.get('Name')
+        if file_name:
+            semantic_attributes.extend(BaseStorageRecorder.map_name_to_semantic_attributes(file_name))
+            if 'st_mode' in posix_attributes:
+                semantic_attributes.extend(BaseStorageRecorder.map_suffix_to_mime_type(file_name))
         return semantic_attributes
 
     def record(self) -> None:

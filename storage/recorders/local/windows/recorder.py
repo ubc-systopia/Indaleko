@@ -176,8 +176,6 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
                 }
             )
         semantic_attributes = self.map_posix_storage_attributes_to_semantic_attributes(data)
-        if data.get('st_file_attributes', 0) & IndalekoPosix.FILE_ATTRIBUTES["S_IFREG"]:
-            semantic_attributes += self.map_suffix_to_mime_type(data['URI'])
         kwargs = {
             "source": self.source,
             "raw_data": encode_binary_data(bytes(json.dumps(data).encode("utf-8"))),

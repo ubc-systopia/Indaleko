@@ -91,7 +91,10 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         self.db_config = IndalekoDBConfig(config_file=config_file_path)
         self.collections_metadata = IndalekoDBCollectionsMetadata(self.db_config)
         self.openai_key = self.get_api_key()
-        self.llm_connector = OpenAIConnector(api_key=self.openai_key)
+        self.llm_connector = OpenAIConnector(
+            api_key=self.openai_key,
+            model="gpt-4o-mini",
+        )
         self.nl_parser = NLParser(
             llm_connector=self.llm_connector,
             collections_metadata=self.collections_metadata,

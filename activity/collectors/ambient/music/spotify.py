@@ -38,6 +38,10 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from activity.collectors.ambient.music.spotify_data_model import SpotifyAmbientData
 from activity.collectors.ambient.base import AmbientCollector
+from data_models.record import IndalekoRecordDataModel
+from data_models.source_identifier import IndalekoSourceIdentifierDataModel
+from activity.characteristics import ActivityDataCharacteristics
+from Indaleko import Indaleko
 
 from data_models.record import IndalekoRecordDataModel
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
@@ -59,51 +63,42 @@ class SpotifyMusicCollector(AmbientCollector):
         """Initialize the object."""
         super().__init__(**kwargs)
 
-        # Your Spotify API Authentication Token here:
-        client_id = ""
-        client_secret = ""
-        redirect_uri = ""
-        self.sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id = client_id,
-                                                            client_secret= client_secret,
-                                                            redirect_uri=  redirect_uri,
-                                                            scope="user-read-playback-state"))
-        self.authenticate()
-
-    def authenticate(self) -> None:
-        """Authenticate with the Spotify API."""
-        ic("Authenticating with Spotify API")
-        self.sp.current_user()
-
-    def get_ambient_condition_history(self, start_time, end_time):
-        raise NotImplementedError('This method is not implemented yet.')
+        self.sp = spotipy.Spotify(
+            auth_manager=SpotifyOAuth(
+                client_id=client_id,
+                client_secret=client_secret,
+                redirect_uri=redirect_uri,
+                scope="user-read-playback-state"
+            )
+        )
     
     def get_ambient_condition_name(self):
         raise NotImplementedError('This method is not implemented yet.')
-    
+
     def get_collector_characteristics(self) -> List[ActivityDataCharacteristics]:
         '''Get the provider characteristics'''
         return [
             ActivityDataCharacteristics.ACTIVITY_DATA_SPOTIFY
         ]
-    
+
     def get_collector_name(self):
         raise NotImplementedError('This method is not implemented yet.')
-    
+
     def get_cursor(self, activity_context):
         raise NotImplementedError('This method is not implemented yet.')
-    
+
     def get_description(self):
         return self.description
-    
+
     def get_json_schema(self) -> dict:
         return SpotifyAmbientData(**SpotifyAmbientData.Config.json_schema_extra['example']).model_json_schema()
-    
+
     def get_provider_id(self):
         raise NotImplementedError('This method is not implemented yet.')
-    
+
     def retrieve_data(self, data_id):
         raise NotImplementedError('This method is not implemented yet.')
-    
+
     def cache_duration(self) -> timedelta:
         raise timedelta(minutes=10)
 
@@ -144,7 +139,6 @@ class SpotifyMusicCollector(AmbientCollector):
         """
         Process the collected data and turn it into a SpotifyAmbientData.
         """
-
         ic('Processing Spotify data')
         data["Timestamp"] = datetime.now().isoformat()
 
@@ -163,7 +157,6 @@ class SpotifyMusicCollector(AmbientCollector):
         data["source"] = "spotify"
 
         return SpotifyAmbientData(**data)
-
 
     def store_data(self, data: Dict[str, Any]) -> None:
         """
@@ -207,10 +200,8 @@ class SpotifyMusicCollector(AmbientCollector):
 
 def main():
     """Main entry point for the Spotify Music Collector."""
-
     ic('Starting Spotify Music Collector')
     collector = SpotifyMusicCollector()
-
     collector.collect_data()
     latest = collector.get_latest_db_update()
     ic(latest)

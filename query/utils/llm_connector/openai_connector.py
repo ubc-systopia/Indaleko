@@ -24,6 +24,7 @@ import sys
 
 import openai
 from icecream import ic
+import tiktoken
 from typing import Any
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -188,12 +189,22 @@ class OpenAIConnector(IndalekoLLMBase):
         """
         prompt = f"Context: {context}\n\n"
         question = f"User query: {question}"
+        messages = [
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": question},
+        ]
+        enc = tiktoken.encoding_for_model(self.model)
+        total = 0
+        for message in messages:
+            total += 4  # for the role and content fields
+            for value in message.values():
+                total += len(enc.encode(value))
+        if total > 4096:
+            ic(f"Total length of messages {total} exceeds 4096 characters")
+            ic(messages)
         completion = self.client.beta.chat.completions.parse(
             model=self.model,
-            messages=[
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": question},
-            ],
+            messages=messages,
             temperature=0,
             response_format={
                 "type": "json_schema",
