@@ -47,10 +47,11 @@ class KnownSemanticAttributes:
     full_prefix = "ACTIVITY_DATA"
 
     _modules_to_load = {
-        "collaboration": "activity.collectors.collaboration.semantic_attributes",
-        "location": "activity.collectors.location.semantic_attributes",
-        "network": "activity.collectors.network.semantic_attributes",
-        "storage": "activity.collectors.storage.semantic_attributes",
+        'collaboration': 'activity.collectors.collaboration.semantic_attributes',
+        'location': 'activity.collectors.location.semantic_attributes',
+        'network': 'activity.collectors.network.semantic_attributes',
+        'storage': 'activity.collectors.storage.semantic_attributes',
+        'ambient': 'activity.collectors.ambient.semantic_attributes'
     }
 
     @classmethod

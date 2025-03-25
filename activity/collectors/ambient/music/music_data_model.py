@@ -21,7 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 from typing import Optional, List, Dict
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, AwareDatetime
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -93,7 +93,7 @@ class AmbientMusicData(BaseAmbientConditionDataModel):
     @classmethod
     def validate_position(cls, value: int, values: Dict) -> int:
         """Validate playback position is within track duration"""
-        if "track_duration_ms" in values and value > values["track_duration_ms"]:
+        if "playback_position_ms" in values.data and value > values.data['track_duration_ms']:
             raise ValueError("Playback position cannot exceed track duration")
         return value
 
