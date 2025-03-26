@@ -631,8 +631,10 @@ def show_command(args: argparse.Namespace) -> None:
     print("Config file found: loading")
     config = IndalekoDBConfig()
     print(f"Created at {config.config['database']['timestamp']}")
-    print(f"Container name: {config.config['database']['container']}")
-    print(f"Volume name: {config.config['database']['volume']}")
+    if config.config['database'].get('container'):
+        print(f"Container name: {config.config['database']['container']}")
+    if config.config['database'].get('volume'):
+        print(f"Volume name: {config.config['database']['volume']}")
     print(f"Host: {config.config['database']['host']}")
     print(f"Port: {config.config['database']['port']}")
     print(f"Admin user: {config.config['database']['admin_user']}")
