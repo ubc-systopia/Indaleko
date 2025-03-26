@@ -513,31 +513,33 @@ def setup_command(args: argparse.Namespace) -> None:
     if db_config is None:
         logging.critical("Could not create IndalekoDBConfig object")
         exit(1)
-    logging.info("Initialize Docker ArangoDB")
-    print("Initialize Docker ArangoDB")
-    indaleko_docker = IndalekoDocker()
-    logging.info(
-        "Create container %s with volume %s",
-        db_config.config["database"]["container"],
-        db_config.config["database"]["volume"],
-    )
-    print(
-        f"Create container {db_config.config['database']['container']} "
-        f"with volume {db_config.config['database']['volume']}"
-    )
-    indaleko_docker.create_container(
-        db_config.config["database"]["container"],
-        db_config.config["database"]["volume"],
-        db_config.config["database"]["admin_passwd"],
-    )
-    logging.info("Created container %s", db_config.config["database"]["container"])
-    print(
-        f"Created container {db_config.config['database']['container']} "
-        f"with volume {db_config.config['database']['volume']}"
-    )
-    logging.info("Start container %s", db_config.config["database"]["container"])
-    print(f"Start container {db_config.config['database']['container']}")
-    indaleko_docker.start_container(db_config.config["database"]["container"])
+    if db_config.config['database'].get('container') \
+       and db_config.config['database'].get('volume'):
+        logging.info("Initialize Docker ArangoDB")
+        print("Initialize Docker ArangoDB")
+        indaleko_docker = IndalekoDocker()
+        logging.info(
+            "Create container %s with volume %s",
+            db_config.config["database"]["container"],
+            db_config.config["database"]["volume"],
+        )
+        print(
+            f"Create container {db_config.config['database']['container']} "
+            f"with volume {db_config.config['database']['volume']}"
+        )
+        indaleko_docker.create_container(
+            db_config.config["database"]["container"],
+            db_config.config["database"]["volume"],
+            db_config.config["database"]["admin_passwd"],
+        )
+        logging.info("Created container %s", db_config.config["database"]["container"])
+        print(
+            f"Created container {db_config.config['database']['container']} "
+            f"with volume {db_config.config['database']['volume']}"
+        )
+        logging.info("Start container %s", db_config.config["database"]["container"])
+        print(f"Start container {db_config.config['database']['container']}")
+        indaleko_docker.start_container(db_config.config["database"]["container"])
     logging.info("Connect to database")
     print("Connect to database")
     started = db_config.start()
