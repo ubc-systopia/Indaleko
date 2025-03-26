@@ -22,7 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
-from pydantic import Field
+from pydantic import  Field
 
 if os.environ.get('INDALEKO_ROOT') is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -47,7 +47,7 @@ class BaseAmbientConditionDataModel(IndalekoActivityDataModel):
         @staticmethod
         def generate_example():
             '''Generate an example for the data model'''
-            example = IndalekoActivityDataModel.Config.json_schema_extra['example']
+            example = IndalekoActivityDataModel.Config.json_schema_extra
             example["source"] = "Spotify"
             return example
 
@@ -56,11 +56,9 @@ class BaseAmbientConditionDataModel(IndalekoActivityDataModel):
             "example": generate_example(),
         }
 
-
 def main():
     '''This allows testing the data model'''
     BaseAmbientConditionDataModel.test_model_main()
-
 
 if __name__ == '__main__':
     main()
