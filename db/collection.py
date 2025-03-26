@@ -189,7 +189,7 @@ class IndalekoCollection:
         """Insert a list of documents into the collection in batches."""
         errors = []
         for i in range(0, len(documents), self.max_chunk_size):
-            batch = documents[i : i + self.max_chunk_size]
+            batch = documents[i: i + self.max_chunk_size]
             try:
                 result = self.collection.insert_many(batch)
                 batch_errors = [doc for doc in result if doc.get("error")]
