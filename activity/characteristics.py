@@ -40,7 +40,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 class ActivityDataCharacteristics:
     """
     Define the provider characteristics available for a data provider.
-    '''
+    """
     ACTIVITY_DATA_TEMPORAL = '521e13be-096e-4068-8f2a-4c162bd6a3fb'
     ACTIVITY_DATA_SPATIAL = 'a77d0a02-a716-4d5e-a7e2-cabab87e00e6'
     ACTIVITY_DATA_COMMUNICATION = 'c9f9f8d1-345f-4af6-ac65-23bdfec32e62'
