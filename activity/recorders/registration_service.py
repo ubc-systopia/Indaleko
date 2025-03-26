@@ -187,9 +187,10 @@ class IndalekoActivityDataRegistrationService(IndalekoSingleton):
         assert Indaleko.validate_uuid_string(
             identifier
         ), "Identifier must be a valid UUID"
-        activity_provider_collection_name = IndalekoActivityDataRegistration.generate_activity_data_provider_collection_name(
-            identifier
-        )
+        activity_provider_collection_name = \
+            IndalekoActivityDataRegistration.generate_activity_data_provider_collection_name(
+                identifier
+            )
         existing_collection = None
         try:
             existing_collection = IndalekoCollections.get_collection(
@@ -228,14 +229,15 @@ class IndalekoActivityDataRegistrationService(IndalekoSingleton):
             identifier = identifier[
                 len(
                     IndalekoActivityDataRegistration.ActivityProviderDataCollectionPrefix
-                ) :
+                ):
             ]
         assert Indaleko.validate_uuid_string(
             identifier
         ), "Identifier must be a valid UUID"
-        activity_provider_collection_name = IndalekoActivityDataRegistration.generate_activity_data_provider_collection_name(
-            identifier
-        )
+        activity_provider_collection_name = \
+            IndalekoActivityDataRegistration.generate_activity_data_provider_collection_name(
+                identifier
+            )
         existing_collection = None
         try:
             existing_collection = IndalekoCollections.get_collection(
