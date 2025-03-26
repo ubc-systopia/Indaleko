@@ -37,9 +37,13 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from data_models import IndalekoRecordDataModel
+from data_models import (
+    IndalekoRecordDataModel,
+    IndalekoSemanticAttributeDataModel,
+)
+from data_models.storage_semantic_attributes import StorageSemanticAttributes
 from db import IndalekoServiceManager
-from platforms.unix import UnixFileAttributes
+from platforms.posix import IndalekoPosix
 from platforms.windows_attributes import IndalekoWindows
 from storage.i_object import IndalekoObject
 from storage.collectors.cloud.drop_box import IndalekoDropboxCloudStorageCollector
@@ -151,12 +155,12 @@ class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
         timestamps = []
         size = 0
         if "FolderMetadata" in data:
-            unix_file_attributes = UnixFileAttributes.FILE_ATTRIBUTES["S_IFDIR"]
+            posix_file_attributes = IndalekoPosix.FILE_ATTRIBUTES["S_IFDIR"]
             windows_file_attributes = IndalekoWindows.FILE_ATTRIBUTES[
                 "FILE_ATTRIBUTE_DIRECTORY"
             ]
         if "FileMetadata" in data:
-            unix_file_attributes = UnixFileAttributes.FILE_ATTRIBUTES["S_IFREG"]
+            posix_file_attributes = IndalekoPosix.FILE_ATTRIBUTES["S_IFREG"]
             windows_file_attributes = IndalekoWindows.FILE_ATTRIBUTES[
                 "FILE_ATTRIBUTE_NORMAL"
             ]
@@ -200,6 +204,18 @@ class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
         local_id = data.get("id")
         if local_id and local_id.startswith("id:"):
             local_id = local_id[3:]
+        semantic_attributes = []
+        if name:
+            semantic_attributes.extend(BaseCloudStorageRecorder.map_name_to_semantic_attributes(name))
+            if "FileMetadata" in data:
+                semantic_attributes.extend(BaseCloudStorageRecorder.map_file_name_to_semantic_attributes(name))
+        if "content_hash" in data:
+            semantic_attributes.append(
+                IndalekoSemanticAttributeDataModel(
+                    Identifier=StorageSemanticAttributes.STORAGE_ATTRIBUTES_CHECKSUM_DROPBOX,
+                    Value=data["content_hash"],
+                )
+            )
         kwargs = {
             "Record": IndalekoRecordDataModel(
                 SourceIdentifier=self.source,
@@ -210,17 +226,13 @@ class IndalekoDropboxCloudStorageRecorder(BaseCloudStorageRecorder):
             "ObjectIdentifier": data["ObjectIdentifier"],
             "Timestamps": timestamps,
             "Size": size,
-            "SemanticAttributes": None,  # add some perhaps?
+            "SemanticAttributes": semantic_attributes,
             "Label": name,
             "LocalPath": path,
             "LocalIdentifier": local_id,
             "Volume": None,
-            "PosixFileAttributes": UnixFileAttributes.map_file_attributes(
-                unix_file_attributes
-            ),
-            "WindowsFileAttributes": IndalekoWindows.map_file_attributes(
-                windows_file_attributes
-            ),
+            "PosixFileAttributes": posix_file_attributes,
+            "WindowsFileAttributes": windows_file_attributes,
         }
         obj = IndalekoObject(**kwargs)
         return obj

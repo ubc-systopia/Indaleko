@@ -26,7 +26,7 @@ import json
 import sys
 import uuid
 
-from icecream import ic
+# from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))

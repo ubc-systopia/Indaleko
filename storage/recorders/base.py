@@ -438,9 +438,6 @@ class BaseStorageRecorder:
             A list containing a semantic attribute with the estimated MIME type
         """
 
-        # Ensure mimetypes is initialized with standard types
-        mimetypes.init()
-
         # Extract file extension and convert to lowercase
         _, ext = os.path.splitext(filename)
         ext = ext.lower()
@@ -883,9 +880,13 @@ class BaseStorageRecorder:
                 self.dir_data_by_path[self.get_object_path(obj)] = obj
                 self.dir_data.append(obj)
                 self.dir_count += 1
+                if self.dir_count % 1000 == 0:
+                    ic("Processed", self.dir_count, "directories")
             else:
                 self.file_data.append(obj)
                 self.file_count += 1
+                if self.file_count % 1000 == 0:
+                    ic('Processed', self.file_count, 'files')
 
     @staticmethod
     def map_posix_storage_attributes_to_semantic_attributes(
