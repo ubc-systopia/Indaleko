@@ -120,6 +120,41 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             Note the default implementation here does not add any additional parameters.
             """
             parser = argparse.ArgumentParser(add_help=False)
+            
+            # Add global options
+            parser.add_argument(
+                "--explain", 
+                action="store_true",
+                help="Explain query execution plans instead of executing queries"
+            )
+            parser.add_argument(
+                "--show-plan",
+                action="store_true",
+                help="Show query execution plan before executing the query"
+            )
+            parser.add_argument(
+                "--perf", 
+                action="store_true",
+                help="Collect and display performance metrics for query execution"
+            )
+            parser.add_argument(
+                "--all-plans", 
+                action="store_true",
+                help="Show all possible execution plans when using --explain or --show-plan"
+            )
+            parser.add_argument(
+                "--max-plans", 
+                type=int,
+                default=5,
+                help="Maximum number of plans to show when using --all-plans (default: 5)"
+            )
+            parser.add_argument(
+                "--verbose",
+                action="store_true",
+                help="Show detailed execution plan information including all plan nodes"
+            )
+            
+            # Add command subparsers
             subparsers = parser.add_subparsers(
                 dest="command",
                 help="The mode in which to run the script (batch or interactive).",
@@ -257,15 +292,41 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             translated_query = self.query_translator.translate(query_data)
             print(translated_query.model_dump_json(indent=2))
 
-            # Execute the query
-            raw_results = self.query_executor.execute(
-                translated_query.aql_query, self.db_config
+            # Always get the query execution plan first
+            explain_results = self.query_executor.explain_query(
+                translated_query.aql_query, 
+                self.db_config,
+                all_plans=self.args.all_plans if hasattr(self.args, 'all_plans') else False,
+                max_plans=self.args.max_plans if hasattr(self.args, 'max_plans') else 5
             )
+            
+            # Execute the query or only display the execution plan
+            if hasattr(self.args, 'explain') and self.args.explain:
+                # Display the execution plan
+                self.display_execution_plan(explain_results, translated_query.aql_query)
+                
+                # In EXPLAIN mode, we don't process results further
+                raw_results = explain_results
+                analyzed_results = explain_results
+                facets = []
+                ranked_results = [{"original": {"result": explain_results}}]
+            else:
+                # Execute the query with performance metrics if requested
+                collect_perf = hasattr(self.args, 'perf') and self.args.perf
+                raw_results = self.query_executor.execute(
+                    translated_query.aql_query, 
+                    self.db_config, 
+                    collect_performance=collect_perf
+                )
+                
+                # If requested, display the execution plan
+                if hasattr(self.args, 'show_plan') and self.args.show_plan:
+                    self.display_execution_plan(explain_results, translated_query.aql_query)
 
-            # Analyze and refine results
-            analyzed_results = self.metadata_analyzer.analyze(raw_results)
-            facets = self.facet_generator.generate(analyzed_results)
-            ranked_results = self.result_ranker.rank(analyzed_results)
+                # Analyze and refine results
+                analyzed_results = self.metadata_analyzer.analyze(raw_results)
+                facets = self.facet_generator.generate(analyzed_results)
+                ranked_results = self.result_ranker.rank(analyzed_results)
 
             # Display results to user
             self.display_results(ranked_results, facets)
@@ -279,6 +340,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 LLMName=self.llm_connector.get_llm_name(),
                 LLMQuery=structured_query,
                 TranslatedOutput=translated_query,
+                ExecutionPlan=explain_results,
                 RawResults=raw_results,
                 AnalyzedResults=analyzed_results,
                 Facets=facets,
@@ -369,6 +431,12 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             print("No results found.")
             return
 
+        # Check if this is an EXPLAIN result
+        if len(results) == 1 and isinstance(results[0]["original"]["result"], dict) \
+           and "plan" in results[0]["original"]["result"]:
+            # This is already displayed by display_execution_plan
+            return
+
         print("\nSearch Results:")
         ic(len(results))
         if len(results) < 10:
@@ -376,13 +444,115 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 doc = result["original"]["result"]
                 if isinstance(doc, int):
                     ic(f"Result {i}: {doc}")
-                else:
+                elif isinstance(doc, dict) and "performance" in doc:
+                    # Display performance metrics if available
+                    perf = doc["performance"]
+                    print("\nPerformance Metrics:")
+                    print(f"- Execution time: {perf['execution_time_seconds']:.4f} seconds")
+                    print(f"- CPU usage: User: {perf['cpu']['user_time']:.2f}s, System: {perf['cpu']['system_time']:.2f}s")
+                    print(f"- Memory: RSS: {perf['memory']['rss'] / (1024*1024):.2f} MB")
+                    print(f"- I/O: Reads: {perf['io']['read_count']}, Writes: {perf['io']['write_count']}")
+                    print(f"- Threads: {perf['threads']}")
+                elif isinstance(doc, dict) and "Record" in doc and "Attributes" in doc["Record"] \
+                     and "Path" in doc["Record"]["Attributes"]:
                     ic(doc["Record"]["Attributes"]["Path"])
+                else:
+                    ic(f"Result {i}: {doc}")
 
         if facets:
             print("Suggested refinements:")
             for facet in facets:
                 print(f"- {facet}")
+                
+    def display_execution_plan(self, plan_data: dict, query: str) -> None:
+        """
+        Displays the query execution plan in a formatted way.
+        
+        Args:
+            plan_data (Dict): The execution plan from ArangoDB
+            query (str): The original AQL query
+        """
+        print("\n=== QUERY EXECUTION PLAN ===")
+        print(f"Query: {query}")
+        
+        # Display estimated cost
+        main_plan = plan_data.get("plan", {})
+        print(f"\nEstimated Cost: {main_plan.get('estimatedCost', 'N/A')}")
+        
+        # Display collections used
+        collections = main_plan.get("collections", [])
+        if collections:
+            print("\nCollections:")
+            for collection in collections:
+                print(f"- {collection}")
+        
+        # Display analysis
+        analysis = plan_data.get("analysis", {})
+        if analysis:
+            print("\nAnalysis:")
+            
+            # Display summary
+            summary = analysis.get("summary", {})
+            if summary:
+                print("\n  Summary:")
+                for key, value in summary.items():
+                    if key == "indexes_used" and value:
+                        print("  - Indexes Used:")
+                        for index in value:
+                            print(f"    * {index}")
+                    else:
+                        print(f"  - {key.replace('_', ' ').title()}: {value}")
+            
+            # Display warnings
+            warnings = analysis.get("warnings", [])
+            if warnings:
+                print("\n  Warnings:")
+                for warning in warnings:
+                    print(f"  - {warning}")
+            
+            # Display recommendations
+            recommendations = analysis.get("recommendations", [])
+            if recommendations:
+                print("\n  Recommendations:")
+                for recommendation in recommendations:
+                    print(f"  - {recommendation}")
+        
+        # Display plan nodes if requested
+        if hasattr(self.args, 'verbose') and self.args.verbose:
+            print("\nExecution Plan Nodes:")
+            nodes = main_plan.get("nodes", [])
+            for node in nodes:
+                print(f"\n  Node {node.get('id')}:")
+                print(f"  - Type: {node.get('type')}")
+                if "collection" in node:
+                    print(f"  - Collection: {node.get('collection')}")
+                if "indexes" in node and node["indexes"]:
+                    for index in node["indexes"]:
+                        print(f"  - Index: {index.get('name')} ({index.get('type')})")
+                print(f"  - Est. Cost: {node.get('estimatedCost', 'N/A')}")
+        
+        # Display cacheable info
+        print(f"\nCacheable: {plan_data.get('cacheable', False)}")
+        
+        # Show stats
+        stats = plan_data.get("stats", {})
+        if stats:
+            print("\nOptimization Stats:")
+            for key, value in stats.items():
+                print(f"- {key.replace('rules', 'Rules ').title()}: {value}")
+        
+        # Alternative plans
+        if "plans" in plan_data and plan_data["plans"]:
+            alt_plans = plan_data["plans"]
+            print(f"\nAlternative Plans: {len(alt_plans)} found")
+            for i, alt_plan in enumerate(alt_plans[:3], 1):  # Show up to 3 alternatives
+                print(f"\nAlternative Plan {i}:")
+                print(f"- Est. Cost: {alt_plan.get('estimatedCost', 'N/A')}")
+                print(f"- Rules: {', '.join(alt_plan.get('rules', []))[:80]}..." 
+                      if len(', '.join(alt_plan.get('rules', []))) > 80 
+                      else ', '.join(alt_plan.get('rules', [])))
+        
+        print("\n===============================")
 
     def continue_session(self) -> bool:
         """Check if the user wants to continue the session."""

@@ -74,6 +74,10 @@ class QueryHistoryData(BaseModel):
     TranslatedOutput: TranslatorOutput = Field(
         ..., title="TranslatedOutput", description="The translated output from the LLM."
     )
+    
+    ExecutionPlan: Optional[dict[str, Any]] = Field(
+        None, title="ExecutionPlan", description="The execution plan for the query."
+    )
 
     RawResults: list[dict[str, Any]] = Field(
         ..., title="Results", description="The results of the database query."
@@ -171,6 +175,21 @@ class QueryHistoryData(BaseModel):
                             "Rationale": "The user wants to see the latest performance data.",
                         }
                     ],
+                },
+                "ExecutionPlan": {
+                    "plan": {
+                        "nodes": [],
+                        "rules": [],
+                        "collections": ["PerformanceData"],
+                        "estimatedCost": 10.5
+                    },
+                    "cacheable": True,
+                    "warnings": [],
+                    "analysis": {
+                        "summary": {"estimated_cost": 10.5},
+                        "warnings": [],
+                        "recommendations": []
+                    }
                 },
                 "QueryResults": {
                     "Results": [

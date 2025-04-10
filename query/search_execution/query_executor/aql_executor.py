@@ -18,10 +18,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import os
-from arango.exceptions import AQLQueryExecuteError
 import sys
-
-from typing import Any
+import time
+from arango.exceptions import AQLQueryExecuteError
+from typing import Any, Dict, List, Optional, Union
 
 from icecream import ic
 
@@ -36,6 +36,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from db import IndalekoDBConfig
 from query.search_execution.query_executor.executor_base import ExecutorBase
+from perf.perf_collector import IndalekoPerformanceDataCollector
 
 # pylint: enable=wrong-import-position
 
@@ -46,24 +47,88 @@ class AQLExecutor(ExecutorBase):
     """
 
     @staticmethod
-    def execute(query: str, data_connector: Any) -> list[dict[str, Any]]:
+    def execute(
+        query: str, 
+        data_connector: Any, 
+        bind_vars: Optional[Dict[str, Any]] = None,
+        explain: bool = False,
+        collect_performance: bool = False
+    ) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
         """
         Execute an AQL query using the provided data connector.
 
         Args:
             query (str): The AQL query to execute
             data_connector (Any): The connector to the ArangoDB data source
+            bind_vars (Optional[Dict[str, Any]]): Bind variables for the query
+            explain (bool): Whether to return the query plan instead of executing
+            collect_performance (bool): Whether to collect performance metrics
 
         Returns:
-            List[Dict[str, Any]]: The query results
+            Union[List[Dict[str, Any]], Dict[str, Any]]: 
+                - The query results (when explain=False)
+                - The query execution plan (when explain=True)
         """
         assert isinstance(
             data_connector, IndalekoDBConfig
         ), "Data connector must be an instance of IndalekoDBConfig"
+        
+        # Initialize bind variables if not provided
+        if bind_vars is None:
+            bind_vars = {}
+            
         ic(query)
+        
+        # If explain mode is requested, return the query plan
+        if explain:
+            return AQLExecutor.explain_query(query, data_connector, bind_vars)
+        
+        # Set up performance collection if requested
+        perf_collector = None
+        if collect_performance:
+            perf_collector = IndalekoPerformanceDataCollector()
+            perf_collector.start()
+            start_time = time.time()
+        
         try:
-            raw_results = data_connector.db.aql.execute(query)
-            return AQLExecutor.format_results(raw_results)
+            # Execute the AQL query
+            raw_results = data_connector.db.aql.execute(query, bind_vars=bind_vars)
+            formatted_results = AQLExecutor.format_results(raw_results)
+            
+            # If collecting performance metrics, add them to the results
+            if collect_performance and perf_collector:
+                perf_collector.stop()
+                execution_time = time.time() - start_time
+                perf_data = perf_collector.get_performance_data()
+                
+                # Add a performance metadata entry to the results
+                performance_info = {
+                    "performance": {
+                        "execution_time_seconds": execution_time,
+                        "cpu": {
+                            "user_time": perf_data.user_time,
+                            "system_time": perf_data.system_time
+                        },
+                        "memory": {
+                            "rss": perf_data.rss,
+                            "vms": perf_data.vms
+                        },
+                        "io": {
+                            "read_count": perf_data.io_read_count,
+                            "write_count": perf_data.io_write_count,
+                            "read_bytes": perf_data.io_read_bytes,
+                            "write_bytes": perf_data.io_write_bytes
+                        },
+                        "threads": perf_data.num_threads,
+                        "query_length": len(query)
+                    }
+                }
+                
+                # Add performance info as a special result
+                formatted_results.append(performance_info)
+            
+            return formatted_results
+            
         except TimeoutError as e:
             ic(
                 f"The query execution has timed out:\n\tquery: {query}\n\tException: {e}"
@@ -74,7 +139,214 @@ class AQLExecutor(ExecutorBase):
             ic(
                 f"An error occurred while executing the AQL query:\n\tquery: {query}\n\tException: {e}"
             )
-            raw_results = [{'result': f'Exception: {str(e)}'}]
+            return [{'result': f'Exception: {str(e)}'}]
+        finally:
+            # Ensure performance collection is stopped if we have an exception
+            if collect_performance and perf_collector:
+                perf_collector.stop()
+
+    @staticmethod
+    def explain_query(
+        query: str, 
+        data_connector: Any, 
+        bind_vars: Optional[Dict[str, Any]] = None,
+        all_plans: bool = False,
+        max_plans: int = 5
+    ) -> Dict[str, Any]:
+        """
+        Get the execution plan for an AQL query without executing it.
+        
+        Args:
+            query (str): The AQL query to explain
+            data_connector (Any): The connector to the ArangoDB data source
+            bind_vars (Optional[Dict[str, Any]]): Bind variables for the query
+            all_plans (bool): Whether to return all possible execution plans
+            max_plans (int): Maximum number of plans to return when all_plans is True
+            
+        Returns:
+            Dict[str, Any]: The query execution plan(s) with analysis
+        """
+        assert isinstance(
+            data_connector, IndalekoDBConfig
+        ), "Data connector must be an instance of IndalekoDBConfig"
+        
+        # Initialize bind variables if not provided
+        if bind_vars is None:
+            bind_vars = {}
+        
+        try:
+            # Check if we have parameters in the query for which we don't have bind values
+            import re
+            param_pattern = r'@([a-zA-Z0-9_]+)'
+            params_in_query = set(re.findall(param_pattern, query))
+            
+            # Log parameters found in query
+            ic(f"Parameters found in query: {params_in_query}")
+            ic(f"Bind variables provided: {bind_vars.keys()}")
+            
+            # Add some sample values for common parameters if they're missing
+            for param in params_in_query:
+                if param not in bind_vars:
+                    if param.lower() in ['size', 'filesize', 'minsize']:
+                        bind_vars[param] = 1000000
+                    elif param.lower() in ['timestamp', 'date', 'time']:
+                        bind_vars[param] = "2024-01-01"
+                    elif param.lower() in ['path', 'file', 'filename']:
+                        bind_vars[param] = "test.pdf"
+                    elif param.lower() in ['limit', 'max', 'count']:
+                        bind_vars[param] = 10
+                    else:
+                        # Default to a string for unknown parameters
+                        bind_vars[param] = "sample_value"
+            
+            # Log the final set of bind variables
+            ic(f"Final bind variables: {bind_vars}")
+            
+            # Build explain options - pass directly as kwargs
+            # Create the options for explain
+            kwargs = {}
+            if bind_vars:
+                kwargs["bind_vars"] = bind_vars
+                
+            # Add all_plans parameter if it's True
+            if all_plans:
+                kwargs["all_plans"] = all_plans
+                kwargs["max_plans"] = max_plans
+            
+            # Call ArangoDB's explain method
+            ic(f"Calling ArangoDB explain with kwargs: {kwargs}")
+            explain_result = data_connector.db.aql.explain(query, **kwargs)
+            
+            # Enhance the explain result with additional analysis
+            enhanced_result = AQLExecutor._enhance_explain_result(explain_result, query)
+            
+            # Add the bind variables used to the result
+            enhanced_result["bind_vars"] = bind_vars
+            
+            return enhanced_result
+            
+        except AQLQueryExecuteError as e:
+            ic(
+                f"An error occurred while explaining the AQL query:\n\tquery: {query}\n\tException: {e}"
+            )
+            return {
+                'error': str(e), 
+                'query': query, 
+                'bind_vars': bind_vars,
+                'analysis': {
+                    'warnings': [str(e)],
+                    'recommendations': ["Check query syntax and ensure bind variables are provided for all parameters"]
+                }
+            }
+
+    @staticmethod
+    def _enhance_explain_result(explain_result: Any, query: str) -> Dict[str, Any]:
+        """
+        Enhance the ArangoDB explain result with additional analysis.
+        
+        Args:
+            explain_result (Any): The raw explain result from ArangoDB
+            query (str): The original query string
+            
+        Returns:
+            Dict[str, Any]: Enhanced explain result with additional analysis
+        """
+        # Create an enhanced result dictionary
+        enhanced = {"query": query, "raw_result": explain_result}
+        
+        # Initialize analysis section with default values
+        analysis = {
+            "summary": {
+                "estimated_cost": 0,
+                "collections_used": 0,
+                "operations": 0,
+                "cacheable": False
+            },
+            "warnings": [],
+            "recommendations": []
+        }
+        
+        # Process the explain result based on its type
+        if isinstance(explain_result, dict):
+            # Standard dictionary result - extract plan data
+            plan = explain_result.get("plan", {})
+            
+            # Update analysis with plan data
+            analysis["summary"].update({
+                "estimated_cost": plan.get("estimatedCost", 0),
+                "collections_used": len(plan.get("collections", [])),
+                "operations": len(plan.get("nodes", [])),
+                "cacheable": explain_result.get("cacheable", False)
+            })
+            
+            # Extract plan details
+            nodes = plan.get("nodes", [])
+            collection_scans = [n for n in nodes if n.get("type") == "EnumerateCollectionNode"]
+            index_nodes = [n for n in nodes if n.get("type") == "IndexNode"]
+            
+            # Add warnings for full collection scans
+            if collection_scans:
+                scan_collections = [n.get("collection", "unknown") for n in collection_scans]
+                analysis["warnings"].append(
+                    f"Full collection scan(s) detected on: {', '.join(scan_collections)}"
+                )
+                analysis["recommendations"].append(
+                    "Consider adding indexes to collections that are being full-scanned"
+                )
+            
+            # Add info about indexes being used
+            if index_nodes:
+                index_info = []
+                for node in index_nodes:
+                    collection = node.get("collection", "unknown")
+                    index_type = node.get("indexes", [{}])[0].get("type", "unknown")
+                    index_info.append(f"{collection} ({index_type})")
+                
+                analysis["summary"]["indexes_used"] = index_info
+            else:
+                analysis["warnings"].append("No indexes are being used in this query")
+                analysis["recommendations"].append(
+                    "Review your query and consider adding appropriate indexes"
+                )
+            
+            # Check for very high estimated cost
+            if plan.get("estimatedCost", 0) > 1000:
+                analysis["warnings"].append(
+                    f"High estimated cost: {plan.get('estimatedCost')}"
+                )
+                analysis["recommendations"].append(
+                    "Query may be inefficient and could benefit from optimization"
+                )
+            
+            # Add any warnings from ArangoDB itself
+            for warning in explain_result.get("warnings", []):
+                if isinstance(warning, dict):
+                    analysis["warnings"].append(warning.get("message", str(warning)))
+                else:
+                    analysis["warnings"].append(str(warning))
+                    
+            # Copy relevant parts from explain_result to enhanced
+            for key in ["plan", "plans", "stats", "cacheable", "warnings"]:
+                if key in explain_result:
+                    enhanced[key] = explain_result[key]
+                    
+        elif isinstance(explain_result, list):
+            # If the result is a list, it could be an array of plans or an error
+            analysis["warnings"].append("Received list result instead of expected plan structure")
+            analysis["recommendations"].append("Check query syntax and database configuration")
+            
+        elif isinstance(explain_result, str):
+            # If the result is a string, it's probably an error message
+            analysis["warnings"].append(f"Explain returned message: {explain_result}")
+            
+        else:
+            # Unknown result type
+            analysis["warnings"].append(f"Unexpected explain result type: {type(explain_result)}")
+        
+        # Add analysis to the enhanced result
+        enhanced["analysis"] = analysis
+        
+        return enhanced
 
     @staticmethod
     def validate_query(query: str) -> bool:
@@ -87,12 +359,32 @@ class AQLExecutor(ExecutorBase):
         Returns:
             bool: True if the query is valid, False otherwise
         """
-        # Implement AQL query validation logic
-        # This is a placeholder implementation
-        return "FOR" in query and "RETURN" in query
+        # Basic validation - check for FOR and RETURN keywords
+        if "FOR" not in query or "RETURN" not in query:
+            return False
+            
+        # Check for balanced parentheses, brackets, and braces
+        parens_stack = []
+        for char in query:
+            if char in "({[":
+                parens_stack.append(char)
+            elif char in ")}]":
+                if not parens_stack:
+                    return False
+                last_open = parens_stack.pop()
+                if (char == ")" and last_open != "(") or \
+                   (char == "}" and last_open != "{") or \
+                   (char == "]" and last_open != "["):
+                    return False
+                    
+        # Check if all parentheses were closed
+        if parens_stack:
+            return False
+            
+        return True
 
     @staticmethod
-    def format_results(raw_results: Any) -> list[dict[str, Any]]:
+    def format_results(raw_results: Any) -> List[Dict[str, Any]]:
         """
         Format the raw AQL query results into a standardized format.
 
@@ -102,6 +394,26 @@ class AQLExecutor(ExecutorBase):
         Returns:
             List[Dict[str, Any]]: The formatted results
         """
-        # Implement result formatting logic
-        # This is a placeholder implementation
-        return [{"result": item} for item in raw_results]
+        formatted_results = []
+        
+        # Handle case when raw_results is already a list
+        if isinstance(raw_results, list):
+            for item in raw_results:
+                if isinstance(item, dict):
+                    formatted_results.append(item)
+                else:
+                    formatted_results.append({"result": item})
+            return formatted_results
+        
+        # Handle case when raw_results is a cursor or other iterable
+        try:
+            for item in raw_results:
+                if isinstance(item, dict):
+                    formatted_results.append(item)
+                else:
+                    formatted_results.append({"result": item})
+        except TypeError:
+            # If raw_results is not iterable, wrap it in a single result
+            formatted_results.append({"result": raw_results})
+            
+        return formatted_results
