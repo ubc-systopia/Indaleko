@@ -22,6 +22,7 @@ import json
 import logging
 import os
 import sys
+import uuid
 from textwrap import dedent
 from typing import Any, Dict, List, Optional, Union
 
@@ -148,11 +149,28 @@ class EnhancedNLParser(NLParser):
         Returns:
             EnhancedQueryUnderstanding: Comprehensive query understanding
         """
+        # Create a JSON serializer that handles UUID objects
+        def _json_serializable(obj):
+            if isinstance(obj, uuid.UUID):
+                return str(obj)
+            return obj.__dict__
+            
         # Prepare context information for the LLM
-        context_data = {
-            "basic_parse_results": basic_results.model_dump(),
-            "collection_data": {name: metadata.model_dump() for name, metadata in self.collection_data.items()},
-        }
+        try:
+            # Attempt to use model_dump for structured data
+            context_data = {
+                "basic_parse_results": basic_results.model_dump(),
+                "collection_data": {name: {"name": name, "description": getattr(metadata, "Description", "No description")} 
+                                   for name, metadata in self.collection_data.items()},
+            }
+        except Exception as e:
+            # Fallback to simpler representation if serialization fails
+            logging.warning(f"Error dumping model data: {e}")
+            context_data = {
+                "query": query,
+                "intent": basic_results.Intent.intent,
+                "collection_names": list(self.collection_data.keys()),
+            }
         
         # Add facet context if available
         if facet_context:
@@ -236,6 +254,17 @@ class EnhancedNLParser(NLParser):
         )
         
         # Create the prompt for the LLM
+        # Use our custom serializer when dumping context data to JSON
+        try:
+            context_json = json.dumps(context_data, indent=2, default=_json_serializable)
+        except Exception as e:
+            logging.warning(f"Error serializing context data: {e}")
+            # Fallback to simpler representation
+            context_json = json.dumps({
+                "query": query,
+                "collections_available": list(self.collection_data.keys()),
+            })
+            
         system_prompt = dedent(f"""
         You are Archivist, an expert at analyzing natural language queries about digital objects stored within Indaleko, 
         a unified personal index system. Your task is to provide a comprehensive, structured understanding of user queries 
@@ -259,7 +288,7 @@ class EnhancedNLParser(NLParser):
         Make sure you use the appropriate fields and formats from the schema.
         
         Context Data:
-        {json.dumps(context_data, indent=2)}
+        {context_json}
         
         Remember to identify highly relevant facets based on the query context.
         """)
