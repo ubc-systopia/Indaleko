@@ -45,7 +45,9 @@ from db.db_collection_metadata import IndalekoDBCollectionsMetadata
 from query.history.data_models.query_history import QueryHistoryData
 from query.query_processing.data_models.query_input import StructuredQuery
 from query.query_processing.nl_parser import NLParser
+from query.query_processing.enhanced_nl_parser import EnhancedNLParser
 from query.query_processing.query_translator.aql_translator import AQLTranslator
+from query.query_processing.query_translator.enhanced_aql_translator import EnhancedAQLTranslator
 from query.query_processing.query_history import QueryHistory
 from query.query_processing.data_models.parser_data import ParserResults
 from query.query_processing.data_models.translator_input import TranslatorInput
@@ -99,11 +101,20 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             api_key=self.openai_key,
             model="gpt-4o-mini",
         )
-        self.nl_parser = NLParser(
-            llm_connector=self.llm_connector,
-            collections_metadata=self.collections_metadata,
-        )
-        self.query_translator = AQLTranslator(self.collections_metadata)
+        # Initialize parsers based on args
+        use_enhanced = hasattr(self.args, 'enhanced_nl') and self.args.enhanced_nl
+        if use_enhanced:
+            self.nl_parser = EnhancedNLParser(
+                llm_connector=self.llm_connector,
+                collections_metadata=self.collections_metadata,
+            )
+            self.query_translator = EnhancedAQLTranslator(self.collections_metadata)
+        else:
+            self.nl_parser = NLParser(
+                llm_connector=self.llm_connector,
+                collections_metadata=self.collections_metadata,
+            )
+            self.query_translator = AQLTranslator(self.collections_metadata)
         self.query_history = QueryHistory()
         self.query_executor = AQLExecutor()
         self.metadata_analyzer = MetadataAnalyzer()
@@ -209,6 +220,16 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 action="store_true",
                 help="Disable colorized output for query plans and other displays"
             )
+            parser.add_argument(
+                "--enhanced-nl", 
+                action="store_true",
+                help="Use enhanced natural language understanding for queries"
+            )
+            parser.add_argument(
+                "--context-aware", 
+                action="store_true",
+                help="Enable context-aware queries using query history"
+            )
             
             # Add command subparsers
             subparsers = parser.add_subparsers(
@@ -282,76 +303,99 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             # self.logging_service.log_query(user_query)
             start_time = datetime.now(timezone.utc)
 
-            # Process the query
-            ic(f"Parsing query: {user_query}")
-            parsed_query = self.nl_parser.parse(query=user_query)
-            ParserResults.model_validate(parsed_query)
+            # Check if we should use enhanced NL parsing
+            use_enhanced = hasattr(self.args, 'enhanced_nl') and self.args.enhanced_nl
+            use_context = hasattr(self.args, 'context_aware') and self.args.context_aware
+            
+            if use_enhanced:
+                # Use enhanced natural language parser
+                ic(f"Enhanced parsing of query: {user_query}")
+                
+                # Get dynamic facets for context if available
+                facet_context = self.facet_generator.last_facets if hasattr(self.facet_generator, 'last_facets') else None
+                
+                # Parse with enhanced understanding
+                enhanced_understanding = self.nl_parser.parse_enhanced(
+                    query=user_query,
+                    facet_context=facet_context,
+                    include_history=use_context
+                )
+                
+                # Create input for enhanced translator
+                query_data = TranslatorInput(
+                    Query=enhanced_understanding,
+                    Connector=self.llm_connector,
+                )
+                
+                # Translate using enhanced translator
+                translated_query = self.query_translator.translate_enhanced(
+                    enhanced_understanding,
+                    query_data
+                )
+                
+                # Store for history and facet context
+                self.last_query_understanding = enhanced_understanding
+                
+            else:
+                # Standard parsing flow
+                ic(f"Parsing query: {user_query}")
+                parsed_query = self.nl_parser.parse(query=user_query)
+                ParserResults.model_validate(parsed_query)
 
-            # Only support search for now.
-            if parsed_query.Intent.intent != "search":
-                print(f"Only search queries are supported. Intent inferred is {parsed_query.Intent.intent}")
-                print('Defaulting to "search" for now.')
-            ic(f"Query Type: {parsed_query.Intent.intent}")
+                # Only support search for now.
+                if parsed_query.Intent.intent != "search":
+                    print(f"Only search queries are supported. Intent inferred is {parsed_query.Intent.intent}")
+                    print('Defaulting to "search" for now.')
+                ic(f"Query Type: {parsed_query.Intent.intent}")
 
-            # Map entities to database attributes
-            entity_mappings = self.map_entities(parsed_query.Entities)
+                # Map entities to database attributes
+                entity_mappings = self.map_entities(parsed_query.Entities)
 
-            # Use the categories to obtain the metadata attributes
-            # of the corresponding collection
-            collection_categories = [
-                entity.collection for entity in parsed_query.Categories.category_map
-            ]
-            collection_metadata = self.get_collection_metadata(collection_categories)
+                # Use the categories to obtain the metadata attributes
+                # of the corresponding collection
+                collection_categories = [
+                    entity.collection for entity in parsed_query.Categories.category_map
+                ]
+                collection_metadata = self.get_collection_metadata(collection_categories)
 
-            # Let's get the index data
-            indices = {}
-            for category in collection_categories:
-                collection_indices = self.db_config.db.collection(category).indexes()
-                for index in collection_indices:
-                    if category not in indices:
-                        indices[category] = []
-                    if index["type"] != "primary":
-                        kwargs = {
-                            "Name": index["name"],
-                            "Type": index["type"],
-                            "Fields": index["fields"],
-                        }
-                        if "unique" in index:
-                            kwargs["Unique"] = index["unique"]
-                        if "sparse" in index:
-                            kwargs["Sparse"] = index["sparse"]
-                        if "deduplicate" in index:
-                            kwargs["Deduplicate"] = index["deduplicate"]
-                        indices[category].append(
-                            IndalekoCollectionIndexDataModel(**kwargs)
-                        )
+                # Let's get the index data
+                indices = {}
+                for category in collection_categories:
+                    collection_indices = self.db_config.db.collection(category).indexes()
+                    for index in collection_indices:
+                        if category not in indices:
+                            indices[category] = []
+                        if index["type"] != "primary":
+                            kwargs = {
+                                "Name": index["name"],
+                                "Type": index["type"],
+                                "Fields": index["fields"],
+                            }
+                            if "unique" in index:
+                                kwargs["Unique"] = index["unique"]
+                            if "sparse" in index:
+                                kwargs["Sparse"] = index["sparse"]
+                            if "deduplicate" in index:
+                                kwargs["Deduplicate"] = index["deduplicate"]
+                            indices[category].append(
+                                IndalekoCollectionIndexDataModel(**kwargs)
+                            )
 
-            # Obtain information about the database based upon
-            # the parsed results
-            # self.logging_service.log_query_results(parsed_query)
+                # Create structured query
+                structured_query = StructuredQuery(
+                    original_query=user_query,
+                    intent=parsed_query.Intent.intent,
+                    entities=entity_mappings,
+                    db_info=collection_metadata,
+                    db_indices=indices,
+                )
+                query_data = TranslatorInput(
+                    Query=structured_query,
+                    Connector=self.llm_connector,
+                )
 
-            # this is the original query translation that I am
-            # going to replace with the new query translation
-            # translated_query = self.query_translator.translate(
-            #     parsed_query,
-            #     selected_md_attributes=None,
-            #     additional_notes=None,
-            #     n_truth=1,dir
-            #     llm_connector=self.llm_connector,
-            # )
-            structured_query = StructuredQuery(
-                original_query=user_query,
-                intent=parsed_query.Intent.intent,
-                entities=entity_mappings,
-                db_info=collection_metadata,
-                db_indices=indices,
-            )
-            query_data = TranslatorInput(
-                Query=structured_query,
-                Connector=self.llm_connector,
-            )
-
-            translated_query = self.query_translator.translate(query_data)
+                # Standard translation
+                translated_query = self.query_translator.translate(query_data)
             print(translated_query.model_dump_json(indent=2))
 
             # Always get the query execution plan first
@@ -796,9 +840,14 @@ def main():
     print("\nIndaleko Query CLI")
     print("=================")
     print("Type 'exit' or 'quit' to exit the program.")
-    print("\nTIP: Use --deduplicate flag for better results using Jaro-Winkler similarity")
-    print("     Example: python -m query.cli --deduplicate --show-duplicates")
-    print("     This will group similar results and reduce information overload.\n")
+    print("\nTIPS:")
+    print("- Use --deduplicate flag for better results using Jaro-Winkler similarity")
+    print("  Example: python -m query.cli --deduplicate --show-duplicates")
+    print("  This will group similar results and reduce information overload.")
+    print("\n- Try the new enhanced natural language capabilities:")
+    print("  Example: python -m query.cli --enhanced-nl --context-aware")
+    print("  This provides more sophisticated query understanding and more accurate results.")
+    print("  The --context-aware flag enables query history tracking for better context.\n")
     
     IndalekoQueryCLI().run()
     print("Thank you for using Indaleko Query CLI")
