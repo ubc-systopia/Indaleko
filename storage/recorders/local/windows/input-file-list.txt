@@ -1,4 +1,0 @@
-indaleko-plt=Windows-svc=collector-machine=2e169bb7-0024-4dc1-93dc-18b7d2d28190-storage=3397d97b2ca511edb2fcb40ede9a5a3c-ts=2025_03_21T20#38#09.772187Z.jsonl
-indaleko-plt=Windows-svc=collector-machine=2e169bb7-0024-4dc1-93dc-18b7d2d28190-storage=414e9e8f06884c299b89b5c7064c96ae-ts=2025_03_24T03#19#15.953702Z.jsonl
-indaleko-plt=Windows-svc=collector-machine=2e169bb7-0024-4dc1-93dc-18b7d2d28190-storage=c05da552927a4f6f9fdb8347598b3cd4-ts=2025_03_21T20#27#03.511585Z.jsonl
-indaleko-plt=Windows-svc=collector-machine=2e169bb7-0024-4dc1-93dc-18b7d2d28190-storage=e069ddd951ad400cbccdd5433aed7ea7-ts=2025_03_23T21#45#18.479490Z.jsonl
