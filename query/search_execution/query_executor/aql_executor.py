@@ -36,6 +36,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from db import IndalekoDBConfig
 from query.search_execution.query_executor.executor_base import ExecutorBase
+from query.result_analysis.result_formatter import deduplicate_results, FormattedResults
 from perf.perf_collector import IndalekoPerformanceDataCollector
 
 # pylint: enable=wrong-import-position
@@ -52,8 +53,10 @@ class AQLExecutor(ExecutorBase):
         data_connector: Any, 
         bind_vars: Optional[Dict[str, Any]] = None,
         explain: bool = False,
-        collect_performance: bool = False
-    ) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
+        collect_performance: bool = False,
+        deduplicate: bool = False,
+        similarity_threshold: float = 0.85
+    ) -> Union[List[Dict[str, Any]], Dict[str, Any], FormattedResults]:
         """
         Execute an AQL query using the provided data connector.
 
@@ -63,11 +66,14 @@ class AQLExecutor(ExecutorBase):
             bind_vars (Optional[Dict[str, Any]]): Bind variables for the query
             explain (bool): Whether to return the query plan instead of executing
             collect_performance (bool): Whether to collect performance metrics
+            deduplicate (bool): Whether to deduplicate similar results
+            similarity_threshold (float): Threshold for considering items as duplicates (when deduplicate=True)
 
         Returns:
-            Union[List[Dict[str, Any]], Dict[str, Any]]: 
-                - The query results (when explain=False)
+            Union[List[Dict[str, Any]], Dict[str, Any], FormattedResults]: 
+                - The query results (when explain=False, deduplicate=False)
                 - The query execution plan (when explain=True)
+                - A FormattedResults object with deduplicated results (when explain=False, deduplicate=True)
         """
         assert isinstance(
             data_connector, IndalekoDBConfig
@@ -93,15 +99,15 @@ class AQLExecutor(ExecutorBase):
         try:
             # Execute the AQL query
             raw_results = data_connector.db.aql.execute(query, bind_vars=bind_vars)
-            formatted_results = AQLExecutor.format_results(raw_results)
             
-            # If collecting performance metrics, add them to the results
+            # If collecting performance metrics, prepare performance info
+            performance_info = None
             if collect_performance and perf_collector:
                 perf_collector.stop()
                 execution_time = time.time() - start_time
                 perf_data = perf_collector.get_performance_data()
                 
-                # Add a performance metadata entry to the results
+                # Create performance metadata entry
                 performance_info = {
                     "performance": {
                         "execution_time_seconds": execution_time,
@@ -123,8 +129,16 @@ class AQLExecutor(ExecutorBase):
                         "query_length": len(query)
                     }
                 }
-                
-                # Add performance info as a special result
+            
+            # Format the results with or without deduplication
+            formatted_results = AQLExecutor.format_results(
+                raw_results, 
+                deduplicate=deduplicate,
+                similarity_threshold=similarity_threshold
+            )
+            
+            # Add performance info if available and not deduplicating
+            if performance_info and not deduplicate:
                 formatted_results.append(performance_info)
             
             return formatted_results
@@ -384,36 +398,72 @@ class AQLExecutor(ExecutorBase):
         return True
 
     @staticmethod
-    def format_results(raw_results: Any) -> List[Dict[str, Any]]:
+    def format_results(raw_results: Any, deduplicate: bool = False, similarity_threshold: float = 0.85) -> Union[List[Dict[str, Any]], FormattedResults]:
         """
         Format the raw AQL query results into a standardized format.
 
         Args:
             raw_results (Any): The raw results from the AQL query execution
+            deduplicate (bool): Whether to deduplicate similar results
+            similarity_threshold (float): Threshold for considering items as duplicates (when deduplicate=True)
 
         Returns:
-            List[Dict[str, Any]]: The formatted results
+            Union[List[Dict[str, Any]], FormattedResults]: 
+                - A list of formatted results (when deduplicate=False)
+                - A FormattedResults object with deduplicated results (when deduplicate=True)
         """
         formatted_results = []
+        
+        # Extract any performance information before processing
+        performance_info = None
+        if isinstance(raw_results, list):
+            for item in raw_results:
+                if isinstance(item, dict) and "performance" in item:
+                    performance_info = item
+                    break
         
         # Handle case when raw_results is already a list
         if isinstance(raw_results, list):
             for item in raw_results:
+                # Skip performance info for deduplication
+                if isinstance(item, dict) and "performance" in item:
+                    if not deduplicate:
+                        formatted_results.append(item)
+                    continue
+                    
                 if isinstance(item, dict):
                     formatted_results.append(item)
                 else:
                     formatted_results.append({"result": item})
-            return formatted_results
+        else:
+            # Handle case when raw_results is a cursor or other iterable
+            try:
+                for item in raw_results:
+                    if isinstance(item, dict) and "performance" in item:
+                        if not deduplicate:
+                            formatted_results.append(item)
+                        continue
+                        
+                    if isinstance(item, dict):
+                        formatted_results.append(item)
+                    else:
+                        formatted_results.append({"result": item})
+            except TypeError:
+                # If raw_results is not iterable, wrap it in a single result
+                formatted_results.append({"result": raw_results})
         
-        # Handle case when raw_results is a cursor or other iterable
-        try:
-            for item in raw_results:
-                if isinstance(item, dict):
-                    formatted_results.append(item)
-                else:
-                    formatted_results.append({"result": item})
-        except TypeError:
-            # If raw_results is not iterable, wrap it in a single result
-            formatted_results.append({"result": raw_results})
+        # Apply deduplication if requested
+        if deduplicate:
+            deduped_results = deduplicate_results(
+                formatted_results, 
+                similarity_threshold=similarity_threshold
+            )
+            
+            # Add performance info if available
+            if performance_info and "performance" in performance_info:
+                if "execution_time_seconds" in performance_info["performance"]:
+                    deduped_results.query_time = performance_info["performance"]["execution_time_seconds"]
+            
+            return deduped_results
             
         return formatted_results

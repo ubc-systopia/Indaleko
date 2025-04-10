@@ -25,7 +25,7 @@ import os
 import sys
 
 from icecream import ic
-from typing import Union, Any
+from typing import Union, Any, List, Dict
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -52,6 +52,7 @@ from query.query_processing.data_models.translator_input import TranslatorInput
 from query.result_analysis.facet_generator import FacetGenerator
 from query.result_analysis.metadata_analyzer import MetadataAnalyzer
 from query.result_analysis.result_ranker import ResultRanker
+from query.result_analysis.result_formatter import format_results_for_display, FormattedResults
 from query.search_execution.query_executor.aql_executor import AQLExecutor
 from query.utils.llm_connector.openai_connector import OpenAIConnector
 from utils.cli.base import IndalekoBaseCLI
@@ -152,6 +153,22 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 "--verbose",
                 action="store_true",
                 help="Show detailed execution plan information including all plan nodes"
+            )
+            parser.add_argument(
+                "--deduplicate",
+                action="store_true",
+                help="Enable deduplication of similar results using Jaro-Winkler similarity"
+            )
+            parser.add_argument(
+                "--similarity-threshold",
+                type=float,
+                default=0.85,
+                help="Threshold for considering items as duplicates when using --deduplicate (0.0-1.0, default: 0.85)"
+            )
+            parser.add_argument(
+                "--show-duplicates",
+                action="store_true",
+                help="Show duplicate items in results when using --deduplicate"
             )
             
             # Add command subparsers
@@ -311,22 +328,39 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 facets = []
                 ranked_results = [{"original": {"result": explain_results}}]
             else:
-                # Execute the query with performance metrics if requested
+                # Execute the query with performance metrics and deduplication if requested
                 collect_perf = hasattr(self.args, 'perf') and self.args.perf
+                deduplicate = hasattr(self.args, 'deduplicate') and self.args.deduplicate
+                similarity_threshold = self.args.similarity_threshold if hasattr(self.args, 'similarity_threshold') else 0.85
+                
                 raw_results = self.query_executor.execute(
                     translated_query.aql_query, 
                     self.db_config, 
-                    collect_performance=collect_perf
+                    collect_performance=collect_perf,
+                    deduplicate=deduplicate,
+                    similarity_threshold=similarity_threshold
                 )
                 
                 # If requested, display the execution plan
                 if hasattr(self.args, 'show_plan') and self.args.show_plan:
                     self.display_execution_plan(explain_results, translated_query.aql_query)
 
-                # Analyze and refine results
-                analyzed_results = self.metadata_analyzer.analyze(raw_results)
-                facets = self.facet_generator.generate(analyzed_results)
-                ranked_results = self.result_ranker.rank(analyzed_results)
+                # Handle results based on whether they're deduplicated or not
+                if isinstance(raw_results, FormattedResults):
+                    # For deduplicated results, we already have analyzed data
+                    analyzed_results = raw_results
+                    
+                    # Extract the primary results for facet generation
+                    primary_results = [group.primary for group in raw_results.result_groups]
+                    facets = self.facet_generator.generate(primary_results)
+                    
+                    # No need for further ranking since deduplication handles this
+                    ranked_results = raw_results
+                else:
+                    # For regular results, proceed with analysis and ranking
+                    analyzed_results = self.metadata_analyzer.analyze(raw_results)
+                    facets = self.facet_generator.generate(analyzed_results)
+                    ranked_results = self.result_ranker.rank(analyzed_results)
 
             # Display results to user
             self.display_results(ranked_results, facets)
@@ -419,18 +453,38 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         """Get a query from the user."""
         return input(self.prompt).strip()
 
-    def display_results(self, results: list[dict[str, Any]], facets: list[str]) -> None:
+    def display_results(self, results: Union[list[dict[str, Any]], FormattedResults], facets: list[str]) -> None:
         """
         Displays the search results and suggested facets to the user.
 
         Args:
-            results (List[Dict[str, Any]]): The ranked search results
+            results: The search results, either as a list of ranked results or a FormattedResults object
             facets (List[str]): Suggested facets for query refinement
         """
         if not results:
             print("No results found.")
             return
 
+        # Handle deduplicated results (FormattedResults object)
+        if isinstance(results, FormattedResults):
+            # Display formatted results using the formatter
+            include_duplicates = hasattr(self.args, 'show_duplicates') and self.args.show_duplicates
+            formatted_display = format_results_for_display(
+                results,
+                include_duplicates=include_duplicates,
+                max_groups=10,
+                include_summary=True
+            )
+            print(formatted_display)
+            
+            # Display facets after results if available
+            if facets:
+                print("\nSuggested refinements:")
+                for facet in facets:
+                    print(f"- {facet}")
+            return
+
+        # Handle regular results (list of dictionaries)
         # Check if this is an EXPLAIN result
         if len(results) == 1 and isinstance(results[0]["original"]["result"], dict) \
            and "plan" in results[0]["original"]["result"]:
@@ -460,7 +514,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                     ic(f"Result {i}: {doc}")
 
         if facets:
-            print("Suggested refinements:")
+            print("\nSuggested refinements:")
             for facet in facets:
                 print(f"- {facet}")
                 
@@ -574,6 +628,14 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 def main():
     """A CLI based query tool for Indaleko."""
     ic("Starting Indaleko Query CLI")
+    
+    print("\nIndaleko Query CLI")
+    print("=================")
+    print("Type 'exit' or 'quit' to exit the program.")
+    print("\nTIP: Use --deduplicate flag for better results using Jaro-Winkler similarity")
+    print("     Example: python -m query.cli --deduplicate --show-duplicates")
+    print("     This will group similar results and reduce information overload.\n")
+    
     IndalekoQueryCLI().run()
     print("Thank you for using Indaleko Query CLI")
     print("Have a lovely day!")
