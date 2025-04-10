@@ -53,6 +53,7 @@ from query.result_analysis.facet_generator import FacetGenerator
 from query.result_analysis.metadata_analyzer import MetadataAnalyzer
 from query.result_analysis.result_ranker import ResultRanker
 from query.result_analysis.result_formatter import format_results_for_display, FormattedResults
+from query.result_analysis.data_models.facet_data_model import DynamicFacets, Facet
 from query.search_execution.query_executor.aql_executor import AQLExecutor
 from query.utils.llm_connector.openai_connector import OpenAIConnector
 from utils.cli.base import IndalekoBaseCLI
@@ -104,9 +105,18 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         self.query_history = QueryHistory()
         self.query_executor = AQLExecutor()
         self.metadata_analyzer = MetadataAnalyzer()
-        self.facet_generator = FacetGenerator()
-        self.result_ranker = ResultRanker()
         self.prompt = "Indaleko Search> "
+        
+        # Initialize facet generator with CLI args
+        conversational = hasattr(self.args, 'conversational') and self.args.conversational
+        self.facet_generator = FacetGenerator(
+            max_facets=5,
+            min_facet_coverage=0.2,
+            min_value_count=2,
+            conversational=conversational
+        )
+        
+        self.result_ranker = ResultRanker()
         self.schema = self.build_schema_table()
 
     class query_handler_mixin(IndalekoBaseCLI.default_handler_mixin):
@@ -169,6 +179,16 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 "--show-duplicates",
                 action="store_true",
                 help="Show duplicate items in results when using --deduplicate"
+            )
+            parser.add_argument(
+                "--dynamic-facets",
+                action="store_true",
+                help="Enable enhanced dynamic facets for result exploration"
+            )
+            parser.add_argument(
+                "--conversational",
+                action="store_true",
+                help="Enable conversational suggestions for search refinement"
             )
             
             # Add command subparsers
@@ -453,13 +473,17 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         """Get a query from the user."""
         return input(self.prompt).strip()
 
-    def display_results(self, results: Union[list[dict[str, Any]], FormattedResults], facets: list[str]) -> None:
+    def display_results(
+        self, 
+        results: Union[list[dict[str, Any]], FormattedResults], 
+        facets: Union[list[str], DynamicFacets]
+    ) -> None:
         """
         Displays the search results and suggested facets to the user.
 
         Args:
             results: The search results, either as a list of ranked results or a FormattedResults object
-            facets (List[str]): Suggested facets for query refinement
+            facets: Facet suggestions, either as a list of strings or a DynamicFacets object
         """
         if not results:
             print("No results found.")
@@ -477,11 +501,8 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             )
             print(formatted_display)
             
-            # Display facets after results if available
-            if facets:
-                print("\nSuggested refinements:")
-                for facet in facets:
-                    print(f"- {facet}")
+            # Display facets after results
+            self._display_facets(facets)
             return
 
         # Handle regular results (list of dictionaries)
@@ -513,7 +534,86 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 else:
                     ic(f"Result {i}: {doc}")
 
-        if facets:
+        # Display facets after results
+        self._display_facets(facets)
+        
+    def _display_facets(self, facets: Union[list[str], DynamicFacets]) -> None:
+        """
+        Display facets to the user.
+        
+        Args:
+            facets: Either a list of string facets or a DynamicFacets object
+        """
+        # Handle dynamic facets
+        if isinstance(facets, DynamicFacets):
+            # Check if dynamic facets are enabled
+            use_dynamic = hasattr(self.args, 'dynamic_facets') and self.args.dynamic_facets
+            conversational = hasattr(self.args, 'conversational') and self.args.conversational
+            
+            if use_dynamic:
+                # Display enhanced facets
+                print("\n=== Dynamic Facet Explorer ===")
+                
+                # Display statistics
+                if facets.facet_statistics:
+                    print("\nResult Statistics:")
+                    for key, value in sorted(facets.facet_statistics.items()):
+                        # Format the key for display
+                        display_key = key.replace('_', ' ').capitalize()
+                        
+                        # Format values appropriately
+                        if isinstance(value, int) and key.endswith('size'):
+                            # Format file sizes
+                            if value >= 1024 * 1024 * 1024:
+                                display_value = f"{value / (1024 * 1024 * 1024):.2f} GB"
+                            elif value >= 1024 * 1024:
+                                display_value = f"{value / (1024 * 1024):.2f} MB"
+                            elif value >= 1024:
+                                display_value = f"{value / 1024:.2f} KB"
+                            else:
+                                display_value = f"{value} bytes"
+                        elif isinstance(value, float) and key.endswith('coverage'):
+                            # Format coverage percentages
+                            display_value = f"{value * 100:.1f}%"
+                        else:
+                            display_value = str(value)
+                            
+                        print(f"- {display_key}: {display_value}")
+                
+                # Display facets
+                for facet in facets.facets:
+                    print(f"\n{facet.name}:")
+                    
+                    # Print facet metadata
+                    coverage_percent = facet.coverage * 100
+                    print(f"Coverage: {coverage_percent:.1f}% of results")
+                    
+                    # Print facet values
+                    for i, value in enumerate(facet.values[:5], 1):
+                        print(f"  {i}. {value.value} ({value.count} results)")
+                        print(f"     Refine with: {value.query_refinement}")
+                        
+                    # If there are more values, indicate this
+                    if len(facet.values) > 5:
+                        remaining = len(facet.values) - 5
+                        print(f"  ... and {remaining} more values")
+                
+                # Display conversational hints if enabled
+                if conversational and facets.conversational_hints:
+                    print("\nSuggestions:")
+                    for hint in facets.conversational_hints:
+                        print(f"- {hint}")
+                
+                print("\n" + "=" * 30)
+            else:
+                # Just display suggestions in simple format
+                if facets.suggestions:
+                    print("\nSuggested refinements:")
+                    for suggestion in facets.suggestions:
+                        print(f"- {suggestion}")
+        
+        # Handle legacy string facets
+        elif facets:
             print("\nSuggested refinements:")
             for facet in facets:
                 print(f"- {facet}")
