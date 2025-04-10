@@ -56,6 +56,7 @@ from query.result_analysis.result_formatter import format_results_for_display, F
 from query.result_analysis.data_models.facet_data_model import DynamicFacets, Facet
 from query.result_analysis.query_refiner import QueryRefiner
 from query.search_execution.query_executor.aql_executor import AQLExecutor
+from query.search_execution.query_visualizer import PlanVisualizer
 from query.utils.llm_connector.openai_connector import OpenAIConnector
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
@@ -119,6 +120,10 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         
         # Initialize query refiner for interactive facet refinement
         self.query_refiner = QueryRefiner()
+        
+        # Initialize query plan visualizer
+        colorize = not (hasattr(self.args, 'no_color') and self.args.no_color)
+        self.plan_visualizer = PlanVisualizer(colorize=colorize)
         
         self.result_ranker = ResultRanker()
         self.schema = self.build_schema_table()
@@ -198,6 +203,11 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 "--interactive",
                 action="store_true",
                 help="Enable interactive facet refinement mode"
+            )
+            parser.add_argument(
+                "--no-color",
+                action="store_true",
+                help="Disable colorized output for query plans and other displays"
             )
             
             # Add command subparsers
@@ -747,86 +757,19 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             plan_data (Dict): The execution plan from ArangoDB
             query (str): The original AQL query
         """
-        print("\n=== QUERY EXECUTION PLAN ===")
-        print(f"Query: {query}")
-        
-        # Display estimated cost
-        main_plan = plan_data.get("plan", {})
-        print(f"\nEstimated Cost: {main_plan.get('estimatedCost', 'N/A')}")
-        
-        # Display collections used
-        collections = main_plan.get("collections", [])
-        if collections:
-            print("\nCollections:")
-            for collection in collections:
-                print(f"- {collection}")
-        
-        # Display analysis
-        analysis = plan_data.get("analysis", {})
-        if analysis:
-            print("\nAnalysis:")
+        # Add the query to the plan data if not present
+        if not "query" in plan_data:
+            plan_data["query"] = query
             
-            # Display summary
-            summary = analysis.get("summary", {})
-            if summary:
-                print("\n  Summary:")
-                for key, value in summary.items():
-                    if key == "indexes_used" and value:
-                        print("  - Indexes Used:")
-                        for index in value:
-                            print(f"    * {index}")
-                    else:
-                        print(f"  - {key.replace('_', ' ').title()}: {value}")
-            
-            # Display warnings
-            warnings = analysis.get("warnings", [])
-            if warnings:
-                print("\n  Warnings:")
-                for warning in warnings:
-                    print(f"  - {warning}")
-            
-            # Display recommendations
-            recommendations = analysis.get("recommendations", [])
-            if recommendations:
-                print("\n  Recommendations:")
-                for recommendation in recommendations:
-                    print(f"  - {recommendation}")
+        # Use our enhanced plan visualizer
+        verbose = hasattr(self.args, 'verbose') and self.args.verbose
         
-        # Display plan nodes if requested
-        if hasattr(self.args, 'verbose') and self.args.verbose:
-            print("\nExecution Plan Nodes:")
-            nodes = main_plan.get("nodes", [])
-            for node in nodes:
-                print(f"\n  Node {node.get('id')}:")
-                print(f"  - Type: {node.get('type')}")
-                if "collection" in node:
-                    print(f"  - Collection: {node.get('collection')}")
-                if "indexes" in node and node["indexes"]:
-                    for index in node["indexes"]:
-                        print(f"  - Index: {index.get('name')} ({index.get('type')})")
-                print(f"  - Est. Cost: {node.get('estimatedCost', 'N/A')}")
+        # Parse the plan and visualize it as text
+        visualization = self.plan_visualizer.visualize_text(plan_data, verbose=verbose)
         
-        # Display cacheable info
-        print(f"\nCacheable: {plan_data.get('cacheable', False)}")
-        
-        # Show stats
-        stats = plan_data.get("stats", {})
-        if stats:
-            print("\nOptimization Stats:")
-            for key, value in stats.items():
-                print(f"- {key.replace('rules', 'Rules ').title()}: {value}")
-        
-        # Alternative plans
-        if "plans" in plan_data and plan_data["plans"]:
-            alt_plans = plan_data["plans"]
-            print(f"\nAlternative Plans: {len(alt_plans)} found")
-            for i, alt_plan in enumerate(alt_plans[:3], 1):  # Show up to 3 alternatives
-                print(f"\nAlternative Plan {i}:")
-                print(f"- Est. Cost: {alt_plan.get('estimatedCost', 'N/A')}")
-                print(f"- Rules: {', '.join(alt_plan.get('rules', []))[:80]}..." 
-                      if len(', '.join(alt_plan.get('rules', []))) > 80 
-                      else ', '.join(alt_plan.get('rules', [])))
-        
+        # Print the visualization
+        print("\n=== QUERY EXECUTION PLAN ===\n")
+        print(visualization)
         print("\n===============================")
 
     def continue_session(self) -> bool:
