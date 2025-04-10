@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import datetime
+from enum import Enum
 from typing import Dict, List, Optional, Any, Union
 from pydantic import BaseModel, Field
 
@@ -83,6 +84,38 @@ class QueryPerformance(BaseModel):
     io: Dict[str, int] = Field(default_factory=dict, description="I/O metrics")
     threads: int = Field(0, description="Number of threads used")
     query_length: int = Field(0, description="Length of the query string")
+
+
+class QueryHintSeverity(str, Enum):
+    """
+    Severity levels for query performance hints.
+    """
+    INFO = "info"                # Informational hint
+    WARNING = "warning"          # Warning about potential issues
+    ERROR = "error"              # Error condition
+    CRITICAL = "critical"        # Critical issue
+
+
+class QueryPerformanceImpact(str, Enum):
+    """
+    Performance impact levels for query hints.
+    """
+    POSITIVE = "positive"        # Positive impact on performance
+    NEUTRAL = "neutral"          # No significant impact
+    NEGATIVE = "negative"        # Negative impact on performance
+    CRITICAL = "critical"        # Critical performance issue
+
+
+class QueryPerformanceHint(BaseModel):
+    """
+    Performance hint for query optimization.
+    """
+    hint_type: str = Field(..., description="Type of performance hint")
+    description: str = Field(..., description="Description of the performance hint")
+    severity: QueryHintSeverity = Field(..., description="Severity of the hint")
+    affected_component: str = Field(..., description="Component affected by the hint")
+    performance_impact: QueryPerformanceImpact = Field(..., description="Impact on query performance")
+    recommendation: Optional[str] = Field(None, description="Recommendation for improvement")
 
 
 class QueryExecutionPlan(BaseModel):
