@@ -8,6 +8,9 @@
 - Build package: `python -m build`
 - Test query tools: `python query/tools/test_tools.py --query "Your query here" --debug`
 - Test EXPLAIN: `python query/test_explain.py --query "Your query here" --debug`
+- Test enhanced NL: `python query/test_enhanced_nl.py --query "Your query here" --debug`
+- Test relationships: `python query/test_relationship_query.py --query "Show files I shared with Bob last week" --debug`
+- Run CLI with enhanced NL: `python -m query.cli --enhanced-nl --context-aware --deduplicate --dynamic-facets`
 
 ## Style Guidelines
 - Imports: standard library → third-party → local (with blank lines between)
@@ -77,8 +80,8 @@ IndalekoBaseModel provides several key methods:
   - tiktoken>=0.5.0
   - regex>=2023.0.0
 
-## Query Tooling Framework and Assistant Integration
-Indaleko uses a modular tooling framework for query processing, with OpenAI Assistant API integration:
+## Query Capabilities
+Indaleko features an extensive modular query system with natural language understanding, faceted search, relationship queries, and more:
 
 ### Core Tool Components
 1. **BaseTool**: Abstract base class for all tools, with:
@@ -182,6 +185,128 @@ For testing, use the test script:
 python query/assistants/test_assistant.py --model gpt-4o-mini --debug
 ```
 
+## Advanced Query Features
+
+### Enhanced Natural Language Processing
+Indaleko includes advanced natural language understanding for queries:
+
+1. **EnhancedNLParser**: Extends the base NLParser with:
+   - More sophisticated intent classification
+   - Entity resolution and linking
+   - Constraint extraction with rich type system
+   - Temporal and spatial understanding
+   - Context awareness across multiple queries
+   - Integration with dynamic facets
+
+2. **EnhancedAQLTranslator**: Improved query translation with:
+   - Direct handling of enhanced query understanding
+   - More sophisticated constraint handling
+   - Support for complex temporal and spatial queries
+   - Performance optimization hints
+   - Improved bind variable handling
+
+3. **Usage**:
+```python
+from query.query_processing.enhanced_nl_parser import EnhancedNLParser
+from query.query_processing.query_translator.enhanced_aql_translator import EnhancedAQLTranslator
+
+# Initialize components
+enhanced_parser = EnhancedNLParser(llm_connector, collections_metadata)
+enhanced_translator = EnhancedAQLTranslator(collections_metadata)
+
+# Parse query with enhanced understanding
+query_understanding = enhanced_parser.parse_enhanced(
+    query="Find PDF documents I modified last week",
+    facet_context=facet_data,  # Optional: previous facet data for context
+    include_history=True  # Optional: use query history for context
+)
+
+# Create translator input
+query_data = TranslatorInput(
+    Query=query_understanding,
+    Connector=llm_connector,
+)
+
+# Translate to AQL with enhanced capabilities
+translated_query = enhanced_translator.translate_enhanced(
+    query_understanding, query_data
+)
+```
+
+### Dynamic Faceted Search
+Indaleko provides rich faceted search capabilities:
+
+1. **FacetGenerator**: Analyzes search results to produce:
+   - Dynamic facets based on result attributes
+   - Statistical distribution analysis of values
+   - Relevance ranking of potential facets
+   - Conversational suggestions for refinement
+
+2. **QueryRefiner**: Manages interactive query refinement:
+   - Handles state for active refinements
+   - Applies facet selections to queries
+   - Provides command-based interface (!refine, !remove, etc.)
+   - Maintains refinement history
+
+3. **Usage Example**:
+```python
+from query.result_analysis.facet_generator import FacetGenerator
+from query.result_analysis.query_refiner import QueryRefiner
+
+# Initialize components
+facet_generator = FacetGenerator(
+    max_facets=5,
+    min_facet_coverage=0.2,
+    conversational=True
+)
+query_refiner = QueryRefiner()
+
+# Generate facets from results
+facets = facet_generator.generate(query_results)
+
+# Apply a facet refinement
+refined_query, new_state = query_refiner.apply_refinement(
+    facet_name="file_type",
+    facet_value="PDF"
+)
+```
+
+### Relationship Queries
+Indaleko supports relationship-based queries that focus on connections between entities:
+
+1. **RelationshipParser**: Extracts relationship information from queries:
+   - Identifies relationship types (created, modified, shared_with, etc.)
+   - Extracts source and target entities
+   - Determines relationship direction
+   - Supports time constraints on relationships
+
+2. **Relationship Types**:
+   - User-File: created, modified, viewed, owns
+   - File-File: derived_from, contains, same_folder, related_to
+   - User-User: shared_with, collaborated_with, recommended_to
+
+3. **Usage Example**:
+```python
+from query.query_processing.relationship_parser import RelationshipParser
+from query.query_processing.data_models.relationship_query_model import RelationshipType
+
+# Initialize parser
+relationship_parser = RelationshipParser(
+    llm_connector=llm_connector,
+    collections_metadata=collections_metadata
+)
+
+# Parse a relationship query
+relationship_query = relationship_parser.parse_relationship_query(
+    "Show files I shared with Bob last week"
+)
+
+# Access the relationship information
+relationship_type = relationship_query.relationship_type  # e.g., SHARED_WITH
+source_entity = relationship_query.source_entity  # e.g., current user
+target_entity = relationship_query.target_entity  # e.g., Bob
+```
+
 ## ArangoDB Query Performance
 To optimize ArangoDB queries, use the EXPLAIN functionality:
 
@@ -242,10 +367,27 @@ explain_result = db.aql.explain(
 }
 ```
 
-### Using the CLI with EXPLAIN
-The query CLI supports the `--show-plan` flag to display execution plans:
+### Using the CLI with Advanced Features
+The query CLI supports various flags for enhanced functionality:
+
 ```bash
+# Show execution plan
 python query/cli.py --query "Show me documents about Indaleko" --show-plan
+
+# Use enhanced natural language understanding
+python query/cli.py --enhanced-nl --query "Find PDF documents I modified last week that contain budget information"
+
+# Enable context-aware queries that remember previous interactions
+python query/cli.py --enhanced-nl --context-aware
+
+# Use dynamic facets for interactive result exploration
+python query/cli.py --dynamic-facets --interactive
+
+# Enable deduplication with Jaro-Winkler similarity
+python query/cli.py --deduplicate --similarity-threshold 0.85
+
+# Combine multiple features
+python query/cli.py --enhanced-nl --context-aware --deduplicate --dynamic-facets --conversational
 ```
 
 ### Programmatic EXPLAIN Usage
