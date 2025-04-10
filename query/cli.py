@@ -54,6 +54,7 @@ from query.result_analysis.metadata_analyzer import MetadataAnalyzer
 from query.result_analysis.result_ranker import ResultRanker
 from query.result_analysis.result_formatter import format_results_for_display, FormattedResults
 from query.result_analysis.data_models.facet_data_model import DynamicFacets, Facet
+from query.result_analysis.query_refiner import QueryRefiner
 from query.search_execution.query_executor.aql_executor import AQLExecutor
 from query.utils.llm_connector.openai_connector import OpenAIConnector
 from utils.cli.base import IndalekoBaseCLI
@@ -115,6 +116,9 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             min_value_count=2,
             conversational=conversational
         )
+        
+        # Initialize query refiner for interactive facet refinement
+        self.query_refiner = QueryRefiner()
         
         self.result_ranker = ResultRanker()
         self.schema = self.build_schema_table()
@@ -190,6 +194,11 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 action="store_true",
                 help="Enable conversational suggestions for search refinement"
             )
+            parser.add_argument(
+                "--interactive",
+                action="store_true",
+                help="Enable interactive facet refinement mode"
+            )
             
             # Add command subparsers
             subparsers = parser.add_subparsers(
@@ -252,6 +261,12 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 
             if user_query.lower() in ["exit", "quit", "bye", "leave"]:
                 return
+                
+            # Special processing for interactive mode
+            if user_query == "!status" or user_query == "!help":
+                # Reuse the last query if this is just a status check or help request
+                if hasattr(self, 'current_refined_query'):
+                    user_query = self.current_refined_query
 
             # Log the query
             # self.logging_service.log_query(user_query)
@@ -471,7 +486,92 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 
     def get_query(self) -> str:
         """Get a query from the user."""
-        return input(self.prompt).strip()
+        query = input(self.prompt).strip()
+        
+        # Special commands for interactive refinement
+        if query.startswith("!refine "):
+            if hasattr(self, 'last_facet_options') and self.last_facet_options:
+                # Parse the refinement selection
+                try:
+                    selection = query.split(" ", 1)[1].strip()
+                    if selection in self.last_facet_options:
+                        option = self.last_facet_options[selection]
+                        # Apply the refinement
+                        if hasattr(self, 'original_query'):
+                            refined_query, _ = self.query_refiner.apply_refinement(
+                                option["facet"], 
+                                option["value"]
+                            )
+                            print(f"Refined query: {refined_query}")
+                            return refined_query
+                except Exception as e:
+                    print(f"Error applying refinement: {e}")
+            
+            # If we couldn't apply refinement, return the original query
+            if hasattr(self, 'current_refined_query'):
+                return self.current_refined_query
+                
+        # Special command to clear refinements
+        if query == "!clear":
+            if hasattr(self, 'original_query') and self.query_refiner.current_state:
+                original, _ = self.query_refiner.clear_refinements()
+                print(f"Cleared all refinements. Back to: {original}")
+                self.current_refined_query = original
+                return original
+                
+        # Special command to show active refinements
+        if query == "!status":
+            if self.query_refiner.current_state:
+                print(self.query_refiner.format_active_refinements())
+                if hasattr(self, 'current_refined_query'):
+                    return "!status"  # Special marker to reuse last query
+                    
+        # Special command to remove a refinement
+        if query.startswith("!remove "):
+            if self.query_refiner.current_state:
+                try:
+                    index = int(query.split(" ", 1)[1].strip())
+                    refinement = self.query_refiner.get_active_refinement_by_index(index)
+                    if refinement:
+                        refined_query, _ = self.query_refiner.remove_refinement(
+                            refinement.facet_name, 
+                            refinement.value
+                        )
+                        print(f"Removed refinement: {refinement.facet_name}: {refinement.value}")
+                        print(f"Refined query: {refined_query}")
+                        self.current_refined_query = refined_query
+                        return refined_query
+                except Exception as e:
+                    print(f"Error removing refinement: {e}")
+                    
+        # Special command to show help for interactive mode
+        if query == "!help":
+            self._print_interactive_help()
+            if hasattr(self, 'current_refined_query'):
+                return "!help"  # Special marker to reuse last query
+        
+        # Store the original query for refinement
+        if not query.startswith("!"):
+            self.original_query = query
+            self.current_refined_query = query
+            # Initialize refinement state with this query
+            self.query_refiner.initialize_state(query)
+            
+        return query
+        
+    def _print_interactive_help(self):
+        """Print help information for interactive refinement mode."""
+        print("\n=== Interactive Refinement Help ===")
+        print("Commands:")
+        print("  !refine <number> - Apply the numbered facet refinement")
+        print("  !remove <number> - Remove the numbered active refinement")
+        print("  !clear           - Clear all active refinements")
+        print("  !status          - Show currently active refinements")
+        print("  !help            - Show this help message")
+        print("")
+        print("Example: !refine 2")
+        print("         !remove 1")
+        print("==================================\n")
 
     def display_results(
         self, 
@@ -546,11 +646,20 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         """
         # Handle dynamic facets
         if isinstance(facets, DynamicFacets):
-            # Check if dynamic facets are enabled
+            # Check if dynamic facets or interactive mode are enabled
             use_dynamic = hasattr(self.args, 'dynamic_facets') and self.args.dynamic_facets
             conversational = hasattr(self.args, 'conversational') and self.args.conversational
+            interactive = hasattr(self.args, 'interactive') and self.args.interactive
             
-            if use_dynamic:
+            # Generate facet options for interactive mode
+            if interactive:
+                self.last_facet_options = self.query_refiner.get_facet_options(facets)
+            
+            # Show active refinements if there are any
+            if interactive and self.query_refiner.current_state and self.query_refiner.current_state.active_refinements:
+                print("\n" + self.query_refiner.format_active_refinements())
+            
+            if use_dynamic or interactive:
                 # Display enhanced facets
                 print("\n=== Dynamic Facet Explorer ===")
                 
@@ -580,7 +689,8 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                             
                         print(f"- {display_key}: {display_value}")
                 
-                # Display facets
+                # Display facets with interactive options if enabled
+                option_count = 1
                 for facet in facets.facets:
                     print(f"\n{facet.name}:")
                     
@@ -590,8 +700,14 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                     
                     # Print facet values
                     for i, value in enumerate(facet.values[:5], 1):
-                        print(f"  {i}. {value.value} ({value.count} results)")
-                        print(f"     Refine with: {value.query_refinement}")
+                        if interactive:
+                            # Show with numbered options for interactive mode
+                            print(f"  [{option_count}] {value.value} ({value.count} results)")
+                            option_count += 1
+                        else:
+                            # Show regular format for non-interactive mode
+                            print(f"  {i}. {value.value} ({value.count} results)")
+                            print(f"     Refine with: {value.query_refinement}")
                         
                     # If there are more values, indicate this
                     if len(facet.values) > 5:
@@ -603,6 +719,11 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                     print("\nSuggestions:")
                     for hint in facets.conversational_hints:
                         print(f"- {hint}")
+                
+                # Display interactive mode help if enabled
+                if interactive:
+                    print("\nTo refine results, type: !refine <number>")
+                    print("For more commands: !help")
                 
                 print("\n" + "=" * 30)
             else:
