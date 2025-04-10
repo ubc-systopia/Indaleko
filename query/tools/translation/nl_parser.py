@@ -139,6 +139,26 @@ class NLParserTool(BaseTool):
             collections_metadata=self._collections_metadata
         )
     
+    def _ensure_valid_alternatives_considered(self, category_data):
+        """
+        Ensure that alternatives_considered is valid for each category.
+        
+        Args:
+            category_data: The category data to validate and fix.
+            
+        Returns:
+            The fixed category data.
+        """
+        # If alternatives_considered is missing or not a list, add an empty list
+        if not hasattr(category_data, "alternatives_considered") or category_data.alternatives_considered is None:
+            category_data.alternatives_considered = []
+        
+        # If alternatives_considered is empty, add a placeholder
+        if len(category_data.alternatives_considered) == 0:
+            category_data.alternatives_considered = [{"note": "No alternatives were considered"}]
+            
+        return category_data
+    
     def _get_api_key(self, api_key_file: str) -> str:
         """
         Get the API key from the config file.
@@ -213,9 +233,16 @@ class NLParserTool(BaseTool):
             categories = []
             if hasattr(parsed_result.Categories, "category_map"):
                 for category in parsed_result.Categories.category_map:
+                    # Ensure valid alternatives_considered
+                    category = self._ensure_valid_alternatives_considered(category)
+                    
+                    # Add category to list
                     categories.append({
                         "name": category.collection,
-                        "relevance": category.relevance
+                        "category": str(category.category),  # Convert enum to string
+                        "confidence": category.confidence,
+                        "rationale": category.rationale,
+                        "alternatives_considered": category.alternatives_considered
                     })
             
             # Return the result

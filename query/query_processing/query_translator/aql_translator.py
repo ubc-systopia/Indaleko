@@ -92,6 +92,8 @@ class AQLTranslator(TranslatorBase):
             confidence=response_data["confidence"],
             observations=response_data.get("observations", None),
             performance_info=performance_data,
+            bind_vars=response_data.get("bind_vars", {}),
+            additional_notes=response_data.get("additional_notes", None),
         )
 
     def validate_query(self, query: str, explain=False) -> bool:
@@ -330,6 +332,11 @@ class AQLTranslator(TranslatorBase):
         Constructs a structured prompt for the LLM to generate an AQL query.
         """
         user_prompt = input_data.Query.original_query
+        # Get available collections directly from ArangoDB
+        available_collections = []
+        for collection_name in self.collection_data:
+            available_collections.append(collection_name)
+        
         system_prompt = f"""
         You are **Archivist**, an expert at working with Indaleko to find pertinent
         digital objects (e.g., files).
@@ -338,12 +345,26 @@ class AQLTranslator(TranslatorBase):
         Your task is to generate an optimized AQL query
         that retrieves matching information based on the user query and selected
         metadata attributes.
+        
         In forming this query, you will need to consider the schema of the database,
-        including the relevant collections
-        and their fields, as well as the needs of the user. Please take sufficient time to
-        return a query that is both efficient and accurate, as our primary goal is to
-        minimize the time our user spends looking for the specific information that they need
-        and to also minimize our user's abandonment rate.
+        including the relevant collections and their fields, as well as the needs of the user.
+        
+        IMPORTANT: Use ONLY the following available collections in your query:
+        {available_collections}
+        
+        The most important collections are:
+        - Objects: Contains file and directory information
+        - SemanticData: Contains semantic information extracted from objects
+        - ActivityContext: Contains activity information related to objects
+        - NamedEntities: Contains named entities referenced in objects
+        
+        Your query MUST use one of these existing collections or the query will fail.
+        DO NOT use collections that don't exist in the database like "documents" or "files".
+        
+        Please take sufficient time to return a query that is both efficient and accurate, 
+        as our primary goal is to minimize the time our user spends looking for the specific 
+        information that they need and to also minimize our user's abandonment rate.
+        
         The structured data that follows provides information about the database.
         {input_data}
         """

@@ -196,18 +196,60 @@ class AQLTranslatorTool(BaseTool):
             # Convert raw structured query to StructuredQuery object
             original_query = structured_query_data.get("original_query", "")
             intent = structured_query_data.get("intent", "search")
-            entities = structured_query_data.get("entities", [])
+            entities = structured_query_data.get("entities", {})
             
             # Get collection metadata and indices if available
             db_info = structured_query_data.get("db_info", [])
             db_indices = structured_query_data.get("db_indices", {})
             
+            # Process entities to ensure they are in the correct format
+            # If entities is already a NamedEntityCollection object, use it directly
+            if hasattr(entities, "entities") and isinstance(entities.entities, list):
+                # It's already a NamedEntityCollection or similar object
+                processed_entities = entities
+            else:
+                # Convert from dict or list format
+                from data_models.named_entity import NamedEntityCollection, IndalekoNamedEntityDataModel, IndalekoNamedEntityType
+                
+                # If it's a dict with an 'entities' key, extract the entities
+                if isinstance(entities, dict) and "entities" in entities:
+                    entity_list = entities["entities"]
+                elif isinstance(entities, list):
+                    entity_list = entities
+                else:
+                    entity_list = []
+                
+                # Process each entity to ensure it has required fields
+                processed_entity_list = []
+                for entity in entity_list:
+                    # If it's already an IndalekoNamedEntityDataModel, use it directly
+                    if hasattr(entity, "name") and hasattr(entity, "category"):
+                        processed_entity_list.append(entity)
+                    else:
+                        # Otherwise, convert from dict
+                        if isinstance(entity, dict) and "name" in entity:
+                            # Try to convert entity type to valid enum value
+                            entity_type = entity.get("type", "item")
+                            try:
+                                entity_category = IndalekoNamedEntityType(entity_type.lower())
+                            except ValueError:
+                                entity_category = IndalekoNamedEntityType.item
+                                
+                            processed_entity_list.append(IndalekoNamedEntityDataModel(
+                                name=entity["name"],
+                                category=entity_category,
+                                description=entity.get("value", entity["name"])
+                            ))
+                
+                # Create a NamedEntityCollection
+                processed_entities = NamedEntityCollection(entities=processed_entity_list)
+            
             structured_query = StructuredQuery(
                 original_query=original_query,
                 intent=intent,
-                entities=entities,
-                db_info=db_info,
-                db_indices=db_indices
+                entities=processed_entities,
+                db_info=db_info if db_info else [],  # Ensure db_info is a list
+                db_indices=db_indices if db_indices else {}  # Ensure db_indices is a dict
             )
             
             # Create translator input

@@ -19,12 +19,21 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 import sys
 
-from pydantic import BaseModel
-from typing import Union, Any
+from pydantic import Field, validator
+from typing import Any, Optional
+
+if os.environ.get("INDALEKO_ROOT") is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
+        current_path = os.path.dirname(current_path)
+    os.environ["INDALEKO_ROOT"] = current_path
+    sys.path.append(current_path)
+
+from data_models.base import IndalekoBaseModel
 
 # from icecream import ic
 
@@ -44,7 +53,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: enable=wrong-import-position
 
 
-class TranslatorOutput(BaseModel):
+class TranslatorOutput(IndalekoBaseModel):
     """
     Define the output data model for the translator.
     """
@@ -52,18 +61,26 @@ class TranslatorOutput(BaseModel):
     aql_query: str
     explanation: str
     confidence: float
-    observations: Union[str, None] = None
+    observations: Optional[str] = None
     performance_info: dict[str, Any] = {}
-    additional_notes: Union[str, None] = None
-    timestamp: datetime = datetime.now()
+    additional_notes: Optional[str] = None
+    bind_vars: dict[str, Any] = {}
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    
+    @validator('timestamp')
+    def ensure_timezone(cls, v):
+        """Ensure the timestamp has a timezone."""
+        if v.tzinfo is None:
+            return v.replace(tzinfo=timezone.utc)
+        return v
 
     class Config:
         arbitrary_types_allowed = True
 
         json_schema_extra = {
             "example": {
-                "aql_query": "FOR doc IN collection FILTER doc.attribute == 'value' RETURN doc",
-                "explanation": "The query filters documents in the collection where the attribute equals 'value'.",
+                "aql_query": "FOR doc IN collection FILTER doc.attribute == @value RETURN doc",
+                "explanation": "The query filters documents in the collection where the attribute equals the provided value.",
                 "confidence": 0.95,
                 "observations": "Consider indexing the attribute for faster query performance.",
                 "performance_info": {
@@ -71,6 +88,9 @@ class TranslatorOutput(BaseModel):
                     "token_budget": 150,
                     "input_tokens": 75,
                     "output_tokens": 50,
+                },
+                "bind_vars": {
+                    "value": "example"
                 },
                 "additional_notes": "Have a nice day!",
                 "timestamp": "2025-02-17T12:34:56.789Z",
