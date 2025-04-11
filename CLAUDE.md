@@ -79,6 +79,230 @@ IndalekoBaseModel provides several key methods:
   - openai>=1.0.0
   - tiktoken>=0.5.0
   - regex>=2023.0.0
+- Required packages for NTFS activity monitoring:
+  - pywin32>=305.0
+  - ngrok>=5.0.0 (for Outlook add-in integration)
+
+## Collector/Recorder Pattern
+
+Indaleko uses a consistent collector/recorder pattern for data gathering and storage:
+
+### Collector Base Classes
+
+```python
+from activity.collectors.base import CollectorBase
+from semantic.collectors.semantic_collector import SemanticCollectorBase
+from storage.collectors.base import StorageCollectorBase
+```
+
+Each collector must implement these abstract methods:
+- `get_collector_characteristics()`: Return metadata about the collector's capabilities
+- `get_collector_name()`: Return the collector's name
+- `get_provider_id()`: Return the collector's UUID
+- `retrieve_data()`: Retrieve specific data by ID
+- `get_cursor()`: Get a position cursor for the data
+- `cache_duration()`: Report how long data can be cached
+- `get_description()`: Return a human-readable description
+- `get_json_schema()`: Return the JSON schema for the data
+- `collect_data()`: Perform data collection
+- `process_data()`: Process collected data
+- `store_data()`: Store processed data (usually delegates to the recorder)
+
+### Recorder Base Classes
+
+```python
+from activity.recorders.base import RecorderBase
+from semantic.recorders.base import SemanticRecorderBase
+from storage.recorders.base import StorageRecorderBase
+```
+
+Each recorder must implement these abstract methods:
+- `get_recorder_characteristics()`: Return metadata about the recorder's capabilities
+- `get_recorder_name()`: Return the recorder's name
+- `get_collector_class_model()`: Return the associated collector class model
+- `get_recorder_id()`: Return the recorder's UUID
+- `get_cursor()`: Get a position cursor for the data
+- `cache_duration()`: Report how long data can be cached
+- `get_description()`: Return a human-readable description
+- `get_json_schema()`: Return the JSON schema for the data
+- `process_data()`: Process data for storage
+- `store_data()`: Store data in the database
+- `update_data()`: Update existing data in the database
+- `get_latest_db_update()`: Retrieve the latest update info
+
+### Implementation Pattern
+
+1. Define data models extending `IndalekoBaseModel`
+2. Create semantic attributes with UUIDs
+3. Implement collector class for data gathering
+4. Implement recorder class for database interaction
+5. Use collection namespace conventions
+
+### Example Implementation
+
+```python
+# Collector
+class MyActivityCollector(CollectorBase):
+    def __init__(self, **kwargs):
+        self._name = kwargs.get("name", "My Activity Collector")
+        self._provider_id = kwargs.get(
+            "provider_id", uuid.UUID("11111111-1111-1111-1111-111111111111")
+        )
+        self._description = "Collects my custom activity data"
+        # Initialize collector state
+
+    def collect_data(self) -> None:
+        # Implement data collection logic
+        # Store collected data in self._data
+        pass
+
+    # Implement other abstract methods...
+
+# Recorder
+class MyActivityRecorder(RecorderBase):
+    def __init__(self, **kwargs):
+        self._name = kwargs.get("name", "My Activity Recorder")
+        self._recorder_id = kwargs.get(
+            "recorder_id", uuid.UUID("22222222-2222-2222-2222-222222222222")
+        )
+        self._collection_name = kwargs.get("collection_name", "MyActivity")
+        # Initialize database connection
+        self._db = Indaleko()
+        self._db.connect()
+        self._collection = self._db.get_collection(self._collection_name)
+
+    def store_data(self, data: Dict[str, Any]) -> None:
+        # Convert data to database document format
+        document = self.build_activity_document(data)
+        # Store in database
+        self._collection.add_document(document)
+
+    # Implement other abstract methods...
+```
+
+## Activity Generators
+
+Indaleko supports several activity generators that collect user and system activities:
+
+### Types of Activity Generators
+
+1. **Ambient Activity**
+   - Music listening (Spotify)
+   - Smart thermostats (Nest, Ecobee)
+   - Weather conditions
+
+2. **Collaboration Activity**
+   - Discord file sharing
+   - Outlook email attachments
+   - Meeting participation
+
+3. **Task Activity**
+   - Task creation and management
+   - Task completion events
+   - Task dependencies
+
+4. **NTFS File System Activity**
+   - File creation/modification/deletion
+   - File renaming and security changes
+   - Email attachment tracking
+
+5. **Location Activity**
+   - GPS coordinates
+   - Wi-Fi location
+   - IP-based geolocation
+
+### File Activity Generator (NTFS)
+
+The NTFS activity generator monitors file system activity using the USN Journal:
+
+```python
+from activity.collectors.ntfs_activity.ntfs_activity_collector import NtfsActivityCollector
+from activity.collectors.ntfs_activity.outlook_attachment_tracker import OutlookAttachmentTracker
+from activity.recorders.ntfs_activity.ntfs_activity_recorder import NtfsActivityRecorder
+
+# Create collector
+collector = NtfsActivityCollector(
+    volumes=["C:"],
+    include_close_events=False,
+    auto_start=True
+)
+
+# Create email attachment tracker (optional)
+tracker = OutlookAttachmentTracker(ntfs_collector=collector)
+
+# Create recorder
+recorder = NtfsActivityRecorder(
+    collector=collector,
+    update_storage_objects=True  # Dynamic storage updates
+)
+
+# Store activities
+activities = collector.get_activities()
+recorder.store_activities(activities)
+```
+
+### Discord File Sharing Activity
+
+```python
+from activity.collectors.collaboration.discord.discord_file_collector import DiscordFileShareCollector
+from activity.recorders.collaboration.discord_file_recorder import DiscordFileShareRecorder
+
+# Create collector with Discord token
+collector = DiscordFileShareCollector(
+    token="your_discord_token",
+    scan_dms=True,
+    scan_servers=True
+)
+
+# Create recorder
+recorder = DiscordFileShareRecorder(
+    collector=collector,
+    collection_name="DiscordShares"
+)
+
+# Collect and store file sharing activity
+collector.collect_data()
+file_shares = collector.get_file_shares()
+recorder.store_file_shares(file_shares)
+```
+
+### Semantic Extractors
+
+Indaleko includes semantic extractors for extracting metadata from files:
+
+1. **Checksum Generator**
+   - Calculates MD5, SHA1, SHA256 hashes
+   - Provides file integrity verification
+   - Supports file deduplication
+
+2. **EXIF Metadata Extractor**
+   - Extracts image metadata (camera, GPS, etc.)
+   - Processes timestamp information
+   - Supports geo-tagging
+
+3. **MIME Type Detector**
+   - Identifies file types based on content
+   - More accurate than extension-based detection
+   - Uses libmagic for signature detection
+
+Semantic extractors follow the same collector/recorder pattern:
+
+```python
+from semantic.collectors.mime.mime_collector import IndalekoSemanticMimeType
+from semantic.recorders.mime.recorder import MimeTypeRecorder
+
+# Create MIME type collector
+collector = IndalekoSemanticMimeType()
+
+# Create recorder
+recorder = MimeTypeRecorder(
+    collection_name="MimeTypes"
+)
+
+# Process a directory
+results = collector.process_directory("/path/to/files")
+recorder.store_mime_data(results)
+```
 
 ## Query Capabilities
 Indaleko features an extensive modular query system with natural language understanding, faceted search, relationship queries, and more:
