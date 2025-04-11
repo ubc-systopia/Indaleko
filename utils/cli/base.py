@@ -120,6 +120,10 @@ class IndalekoBaseCLI:
             setup_func()
         self.pre_parser = self.handler_mixin.get_additional_parameters(self.pre_parser)
         self.args = None
+        
+        # Custom command handling
+        self.custom_commands = {}
+        self.help_texts = []
 
     def get_args(self) -> argparse.Namespace:
         """This method is used to get the arguments"""
@@ -424,6 +428,52 @@ class IndalekoBaseCLI:
     def get_config_data(self: "IndalekoBaseCLI") -> dict[str, Any]:
         """This method is used to get the configuration data"""
         return self.config_data
+        
+    def register_command(self, command: str, handler) -> None:
+        """
+        Register a custom command handler.
+        
+        Args:
+            command: The command to register (e.g., "/memory")
+            handler: The function to call when the command is invoked
+        """
+        self.custom_commands[command] = handler
+        
+    def handle_command(self, command: str) -> bool:
+        """
+        Handle a custom command.
+        
+        Args:
+            command: The command to handle
+            
+        Returns:
+            bool: True if the command was handled, False otherwise
+        """
+        parts = command.strip().split(maxsplit=1)
+        cmd = parts[0].lower()
+        
+        if cmd in self.custom_commands:
+            return self.custom_commands[cmd](command)
+        
+        return False
+        
+    def append_help_text(self, text: str) -> None:
+        """
+        Append text to the help message.
+        
+        Args:
+            text: The text to append
+        """
+        self.help_texts.append(text)
+        
+    def get_help_text(self) -> str:
+        """
+        Get the complete help text.
+        
+        Returns:
+            str: The complete help text
+        """
+        return "\n".join(self.help_texts)
 
     class default_handler_mixin(IndalekoHandlermixin):
         """Default handler mixin for the CLI"""

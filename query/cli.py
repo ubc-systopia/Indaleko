@@ -59,9 +59,18 @@ from query.result_analysis.data_models.facet_data_model import DynamicFacets, Fa
 from query.result_analysis.query_refiner import QueryRefiner
 from query.search_execution.query_executor.aql_executor import AQLExecutor
 from query.search_execution.query_visualizer import PlanVisualizer
+from query.memory.archivist_memory import ArchivistMemory
+from query.memory.cli_integration import ArchivistCliIntegration
 from query.utils.llm_connector.openai_connector import OpenAIConnector
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
+
+# Import archivist components if available
+try:
+    from archivist.cli_integration_main import register_with_cli as register_archivist
+    HAS_ARCHIVIST = True
+except ImportError:
+    HAS_ARCHIVIST = False
 
 # pylint: enable=wrong-import-position
 
@@ -230,6 +239,16 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 action="store_true",
                 help="Enable context-aware queries using query history"
             )
+            parser.add_argument(
+                "--archivist", 
+                action="store_true",
+                help="Enable the Archivist memory system for maintaining context across sessions"
+            )
+            parser.add_argument(
+                "--optimizer", 
+                action="store_true",
+                help="Enable the database optimizer for analyzing and improving query performance"
+            )
             
             # Add command subparsers
             subparsers = parser.add_subparsers(
@@ -277,6 +296,12 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             with open(self.args.batch_input_file, "rt") as batch_file:
                 batch_queries = batch_file.readlines()
             batch = True
+            
+        # Initialize Archivist system
+        self.archivist_components = None
+        if HAS_ARCHIVIST and hasattr(self.args, 'archivist') and self.args.archivist:
+            self.archivist_components = register_archivist(self)
+            memory_integration = self.archivist_components.get("memory_integration")
 
         while True:
             # Need UPI information about the database
@@ -298,6 +323,19 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 # Reuse the last query if this is just a status check or help request
                 if hasattr(self, 'current_refined_query'):
                     user_query = self.current_refined_query
+                    
+            # Check for Archivist commands
+            if self.archivist_components and user_query.startswith("/"):
+                # Try to handle commands with the appropriate component
+                if user_query.startswith(("/memory", "/forward", "/load", "/goals", "/insights", "/topics", "/strategies", "/save")):
+                    memory_integration = self.archivist_components.get("memory_integration")
+                    if memory_integration and memory_integration.handle_command(user_query):
+                        continue
+                        
+                elif user_query.startswith(("/optimize", "/analyze", "/index", "/view", "/query", "/impact")):
+                    optimizer_integration = self.archivist_components.get("optimizer_integration")
+                    if optimizer_integration and optimizer_integration.handle_command(user_query):
+                        continue
 
             # Log the query
             # self.logging_service.log_query(user_query)
@@ -818,7 +856,16 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 
     def continue_session(self) -> bool:
         """Check if the user wants to continue the session."""
-        return input("Do you want to continue? [Y/N] ").strip().lower() in ["y", "yes"]
+        continue_session = input("Do you want to continue? [Y/N] ").strip().lower() in ["y", "yes"]
+        
+        # If ending the session and Archivist is enabled, update memory
+        if not continue_session and self.archivist_components:
+            memory_integration = self.archivist_components.get("memory_integration")
+            if memory_integration:
+                memory_integration.update_from_session(self.query_history)
+                print("Archivist memory updated with session knowledge.")
+            
+        return continue_session
 
     def build_schema_table(self):
         """Build the schema table."""
@@ -847,7 +894,13 @@ def main():
     print("\n- Try the new enhanced natural language capabilities:")
     print("  Example: python -m query.cli --enhanced-nl --context-aware")
     print("  This provides more sophisticated query understanding and more accurate results.")
-    print("  The --context-aware flag enables query history tracking for better context.\n")
+    print("  The --context-aware flag enables query history tracking for better context.")
+    print("\n- Enable the Archivist memory system to maintain context across sessions:")
+    print("  Example: python -m query.cli --archivist")
+    print("  Use /memory to see available commands for the Archivist.")
+    print("\n- Enable the database optimizer to improve query performance:")
+    print("  Example: python -m query.cli --optimizer")
+    print("  Use /optimize to see available commands for the database optimizer.\n")
     
     IndalekoQueryCLI().run()
     print("Thank you for using Indaleko Query CLI")
