@@ -420,6 +420,246 @@ The Personal Digital Archivist includes robust privacy protections:
 - **Data Minimization**: Only essential information is stored
 - **Configurability**: Granular control over suggestion behavior
 
+## Self-Optimization Capabilities
+
+The Archivist doesn't just learn about users - it also analyzes its own operation to improve system performance:
+
+### 1. Database Performance Optimization
+
+The Archivist monitors query patterns and performance to recommend database optimizations:
+
+```python
+class DatabaseOptimizationAnalyzer:
+    """Analyzes query patterns to recommend database optimizations."""
+    
+    def __init__(self, db_connection, query_history_collector):
+        self.db = db_connection
+        self.query_history = query_history_collector
+        self.index_analyzer = IndexAnalyzer(db_connection)
+        self.view_analyzer = ViewAnalyzer(db_connection)
+        
+    def analyze_query_patterns(self, time_period=timedelta(days=7)):
+        """Analyze recent query patterns to identify optimization opportunities."""
+        # Get recent queries
+        recent_queries = self.query_history.get_queries(
+            start_time=datetime.now() - time_period
+        )
+        
+        # Analyze for frequently accessed attributes
+        attribute_frequency = self._extract_attribute_access_frequency(recent_queries)
+        
+        # Analyze query performance
+        slow_queries = self._identify_slow_queries(recent_queries)
+        
+        # Generate index recommendations
+        index_recommendations = self.index_analyzer.generate_recommendations(
+            attribute_frequency, slow_queries
+        )
+        
+        # Generate view recommendations
+        view_recommendations = self.view_analyzer.generate_recommendations(
+            attribute_frequency, slow_queries
+        )
+        
+        return {
+            "index_recommendations": index_recommendations,
+            "view_recommendations": view_recommendations,
+            "attribute_frequency": attribute_frequency,
+            "slow_queries": slow_queries
+        }
+    
+    def _extract_attribute_access_frequency(self, queries):
+        """Extract frequency of attribute access in queries."""
+        attribute_counts = {}
+        
+        for query in queries:
+            # Extract accessed attributes from query
+            attrs = self._extract_attributes_from_query(query)
+            
+            # Update counts
+            for attr in attrs:
+                if attr not in attribute_counts:
+                    attribute_counts[attr] = 0
+                attribute_counts[attr] += 1
+        
+        return attribute_counts
+```
+
+### 2. Index Management
+
+The Archivist can intelligently manage indexes based on query patterns:
+
+- **Index with Stored Values**: Creates ArangoDB indexes with stored values for frequently accessed fields to bypass document retrieval
+- **Index Evaluation**: Measures the actual performance improvement of indexes
+- **Cost-Benefit Analysis**: Weighs index maintenance costs against query performance improvements
+- **Index Pruning**: Identifies and recommends removal of unused or low-value indexes
+
+```python
+class IndexRecommendation:
+    """Recommendation for a database index."""
+    
+    def __init__(self, collection, fields, index_type, stored_values=None):
+        self.collection = collection
+        self.fields = fields
+        self.index_type = index_type  # "hash", "skiplist", "persistent", etc.
+        self.stored_values = stored_values or []
+        self.estimated_impact = 0.0
+        self.estimated_cost = 0.0
+        self.affected_queries = []
+    
+    def calculate_impact(self, query_history, db_connection):
+        """Calculate estimated impact of this index."""
+        # Find queries that would benefit
+        self.affected_queries = [
+            q for q in query_history 
+            if self._query_would_benefit(q)
+        ]
+        
+        # If no affected queries, zero impact
+        if not self.affected_queries:
+            self.estimated_impact = 0.0
+            return
+        
+        # Estimate execution time improvement
+        with_index_time = self._estimate_execution_with_index(db_connection)
+        current_time = sum(q.execution_time for q in self.affected_queries)
+        time_saved = current_time - with_index_time
+        
+        # Calculate impact score based on time saved and query frequency
+        query_count = len(self.affected_queries)
+        self.estimated_impact = time_saved * query_count
+        
+        # Calculate maintenance cost
+        self.estimated_cost = self._estimate_maintenance_cost(db_connection)
+    
+    def get_creation_command(self):
+        """Get the ArangoDB command to create this index."""
+        cmd = {
+            "collection": self.collection,
+            "type": self.index_type,
+            "fields": self.fields,
+        }
+        
+        if self.stored_values:
+            cmd["storedValues"] = self.stored_values
+            
+        return cmd
+```
+
+### 3. Semantic Metadata Enhancement
+
+The Archivist identifies areas where semantic metadata could be improved:
+
+- **Missing Metadata Detection**: Identifies frequently searched concepts that lack proper semantic attributes
+- **Semantic Attribute Refinement**: Suggests refinements to existing semantic attributes based on query effectiveness
+- **Attribute Value Analysis**: Examines the distribution and utility of attribute values
+
+```python
+class SemanticMetadataAnalyzer:
+    """Analyzes semantic metadata effectiveness and recommends improvements."""
+    
+    def identify_missing_semantic_attributes(self, query_history):
+        """Identify potentially missing semantic attributes based on query patterns."""
+        # Extract concepts frequently appearing in queries
+        query_concepts = self._extract_concepts_from_queries(query_history)
+        
+        # Get existing semantic attributes
+        existing_attributes = self._get_existing_semantic_attributes()
+        
+        # Identify gaps - concepts frequently queried but not well-represented in metadata
+        missing_attributes = []
+        for concept, frequency in query_concepts.items():
+            coverage = self._calculate_concept_coverage(concept, existing_attributes)
+            
+            if coverage < 0.3 and frequency > 10:  # Thresholds for recommendation
+                missing_attributes.append({
+                    "concept": concept,
+                    "query_frequency": frequency,
+                    "current_coverage": coverage,
+                    "suggested_attribute_name": self._suggest_attribute_name(concept)
+                })
+        
+        return sorted(missing_attributes, key=lambda x: x["query_frequency"], reverse=True)
+```
+
+### 4. Collection Gap Analysis
+
+The Archivist identifies types of data that would improve query results:
+
+- **Failed Query Analysis**: Examines queries with poor results to identify missing data types
+- **Collection Recommendation**: Suggests new data sources that would fill identified gaps
+- **Value Estimation**: Estimates the value of collecting new data types based on query patterns
+
+```python
+class CollectionGapAnalyzer:
+    """Analyzes query failures to identify data collection gaps."""
+    
+    def identify_collection_gaps(self, query_history):
+        """Identify types of data that should be collected based on query patterns."""
+        # Get queries with poor results
+        poor_result_queries = [q for q in query_history if q.result_quality < 0.3]
+        
+        # Cluster similar queries
+        query_clusters = self._cluster_similar_queries(poor_result_queries)
+        
+        # Analyze each cluster
+        collection_recommendations = []
+        for cluster in query_clusters:
+            if len(cluster) >= 5:  # Only consider patterns with sufficient examples
+                common_concepts = self._extract_common_concepts(cluster)
+                existing_data = self._check_existing_data_for_concepts(common_concepts)
+                
+                if not existing_data:
+                    recommendation = {
+                        "concepts": common_concepts,
+                        "query_count": len(cluster),
+                        "sample_queries": [q.text for q in cluster[:3]],
+                        "suggested_data_sources": self._suggest_data_sources(common_concepts)
+                    }
+                    collection_recommendations.append(recommendation)
+        
+        return collection_recommendations
+```
+
+### 5. Query Performance Analytics
+
+The Archivist provides advanced query performance analytics:
+
+- **Performance Trending**: Tracks query performance over time
+- **Query Pattern Identification**: Identifies common query patterns and their performance
+- **Execution Plan Analysis**: Analyzes query execution plans to find optimization opportunities
+- **Bottleneck Detection**: Identifies performance bottlenecks in the query processing pipeline
+
+```python
+class QueryPerformanceAnalyzer:
+    """Analyzes query performance trends and patterns."""
+    
+    def generate_performance_report(self, time_period=timedelta(days=30)):
+        """Generate a comprehensive query performance report."""
+        # Get historical query performance data
+        historical_data = self._get_historical_performance(time_period)
+        
+        # Generate trend analysis
+        trends = self._analyze_performance_trends(historical_data)
+        
+        # Identify problematic query patterns
+        problem_patterns = self._identify_problematic_patterns(historical_data)
+        
+        # Generate execution plan insights
+        execution_insights = self._analyze_execution_plans(problem_patterns)
+        
+        return {
+            "performance_trends": trends,
+            "problem_patterns": problem_patterns,
+            "execution_insights": execution_insights,
+            "optimization_opportunities": self._generate_optimization_opportunities(
+                trends, problem_patterns, execution_insights
+            )
+        }
+```
+
+These self-optimization capabilities ensure that the Archivist continuously improves not just its understanding of the user, but also its own operation and performance.
+
 ## Contribution
 
 This project is in the conceptual phase. Contributions welcome in these areas:
