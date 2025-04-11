@@ -11,6 +11,8 @@
 - Test enhanced NL: `python query/test_enhanced_nl.py --query "Your query here" --debug`
 - Test relationships: `python query/test_relationship_query.py --query "Show files I shared with Bob last week" --debug`
 - Run CLI with enhanced NL: `python -m query.cli --enhanced-nl --context-aware --deduplicate --dynamic-facets`
+- Run CLI with Archivist: `python -m query.cli --archivist --optimizer`
+- Test Database Optimizer: `python archivist/test_optimizer.py`
 
 ## Style Guidelines
 - Imports: standard library → third-party → local (with blank lines between)
@@ -610,8 +612,14 @@ python query/cli.py --dynamic-facets --interactive
 # Enable deduplication with Jaro-Winkler similarity
 python query/cli.py --deduplicate --similarity-threshold 0.85
 
+# Enable Archivist memory system (maintains context across sessions)
+python query/cli.py --archivist
+
+# Enable database optimizer for query performance improvements
+python query/cli.py --optimizer
+
 # Combine multiple features
-python query/cli.py --enhanced-nl --context-aware --deduplicate --dynamic-facets --conversational
+python query/cli.py --enhanced-nl --context-aware --deduplicate --dynamic-facets --conversational --archivist --optimizer
 ```
 
 ### Programmatic EXPLAIN Usage
@@ -646,3 +654,120 @@ python query/test_explain.py --query "Show me documents about Indaleko" --debug
 - "No indexes are being used in this query" - Add appropriate indexes for frequently filtered fields
 - High `estimatedCost` - Refine your query to use indexes and reduce collection scans
 - "collection not found" - Check collection names, ensure using valid collections from the database
+
+## Archivist and Database Optimizer
+
+Indaleko includes a Personal Digital Archivist concept with database optimization capabilities:
+
+### Archivist Memory System
+
+The Archivist memory system maintains context across sessions and learns from interactions:
+
+```python
+from query.memory.archivist_memory import ArchivistMemory
+from query.memory.cli_integration import ArchivistCliIntegration
+
+# Initialize memory system
+archivist_memory = ArchivistMemory(db_config)
+memory_integration = ArchivistCliIntegration(cli_instance, archivist_memory)
+
+# Access memory commands
+# /memory - Show memory system commands
+# /forward - Generate a forward prompt for the next session
+# /load - Load a forward prompt from a previous session
+# /goals - Manage long-term goals
+# /insights - View insights about search patterns
+# /topics - View topics of interest
+# /strategies - View effective search strategies
+# /save - Save memory state to database
+```
+
+### Database Optimizer
+
+The Database Optimizer analyzes query patterns and recommends optimizations:
+
+```python
+from archivist.database_optimizer import DatabaseOptimizer
+from archivist.cli_integration import DatabaseOptimizerCliIntegration
+
+# Initialize optimizer
+optimizer = DatabaseOptimizer(db_connection, archivist_memory, query_history)
+optimizer_integration = DatabaseOptimizerCliIntegration(cli_instance)
+
+# Access optimizer commands
+# /optimize - Show database optimization commands
+# /analyze - Analyze query patterns and suggest optimizations
+# /index - Manage index recommendations
+# /view - Manage view recommendations
+# /query - Manage query optimizations
+# /impact - Show impact of applied optimizations
+```
+
+### Optimizer Architecture
+
+The Database Optimizer includes several key components:
+
+1. **IndexRecommendation**: Generates index recommendations with stored values
+   ```python
+   recommendation = IndexRecommendation(
+       collection="MyCollection",
+       fields=["attribute1", "attribute2"],
+       index_type="skiplist",
+       stored_values=["commonly_accessed_field"],
+       estimated_impact=4.5,
+       explanation="This index addresses 10 queries that filter on MyCollection.attribute1"
+   )
+   ```
+
+2. **ViewRecommendation**: Recommends ArangoSearch views for text search
+   ```python
+   view_rec = ViewRecommendation(
+       name="documents_view",
+       collections=["Documents"],
+       fields={"Documents": ["content", "title"]},
+       estimated_impact=3.2,
+       explanation="This view addresses 6 searches on Documents collection."
+   )
+   ```
+
+3. **QueryOptimization**: Suggests query rewrites for performance
+   ```python
+   optimization = QueryOptimization(
+       original_query="FOR doc IN Documents FILTER doc.type == 'pdf' RETURN doc",
+       optimized_query="FOR doc IN Documents FILTER doc.type == 'pdf' LIMIT 100 RETURN doc",
+       optimization_type="add_limit",
+       estimated_speedup=1.5,
+       explanation="Add LIMIT to avoid large result sets."
+   )
+   ```
+
+### Unified CLI Integration
+
+All Archivist components can be enabled via the main CLI integration:
+
+```python
+from archivist.cli_integration_main import register_archivist_components
+
+# Register all Archivist components with CLI
+components = register_archivist_components(cli_instance)
+
+# Components include:
+# - memory: The ArchivestMemory instance
+# - memory_integration: The ArchivistCliIntegration instance
+# - database_optimizer: The DatabaseOptimizer instance  
+# - optimizer_integration: The DatabaseOptimizerCliIntegration instance
+```
+
+### Custom Commands in CLI
+
+The CLI base class now supports custom command registration:
+
+```python
+from utils.cli.base import IndalekoBaseCLI
+
+# Register a custom command
+cli_instance.register_command("/mycommand", handler_function)
+
+# Add help text
+cli_instance.append_help_text("  /mycommand          - My custom command description")
+```
