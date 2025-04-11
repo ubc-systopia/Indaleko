@@ -660,6 +660,597 @@ class QueryPerformanceAnalyzer:
 
 These self-optimization capabilities ensure that the Archivist continuously improves not just its understanding of the user, but also its own operation and performance.
 
+## Archivist Memory System
+
+The Archivist implements a sophisticated memory system to overcome the limited context window of underlying LLMs:
+
+### 1. Persistent Memory Architecture
+
+```python
+class ArchivistMemorySystem:
+    """Manages the Archivist's persistent memory across sessions."""
+    
+    def __init__(self, db_connection):
+        self.db = db_connection
+        self.memory_collection = "archivist_memory"
+        self.ensure_memory_collection_exists()
+        
+        # Initialize memory subsystems
+        self.episodic_memory = EpisodicMemory(self.db, self.memory_collection)
+        self.semantic_memory = SemanticMemory(self.db, self.memory_collection)
+        self.procedural_memory = ProceduralMemory(self.db, self.memory_collection)
+        self.reflection_memory = ReflectionMemory(self.db, self.memory_collection)
+        
+    def ensure_memory_collection_exists(self):
+        """Ensure the memory collection exists with proper indexes."""
+        if not self.db.has_collection(self.memory_collection):
+            self.db.create_collection(self.memory_collection)
+            
+            # Create indexes for efficient memory retrieval
+            self.db.collection(self.memory_collection).add_hash_index(["memory_type"])
+            self.db.collection(self.memory_collection).add_skiplist_index(["timestamp"])
+            self.db.collection(self.memory_collection).add_fulltext_index(["content"])
+```
+
+### 2. Memory Types
+
+The Archivist stores several types of memories:
+
+#### Episodic Memory
+Records specific interactions and events:
+```python
+class EpisodicMemory:
+    """Manages episodic memories - specific interactions and events."""
+    
+    def store_interaction(self, interaction_data):
+        """Store a user interaction in episodic memory."""
+        memory = {
+            "_key": f"interaction_{uuid.uuid4()}",
+            "memory_type": "episodic",
+            "subtype": "interaction",
+            "timestamp": datetime.now().isoformat(),
+            "content": interaction_data["content"],
+            "context": interaction_data["context"],
+            "user_response": interaction_data.get("user_response"),
+            "outcome": interaction_data.get("outcome"),
+            "importance": self._calculate_importance(interaction_data),
+            "embedding": self._generate_embedding(interaction_data["content"]),
+            "metadata": {
+                "project": interaction_data.get("project"),
+                "activity_type": interaction_data.get("activity_type"),
+                "resources": interaction_data.get("resources", [])
+            }
+        }
+        
+        return self.db.collection(self.collection_name).insert(memory)
+    
+    def retrieve_relevant_episodes(self, current_context, limit=5):
+        """Retrieve episodes relevant to the current context."""
+        query = """
+            FOR doc IN @@collection
+            FILTER doc.memory_type == 'episodic'
+            SEARCH ANALYZER(
+                PHRASE(doc.content, @context_text, 'text_en'),
+                'text_en'
+            )
+            SORT BM25(doc) DESC
+            LIMIT @limit
+            RETURN doc
+        """
+        
+        return self.db.aql.execute(
+            query,
+            bind_vars={
+                "@collection": self.collection_name,
+                "context_text": current_context["text"],
+                "limit": limit
+            }
+        )
+```
+
+#### Semantic Memory
+Stores conceptual knowledge and learned patterns:
+```python
+class SemanticMemory:
+    """Manages semantic memories - conceptual knowledge and learned patterns."""
+    
+    def store_concept(self, concept_data):
+        """Store a concept in semantic memory."""
+        memory = {
+            "_key": f"concept_{concept_data['name'].lower().replace(' ', '_')}",
+            "memory_type": "semantic",
+            "subtype": "concept",
+            "name": concept_data["name"],
+            "description": concept_data["description"],
+            "examples": concept_data.get("examples", []),
+            "related_concepts": concept_data.get("related_concepts", []),
+            "confidence": concept_data.get("confidence", 1.0),
+            "learned_at": datetime.now().isoformat(),
+            "last_updated": datetime.now().isoformat(),
+            "update_count": 1,
+            "embedding": self._generate_embedding(
+                f"{concept_data['name']}: {concept_data['description']}"
+            )
+        }
+        
+        # Check if concept already exists
+        existing = self.get_concept(concept_data["name"])
+        if existing:
+            # Update existing concept
+            memory["update_count"] = existing["update_count"] + 1
+            memory["learned_at"] = existing["learned_at"]
+            memory["_key"] = existing["_key"]
+            return self.db.collection(self.collection_name).replace(existing["_id"], memory)
+        
+        # Insert new concept
+        return self.db.collection(self.collection_name).insert(memory)
+```
+
+#### Procedural Memory
+Records learned processes and methods:
+```python
+class ProceduralMemory:
+    """Manages procedural memories - how to perform tasks."""
+    
+    def store_procedure(self, procedure_data):
+        """Store a procedure in procedural memory."""
+        memory = {
+            "_key": f"procedure_{uuid.uuid4()}",
+            "memory_type": "procedural",
+            "name": procedure_data["name"],
+            "description": procedure_data["description"],
+            "steps": procedure_data["steps"],
+            "success_rate": procedure_data.get("success_rate", 1.0),
+            "execution_count": 1,
+            "average_duration": procedure_data.get("duration", 0),
+            "last_executed": datetime.now().isoformat(),
+            "first_executed": datetime.now().isoformat(),
+            "contexts": [procedure_data.get("context", "general")],
+            "embedding": self._generate_embedding(
+                f"{procedure_data['name']}: {procedure_data['description']} {' '.join(procedure_data['steps'])}"
+            )
+        }
+        
+        return self.db.collection(self.collection_name).insert(memory)
+    
+    def update_procedure_success(self, procedure_id, success, duration):
+        """Update success statistics for a procedure."""
+        procedure = self.db.collection(self.collection_name).document(procedure_id)
+        
+        # Update statistics
+        new_exec_count = procedure["execution_count"] + 1
+        new_success_rate = ((procedure["success_rate"] * procedure["execution_count"]) + (1.0 if success else 0.0)) / new_exec_count
+        new_avg_duration = ((procedure["average_duration"] * procedure["execution_count"]) + duration) / new_exec_count
+        
+        # Update the document
+        self.db.collection(self.collection_name).update(procedure_id, {
+            "execution_count": new_exec_count,
+            "success_rate": new_success_rate,
+            "average_duration": new_avg_duration,
+            "last_executed": datetime.now().isoformat()
+        })
+```
+
+#### Reflection Memory
+Captures the Archivist's reflections on its own operation:
+```python
+class ReflectionMemory:
+    """Manages reflection memories - insights and learnings about operation."""
+    
+    def store_reflection(self, reflection_data):
+        """Store a reflection in memory."""
+        memory = {
+            "_key": f"reflection_{uuid.uuid4()}",
+            "memory_type": "reflection",
+            "subtype": reflection_data.get("subtype", "general"),
+            "timestamp": datetime.now().isoformat(),
+            "content": reflection_data["content"],
+            "source": reflection_data.get("source", "self-analysis"),
+            "impact_areas": reflection_data.get("impact_areas", []),
+            "action_items": reflection_data.get("action_items", []),
+            "status": "new",
+            "embedding": self._generate_embedding(reflection_data["content"])
+        }
+        
+        return self.db.collection(self.collection_name).insert(memory)
+    
+    def store_system_observation(self, observation):
+        """Store an observation about system performance or behavior."""
+        return self.store_reflection({
+            "subtype": "system_observation",
+            "content": observation["content"],
+            "source": "performance_monitor",
+            "impact_areas": observation.get("impact_areas", ["performance"]),
+            "action_items": observation.get("recommendations", [])
+        })
+    
+    def retrieve_relevant_reflections(self, topic, limit=5):
+        """Retrieve reflections relevant to a specific topic."""
+        query = """
+            FOR doc IN @@collection
+            FILTER doc.memory_type == 'reflection'
+            SEARCH ANALYZER(
+                PHRASE(doc.content, @topic, 'text_en'),
+                'text_en'
+            )
+            SORT BM25(doc) DESC
+            LIMIT @limit
+            RETURN doc
+        """
+        
+        return self.db.aql.execute(
+            query,
+            bind_vars={
+                "@collection": self.collection_name,
+                "topic": topic,
+                "limit": limit
+            }
+        )
+```
+
+### 3. Memory Operations
+
+The Archivist performs several operations on its memories:
+
+#### Memory Consolidation
+```python
+def consolidate_memories(self, timeframe=timedelta(days=1)):
+    """Consolidate recent memories to extract patterns and insights."""
+    # Get recent episodic memories
+    recent_episodes = self.episodic_memory.get_recent_memories(timeframe)
+    
+    # Extract patterns from episodes
+    patterns = self._identify_patterns(recent_episodes)
+    
+    # Store identified patterns in semantic memory
+    for pattern in patterns:
+        self.semantic_memory.store_concept({
+            "name": pattern["name"],
+            "description": pattern["description"],
+            "examples": pattern["examples"],
+            "confidence": pattern["confidence"]
+        })
+    
+    # Generate reflections based on recent experiences
+    reflections = self._generate_reflections(recent_episodes, patterns)
+    
+    # Store reflections
+    for reflection in reflections:
+        self.reflection_memory.store_reflection(reflection)
+    
+    return {
+        "patterns_identified": len(patterns),
+        "reflections_generated": len(reflections)
+    }
+```
+
+#### Memory Retrieval
+```python
+def retrieve_relevant_memories(self, context, memory_types=None, limit=10):
+    """Retrieve memories relevant to the current context."""
+    # Generate embedding for context
+    context_embedding = self._generate_embedding(context["text"])
+    
+    # Set default memory types if not specified
+    if memory_types is None:
+        memory_types = ["episodic", "semantic", "procedural", "reflection"]
+    
+    # Build query
+    query = """
+        FOR doc IN @@collection
+        FILTER doc.memory_type IN @memory_types
+        LET score = VECTOR_DISTANCE(doc.embedding, @context_embedding)
+        SORT score ASC
+        LIMIT @limit
+        RETURN {
+            "memory": doc,
+            "relevance_score": score
+        }
+    """
+    
+    # Execute query
+    results = self.db.aql.execute(
+        query,
+        bind_vars={
+            "@collection": self.memory_collection,
+            "memory_types": memory_types,
+            "context_embedding": context_embedding,
+            "limit": limit
+        }
+    )
+    
+    return [result for result in results]
+```
+
+#### Memory Importance Scoring
+```python
+def _calculate_importance(self, memory_data):
+    """Calculate importance score for a memory."""
+    importance = 0.5  # Base importance
+    
+    # Adjust based on factors
+    
+    # 1. User reaction strength
+    if "user_reaction" in memory_data:
+        reaction = memory_data["user_reaction"]
+        if reaction == "very_positive":
+            importance += 0.3
+        elif reaction == "positive":
+            importance += 0.1
+        elif reaction == "negative":
+            importance += 0.2
+        elif reaction == "very_negative":
+            importance += 0.3
+    
+    # 2. Novelty factor
+    if memory_data.get("is_novel", False):
+        importance += 0.2
+    
+    # 3. Emotional content
+    emotion_score = memory_data.get("emotion_score", 0)
+    importance += min(0.2, emotion_score / 5.0)
+    
+    # 4. Relevance to user goals
+    if "goal_relevance" in memory_data:
+        importance += memory_data["goal_relevance"] * 0.3
+    
+    # Cap at 1.0
+    return min(1.0, importance)
+```
+
+### 4. Integration with LLM Context
+
+The Archivist dynamically retrieves relevant memories to include in the LLM context:
+
+```python
+class ContextManager:
+    """Manages the LLM context, including retrieving relevant memories."""
+    
+    def __init__(self, memory_system, max_context_tokens=8000):
+        self.memory_system = memory_system
+        self.max_context_tokens = max_context_tokens
+        self.tokenizer = self._initialize_tokenizer()
+        
+    def build_context(self, current_context, request):
+        """Build the full context to send to the LLM."""
+        # Reserve tokens for the system prompt and user request
+        system_tokens = self._count_tokens(self.get_system_prompt())
+        request_tokens = self._count_tokens(request)
+        
+        # Calculate tokens available for memories
+        available_tokens = self.max_context_tokens - system_tokens - request_tokens - 200  # Buffer
+        
+        # Retrieve memories relevant to current context
+        memories = self.get_relevant_memories(current_context, request)
+        
+        # Format and fit memories into available tokens
+        memory_text = self._format_memories_for_context(memories, available_tokens)
+        
+        # Build final context
+        context = {
+            "system_prompt": self.get_system_prompt(),
+            "memory_context": memory_text,
+            "current_context": current_context,
+            "user_request": request
+        }
+        
+        return context
+        
+    def get_relevant_memories(self, current_context, request):
+        """Get memories relevant to the current context and request."""
+        # Create a combined context for retrieval
+        combined_context = {
+            "text": f"{current_context['description']} {request}",
+            "project": current_context.get("project"),
+            "activity": current_context.get("activity")
+        }
+        
+        # Allocate memory quotas by type
+        quotas = {
+            "episodic": 3,  # Recent relevant interactions
+            "semantic": 5,   # Relevant concepts
+            "procedural": 2, # Relevant procedures
+            "reflection": 2  # Relevant reflections
+        }
+        
+        # Retrieve each type of memory
+        all_memories = []
+        for memory_type, quota in quotas.items():
+            memories = self.memory_system.retrieve_relevant_memories(
+                combined_context, 
+                memory_types=[memory_type],
+                limit=quota
+            )
+            all_memories.extend(memories)
+        
+        # Sort by relevance
+        all_memories.sort(key=lambda x: x["relevance_score"])
+        
+        return all_memories
+    
+    def _format_memories_for_context(self, memories, available_tokens):
+        """Format memories into text that fits within available tokens."""
+        formatted_memories = []
+        current_tokens = 0
+        
+        for memory in memories:
+            # Format the memory based on its type
+            memory_text = self._format_memory(memory["memory"])
+            memory_tokens = self._count_tokens(memory_text)
+            
+            # Check if we can add this memory
+            if current_tokens + memory_tokens <= available_tokens:
+                formatted_memories.append(memory_text)
+                current_tokens += memory_tokens
+            else:
+                # If we can't fit more memories, stop
+                break
+        
+        # Combine formatted memories
+        return "\n\n".join(formatted_memories)
+```
+
+### 5. Reflection and Metacognition
+
+The Archivist regularly reflects on its memory to improve its understanding:
+
+```python
+class ArchivistReflectionEngine:
+    """Generates reflections and insights from the Archivist's memories."""
+    
+    def __init__(self, memory_system, llm_service):
+        self.memory_system = memory_system
+        self.llm = llm_service
+        
+    def generate_daily_reflection(self):
+        """Generate a daily reflection on recent activities and learnings."""
+        # Get recent memories from the past day
+        recent_memories = self.memory_system.get_recent_memories(timedelta(days=1))
+        
+        if not recent_memories:
+            return None
+        
+        # Organize memories by type
+        memories_by_type = self._organize_memories_by_type(recent_memories)
+        
+        # Prepare reflection prompt
+        prompt = self._build_reflection_prompt(memories_by_type)
+        
+        # Generate reflection using LLM
+        reflection_text = self.llm.generate(prompt)
+        
+        # Parse and structure the reflection
+        structured_reflection = self._parse_reflection(reflection_text)
+        
+        # Store the reflection
+        reflection_id = self.memory_system.reflection_memory.store_reflection({
+            "content": reflection_text,
+            "subtype": "daily_reflection",
+            "source": "reflection_engine",
+            "impact_areas": structured_reflection.get("impact_areas", []),
+            "action_items": structured_reflection.get("action_items", [])
+        })
+        
+        return {
+            "reflection_id": reflection_id,
+            "content": reflection_text,
+            "structured": structured_reflection
+        }
+    
+    def _build_reflection_prompt(self, memories_by_type):
+        """Build a prompt for generating a reflection."""
+        # Create a summary of recent activities
+        interactions = memories_by_type.get("episodic", [])
+        interaction_summary = self._summarize_interactions(interactions)
+        
+        # Extract insights from semantic memories
+        semantic_insights = self._extract_semantic_insights(
+            memories_by_type.get("semantic", [])
+        )
+        
+        # Build the prompt
+        prompt = f"""
+        Based on the following recent activities and insights, generate a thoughtful reflection 
+        on what has been learned and how to improve future interactions:
+        
+        Recent Activities:
+        {interaction_summary}
+        
+        Recent Insights:
+        {semantic_insights}
+        
+        Generate a reflection that includes:
+        1. Key observations about user patterns and preferences
+        2. Areas where understanding or accuracy could be improved
+        3. Successful strategies that should be continued
+        4. Specific action items for future improvement
+        5. Open questions that need further exploration
+        
+        Format the reflection in a clear, structured way with sections for each of these areas.
+        """
+        
+        return prompt
+```
+
+### 6. Memory Evolution Analysis
+
+The Archivist tracks how its understanding evolves over time:
+
+```python
+class MemoryEvolutionAnalyzer:
+    """Analyzes how the Archivist's memory and understanding evolve over time."""
+    
+    def __init__(self, memory_system):
+        self.memory_system = memory_system
+        
+    def generate_evolution_report(self, timeframe=timedelta(days=30)):
+        """Generate a report on how memory has evolved over a timeframe."""
+        # Get snapshots of memory at different points
+        start_date = datetime.now() - timeframe
+        memory_snapshots = self._get_memory_snapshots(start_date, datetime.now())
+        
+        # Analyze concept evolution
+        concept_evolution = self._analyze_concept_evolution(memory_snapshots)
+        
+        # Analyze procedural learning
+        procedure_evolution = self._analyze_procedural_evolution(memory_snapshots)
+        
+        # Analyze reflection trends
+        reflection_trends = self._analyze_reflection_trends(memory_snapshots)
+        
+        # Generate visualization data
+        visualization_data = self._generate_visualization_data(
+            concept_evolution, procedure_evolution, reflection_trends
+        )
+        
+        return {
+            "timeframe": {
+                "start": start_date.isoformat(),
+                "end": datetime.now().isoformat(),
+                "duration_days": timeframe.days
+            },
+            "concept_evolution": concept_evolution,
+            "procedure_evolution": procedure_evolution,
+            "reflection_trends": reflection_trends,
+            "visualization_data": visualization_data,
+            "summary": self._generate_evolution_summary(
+                concept_evolution, procedure_evolution, reflection_trends
+            )
+        }
+    
+    def _analyze_concept_evolution(self, snapshots):
+        """Analyze how concepts have evolved across snapshots."""
+        evolution = {}
+        
+        # Track each concept across snapshots
+        for concept_id in self._get_all_concept_ids(snapshots):
+            concept_history = []
+            
+            for snapshot in snapshots:
+                if concept_id in snapshot["concepts"]:
+                    concept_data = snapshot["concepts"][concept_id]
+                    concept_history.append({
+                        "timestamp": snapshot["timestamp"],
+                        "description": concept_data["description"],
+                        "confidence": concept_data["confidence"],
+                        "update_count": concept_data["update_count"]
+                    })
+            
+            if len(concept_history) > 1:  # Only include concepts with changes
+                evolution[concept_id] = {
+                    "name": concept_history[-1]["description"].split(":")[0],
+                    "history": concept_history,
+                    "stability": self._calculate_concept_stability(concept_history),
+                    "confidence_trend": self._calculate_trend(
+                        [entry["confidence"] for entry in concept_history]
+                    )
+                }
+                
+        return evolution
+```
+
+The Archivist's memory system provides a comprehensive solution to the limited context window problem, creating an evolving, queryable "oral history" that becomes more valuable over time through reflection and metacognition.
+
 ## Contribution
 
 This project is in the conceptual phase. Contributions welcome in these areas:
@@ -669,3 +1260,5 @@ This project is in the conceptual phase. Contributions welcome in these areas:
 - User model development
 - Suggestion relevance ranking
 - Natural language generation for suggestions
+- Memory systems and persistent context management
+- Reflection and metacognition algorithms
