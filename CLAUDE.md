@@ -1,5 +1,41 @@
 # CLAUDE.md - Indaleko Development Guidelines
 
+## Development Environment
+
+### Package Management
+Indaleko uses `uv` for package management across multiple platforms (Windows, macOS, Linux). The dependencies are defined in `pyproject.toml` (not requirements.txt).
+
+- **Setup Environment**: 
+  ```bash
+  # Install uv if not already installed
+  pip install uv
+  
+  # Create and activate virtual environment
+  uv venv
+  source .venv/bin/activate  # Linux/macOS
+  .venv\Scripts\activate     # Windows
+  
+  # Install dependencies
+  uv pip install -e .
+  ```
+
+- **Update Dependencies**:
+  ```bash
+  uv pip install -e .
+  ```
+
+### Virtual Environments
+The project maintains separate virtual environments for each platform:
+- `.venv-win32-python3.12` - Windows environment
+- `.venv-linux-python3.13` - Linux environment
+- `.venv-macos-python3.12` - macOS environment
+
+Always activate the appropriate environment before running code:
+```bash
+source .venv-linux-python3.13/bin/activate  # Linux
+.venv-win32-python3.12\Scripts\activate     # Windows
+```
+
 ## Commands
 - Run all tests: `pytest tests/`
 - Run single test: `pytest tests/path/to/test.py::test_function_name -v`
@@ -13,6 +49,7 @@
 - Run CLI with enhanced NL: `python -m query.cli --enhanced-nl --context-aware --deduplicate --dynamic-facets`
 - Run CLI with Archivist: `python -m query.cli --archivist --optimizer`
 - Test Database Optimizer: `python archivist/test_optimizer.py`
+- Test Archivist Memory: `python query/memory/test_archivist.py --all`
 
 ## Style Guidelines
 - Imports: standard library → third-party → local (with blank lines between)
@@ -680,6 +717,79 @@ memory_integration = ArchivistCliIntegration(cli_instance, archivist_memory)
 # /topics - View topics of interest
 # /strategies - View effective search strategies
 # /save - Save memory state to database
+```
+
+#### Testing Archivist Memory
+
+Use the test script to verify Archivist memory functionality:
+
+```bash
+# List all collections in the database
+python query/memory/test_archivist.py --list
+
+# Create and save test memory data
+python query/memory/test_archivist.py --create
+
+# Verify that the Archivist memory collection exists
+python query/memory/test_archivist.py --verify
+
+# Load memory from the database
+python query/memory/test_archivist.py --load
+
+# Run all tests
+python query/memory/test_archivist.py --all
+```
+
+### Cross-Source Pattern Detection
+
+The Proactive Archivist includes cross-source pattern detection to identify patterns across different data sources:
+
+```python
+from query.memory.cross_source_patterns import CrossSourcePatternDetector
+from query.memory.proactive_archivist import ProactiveArchivist
+
+# Initialize the detector
+detector = CrossSourcePatternDetector(db_config)
+
+# Run analysis
+event_count, patterns, correlations, suggestions = detector.analyze_and_generate()
+
+# Initialize Proactive Archivist with pattern detection
+archivist = ArchivistMemory()
+proactive = ProactiveArchivist(archivist)
+
+# Run cross-source analysis
+proactive.analyze_cross_source_patterns()
+
+# Generate suggestions based on patterns
+suggestions = proactive.generate_suggestions()
+```
+
+#### Testing Cross-Source Pattern Detection
+
+Use the test script to verify cross-source pattern detection functionality:
+
+```bash
+# Test event collection
+python query/memory/test_cross_source_patterns.py --collect --reset-timestamps
+
+# Test pattern detection
+python query/memory/test_cross_source_patterns.py --patterns
+
+# Test correlation detection
+python query/memory/test_cross_source_patterns.py --correlations
+
+# Test suggestion generation
+python query/memory/test_cross_source_patterns.py --suggestions
+
+# Test Proactive Archivist integration
+python query/memory/test_cross_source_patterns.py --integration
+
+# Run all tests with verbose output
+python query/memory/test_cross_source_patterns.py --all --verbose
+
+# Save detector state to file
+python query/memory/test_cross_source_patterns.py --all --save-state="patterns_state.json"
 ```
 
 ### Database Optimizer

@@ -47,6 +47,13 @@ from data_models.named_entity import IndalekoNamedEntityDataModel
 from activity.data_model.activity import IndalekoActivityDataModel
 from semantic.data_models.base_data_model import BaseSemanticDataModel
 
+# Import the Archivist memory model if available
+try:
+    from query.memory.archivist_memory import IndalekoArchivistMemoryModel
+    HAS_ARCHIVIST_MEMORY = True
+except ImportError:
+    HAS_ARCHIVIST_MEMORY = False
+
 # pylint: enable=wrong-import-position
 
 
@@ -70,6 +77,7 @@ class IndalekoDBCollections:
     Indaleko_SemanticData_Collection = "SemanticData"
     Indaleko_Named_Entity_Collection = "NamedEntities"
     Indaleko_Collection_Metadata = "CollectionMetadata"
+    Indaleko_Archivist_Memory_Collection = "ArchivistMemory"
 
     Collections = {
         Indaleko_Object_Collection: {
@@ -242,6 +250,18 @@ class IndalekoDBCollections:
             "schema": IndalekoCollectionMetadataDataModel.get_arangodb_schema(),
             "edge": False,
             "indices": {},
+        },
+        Indaleko_Archivist_Memory_Collection: {
+            "internal": True,  # archivist memory is not generally useful for user queries
+            "schema": IndalekoArchivistMemoryModel.get_arangodb_schema() if HAS_ARCHIVIST_MEMORY else {},
+            "edge": False,
+            "indices": {
+                "timestamp": {
+                    "fields": ["Record.Timestamp"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+            },
         },
     }
 

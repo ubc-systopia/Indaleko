@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import uuid
+import json
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any, Set
 
@@ -204,15 +205,38 @@ class ArchivistMemory:
         
     def ensure_collection_exists(self) -> None:
         """Ensure the Archivist memory collection exists in the database."""
-        # Define the collection name as a constant
-        if not hasattr(IndalekoDBCollections, "Indaleko_Archivist_Memory_Collection"):
-            setattr(IndalekoDBCollections, "Indaleko_Archivist_Memory_Collection", "ArchivistMemory")
-        
         collection_name = IndalekoDBCollections.Indaleko_Archivist_Memory_Collection
         
         # Create collection if it doesn't exist
         if not self.db_config.db.has_collection(collection_name):
-            self.db_config.db.create_collection(collection_name)
+            # Check if collection is defined in the schema
+            if collection_name in IndalekoDBCollections.Collections:
+                collection_def = IndalekoDBCollections.Collections[collection_name]
+                # Create with schema if available
+                if collection_def.get("schema"):
+                    self.db_config.db.create_collection(
+                        collection_name,
+                        schema=collection_def.get("schema"),
+                        edge=collection_def.get("edge", False)
+                    )
+                    
+                    # Create indices if defined
+                    if "indices" in collection_def:
+                        collection = self.db_config.db.collection(collection_name)
+                        for index_name, index_def in collection_def["indices"].items():
+                            try:
+                                collection.add_persistent_index(
+                                    fields=index_def["fields"],
+                                    unique=index_def.get("unique", False)
+                                )
+                            except Exception as e:
+                                ic(f"Error creating index {index_name}: {e}")
+                else:
+                    # Create without schema
+                    self.db_config.db.create_collection(collection_name)
+            else:
+                # Collection not defined in schema, create simple collection
+                self.db_config.db.create_collection(collection_name)
     
     def load_latest_memory(self) -> Optional[ArchivistMemoryData]:
         """Load the most recent Archivist memory from the database."""
@@ -220,14 +244,23 @@ class ArchivistMemory:
         collection = self.db_config.db.collection(collection_name)
         
         # Query for the most recent memory entry
-        cursor = collection.find({}, sort=[("Record.Timestamp", -1)], limit=1)
-        documents = [doc for doc in cursor]
-        
-        if not documents:
+        try:
+            # Use AQL to sort by timestamp in descending order
+            aql = "FOR doc IN @@collection SORT doc.Record.Timestamp DESC LIMIT 1 RETURN doc"
+            cursor = self.db_config.db.aql.execute(
+                aql, 
+                bind_vars={"@collection": collection_name}
+            )
+            documents = [doc for doc in cursor]
+            
+            if not documents:
+                return None
+            
+            memory_model = IndalekoArchivistMemoryModel(**documents[0])
+            return memory_model.ArchivistMemory
+        except Exception as e:
+            ic(f"Error loading memory: {e}")
             return None
-        
-        memory_model = IndalekoArchivistMemoryModel(**documents[0])
-        return memory_model.ArchivistMemory
     
     def save_memory(self) -> None:
         """Save the current Archivist memory to the database."""
@@ -257,8 +290,15 @@ class ArchivistMemory:
         )
         
         # Insert into database
-        doc = memory_model.model_dump()
-        collection.insert(doc)
+        # Serialize to JSON and then parse back to ensure UUID handling
+        doc_json = memory_model.model_dump_json(exclude_none=True)
+        doc = json.loads(doc_json)
+        
+        try:
+            collection.insert(doc)
+            ic("Successfully saved memory to database")
+        except Exception as e:
+            ic(f"Error saving memory to database: {e}")
     
     def distill_knowledge(self, conversation_context, query_history) -> None:
         """
