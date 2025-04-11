@@ -1,6 +1,6 @@
 # Indaleko Activity Recorders
 
-**Note: This documentation was updated as part of the implementation of service registration for the NTFS Activity Recorder and verification of the Location Data Recorder registration.**
+**Note: This documentation was updated as part of the implementation of service registration for the NTFS Activity Recorder and verification of the Location Data Recorder registration. It now includes information about the TemplateRecorder base class for simplified implementations.**
 
 This directory contains the recorder implementations for various activity types in the Indaleko system.
 
@@ -123,10 +123,67 @@ Use the included test scripts to verify your service registration implementation
 
 ## Adding New Recorders
 
-When adding a new recorder, make sure to:
+When adding a new recorder, you have two options:
+
+### Option 1: Use the TemplateRecorder (Recommended)
+
+The easiest way to create a new recorder is to extend the `TemplateRecorder` class:
+
+```python
+from activity.recorders.template import TemplateRecorder
+
+class YourCustomRecorder(TemplateRecorder):
+    """Your custom recorder implementation."""
+    
+    def __init__(self, **kwargs):
+        # Set your defaults
+        kwargs.setdefault("name", "Your Custom Recorder")
+        kwargs.setdefault("recorder_id", uuid.UUID("your-custom-uuid"))
+        # ...other defaults
+        
+        # Initialize template
+        super().__init__(**kwargs)
+        
+        # Your custom setup
+        # ...
+    
+    def collect_and_process_data(self) -> List[Any]:
+        """Implement your data collection logic here."""
+        # ...
+    
+    def get_collector_class_model(self) -> Dict[str, Type]:
+        """Return your collector class model."""
+        # ...
+    
+    def get_json_schema(self) -> dict:
+        """Return your JSON schema."""
+        # ...
+```
+
+See the examples in `activity/recorders/examples/` for a complete example.
+
+### Option 2: Extend RecorderBase Directly
+
+For more control, you can extend `RecorderBase` directly:
 
 1. Extend the appropriate base class (`RecorderBase` or a specialized subclass)
 2. Implement all abstract methods
 3. Register with the activity service manager
 4. Provide proper error handling and logging
 5. Document your recorder in this README
+
+## Template Class Features
+
+The `TemplateRecorder` class provides several benefits:
+
+1. **Simplified Service Registration**: Automatically handles registration with the activity service manager
+2. **Default Implementations**: Provides sensible defaults for common methods
+3. **Error Handling**: Built-in error handling and logging
+4. **Standardized Document Formatting**: Consistent formatting of documents for the database
+
+You only need to implement three abstract methods:
+- `collect_and_process_data()`: Your data collection logic
+- `get_collector_class_model()`: Information about your collector
+- `get_json_schema()`: The JSON schema for your data
+
+See the template class documentation in `activity/recorders/template.py` for more details.
