@@ -22,6 +22,7 @@ import os
 import sys
 import uuid
 import json
+import socket
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Any, Union, Tuple, Set, Type
@@ -56,6 +57,8 @@ from data_models.provenance_data import IndalekoProvenanceData
 from data_models.timestamp import IndalekoTimestamp
 from db.collection import IndalekoCollection
 from Indaleko import Indaleko
+from data_models.activity_data_registration import IndalekoActivityDataRegistrationDataModel
+from activity.recorders.registration_service import IndalekoActivityDataRegistrationService
 # pylint: enable=wrong-import-position
 
 
@@ -118,6 +121,11 @@ class NtfsActivityRecorder(RecorderBase):
         
         # Setup logging
         self._logger = logging.getLogger("NtfsActivityRecorder")
+        
+        # Register with activity service manager if specified
+        self._register_enabled = kwargs.get("register_service", True)
+        if self._register_enabled:
+            self._register_with_service_manager()
     
     def _connect_to_db(self):
         """Connect to the Indaleko database."""
@@ -880,6 +888,70 @@ class NtfsActivityRecorder(RecorderBase):
             return next(cursor)
         except StopIteration:
             return {}
+            
+    def _register_with_service_manager(self) -> None:
+        """Register the NTFS activity recorder with the activity service manager."""
+        try:
+            # Get semantic attributes for NTFS activity
+            attributes = get_ntfs_activity_semantic_attributes()
+            semantic_attribute_ids = [str(attr.Identifier.Identifier) for attr in attributes]
+            
+            # Create source identifier for the record
+            source_identifier = IndalekoSourceIdentifierDataModel(
+                Identifier=self._recorder_id,
+                Version=self._version,
+                Description=self._description
+            )
+            
+            # Create record data model
+            record = IndalekoRecordDataModel(
+                SourceIdentifier=source_identifier,
+                Timestamp=datetime.now(timezone.utc),
+                Attributes={},
+                Data=""
+            )
+            
+            # Prepare registration data
+            registration_kwargs = {
+                "Identifier": str(self._recorder_id),
+                "Name": self._name,
+                "Description": self._description,
+                "Version": self._version,
+                "Record": record,
+                "DataProvider": "NTFS File System Activity",
+                "DataProviderType": "Activity",
+                "DataProviderSubType": "FileSystem",
+                "DataProviderURL": "",
+                "DataProviderCollectionName": self._collection_name,
+                "DataFormat": "JSON",
+                "DataFormatVersion": "1.0",
+                "DataAccess": "Read",
+                "DataAccessURL": "",
+                "CreateCollection": True,
+                "SourceIdentifiers": [
+                    # Use NtfsActivityAttributes enum values
+                    str(NtfsActivityAttributes.NTFS_ACTIVITY.value),
+                    str(NtfsActivityAttributes.FILE_CREATE.value),
+                    str(NtfsActivityAttributes.FILE_MODIFY.value),
+                    str(NtfsActivityAttributes.FILE_DELETE.value),
+                    str(NtfsActivityAttributes.FILE_RENAME.value),
+                    str(NtfsActivityAttributes.FILE_SECURITY_CHANGE.value)
+                ],
+                "SchemaIdentifiers": semantic_attribute_ids,
+                "Tags": ["file", "filesystem", "ntfs", "activity", "windows"]
+            }
+            
+            # Register with service manager
+            try:
+                service = IndalekoActivityDataRegistrationService()
+                service.register_provider(**registration_kwargs)
+                
+                self._logger.info(f"Registered NTFS activity recorder with service manager: {self._recorder_id}")
+            except Exception as e:
+                self._logger.error(f"Error registering with service manager: {e}")
+                
+        except Exception as e:
+            self._logger.error(f"Error creating registration data: {e}")
 
 
 def main():
