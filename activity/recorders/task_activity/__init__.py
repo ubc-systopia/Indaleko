@@ -1,5 +1,5 @@
 """
-This module defines known characteristics for checksum data.
+Task activity data recorder for Indaleko.
 
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason
@@ -17,9 +17,3 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-
-SEMANTIC_CHECKSUM_MD5 = "de41cd6f-5468-4eba-8493-428c5791c23e"
-SEMANTIC_CHECKSUM_SHA1 = "e2c803f8-a362-4d9b-b026-757e3af9c3d8"
-SEMANTIC_CHECKSUM_SHA256 = "0e7123a1-b87b-4eb5-afb7-cebc38c8848d"
-SEMANTIC_CHECKSUM_SHA512 = "f9a1bd2a-1b94-4a7a-8a3d-fb9e8cadfb17"
-SEMANTIC_CHECKSUM_DROPBOX_SHA2 = "0349dc34-ec36-4d50-b861-9de5ffb20fbf"

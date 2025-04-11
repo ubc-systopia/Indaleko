@@ -45,6 +45,13 @@ from semantic.data_models.base_data_model import BaseSemanticDataModel
 class SemanticChecksumDataModel(BaseSemanticDataModel):
     """
     This class defines the data model for the file checksum semantic data.
+    
+    It includes multiple checksum types:
+    - MD5: Fast but collision-prone hash (32 characters)
+    - SHA1: Widely used but no longer cryptographically secure (40 characters)
+    - SHA256: Strong cryptographic hash (64 characters)
+    - SHA512: Very strong cryptographic hash with higher security margin (128 characters)
+    - Dropbox Content Hash: Special hash used by Dropbox for content addressing (64 characters)
     """
 
     checksum_data_id: UUID = Field(
@@ -54,6 +61,7 @@ class SemanticChecksumDataModel(BaseSemanticDataModel):
     md5_checksum: str = Field(..., description="The MD5 checksum for the file.")
     sha1_checksum: str = Field(..., description="The SHA1 checksum for the file.")
     sha256_checksum: str = Field(..., description="The SHA256 checksum for the file.")
+    sha512_checksum: str = Field(..., description="The SHA512 checksum for the file.")
     dropbox_checksum: str = Field(..., description="The Dropbox checksum for the file.")
 
     @classmethod
@@ -89,6 +97,15 @@ class SemanticChecksumDataModel(BaseSemanticDataModel):
         if not all(c in "0123456789abcdefABCDEF" for c in value):
             raise ValueError("SHA256 checksum must be a valid hexadecimal string")
         return value
+        
+    @classmethod
+    @field_validator("sha512_checksum")
+    def validate_sha512_checksum(cls, value):
+        if len(value) != 128:
+            raise ValueError("SHA512 checksum must be 128 characters long")
+        if not all(c in "0123456789abcdefABCDEF" for c in value):
+            raise ValueError("SHA512 checksum must be a valid hexadecimal string")
+        return value
 
     @classmethod
     @field_validator("dropbox_checksum")
@@ -112,6 +129,7 @@ class SemanticChecksumDataModel(BaseSemanticDataModel):
                     "md5_checksum": "d41d8cd98f00b204e9800998ecf8427e",
                     "sha1_checksum": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                     "sha256_checksum": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "sha512_checksum": "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e",
                     "dropbox_checksum": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                 }
             }
@@ -123,6 +141,7 @@ class SemanticChecksumDataModel(BaseSemanticDataModel):
                 "md5_checksum": "d41d8cd98f00b204e9800998ecf8427e",
                 "sha1_checksum": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                 "sha256_checksum": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "sha512_checksum": "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e",
                 "dropbox_checksum": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             }
         }

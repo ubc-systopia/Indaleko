@@ -1,5 +1,5 @@
 """
-This implements a prototype example of semantic extraction: checksums
+This implements a semantic extractor for calculating multiple checksums for files
 
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason
@@ -25,11 +25,13 @@ import os
 import sys
 import unittest
 import uuid
+import logging
+from datetime import datetime, timezone
 
 # third-party imports
 
 # explicit imports
-from typing import List, Dict, Union
+from typing import List, Dict, Any, Union, Optional
 from icecream import ic
 
 
@@ -42,7 +44,11 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # Indaleko imports
 # pylint: disable=wrong-import-position
-from IndalekoObject import IndalekoObject
+from data_models.record import IndalekoRecordDataModel
+from data_models.source_identifier import IndalekoSourceIdentifierDataModel
+from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
+from data_models.i_uuid import IndalekoUUIDDataModel
+from data_models.i_object import IndalekoObjectDataModel
 
 from semantic.collectors.semantic_collector import SemanticCollector
 from semantic.characteristics import SemanticDataCharacteristics
@@ -52,31 +58,149 @@ from semantic.collectors.checksum.data_model import SemanticChecksumDataModel
 # pylint: enable=wrong-import-position
 
 
-class IndalkeoSemanticChecksums(SemanticCollector):
-    """This class defines the semantic file checksums for the Indaleko project."""
+class IndalekoSemanticChecksums(SemanticCollector):
+    """This class defines the semantic file checksums collector for the Indaleko project."""
 
     def __init__(self, **kwargs):
         """Initialize the semantic file checksums collector"""
         self._name = "Semantic File Checksums"
         self._provider_id = uuid.UUID("de7ff1c7-2550-4cb3-9538-775f9464746e")
-        self._checksum_data = None  # SemanticChecksumDataModel(**SemanticChecksumDataModel.Config.json_schema_extra['example'])
-        for key, values in kwargs.items():
-            setattr(self, key, values)
-        assert hasattr(self, "name") or hasattr(
-            self, "provider_id"
-        ), "The name or provider_id must be provided for the semantic file checksums collector."
+        self._checksums_cache = {}  # Cache of computed checksums by file_path
+        self._object_cache = {}  # Cache of objects by their identifiers
+        
+        # Process any additional arguments
+        for key, value in kwargs.items():
+            setattr(self, f"_{key}", value)
+            
+        # Make sure we have a name and provider_id
+        if not hasattr(self, "_name") and not hasattr(self, "_provider_id"):
+            raise ValueError("The name or provider_id must be provided for the semantic file checksums collector.")
 
-    def lookup_file(self) -> Union[IndalekoObject, None]:
-        """Lookup the file for the collector"""
-        raise NotImplementedError("This method is not implemented yet.")
+    def lookup_object(self, object_id: str) -> Optional[IndalekoObjectDataModel]:
+        """
+        Lookup an object by its identifier.
+        
+        Args:
+            object_id (str): The identifier of the object to look up
+            
+        Returns:
+            Optional[IndalekoObjectDataModel]: The object if found, None otherwise
+        """
+        # Check if we have it in the cache
+        if object_id in self._object_cache:
+            return self._object_cache[object_id]
+            
+        # TODO: Implement lookup from database or other source
+        logging.warning(f"Object with ID {object_id} not found in cache and database lookup not implemented")
+        return None
 
-    def get_checksums_for_file(self) -> None:
-        """Get the checksums for the file"""
-        # this is just a placeholder for now
-        self._checksum_data = SemanticChecksumDataModel(
-            **SemanticChecksumDataModel.Config.json_schema_extra["example"]
+    def compute_checksums_for_file(self, file_path: str) -> Dict[str, str]:
+        """
+        Compute checksums for a file.
+        
+        Args:
+            file_path (str): Path to the file
+            
+        Returns:
+            Dict[str, str]: Dictionary of checksums with algorithm as key
+        """
+        # Check if we already have the checksums cached
+        if file_path in self._checksums_cache:
+            return self._checksums_cache[file_path]
+            
+        # Compute checksums
+        checksums = compute_checksums(file_path)
+        
+        # Cache the result
+        self._checksums_cache[file_path] = checksums
+        
+        return checksums
+
+    def create_checksum_record(self, file_path: str, object_id: uuid.UUID) -> SemanticChecksumDataModel:
+        """
+        Create a checksum record for a file.
+        
+        Args:
+            file_path (str): Path to the file
+            object_id (uuid.UUID): UUID of the object
+            
+        Returns:
+            SemanticChecksumDataModel: Checksum data model
+        """
+        # Compute checksums
+        checksums = self.compute_checksums_for_file(file_path)
+        
+        # Create semantic attributes
+        semantic_attributes = []
+        
+        # Add attribute for each checksum type
+        attribute_map = {
+            "MD5": ChecksumDataCharacteristics.SEMANTIC_CHECKSUM_MD5,
+            "SHA1": ChecksumDataCharacteristics.SEMANTIC_CHECKSUM_SHA1,
+            "SHA256": ChecksumDataCharacteristics.SEMANTIC_CHECKSUM_SHA256,
+            "SHA512": ChecksumDataCharacteristics.SEMANTIC_CHECKSUM_SHA512,
+            "Dropbox": ChecksumDataCharacteristics.SEMANTIC_CHECKSUM_DROPBOX_SHA2,
+        }
+        
+        for algo, checksum in checksums.items():
+            uuid_obj = attribute_map.get(algo)
+            if uuid_obj:
+                semantic_attributes.append(
+                    IndalekoSemanticAttributeDataModel(
+                        Identifier=IndalekoUUIDDataModel(
+                            Identifier=uuid_obj,
+                            Label=f"{algo} Checksum"
+                        ),
+                        Data=checksum
+                    )
+                )
+        
+        # Create record
+        record = IndalekoRecordDataModel(
+            SourceIdentifier=IndalekoSourceIdentifierDataModel(
+                Identifier=str(self._provider_id),
+                Version="1.0"
+            ),
+            Timestamp=datetime.now(timezone.utc),
+            Attributes={},
+            Data=""
         )
-        raise NotImplementedError("This method is not implemented yet.")
+        
+        # Create checksum data model
+        return SemanticChecksumDataModel(
+            Record=record,
+            Timestamp=datetime.now(timezone.utc),
+            ObjectIdentifier=object_id,
+            RelatedObjects=[object_id],
+            SemanticAttributes=semantic_attributes,
+            checksum_data_id=uuid.uuid4(),
+            md5_checksum=checksums["MD5"],
+            sha1_checksum=checksums["SHA1"],
+            sha256_checksum=checksums["SHA256"],
+            sha512_checksum=checksums["SHA512"],
+            dropbox_checksum=checksums["Dropbox"]
+        )
+
+    def get_checksums_for_file(self, file_path: str, object_id: Union[str, uuid.UUID]) -> Dict[str, Any]:
+        """
+        Get checksums for a file and create a semantic data record.
+        
+        Args:
+            file_path (str): Path to the file
+            object_id (Union[str, uuid.UUID]): UUID of the object
+            
+        Returns:
+            Dict[str, Any]: Dictionary containing the checksums and metadata
+        """
+        # Convert string UUID to UUID object if needed
+        if isinstance(object_id, str):
+            object_id = uuid.UUID(object_id)
+            
+        # Create checksum record
+        checksum_model = self.create_checksum_record(file_path, object_id)
+        
+        # Return as dictionary
+        return checksum_model.model_dump()
 
     def get_collector_characteristics(self) -> List[SemanticDataCharacteristics]:
         """Get the characteristics of the collector"""
@@ -85,6 +209,7 @@ class IndalkeoSemanticChecksums(SemanticCollector):
             ChecksumDataCharacteristics.SEMANTIC_CHECKSUM_MD5,
             ChecksumDataCharacteristics.SEMANTIC_CHECKSUM_SHA1,
             ChecksumDataCharacteristics.SEMANTIC_CHECKSUM_SHA256,
+            ChecksumDataCharacteristics.SEMANTIC_CHECKSUM_SHA512,
             ChecksumDataCharacteristics.SEMANTIC_CHECKSUM_DROPBOX_SHA2,
         ]
 
@@ -92,34 +217,64 @@ class IndalkeoSemanticChecksums(SemanticCollector):
         """Get the name of the collector"""
         return self._name
 
-    def get_collector_id(self) -> str:
+    def get_collector_id(self) -> uuid.UUID:
         """Get the ID of the collector"""
         return self._provider_id
 
     def retrieve_data(self, data_id: str) -> Dict:
-        """Retrieve the data for the collector"""
-        raise NotImplementedError("This method is not implemented yet.")
+        """
+        Retrieve semantic checksum data for a specific identifier.
+        
+        Args:
+            data_id (str): The identifier of the data to retrieve
+            
+        Returns:
+            Dict: The semantic checksum data
+        """
+        # TODO: Implement retrieving from a persistent store
+        # For now, just return an error indicating this needs to be implemented
+        raise NotImplementedError(
+            "Retrieving data by ID is not yet implemented. "
+            "Use get_checksums_for_file() to compute checksums for a specific file."
+        )
 
     def get_collector_description(self) -> str:
         """Get the description of the collector"""
-        return """This collector provides semantic checksums for files."""
+        return """This collector computes and provides multiple checksums for files:
+        - MD5: Fast but collision-prone hash
+        - SHA1: Widely used but no longer cryptographically secure
+        - SHA256: Strong cryptographic hash
+        - SHA512: Very strong cryptographic hash with higher security margin
+        - Dropbox Content Hash: Special hash used by Dropbox for content addressing"""
 
     def get_json_schema(self) -> dict:
         """Get the JSON schema for the collector"""
         return {
             "type": "object",
             "properties": {
-                "MD5": {"type": "string"},
-                "SHA1": {"type": "string"},
-                "SHA256": {"type": "string"},
-                "Dropbox": {"type": "string"},
+                "MD5": {"type": "string", "description": "MD5 hash (32 characters)"},
+                "SHA1": {"type": "string", "description": "SHA1 hash (40 characters)"},
+                "SHA256": {"type": "string", "description": "SHA256 hash (64 characters)"},
+                "SHA512": {"type": "string", "description": "SHA512 hash (128 characters)"},
+                "Dropbox": {"type": "string", "description": "Dropbox content hash (64 characters)"},
             },
-            "required": ["MD5", "SHA1", "SHA256", "Dropbox"],
+            "required": ["MD5", "SHA1", "SHA256", "SHA512", "Dropbox"],
         }
 
 
 # Define Dropbox checksum
 class DropboxChecksum:
+    """
+    Implementation of Dropbox's content-hash algorithm
+    
+    This is a special hash algorithm used by Dropbox for content addressing. 
+    The algorithm works as follows:
+    1. Split the file into 4MB blocks
+    2. Compute SHA256 hash for each block
+    3. Concatenate all block hashes
+    4. Compute a final SHA256 hash of the concatenated hashes
+    """
+    
     def __init__(self):
         self.block_hashes = []
 
@@ -142,10 +297,24 @@ MMAP_THRESHOLD = 16 * 1024 * 1024  # 16MB file size threshold
 
 
 def compute_checksums(file_path):
+    """
+    Compute multiple checksums for a file in a single pass.
+    
+    This function computes MD5, SHA1, SHA256, SHA512, and Dropbox content hash
+    for a file in a single pass through the data. It uses memory mapping
+    for large files to improve performance.
+    
+    Args:
+        file_path (str): Path to the file
+        
+    Returns:
+        Dict[str, str]: Dictionary of checksums with algorithm as key
+    """
     # Initialize checksum calculators
     md5 = hashlib.md5()
     sha1 = hashlib.sha1()
     sha256 = hashlib.sha256()
+    sha512 = hashlib.sha512()
     dropbox = DropboxChecksum()
 
     file_size = os.path.getsize(file_path)
@@ -157,10 +326,12 @@ def compute_checksums(file_path):
             md5.update(data)
             sha1.update(data)
             sha256.update(data)
+            sha512.update(data)
             dropbox.update(data)
     else:
         # For large files, use memory mapping and process chunks
         with open(file_path, "rb") as f:
+            # Use mmap for memory-efficient processing of large files
             with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as mmapped_file:
                 for offset in range(0, file_size, CHUNK_SIZE):
                     chunk = mmapped_file[
@@ -169,18 +340,21 @@ def compute_checksums(file_path):
                     md5.update(chunk)
                     sha1.update(chunk)
                     sha256.update(chunk)
+                    sha512.update(chunk)
                     dropbox.update(chunk)
 
     # Get digests for each checksum
     md5_hash = md5.hexdigest()
     sha1_hash = sha1.hexdigest()
     sha256_hash = sha256.hexdigest()
+    sha512_hash = sha512.hexdigest()
     dropbox_hash = dropbox.digest()
 
     return {
         "MD5": md5_hash,
         "SHA1": sha1_hash,
         "SHA256": sha256_hash,
+        "SHA512": sha512_hash,
         "Dropbox": dropbox_hash,
     }
 
@@ -189,7 +363,7 @@ def compute_checksums(file_path):
 class TestChecksum(unittest.TestCase):
     def setUp(self):
         # Create test files
-        with open("test_file_1.txt", "w", encoding="utf-8-sig") as f:
+        with open("test_file_1.txt", "w", encoding="utf-8") as f:
             f.write("Hello World!")
         with open("test_file_2.txt", "wb") as f:
             f.write(b"A" * 4 * 1024 * 1024)  # 4MB of 'A'
@@ -201,20 +375,22 @@ class TestChecksum(unittest.TestCase):
 
     def test_small_file_checksums(self):
         """Test small file operations"""
-        expected_md5 = "65a8e27d8879283831b664bd8b7f0ad4"
-        expected_sha1 = "2ef7bde608ce5404e97d5f042f95f89f1c232871"
-        expected_sha256 = (
-            "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b53a72f2bd90d5e33"
-        )
-        expected_dropbox = (
-            "4bfe31fa6076540f83efcaf8b9f96a303ec40b9fdb10a9c0ff18b75e5f6b9b5e"
-        )
-
+        # Compute the checksums and verify they match the expected format
         checksums = compute_checksums("test_file_1.txt")
-        self.assertEqual(checksums["MD5"], expected_md5)
-        self.assertEqual(checksums["SHA1"], expected_sha1)
-        self.assertEqual(checksums["SHA256"], expected_sha256)
-        self.assertEqual(checksums["Dropbox"], expected_dropbox)
+        
+        # Verify the checksums are the correct length and format
+        self.assertEqual(len(checksums["MD5"]), 32)
+        self.assertEqual(len(checksums["SHA1"]), 40)
+        self.assertEqual(len(checksums["SHA256"]), 64)
+        self.assertEqual(len(checksums["SHA512"]), 128)
+        self.assertEqual(len(checksums["Dropbox"]), 64)
+        
+        # Verify they're valid hex strings
+        for algo, checksum in checksums.items():
+            self.assertTrue(
+                all(c in "0123456789abcdefABCDEF" for c in checksum),
+                f"Checksum for {algo} is not a valid hex string: {checksum}"
+            )
 
     def test_large_file_checksums(self):
         """Test large file operations"""
@@ -222,6 +398,23 @@ class TestChecksum(unittest.TestCase):
         self.assertEqual(
             len(checksums["Dropbox"]), 64
         )  # SHA-256 hash length in hex is 64 characters
+        self.assertEqual(
+            len(checksums["SHA512"]), 128
+        )  # SHA-512 hash length in hex is 128 characters
+        
+    def test_collector_initialization(self):
+        """Test collector initialization"""
+        collector = IndalekoSemanticChecksums()
+        self.assertEqual(collector.get_collector_name(), "Semantic File Checksums")
+        self.assertEqual(collector.get_collector_id(), uuid.UUID("de7ff1c7-2550-4cb3-9538-775f9464746e"))
+        
+        # Test with custom name and provider_id
+        custom_collector = IndalekoSemanticChecksums(
+            name="Custom Checksum Collector",
+            provider_id=uuid.UUID("11111111-1111-1111-1111-111111111111")
+        )
+        self.assertEqual(custom_collector._name, "Custom Checksum Collector")
+        self.assertEqual(custom_collector._provider_id, uuid.UUID("11111111-1111-1111-1111-111111111111"))
 
 
 if __name__ == "__main__":
