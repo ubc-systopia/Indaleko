@@ -36,15 +36,18 @@ from archivist.database_optimizer import DatabaseOptimizer
 from archivist.cli_integration import DatabaseOptimizerCliIntegration
 from query.memory.archivist_memory import ArchivistMemory
 from query.memory.cli_integration import ArchivistCliIntegration
+from query.memory.proactive_archivist import ProactiveArchivist
+from query.memory.proactive_cli import ProactiveCliIntegration
 # pylint: enable=wrong-import-position
 
 
-def register_archivist_components(cli_instance):
+def register_archivist_components(cli_instance, enable_proactive=True):
     """
     Register all Archivist components with the CLI.
     
     Args:
         cli_instance: The CLI instance to register with
+        enable_proactive: Whether to enable proactive features
         
     Returns:
         Dict containing the initialized components
@@ -65,6 +68,17 @@ def register_archivist_components(cli_instance):
         database_optimizer
     )
     
+    # Initialize proactive components if enabled
+    proactive_archivist = None
+    proactive_integration = None
+    if enable_proactive:
+        proactive_archivist = ProactiveArchivist(archivist_memory)
+        proactive_integration = ProactiveCliIntegration(
+            cli_instance, 
+            archivist_memory, 
+            proactive_archivist
+        )
+    
     # Register memory commands
     for cmd, handler in memory_integration.commands.items():
         cli_instance.register_command(cmd, memory_integration.handle_command)
@@ -72,6 +86,11 @@ def register_archivist_components(cli_instance):
     # Register optimizer commands
     for cmd, handler in optimizer_integration.commands.items():
         cli_instance.register_command(cmd, optimizer_integration.handle_command)
+    
+    # Register proactive commands if enabled
+    if enable_proactive and proactive_integration:
+        for cmd, handler in proactive_integration.commands.items():
+            cli_instance.register_command(cmd, proactive_integration.handle_command)
     
     # Add help text
     cli_instance.append_help_text("\nArchivist Commands:")
@@ -92,22 +111,42 @@ def register_archivist_components(cli_instance):
     cli_instance.append_help_text("  /query               - Manage query optimizations")
     cli_instance.append_help_text("  /impact              - Show impact of applied optimizations")
     
-    return {
+    # Add proactive help text if enabled
+    if enable_proactive:
+        cli_instance.append_help_text("\nProactive Commands:")
+        cli_instance.append_help_text("  /proactive           - Show proactive archivist commands")
+        cli_instance.append_help_text("  /suggest             - Show current suggestions")
+        cli_instance.append_help_text("  /feedback            - Provide feedback on suggestions")
+        cli_instance.append_help_text("  /patterns            - View detected temporal patterns")
+        cli_instance.append_help_text("  /priorities          - Manage suggestion priorities")
+        cli_instance.append_help_text("  /enable              - Enable proactive suggestions")
+        cli_instance.append_help_text("  /disable             - Disable proactive suggestions")
+    
+    result = {
         "memory": archivist_memory,
         "memory_integration": memory_integration,
         "database_optimizer": database_optimizer,
         "optimizer_integration": optimizer_integration
     }
+    
+    if enable_proactive:
+        result.update({
+            "proactive_archivist": proactive_archivist,
+            "proactive_integration": proactive_integration
+        })
+    
+    return result
 
 
-def register_with_cli(cli_instance):
+def register_with_cli(cli_instance, enable_proactive=True):
     """
     Register the Archivist with the CLI.
     
     Args:
         cli_instance: The CLI instance to register with
+        enable_proactive: Whether to enable proactive features
         
     Returns:
         The initialized components
     """
-    return register_archivist_components(cli_instance)
+    return register_archivist_components(cli_instance, enable_proactive)

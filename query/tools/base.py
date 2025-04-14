@@ -80,12 +80,23 @@ class ToolOutput(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 
+class ProgressCallback(BaseModel):
+    """Callback data for tool progress updates."""
+    
+    tool_name: str
+    stage: str
+    message: str
+    progress: float = 0.0  # 0.0 to 1.0
+    data: Optional[Dict[str, Any]] = None
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+
 class BaseTool(ABC):
     """Base class for all Indaleko tools."""
     
     def __init__(self):
         """Initialize the tool."""
-        pass
+        self._progress_callback = None
     
     @property
     @abstractmethod
@@ -105,6 +116,36 @@ class BaseTool(ABC):
             ToolOutput: The result of the tool execution.
         """
         pass
+    
+    def set_progress_callback(self, callback_func: callable) -> None:
+        """
+        Set a callback function to receive progress updates during tool execution.
+        
+        Args:
+            callback_func (callable): A function that takes a ProgressCallback object.
+                                     Set to None to disable progress updates.
+        """
+        self._progress_callback = callback_func
+    
+    def report_progress(self, stage: str, message: str, progress: float = 0.0, data: Optional[Dict[str, Any]] = None) -> None:
+        """
+        Report progress during tool execution.
+        
+        Args:
+            stage (str): The current execution stage (e.g., "parsing", "translating", "executing")
+            message (str): A human-readable message describing the current status
+            progress (float, optional): Progress value between 0.0 and 1.0. Defaults to 0.0.
+            data (Dict[str, Any], optional): Additional data to include with the progress report
+        """
+        if self._progress_callback is not None:
+            callback_data = ProgressCallback(
+                tool_name=self.definition.name,
+                stage=stage,
+                message=message,
+                progress=progress,
+                data=data
+            )
+            self._progress_callback(callback_data)
     
     def validate_input(self, input_data: ToolInput) -> None:
         """

@@ -207,18 +207,50 @@ class NLParserTool(BaseTool):
         api_key_path = input_data.parameters.get("api_key_path")
         model = input_data.parameters.get("model", "gpt-4o-mini")
         
+        # Report initial progress
+        self.report_progress(
+            stage="initialization",
+            message=f"Initializing NL parser for query: {query}",
+            progress=0.1
+        )
+        
         # Initialize parser if needed
         if self._nl_parser is None:
+            self.report_progress(
+                stage="initialization",
+                message="Creating new parser instance",
+                progress=0.2
+            )
             self._initialize_parser(db_config_path, api_key_path, model)
         
         ic(f"Parsing query: {query}")
+        self.report_progress(
+            stage="parsing",
+            message="Starting query parsing",
+            progress=0.3
+        )
         
         # Parse the query
         try:
+            # Report intent detection progress
+            self.report_progress(
+                stage="parsing",
+                message="Detecting query intent",
+                progress=0.4
+            )
+            
             parsed_result = self._nl_parser.parse(query=query)
             
             # Extract key information
             intent = parsed_result.Intent.intent
+            
+            # Report entity extraction progress
+            self.report_progress(
+                stage="processing",
+                message="Extracting and processing entities",
+                progress=0.6,
+                data={"intent": intent}
+            )
             
             # Create entity list
             entities = []
@@ -228,6 +260,14 @@ class NLParserTool(BaseTool):
                     "type": entity.category if hasattr(entity, "category") else "unknown",
                     "value": entity.value if hasattr(entity, "value") else entity.name
                 })
+            
+            # Report category extraction progress
+            self.report_progress(
+                stage="processing",
+                message="Extracting and processing categories",
+                progress=0.8,
+                data={"entities_count": len(entities)}
+            )
             
             # Extract categories
             categories = []
@@ -245,6 +285,18 @@ class NLParserTool(BaseTool):
                         "alternatives_considered": category.alternatives_considered
                     })
             
+            # Report completion
+            self.report_progress(
+                stage="completion",
+                message="NL parsing complete",
+                progress=1.0,
+                data={
+                    "intent": intent,
+                    "entities_count": len(entities),
+                    "categories_count": len(categories)
+                }
+            )
+            
             # Return the result
             return ToolOutput(
                 tool_name=self.definition.name,
@@ -260,6 +312,13 @@ class NLParserTool(BaseTool):
             
         except Exception as e:
             ic(f"Error parsing query: {e}")
+            # Report error
+            self.report_progress(
+                stage="error",
+                message=f"Error parsing query: {e}",
+                progress=1.0,
+                data={"error": str(e)}
+            )
             return ToolOutput(
                 tool_name=self.definition.name,
                 success=False,

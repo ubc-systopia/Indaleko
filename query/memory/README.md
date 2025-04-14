@@ -4,6 +4,16 @@
 
 The Archivist Memory System enables ongoing collaborative relationships between users and AI search assistants by implementing a "prompt forwarding" mechanism. This allows context and knowledge to persist across sessions despite the context window limitations inherent to LLM systems.
 
+## Recent Additions: Proactive Archivist
+
+The Archivist Memory System has been enhanced with proactive capabilities that enable it to:
+
+1. **Generate Proactive Suggestions**: Offer timely suggestions based on patterns, goals, and context
+2. **Detect Temporal Patterns**: Identify time-based patterns in user behavior (e.g., daily active hours)
+3. **Analyze Sequential Patterns**: Discover common sequences of queries that tend to follow each other
+4. **Provide Smart Query Suggestions**: Suggest relevant queries based on user interests and context
+5. **Learn from Feedback**: Adapt suggestion frequency and types based on user feedback
+
 ## Concept
 
 ### Prompt Forwarding
@@ -38,6 +48,16 @@ The memory system uses a rich data model to capture different aspects of the use
 6. **Content Preferences**: Types of content the user frequently searches for
 7. **Semantic Topics**: Subject areas of interest to the user
 
+#### Proactive Extension
+
+The proactive archivist extends this data model with:
+
+1. **Suggestions**: Proactive suggestions with priorities, confidence levels, and expiration timestamps
+2. **Temporal Patterns**: Patterns based on time-of-day and day-of-week user activity
+3. **Sequential Patterns**: Common sequences of queries that indicate user workflows
+4. **Context Triggers**: Events or patterns that should trigger specific suggestions
+5. **Suggestion History**: Record of which suggestions were helpful to guide future suggestions
+
 ### Core Components
 
 #### ArchivistMemory
@@ -59,6 +79,26 @@ Provides command-line interface integration:
 - `/topics`: Views topics of interest
 - `/strategies`: Views effective search strategies
 - `/save`: Saves the current memory state
+
+#### ProactiveArchivist
+Provides proactive capabilities:
+
+- `generate_suggestions()`: Creates timely, context-aware suggestions
+- `detect_temporal_patterns()`: Identifies time-based patterns in user behavior
+- `detect_sequential_patterns()`: Discovers query sequences
+- `extract_insights_from_patterns()`: Generates new insights from patterns
+- `record_user_feedback()`: Learns from user interactions
+
+#### ProactiveCliIntegration
+Integrates proactive features with the CLI:
+
+- `/proactive`: Shows available proactive commands
+- `/suggest`: Shows current suggestions
+- `/feedback`: Provides feedback on suggestions
+- `/patterns`: Views detected temporal patterns
+- `/priorities`: Manages suggestion priorities
+- `/enable`: Enables proactive suggestions
+- `/disable`: Disables proactive suggestions
 
 ### Persistence
 
@@ -183,6 +223,16 @@ Future development will include an Anthropologist layer that:
 - Identifies higher-level patterns in user behavior
 - Develops meta-insights about search effectiveness
 - Optimizes the knowledge distillation process
+
+### Enhanced Proactive Features
+
+Future enhancements to the proactive capabilities include:
+
+- **Machine Learning Model**: Train more sophisticated pattern recognition
+- **Cross-Provider Integration**: Connect patterns across different data sources
+- **Workflow Optimization**: Suggest more efficient workflows based on observed patterns
+- **Priority-Based Scheduling**: Schedule suggestion delivery for optimal times
+- **Collaborative Filtering**: Use patterns from similar users to enhance suggestions
 
 ## Contributors
 

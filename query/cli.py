@@ -249,6 +249,11 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 action="store_true",
                 help="Enable the database optimizer for analyzing and improving query performance"
             )
+            parser.add_argument(
+                "--proactive",
+                action="store_true",
+                help="Enable proactive suggestions based on patterns and context"
+            )
             
             # Add command subparsers
             subparsers = parser.add_subparsers(
@@ -300,8 +305,19 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         # Initialize Archivist system
         self.archivist_components = None
         if HAS_ARCHIVIST and hasattr(self.args, 'archivist') and self.args.archivist:
-            self.archivist_components = register_archivist(self)
+            # Check if proactive mode is enabled
+            enable_proactive = hasattr(self.args, 'proactive') and self.args.proactive
+            self.archivist_components = register_archivist(self, enable_proactive)
             memory_integration = self.archivist_components.get("memory_integration")
+            
+            # Get proactive integration if available
+            self.proactive_integration = self.archivist_components.get("proactive_integration")
+            
+            # Show initial suggestions if proactive mode is enabled
+            if enable_proactive and self.proactive_integration:
+                initial_suggestions = self.proactive_integration.get_initial_suggestions()
+                if initial_suggestions:
+                    self.proactive_integration._display_suggestions(initial_suggestions)
 
         while True:
             # Need UPI information about the database
@@ -335,6 +351,10 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 elif user_query.startswith(("/optimize", "/analyze", "/index", "/view", "/query", "/impact")):
                     optimizer_integration = self.archivist_components.get("optimizer_integration")
                     if optimizer_integration and optimizer_integration.handle_command(user_query):
+                        continue
+                        
+                elif user_query.startswith(("/proactive", "/suggest", "/feedback", "/patterns", "/priorities", "/enable", "/disable")):
+                    if hasattr(self, 'proactive_integration') and self.proactive_integration and self.proactive_integration.handle_command(user_query):
                         continue
 
             # Log the query
@@ -511,6 +531,21 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 ElapsedTime=time_diference.total_seconds(),
             )
             self.query_history.add(query_history)
+            
+            # Update proactive archivist with query context if enabled
+            if hasattr(self, 'proactive_integration') and self.proactive_integration:
+                # Create context with query results information
+                results_count = 0
+                if isinstance(ranked_results, FormattedResults):
+                    results_count = len(ranked_results.result_groups)
+                elif isinstance(ranked_results, list):
+                    results_count = len(ranked_results)
+                
+                # Update proactive context with this query
+                self.proactive_integration.update_context_with_query(
+                    user_query,
+                    results={'count': results_count}
+                )
 
             # Check if user wants to continue
             if not self.continue_session():
@@ -865,6 +900,11 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 memory_integration.update_from_session(self.query_history)
                 print("Archivist memory updated with session knowledge.")
             
+            # Update proactive archivist if enabled
+            if hasattr(self, 'proactive_integration') and self.proactive_integration:
+                self.proactive_integration.analyze_session(self.query_history)
+                print("Proactive patterns updated with session knowledge.")
+            
         return continue_session
 
     def build_schema_table(self):
@@ -900,7 +940,11 @@ def main():
     print("  Use /memory to see available commands for the Archivist.")
     print("\n- Enable the database optimizer to improve query performance:")
     print("  Example: python -m query.cli --optimizer")
-    print("  Use /optimize to see available commands for the database optimizer.\n")
+    print("  Use /optimize to see available commands for the database optimizer.")
+    print("\n- Try the new proactive features with the Archivist memory system:")
+    print("  Example: python -m query.cli --archivist --proactive")
+    print("  This enables proactive suggestions based on your search patterns.")
+    print("  Use /proactive to see available commands for the proactive features.\n")
     
     IndalekoQueryCLI().run()
     print("Thank you for using Indaleko Query CLI")

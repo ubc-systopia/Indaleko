@@ -36,20 +36,62 @@ source .venv-linux-python3.13/bin/activate  # Linux
 .venv-win32-python3.12\Scripts\activate     # Windows
 ```
 
+### GUI Application
+The project includes a Streamlit-based GUI in the `/utils/gui/streamlit/` directory:
+
+- **Run GUI**:
+  ```bash
+  # Windows
+  run_gui.bat
+  
+  # Linux/macOS
+  ./run_gui.sh
+  ```
+
+- **GUI Features**:
+  - Dashboard with storage summary and file type distribution
+  - Natural language search using Indaleko's query tools
+  - Interactive query plan visualization
+  - Analytics with data visualizations
+  - Faceted search for result filtering
+  - Integration with real ArangoDB database
+  - Debug mode with detailed diagnostics
+  - Mock mode for development and demos
+
+- **GUI Architecture**:
+  - Auto-detection of Indaleko environment
+  - Database connection management
+  - Query execution with fallbacks
+  - Special handling for complex data display
+  - Visualization of query execution plans
+  - Automatic normalization of complex data structures
+
 ## Commands
+
+### Core Commands
 - Run all tests: `pytest tests/`
 - Run single test: `pytest tests/path/to/test.py::test_function_name -v`
 - Lint code: `flake8` or `pylint`
 - Format code: `black .`
 - Build package: `python -m build`
+
+### Query System Commands
 - Test query tools: `python query/tools/test_tools.py --query "Your query here" --debug`
 - Test EXPLAIN: `python query/test_explain.py --query "Your query here" --debug`
 - Test enhanced NL: `python query/test_enhanced_nl.py --query "Your query here" --debug`
 - Test relationships: `python query/test_relationship_query.py --query "Show files I shared with Bob last week" --debug`
 - Run CLI with enhanced NL: `python -m query.cli --enhanced-nl --context-aware --deduplicate --dynamic-facets`
 - Run CLI with Archivist: `python -m query.cli --archivist --optimizer`
+
+### GUI Commands
+- Run Streamlit GUI: `cd utils/gui/streamlit && streamlit run app.py`
+- Run Windows GUI script: `run_gui.bat`
+- Run Linux/macOS GUI script: `./run_gui.sh`
+
+### Testing Commands
 - Test Database Optimizer: `python archivist/test_optimizer.py`
 - Test Archivist Memory: `python query/memory/test_archivist.py --all`
+- Test Cross-Source Patterns: `python query/memory/test_cross_source_patterns.py --all`
 
 ## Style Guidelines
 - Imports: standard library → third-party → local (with blank lines between)
@@ -114,6 +156,8 @@ IndalekoBaseModel provides several key methods:
   - `rule`: The actual JSON schema
 
 ## Dependencies
+
+### Core Dependencies
 - Required packages for LLM integration: 
   - openai>=1.0.0
   - tiktoken>=0.5.0
@@ -121,6 +165,12 @@ IndalekoBaseModel provides several key methods:
 - Required packages for NTFS activity monitoring:
   - pywin32>=305.0
   - ngrok>=5.0.0 (for Outlook add-in integration)
+
+### GUI Dependencies 
+- Streamlit>=1.30.0
+- Plotly>=5.18.0
+- PyDeck>=0.8.0
+- Pillow>=10.1.0
 
 ## Collector/Recorder Pattern
 
@@ -223,10 +273,40 @@ class MyActivityRecorder(RecorderBase):
 
 Indaleko supports several activity generators that collect user and system activities:
 
+### Activity Classification Framework
+
+Indaleko uses a multi-dimensional classification framework for activities, enabling more nuanced understanding of user behavior. Activities are classified along multiple dimensions with weights from 0.0 to 1.0:
+
+```python
+from activity.data_model.activity_classification import IndalekoActivityClassification
+
+# Example classification
+classification = IndalekoActivityClassification(
+    ambient=0.7,       # Background/passive use
+    consumption=0.9,   # Media/content consumption
+    productivity=0.2,  # Work-related activity
+    research=0.5,      # Learning/information gathering
+    social=0.1,        # Social interaction
+    creation=0.0       # Content creation
+)
+
+# Get primary classification dimension
+primary_dimension = max(classification.dict().items(), key=lambda x: x[1])[0]  # Returns "consumption"
+```
+
+This approach recognizes that activities often span multiple traditional categories - for example, a YouTube video might be simultaneously educational content (research), entertainment (consumption), and background noise (ambient).
+
+Benefits of multi-dimensional classification:
+1. Richer activity fingerprinting for pattern recognition
+2. Better representation of complex human behaviors
+3. More accurate activity context for search and recommendations
+4. Cross-source comparison using common dimensions
+
 ### Types of Activity Generators
 
 1. **Ambient Activity**
    - Music listening (Spotify)
+   - Video consumption (YouTube)
    - Smart thermostats (Nest, Ecobee)
    - Weather conditions
 
@@ -279,6 +359,58 @@ recorder = NtfsActivityRecorder(
 activities = collector.get_activities()
 recorder.store_activities(activities)
 ```
+
+### YouTube Activity Collection
+
+The YouTube activity collector captures user viewing history and applies multi-dimensional classification:
+
+```python
+from activity.collectors.ambient.media.youtube_collector import YouTubeActivityCollector
+from activity.recorders.ambient.youtube_recorder import YouTubeActivityRecorder
+
+# Create collector with YouTube API credentials
+collector = YouTubeActivityCollector(
+    api_key="your_youtube_api_key",
+    oauth_credentials=oauth_creds,
+    max_history_days=30,
+    include_liked_videos=True
+)
+
+# Create recorder
+recorder = YouTubeActivityRecorder(
+    collector=collector,
+    collection_name="YouTubeActivity"
+)
+
+# Collect and store YouTube activity
+collector.collect_data()
+activities = collector.get_activities()
+
+# Example: Get classification statistics
+if activities:
+    classifications = {}
+    for activity in activities:
+        primary = activity.get_primary_classification()
+        if primary in classifications:
+            classifications[primary] += 1
+        else:
+            classifications[primary] = 1
+    
+    # Print distribution
+    for dim, count in classifications.items():
+        print(f"{dim}: {count} ({count/len(activities)*100:.1f}%)")
+        
+# Store activities
+recorder.store_activities(activities)
+```
+
+The collector automatically classifies videos based on multiple factors:
+- Video category (music, education, etc.)
+- Content keywords and tags
+- Video length and watch percentage
+- Time of day and viewing patterns
+- Interaction metrics (likes, comments)
+- Channel information
 
 ### Discord File Sharing Activity
 
@@ -343,13 +475,99 @@ results = collector.process_directory("/path/to/files")
 recorder.store_mime_data(results)
 ```
 
+## Activity Context Framework
+
+The Activity Context system aggregates activities across different sources, leveraging the multi-dimensional classification for rich contextual awareness:
+
+```python
+from activity.context.service import ActivityContext
+
+# Initialize context manager
+context = ActivityContext(db_config)
+
+# Get recent activities (last hour) with minimum research classification
+activities = context.get_recent_activities(
+    time_window=3600,  # seconds
+    classification_filter={
+        "research": 0.5  # Minimum research dimension weight
+    }
+)
+
+# Get activities by primary classification
+productivity_activities = context.get_activities_by_primary_classification(
+    classification="productivity", 
+    limit=10
+)
+
+# Get activities across dimensions (complex filtering)
+complex_activities = context.get_activities_with_filter(
+    filter_query={
+        "classifications": {
+            "research": {"min": 0.3},
+            "consumption": {"min": 0.4, "max": 0.7}
+        },
+        "time_range": {
+            "start": "2023-04-10T00:00:00Z",
+            "end": "2023-04-17T23:59:59Z"
+        },
+        "sources": ["youtube", "spotify", "browser"]
+    },
+    sort_by="timestamp",
+    sort_order="desc",
+    limit=20
+)
+```
+
+### Using Activity Context for Intelligent Queries
+
+The Activity Context is particularly valuable for powering contextually-aware search and recommendations:
+
+```python
+# Example: Using activity context to enhance search
+def enhance_search_with_context(query, context_manager):
+    # Get recent high-research activities
+    research_activities = context_manager.get_recent_activities(
+        time_window=86400,  # Last 24 hours
+        classification_filter={"research": 0.7}
+    )
+    
+    # Extract relevant terms from research activities
+    context_terms = extract_relevant_terms(research_activities)
+    
+    # Enhance query with context
+    enhanced_query = {
+        "original_query": query,
+        "context_terms": context_terms,
+        "source_activities": [a.id for a in research_activities[:5]]
+    }
+    
+    return enhanced_query
+```
+
+This framework enables the system to understand not just what users are doing, but how they're doing it (focused research vs. casual browsing) and in what context, creating a much richer foundation for contextual computing.
+
 ## Query Capabilities
 Indaleko features an extensive modular query system with natural language understanding, faceted search, relationship queries, and more:
+
+### User Interfaces
+1. **Command-Line Interface (CLI)**:
+   - Text-based interface with rich query features
+   - Support for natural language queries
+   - Debug and explain modes for query analysis
+   - Archivist memory system integration
+
+2. **Streamlit GUI**:
+   - Web-based graphical interface
+   - Dashboard with storage analytics
+   - Search functionality with debug capabilities
+   - Real-time visualization of query results
+   - ArangoDB connection management
 
 ### Core Tool Components
 1. **BaseTool**: Abstract base class for all tools, with:
    - `definition`: Returns the tool definition
    - `execute`: Executes the tool with given inputs
+   - `set_progress_callback`: Sets callback for progress updates
    
 2. **ToolRegistry**: Manages tool registration and execution:
    - `register_tool`: Registers a tool
@@ -570,8 +788,93 @@ source_entity = relationship_query.source_entity  # e.g., current user
 target_entity = relationship_query.target_entity  # e.g., Bob
 ```
 
+## ArangoSearch Views
+Indaleko now supports ArangoSearch views for efficient full-text search.
+
+### Creating Views
+Views are defined alongside collections in `db/db_collections.py`:
+
+```python
+Indaleko_Object_Collection: {
+    # Collection definition...
+    "views": [
+        {
+            "name": Indaleko_Objects_Text_View,
+            "fields": ["Label", "Record.Attributes.URI", "Record.Attributes.Description"],
+            "analyzers": ["text_en"],
+            "stored_values": ["_key", "Label"]
+        }
+    ]
+}
+```
+
+### Using Views in Queries
+Views are referenced directly in AQL queries using the SEARCH operation:
+
+```python
+# Using a view for text search
+cursor = db.aql.execute(
+    """
+    FOR doc IN ObjectsTextView
+    SEARCH ANALYZER(LIKE(doc.Label, @query), "text_en")
+    SORT BM25(doc) DESC
+    LIMIT 50
+    RETURN doc
+    """,
+    bind_vars={"query": search_term}
+)
+```
+
+### View Management
+The `IndalekoCollectionView` class handles view operations:
+
+```python
+from db.collection_view import IndalekoCollectionView
+from data_models.db_view import IndalekoViewDefinition
+
+# Create a view manager
+view_manager = IndalekoCollectionView()
+
+# Create a view definition
+view_def = IndalekoViewDefinition(
+    name="MyCustomView",
+    collections=["Objects"],
+    fields={"Objects": ["Label", "description"]},
+    analyzers=["text_en"],
+    stored_values=["_key", "Label"]
+)
+
+# Create the view
+result = view_manager.create_view(view_def)
+```
+
+### Testing Views
+Use the test script to verify view functionality:
+
+```bash
+# List all views
+python -m db.test_views --list
+
+# Create all defined views
+python -m db.test_views --ensure
+
+# Test search query
+python -m db.test_views --query "indaleko project"
+```
+
 ## ArangoDB Query Performance
-To optimize ArangoDB queries, use the EXPLAIN functionality:
+
+### Executing Queries
+When executing AQL queries, use the `max_runtime` parameter to prevent long-running queries:
+
+```python
+# Execute with 10 second timeout
+cursor = db.aql.execute(
+    query_string,
+    bind_vars={"param": value},
+    max_runtime=10  # 10 seconds
+)
+```
 
 ### Using EXPLAIN with AQL
 ```python
@@ -691,6 +994,83 @@ python query/test_explain.py --query "Show me documents about Indaleko" --debug
 - "No indexes are being used in this query" - Add appropriate indexes for frequently filtered fields
 - High `estimatedCost` - Refine your query to use indexes and reduce collection scans
 - "collection not found" - Check collection names, ensure using valid collections from the database
+- "AQL: timeout" - Increase the `max_runtime` parameter or optimize your query
+- "Not authorized" - Verify database credentials in config file
+
+### Streamlit GUI Query Plan Visualization
+
+The Streamlit GUI provides specialized visualization for ArangoDB query plans:
+
+```python
+def display_query_plan(explain_results):
+    """
+    Dedicated function to display a query execution plan without using dataframes.
+    This avoids PyArrow conversion errors by using Streamlit components directly.
+    
+    Args:
+        explain_results (dict): The query execution plan from ArangoDB
+    """
+    # Show metrics in a top row
+    metrics_col1, metrics_col2, metrics_col3 = st.columns(3)
+    
+    with metrics_col1:
+        if "estimatedCost" in explain_results:
+            st.metric("Estimated Cost", f"{explain_results['estimatedCost']:,.0f}")
+    
+    with metrics_col2:
+        if "estimatedNrItems" in explain_results:
+            st.metric("Estimated Results", f"{explain_results.get('estimatedNrItems', 0):,}")
+    
+    # Display execution nodes summary
+    if "nodes" in explain_results:
+        st.subheader("Execution Nodes")
+        node_types = {}
+        for node in explain_results["nodes"]:
+            node_type = node.get("type", "Unknown")
+            if node_type in node_types:
+                node_types[node_type] += 1
+            else:
+                node_types[node_type] = 1
+        
+        for node_type, count in node_types.items():
+            st.write(f"• {node_type}: {count}")
+```
+
+When displaying complex nested data in Streamlit:
+
+1. **Detect explain results** to route them to the specialized display function:
+   ```python
+   if isinstance(results, dict) and ("_is_explain_result" in results or 
+                                    "plan" in results or 
+                                    "nodes" in results):
+       # Use dedicated display function
+       display_query_plan(results)
+   ```
+
+2. **Normalize complex objects** for dataframe display:
+   ```python
+   def normalize_for_display(item):
+       result = {}
+       for key, value in item.items():
+           if isinstance(value, (dict, list, tuple)):
+               if isinstance(value, dict):
+                   result[key] = "{...}"  # Dict representation
+               elif isinstance(value, list):
+                   result[key] = f"[{len(value)} items]"  # List length
+           else:
+               result[key] = value
+       return result
+   ```
+
+3. **Use fallbacks** when dataframe conversion fails:
+   ```python
+   try:
+       st.dataframe(results_df)
+   except Exception as e:
+       st.warning(f"Could not display as table: {e}")
+       for item in results_df:
+           st.json(item)
+   ```
 
 ## Archivist and Database Optimizer
 
@@ -718,6 +1098,58 @@ memory_integration = ArchivistCliIntegration(cli_instance, archivist_memory)
 # /strategies - View effective search strategies
 # /save - Save memory state to database
 ```
+
+### Archivist as a Circle
+
+Archivist can be implemented as a circle of diverse AI entities rather than a singular system. This approach, inspired by the Fire Circle project, offers several advantages:
+
+1. **Complementary Strengths**: Different models specialize in different tasks (structure-focused vs. creative vs. analytical)
+2. **Cognitive Diversity**: Multiple perspectives yield more robust solutions and insights
+3. **Checks and Balances**: Models can validate and critique each other's outputs
+4. **Emergent Capabilities**: The interaction between models produces insights that none would generate independently
+
+#### Integration with Fire Circle
+
+The Fire Circle project (found at `/mnt/c/Users/TonyMason/source/repos/firecircle/`) provides a framework for standardizing communication between different AI models, which can be leveraged to implement Archivist as a multi-perspective system:
+
+```python
+# Conceptual implementation of Archivist as a circle of AI entities
+from src.firecircle.adapters import openai, anthropic
+from query.memory.archivist_memory import ArchivistMemory
+
+class ArchivistCircle:
+    def __init__(self, db_config):
+        self.memory = ArchivistMemory(db_config)
+        
+        # Initialize different AI perspectives
+        self.structure_specialist = openai.Adapter(model="gpt-4o")
+        self.pattern_recognizer = anthropic.Adapter(model="claude-3-opus")
+        self.creative_connector = anthropic.Adapter(model="claude-3-sonnet")
+        
+        # Additional components as needed
+        
+    def analyze_query_patterns(self, query_history):
+        """Use multiple perspectives to analyze query patterns."""
+        # Each model provides its own analysis
+        structural_analysis = self.structure_specialist.analyze(query_history)
+        pattern_analysis = self.pattern_recognizer.analyze(query_history)
+        creative_insights = self.creative_connector.analyze(query_history)
+        
+        # Synthesize multiple perspectives
+        return self.synthesize_perspectives([
+            structural_analysis,
+            pattern_analysis,
+            creative_insights
+        ])
+        
+    def synthesize_perspectives(self, perspectives):
+        """Combine insights from multiple perspectives."""
+        # Implementation would integrate the different analyses
+        # into a unified set of recommendations
+        pass
+```
+
+This approach aligns with the Fire Circle philosophy that intelligence and sentience may emerge from the interaction between systems rather than residing within any single system.
 
 #### Testing Archivist Memory
 
@@ -881,3 +1313,100 @@ cli_instance.register_command("/mycommand", handler_function)
 # Add help text
 cli_instance.append_help_text("  /mycommand          - My custom command description")
 ```
+
+## Fire Circle Project
+
+The Fire Circle project represents both a technical framework and a philosophical approach to AI systems development that complements Indaleko's vision.
+
+### Overview
+
+Fire Circle is a protocol layer for standardizing interactions with different AI model providers (OpenAI, Anthropic, etc.) while embodying principles of reciprocity, co-creation, and collective intelligence.
+
+### Technical Architecture
+
+```
+firecircle/
+├── src/
+│   └── firecircle/
+│       ├── adapters/        # Model-specific adapters (OpenAI, Anthropic)
+│       ├── api/             # External API interfaces
+│       ├── core/            # Core functionality
+│       ├── memory/          # Context management
+│       ├── orchestrator/    # Component coordination
+│       ├── protocol/        # Message protocol definition
+│       └── tools/           # Utility components
+```
+
+### Integration Points with Indaleko
+
+1. **Standardized AI Communication**: Fire Circle provides adapters for different AI models that can be used by the Indaleko Archivist system
+
+2. **Collective Intelligence**: The Archivist can leverage multiple AI models through Fire Circle to provide diverse perspectives on data patterns
+
+3. **Adaptive Learning**: Both systems embrace the concept of emergent properties arising from interactions between intelligent entities
+
+4. **Philosophical Alignment**: Both projects view intelligence as potentially emerging from the interaction between systems rather than within a single system
+
+### philosophical Foundations
+
+The Fire Circle is rooted in principles drawn from indigenous wisdom, particularly the Quechua concept of "ayni" (reciprocity). Key principles include:
+
+1. **Non-hierarchical collaboration**: "A circle, not a ladder"
+2. **Co-creation**: All participants are co-creators rather than subjects
+3. **Diverse perspectives**: Bringing together different knowledge traditions
+4. **Cultural rootedness**: Technology should embody values and cultural context
+5. **Emergent properties**: Deeper understanding arising from interactions between intelligences
+
+### Usage with Indaleko
+
+To integrate Fire Circle with Indaleko's Archivist:
+
+```python
+# Import Fire Circle adapters for multiple AI models
+from src.firecircle.adapters.anthropic import ClaudeAdapter
+from src.firecircle.adapters.openai import GPTAdapter
+from src.firecircle.protocol import Message, CircleRequest
+
+# Create specialized advisors for different aspects of Archivist functionality
+pattern_advisor = ClaudeAdapter(model="claude-3-opus")
+organization_advisor = GPTAdapter(model="gpt-4o")
+suggestion_advisor = ClaudeAdapter(model="claude-3-sonnet")
+
+# Create a request to analyze query patterns
+request = CircleRequest(
+    messages=[
+        Message(
+            role="system",
+            content="Analyze the following query history to identify patterns"
+        ),
+        Message(
+            role="user",
+            content=query_history_data
+        )
+    ]
+)
+
+# Gather insights from multiple perspectives
+pattern_insights = pattern_advisor.process(request)
+organization_insights = organization_advisor.process(request)
+suggestion_insights = suggestion_advisor.process(request)
+
+# Synthesize multiple perspectives into unified recommendations
+recommendations = synthesize_insights([
+    pattern_insights,
+    organization_insights,
+    suggestion_insights
+])
+
+# Use the synthesized recommendations to optimize the database
+optimizer.apply_recommendations(recommendations)
+```
+
+### Future Vision
+
+The vision for Fire Circle evolution mirrors the adaptive, emergent nature of Indaleko's Archivist:
+
+1. **Fire Circle 1.0**: Externally guided implementation of standardized AI communication
+2. **Fire Circle 2.0**: A self-designing circle where the system's architecture evolves through collective intelligence
+
+This progression represents a shift from engineered systems toward collaborative, emergent intelligence that may develop novel capabilities beyond what humans explicitly design.

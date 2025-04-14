@@ -33,7 +33,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
-from query.tools.base import BaseTool, ToolDefinition, ToolInput, ToolOutput
+from query.tools.base import BaseTool, ToolDefinition, ToolInput, ToolOutput, ProgressCallback
 
 
 class ToolRegistry:
@@ -47,6 +47,7 @@ class ToolRegistry:
             cls._instance = super(ToolRegistry, cls).__new__(cls)
             cls._instance._tools = {}
             cls._instance._tool_instances = {}
+            cls._instance._progress_callback = None
         return cls._instance
     
     def register_tool(self, tool_class: Type[BaseTool]) -> None:
@@ -63,6 +64,10 @@ class ToolRegistry:
         # Register the tool class
         self._tools[definition.name] = tool_class
         self._tool_instances[definition.name] = tool_instance
+        
+        # Set the progress callback if one is registered
+        if self._progress_callback is not None:
+            tool_instance.set_progress_callback(self._progress_callback)
         
         ic(f"Registered tool: {definition.name}")
     
@@ -96,12 +101,52 @@ class ToolRegistry:
         """
         return {name: tool.definition for name, tool in self._tool_instances.items()}
     
-    def execute_tool(self, input_data: ToolInput) -> ToolOutput:
+    def set_progress_callback(self, callback_func: callable) -> None:
+        """
+        Set a global callback function for all tools in the registry.
+        
+        Args:
+            callback_func (callable): A function that takes a ProgressCallback object.
+                                     Set to None to disable progress updates.
+        """
+        self._progress_callback = callback_func
+        
+        # Update all existing tool instances
+        for tool in self._tool_instances.values():
+            tool.set_progress_callback(callback_func)
+
+    def execute_tool(self, name: str, parameters: dict, progress_callback: callable = None) -> ToolOutput:
+        """
+        Execute a tool with the given parameters.
+        
+        Args:
+            name (str): The name of the tool to execute.
+            parameters (dict): The parameters to pass to the tool.
+            progress_callback (callable, optional): A callback function for progress updates.
+                                                  Overrides the registry's global callback.
+                                                  
+        Returns:
+            ToolOutput: The result of the tool execution.
+            
+        Raises:
+            ValueError: If the tool is not found.
+        """
+        # Create a ToolInput object
+        input_data = ToolInput(
+            tool_name=name,
+            parameters=parameters
+        )
+        
+        return self.execute_tool_input(input_data, progress_callback)
+    
+    def execute_tool_input(self, input_data: ToolInput, progress_callback: callable = None) -> ToolOutput:
         """
         Execute a tool with the given input.
         
         Args:
             input_data (ToolInput): The input parameters for the tool.
+            progress_callback (callable, optional): A callback function for progress updates.
+                                                  Overrides the registry's global callback.
             
         Returns:
             ToolOutput: The result of the tool execution.
@@ -113,7 +158,17 @@ class ToolRegistry:
         if tool is None:
             raise ValueError(f"Tool not found: {input_data.tool_name}")
         
-        return tool.wrapped_execute(input_data)
+        # Set the callback for this execution if provided
+        if progress_callback is not None:
+            original_callback = tool._progress_callback
+            tool.set_progress_callback(progress_callback)
+            
+        try:
+            return tool.wrapped_execute(input_data)
+        finally:
+            # Restore the original callback if we changed it
+            if progress_callback is not None:
+                tool.set_progress_callback(original_callback)
     
     def discover_tools(self, package_name: str = "query.tools") -> None:
         """

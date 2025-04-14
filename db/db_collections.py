@@ -44,6 +44,7 @@ from data_models import (
 )
 
 from data_models.named_entity import IndalekoNamedEntityDataModel
+from data_models.db_view import IndalekoViewDefinition
 from activity.data_model.activity import IndalekoActivityDataModel
 from semantic.data_models.base_data_model import BaseSemanticDataModel
 
@@ -78,6 +79,11 @@ class IndalekoDBCollections:
     Indaleko_Named_Entity_Collection = "NamedEntities"
     Indaleko_Collection_Metadata = "CollectionMetadata"
     Indaleko_Archivist_Memory_Collection = "ArchivistMemory"
+    
+    # Define view names
+    Indaleko_Objects_Text_View = "ObjectsTextView"
+    Indaleko_Named_Entity_Text_View = "NamedEntityTextView"
+    Indaleko_Activity_Text_View = "ActivityTextView"
 
     Collections = {
         Indaleko_Object_Collection: {
@@ -108,6 +114,14 @@ class IndalekoDBCollections:
                     "type": "persistent",
                 },
             },
+            "views": [
+                {
+                    "name": Indaleko_Objects_Text_View,
+                    "fields": ["Label", "Record.Attributes.URI", "Record.Attributes.Description", "Tags"],
+                    "analyzers": ["text_en"],
+                    "stored_values": ["_key", "Label"]
+                }
+            ]
         },
         Indaleko_Relationship_Collection: {
             "internal": False,
@@ -165,6 +179,14 @@ class IndalekoDBCollections:
             "schema": IndalekoActivityDataModel.get_arangodb_schema(),
             "edge": False,
             "indices": {},
+            "views": [
+                {
+                    "name": Indaleko_Activity_Text_View,
+                    "fields": ["Description", "Location", "Notes", "Tags"],
+                    "analyzers": ["text_en"],
+                    "stored_values": ["_key", "ActivityType", "Timestamp"]
+                }
+            ]
         },
         Indaleko_MusicActivityData_Collection: {
             "internal": False,
@@ -244,6 +266,14 @@ class IndalekoDBCollections:
                     "type": "persistent",
                 },
             },
+            "views": [
+                {
+                    "name": Indaleko_Named_Entity_Text_View,
+                    "fields": ["name", "description", "address", "tags"],
+                    "analyzers": ["text_en"],
+                    "stored_values": ["_key", "name", "entity_type"]
+                }
+            ]
         },
         Indaleko_Collection_Metadata: {
             "internal": True,  # metadata about collections, not generally useful for querying

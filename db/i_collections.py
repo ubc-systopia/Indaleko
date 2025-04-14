@@ -40,7 +40,9 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from db.db_config import IndalekoDBConfig
 from db.collection_index import IndalekoCollectionIndex
 from db.collection import IndalekoCollection
+from db.collection_view import IndalekoCollectionView
 from db.db_collections import IndalekoDBCollections
+from data_models.db_view import IndalekoViewDefinition
 from utils.singleton import IndalekoSingleton
 
 # pylint: enable=wrong-import-position
@@ -60,6 +62,8 @@ class IndalekoCollections(IndalekoSingleton):
         logging.debug("Starting database")
         self.db_config.start()
         self.collections = {}
+        
+        # Create or update collections
         for name in IndalekoDBCollections.Collections.items():
             name = name[0]
             logging.debug("Processing collection %s", name)
@@ -84,7 +88,52 @@ class IndalekoCollections(IndalekoSingleton):
                         )
                     )
                 raise error
+        
+        # Create or update views
+        self._create_views()
 
+    def _create_views(self) -> None:
+        """Create or update views for collections that have view definitions."""
+        view_manager = IndalekoCollectionView(db_config=self.db_config)
+        created_views = []
+        
+        # Process views for each collection
+        for collection_name, collection_def in IndalekoDBCollections.Collections.items():
+            # Skip collections without view definitions
+            if "views" not in collection_def:
+                continue
+                
+            # Process each view definition for this collection
+            for view_def in collection_def["views"]:
+                view_name = view_def["name"]
+                logging.debug(f"Processing view {view_name} for collection {collection_name}")
+                
+                # Skip if already processed
+                if view_name in created_views:
+                    continue
+                    
+                # Create the view definition
+                fields_dict = {collection_name: view_def["fields"]}
+                view_definition = IndalekoViewDefinition(
+                    name=view_name,
+                    collections=[collection_name],
+                    fields=fields_dict,
+                    analyzers=view_def.get("analyzers", ["text_en"]),
+                    include_all_fields=view_def.get("include_all_fields", False),
+                    stored_values=view_def.get("stored_values")
+                )
+                
+                # Create or update the view
+                if view_manager.view_exists(view_name):
+                    result = view_manager.update_view(view_definition)
+                    logging.debug(f"Updated view {view_name}: {result['status']}")
+                else:
+                    result = view_manager.create_view(view_definition)
+                    logging.debug(f"Created view {view_name}: {result['status']}")
+                    
+                # Add to processed list
+                created_views.append(view_name)
+    
     @staticmethod
     def get_collection(name: str) -> IndalekoCollection:
         """Return the collection with the given name."""
@@ -101,6 +150,13 @@ class IndalekoCollections(IndalekoSingleton):
         else:
             collection = collections.collections[name]
         return collection
+        
+    @staticmethod
+    def get_view(name: str) -> dict:
+        """Return the view with the given name."""
+        collections = IndalekoCollections()
+        view_manager = IndalekoCollectionView(db_config=collections.db_config)
+        return view_manager.get_view(name)
 
 
 def extract_params() -> tuple:

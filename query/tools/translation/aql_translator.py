@@ -188,11 +188,30 @@ class AQLTranslatorTool(BaseTool):
         api_key_path = input_data.parameters.get("api_key_path")
         model = input_data.parameters.get("model", "gpt-4o-mini")
         
+        # Report initial progress
+        self.report_progress(
+            stage="initialization",
+            message="Initializing AQL translator",
+            progress=0.1
+        )
+        
         # Initialize translator if needed
         if self._translator is None:
+            self.report_progress(
+                stage="initialization",
+                message="Creating new translator instance",
+                progress=0.2
+            )
             self._initialize_translator(db_config_path, api_key_path, model)
         
         try:
+            # Report query processing progress
+            self.report_progress(
+                stage="processing",
+                message="Processing structured query data",
+                progress=0.3
+            )
+            
             # Convert raw structured query to StructuredQuery object
             original_query = structured_query_data.get("original_query", "")
             intent = structured_query_data.get("intent", "search")
@@ -201,6 +220,13 @@ class AQLTranslatorTool(BaseTool):
             # Get collection metadata and indices if available
             db_info = structured_query_data.get("db_info", [])
             db_indices = structured_query_data.get("db_indices", {})
+            
+            # Report entity processing progress
+            self.report_progress(
+                stage="processing",
+                message="Processing entity data",
+                progress=0.4
+            )
             
             # Process entities to ensure they are in the correct format
             # If entities is already a NamedEntityCollection object, use it directly
@@ -244,6 +270,18 @@ class AQLTranslatorTool(BaseTool):
                 # Create a NamedEntityCollection
                 processed_entities = NamedEntityCollection(entities=processed_entity_list)
             
+            # Report query construction progress
+            self.report_progress(
+                stage="construction",
+                message="Constructing structured query object",
+                progress=0.5,
+                data={
+                    "original_query": original_query,
+                    "intent": intent,
+                    "entities_count": len(processed_entities.entities)
+                }
+            )
+            
             structured_query = StructuredQuery(
                 original_query=original_query,
                 intent=intent,
@@ -260,8 +298,26 @@ class AQLTranslatorTool(BaseTool):
             
             ic(f"Translating query: {original_query}")
             
+            # Report translation progress
+            self.report_progress(
+                stage="translation",
+                message="Translating to AQL - this may take a moment",
+                progress=0.7
+            )
+            
             # Translate the query
             translated_output = self._translator.translate(translator_input)
+            
+            # Report completion
+            self.report_progress(
+                stage="completion",
+                message="AQL translation complete",
+                progress=1.0,
+                data={
+                    "aql_query": translated_output.aql_query[:100] + "..." if len(translated_output.aql_query) > 100 else translated_output.aql_query,
+                    "bind_vars_count": len(translated_output.bind_vars) if translated_output.bind_vars else 0
+                }
+            )
             
             # Return the result
             return ToolOutput(
@@ -277,6 +333,13 @@ class AQLTranslatorTool(BaseTool):
             
         except Exception as e:
             ic(f"Error translating query: {e}")
+            # Report error
+            self.report_progress(
+                stage="error",
+                message=f"Error translating query: {e}",
+                progress=1.0,
+                data={"error": str(e)}
+            )
             return ToolOutput(
                 tool_name=self.definition.name,
                 success=False,
