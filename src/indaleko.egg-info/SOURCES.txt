@@ -1,0 +1,11 @@
+LICENSE
+README.md
+pyproject.toml
+src/firecircle/adapters/__init__.py
+src/firecircle/adapters/anthropic/__init__.py
+src/firecircle/adapters/openai/__init__.py
+src/indaleko.egg-info/PKG-INFO
+src/indaleko.egg-info/SOURCES.txt
+src/indaleko.egg-info/dependency_links.txt
+src/indaleko.egg-info/requires.txt
+src/indaleko.egg-info/top_level.txt

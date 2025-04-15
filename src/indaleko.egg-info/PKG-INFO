@@ -1,0 +1,55 @@
+Metadata-Version: 2.4
+Name: indaleko
+Version: 0.1.1
+Summary: Indaleko is a Python package for implementing a Unified Personal Index system.
+Author-email: Tony Mason <fsgeek@gatech.edu>
+Requires-Python: >=3.12
+License-File: LICENSE
+Requires-Dist: apischema==0.18.1
+Requires-Dist: discord.py==2.5.2
+Requires-Dist: docker==7.1.0
+Requires-Dist: dotenv==0.9.9
+Requires-Dist: dropbox==12.0.2
+Requires-Dist: Faker==37.0.2
+Requires-Dist: Flask==3.1.0
+Requires-Dist: geopy==2.4.1
+Requires-Dist: gitpython==3.1.44
+Requires-Dist: google_api_python_client==2.165.0
+Requires-Dist: google_auth_oauthlib==1.2.1
+Requires-Dist: icecream==2.1.4
+Requires-Dist: jsonlines==4.0.0
+Requires-Dist: jsonschema==4.23.0
+Requires-Dist: keyring==25.6.0
+Requires-Dist: msal==1.32.0
+Requires-Dist: msgpack_python==0.5.6
+Requires-Dist: openai==1.68.2
+Requires-Dist: psutil==7.0.0
+Requires-Dist: pydantic==2.10.6
+Requires-Dist: pyicloud==1.0.0
+Requires-Dist: pyngrok==7.2.3
+Requires-Dist: python-arango==8.1.6
+Requires-Dist: Requests==2.32.3
+Requires-Dist: graphql-core==3.2.6
+Requires-Dist: pydantic-core==2.27.2
+Requires-Dist: pytile==2024.12.0
+Requires-Dist: spotipy==2.25.0
+Requires-Dist: pyecobee==1.3.11
+Requires-Dist: tiktoken==0.7.0
+Requires-Dist: regex==2024.5.15
+Requires-Dist: winsdk==1.0.0b10; platform_system == "Windows"
+Requires-Dist: pillow>=10.2.0
+Requires-Dist: exifread>=3.0.0
+Requires-Dist: colorama>=0.4.6
+Requires-Dist: tqdm>=4.66.0
+Provides-Extra: test
+Requires-Dist: pytest>=6.0; extra == "test"
+Provides-Extra: dev
+Requires-Dist: black; extra == "dev"
+Requires-Dist: flake8; extra == "dev"
+Provides-Extra: windows
+Requires-Dist: winsdk==1.0.0b10; extra == "windows"
+Provides-Extra: gui
+Requires-Dist: streamlit>=1.38.0; extra == "gui"
+Requires-Dist: plotly>=5.22.0; extra == "gui"
+Requires-Dist: pydeck>=0.8.0; extra == "gui"
+Dynamic: license-file
