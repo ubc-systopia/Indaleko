@@ -93,6 +93,7 @@ The project includes a Streamlit-based GUI in the `/utils/gui/streamlit/` direct
 - Test Archivist Memory: `python query/memory/test_archivist.py --all`
 - Test Cross-Source Patterns: `python query/memory/test_cross_source_patterns.py --all`
 - Test Knowledge Base Updating: `python archivist/test_knowledge_base.py --all`
+- Test Semantic Performance CLI: `python semantic/test_cli_integration.py`
 
 ## Style Guidelines
 - Imports: standard library → third-party → local (with blank lines between)
@@ -583,6 +584,40 @@ Indaleko includes semantic extractors for extracting metadata from files:
    - Identifies file types based on content
    - More accurate than extension-based detection
    - Uses libmagic for signature detection
+
+### Performance Monitoring
+
+Semantic extractors include comprehensive performance monitoring to measure resource usage and processing efficiency:
+
+1. **Performance Monitor**
+   - Tracks CPU, memory, and I/O usage during extraction
+   - Records metrics to database and JSON files
+   - Uses decorator pattern for non-invasive integration
+   - Provides aggregated statistics for analysis
+
+2. **Experiment Framework**
+   - Supports controlled testing of extractor performance
+   - Measures throughput (files/sec, MB/sec)
+   - Compares performance across file types
+   - Analyzes scaling with file size
+   - Projects metadata growth
+
+3. **CLI Integration**
+   - Access monitoring via CLI commands:
+     - `/perf` - Manage performance monitoring
+     - `/experiments` - Run controlled experiments
+     - `/report` - Generate performance reports
+   - Enable with `--semantic-performance` flag:
+     ```bash
+     # Enable semantic performance monitoring
+     python -m query.cli --semantic-performance
+     
+     # Run a standalone test
+     python semantic/test_cli_integration.py
+     
+     # Execute a specific command
+     python semantic/test_cli_integration.py --command "/experiments list"
+     ```
 
 Semantic extractors follow the same collector/recorder pattern:
 
@@ -1089,8 +1124,11 @@ python query/cli.py --optimizer
 # Enable Knowledge Base learning features
 python query/cli.py --kb
 
+# Enable Semantic Performance Monitoring
+python query/cli.py --semantic-performance
+
 # Combine multiple features
-python query/cli.py --enhanced-nl --context-aware --deduplicate --dynamic-facets --conversational --archivist --optimizer --kb
+python query/cli.py --enhanced-nl --context-aware --deduplicate --dynamic-facets --conversational --archivist --optimizer --kb --semantic-performance
 ```
 
 ### Programmatic EXPLAIN Usage

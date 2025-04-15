@@ -73,6 +73,13 @@ try:
 except ImportError:
     HAS_ARCHIVIST = False
 
+# Import semantic performance monitoring components if available
+try:
+    from semantic.cli_integration import register_semantic_performance_cli
+    HAS_SEMANTIC_PERFORMANCE = True
+except ImportError:
+    HAS_SEMANTIC_PERFORMANCE = False
+
 # pylint: enable=wrong-import-position
 
 
@@ -269,6 +276,13 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 help="Minimum confidence threshold for knowledge patterns (0-1)"
             )
             
+            # Add semantic performance monitoring arguments
+            parser.add_argument(
+                "--semantic-performance",
+                action="store_true",
+                help="Enable semantic performance monitoring features"
+            )
+            
             # Add command subparsers
             subparsers = parser.add_subparsers(
                 dest="command",
@@ -339,6 +353,12 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             self.kb_integration = initialize_kb_for_cli(self)
             if self.kb_integration:
                 print("Knowledge Base integration enabled. Use /kb to see available commands.")
+                
+        # Initialize Semantic Performance Monitoring
+        self.semantic_performance_integration = None
+        if HAS_SEMANTIC_PERFORMANCE and hasattr(self.args, 'semantic_performance') and self.args.semantic_performance:
+            self.semantic_performance_integration = register_semantic_performance_cli(self)
+            print("Semantic Performance Monitoring enabled. Use /perf, /experiments, or /report to access commands.")
 
         while True:
             # Need UPI information about the database
@@ -389,6 +409,23 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                     elif user_query.startswith(("/proactive", "/suggest", "/priorities", "/enable", "/disable")):
                         if hasattr(self, 'proactive_integration') and self.proactive_integration and self.proactive_integration.handle_command(user_query):
                             continue
+                            
+                    # Handle Semantic Performance Monitoring commands
+                    elif user_query.startswith(("/perf", "/experiments", "/report")):
+                        if hasattr(self, 'semantic_performance_integration') and self.semantic_performance_integration:
+                            command_parts = user_query.split(maxsplit=1)
+                            command = command_parts[0]
+                            args = command_parts[1] if len(command_parts) > 1 else ""
+                            
+                            if command == "/perf":
+                                self.semantic_performance_integration.handle_perf_command(args.split())
+                                continue
+                            elif command == "/experiments":
+                                self.semantic_performance_integration.handle_experiments_command(args.split())
+                                continue
+                            elif command == "/report":
+                                self.semantic_performance_integration.handle_report_command(args.split())
+                                continue
 
             # Log the query
             # self.logging_service.log_query(user_query)
@@ -1071,7 +1108,12 @@ def main():
     print("\n- Try the new Knowledge Base learning features:")
     print("  Example: python -m query.cli --kb")
     print("  This enables learning from query interactions to improve future searches.")
-    print("  Use /kb to see available commands for the Knowledge Base features.\n")
+    print("  Use /kb to see available commands for the Knowledge Base features.")
+    
+    print("\n- Try the new Semantic Performance Monitoring:")
+    print("  Example: python -m query.cli --semantic-performance")
+    print("  This enables performance monitoring and experiments for semantic extractors.")
+    print("  Use /perf, /experiments, or /report to see available commands.\n")
     
     IndalekoQueryCLI().run()
     print("Thank you for using Indaleko Query CLI")

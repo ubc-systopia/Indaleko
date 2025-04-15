@@ -40,7 +40,7 @@ from semantic.registration_service import IndalekoSemanticRegistrationService
 from data_models.record import IndalekoRecordDataModel
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from semantic.collectors.mime.mime_collector import IndalekoSemanticMimeType
-from semantic.collectors.mime.data_model import IndalekoMimeTypeDataModel
+from semantic.collectors.mime.data_model import SemanticMimeDataModel
 # pylint: enable=wrong-import-position
 
 
