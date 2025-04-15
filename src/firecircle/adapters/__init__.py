@@ -8,3 +8,14 @@ The adapter layer translates between the standardized Fire Circle message protoc
 and the specific API requirements of each provider, ensuring consistent communication
 across different AI models regardless of their underlying implementation.
 """
+
+# Export adapter classes
+from .base import ModelAdapter, FireCircleMessage, FireCircleRequest, FireCircleResponse
+from .openai import OpenAIAdapter
+from .anthropic import AnthropicAdapter
+
+# Dictionary of available adapter classes, keyed by provider name
+AVAILABLE_ADAPTERS = {
+    "openai": OpenAIAdapter,
+    "anthropic": AnthropicAdapter
+}

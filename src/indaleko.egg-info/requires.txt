@@ -34,6 +34,9 @@ exifread>=3.0.0
 colorama>=0.4.6
 tqdm>=4.66.0
 python-magic>=0.4.27
+matplotlib>=3.8.0
+numpy>=1.24.0
+pandas>=2.0.0
 
 [:platform_system == "Windows"]
 winsdk==1.0.0b10

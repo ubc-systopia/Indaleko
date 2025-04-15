@@ -73,6 +73,13 @@ try:
 except ImportError:
     HAS_ARCHIVIST = False
 
+# Import Fire Circle components if available
+try:
+    from archivist.fire_circle_integration import initialize_firecircle_for_cli, add_firecircle_arguments
+    HAS_FIRE_CIRCLE = True
+except ImportError:
+    HAS_FIRE_CIRCLE = False
+
 # Import semantic performance monitoring components if available
 try:
     from semantic.cli_integration import register_semantic_performance_cli
@@ -276,6 +283,18 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 help="Minimum confidence threshold for knowledge patterns (0-1)"
             )
             
+            # Add Fire Circle arguments
+            parser.add_argument(
+                "--fc", "--fire-circle",
+                action="store_true",
+                help="Enable Fire Circle features with specialized entity roles"
+            )
+            parser.add_argument(
+                "--fc-all-perspectives",
+                action="store_true",
+                help="Always use all perspectives for Fire Circle analysis"
+            )
+            
             # Add semantic performance monitoring arguments
             parser.add_argument(
                 "--semantic-performance",
@@ -354,6 +373,13 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             if self.kb_integration:
                 print("Knowledge Base integration enabled. Use /kb to see available commands.")
                 
+        # Initialize Fire Circle integration
+        self.fire_circle_integration = None
+        if HAS_FIRE_CIRCLE and hasattr(self.args, 'fc') and self.args.fc:
+            self.fire_circle_integration = initialize_firecircle_for_cli(self)
+            if self.fire_circle_integration:
+                print("Fire Circle integration enabled. Use /firecircle or /fc to see available commands.")
+                
         # Initialize Semantic Performance Monitoring
         self.semantic_performance_integration = None
         if HAS_SEMANTIC_PERFORMANCE and hasattr(self.args, 'semantic_performance') and self.args.semantic_performance:
@@ -425,6 +451,16 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                                 continue
                             elif command == "/report":
                                 self.semantic_performance_integration.handle_report_command(args.split())
+                                continue
+                                
+                    # Handle Fire Circle commands
+                    elif user_query.startswith(("/firecircle", "/fc")):
+                        if hasattr(self, 'fire_circle_integration') and self.fire_circle_integration:
+                            # The Fire Circle CLI integration handles its own command parsing
+                            handled = self.fire_circle_integration._handle_firecircle_command(
+                                user_query.split(maxsplit=1)[1] if len(user_query.split()) > 1 else ""
+                            )
+                            if handled:
                                 continue
 
             # Log the query
@@ -1063,6 +1099,34 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             if hasattr(self, 'proactive_integration') and self.proactive_integration:
                 self.proactive_integration.analyze_session(self.query_history)
                 print("Proactive patterns updated with session knowledge.")
+        
+        # If ending the session and Fire Circle is enabled, update pattern suggestions
+        if not continue_session and hasattr(self, 'fire_circle_integration') and self.fire_circle_integration:
+            # Get Fire Circle integration through Fire Circle CLI
+            fc_integration = getattr(self.fire_circle_integration, 'fc_integration', None)
+            if fc_integration:
+                # Convert query history to a format that Fire Circle can use
+                query_history_data = []
+                for entry in self.query_history.get_query_history():
+                    query_data = {
+                        "query": entry.OriginalQuery,
+                        "timestamp": entry.StartTimestamp.timestamp(),
+                        "result_count": 0
+                    }
+                    
+                    # Try to extract result count if available
+                    if isinstance(entry.RankedResults, list):
+                        query_data["result_count"] = len(entry.RankedResults)
+                    elif hasattr(entry.RankedResults, 'result_groups'):
+                        query_data["result_count"] = len(entry.RankedResults.result_groups)
+                    
+                    query_history_data.append(query_data)
+                
+                # Suggest patterns if we have query history
+                if query_history_data:
+                    print("Analyzing query patterns with Fire Circle...")
+                    fc_integration.suggest_knowledge_patterns(query_history_data)
+                    print("Fire Circle pattern analysis complete.")
             
         return continue_session
 
@@ -1109,6 +1173,11 @@ def main():
     print("  Example: python -m query.cli --kb")
     print("  This enables learning from query interactions to improve future searches.")
     print("  Use /kb to see available commands for the Knowledge Base features.")
+    
+    print("\n- Try the new Fire Circle integration with specialized entity roles:")
+    print("  Example: python -m query.cli --fc")
+    print("  This enables multi-perspective analysis with Storyteller, Analyst, Critic, and Synthesizer roles.")
+    print("  Use /fc or /firecircle to see available commands for the Fire Circle features.")
     
     print("\n- Try the new Semantic Performance Monitoring:")
     print("  Example: python -m query.cli --semantic-performance")
