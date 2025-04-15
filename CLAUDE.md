@@ -10,17 +10,7 @@ Indaleko uses `uv` for package management across multiple platforms (Windows, ma
   # Install uv if not already installed
   pip install uv
   
-  # Create and activate virtual environment
-  uv venv
-  source .venv/bin/activate  # Linux/macOS
-  .venv\Scripts\activate     # Windows
-  
-  # Install dependencies
-  uv pip install -e .
-  ```
-
-- **Update Dependencies**:
-  ```bash
+  # Install dependencies in the platform-specific virtual environment
   uv pip install -e .
   ```
 
@@ -30,11 +20,22 @@ The project maintains separate virtual environments for each platform:
 - `.venv-linux-python3.13` - Linux environment
 - `.venv-macos-python3.12` - macOS environment
 
-Always activate the appropriate environment before running code:
+Always activate the appropriate environment before running any Indaleko code:
 ```bash
-source .venv-linux-python3.13/bin/activate  # Linux
-.venv-win32-python3.12\Scripts\activate     # Windows
+# Linux
+source .venv-linux-python3.13/bin/activate
+
+# Windows (PowerShell)
+.venv-win32-python3.12\Scripts\Activate.ps1
+
+# Windows (Command Prompt)
+.venv-win32-python3.12\Scripts\activate.bat
+
+# macOS
+source .venv-macos-python3.12/bin/activate
 ```
+
+> **IMPORTANT**: Never run Indaleko code without activating the correct virtual environment first. Most errors and dependency issues occur when running outside the virtual environment.
 
 ### GUI Application
 The project includes a Streamlit-based GUI in the `/utils/gui/streamlit/` directory:
@@ -93,7 +94,20 @@ The project includes a Streamlit-based GUI in the `/utils/gui/streamlit/` direct
 - Test Archivist Memory: `python query/memory/test_archivist.py --all`
 - Test Cross-Source Patterns: `python query/memory/test_cross_source_patterns.py --all`
 - Test Knowledge Base Updating: `python archivist/test_knowledge_base.py --all`
-- Test Semantic Performance CLI: `python semantic/test_cli_integration.py`
+- Test Semantic Performance CLI: 
+  ```bash
+  # Normal test
+  python semantic/test_cli_integration.py
+  
+  # Test with mock mode (when dependencies aren't available)
+  python semantic/test_cli_integration.py --mock
+  
+  # Test a specific command
+  python semantic/test_cli_integration.py --command="/perf status"
+  
+  # Debug mode with detailed error information
+  python semantic/test_cli_integration.py --debug
+  ```
 
 ## Style Guidelines
 - Imports: standard library → third-party → local (with blank lines between)
@@ -611,13 +625,38 @@ Semantic extractors include comprehensive performance monitoring to measure reso
      ```bash
      # Enable semantic performance monitoring
      python -m query.cli --semantic-performance
-     
-     # Run a standalone test
-     python semantic/test_cli_integration.py
-     
-     # Execute a specific command
-     python semantic/test_cli_integration.py --command "/experiments list"
      ```
+
+4. **Semantic Performance CLI Testing**
+   ```bash
+   # First activate the appropriate virtual environment
+   source .venv-linux-python3.13/bin/activate  # Linux
+   .venv-win32-python3.12\Scripts\Activate.ps1  # Windows PowerShell
+   
+   # Run the standalone test CLI
+   python semantic/test_cli_integration.py
+   
+   # Execute a specific command
+   python semantic/test_cli_integration.py --command="/experiments list"
+   
+   # Run in mock mode (for testing without all dependencies)
+   python semantic/test_cli_integration.py --mock
+   
+   # Show debug information
+   python semantic/test_cli_integration.py --debug
+   ```
+
+5. **Using the Decorator Pattern**
+   
+   Apply the performance monitoring decorator to extraction functions:
+   ```python
+   from semantic.performance_monitor import monitor_semantic_extraction
+   
+   @monitor_semantic_extraction(extractor_name="MyExtractor")
+   def extract_metadata(file_path):
+       # Extraction logic
+       return metadata
+   ```
 
 Semantic extractors follow the same collector/recorder pattern:
 
