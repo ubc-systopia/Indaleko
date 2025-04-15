@@ -207,36 +207,67 @@ class ArchivistMemory:
         """Ensure the Archivist memory collection exists in the database."""
         collection_name = IndalekoDBCollections.Indaleko_Archivist_Memory_Collection
         
-        # Create collection if it doesn't exist
-        if not self.db_config.db.has_collection(collection_name):
-            # Check if collection is defined in the schema
-            if collection_name in IndalekoDBCollections.Collections:
-                collection_def = IndalekoDBCollections.Collections[collection_name]
-                # Create with schema if available
-                if collection_def.get("schema"):
-                    self.db_config.db.create_collection(
-                        collection_name,
-                        schema=collection_def.get("schema"),
-                        edge=collection_def.get("edge", False)
-                    )
-                    
-                    # Create indices if defined
-                    if "indices" in collection_def:
-                        collection = self.db_config.db.collection(collection_name)
-                        for index_name, index_def in collection_def["indices"].items():
-                            try:
-                                collection.add_persistent_index(
-                                    fields=index_def["fields"],
-                                    unique=index_def.get("unique", False)
-                                )
-                            except Exception as e:
-                                ic(f"Error creating index {index_name}: {e}")
-                else:
-                    # Create without schema
-                    self.db_config.db.create_collection(collection_name)
-            else:
-                # Collection not defined in schema, create simple collection
-                self.db_config.db.create_collection(collection_name)
+        # First try to get the collection from the centralized registry
+        from db.i_collections import IndalekoCollections
+        try:
+            # Try to get the collection using standard IndalekoCollections mechanism
+            _ = IndalekoCollections.get_collection(collection_name)
+            ic(f"Found existing collection {collection_name} in registry")
+            return
+        except ValueError:
+            # Collection not found in registry
+            ic(f"Collection {collection_name} not in central registry, using registration service")
+            
+        # Check if it exists directly in the database
+        if self.db_config.db.has_collection(collection_name):
+            ic(f"Collection {collection_name} already exists in database")
+            return
+            
+        # Collection needs to be registered, use utils.registration_service
+        from utils.registration_service import IndalekoRegistrationService
+        
+        # Get basic info from collection definition if available
+        schema = None
+        edge = False
+        indices = None
+        if collection_name in IndalekoDBCollections.Collections:
+            collection_def = IndalekoDBCollections.Collections[collection_name]
+            schema = collection_def.get("schema")
+            edge = collection_def.get("edge", False)
+            indices = collection_def.get("indices")
+            
+        # Generate a deterministic UUID for this collection from its name
+        import hashlib
+        name_hash = hashlib.md5(collection_name.encode()).hexdigest()
+        provider_id = str(uuid.UUID(name_hash))
+            
+        # Get registration service instance
+        # Since this is query memory, use the archivist service type
+        service_uuid = "9d3f9e5b-4567-4c1a-8e2b-2b0f3e8d3b2a"  # Fixed UUID for Archivist registration
+        reg_service = IndalekoRegistrationService(
+            service_uuid=service_uuid,
+            service_name="Archivist Registration Service",
+            service_description="Manages Archivist memory collections",
+            service_version="1.0.0",
+            service_type="archivist_data_registrar",
+            collection_name="ArchivistProviders",
+            collection_prefix="Archivist_"
+        )
+            
+        # Check if provider collection already exists
+        provider_collection = reg_service.lookup_provider_collection(provider_id)
+        if provider_collection is None:
+            # Create the collection
+            ic(f"Creating collection {collection_name} via registration service")
+            provider_collection = reg_service.create_provider_collection(
+                identifier=provider_id,
+                schema=schema,
+                edge=edge,
+                indices=indices
+            )
+            ic(f"Successfully created collection {collection_name}")
+        else:
+            ic(f"Found existing collection {collection_name} via registration service")
     
     def load_latest_memory(self) -> Optional[ArchivistMemoryData]:
         """Load the most recent Archivist memory from the database."""

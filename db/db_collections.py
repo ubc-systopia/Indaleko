@@ -54,6 +54,28 @@ try:
     HAS_ARCHIVIST_MEMORY = True
 except ImportError:
     HAS_ARCHIVIST_MEMORY = False
+    
+# Import the Entity Equivalence models if available
+try:
+    from archivist.entity_equivalence import (
+        EntityEquivalenceNode,
+        EntityEquivalenceRelation,
+        EntityEquivalenceGroup
+    )
+    HAS_ENTITY_EQUIVALENCE = True
+except ImportError:
+    HAS_ENTITY_EQUIVALENCE = False
+
+# Import the Knowledge Base models if available
+try:
+    from archivist.knowledge_base.data_models import (
+        LearningEventDataModel,
+        KnowledgePatternDataModel,
+        FeedbackRecordDataModel
+    )
+    HAS_KNOWLEDGE_BASE = True
+except ImportError:
+    HAS_KNOWLEDGE_BASE = False
 
 # pylint: enable=wrong-import-position
 
@@ -80,10 +102,22 @@ class IndalekoDBCollections:
     Indaleko_Collection_Metadata = "CollectionMetadata"
     Indaleko_Archivist_Memory_Collection = "ArchivistMemory"
     
+    # Entity Equivalence Collections
+    Indaleko_Entity_Equivalence_Node_Collection = "EntityEquivalenceNodes"
+    Indaleko_Entity_Equivalence_Relation_Collection = "EntityEquivalenceRelations"
+    Indaleko_Entity_Equivalence_Group_Collection = "EntityEquivalenceGroups"
+    
+    # Knowledge Base collections
+    Indaleko_Learning_Event_Collection = "LearningEvents"
+    Indaleko_Knowledge_Pattern_Collection = "KnowledgePatterns"
+    Indaleko_Feedback_Record_Collection = "FeedbackRecords"
+    
     # Define view names
     Indaleko_Objects_Text_View = "ObjectsTextView"
     Indaleko_Named_Entity_Text_View = "NamedEntityTextView"
     Indaleko_Activity_Text_View = "ActivityTextView"
+    Indaleko_Entity_Equivalence_Text_View = "EntityEquivalenceTextView"
+    Indaleko_Knowledge_Text_View = "KnowledgeTextView"
 
     Collections = {
         Indaleko_Object_Collection: {
@@ -288,6 +322,149 @@ class IndalekoDBCollections:
             "indices": {
                 "timestamp": {
                     "fields": ["Record.Timestamp"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+            },
+        },
+        Indaleko_Entity_Equivalence_Node_Collection: {
+            "internal": False,
+            "schema": EntityEquivalenceNode.get_arangodb_schema() if HAS_ENTITY_EQUIVALENCE else {},
+            "edge": False,
+            "indices": {
+                "name": {
+                    "fields": ["name"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+                "entity_type": {
+                    "fields": ["entity_type"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+                "canonical": {
+                    "fields": ["canonical"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+            },
+            "views": [
+                {
+                    "name": Indaleko_Entity_Equivalence_Text_View,
+                    "fields": ["name", "context"],
+                    "analyzers": ["text_en"],
+                    "stored_values": ["_key", "name", "entity_id", "canonical"]
+                }
+            ]
+        },
+        Indaleko_Entity_Equivalence_Relation_Collection: {
+            "internal": False,
+            "schema": EntityEquivalenceRelation.get_arangodb_schema() if HAS_ENTITY_EQUIVALENCE else {},
+            "edge": True,
+            "indices": {
+                "source": {
+                    "fields": ["source_id"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+                "target": {
+                    "fields": ["target_id"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+                "relation_type": {
+                    "fields": ["relation_type"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+                "confidence": {
+                    "fields": ["confidence"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+            },
+        },
+        Indaleko_Entity_Equivalence_Group_Collection: {
+            "internal": False,
+            "schema": EntityEquivalenceGroup.get_arangodb_schema() if HAS_ENTITY_EQUIVALENCE else {},
+            "edge": False,
+            "indices": {
+                "canonical_id": {
+                    "fields": ["canonical_id"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+                "entity_type": {
+                    "fields": ["entity_type"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+            },
+        },
+        Indaleko_Learning_Event_Collection: {
+            "internal": False,
+            "schema": LearningEventDataModel.get_arangodb_schema() if HAS_KNOWLEDGE_BASE else {},
+            "edge": False,
+            "indices": {
+                "event_type": {
+                    "fields": ["event_type"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+                "timestamp": {
+                    "fields": ["timestamp"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+            },
+            "views": [
+                {
+                    "name": Indaleko_Knowledge_Text_View,
+                    "fields": ["content", "source", "metadata"],
+                    "analyzers": ["text_en"],
+                    "stored_values": ["_key", "event_type", "timestamp"]
+                }
+            ]
+        },
+        Indaleko_Knowledge_Pattern_Collection: {
+            "internal": False,
+            "schema": KnowledgePatternDataModel.get_arangodb_schema() if HAS_KNOWLEDGE_BASE else {},
+            "edge": False,
+            "indices": {
+                "pattern_type": {
+                    "fields": ["pattern_type"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+                "confidence": {
+                    "fields": ["confidence"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+                "usage_count": {
+                    "fields": ["usage_count"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+            },
+        },
+        Indaleko_Feedback_Record_Collection: {
+            "internal": False,
+            "schema": FeedbackRecordDataModel.get_arangodb_schema() if HAS_KNOWLEDGE_BASE else {},
+            "edge": False,
+            "indices": {
+                "feedback_type": {
+                    "fields": ["feedback_type"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+                "timestamp": {
+                    "fields": ["timestamp"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+                "feedback_strength": {
+                    "fields": ["feedback_strength"],
                     "unique": False,
                     "type": "persistent",
                 },

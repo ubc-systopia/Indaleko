@@ -61,6 +61,7 @@ from query.search_execution.query_executor.aql_executor import AQLExecutor
 from query.search_execution.query_visualizer import PlanVisualizer
 from query.memory.archivist_memory import ArchivistMemory
 from query.memory.cli_integration import ArchivistCliIntegration
+from query.memory.kb_integration import initialize_kb_for_cli, enhance_query_with_kb, record_query_results, add_kb_arguments
 from query.utils.llm_connector.openai_connector import OpenAIConnector
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
@@ -255,6 +256,19 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 help="Enable proactive suggestions based on patterns and context"
             )
             
+            # Add Knowledge Base arguments
+            parser.add_argument(
+                "--kb", "--knowledge-base",
+                action="store_true",
+                help="Enable Knowledge Base features for learning from interactions"
+            )
+            parser.add_argument(
+                "--kb-confidence",
+                type=float,
+                default=0.7,
+                help="Minimum confidence threshold for knowledge patterns (0-1)"
+            )
+            
             # Add command subparsers
             subparsers = parser.add_subparsers(
                 dest="command",
@@ -318,6 +332,13 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 initial_suggestions = self.proactive_integration.get_initial_suggestions()
                 if initial_suggestions:
                     self.proactive_integration._display_suggestions(initial_suggestions)
+                    
+        # Initialize Knowledge Base integration
+        self.kb_integration = None
+        if hasattr(self.args, 'kb') and self.args.kb:
+            self.kb_integration = initialize_kb_for_cli(self)
+            if self.kb_integration:
+                print("Knowledge Base integration enabled. Use /kb to see available commands.")
 
         while True:
             # Need UPI information about the database
@@ -341,21 +362,33 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                     user_query = self.current_refined_query
                     
             # Check for Archivist commands
-            if self.archivist_components and user_query.startswith("/"):
-                # Try to handle commands with the appropriate component
-                if user_query.startswith(("/memory", "/forward", "/load", "/goals", "/insights", "/topics", "/strategies", "/save")):
-                    memory_integration = self.archivist_components.get("memory_integration")
-                    if memory_integration and memory_integration.handle_command(user_query):
+            if user_query.startswith("/"):
+                # Handle Knowledge Base commands
+                if hasattr(self, 'kb_integration') and self.kb_integration and user_query.startswith(("/kb", "/patterns", "/entities", "/feedback", "/insights")):
+                    command_handler = self.kb_integration.commands.get(user_query.split()[0], None)
+                    if command_handler:
+                        # Extract arguments for the command handler
+                        args = user_query.split(maxsplit=1)[1] if len(user_query.split()) > 1 else ""
+                        result = command_handler(args)
+                        print(result)
                         continue
-                        
-                elif user_query.startswith(("/optimize", "/analyze", "/index", "/view", "/query", "/impact")):
-                    optimizer_integration = self.archivist_components.get("optimizer_integration")
-                    if optimizer_integration and optimizer_integration.handle_command(user_query):
-                        continue
-                        
-                elif user_query.startswith(("/proactive", "/suggest", "/feedback", "/patterns", "/priorities", "/enable", "/disable")):
-                    if hasattr(self, 'proactive_integration') and self.proactive_integration and self.proactive_integration.handle_command(user_query):
-                        continue
+
+                # Handle Archivist commands if Archivist is enabled
+                if self.archivist_components:
+                    # Try to handle commands with the appropriate component
+                    if user_query.startswith(("/memory", "/forward", "/load", "/goals", "/topics", "/strategies", "/save")):
+                        memory_integration = self.archivist_components.get("memory_integration")
+                        if memory_integration and memory_integration.handle_command(user_query):
+                            continue
+                            
+                    elif user_query.startswith(("/optimize", "/analyze", "/index", "/view", "/query", "/impact")):
+                        optimizer_integration = self.archivist_components.get("optimizer_integration")
+                        if optimizer_integration and optimizer_integration.handle_command(user_query):
+                            continue
+                            
+                    elif user_query.startswith(("/proactive", "/suggest", "/priorities", "/enable", "/disable")):
+                        if hasattr(self, 'proactive_integration') and self.proactive_integration and self.proactive_integration.handle_command(user_query):
+                            continue
 
             # Log the query
             # self.logging_service.log_query(user_query)
@@ -364,6 +397,43 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             # Check if we should use enhanced NL parsing
             use_enhanced = hasattr(self.args, 'enhanced_nl') and self.args.enhanced_nl
             use_context = hasattr(self.args, 'context_aware') and self.args.context_aware
+            
+            # Apply Knowledge Base enhancement if enabled
+            kb_enabled = hasattr(self.args, 'kb') and self.args.kb and hasattr(self, 'kb_integration') and self.kb_integration
+            
+            if kb_enabled:
+                # Extract entities from the query with minimal parsing
+                # Just to get some entity context for the KB
+                basic_entities = []
+                try:
+                    # Try to extract some basic entities for context
+                    temp_parsed = self.nl_parser.parse(query=user_query)
+                    for entity in temp_parsed.Entities.entities:
+                        basic_entities.append({
+                            "name": entity.name,
+                            "type": entity.category if hasattr(entity, 'category') else "unknown",
+                            "original_text": entity.name
+                        })
+                except Exception as e:
+                    # If entity extraction fails, proceed without entities
+                    ic(f"Failed to extract entities for KB: {e}")
+                
+                # Enhance query using Knowledge Base
+                kb_enhanced = enhance_query_with_kb(
+                    self, 
+                    user_query, 
+                    intent="search", 
+                    entities=basic_entities
+                )
+                
+                # If KB successfully enhanced the query, use the enhanced version
+                if kb_enhanced.get("enhancements_applied", False):
+                    ic(f"KB enhanced query: {kb_enhanced.get('enhanced_query')}")
+                    # Use the enhanced query for further processing
+                    enhanced_query = kb_enhanced.get("enhanced_query", user_query)
+                    # Keep original query for reference
+                    original_query = user_query
+                    user_query = enhanced_query
             
             if use_enhanced:
                 # Use enhanced natural language parser
@@ -545,6 +615,58 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 self.proactive_integration.update_context_with_query(
                     user_query,
                     results={'count': results_count}
+                )
+                
+            # Record query results with Knowledge Base if enabled
+            if hasattr(self.args, 'kb') and self.args.kb and hasattr(self, 'kb_integration') and self.kb_integration:
+                # Prepare result info for KB
+                result_info = {
+                    'count': 0,
+                    'quality': 0.8,  # Default quality
+                    'collections': [],
+                    'execution_time': 0.0
+                }
+                
+                # Extract result count
+                if isinstance(ranked_results, FormattedResults):
+                    result_info['count'] = len(ranked_results.result_groups)
+                elif isinstance(ranked_results, list):
+                    result_info['count'] = len(ranked_results)
+                
+                # Extract collections from the query
+                if hasattr(translated_query, 'collections'):
+                    result_info['collections'] = translated_query.collections
+                
+                # Extract any entities if available
+                entities = []
+                try:
+                    if use_enhanced and hasattr(self, 'last_query_understanding'):
+                        # Use entities from enhanced understanding
+                        for entity in self.last_query_understanding.entities:
+                            entities.append({
+                                "name": entity.name,
+                                "type": entity.type if hasattr(entity, 'type') else "unknown",
+                                "original_text": entity.name
+                            })
+                    else:
+                        # Use entities from standard parsing
+                        for entity in parsed_query.Entities.entities:
+                            entities.append({
+                                "name": entity.name,
+                                "type": entity.category if hasattr(entity, 'category') else "unknown",
+                                "original_text": entity.name
+                            })
+                except Exception as e:
+                    # If entity extraction fails, proceed without entities
+                    ic(f"Failed to extract entities for KB recording: {e}")
+                
+                # Record results with Knowledge Base
+                record_query_results(
+                    self,
+                    user_query,
+                    result_info=result_info,
+                    intent="search",
+                    entities=entities
                 )
 
             # Check if user wants to continue
@@ -944,7 +1066,12 @@ def main():
     print("\n- Try the new proactive features with the Archivist memory system:")
     print("  Example: python -m query.cli --archivist --proactive")
     print("  This enables proactive suggestions based on your search patterns.")
-    print("  Use /proactive to see available commands for the proactive features.\n")
+    print("  Use /proactive to see available commands for the proactive features.")
+    
+    print("\n- Try the new Knowledge Base learning features:")
+    print("  Example: python -m query.cli --kb")
+    print("  This enables learning from query interactions to improve future searches.")
+    print("  Use /kb to see available commands for the Knowledge Base features.\n")
     
     IndalekoQueryCLI().run()
     print("Thank you for using Indaleko Query CLI")

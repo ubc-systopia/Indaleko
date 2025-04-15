@@ -42,6 +42,8 @@ dependencies = [
     "winsdk==1.0.0b10 ; platform_system == 'Windows'",
     "pillow>=10.2.0",
     "exifread>=3.0.0",
+    "colorama>=0.4.6",
+    "tqdm>=4.66.0",
 ]
 requires-python = ">=3.12"
 

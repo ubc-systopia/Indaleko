@@ -140,13 +140,39 @@ class NtfsActivityRecorder(RecorderBase):
         self._db.connect()
         
         # Get or create collection
-        if self._collection_name in self._db.get_collections():
-            self._collection = self._db.get_collection(self._collection_name)
-        else:
-            self._collection = self._db.create_collection(
-                self._collection_name,
-                description="NTFS USN Journal activity data"
-            )
+        # Try to get the collection from the central registry
+        from db.i_collections import IndalekoCollections
+        
+        try:
+            # Check if collection exists in registry
+            collection_obj = IndalekoCollections.get_collection(self._collection_name)
+            self._collection = collection_obj.collection
+            self._logger.info(f"Using existing collection {self._collection_name}")
+        except ValueError:
+            # If not in registry, use dynamic registration service
+            self._logger.info(f"Collection {self._collection_name} not found in registry")
+            
+            # Get or create the registration service for activity data
+            from activity.registration_service import ActivityRegistrationService
+            registration_service = ActivityRegistrationService()
+            
+            # Register this collection with a generated UUID for consistency
+            import hashlib
+            # Generate deterministic UUID from collection name
+            name_hash = hashlib.md5(self._collection_name.encode()).hexdigest()
+            provider_id = str(uuid.UUID(name_hash))
+            
+            # Create provider collection
+            provider_collection = registration_service.lookup_provider_collection(provider_id)
+            if provider_collection is None:
+                self._logger.info(f"Creating collection for {self._collection_name} via registration service")
+                provider_collection = registration_service.create_provider_collection(
+                    identifier=provider_id,
+                    schema=None,  # No schema validation for now
+                    edge=False
+                )
+            
+            self._collection = provider_collection.collection
     
     def _initialize_storage_recorder(self):
         """Initialize the storage recorder for dynamic updates."""

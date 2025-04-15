@@ -92,6 +92,7 @@ The project includes a Streamlit-based GUI in the `/utils/gui/streamlit/` direct
 - Test Database Optimizer: `python archivist/test_optimizer.py`
 - Test Archivist Memory: `python query/memory/test_archivist.py --all`
 - Test Cross-Source Patterns: `python query/memory/test_cross_source_patterns.py --all`
+- Test Knowledge Base Updating: `python archivist/test_knowledge_base.py --all`
 
 ## Style Guidelines
 - Imports: standard library → third-party → local (with blank lines between)
@@ -102,6 +103,8 @@ The project includes a Streamlit-based GUI in the `/utils/gui/streamlit/` direct
 - Error handling: Specific exceptions with descriptive messages
 - Documentation: All modules, classes and methods need docstrings (Args/Returns sections)
 - Module organization: Copyright header, imports, constants, classes, functions, main
+
+Refer to TODO.md for a comprehensive list of planned features, enhancements, and research directions for the Indaleko project. The TODO list includes both immediate development tasks and longer-term research initiatives.
 - Datetime fields: Always use timezone-aware datetimes for ArangoDB compatibility:
   ```python
   from datetime import datetime, timezone
@@ -171,6 +174,131 @@ IndalekoBaseModel provides several key methods:
 - Plotly>=5.18.0
 - PyDeck>=0.8.0
 - Pillow>=10.1.0
+
+## Database Management
+
+### Collection Management
+
+Indaleko uses a centralized approach for database collection management. This ensures consistency, automatic schema validation, and proper indexing.
+
+**Important: Never directly create collections!** Always use the centralized mechanisms:
+
+1. **For Standard Collections**: Define them in `db/db_collections.py` in the `IndalekoDBCollections` class
+2. **For Dynamic Collections**: Use the registration service in `utils/registration_service.py`
+
+#### How to Define Collections
+
+Collections should be defined in `db/db_collections.py`:
+
+```python
+# Define collection name constants
+class IndalekoDBCollections:
+    """Defines the set of well-known collections used by Indaleko."""
+    Indaleko_Example_Collection = "ExampleCollection"
+    
+    # Define other collections...
+    
+    Collections = {
+        Indaleko_Example_Collection: {
+            "internal": False,
+            "schema": ExampleDataModel.get_arangodb_schema(),
+            "edge": False,
+            "indices": {
+                "name": {
+                    "fields": ["name"],
+                    "unique": True,
+                    "type": "persistent",
+                },
+            },
+            "views": [
+                {
+                    "name": "ExampleTextView",
+                    "fields": ["name", "description"],
+                    "analyzers": ["text_en"],
+                    "stored_values": ["_key", "name"]
+                }
+            ]
+        },
+        # Define other collections...
+    }
+```
+
+#### How to Access Collections
+
+Always use the `IndalekoCollections` class to get or create collections:
+
+```python
+from db.i_collections import IndalekoCollections
+from db.db_collections import IndalekoDBCollections
+
+# Get collection by name
+collection = IndalekoCollections.get_collection(IndalekoDBCollections.Indaleko_Example_Collection)
+
+# Now you can use the collection
+collection.collection.insert(document)
+```
+
+#### Benefits of Centralized Collection Management
+
+1. Consistent schema validation and indexing
+2. Collection creation is handled automatically
+3. Single location for fixing collection-related bugs
+4. Simplified UUID-based collection names for security
+5. Automatic view creation for search optimization
+6. Controlled rollout of security features
+7. Reduced attack surface area
+8. Simplified audit trails for security monitoring
+
+#### Security Considerations for Collections
+
+The centralized collection management approach is critical for Indaleko's security architecture:
+
+1. **UUID-Based Collection Names**:
+   - Collections use UUIDs for naming rather than descriptive names
+   - In production, this obfuscates the database structure from potential attackers
+   - Reduces information leakage about the contents or purpose of collections
+
+2. **Controlled Collection Access**:
+   - Creating "choke points" for all database operations
+   - Applying security checks at a single point rather than across the codebase
+   - Future role-based access controls can be implemented at the collection access layer
+
+3. **Dynamic Collection Management**:
+   - When dynamic collections are needed, use the registration service:
+   ```python
+   from utils.registration_service import IndalekoRegistrationService
+   
+   # Get registration service instance
+   reg_service = IndalekoRegistrationService(...)
+   
+   # Create a collection through the registration service
+   provider_collection = reg_service.create_provider_collection(
+       identifier=provider_id,
+       schema=schema,
+       edge=edge,
+       indices=indices
+   )
+   
+   # Access the collection
+   collection = provider_collection.collection
+   ```
+
+4. **NEVER Create Collections Directly**:
+   ```python
+   # NEVER do this:
+   db.create_collection("my_collection")  # BAD!
+   
+   # ALWAYS use the centralized mechanism:
+   collection = IndalekoCollections.get_collection(collection_name)  # GOOD!
+   ```
+
+5. **Future Security Enhancements**:
+   - Encryption of collection contents
+   - Access logging and auditing
+   - Enhanced permission checking
+   - Collection existence hiding
+   
+These security features will be progressively implemented as the project matures, but the architectural foundation must be in place from the beginning.
 
 ## Collector/Recorder Pattern
 
@@ -958,8 +1086,11 @@ python query/cli.py --archivist
 # Enable database optimizer for query performance improvements
 python query/cli.py --optimizer
 
+# Enable Knowledge Base learning features
+python query/cli.py --kb
+
 # Combine multiple features
-python query/cli.py --enhanced-nl --context-aware --deduplicate --dynamic-facets --conversational --archivist --optimizer
+python query/cli.py --enhanced-nl --context-aware --deduplicate --dynamic-facets --conversational --archivist --optimizer --kb
 ```
 
 ### Programmatic EXPLAIN Usage
@@ -1171,6 +1302,36 @@ python query/memory/test_archivist.py --load
 # Run all tests
 python query/memory/test_archivist.py --all
 ```
+
+### Knowledge Base Updating System
+
+The Archivist component includes a Knowledge Base Updating system that learns from interactions and improves over time:
+
+```python
+from archivist.knowledge_base import KnowledgeBaseManager, LearningEventType
+
+# Initialize the knowledge base manager
+kb_manager = KnowledgeBaseManager()
+
+# Record a learning event from successful query
+kb_manager.record_learning_event(
+    event_type=LearningEventType.query_success,
+    source="query_execution",
+    content={
+        "query": "Find documents about Indaleko",
+        "result_count": 5,
+        "entities": ["Indaleko"]
+    },
+    confidence=0.9
+)
+
+# Apply learned patterns to enhance a query
+enhanced_query = kb_manager.apply_knowledge_to_query(
+    "Show me files related to Indaleko"
+)
+```
+
+For detailed documentation on the Knowledge Base system, see [Knowledge Base README](archivist/knowledge_base/README.md).
 
 ### Cross-Source Pattern Detection
 
@@ -1410,3 +1571,165 @@ The vision for Fire Circle evolution mirrors the adaptive, emergent nature of In
 2. **Fire Circle 2.0**: A self-designing circle where the system's architecture evolves through collective intelligence
 
 This progression represents a shift from engineered systems toward collaborative, emergent intelligence that may develop novel capabilities beyond what humans explicitly design.
+
+## Software Engineering Best Practices
+
+### Error Handling
+
+Indaleko follows specific practices for proper error handling:
+
+1. **Use Specific Exceptions**: Catch and raise specific exception types:
+   ```python
+   try:
+       # Operation that might fail
+       result = risky_operation()
+   except (ValueError, KeyError) as e:
+       # Handle specific errors
+       logger.error(f"Failed to process data: {e}")
+       raise IndalekoProcessingError(f"Data processing failed: {str(e)}") from e
+   ```
+
+2. **Custom Exception Hierarchy**: Use custom exceptions to help with categorization:
+   ```python
+   class IndalekoError(Exception):
+       """Base exception for all Indaleko errors."""
+       pass
+       
+   class IndalekoProcessingError(IndalekoError):
+       """Errors that occur during data processing."""
+       pass
+       
+   class IndalekoConnectionError(IndalekoError):
+       """Errors related to external connections."""
+       pass
+   ```
+
+3. **Include Context**: Always include context when raising exceptions:
+   ```python
+   raise IndalekoProcessingError(
+       f"Failed to process object {object_id}. Reason: {detail}"
+   )
+   ```
+
+4. **Log Before Raise**: Always log errors before raising them higher:
+   ```python
+   except SomeError as e:
+       logger.error(f"Operation failed: {e}", exc_info=True)
+       raise
+   ```
+
+### Logging Best Practices
+
+Indaleko uses structured logging for better analysis:
+
+1. **Use Appropriate Log Levels**:
+   - `DEBUG`: Detailed information for diagnosis
+   - `INFO`: Confirmation that things are working
+   - `WARNING`: Indication of potential issues
+   - `ERROR`: Error that doesn't prevent operation
+   - `CRITICAL`: Error that prevents operation
+
+2. **Include Contextual Information**:
+   ```python
+   logger.info(
+       "Processing completed",
+       extra={
+           "object_id": obj.id,
+           "process_time": elapsed_time,
+           "result_count": len(results)
+       }
+   )
+   ```
+
+3. **Use utils.i_logging Module**: Always use the centralized logging:
+   ```python
+   from utils.i_logging import get_logger
+   
+   logger = get_logger(__name__)
+   ```
+
+### Performance Considerations
+
+Indaleko includes built-in performance tracking:
+
+1. **Use Performance Mixins** for automatic tracking:
+   ```python
+   from perf.perf_mixin import IndalekoPerformanceMixin
+   
+   class MyProcessor(IndalekoPerformanceMixin):
+       def process_data(self, data):
+           with self.perf_context("data_processing"):
+               # Processing logic
+   ```
+
+2. **Database Query Optimization**:
+   - Always use bind parameters instead of string interpolation
+   - Consider index usage for frequently filtered fields
+   - Use `LIMIT` to restrict result sets
+   - Use projection (`RETURN { name: doc.name }`) for partial documents
+
+3. **Batch Processing** for large datasets:
+   ```python
+   # Process in batches of 1000
+   for i in range(0, len(items), 1000):
+       batch = items[i:i+1000]
+       process_batch(batch)
+   ```
+
+### Testing Strategy
+
+1. **Unit Tests**: Focus on testing individual components in isolation:
+   ```python
+   def test_entity_equivalence_merge():
+       # Arrange
+       manager = EntityEquivalenceManager()
+       entity1 = manager.add_entity_reference(...)
+       entity2 = manager.add_entity_reference(...)
+       
+       # Act
+       result = manager.merge_entities(entity1.entity_id, entity2.entity_id)
+       
+       # Assert
+       assert result is True
+       assert manager.get_canonical_reference(entity2.entity_id).entity_id == entity1.entity_id
+   ```
+
+2. **Integration Tests**: Test how components work together:
+   ```python
+   def test_collection_view_integration():
+       # Test that views are properly created when collections are defined
+       collections = IndalekoCollections()
+       view = IndalekoCollections.get_view(IndalekoDBCollections.Indaleko_Objects_Text_View)
+       assert view is not None
+   ```
+
+3. **Test Coverage**: Aim for comprehensive coverage, especially for critical paths.
+
+4. **Mock External Dependencies**: Use mocks for external systems:
+   ```python
+   @patch('archivist.entity_equivalence.EntityEquivalenceManager._load_data')
+   def test_setup_collections(mock_load):
+       manager = EntityEquivalenceManager()
+       # Test logic that doesn't depend on database
+   ```
+
+### Code Reviews
+
+When reviewing code (or having your code reviewed), focus on:
+
+1. **Correctness**: Does the code properly implement the requirements?
+2. **Security**: Are there any potential security issues?
+3. **Performance**: Are there any performance bottlenecks?
+4. **Maintainability**: Is the code easy to understand and maintain?
+5. **Testability**: Is the code structured to be testable?
+6. **Error Handling**: Does the code properly handle errors?
+7. **Documentation**: Is the code properly documented?
+
+### Architecture Principles
+
+1. **Single Responsibility**: Each module/class should have a single responsibility
+2. **Open/Closed**: Code should be open for extension but closed for modification
+3. **Dependency Inversion**: Depend on abstractions, not concrete implementations
+4. **Interface Segregation**: Many specific interfaces are better than one general interface
+5. **Don't Repeat Yourself (DRY)**: Avoid duplication of code and logic
+6. **Composition Over Inheritance**: Favor object composition over class inheritance

@@ -110,15 +110,40 @@ class CalendarRecorder(RecorderBase):
     def _ensure_collection_exists(self) -> None:
         """Ensure the calendar events collection exists in the database."""
         try:
-            collection_names = self._db.get_collection_names()
+            # Try to get the collection from the central registry
+            from db.i_collections import IndalekoCollections
             
-            if self._collection_name not in collection_names:
-                self.logger.info(f"Creating collection {self._collection_name}")
-                self._db.create_collection(self._collection_name)
+            try:
+                # Check if collection exists in registry
+                collection_obj = IndalekoCollections.get_collection(self._collection_name)
+                self._collection = collection_obj.collection
+                self.logger.info(f"Using existing collection {self._collection_name}")
+            except ValueError:
+                # If not in registry, use dynamic registration service
+                self.logger.info(f"Collection {self._collection_name} not found in registry")
                 
-            # Get collection
-            self._collection = self._db.get_collection(self._collection_name)
-            
+                # Get or create the registration service for activity data
+                from activity.registration_service import ActivityRegistrationService
+                registration_service = ActivityRegistrationService()
+                
+                # Register this collection with a generated UUID for consistency
+                import hashlib
+                # Generate deterministic UUID from collection name
+                name_hash = hashlib.md5(self._collection_name.encode()).hexdigest()
+                provider_id = str(uuid.UUID(name_hash))
+                
+                # Create provider collection
+                provider_collection = registration_service.lookup_provider_collection(provider_id)
+                if provider_collection is None:
+                    self.logger.info(f"Creating collection for {self._collection_name} via registration service")
+                    provider_collection = registration_service.create_provider_collection(
+                        identifier=provider_id,
+                        schema=None,  # No schema validation for now
+                        edge=False
+                    )
+                
+                self._collection = provider_collection.collection
+                
         except Exception as e:
             self.logger.error(f"Error ensuring collection exists: {e}")
             raise
