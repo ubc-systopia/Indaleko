@@ -61,11 +61,24 @@ class IndalekoCollectionView:
         """
         views = {}
         try:
-            view_names = self.db_config.db.views()
-            for view_name in view_names:
-                views[view_name] = self.db_config.db.view(view_name)
+            # First try the ArangoDB Python driver's views() method
+            try:
+                view_names = self.db_config.db.views()
+                for view_name in view_names:
+                    views[view_name] = self.db_config.db.view(view_name)
+            except AttributeError:
+                # Fall back to HTTP API
+                logging.info("Falling back to HTTP API for view retrieval")
+                result = self.db_config.db._execute(
+                    url="/_api/view",
+                    method="GET"
+                )
+                for view_info in result["result"]:
+                    view_name = view_info["name"]
+                    views[view_name] = view_info
         except Exception as e:
             logging.error(f"Failed to retrieve existing views: {e}")
+            # Return empty dict but don't fail - we'll create views if needed
         return views
 
     @type_check
@@ -108,12 +121,28 @@ class IndalekoCollectionView:
                 "properties": properties
             }
         except Exception as e:
-            logging.error(f"Failed to create view '{view_name}': {e}")
-            return {
-                "status": "error",
-                "message": f"Error creating view: {str(e)}",
-                "view_definition": view_definition.model_dump()
-            }
+            # Check if it's an error about duplicate name
+            error_str = str(e).lower()
+            if "duplicate" in error_str and "name" in error_str:
+                # The view probably already exists but wasn't detected correctly
+                logging.warning(f"View '{view_name}' already exists but wasn't detected in _get_existing_views()")
+                # Try to refresh the view cache
+                self._existing_views = self._get_existing_views()
+                
+                # Handle as if it existed to prevent errors
+                return {
+                    "status": "exists",
+                    "message": f"View '{view_name}' already exists (detected during creation)",
+                    "view_id": None,  # We don't know the ID
+                    "properties": properties
+                }
+            else:
+                logging.error(f"Failed to create view '{view_name}': {e}")
+                return {
+                    "status": "error",
+                    "message": f"Error creating view: {str(e)}",
+                    "view_definition": view_definition.model_dump()
+                }
 
     @type_check
     def update_view(self, view_definition: IndalekoViewDefinition) -> Dict[str, Any]:
