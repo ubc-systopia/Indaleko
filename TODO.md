@@ -148,6 +148,16 @@ This document outlines planned enhancements, features, and improvements for the 
 
 ## Lower Priority Items
 
+### Code Quality and Enforcement
+
+- [ ] **Database Collection Management Enforcement**
+  - Create pre-commit hooks to detect direct collection creation calls
+  - Implement linter rules to flag unauthorized collection management
+  - Add warning comments near DB-related imports with architectural constraints
+  - Create a "cheat sheet" summary file with critical architectural constraints
+  - Build automated code review tool for architectural pattern compliance
+  - Develop developer education materials on collection management architecture
+
 ### Performance and Scaling
 
 - [ ] **Query Performance Optimization**
