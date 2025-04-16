@@ -338,7 +338,9 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
         # Get the volume path, preferring GUID format if available
         if self._use_volume_guids and not volume.startswith("\\\\?\\Volume{"):
             volume_path = self.get_volume_guid_path(volume)
-            self._logger.info(f"Using volume GUID path for {volume}: {volume_path}")
+            # Use the proper volume variable, not potentially double-colon version
+            cleaned_volume = volume.split(":")[0] + ":"
+            self._logger.info(f"Using volume GUID path for {cleaned_volume}: {volume_path}")
         else:
             # Use standard path format
             if volume.startswith("\\\\?\\Volume{"):
@@ -352,15 +354,45 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
         
         try:
             if WINDOWS_AVAILABLE and not self._use_mock:
-                handle = win32file.CreateFile(
-                    volume_path,
-                    win32file.GENERIC_READ | win32file.GENERIC_WRITE,
-                    win32file.FILE_SHARE_READ | win32file.FILE_SHARE_WRITE,
-                    None,
-                    win32file.OPEN_EXISTING,
-                    win32file.FILE_ATTRIBUTE_NORMAL,
-                    None
-                )
+                # Try alternate formats for volume path to handle different Windows configurations
+                handle = None
+                volume_path_variants = []
+                
+                # Original volume path
+                volume_path_variants.append(volume_path)
+                
+                # Common variations
+                if volume.endswith(':'):
+                    # Try standard Windows path format
+                    volume_path_variants.append(f"{volume}\\")
+                    
+                    # Try with physical drive syntax
+                    volume_path_variants.append(f"\\\\.\\{volume}")
+                    
+                    # Try with just drive letter
+                    if len(volume) == 2:  # like "C:"
+                        volume_path_variants.append(volume[0] + ":\\")
+                
+                # Try each variation
+                for path_variant in volume_path_variants:
+                    try:
+                        self._logger.debug(f"Trying volume path: {path_variant}")
+                        handle = win32file.CreateFile(
+                            path_variant,
+                            win32file.GENERIC_READ | win32file.GENERIC_WRITE,
+                            win32file.FILE_SHARE_READ | win32file.FILE_SHARE_WRITE,
+                            None,
+                            win32file.OPEN_EXISTING,
+                            win32file.FILE_ATTRIBUTE_NORMAL,
+                            None
+                        )
+                        if handle:
+                            self._logger.info(f"Successfully opened volume with path: {path_variant}")
+                            break
+                    except Exception as inner_e:
+                        self._logger.debug(f"Failed to open volume with path {path_variant}: {inner_e}")
+                        
+                # If all variants failed, we'll have None handle and the outer exception handler will catch it
             else:
                 # In mock mode, we don't actually open the volume
                 self._logger.info(f"Mock mode: Not actually opening volume {volume_path}")
@@ -769,7 +801,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
             volume: The volume (usually drive letter like "C:")
             
         Returns:
-            The volume GUID path (\\?\Volume{GUID}\) or the original volume if not available
+            The volume GUID path (in Windows-style with double backslashes) or the original volume if not available
         """
         # If volume is already a GUID path, return it
         if volume.startswith("\\\\?\\Volume{"):

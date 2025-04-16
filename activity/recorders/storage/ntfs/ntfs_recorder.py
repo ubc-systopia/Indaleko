@@ -52,6 +52,9 @@ import hashlib
 from datetime import timedelta, datetime, timezone
 from typing import Dict, List, Optional, Any, Union
 
+# Import ServiceManager upfront to avoid late binding issues
+from db.service_manager import IndalekoServiceManager
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -152,13 +155,18 @@ class NtfsStorageActivityRecorder(StorageActivityRecorder):
                 raise  # Only re-raise if we're supposed to connect to the database
 
         # Update registration service import
+        # Note: We already imported IndalekoServiceManager at the top of this file
         if kwargs.get("register_service", True):
             try:
-                # Import here to avoid circular imports
-                from db.service_manager import IndalekoServiceManager
-                kwargs["_service_manager"] = IndalekoServiceManager
-            except ImportError:
-                self._logger.warning("IndalekoServiceManager not found - will not register with service")
+                # Ensure we can access the class
+                if 'IndalekoServiceManager' not in globals():
+                    self._logger.warning("IndalekoServiceManager not available in globals - will not register with service")
+                    kwargs["register_service"] = False
+                else:
+                    # We use the already imported class
+                    kwargs["_service_manager"] = IndalekoServiceManager
+            except Exception as e:
+                self._logger.warning(f"Error setting up service manager: {e} - will not register with service")
                 kwargs["register_service"] = False
                 
         # Call parent initializer

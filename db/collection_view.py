@@ -67,12 +67,34 @@ class IndalekoCollectionView:
                 for view_name in view_names:
                     views[view_name] = self.db_config.db.view(view_name)
             except AttributeError:
-                # Fall back to HTTP API
-                logging.info("Falling back to HTTP API for view retrieval")
-                result = self.db_config.db._execute(
-                    url="/_api/view",
-                    method="GET"
-                )
+                # Fall back to direct HTTP request
+                logging.info("Falling back to direct HTTP request for view retrieval")
+                try:
+                    # Get the API endpoint and credentials
+                    host = self.db_config.host
+                    port = self.db_config.port
+                    database = self.db_config.database
+                    username = self.db_config.username
+                    password = self.db_config.password
+                    
+                    # Build the URL
+                    url = f"http://{host}:{port}/_db/{database}/_api/view"
+                    
+                    # Make the request
+                    response = requests.get(
+                        url, 
+                        auth=(username, password),
+                        headers={"Accept": "application/json"}
+                    )
+                    
+                    if response.status_code == 200:
+                        result = response.json()
+                    else:
+                        logging.error(f"HTTP error {response.status_code}: {response.text}")
+                        return {}
+                except Exception as http_error:
+                    logging.error(f"Error making direct HTTP request: {http_error}")
+                    return {}
                 for view_info in result["result"]:
                     view_name = view_info["name"]
                     views[view_name] = view_info
