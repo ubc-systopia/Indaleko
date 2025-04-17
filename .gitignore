@@ -17,6 +17,7 @@ __pycache__/*
 wmiobject-list.txt
 *.log
 *.json
+*.csv
 scratch*.py
 scratch*.ipynb
 scratch/*
