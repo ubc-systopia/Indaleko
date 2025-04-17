@@ -1,5 +1,6 @@
 """
-This module defines the base data model used by the Indaleko storage collectors.
+This module defines the base data model used by the
+Indaleko storage collectors.
 
 Indaleko Storage Collector Data Model
 Copyright (C) 2024-2025 Tony Mason
@@ -21,10 +22,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import platform
 import sys
-from typing import Optional, Union
-from uuid import UUID, uuid4
 
-from pydantic import Field, BaseModel
+from pydantic import Field
 from icecream import ic
 
 
@@ -38,44 +37,13 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from constants import IndalekoConstants
+from data_models.collector import IndalekoCollectorDataModel
 
 # pylint: enable=wrong-import-position
 
 
-class IndalekoStorageCollectorDataModel(BaseModel):
+class IndalekoStorageCollectorDataModel(IndalekoCollectorDataModel):
     """Defines the base data model for the storage collectors"""
-
-    PlatformName: Optional[Union[str, None]] = Field(
-        None,
-        title="PlatformName",
-        description="The name of the platform (e.g., Linux, Windows, etc.) if any (default=None).",
-    )
-
-    ServiceRegistrationName: str = Field(
-        ...,
-        title="ServiceRegistrationName",
-        description="The service name used when registering this collector in the database.",
-    )
-
-    ServiceFileName: str = Field(
-        ...,
-        title="ServiceFileName",
-        description="The service name of the collector for file name generation.",
-    )
-
-    ServiceUUID: UUID = Field(
-        ..., title="ServiceUUID", description="The UUID of the collector."
-    )
-
-    ServiceVersion: str = Field(
-        ..., title="CollectorVersion", description="The version of the collector."
-    )
-
-    ServiceDescription: str = Field(
-        ...,
-        title="CollectorDescription",
-        description="The description of the collector.",
-    )
 
     ServiceType: str = Field(
         IndalekoConstants.service_type_storage_collector,
@@ -84,23 +52,26 @@ class IndalekoStorageCollectorDataModel(BaseModel):
     )
 
     class Config:
-        """Configuration for the base CLI data model"""
+        """Configuration for the storage collector data model"""
+
+        @staticmethod
+        @staticmethod
+        def get_example():
+            """Get an example of the activity collector data model."""
+            example = IndalekoCollectorDataModel.Config.json_schema_extra[
+                "example"
+            ].copy()
+            example["ServiceType"] = \
+                IndalekoConstants.service_type_storage_collector
+            return example
 
         json_schema_extra = {
-            "example": {
-                "PlatformName": "Linux",
-                "ServiceRegistrationName": "Linux Local Collector",
-                "ServiceFileName": "collector",
-                "ServiceUUID": uuid4(),
-                "ServiceVersion": "1.0",
-                "ServiceDescription": "This service collects local filesystem metadata of a Linux machine.",
-                "ServiceType": IndalekoConstants.service_type_storage_collector,  # same as default
-            }
+            "example": get_example(),
         }
 
 
 def main():
-    """Test code for the base CLI data model"""
+    """Test code for the storage collector data model"""
     ic("Testing Storage Collector Data Model")
     storage_collector_data = IndalekoStorageCollectorDataModel(
         **IndalekoStorageCollectorDataModel.Config.json_schema_extra["example"]

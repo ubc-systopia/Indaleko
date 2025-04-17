@@ -61,46 +61,70 @@ class IndalekoCollectionView:
         """
         views = {}
         try:
-            # First try the ArangoDB Python driver's views() method
+            # Properly access the database object from ArangoDB
+            db = self.db_config.db
+            
+            # Get list of views using the proper ArangoDB Python driver method
             try:
-                view_names = self.db_config.db.views()
-                for view_name in view_names:
-                    views[view_name] = self.db_config.db.view(view_name)
-            except AttributeError:
-                # Fall back to direct HTTP request
-                logging.info("Falling back to direct HTTP request for view retrieval")
+                # Get all views (safer approach)
+                cursor = db.aql.execute("FOR v IN _views RETURN v")
+                view_data = [doc for doc in cursor]
+                
+                # Process each view
+                for view_info in view_data:
+                    if "name" in view_info:
+                        view_name = view_info["name"]
+                        views[view_name] = view_info
+                
+                logging.info(f"Retrieved {len(views)} views from ArangoDB")
+            except Exception as view_error:
+                logging.warning(f"Error retrieving views with AQL: {view_error}")
+                
+                # If the above failed, try another approach
                 try:
-                    # Get the API endpoint and credentials
-                    host = self.db_config.host
-                    port = self.db_config.port
-                    database = self.db_config.database
-                    username = self.db_config.username
-                    password = self.db_config.password
+                    # Get direct access to ArangoDB connection
+                    conn = db.connection
                     
-                    # Build the URL
-                    url = f"http://{host}:{port}/_db/{database}/_api/view"
-                    
-                    # Make the request
-                    response = requests.get(
-                        url, 
-                        auth=(username, password),
-                        headers={"Accept": "application/json"}
-                    )
-                    
-                    if response.status_code == 200:
-                        result = response.json()
+                    # Use low-level API to get views
+                    resp = conn.get(f'/_db/{db.name}/_api/view')
+                    if resp.status_code == 200:
+                        result = resp.body.get('result', [])
+                        for view_info in result:
+                            if "name" in view_info:
+                                view_name = view_info["name"]
+                                views[view_name] = view_info
                     else:
-                        logging.error(f"HTTP error {response.status_code}: {response.text}")
-                        return {}
-                except Exception as http_error:
-                    logging.error(f"Error making direct HTTP request: {http_error}")
-                    return {}
-                for view_info in result["result"]:
-                    view_name = view_info["name"]
-                    views[view_name] = view_info
+                        logging.warning(f"Failed to get views using API: {resp.error_message}")
+                except Exception as api_error:
+                    logging.warning(f"Error using connection API: {api_error}")
+                    
+                    # One last attempt - try each view individually if we have a list
+                    try:
+                        # Try to get known view names
+                        known_views = [
+                            "ObjectsTextView", 
+                            "ActivityTextView", 
+                            "NamedEntityTextView", 
+                            "EntityEquivalenceTextView",
+                            "KnowledgeTextView"
+                        ]
+                        
+                        for view_name in known_views:
+                            try:
+                                # Try to get view info
+                                view_resp = conn.get(f'/_db/{db.name}/_api/view/{view_name}')
+                                if view_resp.status_code == 200:
+                                    views[view_name] = view_resp.body
+                            except Exception:
+                                # Ignore errors for individual views
+                                pass
+                    except Exception as known_view_error:
+                        logging.warning(f"Error retrieving known views: {known_view_error}")
+                
         except Exception as e:
             logging.error(f"Failed to retrieve existing views: {e}")
-            # Return empty dict but don't fail - we'll create views if needed
+            
+        # Return whatever views we found - will be empty dict if none were found
         return views
 
     @type_check
@@ -125,46 +149,85 @@ class IndalekoCollectionView:
             }
         
         try:
-            # Create the view
+            # Get the database object
+            db = self.db_config.db
+            
+            # Get view creation properties
             properties = view_definition.get_creation_properties()
-            result = self.db_config.db.create_view(
-                name=view_name,
-                view_type=view_definition.type,
-                properties=properties
-            )
             
-            # Update view cache
-            self._existing_views = self._get_existing_views()
+            # Create the view using proper python-arango methods
+            view_type = view_definition.type.lower()
             
-            return {
-                "status": "success",
-                "message": f"Created view '{view_name}'",
-                "view_id": result["id"],
-                "properties": properties
-            }
-        except Exception as e:
-            # Check if it's an error about duplicate name
-            error_str = str(e).lower()
-            if "duplicate" in error_str and "name" in error_str:
-                # The view probably already exists but wasn't detected correctly
-                logging.warning(f"View '{view_name}' already exists but wasn't detected in _get_existing_views()")
-                # Try to refresh the view cache
+            try:
+                if view_type == "arangosearch":
+                    result = db.create_arangosearch_view(
+                        name=view_name,
+                        properties=properties
+                    )
+                else:
+                    # Use generic create_view for other view types
+                    conn = db.connection
+                    request_data = {
+                        "name": view_name,
+                        "type": view_definition.type,
+                        **properties
+                    }
+                    resp = conn.post(f'/_db/{db.name}/_api/view', data=request_data)
+                    result = resp.body
+                
+                # Update view cache
                 self._existing_views = self._get_existing_views()
                 
-                # Handle as if it existed to prevent errors
                 return {
-                    "status": "exists",
-                    "message": f"View '{view_name}' already exists (detected during creation)",
-                    "view_id": None,  # We don't know the ID
+                    "status": "success",
+                    "message": f"Created view '{view_name}'",
+                    "view_id": result.get("id", ""),
                     "properties": properties
                 }
-            else:
-                logging.error(f"Failed to create view '{view_name}': {e}")
-                return {
-                    "status": "error",
-                    "message": f"Error creating view: {str(e)}",
-                    "view_definition": view_definition.model_dump()
-                }
+            except Exception as create_error:
+                # Check if it's a duplicate error
+                error_str = str(create_error).lower()
+                if "duplicate" in error_str and "name" in error_str:
+                    # View exists but wasn't detected - update our cache
+                    logging.warning(f"View '{view_name}' already exists but wasn't detected")
+                    self._existing_views = self._get_existing_views()
+                    
+                    # Try to get the view now
+                    try:
+                        view_info = None
+                        try:
+                            # Try to get via connection
+                            conn = db.connection
+                            resp = conn.get(f'/_db/{db.name}/_api/view/{view_name}')
+                            if resp.status_code == 200:
+                                view_info = resp.body
+                        except Exception:
+                            pass
+                            
+                        return {
+                            "status": "exists",
+                            "message": f"View '{view_name}' already exists",
+                            "view_id": view_info.get("id", "") if view_info else "",
+                            "properties": properties
+                        }
+                    except Exception as view_check_error:
+                        logging.warning(f"Error checking existing view: {view_check_error}")
+                        return {
+                            "status": "exists",
+                            "message": f"View '{view_name}' appears to exist (duplicate name error)",
+                            "properties": properties
+                        }
+                else:
+                    # Not a duplicate error, re-raise
+                    raise
+                        
+        except Exception as e:
+            logging.error(f"Failed to create view '{view_name}': {e}")
+            return {
+                "status": "error",
+                "message": f"Error creating view: {str(e)}",
+                "view_definition": view_definition.model_dump()
+            }
 
     @type_check
     def update_view(self, view_definition: IndalekoViewDefinition) -> Dict[str, Any]:

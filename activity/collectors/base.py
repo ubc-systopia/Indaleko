@@ -37,6 +37,15 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from activity.characteristics import ActivityDataCharacteristics
+from activity.collectors.data_model import IndalekoActivityCollectorDataModel
+from utils.misc.directory_management import (
+    indaleko_default_log_dir,
+    indaleko_default_data_dir,
+    indaleko_default_config_dir,
+)
+from utils.misc.file_name_management import (
+    indaleko_file_name_prefix,
+)
 
 # pylint: enable=wrong-import-position
 
@@ -50,7 +59,9 @@ class CollectorBase(ABC):
     """
 
     @abstractmethod
-    def get_collector_characteristics(self) -> List[ActivityDataCharacteristics]:
+    def get_collector_characteristics(self) -> List[
+        ActivityDataCharacteristics
+    ]:
         """
         This call returns the characteristics of the data provider.  This is
         intended to be used to help users understand the data provider and to
@@ -124,6 +135,99 @@ class CollectorBase(ABC):
     @abstractmethod
     def store_data(self, data: Dict[str, Any]) -> None:
         """Store the processed data"""
+
+
+class BaseActivityCollector:
+    """
+    This is the base class for Indaleko storage collectors.  It provides
+    fundamental mechanisms for managing the data and configuration files
+    that are used by the collectors.
+    """
+    collector_data = IndalekoActivityCollectorDataModel(
+        PlatformName=None,
+        ServiceRegistrationName="Indaleko Generic Activity Collector",
+        ServiceFileName="activity_collector",
+        ServiceUUID=uuid.UUID("6a1b20e8-2a75-4f6b-a1b2-05bd0bb84fb5"),
+        ServiceVersion="1.0",
+        ServiceDescription="Base Indaleko activity collector. Do not use.",
+    )
+
+    # default values, override in the child class
+    cli_handler_mixin = None
+    requires_machine_config = False
+    file_prefix = indaleko_file_name_prefix
+    file_suffix = '.jsonl'
+
+    def __init__(self, **kwargs):
+        if self.requires_machine_config:
+            assert "machine_config" in kwargs, \
+                "machine_config must be specified"
+            self.machine_config = kwargs["machine_config"]
+            if "machine_id" not in kwargs:
+                kwargs["machine_id"] = self.machine_config.machine_id
+        self.debug = kwargs.get("debug", False)
+        self.offline = False
+        if "offline" in kwargs:
+            self.offline = kwargs["offline"]
+            del kwargs["offline"]
+        if self.debug:
+            ic(self.offline)
+        if "collector_data" in kwargs:
+            self.collector_data = kwargs["collector_data"]
+        assert hasattr(
+            self, "collector_data"
+        ), "collector_data must either be passed in "\
+            "or created in derived class"
+        self.platform = kwargs.get(
+            "platform",
+            self.collector_data.PlatformName
+        )
+        self.file_prefix = kwargs.get(
+            "file_prefix", BaseActivityCollector.file_prefix
+        ).replace("-", "_")
+        self.file_suffix = kwargs.get(
+            "file_suffix", BaseActivityCollector.file_suffix
+        ).replace("-", "_")
+        self.data_dir = kwargs.get("data_dir", indaleko_default_data_dir)
+        assert os.path.isdir(
+            self.data_dir
+        ), f"{self.data_dir} must be an existing directory"
+        self.config_dir = kwargs.get("config_dir", indaleko_default_config_dir)
+        assert os.path.isdir(
+            self.data_dir
+        ), f"{self.data_dir} must be an existing directory"
+        self.log_dir = kwargs.get("log_dir", indaleko_default_log_dir)
+        assert os.path.isdir(
+            self.data_dir
+        ), f"{self.data_dir} must be an existing directory"
+        self.timestamp = kwargs.get(
+            "timestamp",
+            datetime.datetime.now(datetime.timezone.utc).isoformat()
+        )
+        assert isinstance(self.timestamp, str), "timestamp must be a string"
+        assert hasattr(self, "collector_data"), \
+            "Must be created by derived class"
+        self.machine_id = None
+        self.storage_description = None
+        if self.requires_machine_config:
+            if "machine_id" in kwargs:
+                self.machine_id = kwargs["machine_id"]
+            else:
+                assert "machine_config" in kwargs, \
+                    "machine_config must be specified"
+                self.machine_config = kwargs["machine_config"]
+                self.machine_id = self.machine_config.machine_id
+            assert hasattr(self, "machine_id")
+            if "storage_description" in kwargs:
+                assert isinstance(
+                    kwargs["storage_description"], str
+                ), 'storage_description must be a string, '\
+                    f'not {type(kwargs["storage_description"])}'
+                self.storage_description = kwargs["storage_description"]
+        self.path = kwargs.get("path", None)
+        self.collector_service = None
+        if not self.offline:
+            ic('might want to add registration here')
 
 
 def main():

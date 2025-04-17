@@ -68,7 +68,7 @@ class BaseStorageCollector:
 
     default_collector_data = IndalekoStorageCollectorDataModel(
         PlatformName=None,
-        ServiceRegistrationName="Indaleko Generic Collector",
+        ServiceRegistrationName="Indaleko Generic Storage Collector",
         ServiceFileName="collector",
         ServiceUUID=uuid.UUID("4a80a080-9cc9-4856-bf43-7b646557ac2d"),
         ServiceVersion="1.0",

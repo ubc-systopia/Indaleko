@@ -1,0 +1,2 @@
+Test file created at 2025-04-16 07:02:25.376378
+This file is used to test NTFS USN journal monitoring.

@@ -1,5 +1,6 @@
 """
-This module defines the ActivityDataCharacteristics class.  This class is used to
+This module defines the ActivityDataCharacteristics class.
+This class is used to
 describe the characteristics of activity data.  This is intended to be used to
 help the system understand how to interact with the activity data.
 
@@ -56,6 +57,9 @@ class ActivityDataCharacteristics:
     ACTIVITY_DATA_DEVICE_STATE = '8c7ac170-fe89-4d42-8ae1-de4c3c998917'
     ACTIVITY_DATA_ENVIRONMENTAL = '96b30aa4-635e-45e9-b3f2-1763c59a877a'
     ACTIVITY_DATA_SPOTIFY = '651b3b00-23f3-45ae-8d0e-79454a61ff3a'
+    ACTIVITY_DATA_SYSTEM_ACTIVITY = '7e985763-ac4e-41b6-8b08-596d245be6c7'
+    ACTIVITY_DATA_FILE_ACTIVITY = '008b6c9b-4428-4451-8bf4-36b4edfc123c'
+
     # available for use beyond this point
 
     _characteristic_prefix = "ACTIVITY_DATA_"
@@ -64,7 +68,9 @@ class ActivityDataCharacteristics:
         """Initialize the provider characteristics"""
         self.uuid_to_label = {}
         for label, value in ActivityDataCharacteristics.__dict__.items():
-            if label.startswith(ActivityDataCharacteristics._characteristic_prefix):
+            if label.startswith(
+                ActivityDataCharacteristics._characteristic_prefix
+            ):
                 setattr(self, label + "_UUID", uuid.UUID(value))
                 self.uuid_to_label[value] = label
 
@@ -74,13 +80,16 @@ class ActivityDataCharacteristics:
         return {
             label: value
             for label, value in ActivityDataCharacteristics.__dict__.items()
-            if label.startswith(ActivityDataCharacteristics._characteristic_prefix)
+            if label.startswith(
+                ActivityDataCharacteristics._characteristic_prefix
+            )
         }
 
     @staticmethod
     def get_activity_label(identifier: uuid.UUID) -> str:
         """Get the label for the provider"""
-        return ActivityDataCharacteristics().uuid_to_label.get(identifier, None)
+        return ActivityDataCharacteristics(
+        ).uuid_to_label.get(identifier, None)
 
 
 def main():
