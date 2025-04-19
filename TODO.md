@@ -148,6 +148,11 @@ This document outlines planned enhancements, features, and improvements for the 
 
 ## Lower Priority Items
 
+### Data Model Enhancements
+
+- [ ] **Data Field Encoding Type Support**
+  - Modify IndalekoRecordData.Data to include encoding type characteristic along with the encoded data.
+
 ### Code Quality and Enforcement
 
 - [ ] **Database Collection Management Enforcement**
