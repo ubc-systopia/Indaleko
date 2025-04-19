@@ -35,10 +35,10 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+from query.memory.pattern_types import DataSourceType, ProactiveSuggestion
 from query.memory.cross_source_patterns import (
     CrossSourcePatternDetector,
     CrossSourceEvent,
-    DataSourceType,
     CrossSourcePatternsData
 )
 from query.memory.proactive_archivist import ProactiveArchivist

@@ -116,6 +116,15 @@ This document outlines planned enhancements, features, and improvements for the 
   - Create non-intrusive notification system
   - Develop relevance scoring for proactive suggestions
 
+- [ ] **Cross-Source Pattern Detection**
+  - Fix circular import issues between pattern detection components
+  - Enhance pattern detection algorithms with more sophisticated statistical analysis
+  - Improve correlation detection with adjustable time-window parameters
+  - Add visualization tools for discovered patterns and correlations
+  - Implement guided pattern exploration through conversation
+  - Develop pattern validation mechanisms to reduce false positives
+  - Create cross-source pattern dashboards in the GUI
+
 ## Ayni Research Initiatives
 
 - [ ] **Ayni-Based Safety Model**
@@ -164,6 +173,13 @@ This document outlines planned enhancements, features, and improvements for the 
   - Develop developer education materials on collection management architecture
 
 ### Performance and Scaling
+
+- [x] **Database View Performance Optimization**
+  - ✅ Implement view caching mechanism with TTL
+  - ✅ Add skip_views option for operations that don't need views
+  - ✅ Create analyzer caching for better performance
+  - ✅ Add diagnostic tools for view performance profiling
+  - ✅ Support environment variable control of view creation
 
 - [ ] **Query Performance Optimization**
   - Implement query caching mechanisms
@@ -264,4 +280,4 @@ When contributing to Indaleko, keep these core values in mind:
 5. **Transparency**: Users should understand how their data is used
 6. **Performance**: Efficient and responsive operation
 
-Last updated: April 14, 2025
+Last updated: April 19, 2025

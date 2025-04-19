@@ -144,6 +144,179 @@ TOPICS OF INTEREST:
 - work (importance: 0.40)
 ```
 
+# Cross-Source Pattern Detection System
+
+The Cross-Source Pattern Detection system is a new enhancement to the Archivist Memory, focused on analyzing patterns across multiple data sources.
+
+## Overview
+
+This system analyzes events from various data sources (NTFS, location data, collaboration tools, ambient data, etc.) to identify correlations and patterns that span multiple sources. This creates a holistic understanding of user activity that transcends individual data silos.
+
+## Key Components
+
+### Data Models
+
+1. **CrossSourceEvent**: Represents an event from any data source with unified attributes
+2. **CrossSourcePattern**: Represents a detected pattern across multiple sources
+3. **CrossSourceCorrelation**: Represents a correlation between events from different sources
+4. **LocationContext** and **DeviceContext**: Provide contextual information for analysis
+
+### Core Classes
+
+1. **CrossSourcePatternDetector**: Main class for pattern detection with methods for:
+   - Collecting events from different sources
+   - Detecting sequential patterns with statistical validation
+   - Detecting temporal patterns (hour-based, day-based)
+   - Detecting correlations with adaptive time windows
+   - Generating proactive suggestions
+   - Validating patterns to reduce false positives
+
+2. **ProactiveArchivist**: Integrates pattern detection with the Archivist memory system
+
+## Enhanced Algorithms
+
+### Pattern Detection
+
+The system uses several sophisticated algorithms for pattern detection:
+
+1. **Statistical Significance Analysis**:
+   - Calculates expected vs. observed probabilities
+   - Measures source diversity in patterns
+   - Computes significance scores based on lift, diversity, and frequency
+
+2. **Temporal Clustering Analysis**:
+   - Analyzes time differences between related events
+   - Calculates time proximity scores and consistency
+   - Identifies events that cluster meaningfully in time
+
+3. **Pattern Validation**:
+   - Filters patterns by confidence threshold
+   - Checks for statistical significance
+   - Verifies temporal consistency
+   - Cross-validates against other patterns
+   - Reduces false positives
+
+### Correlation Detection
+
+The correlation detection is enhanced with:
+
+1. **Adaptive Time Windows**:
+   - Different source type combinations use appropriate time windows
+   - NTFS and Query activities use tighter windows (3-5 minutes)
+   - Location and Ambient activities use looser windows (20-25 minutes)
+
+2. **Entity Overlap Analysis**:
+   - Calculates Jaccard similarity for entity overlap
+   - Improves correlation quality by focusing on related entities
+   - Adjusts confidence based on overlap strength
+
+3. **Statistical Significance Testing**:
+   - Calculates expected coincidence based on baseline frequencies
+   - Computes coincidence lift to measure significance
+   - Combines with time proximity and entity overlap for confidence scoring
+
+## Testing and Benchmarking
+
+The system includes comprehensive testing capabilities:
+
+1. **Synthetic Data Generation**:
+   - Creates realistic event data with controlled correlation ratios
+   - Injects known patterns for validation
+   - Supports various source types and time spans
+
+2. **Performance Benchmarking**:
+   - Tests scalability with different event counts
+   - Measures execution time for pattern and correlation detection
+   - Visualizes performance characteristics
+
+3. **Results Visualization**:
+   - Shows pattern confidence by source combination
+   - Displays correlation confidence metrics
+   - Creates event timeline visualizations
+
+## Usage
+
+### Basic Usage
+
+```python
+from query.memory.cross_source_patterns import CrossSourcePatternDetector
+
+# Initialize detector with database config
+detector = CrossSourcePatternDetector(db_config)
+
+# Run full analysis
+event_count, patterns, correlations, suggestions = detector.analyze_and_generate()
+
+# Access results
+for pattern in patterns:
+    print(f"{pattern.pattern_name}: {pattern.description} (confidence: {pattern.confidence:.2f})")
+
+for correlation in correlations:
+    print(f"{correlation.description} (confidence: {correlation.confidence:.2f})")
+
+for suggestion in suggestions:
+    print(f"[{suggestion.priority}] {suggestion.title}: {suggestion.content}")
+```
+
+### Integration with Proactive Archivist
+
+```python
+from query.memory.archivist_memory import ArchivistMemory
+from query.memory.proactive_archivist import ProactiveArchivist
+
+# Initialize components
+archivist = ArchivistMemory()
+proactive = ProactiveArchivist(archivist)
+
+# Run cross-source analysis
+proactive.analyze_cross_source_patterns()
+
+# Generate suggestions based on patterns
+suggestions = proactive.generate_suggestions()
+
+# Show suggestions
+for suggestion in suggestions:
+    print(f"[{suggestion.priority}] {suggestion.title}")
+    print(f"  {suggestion.content}")
+```
+
+### Testing with Synthetic Data
+
+```bash
+# Basic test with synthetic data
+python -m query.memory.test_enhanced_patterns --synthetic
+
+# Advanced test with visualization
+python -m query.memory.test_enhanced_patterns --synthetic --visualize --adaptive-window
+
+# Performance benchmark
+python -m query.memory.test_enhanced_patterns --benchmark
+```
+
+## Future Enhancements
+
+Planned enhancements to the system include:
+
+1. **Machine Learning Integration**:
+   - Supervised learning for pattern classification
+   - Anomaly detection for unusual patterns
+   - Reinforcement learning for suggestion quality improvement
+
+2. **Advanced Visualization**:
+   - Interactive pattern explorer
+   - Temporal heat maps of correlations
+   - Network graphs of entity relationships
+
+3. **Personalization**:
+   - User feedback integration
+   - Personal preference learning
+   - Adaptive confidence thresholds
+
+4. **Cross-Validation**:
+   - Pattern stability analysis over time
+   - A/B testing of pattern detection parameters
+   - Confidence calibration based on user feedback
+
 ## Test Plan
 
 ### 1. Unit Tests

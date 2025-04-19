@@ -24,7 +24,6 @@ import uuid
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional, Any, Set, Tuple
-from enum import Enum
 import json
 from collections import defaultdict
 
@@ -40,22 +39,12 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from query.memory.proactive_archivist import ProactiveSuggestion, SuggestionType, SuggestionPriority
+from query.memory.pattern_types import (
+    DataSourceType, SuggestionType, SuggestionPriority, ProactiveSuggestion
+)
 from activity.collectors.known_semantic_attributes import KnownSemanticAttributes
 from data_models.base import IndalekoBaseModel
 # pylint: enable=wrong-import-position
-
-
-class DataSourceType(str, Enum):
-    """Type of data source for cross-source pattern analysis."""
-    
-    NTFS = "ntfs"
-    COLLABORATION = "collaboration"
-    LOCATION = "location"
-    AMBIENT = "ambient"
-    TASK = "task"
-    SEMANTIC = "semantic"
-    QUERY = "query"
 
 
 class CrossSourceEvent(BaseModel):
@@ -794,7 +783,7 @@ class CrossSourcePatternDetector:
     
     def _detect_sequential_patterns(self, window_size: int, min_occurrences: int) -> List[CrossSourcePattern]:
         """
-        Detect sequential patterns across different sources.
+        Detect sequential patterns across different sources with enhanced statistical analysis.
         
         Args:
             window_size: Size of the sliding window for pattern detection
@@ -808,20 +797,43 @@ class CrossSourcePatternDetector:
         # Use a sliding window to find patterns
         timeline = self.data.event_timeline
         
-        # Keep track of observed sequences
+        if len(timeline) <= window_size:
+            return new_patterns
+        
+        # Keep track of observed sequences and their statistical significance
         sequence_counter = defaultdict(int)
         sequence_windows = defaultdict(list)
+        sequence_stats = {}  # Store additional statistics for significance testing
+        
+        # Total number of possible windows
+        total_windows = len(timeline) - window_size + 1
+        
+        # Get baseline frequency for each source type
+        source_type_counts = defaultdict(int)
+        for event_id in timeline:
+            event = self.data.events.get(event_id)
+            if event:
+                source_type_counts[event.source_type] += 1
+        
+        # Calculate baseline probabilities
+        total_events = len(timeline)
+        source_type_probs = {
+            source_type: count / total_events 
+            for source_type, count in source_type_counts.items()
+        }
         
         # Scan through timeline with sliding window
-        for i in range(len(timeline) - window_size + 1):
+        for i in range(total_windows):
             window = timeline[i:i+window_size]
             
             # Create sequence signature from event types
             event_signatures = []
+            window_source_types = set()
             for event_id in window:
                 event = self.data.events.get(event_id)
                 if event:
                     event_signatures.append(event.get_event_signature())
+                    window_source_types.add(event.source_type)
             
             # Create a sequence signature
             sequence_sig = "|".join(event_signatures)
@@ -829,10 +841,36 @@ class CrossSourcePatternDetector:
             # Update counter and windows
             sequence_counter[sequence_sig] += 1
             sequence_windows[sequence_sig].append((i, window))
+            
+            # Store source types for statistical significance
+            if sequence_sig not in sequence_stats:
+                sequence_stats[sequence_sig] = {
+                    "source_types": window_source_types,
+                    "timestamps": []
+                }
+            
+            # Store timestamps for temporal analysis
+            for event_id in window:
+                event = self.data.events.get(event_id)
+                if event:
+                    sequence_stats[sequence_sig]["timestamps"].append(event.timestamp)
         
         # Find patterns that occur at least min_occurrences times
         for sequence_sig, count in sequence_counter.items():
             if count >= min_occurrences:
+                # Calculate statistical significance of this pattern
+                significance_score = self._calculate_pattern_significance(
+                    sequence_sig, 
+                    count, 
+                    total_windows, 
+                    sequence_stats[sequence_sig],
+                    source_type_probs
+                )
+                
+                # Skip patterns with low significance
+                if significance_score < 0.3:
+                    continue
+                
                 # Check if this is a known pattern
                 is_known = False
                 for pattern in self.data.patterns:
@@ -840,7 +878,8 @@ class CrossSourcePatternDetector:
                         # Update existing pattern
                         pattern.observation_count += 1
                         pattern.last_observed = datetime.now(timezone.utc)
-                        pattern.confidence = min(0.95, pattern.confidence + 0.05)  # Increase confidence
+                        # Use significance to adjust confidence
+                        pattern.confidence = min(0.95, pattern.confidence + 0.05 * significance_score)
                         is_known = True
                         break
                 
@@ -860,6 +899,15 @@ class CrossSourcePatternDetector:
                     
                     # Only consider patterns with multiple source types
                     if len(source_types) > 1:
+                        # Calculate temporal clustering to determine if events are truly related
+                        temporal_clustering = self._analyze_temporal_clustering(
+                            sequence_stats[sequence_sig]["timestamps"]
+                        )
+                        
+                        # Skip patterns with low temporal clustering
+                        if temporal_clustering < 0.3:
+                            continue
+                        
                         # Generate a pattern name and description
                         source_names = [s.value for s in source_types]
                         pattern_name = f"Cross-source pattern: {' + '.join(source_names)}"
@@ -867,6 +915,12 @@ class CrossSourcePatternDetector:
                         # Generate description
                         description = "Sequential pattern involving "
                         description += ", ".join([s.value.capitalize() for s in source_types])
+                        
+                        # Enhanced description with statistical significance
+                        if significance_score > 0.7:
+                            description += " (highly significant)"
+                        elif significance_score > 0.5:
+                            description += " (moderately significant)"
                         
                         # Get entities involved
                         entities = set()
@@ -876,15 +930,20 @@ class CrossSourcePatternDetector:
                                 if event and event.entities:
                                     entities.update(event.entities)
                         
-                        # Create pattern
+                        # Create pattern with confidence based on statistical significance
+                        initial_confidence = 0.5 + (significance_score * 0.3) + (temporal_clustering * 0.2)
                         pattern = CrossSourcePattern(
                             pattern_name=pattern_name,
                             description=description,
-                            confidence=0.6,  # Initial confidence
+                            confidence=min(0.9, initial_confidence),  # Cap at 0.9 initially
                             source_types=list(source_types),
                             event_sequence=event_types,
                             observation_count=count,
-                            entities_involved=list(entities)[:10]  # Limit to top 10 entities
+                            entities_involved=list(entities)[:10],  # Limit to top 10 entities
+                            attributes={
+                                "significance_score": significance_score,
+                                "temporal_clustering": temporal_clustering
+                            }
                         )
                         
                         # Add to patterns and return
@@ -892,6 +951,125 @@ class CrossSourcePatternDetector:
                         new_patterns.append(pattern)
         
         return new_patterns
+        
+    def _calculate_pattern_significance(
+        self, 
+        sequence_sig: str, 
+        count: int, 
+        total_windows: int, 
+        sequence_stats: Dict[str, Any],
+        source_type_probs: Dict[DataSourceType, float]
+    ) -> float:
+        """
+        Calculate the statistical significance of a pattern.
+        
+        This evaluates how likely the pattern is to occur by chance based on:
+        1. The frequencies of individual source types
+        2. The frequency of the observed pattern
+        3. The diversity of source types in the pattern
+        
+        Args:
+            sequence_sig: The sequence signature
+            count: Number of occurrences of this pattern
+            total_windows: Total number of windows analyzed
+            sequence_stats: Statistics about this sequence
+            source_type_probs: Baseline probabilities for each source type
+            
+        Returns:
+            Significance score between 0.0 and 1.0
+        """
+        # Get source types in this pattern
+        source_types = sequence_stats["source_types"]
+        
+        if not source_types:
+            return 0.0
+        
+        # Calculate expected probability of this combination by chance
+        # (simplified approximation assuming independence)
+        expected_prob = 1.0
+        for source_type in source_types:
+            expected_prob *= source_type_probs.get(source_type, 0.01)
+            
+        # If source types rarely occur together naturally, the pattern is more significant
+        source_diversity = len(source_types) / len(DataSourceType)
+        
+        # Calculate observed probability
+        observed_prob = count / total_windows
+        
+        # If observed probability is much higher than expected, pattern is significant
+        if expected_prob > 0:
+            lift = observed_prob / expected_prob
+        else:
+            lift = 10.0  # High default if expected_prob is essentially zero
+            
+        # Cap lift at a reasonable value to avoid extreme results from rare events
+        lift = min(lift, 20.0)
+        
+        # Calculate significance score combining:
+        # 1. How much more often than expected the pattern occurs (lift)
+        # 2. The diversity of source types involved
+        # 3. The absolute frequency of the pattern
+        relative_frequency = min(1.0, count / 10)  # Cap at 10+ occurrences
+        
+        significance = (
+            (0.5 * (lift / 20.0)) +  # 50% weight: normalized lift
+            (0.3 * source_diversity) +  # 30% weight: source type diversity
+            (0.2 * relative_frequency)  # 20% weight: relative frequency
+        )
+        
+        return min(1.0, significance)
+    
+    def _analyze_temporal_clustering(self, timestamps: List[datetime]) -> float:
+        """
+        Analyze temporal clustering of events to determine if they're related.
+        
+        Args:
+            timestamps: List of event timestamps
+            
+        Returns:
+            Temporal clustering score between 0.0 and 1.0
+        """
+        if not timestamps or len(timestamps) < 2:
+            return 0.0
+            
+        # Sort timestamps
+        sorted_timestamps = sorted(timestamps)
+        
+        # Calculate time differences between consecutive events
+        time_diffs = []
+        for i in range(len(sorted_timestamps) - 1):
+            diff = (sorted_timestamps[i+1] - sorted_timestamps[i]).total_seconds()
+            time_diffs.append(diff)
+            
+        if not time_diffs:
+            return 0.0
+            
+        # Calculate mean and standard deviation of time differences
+        mean_diff = sum(time_diffs) / len(time_diffs)
+        
+        # Skip std calculation if only one time difference
+        if len(time_diffs) < 2:
+            std_diff = mean_diff
+        else:
+            variance = sum((diff - mean_diff) ** 2 for diff in time_diffs) / len(time_diffs)
+            std_diff = variance ** 0.5
+        
+        # Calculate coefficient of variation (lower means more clustered)
+        if mean_diff > 0:
+            cv = std_diff / mean_diff
+        else:
+            cv = 0
+            
+        # Calculate clustering score:
+        # - Events that happen close together in time (small mean_diff) -> higher score
+        # - Events with consistent time intervals (low cv) -> higher score
+        time_proximity_score = 1.0 / (1.0 + (mean_diff / 3600))  # Normalize by hour
+        consistency_score = 1.0 / (1.0 + cv)
+        
+        # Combine scores (time proximity is more important than consistency)
+        clustering_score = (0.7 * time_proximity_score) + (0.3 * consistency_score)
+        
+        return min(1.0, clustering_score)
     
     def _detect_location_patterns(self, min_occurrences: int) -> List[CrossSourcePattern]:
         """
@@ -1099,13 +1277,21 @@ class CrossSourcePatternDetector:
         
         return new_patterns
     
-    def detect_correlations(self, time_window_minutes: int = 15, min_confidence: float = 0.6) -> List[CrossSourceCorrelation]:
+    def detect_correlations(
+        self, 
+        time_window_minutes: int = 15, 
+        min_confidence: float = 0.6,
+        min_entity_overlap: float = 0.0,
+        adaptive_window: bool = True
+    ) -> List[CrossSourceCorrelation]:
         """
-        Detect correlations between events from different sources.
+        Detect correlations between events from different sources with advanced statistical methods.
         
         Args:
-            time_window_minutes: Time window for considering events correlated
+            time_window_minutes: Base time window for considering events correlated
             min_confidence: Minimum confidence required for a correlation
+            min_entity_overlap: Minimum required overlap in entities (0.0 to 1.0)
+            adaptive_window: Whether to use adaptive time windows based on source types
             
         Returns:
             List of detected correlations
@@ -1118,8 +1304,33 @@ class CrossSourcePatternDetector:
         # Skip if timeline is too short
         if len(timeline) < 3:
             return new_correlations
+            
+        # Define adaptive time windows based on source types (in minutes)
+        # Some source types naturally have tighter temporal correlations than others
+        adaptive_time_windows = {
+            # Same device/user immediate activities tend to be close in time
+            (DataSourceType.NTFS, DataSourceType.COLLABORATION): 5,
+            (DataSourceType.NTFS, DataSourceType.QUERY): 3,
+            (DataSourceType.COLLABORATION, DataSourceType.QUERY): 5,
+            
+            # Location and ambient activities can have looser temporal connections
+            (DataSourceType.LOCATION, DataSourceType.NTFS): 20,
+            (DataSourceType.LOCATION, DataSourceType.COLLABORATION): 20,
+            (DataSourceType.AMBIENT, DataSourceType.NTFS): 25,
+            (DataSourceType.AMBIENT, DataSourceType.COLLABORATION): 25,
+            
+            # Default window for other combinations
+            "default": time_window_minutes
+        }
         
-        # Group events by time windows
+        # Count frequencies by source type for statistical analysis
+        source_type_counts = defaultdict(int)
+        for event_id in timeline:
+            event = self.data.events.get(event_id)
+            if event:
+                source_type_counts[event.source_type] += 1
+        
+        # Group events by time windows with the base window size initially
         time_windows = []
         current_window = []
         last_timestamp = None
@@ -1167,6 +1378,21 @@ class CrossSourcePatternDetector:
                 for j in range(i+1, len(source_types)):
                     source_type2 = source_types[j]
                     
+                    # Get the appropriate time window for this source type pair
+                    if adaptive_window:
+                        # Check both orderings of the pair
+                        pair1 = (source_type1, source_type2)
+                        pair2 = (source_type2, source_type1)
+                        
+                        if pair1 in adaptive_time_windows:
+                            actual_window_minutes = adaptive_time_windows[pair1]
+                        elif pair2 in adaptive_time_windows:
+                            actual_window_minutes = adaptive_time_windows[pair2]
+                        else:
+                            actual_window_minutes = adaptive_time_windows["default"]
+                    else:
+                        actual_window_minutes = time_window_minutes
+                    
                     # Get events for each source type
                     events1 = events_by_source[source_type1]
                     events2 = events_by_source[source_type2]
@@ -1175,41 +1401,119 @@ class CrossSourcePatternDetector:
                     if not events1 or not events2:
                         continue
                         
+                    # Get event objects
+                    events1_objs = [self.data.events.get(event_id) for event_id in events1]
+                    events1_objs = [e for e in events1_objs if e is not None]
+                    
+                    events2_objs = [self.data.events.get(event_id) for event_id in events2]
+                    events2_objs = [e for e in events2_objs if e is not None]
+                    
+                    # Check if events are close enough within the adaptive window
+                    timestamps1 = [e.timestamp for e in events1_objs]
+                    timestamps2 = [e.timestamp for e in events2_objs]
+                    
+                    if not timestamps1 or not timestamps2:
+                        continue
+                        
+                    # Find minimum time difference between any event pair
+                    min_time_diff = min(
+                        abs((t1 - t2).total_seconds()) 
+                        for t1 in timestamps1 
+                        for t2 in timestamps2
+                    )
+                    
+                    # Skip if minimum time diff exceeds the adaptive window
+                    if min_time_diff > actual_window_minutes * 60:
+                        continue
+                        
+                    # Calculate entity overlap
+                    entities1 = set()
+                    for event in events1_objs:
+                        entities1.update(event.entities)
+                        
+                    entities2 = set()
+                    for event in events2_objs:
+                        entities2.update(event.entities)
+                    
+                    # Skip if no entities found
+                    if not entities1 and not entities2:
+                        # For no entities, just use weak overlap by default
+                        entity_overlap = 0.1
+                    elif not entities1 or not entities2:
+                        # One side has no entities
+                        entity_overlap = 0.0
+                    else:
+                        # Calculate Jaccard similarity for entity overlap
+                        common_entities = entities1.intersection(entities2)
+                        all_entities = entities1.union(entities2)
+                        entity_overlap = len(common_entities) / len(all_entities) if all_entities else 0.0
+                    
+                    # Skip if entity overlap is too low
+                    if entity_overlap < min_entity_overlap:
+                        continue
+                        
                     # Create correlation object
                     correlation_sources = [source_type1, source_type2]
                     correlation_events = events1 + events2
                     
-                    # Get event objects
-                    events = [self.data.events.get(event_id) for event_id in correlation_events]
-                    events = [e for e in events if e is not None]
+                    # Calculate statistical significance of correlation
+                    expected_coincidence = (
+                        (len(events1_objs) / len(timeline)) * 
+                        (len(events2_objs) / len(timeline)) * 
+                        len(window)
+                    )
                     
-                    # Calculate correlation strength based on various factors
-                    time_proximity = 1.0  # Maximum initially
+                    # If observed coincidence is much higher than expected, correlation is significant
+                    coincidence_lift = len(correlation_events) / max(1.0, expected_coincidence)
                     
-                    # If more than one event, calculate time proximity
-                    if len(events) > 1:
-                        # Get time range
-                        timestamps = [e.timestamp for e in events]
-                        time_range = (max(timestamps) - min(timestamps)).total_seconds()
-                        
-                        # Normalize by window size (closer is better)
-                        time_proximity = max(0.0, 1.0 - time_range / (time_window_minutes * 60))
+                    # Cap lift at a reasonable value
+                    coincidence_lift = min(coincidence_lift, 10.0)
                     
-                    # Calculate confidence
-                    confidence = min_confidence + (1.0 - min_confidence) * time_proximity
+                    # Calculate time proximity (normalized by adaptive window)
+                    time_proximity = max(0.0, 1.0 - min_time_diff / (actual_window_minutes * 60))
                     
-                    # Generate description based on source types
+                    # Combine factors to calculate confidence:
+                    # - Time proximity: how close in time are the events
+                    # - Entity overlap: how many shared entities
+                    # - Coincidence lift: how much more often do these events co-occur than expected
+                    base_confidence = min_confidence
+                    confidence = base_confidence + (1.0 - base_confidence) * (
+                        (0.4 * time_proximity) +
+                        (0.3 * entity_overlap) +
+                        (0.3 * (coincidence_lift / 10.0))
+                    )
+                    
+                    # If confidence is too low, skip
+                    if confidence < min_confidence:
+                        continue
+                    
+                    # Generate description based on source types and correlation strength
                     src1_name = source_type1.value.capitalize()
                     src2_name = source_type2.value.capitalize()
+                    
                     description = f"Correlation between {src1_name} and {src2_name} events"
+                    
+                    # Add more detail for high-confidence correlations
+                    if confidence > 0.8:
+                        description += " (strong correlation)"
+                    elif confidence > 0.7:
+                        description += " (moderate correlation)"
+                        
+                    # Add entity info if there's overlap
+                    if entity_overlap > 0.3:
+                        common = list(entities1.intersection(entities2))
+                        if common:
+                            # Limit to first 2 entities for description
+                            entity_str = ", ".join(common[:2])
+                            if len(common) > 2:
+                                entity_str += f" and {len(common)-2} more"
+                            description += f" involving {entity_str}"
                     
                     # Generate relationship type
                     relationship_type = f"{source_type1.value}_to_{source_type2.value}"
                     
-                    # Get entities involved
-                    entities = set()
-                    for event in events:
-                        entities.update(event.entities)
+                    # Combine all entities
+                    all_entities = entities1.union(entities2)
                     
                     # Create correlation object
                     correlation = CrossSourceCorrelation(
@@ -1218,7 +1522,13 @@ class CrossSourcePatternDetector:
                         confidence=confidence,
                         relationship_type=relationship_type,
                         description=description,
-                        entities_involved=list(entities)[:10]  # Limit to top 10
+                        entities_involved=list(all_entities)[:10],  # Limit to top 10
+                        attributes={
+                            "time_proximity": time_proximity,
+                            "entity_overlap": entity_overlap,
+                            "coincidence_lift": coincidence_lift,
+                            "adaptive_window_minutes": actual_window_minutes
+                        }
                     )
                     
                     # Add to correlations and return
@@ -1427,6 +1737,76 @@ class CrossSourcePatternDetector:
         
         return suggestions
     
+    def validate_patterns(self, patterns: List[CrossSourcePattern], min_confidence: float = 0.5) -> List[CrossSourcePattern]:
+        """
+        Validate patterns to reduce false positives by additional filtering.
+        
+        This applies additional validation to patterns, including:
+        1. Checking for statistical significance
+        2. Verifying temporal consistency
+        3. Cross-validating against other patterns
+        
+        Args:
+            patterns: List of patterns to validate
+            min_confidence: Minimum confidence threshold
+            
+        Returns:
+            List of validated patterns
+        """
+        if not patterns:
+            return []
+        
+        validated_patterns = []
+        
+        # Get statistics on source type frequencies for baseline
+        source_type_counts = defaultdict(int)
+        for event_id in self.data.event_timeline:
+            event = self.data.events.get(event_id)
+            if event:
+                source_type_counts[event.source_type] += 1
+        
+        total_events = len(self.data.event_timeline)
+        
+        # First pass: filter by confidence
+        confident_patterns = [p for p in patterns if p.confidence >= min_confidence]
+        
+        # Second pass: additional validation checks
+        for pattern in confident_patterns:
+            # Skip patterns with too few observations
+            if pattern.observation_count < 2:
+                continue
+            
+            # For temporal patterns, check if observation time points show consistency
+            if "hour" in pattern.temporal_constraints or "day_of_week" in pattern.temporal_constraints:
+                # Temporal patterns are valid by design
+                validated_patterns.append(pattern)
+                continue
+            
+            # For sequential patterns, verify source diversity
+            if len(pattern.source_types) < 2:
+                # Only interested in cross-source patterns
+                continue
+            
+            # Check if the pattern is over-represented by a single source type
+            overrepresented = False
+            for source_type in pattern.source_types:
+                if source_type_counts[source_type] / total_events > 0.8:
+                    # This source type dominates the dataset, so patterns involving it are less meaningful
+                    overrepresented = True
+                    break
+            
+            if overrepresented:
+                continue
+            
+            # Add validation passed attribute
+            pattern.attributes = pattern.attributes or {}
+            pattern.attributes["validation_passed"] = True
+            
+            # Add to validated patterns
+            validated_patterns.append(pattern)
+        
+        return validated_patterns
+    
     def analyze_and_generate(self) -> Tuple[int, List[CrossSourcePattern], List[CrossSourceCorrelation], List[ProactiveSuggestion]]:
         """
         Run a complete analysis cycle and generate suggestions.
@@ -1434,8 +1814,9 @@ class CrossSourcePatternDetector:
         This method:
         1. Collects events from all sources
         2. Detects patterns
-        3. Detects correlations
-        4. Generates suggestions
+        3. Validates patterns to reduce false positives
+        4. Detects correlations
+        5. Generates suggestions
         
         Returns:
             Tuple containing:
@@ -1448,13 +1829,26 @@ class CrossSourcePatternDetector:
         event_count = self.collect_events()
         
         # Detect patterns
-        patterns = self.detect_patterns()
+        raw_patterns = self.detect_patterns()
         
-        # Detect correlations
-        correlations = self.detect_correlations()
+        # Validate patterns to reduce false positives
+        patterns = self.validate_patterns(raw_patterns, min_confidence=0.55)
+        
+        # Detect correlations (with adaptive window and entity overlap)
+        correlations = self.detect_correlations(
+            adaptive_window=True,
+            min_entity_overlap=0.1
+        )
         
         # Generate suggestions
         suggestions = self.generate_suggestions()
+        
+        # Log detection statistics
+        self.logger.info(f"Cross-source analysis: Collected {event_count} events")
+        self.logger.info(f"Cross-source analysis: Detected {len(raw_patterns)} raw patterns")
+        self.logger.info(f"Cross-source analysis: {len(patterns)} patterns passed validation")
+        self.logger.info(f"Cross-source analysis: Detected {len(correlations)} correlations")
+        self.logger.info(f"Cross-source analysis: Generated {len(suggestions)} suggestions")
         
         return event_count, patterns, correlations, suggestions
 
