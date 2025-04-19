@@ -363,6 +363,20 @@ class IndalekoDBConfig(IndalekoSingleton):
             self.config["database"]["user_password"] is not None
         ), "No user password found"
         return self.config["database"]["user_password"]
+        
+    def get_root_name(self) -> str:
+        """Get the root/admin username for the database."""
+        assert self.config is not None, "No config found"
+        assert self.config["database"] is not None, "No database config found"
+        assert self.config["database"]["admin_user"] is not None, "No admin username found"
+        return self.config["database"]["admin_user"]
+
+    def get_root_password(self) -> str:
+        """Get the root/admin password for the database."""
+        assert self.config is not None, "No config found"
+        assert self.config["database"] is not None, "No database config found"
+        assert self.config["database"]["admin_passwd"] is not None, "No admin password found"
+        return self.config["database"]["admin_passwd"]
 
     def get_database_name(self) -> str:
         """Get the database name."""
