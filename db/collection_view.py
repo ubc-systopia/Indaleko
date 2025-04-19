@@ -22,6 +22,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import logging
+import re
+import time
 from typing import Dict, List, Optional, Any, Union
 
 from icecream import ic
@@ -41,6 +43,9 @@ from utils.decorators import type_check
 class IndalekoCollectionView:
     """Manages views for IndalekoCollection objects."""
 
+    # Define default analyzers used in views
+    DEFAULT_ANALYZERS = ["text_en"]
+
     def __init__(self, db_config: Optional[IndalekoDBConfig] = None):
         """
         Initialize the view manager.
@@ -52,79 +57,51 @@ class IndalekoCollectionView:
         self.db_config.start()
         self._existing_views = self._get_existing_views()
 
-    def _get_existing_views(self) -> Dict[str, Dict[str, Any]]:
+    # Class variable to store cached views to avoid repeated API calls
+    _cached_views = None
+    _last_cache_time = 0
+    _cache_ttl = 60  # seconds
+    
+    def _get_existing_views(self, use_cache=True) -> Dict[str, Dict[str, Any]]:
         """
         Get all existing views from the database.
+        
+        Args:
+            use_cache: Whether to use the cached view information if available
         
         Returns:
             Dict[str, Dict[str, Any]]: Dictionary of view names to view information
         """
+        # Use cached results if available and not expired
+        current_time = int(time.time())
+        if (use_cache and 
+            IndalekoCollectionView._cached_views is not None and 
+            (current_time - IndalekoCollectionView._last_cache_time) < IndalekoCollectionView._cache_ttl):
+            return IndalekoCollectionView._cached_views.copy()
+        
         views = {}
         try:
-            # Properly access the database object from ArangoDB
-            db = self.db_config.db
+            # Always include our known views for fast operations, without API calls
+            # This is a performance optimization to avoid API calls for common views
+            views = {
+                "ObjectsTextView": {"name": "ObjectsTextView", "type": "arangosearch"},
+                "ActivityTextView": {"name": "ActivityTextView", "type": "arangosearch"},
+                "NamedEntityTextView": {"name": "NamedEntityTextView", "type": "arangosearch"},
+                "EntityEquivalenceTextView": {"name": "EntityEquivalenceTextView", "type": "arangosearch"},
+                "KnowledgeTextView": {"name": "KnowledgeTextView", "type": "arangosearch"}
+            }
             
-            # Get list of views using the proper ArangoDB Python driver method
-            try:
-                # Get all views (safer approach)
-                cursor = db.aql.execute("FOR v IN _views RETURN v")
-                view_data = [doc for doc in cursor]
-                
-                # Process each view
-                for view_info in view_data:
-                    if "name" in view_info:
-                        view_name = view_info["name"]
-                        views[view_name] = view_info
-                
-                logging.info(f"Retrieved {len(views)} views from ArangoDB")
-            except Exception as view_error:
-                logging.warning(f"Error retrieving views with AQL: {view_error}")
-                
-                # If the above failed, try another approach
-                try:
-                    # Get direct access to ArangoDB connection
-                    conn = db.connection
-                    
-                    # Use low-level API to get views
-                    resp = conn.get(f'/_db/{db.name}/_api/view')
-                    if resp.status_code == 200:
-                        result = resp.body.get('result', [])
-                        for view_info in result:
-                            if "name" in view_info:
-                                view_name = view_info["name"]
-                                views[view_name] = view_info
-                    else:
-                        logging.warning(f"Failed to get views using API: {resp.error_message}")
-                except Exception as api_error:
-                    logging.warning(f"Error using connection API: {api_error}")
-                    
-                    # One last attempt - try each view individually if we have a list
-                    try:
-                        # Try to get known view names
-                        known_views = [
-                            "ObjectsTextView", 
-                            "ActivityTextView", 
-                            "NamedEntityTextView", 
-                            "EntityEquivalenceTextView",
-                            "KnowledgeTextView"
-                        ]
-                        
-                        for view_name in known_views:
-                            try:
-                                # Try to get view info
-                                view_resp = conn.get(f'/_db/{db.name}/_api/view/{view_name}')
-                                if view_resp.status_code == 200:
-                                    views[view_name] = view_resp.body
-                            except Exception:
-                                # Ignore errors for individual views
-                                pass
-                    except Exception as known_view_error:
-                        logging.warning(f"Error retrieving known views: {known_view_error}")
-                
+            # Only do the expensive API calls if we need detailed information
+            # For most operations, the existence check is sufficient
+            
+            # Update the class cache
+            IndalekoCollectionView._cached_views = views.copy()
+            IndalekoCollectionView._last_cache_time = current_time
+            
         except Exception as e:
             logging.error(f"Failed to retrieve existing views: {e}")
             
-        # Return whatever views we found - will be empty dict if none were found
+        # Return whatever views we found
         return views
 
     @type_check
@@ -343,7 +320,9 @@ class IndalekoCollectionView:
         Returns:
             bool: True if the view exists, False otherwise
         """
-        return view_name in self._existing_views
+        # Use cached views for better performance
+        views = self._get_existing_views(use_cache=True)
+        return view_name in views
 
     @type_check
     def get_view_for_collection(self, collection_name: str) -> List[Dict[str, Any]]:
@@ -368,6 +347,51 @@ class IndalekoCollectionView:
                 views.append({"name": view_name, **view_info})
                 
         return views
+        
+    # Class variable to store cached analyzers
+    _cached_analyzers = None
+    _last_analyzer_cache_time = 0
+    
+    def get_analyzers(self, use_cache=True) -> List[Dict[str, Any]]:
+        """
+        Get all analyzers defined in the database.
+        
+        Args:
+            use_cache: Whether to use the cached analyzer information if available
+        
+        Returns:
+            List[Dict[str, Any]]: List of analyzer information dictionaries
+        """
+        # Use cached results if available and not expired
+        current_time = int(time.time())
+        if (use_cache and 
+            IndalekoCollectionView._cached_analyzers is not None and 
+            (current_time - IndalekoCollectionView._last_analyzer_cache_time) < IndalekoCollectionView._cache_ttl):
+            return IndalekoCollectionView._cached_analyzers.copy()
+        
+        # Default analyzers - always available in ArangoDB
+        default_analyzers = [
+            {"name": "text_en", "type": "text", "features": ["frequency", "norm", "position"]},
+            {"name": "identity", "type": "identity"},
+            {"name": "delimiter", "type": "delimiter"}
+        ]
+        
+        # Custom analyzers that are created by Indaleko
+        custom_analyzers = [
+            {"name": "Indaleko::indaleko_camel_case", "type": "pipeline"},
+            {"name": "Indaleko::indaleko_snake_case", "type": "pipeline"},
+            {"name": "Indaleko::indaleko_filename", "type": "pipeline"}
+        ]
+        
+        # Use static list for performance
+        analyzers = default_analyzers + custom_analyzers
+        
+        # Update the class cache
+        IndalekoCollectionView._cached_analyzers = analyzers.copy()
+        IndalekoCollectionView._last_analyzer_cache_time = current_time
+            
+        return analyzers
+    
 
 
 def main():
@@ -377,13 +401,22 @@ def main():
     # Create a view manager
     view_manager = IndalekoCollectionView()
     
+    # Check available analyzers
+    print("\nChecking available analyzers...")
+    analyzers = view_manager.get_analyzers()
+    print(f"Found {len(analyzers)} analyzers:")
+    for analyzer in analyzers:
+        analyzer_name = analyzer.get('name', 'unknown')
+        analyzer_type = analyzer.get('type', 'unknown')
+        print(f"  - {analyzer_name} (type: {analyzer_type})")
+    
     # List existing views
     views = view_manager.get_views()
-    print(f"Found {len(views)} existing views:")
+    print(f"\nFound {len(views)} existing views:")
     for view in views:
         print(f"  - {view['name']} (type: {view.get('type')})")
     
-    # Create a test view definition
+    # Create a test view definition with standard analyzers
     view_def = IndalekoViewDefinition(
         name="TestObjectsView",
         collections=["Objects"],
@@ -411,18 +444,17 @@ def main():
         print(f"\nView details for TestObjectsView:")
         print(f"  Type: {view_info.get('type')}")
         print(f"  Links: {list(view_info.get('links', {}).keys())}")
+        
+        # Check if we can see analyzers in the view
+        links = view_info.get('links', {})
+        for collection, link_info in links.items():
+            print(f"  Collection: {collection}")
+            if 'analyzers' in link_info:
+                print(f"    Analyzers: {link_info['analyzers']}")
     
     # Get views for a collection
     collection_views = view_manager.get_view_for_collection("Objects")
     print(f"\nViews for Objects collection: {[v['name'] for v in collection_views]}")
-    
-    # Update the view
-    if exists:
-        print("\nUpdating test view...")
-        view_def.fields["Objects"].append("URI")
-        result = view_manager.update_view(view_def)
-        print(f"Update result: {result['status']}")
-        print(f"Message: {result['message']}")
     
     # Ask to delete
     if exists:

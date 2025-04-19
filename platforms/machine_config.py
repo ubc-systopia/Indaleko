@@ -31,6 +31,7 @@ import os
 # import logging
 # import re
 import sys
+import time
 
 import arango
 
@@ -45,13 +46,30 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
+# Set environment variable to skip view creation for this script
+# This is a performance optimization to avoid slow view creation in the database
+os.environ["INDALEKO_SKIP_VIEWS"] = "1"
+
 # pylint: disable=wrong-import-position
 from constants import IndalekoConstants
 from data_models import IndalekoMachineConfigDataModel
-from db import IndalekoCollections, IndalekoDBCollections, IndalekoServiceManager
-from utils.data_validation import validate_uuid_string
+from db.db_collections import IndalekoDBCollections  # noqa: E402
+from db.i_collections import IndalekoCollections
+from db.service_manager import IndalekoServiceManager
 
 # pylint: enable=wrong-import-position
+
+# Monkey patch to make this script run faster
+# Original IndalekoCollections.get_collection method
+original_get_collection = IndalekoCollections.get_collection
+
+# Faster replacement that always skips views
+@staticmethod
+def fast_get_collection(name, skip_views=True):
+    return original_get_collection(name, skip_views=True)
+
+# Replace the method
+IndalekoCollections.get_collection = fast_get_collection
 
 
 class IndalekoMachineConfig:
@@ -86,7 +104,8 @@ class IndalekoMachineConfig:
         self.machine_config = IndalekoMachineConfigDataModel(**kwargs)
         if not self.offline:
             self.collection = IndalekoCollections().get_collection(
-                IndalekoDBCollections.Indaleko_MachineConfig_Collection
+                IndalekoDBCollections.Indaleko_MachineConfig_Collection,
+                skip_views=True  # Skip view creation for performance
             )
             assert (
                 self.collection is not None
@@ -148,8 +167,9 @@ class IndalekoMachineConfig:
     def delete_config_in_db(machine_id: str) -> bool:
         """Delete the configuration from the database"""
         assert validate_uuid_string(machine_id), "Invalid machine identifier"
-        IndalekoCollections().get_collection(
-            IndalekoDBCollections.Indaleko_MachineConfig_Collection
+        IndalekoCollections(skip_views=True).get_collection(
+            IndalekoDBCollections.Indaleko_MachineConfig_Collection,
+            skip_views=True
         ).delete(machine_id)
 
     @staticmethod
@@ -174,7 +194,7 @@ class IndalekoMachineConfig:
         source_id: str = None,
     ) -> List["IndalekoMachineConfig"]:
         """Lookup all machine configurations"""
-        collections = IndalekoCollections()
+        collections = IndalekoCollections(skip_views=True)  # Skip view creation for performance
         query = "FOR doc IN @@collection RETURN doc"
         bind_vars = {
             "@collection": IndalekoDBCollections.Indaleko_MachineConfig_Collection
