@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import streamlit as st
+from datetime import datetime, timezone, timedelta
 from utils.gui.streamlit.mock_modules import MockDb
 
 def get_db_stats(db_info):
@@ -312,3 +313,265 @@ def get_activity_timeline(db_service):
         {"date": "2025-04-06", "count": 15},
         {"date": "2025-04-07", "count": 42}
     ]
+
+def get_cross_source_patterns(db_service):
+    """
+    Get cross-source pattern data for visualization
+    
+    Args:
+        db_service: IndalekoServiceManager or MockServiceManager object
+        
+    Returns:
+        dict: Dictionary with patterns, correlations, and suggestions data
+    """
+    try:
+        # Determine if this is a real service manager or a mock
+        if hasattr(db_service, 'db_config') and hasattr(db_service.db_config, 'db'):
+            # Real IndalekoServiceManager
+            db = db_service.db_config.db
+            
+            # Get patterns, correlations, and suggestions
+            patterns = _get_patterns_from_db(db)
+            correlations = _get_correlations_from_db(db)
+            suggestions = _get_suggestions_from_db(db)
+            
+            if patterns or correlations or suggestions:
+                recent_correlations = [c for c in correlations if c.get("is_recent", False)]
+                active_suggestions = [s for s in suggestions if not s.get("is_expired", False)]
+                
+                return {
+                    "patterns": patterns,
+                    "correlations": correlations,
+                    "suggestions": suggestions,
+                    "recent_correlations": recent_correlations,
+                    "active_suggestions": active_suggestions
+                }
+        else:
+            # Mock object
+            if hasattr(db_service, 'get_cross_source_patterns'):
+                return db_service.get_cross_source_patterns()
+    except Exception as e:
+        st.error(f"Error getting cross-source pattern data: {e}")
+    
+    # Return mock data as fallback
+    return _get_mock_pattern_data()
+
+def _get_patterns_from_db(db):
+    """Get patterns from database"""
+    collection_name = "CrossSourcePatterns"
+    if not db.has_collection(collection_name):
+        return []
+        
+    try:
+        collection = db.collection(collection_name)
+        cursor = collection.all(
+            limit=100  # Limit to 100 patterns
+        )
+        
+        return list(cursor)
+    except Exception as e:
+        st.warning(f"Error getting patterns from database: {e}")
+        return []
+    
+def _get_correlations_from_db(db):
+    """Get correlations from database"""
+    collection_name = "CrossSourceCorrelations"
+    if not db.has_collection(collection_name):
+        return []
+        
+    try:
+        collection = db.collection(collection_name)
+        now = datetime.now(timezone.utc)
+        one_day_ago = (now - timedelta(days=1)).isoformat()
+        
+        # Get all correlations, mark recent ones
+        cursor = collection.all(
+            limit=100  # Limit to 100 correlations
+        )
+        
+        # Process results to add is_recent flag
+        results = []
+        for doc in cursor:
+            # Add is_recent flag
+            if "timestamp" in doc:
+                doc["is_recent"] = doc["timestamp"] > one_day_ago
+            results.append(doc)
+            
+        return results
+    except Exception as e:
+        st.warning(f"Error getting correlations from database: {e}")
+        return []
+    
+def _get_suggestions_from_db(db):
+    """Get suggestions from database"""
+    collection_name = "ProactiveSuggestions"
+    if not db.has_collection(collection_name):
+        return []
+        
+    try:
+        collection = db.collection(collection_name)
+        now = datetime.now(timezone.utc)
+        
+        # Get active (not expired, not dismissed) suggestions
+        cursor = db.aql.execute(
+            f"""
+            FOR s IN {collection_name}
+            FILTER s.dismissed != true
+            FILTER s.expires_at == null OR s.expires_at > "{now.isoformat()}"
+            SORT s.priority ASC, s.confidence DESC
+            LIMIT 20
+            RETURN s
+            """
+        )
+        
+        # Process results to add is_expired flag
+        results = []
+        for doc in cursor:
+            # Add is_expired flag
+            if "expires_at" in doc and doc["expires_at"]:
+                doc["is_expired"] = doc["expires_at"] < now.isoformat()
+            else:
+                doc["is_expired"] = False
+            results.append(doc)
+            
+        return results
+    except Exception as e:
+        st.warning(f"Error getting suggestions from database: {e}")
+        return []
+
+def _get_mock_pattern_data():
+    """Return mock pattern data for testing"""
+    now = datetime.now(timezone.utc)
+    
+    # Create mock patterns
+    patterns = [
+        {
+            "pattern_id": "p1",
+            "pattern_name": "Cross-source pattern: ntfs + collaboration",
+            "description": "File activities followed by collaboration events",
+            "confidence": 0.82,
+            "source_types": ["ntfs", "collaboration"],
+            "observation_count": 15,
+            "last_observed": (now - timedelta(hours=3)).isoformat()
+        },
+        {
+            "pattern_id": "p2",
+            "pattern_name": "Cross-source pattern: location + ntfs",
+            "description": "File activities associated with specific locations",
+            "confidence": 0.67,
+            "source_types": ["location", "ntfs"],
+            "observation_count": 8,
+            "last_observed": (now - timedelta(hours=5)).isoformat()
+        },
+        {
+            "pattern_id": "p3",
+            "pattern_name": "Cross-source pattern: ambient + collaboration",
+            "description": "Music activity followed by collaboration events",
+            "confidence": 0.75,
+            "source_types": ["ambient", "collaboration"],
+            "observation_count": 12,
+            "last_observed": (now - timedelta(hours=8)).isoformat()
+        },
+        {
+            "pattern_id": "p4",
+            "pattern_name": "Hour pattern: ntfs at 14:00",
+            "description": "File activity frequently occurs around 14:00-15:00",
+            "confidence": 0.79,
+            "source_types": ["ntfs"],
+            "observation_count": 21,
+            "last_observed": (now - timedelta(hours=2)).isoformat()
+        },
+        {
+            "pattern_id": "p5",
+            "pattern_name": "Day pattern: collaboration on Tuesday",
+            "description": "Collaboration activity frequently occurs on Tuesdays",
+            "confidence": 0.63,
+            "source_types": ["collaboration"],
+            "observation_count": 9,
+            "last_observed": (now - timedelta(days=2)).isoformat()
+        }
+    ]
+    
+    # Create mock correlations
+    correlations = [
+        {
+            "correlation_id": "c1",
+            "description": "Correlation between Ntfs and Collaboration events",
+            "confidence": 0.85,
+            "source_types": ["ntfs", "collaboration"],
+            "timestamp": (now - timedelta(hours=2)).isoformat(),
+            "is_recent": True
+        },
+        {
+            "correlation_id": "c2",
+            "description": "Correlation between Location and Ntfs events",
+            "confidence": 0.72,
+            "source_types": ["location", "ntfs"],
+            "timestamp": (now - timedelta(hours=4)).isoformat(),
+            "is_recent": True
+        },
+        {
+            "correlation_id": "c3",
+            "description": "Correlation between Ambient and Collaboration events",
+            "confidence": 0.68,
+            "source_types": ["ambient", "collaboration"],
+            "timestamp": (now - timedelta(hours=6)).isoformat(),
+            "is_recent": True
+        },
+        {
+            "correlation_id": "c4",
+            "description": "Correlation between Query and Ntfs events",
+            "confidence": 0.76,
+            "source_types": ["query", "ntfs"],
+            "timestamp": (now - timedelta(hours=12)).isoformat(),
+            "is_recent": False
+        }
+    ]
+    
+    # Create mock suggestions
+    suggestions = [
+        {
+            "suggestion_id": "s1",
+            "suggestion_type": "content",
+            "title": "Files relevant to your location",
+            "content": "Based on your patterns, we've noticed you typically access certain files when at this location. Would you like to see them?",
+            "priority": "medium",
+            "confidence": 0.78,
+            "created_at": (now - timedelta(hours=1)).isoformat(),
+            "expires_at": (now + timedelta(days=1)).isoformat(),
+            "is_expired": False,
+            "dismissed": False
+        },
+        {
+            "suggestion_id": "s2",
+            "suggestion_type": "search_strategy",
+            "title": "Search strategy suggestion",
+            "content": "Your search patterns and file activities show a connection. Consider using more specific file-related terms in your searches.",
+            "priority": "low",
+            "confidence": 0.65,
+            "created_at": (now - timedelta(hours=3)).isoformat(),
+            "expires_at": (now + timedelta(days=3)).isoformat(),
+            "is_expired": False,
+            "dismissed": False
+        },
+        {
+            "suggestion_id": "s3",
+            "suggestion_type": "related_content",
+            "title": "Connection between Ambient and Collaboration",
+            "content": "We've noticed a correlation between your Ambient and Collaboration activities. Would you like to explore this connection?",
+            "priority": "high",
+            "confidence": 0.81,
+            "created_at": (now - timedelta(hours=0.5)).isoformat(),
+            "expires_at": (now + timedelta(days=2)).isoformat(),
+            "is_expired": False,
+            "dismissed": False
+        }
+    ]
+    
+    return {
+        "patterns": patterns,
+        "correlations": correlations,
+        "suggestions": suggestions,
+        "recent_correlations": [c for c in correlations if c.get("is_recent", False)],
+        "active_suggestions": [s for s in suggestions if not s.get("is_expired", False)]
+    }
