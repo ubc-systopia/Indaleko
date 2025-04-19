@@ -37,6 +37,7 @@ Requires-Dist: pyecobee==1.3.11
 Requires-Dist: tiktoken==0.7.0
 Requires-Dist: regex==2024.5.15
 Requires-Dist: winsdk==1.0.0b10; platform_system == "Windows"
+Requires-Dist: win32more==0.5.10; platform_system == "Windows"
 Requires-Dist: pillow>=10.2.0
 Requires-Dist: exifread>=3.0.0
 Requires-Dist: colorama>=0.4.6
@@ -45,6 +46,7 @@ Requires-Dist: python-magic>=0.4.27
 Requires-Dist: matplotlib>=3.8.0
 Requires-Dist: numpy>=1.24.0
 Requires-Dist: pandas>=2.0.0
+Requires-Dist: pytest>=6.0
 Provides-Extra: test
 Requires-Dist: pytest>=6.0; extra == "test"
 Provides-Extra: dev

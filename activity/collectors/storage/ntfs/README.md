@@ -300,6 +300,34 @@ This implementation replaces the previous NTFS activity collector/recorder (whic
 5. Better integration with the overall Indaleko architecture
 6. More extensible for future storage providers
 
+## Building the C Collector
+
+This directory includes `journal.c`, a standalone C program to enumerate the NTFS USN Journal on Windows. To build and run the collector:
+
+Prerequisites:
+- A Windows development environment (Visual Studio or MinGW-w64).
+- Or MinGW-w64 cross-compiler on Linux.
+
+Using MinGW-w64 on Linux:
+
+    sudo apt-get install mingw-w64
+    cd indaleko/activity/collectors/storage/ntfs
+    make
+
+This will produce `journal.exe`, a Windows executable.
+
+Using Visual Studio:
+
+    Open 'Developer Command Prompt for VS'.
+    cd path\to\indaleko\activity\collectors\storage\ntfs
+    cl /Fe:journal.exe journal.c
+
+Once built, copy `journal.exe` to a Windows system and run:
+
+    journal.exe -d C:
+
+to dump the USN journal entries for volume C:.
+
 ## See Also
 
 - Other storage providers: Dropbox, OneDrive, Google Drive (TBD)
