@@ -24,7 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import uuid
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Union
 from datetime import datetime, timezone
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -51,8 +51,12 @@ class IndalekoViewDefinition(IndalekoBaseModel):
     name: str = Field(..., description="Name of the view")
     type: str = Field("arangosearch", description="Type of view (arangosearch is the primary type)")
     collections: List[str] = Field(..., description="Collections to include in the view")
-    fields: Dict[str, List[str]] = Field(..., description="Fields to include in the view by collection")
-    analyzers: List[str] = Field(default=["text_en"], description="Text analyzers to use")
+    fields: Union[Dict[str, List[str]], Dict[str, Dict[str, List[str]]]] = Field(
+        ..., 
+        description="Fields to include in the view by collection. Can be Dict[str, List[str]] or Dict[str, Dict[str, List[str]]]"
+    )
+    analyzers: Optional[List[str]] = Field(default=["text_en"], 
+                             description="Default text analyzers to use (when not specified per field)")
     include_all_fields: bool = Field(default=False, description="Whether to include all fields in the view")
     primary_sort: Optional[List[Dict[str, str]]] = Field(default=None, description="Primary sort fields")
     stored_values: Optional[List[str]] = Field(default=None, description="Fields to store in the view for retrieval")
@@ -76,8 +80,17 @@ class IndalekoViewDefinition(IndalekoBaseModel):
             
             # Add fields for this collection
             if collection in self.fields:
-                for field in self.fields[collection]:
-                    links[collection]["fields"][field] = {"analyzers": self.analyzers}
+                collection_fields = self.fields[collection]
+                
+                # Check if we have field-specific analyzers
+                if isinstance(collection_fields, dict):
+                    # Format: {"field1": ["analyzer1", "analyzer2"], "field2": ["analyzer3"]}
+                    for field, field_analyzers in collection_fields.items():
+                        links[collection]["fields"][field] = {"analyzers": field_analyzers}
+                else:
+                    # Old format: list of fields using default analyzers
+                    for field in collection_fields:
+                        links[collection]["fields"][field] = {"analyzers": self.analyzers}
         
         # Build the properties object
         properties = {

@@ -218,6 +218,22 @@ class KnowledgeBaseManager:
         query_intent = event.content.get("intent", "unknown")
         result_count = event.content.get("result_count", 0)
         entities = event.content.get("entities", [])
+        execution_time = event.content.get("execution_time", 0.0)
+        applied_patterns = event.content.get("applied_patterns", [])
+        
+        # Extract contextual information about when this query was successful
+        query_context = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "time_of_day": datetime.now(timezone.utc).hour,
+            "day_of_week": datetime.now(timezone.utc).weekday(),
+            "result_count": result_count,
+            "execution_time": execution_time,
+            "applied_patterns": applied_patterns
+        }
+        
+        # Enhanced: Add contextual data from event
+        if "context" in event.content:
+            query_context.update(event.content["context"])
         
         # Check if this matches an existing pattern
         matching_pattern = self._find_matching_query_pattern(query_text, query_intent)
@@ -233,6 +249,41 @@ class KnowledgeBaseManager:
                 matching_pattern.confidence = min(1.0, matching_pattern.confidence + 0.05)
             else:
                 matching_pattern.confidence = max(0.0, matching_pattern.confidence - 0.1)
+            
+            # Enhanced: Track query success history
+            success_history = matching_pattern.pattern_data.get("success_history", [])
+            success_history.append(query_context)
+            matching_pattern.pattern_data["success_history"] = success_history
+            
+            # Enhanced: Update entity-specific success tracking
+            if entities:
+                entity_success = matching_pattern.pattern_data.get("entity_success", {})
+                for entity in entities:
+                    entity_name = entity if isinstance(entity, str) else entity.get("name", "unknown")
+                    if entity_name not in entity_success:
+                        entity_success[entity_name] = {"success_count": 0, "fail_count": 0}
+                    
+                    if result_count > 0:
+                        entity_success[entity_name]["success_count"] += 1
+                    else:
+                        entity_success[entity_name]["fail_count"] += 1
+                
+                matching_pattern.pattern_data["entity_success"] = entity_success
+            
+            # Enhanced: Update collection success tracking
+            collections = event.content.get("collections", [])
+            if collections:
+                collection_success = matching_pattern.pattern_data.get("collection_success", {})
+                for collection in collections:
+                    if collection not in collection_success:
+                        collection_success[collection] = {"success_count": 0, "fail_count": 0}
+                    
+                    if result_count > 0:
+                        collection_success[collection]["success_count"] += 1
+                    else:
+                        collection_success[collection]["fail_count"] += 1
+                
+                matching_pattern.pattern_data["collection_success"] = collection_success
             
             # Add this event to source events
             if event.event_id not in matching_pattern.source_events:
@@ -268,7 +319,18 @@ class KnowledgeBaseManager:
                         "entities": entities,
                         "result_count": result_count,
                         "collections": event.content.get("collections", []),
-                        "query_template": event.content.get("query_template", "")
+                        "query_template": event.content.get("query_template", ""),
+                        # Enhanced: Add success history tracking
+                        "success_history": [query_context],
+                        "entity_success": {},
+                        "collection_success": {},
+                        # Enhanced: Add pattern application metrics
+                        "application_metrics": {
+                            "success_count": 1 if result_count > 0 else 0,
+                            "fail_count": 0 if result_count > 0 else 1,
+                            "avg_execution_time": execution_time,
+                            "avg_result_count": result_count
+                        }
                     },
                     source_events=[event.event_id]
                 )
@@ -279,6 +341,18 @@ class KnowledgeBaseManager:
                 
                 # Add to cache
                 self._patterns_cache[pattern.pattern_id] = pattern
+                
+                # Enhanced: Check for schema learning opportunity
+                if result_count > 0 and event.content.get("first_result"):
+                    try:
+                        # Analyze sample result for schema information
+                        first_result = event.content.get("first_result")
+                        collections = event.content.get("collections", [])
+                        
+                        for collection in collections:
+                            self.detect_schema_changes(collection, first_result)
+                    except Exception as e:
+                        self.logger.warning(f"Error detecting schema changes: {str(e)}")
     
     def _find_matching_query_pattern(self, query_text: str, intent: str) -> Optional[KnowledgePatternDataModel]:
         """
@@ -463,6 +537,21 @@ class KnowledgeBaseManager:
             merged_changes = {**existing_changes, **changes}
             existing_pattern.pattern_data["changes"] = merged_changes
             
+            # Enhanced: Track schema evolution over time
+            evolution_history = existing_pattern.pattern_data.get("evolution_history", [])
+            evolution_history.append({
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "changes": changes,
+                "event_id": str(event.event_id),
+                "backwards_compatible": event.content.get("backwards_compatible", True)
+            })
+            existing_pattern.pattern_data["evolution_history"] = evolution_history
+            
+            # Enhanced: Generate migration path if needed
+            if not event.content.get("backwards_compatible", True) and not existing_pattern.pattern_data.get("migration_path"):
+                migration_path = self._generate_migration_path(collection, changes)
+                existing_pattern.pattern_data["migration_path"] = migration_path
+            
             # Update metadata
             existing_pattern.confidence = min(1.0, existing_pattern.confidence + 0.05)
             existing_pattern.usage_count += 1
@@ -499,7 +588,15 @@ class KnowledgeBaseManager:
                     "collection": collection,
                     "changes": changes,
                     "backwards_compatible": event.content.get("backwards_compatible", True),
-                    "migration_path": event.content.get("migration_path", "")
+                    "migration_path": event.content.get("migration_path", ""),
+                    "evolution_history": [{
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "changes": changes,
+                        "event_id": str(event.event_id),
+                        "backwards_compatible": event.content.get("backwards_compatible", True)
+                    }],
+                    "field_types": event.content.get("field_types", {}),
+                    "field_usage_stats": event.content.get("field_usage_stats", {})
                 },
                 source_events=[event.event_id]
             )
@@ -510,6 +607,48 @@ class KnowledgeBaseManager:
             
             # Add to cache
             self._patterns_cache[pattern.pattern_id] = pattern
+    
+    def _generate_migration_path(self, collection: str, changes: Dict[str, Any]) -> str:
+        """
+        Generate a migration path for schema changes.
+        
+        Args:
+            collection: The collection being changed
+            changes: The schema changes
+            
+        Returns:
+            A migration path for the changes
+        """
+        migration_path = f"// Migration path for {collection} schema changes\n"
+        
+        # Build AQL query for migration
+        migration_path += "db._query(`\n"
+        migration_path += f"FOR doc IN {collection}\n"
+        migration_path += "  LET updated = doc\n"
+        
+        # Handle each type of change
+        added_fields = changes.get("added_fields", {})
+        removed_fields = changes.get("removed_fields", [])
+        renamed_fields = changes.get("renamed_fields", {})
+        
+        # Handle added fields
+        for field, default_value in added_fields.items():
+            migration_path += f"  LET updated = MERGE(updated, {{ {field}: {json.dumps(default_value)} }})\n"
+        
+        # Handle renamed fields
+        for old_field, new_field in renamed_fields.items():
+            migration_path += f"  LET updated = MERGE(UNSET(updated, '{old_field}'), {{ {new_field}: doc.{old_field} }})\n"
+        
+        # Handle removed fields
+        if removed_fields:
+            fields_str = "', '".join(removed_fields)
+            migration_path += f"  LET updated = UNSET(updated, '{fields_str}')\n"
+        
+        # Update document
+        migration_path += "  UPDATE doc WITH updated IN " + collection + "\n"
+        migration_path += "`);\n"
+        
+        return migration_path
     
     def _process_pattern_discovery(self, event: LearningEventDataModel) -> None:
         """
@@ -680,17 +819,21 @@ class KnowledgeBaseManager:
         matching_patterns.sort(key=lambda p: p.confidence, reverse=True)
         return matching_patterns
     
-    def apply_knowledge_to_query(self, query_text: str, intent: str = "") -> Dict[str, Any]:
+    def apply_knowledge_to_query(self, query_text: str, intent: str = "", 
+                         context: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Apply knowledge patterns to enhance a query.
         
         Args:
             query_text: The original query text
             intent: The query intent (optional)
+            context: Additional context for query enhancement (optional)
             
         Returns:
             Enhanced query information
         """
+        context = context or {}
+        
         # Find matching patterns
         matching_patterns = self.find_matching_patterns(query_text, intent)
         
@@ -703,8 +846,8 @@ class KnowledgeBaseManager:
                 "enhancements_applied": False
             }
         
-        # Use the best (highest confidence) pattern
-        best_pattern = matching_patterns[0]
+        # Enhanced: Use contextual information to select the best pattern
+        best_pattern = self._select_best_pattern_with_context(matching_patterns, context)
         
         # Apply pattern enhancements
         enhancements = {
@@ -718,8 +861,37 @@ class KnowledgeBaseManager:
             "confidence": best_pattern.confidence
         }
         
+        # Enhanced: Apply the pattern's query template if available
+        query_template = best_pattern.pattern_data.get("query_template", "")
+        if query_template:
+            # Extract entities from context or original query
+            entities = context.get("entities", [])
+            entity_names = [e.get("name", "") for e in entities if isinstance(e, dict)]
+            
+            # Apply template if possible
+            if entities and query_template:
+                try:
+                    # For now, simple substitution
+                    enhanced_query = query_template.replace("{entity}", entity_names[0])
+                    enhancements["enhanced_query"] = enhanced_query
+                except Exception as e:
+                    self.logger.warning(f"Error applying query template: {str(e)}")
+        
         # Increment usage count for the pattern
         best_pattern.usage_count += 1
+        best_pattern.updated_at = datetime.now(timezone.utc)
+        
+        # Enhanced: Track pattern effectiveness
+        success_history = best_pattern.pattern_data.get("success_history", [])
+        success_history.append({
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "applied": True,
+            "context": {
+                "time_of_day": datetime.now(timezone.utc).hour,
+                "day_of_week": datetime.now(timezone.utc).weekday(),
+            }
+        })
+        best_pattern.pattern_data["success_history"] = success_history
         
         # Get the document key first
         cursor = self.patterns_collection.find({"pattern_id": str(best_pattern.pattern_id)})
@@ -741,6 +913,80 @@ class KnowledgeBaseManager:
         self._patterns_cache[best_pattern.pattern_id] = best_pattern
         
         return enhancements
+        
+    def _select_best_pattern_with_context(self, patterns: List[KnowledgePatternDataModel], 
+                                         context: Dict[str, Any]) -> KnowledgePatternDataModel:
+        """
+        Select the best pattern using contextual information.
+        
+        Args:
+            patterns: List of patterns to choose from
+            context: Query context information
+            
+        Returns:
+            The best pattern for the given context
+        """
+        if not patterns:
+            raise ValueError("No patterns provided")
+            
+        if len(patterns) == 1:
+            return patterns[0]
+            
+        # Get contextual information
+        current_hour = datetime.now(timezone.utc).hour
+        current_day = datetime.now(timezone.utc).weekday()  # 0-6 (Mon-Sun)
+        time_context = context.get("time_context", {})
+        location_context = context.get("location_context", {})
+        entity_context = context.get("entities", [])
+        
+        # Score each pattern based on context
+        pattern_scores = []
+        
+        for pattern in patterns:
+            # Base score is the pattern confidence
+            score = pattern.confidence
+            
+            # Enhanced scoring based on pattern history
+            success_history = pattern.pattern_data.get("success_history", [])
+            if success_history:
+                # Calculate success rate
+                recent_history = success_history[-min(len(success_history), 10):]  # Last 10 uses
+                success_results = [
+                    h.get("result_count", 0) > 0 if isinstance(h, dict) else False 
+                    for h in recent_history
+                ]
+                success_rate = sum(success_results) / len(success_results) if success_results else 0
+                
+                # Boost score based on success rate
+                score += success_rate * 0.2
+                
+                # Check for time-of-day patterns
+                time_matches = 0
+                for history in recent_history:
+                    if isinstance(history, dict) and "context" in history:
+                        hist_hour = history["context"].get("time_of_day", -1)
+                        hist_day = history["context"].get("day_of_week", -1)
+                        
+                        # Check if current time is similar to successful times
+                        if abs(hist_hour - current_hour) <= 3:  # Within 3 hours
+                            time_matches += 1
+                        
+                        if hist_day == current_day:  # Same day of week
+                            time_matches += 1
+                
+                # Boost score based on time patterns
+                if recent_history:
+                    time_match_score = time_matches / (len(recent_history) * 2)  # Normalize
+                    score += time_match_score * 0.1
+            
+            # Store the final score
+            pattern_scores.append((pattern, score))
+        
+        # Sort by score (highest first)
+        pattern_scores.sort(key=lambda x: x[1], reverse=True)
+        
+        # Return the highest scoring pattern
+        return pattern_scores[0][0]
     
     def get_related_entities(self, entity_name: str, entity_type: str = "",
                            min_confidence: float = 0.7) -> List[Dict[str, Any]]:
@@ -792,13 +1038,307 @@ class KnowledgeBaseManager:
     
     def get_stats(self) -> Dict:
         """Get statistics about the knowledge base."""
+        # Count by pattern type
+        pattern_type_counts = {t.value: 0 for t in KnowledgePatternType}
+        for pattern in self._patterns_cache.values():
+            pattern_type = pattern.pattern_type.value
+            if pattern_type in pattern_type_counts:
+                pattern_type_counts[pattern_type] += 1
+        
+        # Count by event type
+        event_type_counts = {t.value: 0 for t in LearningEventType}
+        for event in self._events_cache.values():
+            event_type = event.event_type.value
+            if event_type in event_type_counts:
+                event_type_counts[event_type] += 1
+                
+        # Count by feedback type
+        feedback_type_counts = {t.value: 0 for t in FeedbackType}
+        for feedback in self._feedback_cache.values():
+            feedback_type = feedback.feedback_type.value
+            if feedback_type in feedback_type_counts:
+                feedback_type_counts[feedback_type] += 1
+                
+        # Calculate pattern effectiveness
+        pattern_effectiveness = {}
+        for pattern in self._patterns_cache.values():
+            success_history = pattern.pattern_data.get("success_history", [])
+            if success_history:
+                success_items = [h for h in success_history if isinstance(h, dict) and h.get("result_count", 0) > 0]
+                success_rate = len(success_items) / len(success_history) if success_history else 0
+                pattern_effectiveness[str(pattern.pattern_id)] = {
+                    "pattern_type": pattern.pattern_type.value,
+                    "success_rate": success_rate,
+                    "usage_count": pattern.usage_count,
+                    "confidence": pattern.confidence
+                }
+                
         return {
             "event_count": len(self._events_cache),
             "pattern_count": len(self._patterns_cache),
             "feedback_count": len(self._feedback_cache),
-            "pattern_types": {t.value: 0 for t in KnowledgePatternType},
-            "event_types": {t.value: 0 for t in LearningEventType},
-            "feedback_types": {t.value: 0 for t in FeedbackType}
+            "pattern_types": pattern_type_counts,
+            "event_types": event_type_counts,
+            "feedback_types": feedback_type_counts,
+            "effectiveness": pattern_effectiveness
+        }
+        
+    def detect_schema_changes(self, collection_name: str, data_sample: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Detect schema changes in a collection by comparing with known schema.
+        
+        Args:
+            collection_name: The name of the collection
+            data_sample: A sample document from the collection
+            
+        Returns:
+            Schema change information
+        """
+        # Find existing schema pattern for this collection
+        existing_schema = None
+        for pattern in self._patterns_cache.values():
+            if (pattern.pattern_type == KnowledgePatternType.schema_update and
+                pattern.pattern_data.get("collection") == collection_name):
+                existing_schema = pattern
+                break
+                
+        if not existing_schema:
+            # No existing schema, record this as the initial schema
+            self.record_learning_event(
+                event_type=LearningEventType.schema_update,
+                source="schema_detection",
+                content={
+                    "collection": collection_name,
+                    "changes": {},
+                    "backwards_compatible": True,
+                    "field_types": self._extract_field_types(data_sample),
+                    "schema_version": 1
+                },
+                confidence=1.0
+            )
+            
+            return {
+                "collection": collection_name,
+                "change_detected": False,
+                "message": "Initial schema recorded",
+                "schema_version": 1
+            }
+            
+        # We have an existing schema, compare with the sample
+        current_field_types = existing_schema.pattern_data.get("field_types", {})
+        new_field_types = self._extract_field_types(data_sample)
+        
+        changes = {}
+        
+        # Check for new fields
+        added_fields = {}
+        for field, field_type in new_field_types.items():
+            if field not in current_field_types:
+                added_fields[field] = self._get_default_value_for_type(field_type)
+                
+        if added_fields:
+            changes["added_fields"] = added_fields
+        
+        # Check for removed fields
+        removed_fields = []
+        for field in current_field_types:
+            if field not in new_field_types:
+                removed_fields.append(field)
+                
+        if removed_fields:
+            changes["removed_fields"] = removed_fields
+            
+        # Check for type changes
+        type_changes = {}
+        for field, field_type in current_field_types.items():
+            if field in new_field_types and new_field_types[field] != field_type:
+                type_changes[field] = {
+                    "old_type": field_type,
+                    "new_type": new_field_types[field]
+                }
+                
+        if type_changes:
+            changes["type_changes"] = type_changes
+            
+        # Determine if changes are backwards compatible
+        backwards_compatible = not removed_fields and not type_changes
+        
+        # If changes detected, record a schema update event
+        if changes:
+            # Get the current schema version
+            current_version = existing_schema.pattern_data.get("schema_version", 1)
+            new_version = current_version + 1
+            
+            self.record_learning_event(
+                event_type=LearningEventType.schema_update,
+                source="schema_detection",
+                content={
+                    "collection": collection_name,
+                    "changes": changes,
+                    "backwards_compatible": backwards_compatible,
+                    "field_types": new_field_types,
+                    "schema_version": new_version
+                },
+                confidence=0.9 if backwards_compatible else 0.7
+            )
+            
+            return {
+                "collection": collection_name,
+                "change_detected": True,
+                "changes": changes,
+                "backwards_compatible": backwards_compatible,
+                "schema_version": new_version
+            }
+            
+        return {
+            "collection": collection_name,
+            "change_detected": False,
+            "message": "No schema changes detected",
+            "schema_version": existing_schema.pattern_data.get("schema_version", 1)
+        }
+    
+    def _extract_field_types(self, data: Dict[str, Any], 
+                            prefix: str = "", 
+                            max_depth: int = 3) -> Dict[str, str]:
+        """
+        Extract field types from a data sample.
+        
+        Args:
+            data: The data sample
+            prefix: Prefix for nested fields
+            max_depth: Maximum depth for nested fields
+            
+        Returns:
+            Dictionary of field names and types
+        """
+        field_types = {}
+        
+        if max_depth <= 0 or not isinstance(data, dict):
+            return field_types
+            
+        for key, value in data.items():
+            field_name = f"{prefix}.{key}" if prefix else key
+            
+            if value is None:
+                field_types[field_name] = "null"
+            elif isinstance(value, bool):
+                field_types[field_name] = "boolean"
+            elif isinstance(value, int):
+                field_types[field_name] = "integer"
+            elif isinstance(value, float):
+                field_types[field_name] = "number"
+            elif isinstance(value, str):
+                field_types[field_name] = "string"
+            elif isinstance(value, list):
+                field_types[field_name] = "array"
+                
+                # Check first item if it's a non-empty array
+                if value and max_depth > 1:
+                    first_item = value[0]
+                    if isinstance(first_item, dict):
+                        # Extract types from the first item
+                        nested_types = self._extract_field_types(
+                            first_item, 
+                            f"{field_name}[0]", 
+                            max_depth - 1
+                        )
+                        field_types.update(nested_types)
+            elif isinstance(value, dict):
+                field_types[field_name] = "object"
+                
+                # Extract nested fields
+                nested_types = self._extract_field_types(
+                    value, 
+                    field_name, 
+                    max_depth - 1
+                )
+                field_types.update(nested_types)
+            else:
+                field_types[field_name] = type(value).__name__
+                
+        return field_types
+    
+    def _get_default_value_for_type(self, type_name: str) -> Any:
+        """
+        Get a default value for a data type.
+        
+        Args:
+            type_name: The type name
+            
+        Returns:
+            A default value for the type
+        """
+        defaults = {
+            "null": None,
+            "boolean": False,
+            "integer": 0,
+            "number": 0.0,
+            "string": "",
+            "array": [],
+            "object": {}
+        }
+        
+        return defaults.get(type_name, None)
+        
+    def track_query_refinement(self, query_text: str, 
+                              refinements: List[Dict[str, Any]],
+                              result_info: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Track query refinements to improve pattern learning.
+        
+        Args:
+            query_text: The original query text
+            refinements: List of refinements applied to the query
+            result_info: Information about query results
+            
+        Returns:
+            Information about the tracked refinements
+        """
+        if not refinements:
+            return {"tracked": False, "message": "No refinements provided"}
+            
+        # Extract the final (most effective) refinement
+        final_refinement = refinements[-1]
+        
+        # Check if this improved results
+        original_result_count = result_info.get("original_count", 0)
+        refined_result_count = result_info.get("count", 0)
+        
+        # Calculate improvement
+        improved = refined_result_count > 0 and (
+            original_result_count == 0 or
+            result_info.get("quality", 0) > result_info.get("original_quality", 0)
+        )
+        
+        # Adjust confidence based on improvement
+        confidence = 0.8 if improved else 0.5
+        
+        # Record as a learning event
+        learning_event = self.record_learning_event(
+            event_type=LearningEventType.pattern_discovery,
+            source="query_refinement",
+            content={
+                "query_text": query_text,
+                "refinements": refinements,
+                "final_refinement": final_refinement,
+                "pattern_type": KnowledgePatternType.query_pattern,
+                "pattern_data": {
+                    "query_text": query_text,
+                    "intent": result_info.get("intent", ""),
+                    "refinement_type": final_refinement.get("type", ""),
+                    "refinement_value": final_refinement.get("value", ""),
+                    "success_rate": 1.0 if improved else 0.0,
+                    "result_improvement": refined_result_count - original_result_count
+                }
+            },
+            confidence=confidence
+        )
+        
+        return {
+            "tracked": True,
+            "event_id": str(learning_event.event_id),
+            "improved": improved,
+            "confidence": confidence
         }
 
 

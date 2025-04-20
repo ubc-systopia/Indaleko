@@ -151,8 +151,12 @@ class IndalekoDBCollections:
             "views": [
                 {
                     "name": Indaleko_Objects_Text_View,
-                    "fields": ["Label", "Record.Attributes.URI", "Record.Attributes.Description", "Tags"],
-                    "analyzers": ["text_en"],
+                    "fields": {
+                        "Label": ["text_en", "indaleko_camel_case", "indaleko_snake_case", "indaleko_filename"],
+                        "Record.Attributes.URI": ["text_en"],
+                        "Record.Attributes.Description": ["text_en"],
+                        "Tags": ["text_en"]
+                    },
                     "stored_values": ["_key", "Label"]
                 }
             ]

@@ -214,6 +214,19 @@ def parse_usn_record(buffer, offset, bytes_returned):
     }
 
 def main():
+    # Add argument parsing for better integration
+    import argparse
+    parser = argparse.ArgumentParser(description="USN Journal Reader")
+    parser.add_argument("--volume", type=str, default="C:",
+                       help="Volume to query (default: C:)")
+    parser.add_argument("--start-usn", type=int,
+                       help="Starting USN (default: first USN in journal)")
+    parser.add_argument("--max-records", type=int, default=50,
+                       help="Maximum number of records to retrieve (default: 50)")
+    parser.add_argument("--verbose", action="store_true",
+                       help="Show verbose output")
+    args = parser.parse_args()
+
     if not is_admin():
         print("This script must be run with administrative privileges.")
         return
@@ -222,7 +235,15 @@ def main():
     win_version = platform.win32_ver()[0]
     print(f"Running on Windows {win_version}. Note: USN journal behavior may vary across versions.")
 
-    volume_path = "\\\\.\\C:"  # Adjust for desired volume
+    # Format volume path properly
+    volume = args.volume
+    if not volume.endswith(':'):
+        volume = f"{volume}:"
+    volume_path = f"\\\\.\\{volume}"
+
+    if args.verbose:
+        print(f"Using volume path: {volume_path}")
+
     try:
         # Open volume handle
         handle = get_volume_handle(volume_path)
@@ -234,15 +255,27 @@ def main():
             print(f"First USN: {journal_data.FirstUsn}")
             print(f"Next USN: {journal_data.NextUsn}")
 
+            # Use provided start_usn or default to FirstUsn
+            start_usn = args.start_usn if args.start_usn is not None else journal_data.FirstUsn
+
+            if args.verbose:
+                print(f"Starting from USN: {start_usn}")
+
             # Read USN journal
-            buffer, bytes_returned = read_usn_journal(handle, journal_data.UsnJournalID, journal_data.FirstUsn)
+            buffer, bytes_returned = read_usn_journal(handle, journal_data.UsnJournalID, start_usn)
+
+            if args.verbose:
+                print(f"Read {bytes_returned} bytes from USN journal")
 
             # Parse records
             offset = 8  # Skip first 8 bytes (NextUsn)
-            while offset < bytes_returned:
+            records_found = 0
+            while offset < bytes_returned and records_found < args.max_records:
                 record = parse_usn_record(buffer, offset, bytes_returned)
                 if record is None:
                     break
+
+                records_found += 1
                 print(f"\nUSN: {record['USN']}")
                 print(f"File: {record['FileName']}")
                 print(f"Timestamp: {record['Timestamp']}")
@@ -252,6 +285,9 @@ def main():
                 print(f"ParentFileRef: {record['ParentFileReferenceNumber']}")
 
                 offset += struct.unpack_from("<I", buffer, offset)[0]
+
+            if args.verbose:
+                print(f"Found {records_found} records")
 
         finally:
             ctypes.windll.kernel32.CloseHandle(handle)

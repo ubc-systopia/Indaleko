@@ -76,13 +76,20 @@ The collector follows these core principles:
 4. **Resource Management**: Ensure proper cleanup of system resources (file handles, etc.)
 5. **Compatibility**: Ensure all data is compatible with ArangoDB's requirements
 
+### Recent Enhancements
+
+1. **Complete Sensory Memory Recorder**: Implemented and verified the NtfsSensoryMemoryRecorder with real data
+2. **Cognitive Importance Scoring**: Added sophisticated scoring system with multiple weighted factors
+3. **Short-Term Memory Implementation**: Created short-term memory recorder with aggregation capabilities
+4. **Memory Consolidation Management**: Built automated system for memory consolidation between tiers
+5. **Command-line Tools**: Added scripts for managing memory consolidation and monitoring
+
 ### Next Steps
 
-1. **Verify Hot Tier Recorder**: Test the newly implemented NtfsHotTierRecorder with real data in the database using the verification script
-2. **Correlation Logic**: Add logic to match RENAME_OLD_NAME and RENAME_NEW_NAME pairs in the recorder
-3. **Integration Testing**: Test the full collector/recorder pipeline with real-world scenarios
-4. **Performance Optimization**: Profile and optimize for handling high-volume change events
-5. **Add Warm Tier**: Implement the warm tier recorder for longer-term storage
+1. **Cold Tier Implementation**: Create final archival tier for long-term storage
+2. **Performance Testing**: Profile and optimize for handling high-volume change events
+3. **UI Integration**: Add tiered memory visualization to the Streamlit GUI
+4. **Remote Storage Support**: Add capability to store cold tier data in remote storage
 
 ### Diagnostic & Testing Tools
 
@@ -104,33 +111,33 @@ python activity/collectors/storage/ntfs/direct_usn_test.py --volume C: --create-
 
 The NTFS USN Journal collector is now fully functional and integrated with the tiered recorder architecture.
 
-## NTFS Tiered Recorder Architecture
+## NTFS Cognitive Memory Architecture
 
-Indaleko now implements a tiered recorder architecture for NTFS storage activities, inspired by the tiered memory model in human cognition. The tiered approach provides several benefits:
+Indaleko now implements a cognitive memory architecture for NTFS storage activities, inspired by human memory models. This biomimetic approach provides several benefits:
 
 1. **Storage Efficiency**: Keeps high-fidelity data for a short period, then transitions to more compact forms
-2. **Performance Optimization**: Hot tier optimized for recent activity queries, cooler tiers for historical analysis
-3. **Data Lifecycle Management**: Automatic TTL-based expiration for temporary data
+2. **Performance Optimization**: Sensory memory optimized for recent activity queries, longer-term memories for historical analysis
+3. **Memory Lifecycle Management**: Automatic TTL-based expiration for short-term memories
 4. **Entity Consistency**: Stable entity identifiers across file system operations like renames
-5. **Importance-Based Retention**: Prioritizes important files based on usage patterns
+5. **Importance-Based Retention**: Prioritizes important files based on cognitive importance factors
 
-### Hot Tier Recorder
+### Sensory Memory Recorder
 
-The Hot Tier Recorder (`activity/recorders/storage/ntfs/tiered/hot/recorder.py`) has been fully implemented with the following key features:
+The Sensory Memory Recorder (`activity/recorders/storage/ntfs/memory/sensory/recorder.py`) has been fully implemented with the following key features:
 
 1. **High-Fidelity Storage**: Stores recent NTFS file system activities with full detail
 2. **TTL-Based Expiration**: Activities automatically expire after configurable period (default: 4 days)
 3. **Entity Mapping System**: Maps File Reference Numbers (FRNs) to stable UUIDs
 4. **Importance Scoring**: Activities scored by type, path significance, file type, and more
-5. **Search Feedback Loop**: Items searched frequently gain importance
+5. **Retrieval Feedback Loop**: Items retrieved frequently gain importance
 6. **Comprehensive Queries**: Time-based, entity-based, activity type, and many other query capabilities
 
 ### Data Loading Tool
 
-A data loading tool (`activity/recorders/storage/ntfs/tiered/hot/load_to_database.py`) has been implemented to:
+A data loading tool (`activity/recorders/storage/ntfs/memory/sensory/load_to_database.py`) has been implemented to:
 
 1. Process JSONL files from the NTFS collector
-2. Load activities into the hot tier database
+2. Load activities into the sensory memory database
 3. Generate reports and statistics
 4. Support simulation and dry-run modes for testing
 
@@ -138,18 +145,18 @@ A data loading tool (`activity/recorders/storage/ntfs/tiered/hot/load_to_databas
 
 ```bash
 # Load NTFS activity data (Linux/macOS)
-./load_hot_tier_data.sh --simulate --report
+./load_sensory_memory_data.sh --simulate --report
 
 # Load NTFS activity data (Windows)
-load_hot_tier_data.bat --simulate --report
+load_sensory_memory_data.bat --simulate --report
 
 # Process specific file with verbose output
-python activity/recorders/storage/ntfs/tiered/hot/load_to_database.py --file data/ntfs_activities.jsonl --verbose
+python activity/recorders/storage/ntfs/memory/sensory/load_to_database.py --file data/ntfs_activities.jsonl --verbose
 ```
 
 ### Verification Plan
 
-A comprehensive verification plan has been created to validate the hot tier recorder with real data in a production database. The verification script (`verify_hot_tier.py`) implements this plan and includes:
+A comprehensive verification plan has been created to validate the sensory memory recorder with real data in a production database. The verification script (`verify_sensory_memory.py`) implements this plan and includes:
 
 1. Database setup and connection verification
 2. Data preparation and loading
@@ -161,20 +168,45 @@ A comprehensive verification plan has been created to validate the hot tier reco
 The verification script can be run with:
 ```bash
 # On Linux/macOS
-./verify_hot_tier.sh --full-verification
+./verify_sensory_memory.sh --full-verification
 
 # On Windows
-verify_hot_tier.bat --full-verification
+verify_sensory_memory.bat --full-verification
 ```
 
-For detailed options, run `./verify_hot_tier.sh --help`
+For detailed options, run `./verify_sensory_memory.sh --help`
+
+### Cognitive Memory Implementation Status
+
+The Indaleko NTFS cognitive memory system is now fully implemented with multiple memory tiers:
+
+1. **Sensory Memory** (Complete):
+   - High-fidelity storage of recent file system activities
+   - Automatic TTL-based expiration (default: 4 days)
+   - Entity mapping system for consistent file tracking
+   - Importance scoring for consolidation decisions
+   - Retrieval feedback loop for frequently accessed files
+
+2. **Short-Term Memory** (Complete):
+   - Efficient storage of older file system activities
+   - Aggregation of similar activities based on importance
+   - Advanced importance scoring with time decay function
+   - Configurable retention policies (default: 30 days)
+   - Automatic consolidation from sensory memory before TTL expiration
+
+3. **Memory Consolidation** (Complete):
+   - Fully automated consolidation between memory tiers
+   - Importance-based decisions for consolidation timing
+   - Batch processing for efficient database operations
+   - Detailed statistics and reporting
+   - Command-line tools for manual management
 
 ### Pending Tasks
 
-1. **Execute Verification**: Test with real database connection
-2. **Performance Testing**: Benchmark with large datasets
-3. **Documentation**: Create detailed usage guidelines
-4. **Warm Tier**: Implement next tier in the architecture
+1. **Performance Testing**: Benchmark with large datasets
+2. **Documentation**: Create detailed usage guidelines 
+3. **Long-Term Memory**: Implement archival tier for long-term storage
+4. **User Interface**: Add cognitive memory visualization to Streamlit GUI
 
 ## Development Environment
 
@@ -252,15 +284,14 @@ The project includes a Streamlit-based GUI in the `/utils/gui/streamlit/` direct
 - Format code: `black .`
 - Build package: `python -m build`
 
-### NTFS Hot Tier Recorder Verification Commands
-- Run full verification: `./verify_hot_tier.sh --full-verification`
-- Find activity files: `./verify_hot_tier.sh --find-files`
-- Load data to database: `./verify_hot_tier.sh --load-data`
-- Verify entity mapping: `./verify_hot_tier.sh --verify-entities`
-- Test TTL expiration: `./verify_hot_tier.sh --test-ttl`
-- Run benchmarks: `./verify_hot_tier.sh --benchmark`
-- Test query capabilities: `./verify_hot_tier.sh --query-test`
-- Simulate operations: `./verify_hot_tier.sh --dry-run --full-verification`
+### NTFS Cognitive Memory Commands
+- Sensory memory verification: `./verify_sensory_memory.sh --full-verification`
+- Load data to sensory memory: `./load_sensory_memory_data.sh --simulate --report`
+- Check memory statistics: `./run_memory_consolidation.sh --stats-only --verbose`
+- Run memory consolidation: `./run_memory_consolidation.sh --run --verbose`
+- Configure consolidation age: `./run_memory_consolidation.sh --run --age-hours 24`
+- Batch size configuration: `./run_memory_consolidation.sh --run --batch-size 500 --max-batches 5`
+- Dry run simulation: `./run_memory_consolidation.sh --run --dry-run --verbose`
 
 ### Query System Commands
 - Test query tools: `python query/tools/test_tools.py --query "Your query here" --debug`

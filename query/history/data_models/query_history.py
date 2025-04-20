@@ -120,6 +120,12 @@ class QueryHistoryData(BaseModel):
         title="ResourceUtilization",
         description="Resource utilization metrics such as CPU and memory usage.",
     )
+    
+    query_activity_id: Optional[str] = Field(
+        None,
+        title="QueryActivityID",
+        description="Reference ID to the query activity in the activity context system.",
+    )
 
     @staticmethod
     def validate_timestamp(ts: Union[str, datetime]) -> datetime:

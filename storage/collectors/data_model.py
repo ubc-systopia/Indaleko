@@ -55,7 +55,6 @@ class IndalekoStorageCollectorDataModel(IndalekoCollectorDataModel):
         """Configuration for the storage collector data model"""
 
         @staticmethod
-        @staticmethod
         def get_example():
             """Get an example of the activity collector data model."""
             example = IndalekoCollectorDataModel.Config.json_schema_extra[

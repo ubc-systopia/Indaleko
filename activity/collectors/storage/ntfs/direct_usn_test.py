@@ -33,6 +33,9 @@ import ctypes
 from ctypes import wintypes
 from datetime import datetime, timezone
 from typing import Any, Optional, List, Dict, Tuple
+import uuid
+import subprocess
+import tempfile
 
 from icecream import ic
 
@@ -61,6 +64,9 @@ FSCTL_QUERY_USN_JOURNAL = 0x000900f4
 FSCTL_ENUM_USN_DATA = 0x000900b3
 FSCTL_READ_USN_JOURNAL = 0x000900bb
 FSCTL_CREATE_USN_JOURNAL = 0x000900e7
+
+# Add new FSCTL constant
+FSCTL_READ_UNPRIVILEGED_USN_JOURNAL = 0x900f8
 
 # USN reason flags
 USN_REASON_DATA_OVERWRITE = 0x00000001
@@ -300,269 +306,334 @@ def parse_usn_data(data: bytes, verbose: bool = False) -> list[dict[str, Any]]:
 
     return records
 
-def query_usn_journal(volume: str, start_usn: Optional[int] = None, verbose: bool = False) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    """
-    Query the USN journal for a volume.
+# Define READ_USN_JOURNAL_DATA structure (V0 for compatibility)
+class READ_USN_JOURNAL_DATA(ctypes.Structure):
+    _fields_ = [
+        ("StartUsn", ctypes.c_longlong),
+        ("ReasonMask", wintypes.DWORD),
+        ("ReturnOnlyOnClose", wintypes.DWORD),
+        ("Timeout", ctypes.c_ulonglong),
+        ("BytesToWaitFor", ctypes.c_ulonglong),
+        ("UsnJournalID", ctypes.c_ulonglong)
+    ]
 
-    Args:
-        volume: Volume to query (e.g., "C:")
-        start_usn: Starting USN to query from (if None, uses a recent USN)
-        verbose: Whether to print verbose debugging information
-
-    Returns:
-        tuple of (journal_info, records)
-    """
-    # Standardize volume path
-    if not volume.endswith(":"):
-        volume = f"{volume}:"
-
-    volume_path = f"\\\\.\\{volume}"
-    if verbose:
-        print(f"Opening volume {volume_path}")
-
-    # Open volume
+def is_admin() -> bool:
+    """Check if the script is running with administrative privileges."""
     try:
-        handle = win32file.CreateFile(
-            volume_path,
-            win32file.GENERIC_READ,
-            win32file.FILE_SHARE_READ | win32file.FILE_SHARE_WRITE,
-            None,
-            win32file.OPEN_EXISTING,
-            win32file.FILE_ATTRIBUTE_NORMAL,
+        return ctypes.windll.shell32.IsUserAnAdmin() != 0
+    except:
+        return False
+
+def read_usn_journal(handle: int, journal_id: int, start_usn: int, verbose: bool = False) -> tuple[bytes, int]:
+    """
+    Read USN journal entries.
+    
+    This implementation matches the working implementation in ntfs_collector_v2.py,
+    which was adapted from the successful approach in foo.py.
+    
+    Args:
+        handle: Volume handle
+        journal_id: USN journal ID
+        start_usn: Starting USN for reading journal entries
+        verbose: Whether to print verbose debugging information
+    
+    Returns:
+        Tuple of (buffer, bytes_returned)
+    """
+    if verbose:
+        print(f"Reading USN journal: handle={handle}, journal_id={journal_id}, start_usn={start_usn}")
+    
+    # Prepare the data structure - exactly as in the working implementation
+    read_data = READ_USN_JOURNAL_DATA(
+        StartUsn=start_usn,
+        ReasonMask=0xFFFFFFFF,  # All reasons
+        ReturnOnlyOnClose=0,
+        Timeout=0,
+        BytesToWaitFor=0,
+        UsnJournalID=journal_id
+    )
+    
+    # Create the buffer
+    buffer_size = 8192  # Increased from 4096 for more data
+    buffer = ctypes.create_string_buffer(buffer_size)
+    bytes_returned = wintypes.DWORD()
+    
+    if verbose:
+        print(f"Using FILE_READ_DATA access flag")
+        print(f"ReadData structure: StartUsn={read_data.StartUsn}, JournalID={read_data.UsnJournalID}")
+        print(f"Buffer size: {buffer_size} bytes")
+    
+    try:
+        # Call DeviceIoControl - matching the working implementation
+        success = ctypes.windll.kernel32.DeviceIoControl(
+            handle,
+            FSCTL_READ_USN_JOURNAL,
+            ctypes.byref(read_data),
+            ctypes.sizeof(read_data),
+            buffer,
+            buffer_size,
+            ctypes.byref(bytes_returned),
             None
         )
-        if verbose:
-            print("Successfully opened volume")
-    except Exception as e:
-        print(f"Error opening volume: {e}")
-        return None, []
-
-    # Query USN journal info
-    try:
-        journal_data = win32file.DeviceIoControl(
-            handle,
-            FSCTL_QUERY_USN_JOURNAL,
-            None,
-            1024
-        )
-        if verbose:
-            print(f"Successfully queried USN journal, received {len(journal_data)} bytes")
-            print(f"Raw journal data: {journal_data.hex()}")
-    except Exception as e:
-        print(f"Error querying USN journal: {e}")
-        # Try to create the journal if it doesn't exist
-        try:
-            print(f"Trying to create USN journal on {volume}")
-            # Create a 32MB journal with 4MB delta
-            buffer = struct.pack("<QQ", 32*1024*1024, 4*1024*1024)
-            win32file.DeviceIoControl(
-                handle,
-                FSCTL_CREATE_USN_JOURNAL,
-                buffer,
-                0
-            )
-            # Query again
-            journal_data = win32file.DeviceIoControl(
-                handle,
-                FSCTL_QUERY_USN_JOURNAL,
-                None,
-                1024
-            )
-            print("Successfully created and queried USN journal")
-        except Exception as create_err:
-            print(f"Error creating USN journal: {create_err}")
-            win32file.CloseHandle(handle)
-            return None, []
-
-    # Parse journal info
-    try:
-        journal_id = struct.unpack("<Q", journal_data[:8])[0]
-        first_usn = struct.unpack("<Q", journal_data[8:16])[0]
-        next_usn = struct.unpack("<Q", journal_data[16:24])[0]
-        lowest_valid_usn = struct.unpack("<Q", journal_data[24:32])[0]
-
-        # Use provided start_usn or default to something recent (next_usn - 1000)
-        if start_usn is None:
-            # Start from a reasonable point to avoid too much data
-            start_usn = max(lowest_valid_usn, next_usn - 1000)
-
-        journal_info = {
-            "journal_id": journal_id,
-            "first_usn": first_usn,
-            "next_usn": next_usn,
-            "lowest_valid_usn": lowest_valid_usn,
-            "start_usn": start_usn
-        }
-
-        # Print numeric values in hex
-        print(f"Journal ID (hex): {journal_id:#x}")
-        print(f"First USN (hex): {first_usn:#x}")
-        print(f"Next USN (hex): {next_usn:#x}")
-        print(f"Lowest Valid USN (hex): {lowest_valid_usn:#x}")
-        print(f"Start USN (hex): {start_usn:#x}")
-
-        if verbose:
-            print(f"Journal info: {json.dumps(journal_info, indent=2)}")
-    except Exception as e:
-        print(f"Error parsing journal info: {e}")
-        win32file.CloseHandle(handle)
-        return None, []
-
-    # Try both methods to read the journal
-    records = []
-
-    # Method 1: FSCTL_ENUM_USN_DATA (recommended for newer Windows)
-    try:
-        if verbose:
-            print(f"\nTrying FSCTL_ENUM_USN_DATA with start_usn={start_usn}")
-
-        buffer_in = bytearray(28)  # 28 bytes for MFT_ENUM_DATA
-        struct.pack_into("<QQQHH", buffer_in, 0,
-                       0,               # StartFileReferenceNumber
-                       start_usn,       # LowUsn
-                       0xFFFFFFFFFFFFFFFF,  # HighUsn
-                       2, 2)            # MinMajorVersion, MaxMajorVersion
-
-        if verbose:
-            print(f"Input buffer: {buffer_in.hex()}")
-
-        # Read journal data
-        read_data = win32file.DeviceIoControl(
-            handle,
-            FSCTL_ENUM_USN_DATA,
-            buffer_in,
-            65536
-        )
-
-        if verbose:
-            print(f"Successfully read {len(read_data)} bytes using ENUM_USN_DATA")
-            if len(read_data) > 0:
-                print(f"First 32 bytes: {read_data[:32].hex()}")
-
-        # Parse the records
-        enum_records = parse_usn_data(read_data, verbose)
-        if verbose:
-            print(f"Found {len(enum_records)} records using ENUM_USN_DATA")
-        records.extend(enum_records)
-    except pywintypes.error as win_err:
-        # Handle specific windows errors
-        if win_err.winerror == 38:  # ERROR_HANDLE_EOF
+        
+        if success:
             if verbose:
-                print("No more USN records available (reached end of file)")
+                print(f"Successfully read {bytes_returned.value} bytes from USN journal")
+                if bytes_returned.value > 0:
+                    print(f"First 32 bytes: {buffer.raw[:32].hex()}")
+            return buffer.raw, bytes_returned.value
         else:
-            print(f"Error reading USN journal with ENUM_USN_DATA: {win_err}")
-
-    # Method 2: FSCTL_READ_USN_JOURNAL (if Method 1 failed)
-    if len(records) == 0:
+            error = ctypes.get_last_error()
+            if verbose:
+                print(f"DeviceIoControl failed with Win32 error code: {error}")
+            
+            # Try unprivileged access as fallback
+            if error == 5:  # 5 = ERROR_ACCESS_DENIED
+                if verbose:
+                    print("Access denied, trying unprivileged USN journal access...")
+                
+                # Reset buffer for clean attempt
+                buffer = ctypes.create_string_buffer(buffer_size)
+                bytes_returned = wintypes.DWORD()
+                
+                try:
+                    success = ctypes.windll.kernel32.DeviceIoControl(
+                        handle,
+                        FSCTL_READ_UNPRIVILEGED_USN_JOURNAL,
+                        ctypes.byref(read_data),
+                        ctypes.sizeof(read_data),
+                        buffer,
+                        buffer_size,
+                        ctypes.byref(bytes_returned),
+                        None
+                    )
+                    
+                    if success:
+                        if verbose:
+                            print(f"Unprivileged USN journal access succeeded, got {bytes_returned.value} bytes")
+                        return buffer.raw, bytes_returned.value
+                    else:
+                        error = ctypes.get_last_error()
+                        if verbose:
+                            print(f"Unprivileged access also failed with error code: {error}")
+                except Exception as e:
+                    if verbose:
+                        print(f"Error during unprivileged access attempt: {e}")
+            
+            # If we get here, all attempts failed
+            raise ctypes.WinError(error)
+            
+    except Exception as e:
         if verbose:
-            print(f"\nTrying FSCTL_READ_USN_JOURNAL with start_usn={start_usn}")
+            print(f"Error reading USN journal: {e}")
+            
+        # Check if it's an access denied error
+        is_access_denied = False
+        if hasattr(e, 'winerror') and e.winerror == 5:
+            is_access_denied = True
+        elif hasattr(e, 'args') and len(e.args) > 0 and e.args[0] == 5:
+            is_access_denied = True
+            
+        if is_access_denied:
+            print("\nAccess denied. Some USN journal operations require administrative privileges.")
+            print("Please run this script with elevated privileges (Run as Administrator).")
+            
+        raise e
 
-        # typedef struct {
-        # USN       StartUsn;
-        # DWORD     ReasonMask;
-        # DWORD     ReturnOnlyOnClose;
-        # DWORDLONG Timeout;
-        # DWORDLONG BytesToWaitFor;
-        # DWORDLONG UsnJournalID;
-        # } READ_USN_JOURNAL_DATA_V0, *PREAD_USN_JOURNAL_DATA_V0, READ_USN_JOURNAL_DATA, *PREAD_USN_JOURNAL_DATA;
+def get_volume_handle(volume_path: str) -> int:
+    """
+    Get a volume handle using ctypes with FILE_READ_DATA access.
+    
+    This is critical - using FILE_READ_DATA (0x0001) instead of GENERIC_READ (0x80000000)
+    allows proper access to the USN journal even without admin privileges in some cases.
+    """
+    # FILE_READ_DATA = 0x0001 (Critical for USN journal access)
+    FILE_READ_DATA = 0x0001
+    FILE_SHARE_READ = 0x00000001
+    FILE_SHARE_WRITE = 0x00000002
+    OPEN_EXISTING = 3
+    FILE_FLAG_BACKUP_SEMANTICS = 0x02000000
 
-        # typedef struct {
-        #
-        #        USN StartUsn;
-        #        ULONG ReasonMask;
-        #        ULONG ReturnOnlyOnClose;
-        #        ULONGLONG Timeout;
-        #        ULONGLONG BytesToWaitFor;
-        #        ULONGLONG UsnJournalID;
-        #        USHORT MinMajorVersion;
-        #        USHORT MaxMajorVersion;
-        #
-        #    } READ_USN_JOURNAL_DATA_V1, *PREAD_USN_JOURNAL_DATA_V1;
+    # Check if we're running with admin rights
+    admin_status = is_admin()
+    print(f"Running with administrator privileges: {admin_status}")
 
+    handle = ctypes.windll.kernel32.CreateFileW(
+        volume_path,
+        FILE_READ_DATA,  # Use FILE_READ_DATA instead of GENERIC_READ
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        None,
+        OPEN_EXISTING,
+        FILE_FLAG_BACKUP_SEMANTICS,
+        None
+    )
 
-        # Create a 36-byte buffer based on the GitHub example approach
-        buffer = bytearray(4096)
+    if handle == -1:  # INVALID_HANDLE_VALUE
+        error = ctypes.get_last_error()
+        if error == 5:  # ERROR_ACCESS_DENIED
+            print(f"Access denied when opening volume {volume_path}")
+            print("This usually means the process doesn't have administrator privileges.")
+            print("Try running the script as administrator (right-click, Run as Administrator).")
+        raise ctypes.WinError(error)
 
-        ALL_INTERESTING_CHANGES = (
-            winioctlcon.USN_REASON_BASIC_INFO_CHANGE |
-            winioctlcon.USN_REASON_CLOSE |
-            winioctlcon.USN_REASON_DATA_EXTEND |
-            winioctlcon.USN_REASON_DATA_OVERWRITE |
-            winioctlcon.USN_REASON_DATA_TRUNCATION |
-            winioctlcon.USN_REASON_FILE_CREATE |
-            winioctlcon.USN_REASON_FILE_DELETE |
-            winioctlcon.USN_REASON_RENAME_NEW_NAME |
-            winioctlcon.USN_REASON_RENAME_OLD_NAME
-        )
+    return handle
 
-        def ctl_code(device_type: int, function: int, method: int, access: int) -> int:
-            """
-            Generate a control code consistent with the CTL_CODE macro in C.
+def read_usn_journal_from_foo(handle: int, journal_id: int, start_usn: int, verbose: bool = False) -> tuple[bytes, int]:
+    """Read USN journal entries by importing and using the working implementation from foo.py."""
+    if verbose:
+        print(f"Reading USN journal by importing foo.py implementation")
+        print(f"Parameters: journal_id={journal_id}, start_usn={start_usn}")
 
-            Args:
-                device_type (int): The device type (16-bit value).
-                function (int): The function code (12-bit value).
-                method (int): The method code (2-bit value).
-                access (int): The access code (2-bit value).
+    try:
+        # Import foo.py from the same directory
+        import os
+        import sys
+        import importlib.util
 
-            Returns:
-                int: The generated control code.
-            """
-            return ((device_type << 16) | (access << 14) | (function << 2) | method)
-        #define FSCTL_READ_USN_JOURNAL          CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 46,  METHOD_NEITHER, FILE_ANY_ACCESS) // READ_USN_JOURNAL_DATA, USN
+        # Get the current directory where our script is located
+        script_dir = os.path.dirname(os.path.abspath(__file__))
 
-        ic(ctl_code(9, 46, 3, 0))
-
-        ic('Packing buffer with USN journal data:',
-            start_usn,
-            ALL_INTERESTING_CHANGES,
-            journal_id,
-            winioctlcon.FSCTL_READ_USN_JOURNAL)
-
-        # Pack only the first two fields (JournalID and StartUSN)
-        # reason_mask = ALL_INTERESTING_CHANGES
-        # inp = struct.pack('QLLQQQ', first_usn, reason_mask, 0, 0, 0, journal_id)
-        struct.pack_into(
-            "QLLQQQHH",  # format string
-            buffer,      # where to put the data
-            0,
-            start_usn,   # StartUSN (8 bytes)
-            ALL_INTERESTING_CHANGES,  # ReasonMask (4 bytes)
-            0,           # ReturnOnlyOnClose (4 bytes)
-            0,           # Timeout (8 bytes)
-            0,           # BytesToWaitFor (8 bytes)
-            journal_id,  # JournalID (8 bytes)
-            2,
-            2
-        )
-
-        # The rest of the buffer is left as zeros
-
-        # Read journal data with the 36-byte buffer
-        read_data = win32file.DeviceIoControl(
-            handle,
-            winioctlcon.FSCTL_READ_USN_JOURNAL,
-            buffer,
-            65536
-        )
+        # Path to foo.py in the same directory
+        foo_path = os.path.join(script_dir, "foo.py")
 
         if verbose:
-            ic(f"Successfully read {len(read_data)} bytes using READ_USN_JOURNAL with 36-byte buffer")
-            if len(read_data) > 0:
-                print(f"First 32 bytes: {read_data[:32].hex()}")
+            print(f"Looking for foo.py at: {foo_path}")
 
-        # Parse the records
-        read_records = parse_usn_data(read_data, verbose)
+        if os.path.exists(foo_path):
+            if verbose:
+                print("foo.py found, importing...")
+
+            # Import foo.py as a module
+            spec = importlib.util.spec_from_file_location("foo", foo_path)
+            foo = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(foo)
+
+            if verbose:
+                print("Successfully imported foo.py")
+                print("Calling foo.read_usn_journal...")
+
+            # Call the read_usn_journal function from foo.py
+            buffer, bytes_returned = foo.read_usn_journal(handle, journal_id, start_usn)
+
+            if verbose:
+                print(f"Successfully read {bytes_returned} bytes using foo.py")
+                if bytes_returned > 0:
+                    print(f"First 32 bytes: {buffer.raw[:32].hex()}")
+
+            return buffer.raw, bytes_returned
+        else:
+            if verbose:
+                print(f"foo.py not found at {foo_path}")
+            raise FileNotFoundError(f"foo.py not found at {foo_path}")
+
+    except Exception as e:
         if verbose:
-            print(f"Found {len(read_records)} records using READ_USN_JOURNAL")
+            print(f"Error using foo.py implementation: {e}")
+        raise e
 
-        records.extend(read_records)
+def query_usn_journal(volume, start_usn=None, verbose=False):
+    """
+    Query the USN journal for a specified volume using usn_bridge.py
 
+    Args:
+        volume (str): Volume name (e.g. "C:")
+        start_usn (int, optional): Starting USN for the query
+        verbose (bool, optional): Enable verbose output
 
-    # Close handle
-    win32file.CloseHandle(handle)
+    Returns:
+        list: List of USN journal records
+    """
+    if verbose:
+        print(f"Querying USN journal on volume {volume}")
 
-    return journal_info, records
+    # Standardize volume name
+    if not volume.endswith(':'):
+        volume = f"{volume}:"
+
+    # Get the script directory to find usn_bridge.py
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    bridge_script = os.path.join(script_dir, "usn_bridge.py")
+
+    if not os.path.exists(bridge_script):
+        if verbose:
+            print(f"Error: usn_bridge.py not found at {bridge_script}")
+        return []
+
+    # Create a temporary file to store the bridge output
+    with tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='.txt') as temp_file:
+        output_file = temp_file.name
+
+    try:
+        # Build the command to run the bridge script
+        cmd = [sys.executable, bridge_script, "--volume", volume, "--output", output_file]
+
+        if start_usn is not None:
+            cmd.extend(["--start-usn", str(start_usn)])
+
+        if verbose:
+            cmd.append("--verbose")
+            print(f"Running: {' '.join(cmd)}")
+
+        # Run the bridge script
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        if result.returncode != 0:
+            if verbose:
+                print(f"Error running usn_bridge.py: {result.stderr}")
+            return []
+
+        # Parse the output file
+        records = []
+        current_record = {}
+
+        with open(output_file, 'r') as f:
+            lines = f.readlines()
+
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    if current_record:
+                        records.append(current_record)
+                        current_record = {}
+                    continue
+
+                if line.startswith("USN:"):
+                    if current_record:
+                        records.append(current_record)
+                        current_record = {}
+
+                    # Start a new record
+                    current_record = {"USN": line.split("USN:")[1].strip()}
+                    continue
+
+                # Parse other lines in the record
+                if ":" in line:
+                    parts = line.split(":", 1)
+                    key = parts[0].strip()
+                    value = parts[1].strip()
+                    current_record[key] = value
+
+            # Add the last record if there is one
+            if current_record:
+                records.append(current_record)
+
+        if verbose:
+            print(f"Found {len(records)} USN journal records")
+
+        return records
+
+    except Exception as e:
+        if verbose:
+            print(f"Error querying USN journal: {e}")
+        return []
+
+    finally:
+        # Clean up the temporary file
+        try:
+            if os.path.exists(output_file):
+                os.unlink(output_file)
+        except:
+            pass
 
 def create_test_files(volume: str, num_files: int = 3, verbose: bool = False) -> list[str]:
     """
@@ -746,143 +817,233 @@ def check_usn_journal_status(volume, verbose=False):
 
 
 def main():
-    """Main function."""
-    parser = argparse.ArgumentParser(description="USN Journal Test Tool")
-    parser.add_argument("--volume", type=str, default="C:", help="Volume to query (default: C:)")
-    parser.add_argument("--start-usn", type=int, help="Starting USN (defaults to recent entries)")
-    parser.add_argument("--output", type=str, default="usn_records.jsonl", help="Output file (default: usn_records.jsonl)")
-    parser.add_argument("--limit", type=int, default=100, help="Maximum records to output (default: 100)")
-    parser.add_argument("--create-test-files", action="store_true", help="Create test files to generate USN activity")
-    parser.add_argument("--verbose", action="store_true", help="Enable verbose debugging output")
-    parser.add_argument("--fsutil", action="store_true", help="Check USN journal status with fsutil")
+    """Main entry point for the script."""
+    parser = argparse.ArgumentParser(description="USN Journal Direct Test Tool")
+    parser.add_argument("--volume", type=str, default="C:",
+                      help="Volume to query (default: C:)")
+    parser.add_argument("--start-usn", type=int,
+                      help="Starting USN for the query (defaults to most recent entries)")
+    parser.add_argument("--output", type=str, default="usn_records.jsonl",
+                      help="Output file (default: usn_records.jsonl)")
+    parser.add_argument("--verbose", action="store_true",
+                      help="Enable verbose output")
+    parser.add_argument("--fsutil", action="store_true",
+                      help="Use fsutil to get USN journal info")
+    parser.add_argument("--create-test-files", action="store_true",
+                      help="Create test files to generate USN activity")
+    parser.add_argument("--direct-access", action="store_true",
+                      help="Use direct access mode instead of bridge (recommended)")
+    parser.add_argument("--use-module", action="store_true",
+                      help="Use the usn_journal module if available")
+    parser.add_argument("--use-foo", action="store_true",
+                      help="Import and use foo.py directly")
+
     args = parser.parse_args()
 
-    # Check USN journal status with fsutil if requested
-    if args.fsutil and sys.platform.startswith('win'):
-        print("\n=== USN Journal Status via fsutil ===")
-        fsutil_info = check_usn_journal_status(args.volume, args.verbose)
-        if fsutil_info:
-            if "usn_journal" in fsutil_info:
-                print("\nUSN Journal Information:")
-                for key, value in fsutil_info["usn_journal"].items():
-                    print(f"  {key}: {value}")
+    # Standardize volume name
+    volume = args.volume
+    if not volume.endswith(':'):
+        volume = f"{volume}:"
+        
+    # Format volume path for Windows API
+    volume_path = fr"\\.\{volume}"
+    
+    # Print test mode information
+    print(f"USN Journal Test Tool running in {'verbose' if args.verbose else 'normal'} mode")
+    print(f"Target volume: {volume} (path: {volume_path})")
+    print(f"Running with admin privileges: {is_admin()}")
 
-            # In non-verbose mode, only show USN info (verbose mode already shows the full output)
-            if not args.verbose:
-                if "ntfs_info" in fsutil_info:
-                    print("\nNTFS Volume Information (Selected):")
-                    for key in ["Bytes Per Sector", "Bytes Per Cluster", "Bytes Per FileRecord Segment", "Clusters Per FileRecord Segment", "Volume Size"]:
-                        if key in fsutil_info["ntfs_info"]:
-                            print(f"  {key}: {fsutil_info['ntfs_info'][key]}")
-
-                if "disk_info" in fsutil_info:
-                    print("\nVolume Space Information:")
-                    for key, value in fsutil_info["disk_info"].items():
-                        print(f"  {key}: {value}")
+    # Show USN journal information if requested
+    if args.fsutil:
+        print(f"\nUSN Journal info for {volume} (via fsutil):")
+        journal_info = check_usn_journal_status(volume, args.verbose)
+        
+        if journal_info and "usn_journal" in journal_info:
+            print("\nUSN Journal Status:")
+            for key, value in journal_info["usn_journal"].items():
+                print(f"  {key}: {value}")
+            
+            # Extract USN journal ID if present
+            journal_id = None
+            if "USN Journal ID" in journal_info["usn_journal"]:
+                try:
+                    journal_id = int(journal_info["usn_journal"]["USN Journal ID"], 16)
+                    print(f"\nDetected USN Journal ID: {journal_id} (0x{journal_id:x})")
+                except:
+                    pass
+        else:
+            subprocess.run(["fsutil", "usn", "queryjournal", volume], capture_output=args.verbose)
         print()
 
-    # Create test files if requested or in verbose mode
-    if args.create_test_files or args.verbose:
-        print(f"Creating test files on volume {args.volume} to generate USN activity...")
-        created_files = create_test_files(args.volume, 3, args.verbose)
-        print(f"Created {len(created_files)} test files")
+    # Create test files if requested
+    if args.create_test_files:
+        print(f"\nCreating test files on {volume}")
+        created_files = create_test_files(volume, num_files=3, verbose=args.verbose)
+        
+        if created_files:
+            print(f"Created {len(created_files)} test files for USN activity")
+            for i, file in enumerate(created_files[:5], 1):  # Show at most 5 files
+                print(f"  {i}. {file}")
+            
+            if len(created_files) > 5:
+                print(f"  ... and {len(created_files) - 5} more files")
+        
+        print()
 
-        # Sleep briefly to allow USN journal to update
-        time.sleep(1)
-
-    print(f"Querying USN journal for volume {args.volume}")
-    journal_info, records = query_usn_journal(args.volume, args.start_usn, args.verbose)
-
-    if not journal_info:
-        print("Failed to query USN journal")
-        # If fsutil wasn't already checked, try it now as a fallback diagnostic
-        if not args.fsutil and sys.platform.startswith('win'):
-            print("\n=== Checking USN Journal Status with fsutil (fallback) ===")
-            fsutil_info = check_usn_journal_status(args.volume, True)  # Force verbose
-            if fsutil_info:
-                print("\nFallback USN Journal Diagnostics:")
-                if "usn_journal" in fsutil_info:
-                    if "error" in fsutil_info["usn_journal"]:
-                        print(f"  USN Journal Error: {fsutil_info['usn_journal']['error']}")
-                    else:
-                        print("  USN Journal Information:")
-                        for key, value in fsutil_info["usn_journal"].items():
-                            print(f"    {key}: {value}")
-
-                # Also print some basic troubleshooting advice
-                print("\nPossible solutions to try:")
-                print("  1. Check if you have administrative privileges")
-                print("  2. Try creating a new USN journal with: fsutil usn createjournal m=32768 a=4096 <volume>")
-                print("  3. Check for NTFS file system corruption with: chkdsk <volume>")
-                print("  4. Try restarting the computer if journal creation fails")
-            print()
-        return
-
-    # Limit records if needed
-    if len(records) > args.limit:
-        print(f"Limiting output to {args.limit} records (out of {len(records)})")
-        records = records[:args.limit]
-
-    # Save records to file
-    with open(args.output, 'w', encoding='utf-8') as f:
-        # Write journal info
-        journal_info_record = {"record_type": "journal_info", **journal_info}
-        f.write(json.dumps(journal_info_record) + '\n')
-
-        # Write records
-        for record in records:
-            record["record_type"] = "usn_record"
-            f.write(json.dumps(record) + '\n')
-
-    print(f"Saved {len(records)} records to {args.output}")
-
-    # Print a few sample records
-    if records:
-        print("\nSample Records:")
-        for i, record in enumerate(records[:5]):
-            print(f"\nRecord {i+1}:")
-            print(f"  USN: {record['usn']}")
-            print(f"  File: {record['file_name']}")
-            print(f"  Reason: {record['reason_text']}")
-            print(f"  Timestamp: {record['timestamp']}")
-            print(f"  Attributes: {record['file_attributes_text']}")
-
-    # If verbose and we didn't check with fsutil before, do it now for comparison
-    if args.verbose and not args.fsutil and sys.platform.startswith('win'):
-        print("\n=== USN Journal Status via fsutil (final check) ===")
-        fsutil_info = check_usn_journal_status(args.volume, False)
-        if fsutil_info and "usn_journal" in fsutil_info:
-            # Just check if values have changed compared to the USN info we retrieved
-            if journal_info:
-                print("\nComparison of USN values:")
-                usn_info = fsutil_info["usn_journal"]
-                for key, value in usn_info.items():
-                    # Try to find equivalent keys in our journal_info
-                    equivalent_key = None
-                    if key.lower() == "usn journal id":
-                        equivalent_key = "journal_id"
-                    elif key.lower() == "first usn":
-                        equivalent_key = "first_usn"
-                    elif key.lower() == "next usn":
-                        equivalent_key = "next_usn"
-                    elif key.lower() == "lowest valid usn" or key.lower() == "lowest usn":
-                        equivalent_key = "lowest_valid_usn"
-
-                    if equivalent_key and equivalent_key in journal_info:
-                        api_value = journal_info[equivalent_key]
-                        print(f"  {key}:")
-                        print(f"    - fsutil value: {value}")
-                        print(f"    - API value:    {api_value}")
-
-                        # If values don't match, highlight it
-                        if str(api_value) not in str(value):
-                            print(f"    - NOTE: Values don't appear to match!")
+    # Try direct access if requested
+    records = []
+    if args.direct_access:
+        print(f"\nAttempting direct access to USN journal on {volume}...")
+        try:
+            # Get a handle to the volume
+            handle = get_volume_handle(volume_path)
+            print(f"Successfully opened volume handle: {handle}")
+            
+            # Query USN journal information
+            journal_info = check_usn_journal_status(volume, args.verbose)
+            journal_id = None
+            
+            if journal_info and "usn_journal" in journal_info and "USN Journal ID" in journal_info["usn_journal"]:
+                try:
+                    journal_id = int(journal_info["usn_journal"]["USN Journal ID"], 16)
+                except:
+                    pass
+            
+            if journal_id is None:
+                # Use a fallback mechanism to get journal ID
+                # For test purposes, use a hardcoded ID (should be replaced with proper detection)
+                journal_id = 0x2000000000005
+                print(f"Using fallback USN Journal ID: {journal_id} (0x{journal_id:x})")
+            
+            # Read USN journal entries
+            start_usn = args.start_usn or 0
+            print(f"Reading USN journal entries starting from USN {start_usn}...")
+            
+            buffer, bytes_returned = read_usn_journal(handle, journal_id, start_usn, args.verbose)
+            
+            if bytes_returned > 0:
+                print(f"Successfully read {bytes_returned} bytes from USN journal")
+                # Parse USN records
+                usn_records = parse_usn_data(buffer[:bytes_returned], args.verbose)
+                print(f"Found {len(usn_records)} USN records")
+                
+                # Save records to the output file
+                with open(args.output, 'w') as f:
+                    for record in usn_records:
+                        f.write(json.dumps(record) + '\n')
+                
+                print(f"Wrote {len(usn_records)} USN records to {args.output}")
+                records = usn_records
             else:
-                # Just show the fsutil values
-                print("\nUSN Journal Information from fsutil:")
-                for key, value in fsutil_info["usn_journal"].items():
-                    print(f"  {key}: {value}")
-        print()
+                print("No USN data returned (0 bytes)")
+            
+            # Close the handle
+            ctypes.windll.kernel32.CloseHandle(handle)
+            
+        except Exception as e:
+            print(f"Error during direct USN journal access: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    # Import and use foo.py directly if requested
+    elif args.use_foo:
+        print(f"\nImporting and using foo.py implementation...")
+        try:
+            handle = get_volume_handle(volume_path)
+            journal_info = check_usn_journal_status(volume, args.verbose)
+            journal_id = None
+            
+            if journal_info and "usn_journal" in journal_info and "USN Journal ID" in journal_info["usn_journal"]:
+                try:
+                    journal_id = int(journal_info["usn_journal"]["USN Journal ID"], 16)
+                except:
+                    pass
+            
+            if journal_id is None:
+                journal_id = 0x2000000000005
+                print(f"Using fallback USN Journal ID: {journal_id} (0x{journal_id:x})")
+            
+            start_usn = args.start_usn or 0
+            buffer, bytes_returned = read_usn_journal_from_foo(handle, journal_id, start_usn, args.verbose)
+            
+            if bytes_returned > 0:
+                usn_records = parse_usn_data(buffer[:bytes_returned], args.verbose)
+                print(f"Found {len(usn_records)} USN records")
+                
+                with open(args.output, 'w') as f:
+                    for record in usn_records:
+                        f.write(json.dumps(record) + '\n')
+                
+                print(f"Wrote {len(usn_records)} USN records to {args.output}")
+                records = usn_records
+            else:
+                print("No USN data returned (0 bytes)")
+            
+            # Close the handle
+            ctypes.windll.kernel32.CloseHandle(handle)
+            
+        except Exception as e:
+            print(f"Error using foo.py implementation: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    # Use the module if available and requested
+    elif args.use_module and MODULE_AVAILABLE:
+        print(f"\nUsing usn_journal module...")
+        try:
+            start_usn = args.start_usn or 0
+            volume_letter = volume[0]
+            
+            from activity.collectors.storage.ntfs.usn_journal import get_usn_journal_records
+            usn_records = get_usn_journal_records(volume_letter, start_usn, args.verbose)
+            
+            if usn_records:
+                print(f"Found {len(usn_records)} USN records")
+                
+                with open(args.output, 'w') as f:
+                    for record in usn_records:
+                        f.write(json.dumps(record) + '\n')
+                
+                print(f"Wrote {len(usn_records)} USN records to {args.output}")
+                records = usn_records
+            else:
+                print("No USN records found")
+            
+        except Exception as e:
+            print(f"Error using usn_journal module: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    # Fall back to the bridge method
+    else:
+        print(f"\nUsing bridge method to query USN journal...")
+        records = query_usn_journal(volume, args.start_usn, args.verbose)
+        
+        if records:
+            # Write records to the output file
+            with open(args.output, 'w') as f:
+                for record in records:
+                    f.write(json.dumps(record) + '\n')
+    
+            print(f"Wrote {len(records)} USN records to {args.output}")
+        else:
+            print("No USN records found or an error occurred using bridge method.")
+    
+    # Print a summary
+    print("\nSummary:")
+    print(f"  Test volume: {volume}")
+    print(f"  Admin privileges: {is_admin()}")
+    print(f"  Records found: {len(records)}")
+    print(f"  Output file: {args.output}")
+    
+    if records:
+        print("\nSample records (up to 5):")
+        for i, record in enumerate(records[:5], 1):
+            filename = record.get("file_name", "unknown")
+            reason = record.get("reason_text", "unknown")
+            print(f"  {i}. {filename} - {reason}")
+    
+    print("\nTest completed.")
 
 if __name__ == "__main__":
     main()

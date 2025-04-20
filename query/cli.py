@@ -66,6 +66,16 @@ from query.utils.llm_connector.openai_connector import OpenAIConnector
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 
+# Import Query Context Integration components
+try:
+    from query.context.activity_provider import QueryActivityProvider
+    from query.context.navigation import QueryNavigator
+    from query.context.relationship import QueryRelationshipDetector
+    from query.context.visualization import QueryPathVisualizer
+    HAS_QUERY_CONTEXT = True
+except ImportError:
+    HAS_QUERY_CONTEXT = False
+
 # Import archivist components if available
 try:
     from archivist.cli_integration_main import register_with_cli as register_archivist
@@ -302,6 +312,18 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 help="Enable semantic performance monitoring features"
             )
             
+            # Add Query Context Integration arguments
+            parser.add_argument(
+                "--query-context",
+                action="store_true",
+                help="Enable Query Context Integration for recording queries as activities"
+            )
+            parser.add_argument(
+                "--query-visualization",
+                action="store_true",
+                help="Enable visualization of query paths and relationships"
+            )
+            
             # Add command subparsers
             subparsers = parser.add_subparsers(
                 dest="command",
@@ -385,6 +407,27 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         if HAS_SEMANTIC_PERFORMANCE and hasattr(self.args, 'semantic_performance') and self.args.semantic_performance:
             self.semantic_performance_integration = register_semantic_performance_cli(self)
             print("Semantic Performance Monitoring enabled. Use /perf, /experiments, or /report to access commands.")
+            
+        # Initialize Query Context Integration
+        self.query_context_integration = None
+        self.query_navigator = None
+        self.query_relationship_detector = None
+        self.query_path_visualizer = None
+        
+        if HAS_QUERY_CONTEXT and hasattr(self.args, 'query_context') and self.args.query_context:
+            # Initialize QueryActivityProvider
+            self.query_context_integration = QueryActivityProvider(debug=hasattr(self.args, 'debug') and self.args.debug)
+            
+            # Initialize related components if available
+            self.query_navigator = QueryNavigator(debug=hasattr(self.args, 'debug') and self.args.debug)
+            self.query_relationship_detector = QueryRelationshipDetector(debug=hasattr(self.args, 'debug') and self.args.debug)
+            
+            # Initialize visualization if requested
+            if hasattr(self.args, 'query_visualization') and self.args.query_visualization:
+                self.query_path_visualizer = QueryPathVisualizer(debug=hasattr(self.args, 'debug') and self.args.debug)
+                print("Query Path Visualization enabled. Use /query-path to visualize query exploration paths.")
+            
+            print("Query Context Integration enabled. Queries will be recorded as activities.")
 
         while True:
             # Need UPI information about the database
@@ -462,6 +505,60 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                             )
                             if handled:
                                 continue
+                                
+                    # Handle Query Context commands
+                    elif user_query.startswith("/query-path"):
+                        if hasattr(self, 'query_path_visualizer') and self.query_path_visualizer:
+                            # Parse the command
+                            args = user_query.split(maxsplit=1)[1] if len(user_query.split()) > 1 else ""
+                            
+                            # Process different visualization options
+                            if args.startswith("recent"):
+                                # Show the most recent query path
+                                limit = 5  # Default to 5 recent queries
+                                if len(args.split()) > 1:
+                                    try:
+                                        limit = int(args.split()[1])
+                                    except ValueError:
+                                        print(f"Invalid limit: {args.split()[1]}. Using default of 5.")
+                                
+                                # Get recent activities from the context provider
+                                recent_activities = self.query_context_integration.get_recent_query_activities(limit=limit)
+                                if recent_activities:
+                                    # Generate visualization
+                                    viz_path = self.query_path_visualizer.generate_path_graph(
+                                        query_id=recent_activities[0].query_id,
+                                        include_branches=True,
+                                        max_depth=limit
+                                    )
+                                    print(f"Query path visualization generated: {viz_path}")
+                                else:
+                                    print("No recent query activities found to visualize.")
+                            
+                            elif args.startswith("type"):
+                                # Show queries by relationship type
+                                relationship_type = args.split()[1] if len(args.split()) > 1 else "refinement"
+                                
+                                # Generate visualization for the specified relationship type
+                                viz_path = self.query_path_visualizer.generate_relationship_graph(
+                                    relationship_type=relationship_type
+                                )
+                                print(f"Relationship visualization generated: {viz_path}")
+                            
+                            elif args.startswith("help") or args == "":
+                                # Show help information
+                                print("\n=== Query Path Visualization Help ===")
+                                print("Commands:")
+                                print("  /query-path recent [N]   - Show the most recent N query paths (default: 5)")
+                                print("  /query-path type TYPE    - Show queries with a specific relationship type")
+                                print("                            (refinement, broadening, pivot, backtrack)")
+                                print("  /query-path help         - Show this help message")
+                                print("==================================\n")
+                            
+                            else:
+                                print("Unknown query path command. Use '/query-path help' for available commands.")
+                            
+                            continue
 
             # Log the query
             # self.logging_service.log_query(user_query)
@@ -674,6 +771,49 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 ElapsedTime=time_diference.total_seconds(),
             )
             self.query_history.add(query_history)
+            
+            # Record query in activity context if enabled
+            if hasattr(self, 'query_context_integration') and self.query_context_integration:
+                # Extract result count
+                result_count = 0
+                if isinstance(ranked_results, FormattedResults):
+                    result_count = len(ranked_results.result_groups)
+                elif isinstance(ranked_results, list):
+                    result_count = len(ranked_results)
+                
+                # Get relationship type if available and a previous query exists
+                relationship_type = None
+                previous_query_id = None
+                
+                if hasattr(self, 'query_relationship_detector') and self.query_relationship_detector and len(self.query_history.get_query_history()) > 1:
+                    previous_query = self.query_history.get_query_history()[-2].OriginalQuery
+                    current_query = user_query
+                    
+                    # Detect relationship between current and previous query
+                    relationship = self.query_relationship_detector.detect_relationship(
+                        previous_query, 
+                        current_query
+                    )
+                    
+                    if relationship:
+                        relationship_type = relationship.value
+                        # Get the previous query ID from our activity provider if available
+                        previous_activities = self.query_context_integration.get_recent_query_activities(limit=1)
+                        if previous_activities:
+                            previous_query_id = previous_activities[0].query_id
+                
+                # Record the query as an activity
+                query_activity = self.query_context_integration.record_query(
+                    query_text=user_query,
+                    results={"count": result_count},
+                    execution_time=time_diference.total_seconds(),
+                    relationship_type=relationship_type,
+                    previous_query_id=previous_query_id
+                )
+                
+                # Store the query ID in the query history for reference
+                if query_activity:
+                    query_history.query_activity_id = str(query_activity.query_id)
             
             # Update proactive archivist with query context if enabled
             if hasattr(self, 'proactive_integration') and self.proactive_integration:
@@ -1182,7 +1322,12 @@ def main():
     print("\n- Try the new Semantic Performance Monitoring:")
     print("  Example: python -m query.cli --semantic-performance")
     print("  This enables performance monitoring and experiments for semantic extractors.")
-    print("  Use /perf, /experiments, or /report to see available commands.\n")
+    print("  Use /perf, /experiments, or /report to see available commands.")
+    
+    print("\n- Try the new Query Context Integration:")
+    print("  Example: python -m query.cli --query-context --query-visualization")
+    print("  This records queries as activities in the activity context system and enables visualization.")
+    print("  Use /query-path to visualize and explore your query exploration paths.\n")
     
     IndalekoQueryCLI().run()
     print("Thank you for using Indaleko Query CLI")

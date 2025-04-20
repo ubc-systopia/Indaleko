@@ -75,7 +75,8 @@ class ArchivistKnowledgeIntegration:
     
     def process_query(self, query_text: str, query_intent: str = "",
                     entities: List[Dict[str, Any]] = None,
-                    result_info: Dict[str, Any] = None) -> Dict[str, Any]:
+                    result_info: Dict[str, Any] = None,
+                    context: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Process a query through the knowledge integration system.
         
@@ -90,33 +91,70 @@ class ArchivistKnowledgeIntegration:
             query_intent: The intent of the query (if known)
             entities: List of entities extracted from the query
             result_info: Information about query results (if available)
+            context: Additional context for query processing (optional)
             
         Returns:
             Enhanced query with additional context
         """
         entities = entities or []
         result_info = result_info or {}
+        context = context or {}
         
         # 1. Process entity references from the query
         entity_data = self._process_entities(entities)
         
-        # 2. Apply knowledge patterns to enhance the query
-        enhanced_query = self.kb_manager.apply_knowledge_to_query(query_text, query_intent)
-        
-        # 3. Record in Archivist memory
-        memory_entry = self.archivist_memory.add_memory(
-            memory_type="query",
-            content={
-                "query": query_text,
-                "intent": query_intent,
-                "entities": entities,
-                "enhanced_query": enhanced_query.get("enhanced_query", query_text),
-                "applied_patterns": enhanced_query.get("applied_patterns", [])
+        # Enhanced: Build rich context for knowledge application
+        query_context = {
+            "entities": entity_data,
+            "time_context": {
+                "time_of_day": datetime.now(timezone.utc).hour,
+                "day_of_week": datetime.now(timezone.utc).weekday()
             }
+        }
+        
+        # Enhanced: Add location context if available
+        if "location" in context:
+            query_context["location_context"] = context["location"]
+            
+        # Enhanced: Add device context if available
+        if "device" in context:
+            query_context["device_context"] = context["device"]
+            
+        # 2. Apply knowledge patterns to enhance the query with context
+        enhanced_query = self.kb_manager.apply_knowledge_to_query(
+            query_text, 
+            query_intent,
+            query_context
         )
         
-        # 4. If results are available, record as a learning event
+        # 3. Record in Archivist memory with enhanced metadata
+        memory_metadata = {
+            "query": query_text,
+            "intent": query_intent,
+            "entities": entities,
+            "enhanced_query": enhanced_query.get("enhanced_query", query_text),
+            "applied_patterns": enhanced_query.get("applied_patterns", [])
+        }
+        
+        # Enhanced: Add context to memory
+        if context:
+            memory_metadata["context"] = context
+            
+        memory_entry = self.archivist_memory.add_memory(
+            memory_type="query",
+            content=memory_metadata
+        )
+        
+        # 4. If results are available, record as a learning event with enhanced data
         if result_info:
+            # Enhanced: Add first result for schema learning if available
+            if "results" in result_info and result_info["results"] and len(result_info["results"]) > 0:
+                result_info["first_result"] = result_info["results"][0]
+                
+            # Enhanced: Add context information to result info
+            if context:
+                result_info["context"] = context
+                
             self._record_query_results(query_text, query_intent, entities, result_info, 
                                       enhanced_query.get("applied_patterns", []))
         
@@ -227,23 +265,89 @@ class ArchivistKnowledgeIntegration:
             # More results and better quality increase confidence
             confidence = min(0.9, 0.6 + (0.1 * min(result_count / 10, 1.0)) + (0.2 * result_quality))
         
+        # Enhanced: Include additional context and metadata
+        content = {
+            "query": query_text,
+            "intent": query_intent,
+            "entities": [e.get("name") for e in entities],
+            "result_count": result_count,
+            "execution_time": execution_time,
+            "collections": result_info.get("collections", []),
+            "applied_patterns": applied_patterns,
+            "query_template": result_info.get("query_template", ""),
+            "result_quality": result_quality
+        }
+        
+        # Enhanced: Include schema learning data if available
+        if "first_result" in result_info:
+            content["first_result"] = result_info["first_result"]
+            
+        # Enhanced: Include context information
+        if "context" in result_info:
+            content["context"] = result_info["context"]
+            
+        # Enhanced: Include refinement information if available
+        if "refinements" in result_info:
+            content["refinements"] = result_info["refinements"]
+            content["original_count"] = result_info.get("original_count", 0)
+            content["original_quality"] = result_info.get("original_quality", 0.0)
+            
+        # Enhanced: Include more detailed result metrics if available
+        if "metrics" in result_info:
+            content["metrics"] = result_info["metrics"]
+            
         # Record as learning event
-        self.kb_manager.record_learning_event(
+        event = self.kb_manager.record_learning_event(
             event_type=LearningEventType.query_success if result_count > 0 else LearningEventType.pattern_discovery,
             source="query_execution",
-            content={
-                "query": query_text,
-                "intent": query_intent,
-                "entities": [e.get("name") for e in entities],
-                "result_count": result_count,
-                "execution_time": execution_time,
-                "collections": result_info.get("collections", []),
-                "applied_patterns": applied_patterns,
-                "query_template": result_info.get("query_template", ""),
-                "result_quality": result_quality
-            },
+            content=content,
             confidence=confidence
         )
+        
+        # Enhanced: Process query refinements if available
+        if "refinements" in result_info and result_info["refinements"]:
+            refinement_result = self.kb_manager.track_query_refinement(
+                query_text=query_text,
+                refinements=result_info["refinements"],
+                result_info=result_info
+            )
+            
+            # Add refinement tracking to Archivist memory for future reference
+            if refinement_result.get("tracked", False):
+                self.archivist_memory.add_memory(
+                    memory_type="refinement",
+                    content={
+                        "query": query_text,
+                        "refinements": result_info["refinements"],
+                        "refinement_result": refinement_result,
+                        "query_event_id": str(event.event_id)
+                    }
+                )
+                
+        # Enhanced: Check for database schema changes if applicable
+        collections = result_info.get("collections", [])
+        if collections and "first_result" in result_info and result_info["first_result"]:
+            try:
+                # Only check the first collection for schema changes
+                schema_result = self.kb_manager.detect_schema_changes(
+                    collection_name=collections[0],
+                    data_sample=result_info["first_result"]
+                )
+                
+                # If schema changes detected, record in memory
+                if schema_result.get("change_detected", False):
+                    self.archivist_memory.add_memory(
+                        memory_type="schema_change",
+                        content={
+                            "collection": collections[0],
+                            "schema_changes": schema_result.get("changes", {}),
+                            "schema_version": schema_result.get("schema_version", 1),
+                            "backwards_compatible": schema_result.get("backwards_compatible", True),
+                            "query_event_id": str(event.event_id)
+                        }
+                    )
+            except Exception as e:
+                self.logger.warning(f"Error checking for schema changes: {str(e)}")
     
     def add_user_feedback(self, feedback_type: str, query_text: str,
                         feedback_data: Dict[str, Any],

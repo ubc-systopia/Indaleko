@@ -101,7 +101,7 @@ class StorageActivityCollector(CollectorBase):
         # Data structures
         self._activities = []
         self._storage_location = kwargs.get("storage_location", None)
-        
+
         # Output path for storing collected data
         self._output_path = kwargs.get("output_path", None)
 
@@ -118,6 +118,62 @@ class StorageActivityCollector(CollectorBase):
 
         # Map of activity types to handler methods
         self._activity_handlers = {}
+
+    def generate_collector_file_name(self: "StorageActivityCollector", **kwargs) -> str:
+        """Generate a file name for the storage activity data collector"""
+        if "platform" not in kwargs:
+            kwargs["platform"] = self.collector_data.PlatformName
+        if "collector_name" not in kwargs:
+            kwargs["collector_name"] = self.collector_data.ServiceRegistrationFileName
+        if "machine_id" not in kwargs:
+            if not hasattr(self, "machine_id"):
+                ic(f"type(cls): {type(self)}")
+                ic(f"dir(cls): {dir(self)}")
+            kwargs["machine_id"] = self.machine_id  # must be there!
+        assert "machine_id" in kwargs, "machine_id must be specified"
+        return BaseStorageCollector.__generate_collector_file_name(**kwargs)
+
+    @staticmethod
+    def __generate_collector_file_name(**kwargs) -> str:
+        """This will generate a file name for the collector output file."""
+        # platform : str, target_dir : str = None, suffix : str = None) -> str:
+        assert "collector_name" in kwargs, "collector_name must be specified"
+        platform = None
+        if "platform" in kwargs:
+            if not isinstance(kwargs["platform"], str):
+                raise ValueError("platform must be a string")
+            platform = kwargs["platform"].replace("-", "_")
+        collector_name = kwargs.get("collector_name", "unknown_collector").replace(
+            "-", "_"
+        )
+        if not isinstance(collector_name, str):
+            raise ValueError("collector_name must be a string")
+        machine_id = kwargs.get("machine_id", None)
+        storage_description = None
+        if "storage_description" in kwargs:
+            storage_description = str(uuid.UUID(kwargs["storage_description"]).hex)
+        timestamp = kwargs.get(
+            "timestamp", datetime.datetime.now(datetime.timezone.utc).isoformat()
+        )
+        assert isinstance(timestamp, str), "timestamp must be a string"
+        target_dir = indaleko_default_data_dir
+        if "target_dir" in kwargs:
+            target_dir = kwargs["target_dir"]
+        suffix = kwargs.get("suffix", BaseStorageCollector.default_file_suffix)
+        kwargs = {
+            "service": collector_name,
+            "timestamp": timestamp,
+        }
+        if platform:
+            kwargs["platform"] = platform
+        if machine_id is not None:
+            kwargs["machine"] = machine_id
+        if storage_description is not None:
+            kwargs["storage"] = storage_description
+        kwargs["suffix"] = suffix
+        name = generate_file_name(**kwargs)
+        return os.path.join(target_dir, name)
+
 
     def add_activity(self, activity: BaseStorageActivityData) -> None:
         """
@@ -326,26 +382,26 @@ class StorageActivityCollector(CollectorBase):
         """
         # This is a collector, not a recorder.
         # Storage is handled by the recorder.
-        
+
     def save_activities_to_file(self) -> Optional[str]:
         """
         Save collected activities to a file.
-        
+
         Returns:
             Path to the saved file, or None if no file was saved
         """
         if not self._activities:
             self._logger.warning("No activities to save")
             return None
-            
+
         if not self._output_path:
             self._logger.warning("No output path specified, activities not saved to file")
             return None
-            
+
         try:
             # Create directory if it doesn't exist
             os.makedirs(os.path.dirname(self._output_path), exist_ok=True)
-            
+
             # Write to file using JSONL format (one JSON object per line)
             with open(self._output_path, 'w', encoding='utf-8') as f:
                 # First write the metadata as a single line
@@ -357,13 +413,13 @@ class StorageActivityCollector(CollectorBase):
                     "total_activities": len(self._activities)
                 }
                 f.write(json.dumps(metadata, default=str) + '\n')
-                
+
                 # Then write each activity as a separate line
                 for activity in self._activities:
                     activity_data = activity.model_dump()
                     activity_data["record_type"] = "activity"  # Add record type for easier parsing
                     f.write(json.dumps(activity_data, default=str) + '\n')
-                
+
             self._logger.info(f"Saved {len(self._activities)} activities to {self._output_path}")
             return self._output_path
         except Exception as e:
@@ -388,15 +444,15 @@ class WindowsStorageActivityCollector(StorageActivityCollector):
             use_volume_guids: Whether to use volume GUIDs for stable paths
         """
         super().__init__(**kwargs)
-        
+
         # Windows-specific configuration
         self._machine_config = kwargs.get("machine_config", None)
         self._use_volume_guids = kwargs.get("use_volume_guids", True)
-        
+
         # Check for Windows machine config
         if self._machine_config is None:
             self._logger.warning("No machine configuration provided")
-        
+
     def get_volume_guid_path(self, volume: str) -> str:
         """
         Get the volume GUID path for a volume.
@@ -410,17 +466,17 @@ class WindowsStorageActivityCollector(StorageActivityCollector):
         if not volume:
             self._logger.error("No volume provided")
             return volume
-            
+
         # If it's already a volume GUID path, return it
         if volume.startswith("\\\\?\\Volume{"):
             return volume
-            
+
         # Extract drive letter
         if ":" in volume:
             drive_letter = volume[0].upper()
         else:
             drive_letter = volume.upper()
-            
+
         # Use machine config to get GUID if available
         if self._machine_config and hasattr(self._machine_config, "map_drive_letter_to_volume_guid"):
             try:
@@ -433,12 +489,12 @@ class WindowsStorageActivityCollector(StorageActivityCollector):
                     self._logger.warning(f"Could not map drive {drive_letter}: to a volume GUID")
             except Exception as e:
                 self._logger.error(f"Error mapping drive to GUID: {e}")
-                
+
         # Fall back to standard path
         std_path = f"\\\\?\\{volume}\\"
         self._logger.info(f"Using standard path for volume {volume}: {std_path}")
         return std_path
-        
+
     def map_drive_letter_to_volume_guid(self, drive_letter: str) -> Optional[str]:
         """
         Map a drive letter to a volume GUID.
@@ -452,13 +508,13 @@ class WindowsStorageActivityCollector(StorageActivityCollector):
         if not self._machine_config:
             self._logger.error("No machine configuration available")
             return None
-            
+
         # Make sure the drive letter is just a single character
         if len(drive_letter) > 1:
             drive_letter = drive_letter[0]
-            
+
         self._logger.debug(f"Attempting to map drive letter {drive_letter} to volume GUID")
-        
+
         # Use the machine config to map the drive letter
         try:
             if hasattr(self._machine_config, "map_drive_letter_to_volume_guid"):
@@ -466,19 +522,19 @@ class WindowsStorageActivityCollector(StorageActivityCollector):
                 if hasattr(self._machine_config, "get_volume_info") and self._debug:
                     volume_info = self._machine_config.get_volume_info()
                     self._logger.debug(f"Volume info from machine config: {volume_info}")
-                    
+
                 # Map drive letter to GUID
                 guid = self._machine_config.map_drive_letter_to_volume_guid(drive_letter)
-                
+
                 if guid:
                     self._logger.debug(f"Successfully mapped drive {drive_letter} to GUID {guid}")
                 else:
                     self._logger.warning(f"Drive letter {drive_letter} not found in machine configuration")
-                    
+
                 return guid
             else:
                 self._logger.error("Machine config does not have map_drive_letter_to_volume_guid method")
         except Exception as e:
             self._logger.error(f"Error mapping drive letter to GUID: {e}")
-            
+
         return None

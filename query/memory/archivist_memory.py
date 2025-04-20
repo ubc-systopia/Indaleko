@@ -42,6 +42,13 @@ from data_models.record import IndalekoRecordDataModel
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from utils.misc.data_management import encode_binary_data
 from db import IndalekoDBConfig, IndalekoDBCollections
+
+# Import Query Context Integration components if available
+try:
+    from query.context.data_models.query_activity import QueryActivityData
+    HAS_QUERY_CONTEXT = True
+except ImportError:
+    HAS_QUERY_CONTEXT = False
 # pylint: enable=wrong-import-position
 
 

@@ -80,6 +80,8 @@ class KnowledgeBaseCliIntegration:
         self.cli.register_command("/entities", self.handle_entities_command)
         self.cli.register_command("/feedback", self.handle_feedback_command)
         self.cli.register_command("/insights", self.handle_insights_command)
+        self.cli.register_command("/schema", self.handle_schema_command)
+        self.cli.register_command("/stats", self.handle_stats_command)
     
     def _update_help_text(self):
         """Update CLI help text with knowledge base commands."""
@@ -93,6 +95,8 @@ class KnowledgeBaseCliIntegration:
             "  /feedback positive  - Give positive feedback on last query\n"
             "  /feedback negative  - Give negative feedback on last query\n"
             "  /insights           - Show knowledge base insights\n"
+            "  /schema [collection] - Show schema information for a collection\n"
+            "  /stats              - Show knowledge base statistics\n"
         )
         
         self.cli.append_help_text(kb_help_text)
@@ -117,12 +121,16 @@ class KnowledgeBaseCliIntegration:
             "/feedback positive - Give positive feedback on last query\n"
             "/feedback negative - Give negative feedback on last query\n"
             "/insights - Show knowledge base insights\n"
+            "/schema [collection] - Show schema information for a collection\n"
+            "/stats - Show knowledge base statistics\n"
             "\nExamples:\n"
             "/patterns - List all patterns\n"
             "/patterns a81b3522-c394-40b0-a82c-a9d7fa1f7e03 - Show details for pattern\n"
             "/entities - List all entity groups\n"
             "/entities Indaleko - Show details for 'Indaleko' entities\n"
             "/feedback positive comment='Great results!' - Give positive feedback\n"
+            "/schema Objects - Show schema information for the Objects collection\n"
+            "/stats - Show detailed knowledge base statistics\n"
         )
         
         return kb_help
@@ -427,9 +435,174 @@ class KnowledgeBaseCliIntegration:
         
         return output
     
+    def handle_schema_command(self, args: str) -> str:
+        """
+        Handle the /schema command.
+        
+        Args:
+            args: Command arguments
+            
+        Returns:
+            Command output
+        """
+        if not args:
+            return (
+                "Usage: /schema [collection_name]\n\n"
+                "Examples:\n"
+                "/schema Objects - Show schema information for the Objects collection\n"
+                "/schema LearningEvents - Show schema information for the LearningEvents collection\n"
+            )
+            
+        collection_name = args.strip()
+        
+        # Find schema pattern for this collection
+        from knowledge_base import KnowledgePatternType
+        
+        schema_patterns = self.kb_integration.kb_manager.get_patterns_by_type(
+            KnowledgePatternType.schema_update,
+            min_confidence=0.0
+        )
+        
+        matching_pattern = None
+        for pattern in schema_patterns:
+            if pattern.pattern_data.get("collection") == collection_name:
+                matching_pattern = pattern
+                break
+                
+        if not matching_pattern:
+            return f"No schema information found for collection '{collection_name}'."
+            
+        # Build output with schema information
+        output = f"Schema Information for {collection_name}:\n\n"
+        
+        # Schema version
+        output += f"Schema Version: {matching_pattern.pattern_data.get('schema_version', 1)}\n"
+        output += f"Last Updated: {matching_pattern.updated_at.isoformat()}\n"
+        output += f"Confidence: {matching_pattern.confidence:.2f}\n\n"
+        
+        # Field types
+        field_types = matching_pattern.pattern_data.get("field_types", {})
+        if field_types:
+            output += "Field Types:\n"
+            for field, field_type in sorted(field_types.items()):
+                output += f"- {field}: {field_type}\n"
+            output += "\n"
+            
+        # Evolution history
+        evolution_history = matching_pattern.pattern_data.get("evolution_history", [])
+        if evolution_history:
+            output += f"Evolution History ({len(evolution_history)} changes):\n"
+            for i, evolution in enumerate(evolution_history):
+                if i >= 5 and len(evolution_history) > 6:
+                    output += f"- ... and {len(evolution_history) - 5} more changes\n"
+                    break
+                    
+                timestamp = evolution.get("timestamp", "unknown")
+                changes = evolution.get("changes", {})
+                backwards_compatible = evolution.get("backwards_compatible", True)
+                
+                output += f"- {timestamp}"
+                if changes:
+                    change_str = []
+                    if "added_fields" in changes:
+                        change_str.append(f"{len(changes['added_fields'])} fields added")
+                    if "removed_fields" in changes:
+                        change_str.append(f"{len(changes['removed_fields'])} fields removed")
+                    if "renamed_fields" in changes:
+                        change_str.append(f"{len(changes['renamed_fields'])} fields renamed")
+                    if "type_changes" in changes:
+                        change_str.append(f"{len(changes['type_changes'])} type changes")
+                        
+                    if change_str:
+                        output += f": {', '.join(change_str)}"
+                        
+                if not backwards_compatible:
+                    output += " (breaking change)"
+                    
+                output += "\n"
+                
+        # Migration path
+        migration_path = matching_pattern.pattern_data.get("migration_path", "")
+        if migration_path:
+            output += "\nMigration Path:\n"
+            output += migration_path
+            
+        return output
+    
+    def handle_stats_command(self, args: str) -> str:
+        """
+        Handle the /stats command.
+        
+        Args:
+            args: Command arguments
+            
+        Returns:
+            Command output
+        """
+        stats = self.kb_integration.kb_manager.get_stats()
+        
+        output = "Knowledge Base Statistics:\n\n"
+        
+        # Basic counts
+        output += "Event Counts:\n"
+        output += f"- Total Events: {stats.get('event_count', 0)}\n"
+        output += f"- Total Patterns: {stats.get('pattern_count', 0)}\n"
+        output += f"- Total Feedback: {stats.get('feedback_count', 0)}\n\n"
+        
+        # Pattern type breakdown
+        pattern_types = stats.get("pattern_types", {})
+        if pattern_types:
+            output += "Pattern Types:\n"
+            for pattern_type, count in pattern_types.items():
+                if count > 0:
+                    output += f"- {pattern_type}: {count}\n"
+            output += "\n"
+            
+        # Event type breakdown
+        event_types = stats.get("event_types", {})
+        if event_types:
+            output += "Event Types:\n"
+            for event_type, count in event_types.items():
+                if count > 0:
+                    output += f"- {event_type}: {count}\n"
+            output += "\n"
+            
+        # Feedback type breakdown
+        feedback_types = stats.get("feedback_types", {})
+        if feedback_types:
+            output += "Feedback Types:\n"
+            for feedback_type, count in feedback_types.items():
+                if count > 0:
+                    output += f"- {feedback_type}: {count}\n"
+            output += "\n"
+            
+        # Pattern effectiveness
+        effectiveness = stats.get("effectiveness", {})
+        if effectiveness:
+            # Find top patterns by success rate
+            top_patterns = []
+            for pattern_id, pattern_stats in effectiveness.items():
+                if pattern_stats.get("usage_count", 0) >= 5:  # Only consider patterns with enough usage
+                    top_patterns.append((pattern_id, pattern_stats))
+                    
+            top_patterns.sort(key=lambda x: x[1].get("success_rate", 0), reverse=True)
+            
+            if top_patterns:
+                output += "Top Pattern Performance (min 5 uses):\n"
+                for i, (pattern_id, pattern_stats) in enumerate(top_patterns[:5]):
+                    success_rate = pattern_stats.get("success_rate", 0)
+                    usage_count = pattern_stats.get("usage_count", 0)
+                    pattern_type = pattern_stats.get("pattern_type", "unknown")
+                    
+                    output += f"- {pattern_id[:8]}: {success_rate:.2f} success rate ({usage_count} uses, {pattern_type})\n"
+                output += "\n"
+                
+        return output
+    
     def enhance_query(self, query_text: str, 
                      intent: str = "", 
-                     extracted_entities: List[Dict[str, Any]] = None) -> Dict[str, Any]:
+                     extracted_entities: List[Dict[str, Any]] = None,
+                     context: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Enhance a query using the knowledge base.
         
@@ -437,6 +610,7 @@ class KnowledgeBaseCliIntegration:
             query_text: The original query text
             intent: The query intent (if known)
             extracted_entities: Entities extracted from the query
+            context: Additional context for the query (optional)
             
         Returns:
             Enhanced query information
@@ -448,7 +622,8 @@ class KnowledgeBaseCliIntegration:
         response = self.kb_integration.process_query(
             query_text=query_text,
             query_intent=intent,
-            entities=extracted_entities or []
+            entities=extracted_entities or [],
+            context=context
         )
         
         return response
@@ -456,7 +631,9 @@ class KnowledgeBaseCliIntegration:
     def record_query_results(self, query_text: str, 
                            result_info: Dict[str, Any],
                            query_intent: str = "",
-                           entities: List[Dict[str, Any]] = None) -> None:
+                           entities: List[Dict[str, Any]] = None,
+                           context: Dict[str, Any] = None,
+                           refinements: List[Dict[str, Any]] = None) -> None:
         """
         Record query results for learning.
         
@@ -465,12 +642,20 @@ class KnowledgeBaseCliIntegration:
             result_info: Information about query results
             query_intent: The query intent (if known)
             entities: Entities extracted from the query
+            context: Additional context for the query (optional)
+            refinements: Query refinements applied (optional)
         """
+        # Enhanced: Add refinement information if available
+        if refinements:
+            result_info["refinements"] = refinements
+            
+        # Process query through knowledge integration
         self.kb_integration.process_query(
             query_text=query_text,
             query_intent=query_intent,
             entities=entities or [],
-            result_info=result_info
+            result_info=result_info,
+            context=context
         )
 
 

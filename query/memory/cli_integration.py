@@ -20,6 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+import uuid
+from datetime import datetime
+from typing import Optional, List, Dict, Any
 from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -31,6 +34,15 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from query.memory.archivist_memory import ArchivistMemory
+
+# Import Query Context Integration components if available
+try:
+    from query.context.activity_provider import QueryActivityProvider
+    from query.context.navigation import QueryNavigator
+    from query.context.relationship import QueryRelationshipDetector, RelationshipType
+    HAS_QUERY_CONTEXT = True
+except ImportError:
+    HAS_QUERY_CONTEXT = False
 # pylint: enable=wrong-import-position
 
 
@@ -50,6 +62,28 @@ class ArchivistCliIntegration:
         self.cli = cli_instance
         self.memory = archivist_memory or ArchivistMemory(self.cli.db_config)
         
+        # Initialize Query Context components if available
+        self.query_context_provider = None
+        self.query_navigator = None
+        self.query_relationship_detector = None
+        
+        if HAS_QUERY_CONTEXT:
+            # Check if CLI already has these components
+            if hasattr(self.cli, 'query_context_integration') and self.cli.query_context_integration:
+                self.query_context_provider = self.cli.query_context_integration
+            elif hasattr(self.cli, 'args') and hasattr(self.cli.args, 'debug'):
+                self.query_context_provider = QueryActivityProvider(debug=self.cli.args.debug)
+                
+            if hasattr(self.cli, 'query_navigator') and self.cli.query_navigator:
+                self.query_navigator = self.cli.query_navigator
+            elif hasattr(self.cli, 'args') and hasattr(self.cli.args, 'debug'):
+                self.query_navigator = QueryNavigator(debug=self.cli.args.debug)
+                
+            if hasattr(self.cli, 'query_relationship_detector') and self.cli.query_relationship_detector:
+                self.query_relationship_detector = self.cli.query_relationship_detector
+            elif hasattr(self.cli, 'args') and hasattr(self.cli.args, 'debug'):
+                self.query_relationship_detector = QueryRelationshipDetector(debug=self.cli.args.debug)
+        
         # Add the memory commands to the CLI
         self.commands = {
             "/memory": self.show_memory_help,
@@ -59,7 +93,8 @@ class ArchivistCliIntegration:
             "/insights": self.view_insights,
             "/topics": self.view_topics,
             "/strategies": self.view_strategies,
-            "/save": self.save_memory
+            "/save": self.save_memory,
+            "/query-insights": self.view_query_insights
         }
     
     def handle_command(self, command):
@@ -86,14 +121,17 @@ class ArchivistCliIntegration:
         """Show help for memory commands."""
         print("\nArchivist Memory Commands:")
         print("-------------------------")
-        print("/memory     - Show this help message")
-        print("/forward    - Generate a forward prompt for the next session")
-        print("/load       - Load a forward prompt from a previous session")
-        print("/goals      - Manage long-term goals")
-        print("/insights   - View insights about search patterns")
-        print("/topics     - View topics of interest")
-        print("/strategies - View effective search strategies")
-        print("/save       - Save the current memory state")
+        print("/memory         - Show this help message")
+        print("/forward        - Generate a forward prompt for the next session")
+        print("/load           - Load a forward prompt from a previous session")
+        print("/goals          - Manage long-term goals")
+        print("/insights       - View insights about search patterns")
+        print("/topics         - View topics of interest")
+        print("/strategies     - View effective search strategies")
+        print("/save           - Save the current memory state")
+        
+        if HAS_QUERY_CONTEXT:
+            print("/query-insights - View insights from Query Context Integration")
     
     def generate_forward_prompt(self, args):
         """Generate and display a forward prompt."""
@@ -247,6 +285,120 @@ class ArchivistCliIntegration:
         self.memory.save_memory()
         print("Memory state saved to database")
         
+    def view_query_insights(self, args):
+        """View insights from Query Context Integration."""
+        if not HAS_QUERY_CONTEXT:
+            print("Query Context Integration is not available.")
+            return
+            
+        if not self.query_context_provider or not self.query_navigator:
+            print("Query Context Integration components not initialized.")
+            return
+            
+        # Get recent query activities
+        recent_activities = self.query_context_provider.get_recent_query_activities(limit=10)
+        if not recent_activities:
+            print("No query activities found.")
+            return
+            
+        # Display query history summary
+        print("\nRecent Query Activity:")
+        print("--------------------")
+        for i, activity in enumerate(recent_activities, 1):
+            timestamp = activity.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+            result_count = "Unknown"
+            if activity.result_count is not None:
+                result_count = str(activity.result_count)
+                
+            relationship = activity.relationship_type or "initial"
+            
+            print(f"{i}. [{timestamp}] {activity.query_text}")
+            print(f"   Results: {result_count}, Relationship: {relationship}")
+            
+            # If this query has a previous query, show the relationship
+            if activity.previous_query_id:
+                prev_activity = self.query_context_provider.get_query_activity(activity.previous_query_id)
+                if prev_activity:
+                    print(f"   Previous query: {prev_activity.query_text}")
+                    
+            print()
+            
+        # Check if query paths should be analyzed
+        if self.query_navigator and args and "analyze" in args:
+            print("\nQuery Path Analysis:")
+            print("------------------")
+            
+            # Get the most recent query activity
+            latest_activity = recent_activities[0]
+            
+            # Get the query path
+            path = self.query_navigator.get_query_path(latest_activity.query_id, max_depth=5)
+            if path:
+                print("Query exploration path:")
+                for i, step in enumerate(path, 1):
+                    rel = step.get("relationship_type", "initial")
+                    query = step.get("query_text", "Unknown")
+                    timestamp = datetime.fromisoformat(step.get("timestamp", datetime.now().isoformat())).strftime("%H:%M:%S")
+                    
+                    print(f"{i}. [{timestamp}] {query} ({rel})")
+                    
+                # Get branches if any
+                if len(path) > 1:
+                    pivot_point = path[1].get("query_id")  # Get second query in path
+                    if pivot_point:
+                        branches = self.query_navigator.get_query_branches(uuid.UUID(pivot_point), max_depth=3)
+                        if len(branches) > 1:  # If there are multiple branches
+                            print("\nAlternative exploration branches:")
+                            for i, branch in enumerate(branches, 1):
+                                if branch:  # Ensure branch is not empty
+                                    print(f"Branch {i}: {' -> '.join([q.get('query_text', 'Unknown') for q in branch[:3]])}")
+            
+            # Add query patterns to Archivist memory
+            if self.memory:
+                for activity in recent_activities:
+                    # Check for relationship patterns
+                    if activity.relationship_type:
+                        # Create search pattern based on relationship type
+                        pattern_type = f"query_{activity.relationship_type}"
+                        description = f"User tends to {activity.relationship_type} queries when exploring"
+                        examples = [activity.query_text]
+                        frequency = 0.7  # Default frequency
+                        
+                        # Add pattern to memory
+                        self._add_query_pattern_to_memory(pattern_type, description, examples, frequency)
+                
+                # Save memory updates
+                self.memory.save_memory()
+                print("\nQuery patterns have been added to Archivist memory.")
+        
+        # Show help for analysis options
+        if not args:
+            print("\nFor detailed analysis, use: /query-insights analyze")
+    
+    def _add_query_pattern_to_memory(self, pattern_type, description, examples, frequency):
+        """Add a query pattern to the Archivist memory."""
+        if not self.memory:
+            return
+            
+        # Check if pattern already exists
+        for pattern in self.memory.memory.search_patterns:
+            if pattern.pattern_type == pattern_type:
+                # Update existing pattern
+                pattern.frequency = (pattern.frequency + frequency) / 2  # Moving average
+                pattern.examples = list(set(pattern.examples + examples))[:5]  # Keep up to 5 unique examples
+                return
+                
+        # Add new pattern
+        self.memory.memory.search_patterns.append({
+            "pattern_type": pattern_type,
+            "description": description,
+            "examples": examples[:3],  # Keep up to 3 examples
+            "frequency": frequency
+        })
+        
+        # Also add as insight
+        self.memory.add_insight("query_behavior", description, confidence=0.7)
+    
     def update_from_session(self, query_history):
         """
         Update the memory with information from the current session.
@@ -255,4 +407,47 @@ class ArchivistCliIntegration:
             query_history: The query history from the current session
         """
         self.memory.distill_knowledge(query_history, query_history)
+        
+        # Also integrate with Query Context data if available
+        if HAS_QUERY_CONTEXT and self.query_context_provider:
+            recent_activities = self.query_context_provider.get_recent_query_activities(limit=20)
+            
+            if recent_activities:
+                # Analyze query patterns
+                refinement_count = 0
+                broadening_count = 0
+                pivot_count = 0
+                
+                for activity in recent_activities:
+                    if activity.relationship_type == RelationshipType.REFINEMENT.value:
+                        refinement_count += 1
+                    elif activity.relationship_type == RelationshipType.BROADENING.value:
+                        broadening_count += 1
+                    elif activity.relationship_type == RelationshipType.PIVOT.value:
+                        pivot_count += 1
+                
+                total = len(recent_activities)
+                if total > 0:
+                    # Add insights based on dominant patterns
+                    if refinement_count / total > 0.3:
+                        self.memory.add_insight(
+                            "query_behavior", 
+                            "User frequently refines queries to narrow down results",
+                            confidence=min(0.5 + (refinement_count / total), 0.9)
+                        )
+                        
+                    if broadening_count / total > 0.3:
+                        self.memory.add_insight(
+                            "query_behavior", 
+                            "User often broadens queries when results are too specific",
+                            confidence=min(0.5 + (broadening_count / total), 0.9)
+                        )
+                        
+                    if pivot_count / total > 0.3:
+                        self.memory.add_insight(
+                            "query_behavior", 
+                            "User frequently pivots to related topics during exploration",
+                            confidence=min(0.5 + (pivot_count / total), 0.9)
+                        )
+        
         self.memory.save_memory()

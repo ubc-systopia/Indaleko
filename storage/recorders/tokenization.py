@@ -39,6 +39,7 @@ def tokenize_filename(filename: str) -> Dict[str, Union[str, List[str]]]:
         - SnakeCaseTokenizedName: Splits snake_case names (e.g., "indaleko_object" -> "indaleko object")
         - NgramTokenizedName: List of n-grams (3-5 character sequences)
         - SpaceTokenizedName: Simple space-split tokenization
+        - SearchTokenizedName: Combined tokenization for search purposes
     """
     # Strip path but keep extension for display
     base_name = os.path.basename(filename)
@@ -84,6 +85,19 @@ def tokenize_filename(filename: str) -> Dict[str, Union[str, List[str]]]:
     # Remove empty strings from the list
     space_split = [token for token in space_split if token]
     result["SpaceTokenizedName"] = space_split
+    
+    # Create a combined tokenized value that incorporates CamelCase and snake_case tokenization
+    # This will be indexed using the standard text_en analyzer
+    combined_tokens = []
+    combined_tokens.append(base_name)  # Original name
+    combined_tokens.append(camel_split)  # CamelCase tokenized version
+    combined_tokens.append(snake_split)  # snake_case tokenized version
+    
+    # Add individual tokens from space tokenization
+    combined_tokens.extend(space_split)
+    
+    # Join everything into a single string with spaces for standard analyzer processing
+    result["SearchTokenizedName"] = " ".join(combined_tokens)
 
     return result
 

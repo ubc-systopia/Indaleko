@@ -40,6 +40,14 @@ from query.assistants.state import ConversationState, Message
 from query.tools.registry import get_registry
 from query.tools.base import ToolInput, ToolOutput
 
+# Import Query Context Integration components if available
+try:
+    from query.context.activity_provider import QueryActivityProvider
+    from query.context.relationship import QueryRelationshipDetector
+    HAS_QUERY_CONTEXT = True
+except ImportError:
+    HAS_QUERY_CONTEXT = False
+
 
 class IndalekoAssistant:
     """
@@ -72,13 +80,16 @@ class IndalekoAssistant:
     6. Suggest related queries when appropriate
     """
     
-    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4o"):
+    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4o", 
+                 enable_query_context: bool = True, debug: bool = False):
         """
         Initialize the Indaleko Assistant.
         
         Args:
             api_key (Optional[str]): The OpenAI API key. If None, will be loaded from config.
             model (str): The model to use for the assistant.
+            enable_query_context (bool): Whether to enable Query Context Integration.
+            debug (bool): Whether to enable debug output.
         """
         self.api_key = api_key if api_key else self._load_api_key()
         self.model = model
@@ -86,6 +97,16 @@ class IndalekoAssistant:
         self.tool_registry = get_registry()
         self.assistant_id = None
         self.conversations = {}
+        self.debug = debug
+        
+        # Initialize Query Context Integration if available and enabled
+        self.query_context_provider = None
+        self.query_relationship_detector = None
+        
+        if enable_query_context and HAS_QUERY_CONTEXT:
+            self.query_context_provider = QueryActivityProvider(debug=debug)
+            self.query_relationship_detector = QueryRelationshipDetector(debug=debug)
+            ic("Query Context Integration enabled for Assistant.")
         
         # Create or retrieve the assistant
         self._initialize_assistant()
@@ -303,6 +324,58 @@ class IndalekoAssistant:
         # Add the message to the conversation state
         conversation.add_message("user", message_content)
         
+        # Record the query in the activity context system if enabled
+        query_activity = None
+        if hasattr(self, 'query_context_provider') and self.query_context_provider:
+            # First, determine if this is a query (vs. a conversation)
+            is_query = self._is_likely_query(message_content)
+            
+            if is_query:
+                # Determine relationship with previous query if available
+                relationship_type = None
+                previous_query_id = None
+                
+                # Check if this conversation has previous messages
+                previous_messages = [msg for msg in conversation.messages 
+                                    if msg.role == "user" and msg != conversation.messages[-1]]
+                
+                if previous_messages and self.query_relationship_detector:
+                    previous_query = previous_messages[-1].content
+                    current_query = message_content
+                    
+                    # Detect relationship between current and previous query
+                    relationship = self.query_relationship_detector.detect_relationship(
+                        previous_query, 
+                        current_query
+                    )
+                    
+                    if relationship:
+                        relationship_type = relationship.value
+                        
+                        # Get previous query activity ID from context variables if available
+                        prev_query_activity_id = conversation.get_context_variable("last_query_activity_id")
+                        if prev_query_activity_id:
+                            previous_query_id = uuid.UUID(prev_query_activity_id)
+                
+                # Record the query as an activity
+                query_activity = self.query_context_provider.record_query(
+                    query_text=message_content,
+                    relationship_type=relationship_type,
+                    previous_query_id=previous_query_id
+                )
+                
+                # Store the query activity ID in context variables
+                if query_activity:
+                    conversation.set_context_variable("last_query_activity_id", str(query_activity.query_id))
+                    conversation.set_context_variable("is_query", True)
+                    
+                    # Add as a referenced activity in conversation state
+                    conversation.add_referenced_memory(
+                        memory_id=str(query_activity.query_id),
+                        memory_type="query_activity",
+                        summary=f"Query: {message_content}"
+                    )
+        
         # Get the thread ID
         thread_id = conversation.execution_context.get("thread_id")
         if not thread_id:
@@ -393,6 +466,38 @@ class IndalekoAssistant:
                         # Execute the tool
                         output = self.execute_tool(tool_call, conversation_id)
                         
+                        # Update query activity with results if this is a query_executor tool
+                        if (tool_call["function"]["name"] == "query_executor" and 
+                            hasattr(self, 'query_context_provider') and self.query_context_provider):
+                            
+                            conversation = self.get_conversation(conversation_id)
+                            if conversation and conversation.get_context_variable("is_query", False):
+                                # Get the query activity ID from context variables
+                                query_activity_id = conversation.get_context_variable("last_query_activity_id")
+                                
+                                if query_activity_id:
+                                    # Extract result information
+                                    try:
+                                        result_data = json.loads(output.get("output", "{}"))
+                                        result_count = 0
+                                        
+                                        # Try to determine result count based on response format
+                                        if isinstance(result_data, list):
+                                            result_count = len(result_data)
+                                        elif isinstance(result_data, dict) and "result" in result_data:
+                                            if isinstance(result_data["result"], list):
+                                                result_count = len(result_data["result"])
+                                        
+                                        # Update the query activity with results
+                                        self.query_context_provider.update_query_results(
+                                            query_id=uuid.UUID(query_activity_id),
+                                            results={"count": result_count},
+                                            execution_time=result_data.get("execution_time", None)
+                                        )
+                                    except Exception as e:
+                                        if self.debug:
+                                            ic(f"Error updating query results: {e}")
+                        
                         # Add to outputs
                         tool_outputs.append({
                             "tool_call_id": tool_call.id,
@@ -469,3 +574,49 @@ class IndalekoAssistant:
                 self.conversations[conversation_id] = conversation
         except (FileNotFoundError, json.JSONDecodeError) as e:
             ic(f"Error loading conversations: {e}")
+            
+    def _is_likely_query(self, message: str) -> bool:
+        """
+        Determine if a message is likely a query rather than a conversational message.
+        
+        Args:
+            message (str): The message to analyze.
+            
+        Returns:
+            bool: True if the message is likely a query, False otherwise.
+        """
+        # Define query indicators
+        query_indicators = [
+            "show me", "find", "search for", "look for", "get", "retrieve",
+            "where is", "when did", "how many", "list all", "display", 
+            "what is", "who is", "which", "where are"
+        ]
+        
+        # Check for question marks
+        has_question_mark = "?" in message
+        
+        # Check for query indicators
+        message_lower = message.lower()
+        has_query_indicator = any(indicator in message_lower for indicator in query_indicators)
+        
+        # Check length (queries tend to be shorter)
+        is_short = len(message.split()) < 15
+        
+        # Check for command-like syntax (not conversational)
+        starts_with_verb = any(message_lower.startswith(verb) for verb in [
+            "show", "find", "search", "get", "list", "display", "retrieve"
+        ])
+        
+        # Calculate a score based on these factors
+        score = 0
+        if has_question_mark:
+            score += 1
+        if has_query_indicator:
+            score += 2
+        if is_short:
+            score += 1
+        if starts_with_verb:
+            score += 2
+            
+        # If score is at least 2, it's likely a query
+        return score >= 2

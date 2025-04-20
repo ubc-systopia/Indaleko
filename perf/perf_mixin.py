@@ -38,8 +38,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 
 # pylint: disable=wrong-import-position
-# from perf_collector import IndalekoPerformanceDataCollector
-from perf_recorder import IndalekoPerformanceDataRecorder
+# from perf.perf_collector import IndalekoPerformanceDataCollector
+from perf.perf_recorder import IndalekoPerformanceDataRecorder
 
 # pylint: enable=wrong-import-position
 
