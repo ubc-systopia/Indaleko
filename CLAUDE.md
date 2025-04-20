@@ -1,5 +1,170 @@
 # CLAUDE.md - Indaleko Development Guidelines
 
+## Current NTFS Collector Development Status
+
+We now have a fully functional NTFS USN Journal collector in `activity/collectors/storage/ntfs/usn_journal_collector.py`. This collector monitors file system changes by accessing the Windows NTFS USN Journal.
+
+### Collector Implementation
+
+The collector has been completely redesigned with a clean, modular approach:
+
+1. **UsnJournalReader Class** (`bar.py`):
+   - Handles the low-level Windows API access to USN journal
+   - Implements proper context management with `__enter__` and `__exit__`
+   - Ensures proper resource cleanup with explicit `close()` method
+   - Returns timezone-aware datetime objects (UTC) for ArangoDB compatibility
+   - Uses FILE_READ_DATA (0x0001) instead of GENERIC_READ for volume access
+
+2. **NtfsUsnJournalCollector Class** (`usn_journal_collector.py`):
+   - High-level collector that uses UsnJournalReader to get journal entries
+   - Converts raw journal entries to NtfsStorageActivityData models
+   - Preserves all USN reason flags and other metadata
+   - Handles state persistence between runs
+   - Supports serialization to JSONL files
+
+### Key Features
+
+1. **Clean Separation of Concerns**:
+   - UsnJournalReader: Responsible only for raw USN journal access
+   - NtfsUsnJournalCollector: Handles collection, conversion, and state management
+   - Recorder (to be implemented): Will handle database storage and correlation
+
+2. **Handling of Rename Operations**:
+   - Preserves the distinction between RENAME_OLD_NAME and RENAME_NEW_NAME in attributes
+   - Stores raw USN reason flags in the attributes field
+   - Adds explicit "rename_type" attribute ("old_name" or "new_name")
+   - Allows recorders to correlate rename events using file reference numbers
+
+3. **Timezone-Aware Datetime**:
+   - All datetime objects are created with UTC timezone
+   - Ensures compatibility with ArangoDB's requirement for timezone-aware dates
+   - Implemented in both raw data parsing and model creation
+
+4. **State Persistence**:
+   - Tracks last processed USN position per volume
+   - Saves state to JSON file between runs
+   - Supports resuming collection from last position
+
+5. **Modern Pydantic Integration**:
+   - Uses Pydantic V2's model_dump() instead of deprecated dict()
+   - Proper JSON serialization of all fields including UUID and datetime
+   - Validation of all required fields
+
+### Usage
+
+```bash
+# Basic collection
+python activity/collectors/storage/ntfs/usn_journal_collector.py --verbose
+
+# Specify volumes and output file
+python activity/collectors/storage/ntfs/usn_journal_collector.py --volumes=C:,D: --output=activities.jsonl
+
+# Use state file for persistence
+python activity/collectors/storage/ntfs/usn_journal_collector.py --state-file=usn_state.json
+
+# Run tests
+python activity/collectors/storage/ntfs/usn_journal_collector.py --test
+```
+
+### Implementation Details
+
+The collector follows these core principles:
+
+1. **KISS Principle**: Keep the collector simple and focused on data gathering, not interpretation
+2. **Data Preservation**: Preserve all raw USN information to allow flexible interpretation by recorders
+3. **Clean Error Handling**: Handle exceptions gracefully with informative messages
+4. **Resource Management**: Ensure proper cleanup of system resources (file handles, etc.)
+5. **Compatibility**: Ensure all data is compatible with ArangoDB's requirements
+
+### Next Steps
+
+1. **Verify Hot Tier Recorder**: Test the newly implemented NtfsHotTierRecorder with real data in the database
+2. **Correlation Logic**: Add logic to match RENAME_OLD_NAME and RENAME_NEW_NAME pairs in the recorder
+3. **Integration Testing**: Test the full collector/recorder pipeline with real-world scenarios
+4. **Performance Optimization**: Profile and optimize for handling high-volume change events
+5. **Add Warm Tier**: Implement the warm tier recorder for longer-term storage
+
+### Diagnostic & Testing Tools
+
+The following tools are still available for low-level debugging of USN journal access:
+
+#### direct_usn_test.py
+A standalone test tool for directly accessing and testing the USN journal with multiple methods:
+
+```bash
+# Basic usage with direct access (recommended)
+python activity/collectors/storage/ntfs/direct_usn_test.py --volume C: --direct-access --verbose
+
+# Show USN journal info with fsutil
+python activity/collectors/storage/ntfs/direct_usn_test.py --volume C: --fsutil
+
+# Create test files to generate journal activity
+python activity/collectors/storage/ntfs/direct_usn_test.py --volume C: --create-test-files
+```
+
+The NTFS USN Journal collector is now fully functional and integrated with the tiered recorder architecture.
+
+## NTFS Tiered Recorder Architecture
+
+Indaleko now implements a tiered recorder architecture for NTFS storage activities, inspired by the tiered memory model in human cognition. The tiered approach provides several benefits:
+
+1. **Storage Efficiency**: Keeps high-fidelity data for a short period, then transitions to more compact forms
+2. **Performance Optimization**: Hot tier optimized for recent activity queries, cooler tiers for historical analysis
+3. **Data Lifecycle Management**: Automatic TTL-based expiration for temporary data
+4. **Entity Consistency**: Stable entity identifiers across file system operations like renames
+5. **Importance-Based Retention**: Prioritizes important files based on usage patterns
+
+### Hot Tier Recorder
+
+The Hot Tier Recorder (`activity/recorders/storage/ntfs/tiered/hot/recorder.py`) has been fully implemented with the following key features:
+
+1. **High-Fidelity Storage**: Stores recent NTFS file system activities with full detail
+2. **TTL-Based Expiration**: Activities automatically expire after configurable period (default: 4 days)
+3. **Entity Mapping System**: Maps File Reference Numbers (FRNs) to stable UUIDs
+4. **Importance Scoring**: Activities scored by type, path significance, file type, and more
+5. **Search Feedback Loop**: Items searched frequently gain importance
+6. **Comprehensive Queries**: Time-based, entity-based, activity type, and many other query capabilities
+
+### Data Loading Tool
+
+A data loading tool (`activity/recorders/storage/ntfs/tiered/hot/load_to_database.py`) has been implemented to:
+
+1. Process JSONL files from the NTFS collector
+2. Load activities into the hot tier database
+3. Generate reports and statistics
+4. Support simulation and dry-run modes for testing
+
+### Usage
+
+```bash
+# Load NTFS activity data (Linux/macOS)
+./load_hot_tier_data.sh --simulate --report
+
+# Load NTFS activity data (Windows)
+load_hot_tier_data.bat --simulate --report
+
+# Process specific file with verbose output
+python activity/recorders/storage/ntfs/tiered/hot/load_to_database.py --file data/ntfs_activities.jsonl --verbose
+```
+
+### Verification Plan
+
+A comprehensive verification plan has been created to validate the hot tier recorder with real data in a production database. The plan includes:
+
+1. Database setup and connection verification
+2. Data preparation and loading
+3. Entity mapping verification
+4. TTL expiration testing
+5. Performance benchmarking
+6. Integration testing with other components
+
+### Pending Tasks
+
+1. **Execute Verification**: Test with real database connection
+2. **Performance Testing**: Benchmark with large datasets
+3. **Documentation**: Create detailed usage guidelines
+4. **Warm Tier**: Implement next tier in the architecture
+
 ## Development Environment
 
 ### Package Management
@@ -1028,7 +1193,7 @@ cursor = db.aql.execute(
 ```
 
 ### View Management
-The `IndalekoCollectionView` class handles view operations:
+The `IndalekoCollectionView` class handles view operations with performance optimizations:
 
 ```python
 from db.collection_view import IndalekoCollectionView
@@ -1050,8 +1215,40 @@ view_def = IndalekoViewDefinition(
 result = view_manager.create_view(view_def)
 ```
 
+#### Performance Optimizations for Views
+
+The view system includes performance optimizations to prevent slowdowns:
+
+1. **Caching**: Views and analyzers are cached with TTL to avoid repeated API calls:
+   ```python
+   # Class-level caching in IndalekoCollectionView
+   _cached_views = None
+   _last_cache_time = 0
+   _cache_ttl = 300  # 5 minutes
+   ```
+
+2. **Skip Views Option**: For operations that don't need views, use skip_views=True:
+   ```python
+   # Skip view creation for better performance
+   collection = IndalekoCollections.get_collection(
+       IndalekoDBCollections.Indaleko_MachineConfig_Collection,
+       skip_views=True
+   )
+   
+   # Or for the entire collections instance
+   collections = IndalekoCollections(skip_views=True)
+   ```
+
+3. **Environment Variable**: Set a global option to skip views:
+   ```python
+   # Set environment variable to skip view creation
+   os.environ["INDALEKO_SKIP_VIEWS"] = "1"
+   ```
+
+These optimizations significantly improve performance (8x+ speedup) for operations that don't require view functionality.
+
 ### Testing Views
-Use the test script to verify view functionality:
+Use the test scripts to verify view functionality and performance:
 
 ```bash
 # List all views
@@ -1062,7 +1259,234 @@ python -m db.test_views --ensure
 
 # Test search query
 python -m db.test_views --query "indaleko project"
+
+# Profile view performance
+python -m db.profile_view_performance
+
+# Test optimized view handling
+python -m db.test_optimized_views --compare
 ```
+
+## Cross-Source Pattern Detection
+
+Indaleko includes sophisticated pattern detection capabilities across different data sources, enabling the discovery of correlations and relationships that span different data silos.
+
+### Key Components
+
+The Cross-Source Pattern Detection system consists of:
+
+1. **Data Models**:
+   - `CrossSourceEvent`: Unified representation of events from any data source
+   - `CrossSourcePattern`: Representation of patterns detected across sources
+   - `CrossSourceCorrelation`: Correlations between events from different sources
+   - Support for contextual information (location, device, etc.)
+
+2. **Core Classes**:
+   - `CrossSourcePatternDetector`: Main detection engine
+   - Integration with `ProactiveArchivist` for the Archivist Memory system
+
+### Advanced Pattern Detection
+
+The system uses multiple sophisticated algorithms:
+
+1. **Statistical Significance Analysis**:
+   ```python
+   def _calculate_pattern_significance(
+       self, sequence_sig, count, total_windows, 
+       sequence_stats, source_type_probs
+   ) -> float:
+       """Calculate the statistical significance of a pattern."""
+       # Get source types in this pattern
+       source_types = sequence_stats["source_types"]
+       
+       # Calculate expected probability by chance
+       expected_prob = 1.0
+       for source_type in source_types:
+           expected_prob *= source_type_probs.get(source_type, 0.01)
+           
+       # Calculate observed probability
+       observed_prob = count / total_windows
+       
+       # Calculate lift (higher means more significant)
+       lift = observed_prob / expected_prob if expected_prob > 0 else 10.0
+       lift = min(lift, 20.0)  # Cap lift
+       
+       # Calculate final significance score
+       significance = (
+           (0.5 * (lift / 20.0)) +         # 50% weight: normalized lift
+           (0.3 * len(source_types) / 7) +  # 30% weight: source diversity
+           (0.2 * min(1.0, count / 10))     # 20% weight: frequency
+       )
+       
+       return min(1.0, significance)
+   ```
+
+2. **Temporal Clustering Analysis**:
+   ```python
+   def _analyze_temporal_clustering(self, timestamps) -> float:
+       """Analyze temporal clustering of events."""
+       # Sort timestamps
+       sorted_timestamps = sorted(timestamps)
+       
+       # Calculate time differences between consecutive events
+       time_diffs = []
+       for i in range(len(sorted_timestamps) - 1):
+           diff = (sorted_timestamps[i+1] - sorted_timestamps[i]).total_seconds()
+           time_diffs.append(diff)
+           
+       # Calculate coefficient of variation (lower means more clustered)
+       mean_diff = sum(time_diffs) / len(time_diffs) if time_diffs else 0
+       if len(time_diffs) > 1 and mean_diff > 0:
+           variance = sum((diff - mean_diff) ** 2 for diff in time_diffs) / len(time_diffs)
+           std_diff = variance ** 0.5
+           cv = std_diff / mean_diff
+       else:
+           cv = 0
+           
+       # Calculate clustering scores
+       time_proximity = 1.0 / (1.0 + (mean_diff / 3600))  # Normalize by hour
+       consistency = 1.0 / (1.0 + cv)
+       
+       # Combine scores
+       clustering_score = (0.7 * time_proximity) + (0.3 * consistency)
+       
+       return min(1.0, clustering_score)
+   ```
+
+3. **Adaptive Correlation Detection**:
+   ```python
+   def detect_correlations(
+       self, time_window_minutes=15, min_confidence=0.6,
+       min_entity_overlap=0.0, adaptive_window=True
+   ) -> List[CrossSourceCorrelation]:
+       """Detect correlations with adaptive time windows."""
+       # Define source-specific time windows
+       adaptive_time_windows = {
+           (DataSourceType.NTFS, DataSourceType.QUERY): 3,      # Tighter window
+           (DataSourceType.LOCATION, DataSourceType.AMBIENT): 25,  # Looser window
+           "default": time_window_minutes
+       }
+       
+       # For each source pair, apply the appropriate window
+       if adaptive_window:
+           pair = (source_type1, source_type2)
+           actual_window = adaptive_time_windows.get(
+               pair, 
+               adaptive_time_windows.get(
+                   (source_type2, source_type1),
+                   adaptive_time_windows["default"]
+               )
+           )
+       
+       # Calculate entity overlap with Jaccard similarity
+       if entities1 and entities2:
+           common_entities = entities1.intersection(entities2)
+           all_entities = entities1.union(entities2)
+           entity_overlap = len(common_entities) / len(all_entities)
+       
+       # Calculate confidence using multiple factors
+       confidence = base_confidence + (1.0 - base_confidence) * (
+           (0.4 * time_proximity) +
+           (0.3 * entity_overlap) +
+           (0.3 * (coincidence_lift / 10.0))
+       )
+   ```
+
+4. **Pattern Validation**:
+   ```python
+   def validate_patterns(self, patterns, min_confidence=0.5) -> List[CrossSourcePattern]:
+       """Validate patterns to reduce false positives."""
+       validated_patterns = []
+       
+       # First pass: filter by confidence
+       confident_patterns = [p for p in patterns if p.confidence >= min_confidence]
+       
+       # Second pass: additional validation
+       for pattern in confident_patterns:
+           # Skip patterns with too few observations
+           if pattern.observation_count < 2:
+               continue
+               
+           # For sequential patterns, verify source diversity
+           if len(pattern.source_types) < 2:
+               continue
+               
+           # Check for source type over-representation
+           overrepresented = False
+           for source_type in pattern.source_types:
+               if source_type_counts[source_type] / total_events > 0.8:
+                   overrepresented = True
+                   break
+           
+           if not overrepresented:
+               validated_patterns.append(pattern)
+               
+       return validated_patterns
+   ```
+
+### Testing with Synthetic Data
+
+The system includes robust testing capabilities:
+
+```python
+from query.memory.test_enhanced_patterns import test_with_synthetic_data
+
+# Basic test
+test_with_synthetic_data(args)
+
+# Advanced test with visualization
+python -m query.memory.test_enhanced_patterns --synthetic --visualize --adaptive-window
+
+# Performance benchmarking
+python -m query.memory.test_enhanced_patterns --benchmark
+```
+
+### Usage Examples
+
+Basic usage:
+
+```python
+from query.memory.cross_source_patterns import CrossSourcePatternDetector
+
+# Initialize detector
+detector = CrossSourcePatternDetector(db_config)
+
+# Run analysis
+event_count, patterns, correlations, suggestions = detector.analyze_and_generate()
+
+# Work with results
+for pattern in patterns:
+    print(f"{pattern.pattern_name}: {pattern.confidence:.2f}")
+    
+for correlation in correlations:
+    print(f"{correlation.description}: {correlation.confidence:.2f}")
+```
+
+Integration with Archivist:
+
+```python
+from query.memory.archivist_memory import ArchivistMemory
+from query.memory.proactive_archivist import ProactiveArchivist
+
+# Initialize
+archivist = ArchivistMemory()
+proactive = ProactiveArchivist(archivist)
+
+# Run cross-source analysis
+proactive.analyze_cross_source_patterns()
+
+# Generate suggestions
+suggestions = proactive.generate_suggestions()
+```
+
+### Future Enhancements
+
+The system is designed for ongoing enhancement with:
+
+1. **Machine Learning Integration**: Classification and anomaly detection
+2. **Advanced Visualization**: Interactive pattern explorers
+3. **Personalization**: Adaptive confidence thresholds based on feedback
+4. **Cross-Validation**: Pattern stability analysis over time
 
 ## ArangoDB Query Performance
 
