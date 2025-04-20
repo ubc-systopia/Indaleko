@@ -300,6 +300,83 @@ This implementation replaces the previous NTFS activity collector/recorder (whic
 5. Better integration with the overall Indaleko architecture
 6. More extensible for future storage providers
 
+## Troubleshooting and Testing
+
+### USN Journal Access Testing
+
+The module includes a dedicated testing tool for USN journal access: `direct_usn_test.py`. This tool can help diagnose issues with USN journal access and test different access approaches.
+
+```bash
+# Basic usage - try direct USN journal access
+python direct_usn_test.py --volume C: --direct-access --verbose
+
+# Check USN journal status with fsutil
+python direct_usn_test.py --volume C: --fsutil --verbose
+
+# Create test files to generate USN activity
+python direct_usn_test.py --volume C: --create-test-files --direct-access
+
+# Try using the foo.py implementation directly
+python direct_usn_test.py --volume C: --use-foo --verbose
+
+# Try using the bridge approach (indirect)
+python direct_usn_test.py --volume C: --verbose
+
+# Try using the usn_journal module
+python direct_usn_test.py --volume C: --use-module --verbose
+```
+
+#### Common Issues
+
+1. **Access Denied**: The most common issue when accessing the USN journal. This typically happens when:
+   - Script is not running with administrative privileges
+   - Using GENERIC_READ instead of FILE_READ_DATA for volume access
+   - USN journal is disabled on the volume
+   
+2. **Solution for Access Denied**:
+   - Run the script as Administrator (right-click, Run as Administrator)
+   - Use FILE_READ_DATA (0x0001) access flag instead of GENERIC_READ (0x80000000)
+   - Ensure the USN journal is enabled: `fsutil usn createjournal m=1000 a=100 C:`
+
+3. **Invalid USN Journal ID**: This can happen if the journal ID is not correctly identified.
+   - Use fsutil to verify the journal ID: `fsutil usn queryjournal C:`
+   - Pass the journal ID explicitly if needed
+
+4. **No Records Found**: This can happen if:
+   - There hasn't been any activity since the starting USN
+   - The starting USN is beyond the current journal range
+   - The USN journal has been reset
+
+### Debugging the USN Journal Directly
+
+You can use `fsutil` directly to query USN journal information:
+
+```batch
+:: Check if the USN journal is enabled
+fsutil usn queryjournal C:
+
+:: Create a USN journal if it doesn't exist (run as Administrator)
+fsutil usn createjournal m=1000 a=100 C:
+
+:: List USN journal records (shows raw data)
+fsutil usn enumdata 1 0 1 C:
+
+:: Dump USN journal records to a file
+fsutil usn readjournal C: csv > usn_dump.csv
+```
+
+### Multiple Access Strategies
+
+The implementation includes multiple strategies for accessing the USN journal:
+
+1. **Direct Access**: Uses FILE_READ_DATA access flag with DeviceIoControl
+2. **Unprivileged Access**: Falls back to FSCTL_READ_UNPRIVILEGED_USN_JOURNAL for non-admin access
+3. **Module-based Access**: Uses the internal usn_journal.py module
+4. **Bridge-based Access**: Uses a bridge script to call the reference implementation
+5. **Direct Import**: Directly imports the reference implementation
+
+In production, the implementation prioritizes Direct Access for the best performance and reliability, with fallbacks to ensure the system continues to function even if optimal access is not available.
+
 ## See Also
 
 - Other storage providers: Dropbox, OneDrive, Google Drive (TBD)

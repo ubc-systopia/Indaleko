@@ -37,9 +37,12 @@ python-magic>=0.4.27
 matplotlib>=3.8.0
 numpy>=1.24.0
 pandas>=2.0.0
+pytest>=6.0
+lazy_import>=0.2.2
 
 [:platform_system == "Windows"]
 winsdk==1.0.0b10
+win32more==0.5.10
 
 [dev]
 black
