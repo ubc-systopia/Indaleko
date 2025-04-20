@@ -18,6 +18,23 @@ set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 REM Set INDALEKO_ROOT environment variable
 set "INDALEKO_ROOT=%SCRIPT_DIR%"
 
+REM Check for Python virtual environment and activate it
+if exist "%SCRIPT_DIR%\.venv-win32-python3.12\Scripts\activate.bat" (
+  echo Activating Windows Python 3.12 environment
+  call "%SCRIPT_DIR%\.venv-win32-python3.12\Scripts\activate.bat"
+) else if exist "%SCRIPT_DIR%\.venv-win32\Scripts\activate.bat" (
+  echo Activating Windows Python environment
+  call "%SCRIPT_DIR%\.venv-win32\Scripts\activate.bat"
+) else if exist "%SCRIPT_DIR%\.venv\Scripts\activate.bat" (
+  echo Activating Python environment
+  call "%SCRIPT_DIR%\.venv\Scripts\activate.bat"
+) else (
+  echo Warning: No Python virtual environment found. Script may fail if dependencies are missing.
+)
+
+REM Add project root to Python path
+set "PYTHONPATH=%SCRIPT_DIR%;%PYTHONPATH%"
+
 REM Help message function
 if "%1"=="--help" goto :show_help
 goto :main
