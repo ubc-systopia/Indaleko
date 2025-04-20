@@ -65,6 +65,41 @@ This document outlines planned enhancements, features, and improvements for the 
 
 ### Activity Data Collection Expansion
 
+- [x] **NTFS Journal Collection**
+  - ✅ Implement reliable NTFS USN journal collector
+  - ✅ Support timestamp-aware datetime fields for ArangoDB
+  - ✅ Preserve USN journal event details including rename operations
+  - ✅ Add state preservation between runs
+  - ✅ Create JSONL serialization for activities
+  
+- [ ] **NTFS Activity Context Integration**
+  - Add optional activity context association to NTFS activity records
+  - Modify data model to include activity context reference field
+  - Enhance recorder to obtain activity context handle during processing
+  - Create example queries demonstrating cross-context correlations
+  - Add visualization showing NTFS activities in broader context
+
+- [ ] **Cloud Storage Activity Providers**
+  - Implement Dropbox webhook activity collector
+  - Add OneDrive activity tracking via Microsoft Graph API
+  - Create Google Drive activity monitoring
+  - Develop unified view of local and cloud storage activities
+  - Implement cross-provider file relationship tracking
+
+- [ ] **Media Consumption Tracking**
+  - Test YouTube history provider with existing Google OAuth flow
+  - Add Spotify listening activity collection
+  - Implement media metadata extraction and enrichment
+  - Create content recommendation engine based on consumption patterns
+  - Develop cross-media content relationship mapping
+
+- [ ] **Calendar and Social Graph Integration**
+  - Implement Google Calendar integration using OAuth
+  - Add Microsoft Graph calendar integration
+  - Create meeting participant extraction for people entity building
+  - Develop social graph construction from calendar events
+  - Add relationship strength scoring based on meeting frequency
+
 - [ ] **Complete Location Providers**
   - Implement Windows GPS Location collector
   - Add IP-based location provider
@@ -107,11 +142,13 @@ This document outlines planned enhancements, features, and improvements for the 
 
 ### Archivist Enhancements
 
-- [ ] **Advanced Memory Management**
-  - Implement multi-tier memory architecture (short/medium/long-term)
-  - Add "forgetting" mechanisms for irrelevant information
-  - Create memory consolidation processes
-  - Develop context-based memory retrieval
+- [x] **Advanced Memory Management**
+  - ✅ Implement multi-tier memory architecture (hot/warm tiers)
+  - ✅ Add importance-based retention for selective information preservation
+  - ✅ Create aggregation and summarization for older data
+  - ✅ Develop time-decay importance scoring for memory management
+  - [ ] Add "forgetting" mechanisms for cold tier rarely-used information
+  - [ ] Create advanced memory consolidation processes for insights
 
 - [ ] **Personalization Capabilities**
   - Build user preference learning
@@ -202,11 +239,13 @@ This document outlines planned enhancements, features, and improvements for the 
   - Create federated search capabilities
   - Develop cross-node activity correlation
 
-- [ ] **Storage Optimization**
-  - Implement tiered storage management
-  - Add data compression strategies
-  - Create archiving policies
-  - Develop data retention management
+- [x] **Storage Optimization**
+  - ✅ Implement tiered storage management with hot/warm tiers
+  - ✅ Add activity aggregation for warm tier
+  - ✅ Create importance-based retention policies
+  - ✅ Develop automated tier transition management
+  - [ ] Implement cold tier for long-term archival storage
+  - [ ] Add remote storage support for cold tier
 
 ### UI/UX Improvements
 
@@ -289,4 +328,4 @@ When contributing to Indaleko, keep these core values in mind:
 5. **Transparency**: Users should understand how their data is used
 6. **Performance**: Efficient and responsive operation
 
-Last updated: April 19, 2025
+Last updated: April 21, 2025
