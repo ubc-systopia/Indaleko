@@ -78,7 +78,7 @@ The collector follows these core principles:
 
 ### Next Steps
 
-1. **Verify Hot Tier Recorder**: Test the newly implemented NtfsHotTierRecorder with real data in the database
+1. **Verify Hot Tier Recorder**: Test the newly implemented NtfsHotTierRecorder with real data in the database using the verification script
 2. **Correlation Logic**: Add logic to match RENAME_OLD_NAME and RENAME_NEW_NAME pairs in the recorder
 3. **Integration Testing**: Test the full collector/recorder pipeline with real-world scenarios
 4. **Performance Optimization**: Profile and optimize for handling high-volume change events
@@ -149,7 +149,7 @@ python activity/recorders/storage/ntfs/tiered/hot/load_to_database.py --file dat
 
 ### Verification Plan
 
-A comprehensive verification plan has been created to validate the hot tier recorder with real data in a production database. The plan includes:
+A comprehensive verification plan has been created to validate the hot tier recorder with real data in a production database. The verification script (`verify_hot_tier.py`) implements this plan and includes:
 
 1. Database setup and connection verification
 2. Data preparation and loading
@@ -157,6 +157,17 @@ A comprehensive verification plan has been created to validate the hot tier reco
 4. TTL expiration testing
 5. Performance benchmarking
 6. Integration testing with other components
+
+The verification script can be run with:
+```bash
+# On Linux/macOS
+./verify_hot_tier.sh --full-verification
+
+# On Windows
+verify_hot_tier.bat --full-verification
+```
+
+For detailed options, run `./verify_hot_tier.sh --help`
 
 ### Pending Tasks
 
@@ -240,6 +251,16 @@ The project includes a Streamlit-based GUI in the `/utils/gui/streamlit/` direct
 - Lint code: `flake8` or `pylint`
 - Format code: `black .`
 - Build package: `python -m build`
+
+### NTFS Hot Tier Recorder Verification Commands
+- Run full verification: `./verify_hot_tier.sh --full-verification`
+- Find activity files: `./verify_hot_tier.sh --find-files`
+- Load data to database: `./verify_hot_tier.sh --load-data`
+- Verify entity mapping: `./verify_hot_tier.sh --verify-entities`
+- Test TTL expiration: `./verify_hot_tier.sh --test-ttl`
+- Run benchmarks: `./verify_hot_tier.sh --benchmark`
+- Test query capabilities: `./verify_hot_tier.sh --query-test`
+- Simulate operations: `./verify_hot_tier.sh --dry-run --full-verification`
 
 ### Query System Commands
 - Test query tools: `python query/tools/test_tools.py --query "Your query here" --debug`
