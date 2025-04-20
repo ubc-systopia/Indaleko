@@ -160,9 +160,16 @@ class ArchivistMemoryData(BaseModel):
         description="User's preference for different content types (0.0-1.0)"
     )
     
-    continuation_context: Optional[str] = Field(
+    # String-based continuation context for simple continuity hints
+    continuation_context: Dict[str, Any] = Field(
+        default_factory=lambda: {"conversations": []},
+        description="Structured data for conversation continuity across sessions"
+    )
+    
+    # Legacy field for backwards compatibility
+    legacy_continuation_context: Optional[str] = Field(
         default=None,
-        description="Context from the last session for continuity"
+        description="Legacy string-based context from the last session for continuity"
     )
     
     semantic_topics: Dict[str, float] = Field(
@@ -187,6 +194,31 @@ class IndalekoArchivistMemoryModel(IndalekoBaseModel):
     )
 
 
+class ConversationStateMemory(BaseModel):
+    """Memory model for storing conversation state."""
+    
+    conversation_id: str = Field(..., description="The conversation ID")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), 
+                               description="When this memory was created")
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc),
+                               description="When this memory was last updated")
+    summary: str = Field(..., description="Summary of the conversation")
+    key_takeaways: List[str] = Field(default_factory=list, 
+                                   description="Key takeaways from the conversation")
+    topics: List[str] = Field(default_factory=list, 
+                             description="Topics covered in the conversation")
+    entities: List[str] = Field(default_factory=list,
+                              description="Entities identified in the conversation")
+    importance_score: float = Field(default=0.5,
+                                  description="Overall importance of the conversation")
+    message_count: int = Field(default=0,
+                             description="Number of messages in the conversation")
+    context_variables: Dict[str, Any] = Field(default_factory=dict,
+                                           description="Context variables maintained across the conversation")
+    continuation_id: Optional[str] = Field(default=None,
+                                        description="ID for continuing this conversation")
+
+
 class ArchivistMemory:
     """
     Manages persistent memory for the Archivist across sessions.
@@ -194,7 +226,7 @@ class ArchivistMemory:
     """
     
     archivist_memory_uuid_str = "e7b6f4a2-8c5d-4e9c-b3a7-f29d8a6d7e5c"
-    archivist_memory_version = "2025.03.16.01"
+    archivist_memory_version = "2025.04.20.01"  # Updated version for conversation support
     archivist_memory_description = "Archivist persistent memory across sessions"
     
     def __init__(self, db_config: IndalekoDBConfig = IndalekoDBConfig()):
@@ -997,6 +1029,187 @@ class ArchivistMemory:
             reverse=True
         )
         return sorted_insights[:limit]
+        
+    def store_conversation_state(self, conversation_id: str, state_data: Dict[str, Any]) -> str:
+        """
+        Store conversation state information for cross-session continuity.
+        
+        Args:
+            conversation_id: The conversation ID
+            state_data: Data about the conversation state
+            
+        Returns:
+            Continuation ID for retrieving this state later
+        """
+        # Create a continuation ID
+        continuation_id = f"cont_{conversation_id}_{uuid.uuid4().hex[:8]}"
+        
+        # Create conversation state memory with required fields
+        convo_state = {
+            "conversation_id": conversation_id,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "summary": state_data.get("summary", "Conversation with Indaleko Assistant"),
+            "key_takeaways": state_data.get("key_takeaways", []),
+            "topics": state_data.get("topics", []),
+            "entities": state_data.get("entities", []),
+            "importance_score": state_data.get("importance_score", 0.5),
+            "message_count": state_data.get("message_count", 0),
+            "context_variables": state_data.get("context_variables", {}),
+            "continuation_id": continuation_id
+        }
+        
+        # Ensure continuation_context is properly initialized
+        if not hasattr(self.memory, "continuation_context"):
+            self.memory.continuation_context = {"conversations": []}
+        elif isinstance(self.memory.continuation_context, str):
+            # Handle legacy string format - save it and create new dict format
+            legacy_text = self.memory.continuation_context
+            self.memory.legacy_continuation_context = legacy_text
+            self.memory.continuation_context = {"conversations": []}
+        elif self.memory.continuation_context is None:
+            self.memory.continuation_context = {"conversations": []}
+        elif not isinstance(self.memory.continuation_context, dict):
+            # For any other type, convert to dict
+            self.memory.legacy_continuation_context = str(self.memory.continuation_context)
+            self.memory.continuation_context = {"conversations": []}
+        elif "conversations" not in self.memory.continuation_context:
+            # Ensure conversations key exists
+            self.memory.continuation_context["conversations"] = []
+            
+        # Store in memory
+        # First, check if we already have this conversation
+        existing_index = -1
+        conversation_states = self.memory.continuation_context.get("conversations", [])
+        
+        for i, state in enumerate(conversation_states):
+            if state.get("conversation_id") == conversation_id:
+                existing_index = i
+                break
+                
+        # Add or update
+        if existing_index >= 0:
+            conversation_states[existing_index] = convo_state
+        else:
+            conversation_states.append(convo_state)
+            
+        # Update memory
+        self.memory.continuation_context["conversations"] = conversation_states
+        
+        # Save memory
+        self.save_memory()
+        
+        return continuation_id
+        
+    def get_continuation_context(self, continuation_id: str) -> Dict[str, Any]:
+        """
+        Get conversation continuation context.
+        
+        Args:
+            continuation_id: The continuation ID
+            
+        Returns:
+            Dict with continuation context, or empty dict if not found
+        """
+        # Initialize continuation context if not present
+        if not hasattr(self.memory, "continuation_context"):
+            return {}
+            
+        # Handle legacy string format
+        if isinstance(self.memory.continuation_context, str):
+            # If it's a string, we can't search it properly
+            # Convert it to a dict first
+            self.memory.legacy_continuation_context = self.memory.continuation_context
+            self.memory.continuation_context = {"conversations": []}
+            return {}
+            
+        # Look for the continuation
+        conversation_states = self.memory.continuation_context.get("conversations", [])
+        
+        for state in conversation_states:
+            if state.get("continuation_id") == continuation_id:
+                return state
+                
+        return {}
+        
+    def search_memories(self, query: str, max_results: int = 5) -> List[Dict[str, Any]]:
+        """
+        Search for relevant memories based on a query.
+        
+        Args:
+            query: The search query
+            max_results: Maximum number of results to return
+            
+        Returns:
+            List of relevant memories
+        """
+        results = []
+        
+        # Search insights
+        for insight in self.memory.insights:
+            # Simple keyword matching
+            if any(keyword in insight.insight.lower() for keyword in query.lower().split()):
+                results.append({
+                    "memory_id": str(uuid.uuid4()),  # Generate a unique ID
+                    "memory_type": "insight",
+                    "relevance": 0.7,
+                    "summary": insight.insight,
+                    "category": insight.category,
+                    "confidence": insight.confidence
+                })
+                
+        # Search goals
+        for goal in self.memory.long_term_goals:
+            # Simple keyword matching
+            if any(keyword in goal.name.lower() or keyword in goal.description.lower() 
+                  for keyword in query.lower().split()):
+                results.append({
+                    "memory_id": str(uuid.uuid4()),  # Generate a unique ID
+                    "memory_type": "goal",
+                    "relevance": 0.8,
+                    "summary": goal.description,
+                    "name": goal.name,
+                    "progress": goal.progress
+                })
+                
+        # Search patterns
+        for pattern in self.memory.search_patterns:
+            # Simple keyword matching
+            if any(keyword in pattern.description.lower() for keyword in query.lower().split()):
+                results.append({
+                    "memory_id": str(uuid.uuid4()),  # Generate a unique ID
+                    "memory_type": "pattern",
+                    "relevance": 0.6,
+                    "summary": pattern.description,
+                    "pattern_type": pattern.pattern_type,
+                    "frequency": pattern.frequency
+                })
+                
+        # Search conversation history if available
+        if hasattr(self.memory, "continuation_context"):
+            conversation_states = self.memory.continuation_context.get("conversations", [])
+            for state in conversation_states:
+                # Check summary and takeaways
+                summary = state.get("summary", "")
+                takeaways = state.get("key_takeaways", [])
+                
+                if any(keyword in summary.lower() for keyword in query.lower().split()) or \
+                   any(any(keyword in takeaway.lower() for keyword in query.lower().split()) 
+                       for takeaway in takeaways):
+                    results.append({
+                        "memory_id": state.get("conversation_id", str(uuid.uuid4())),
+                        "memory_type": "conversation",
+                        "relevance": 0.9,
+                        "summary": summary,
+                        "key_takeaways": takeaways,
+                        "continuation_id": state.get("continuation_id")
+                    })
+                    
+        # Sort by relevance
+        results.sort(key=lambda x: x.get("relevance", 0), reverse=True)
+        
+        # Limit results
+        return results[:max_results]
 
 
 def main():
