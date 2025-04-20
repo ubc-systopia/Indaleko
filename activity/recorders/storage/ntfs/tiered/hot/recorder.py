@@ -76,6 +76,7 @@ from activity.characteristics import ActivityDataCharacteristics
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 # Import ServiceManager upfront to avoid late binding issues
 from db.service_manager import IndalekoServiceManager
+from activity.recorders.storage.ntfs.activity_context_integration import NtfsActivityContextIntegration
 # pylint: enable=wrong-import-position
 
 
@@ -145,6 +146,12 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             if not kwargs.get("no_db", False):
                 raise  # Only re-raise if we're supposed to connect to the database
         
+        # Initialize activity context integration
+        self._activity_context_integration = NtfsActivityContextIntegration(
+            debug=kwargs.get("debug", False)
+        )
+        self._logger.info(f"Activity context integration available: {self._activity_context_integration.is_context_available()}")
+
         # Add NTFS-specific metadata
         try:
             self._metadata = StorageActivityMetadata(
@@ -774,6 +781,41 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             # Fall back to parent implementation directly
             return super().build_activity_document(activity_data, semantic_attributes)
     
+    def store_activities(self, activities: List[NtfsStorageActivityData]) -> List[uuid.UUID]:
+        """
+        Store multiple activities in the hot tier.
+        
+        Args:
+            activities: List of NTFS activity data to store
+            
+        Returns:
+            List of UUIDs of the stored activities
+        """
+        if not activities:
+            return []
+            
+        activity_ids = []
+        
+        # Batch update activity context if available
+        if (hasattr(self, "_activity_context_integration") and 
+            self._activity_context_integration.is_context_available()):
+            try:
+                self._logger.info(f"Batch updating activity context with {len(activities)} activities")
+                updates = self._activity_context_integration.batch_update_context(activities)
+                self._logger.debug(f"Successfully updated {updates} activities in context")
+            except Exception as e:
+                self._logger.error(f"Error batch updating activity context: {e}")
+        
+        # Store each activity in the database
+        for activity in activities:
+            try:
+                activity_id = self.store_activity(activity)
+                activity_ids.append(activity_id)
+            except Exception as e:
+                self._logger.error(f"Error storing activity: {e}")
+                
+        return activity_ids
+    
     def store_activity(self, activity_data: Union[NtfsStorageActivityData, Dict]) -> uuid.UUID:
         """
         Store an activity in the hot tier.
@@ -787,6 +829,23 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
         # Convert dict to NtfsStorageActivityData if needed
         if isinstance(activity_data, dict):
             activity_data = NtfsStorageActivityData(**activity_data)
+            
+        # Integrate with activity context if available
+        if hasattr(self, "_activity_context_integration") and self._activity_context_integration.is_context_available():
+            # Associate with current activity context
+            try:
+                self._logger.debug(f"Associating activity {activity_data.activity_id} with activity context")
+                enhanced_data = self._activity_context_integration.associate_with_activity_context(activity_data)
+                
+                # If we get a dictionary back, convert it to NtfsStorageActivityData
+                if isinstance(enhanced_data, dict):
+                    # Preserve original activity_id and create new object with context
+                    original_id = activity_data.activity_id
+                    activity_data = NtfsStorageActivityData(**enhanced_data)
+                    activity_data.activity_id = original_id
+            except Exception as e:
+                self._logger.error(f"Error integrating with activity context: {e}")
+                # Continue with original activity data
         
         # Build document with hot tier enhancements
         document = self._build_hot_tier_document(activity_data)
