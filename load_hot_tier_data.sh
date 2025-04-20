@@ -12,29 +12,6 @@
 # Get the directory of this script
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# Set INDALEKO_ROOT environment variable
-export INDALEKO_ROOT="$SCRIPT_DIR"
-
-# Check for Python virtual environment and activate it
-if [ -d "$SCRIPT_DIR/.venv-linux-python3.13" ]; then
-  echo "Activating Linux Python 3.13 environment"
-  source "$SCRIPT_DIR/.venv-linux-python3.13/bin/activate"
-elif [ -d "$SCRIPT_DIR/.venv-linux-python3.12" ]; then
-  echo "Activating Linux Python 3.12 environment"
-  source "$SCRIPT_DIR/.venv-linux-python3.12/bin/activate"
-elif [ -d "$SCRIPT_DIR/.venv-linux" ]; then
-  echo "Activating Linux Python environment"
-  source "$SCRIPT_DIR/.venv-linux/bin/activate"
-elif [ -d "$SCRIPT_DIR/.venv" ]; then
-  echo "Activating Python environment"
-  source "$SCRIPT_DIR/.venv/bin/activate"
-else
-  echo "Warning: No Python virtual environment found. Script may fail if dependencies are missing."
-fi
-
-# Add project root to Python path
-export PYTHONPATH="$SCRIPT_DIR:$PYTHONPATH"
-
 # Help message
 function show_help() {
   echo "Usage: $0 [options]"

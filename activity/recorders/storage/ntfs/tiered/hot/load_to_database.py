@@ -251,18 +251,14 @@ def count_activities_in_jsonl(file_path: str) -> Dict[str, int]:
 
 def setup_database(db_config_path: Optional[str] = None, 
                   simulate: bool = False, 
-                  dry_run: bool = False,
-                  connection_timeout: int = 30,
-                  verify_connection: bool = True) -> Optional[IndalekoDBConfig]:
+                  dry_run: bool = False) -> Optional[IndalekoDBConfig]:
     """
-    Set up database connection.
+    Set up database connection using the Indaleko framework.
     
     Args:
         db_config_path: Optional path to database configuration file
         simulate: If True, don't actually connect to the database
         dry_run: If True, perform a dry run without database modifications
-        connection_timeout: Timeout in seconds for database connection
-        verify_connection: Whether to verify database connectivity
         
     Returns:
         IndalekoDBConfig instance connected to the database or None if simulated
@@ -276,50 +272,13 @@ def setup_database(db_config_path: Optional[str] = None,
     
     print("Setting up database connection...")
     
-    # Look for available configuration
-    config_paths = [
-        # Use provided path first
-        db_config_path,
-        # Then look for common locations
-        os.path.join(os.environ["INDALEKO_ROOT"], "db", "db_config.json"),
-        os.path.join(os.environ["INDALEKO_ROOT"], "db_config.json"),
-        os.path.join(os.environ["INDALEKO_ROOT"], "config", "db_config.json"),
-    ]
-    
-    # Try to find a usable config file
-    config_file = None
-    for path in config_paths:
-        if path and os.path.exists(path):
-            config_file = path
-            print(f"Using database config file: {config_file}")
-            break
-            
-    # Fall back to default localhost configuration if nothing found
-    if config_file is None:
-        print("No database configuration file found, using default localhost configuration")
-    
     try:
-        # Create database configuration
-        db_config = IndalekoDBConfig(config_file=config_file)
-        
-        # Set timeout if not None
-        if connection_timeout is not None and hasattr(db_config, 'connection_timeout'):
-            db_config.connection_timeout = connection_timeout
+        # Create database configuration - the framework handles config file discovery
+        db_config = IndalekoDBConfig(config_file=db_config_path)
         
         # Start the database connection
         db_config.start()
         
-        # Verify actual connectivity (some errors only appear after attempting a query)
-        if verify_connection and hasattr(db_config, 'db'):
-            try:
-                # Try a simple operation to verify connection
-                system_db = db_config.db.database("_system")
-                system_db.properties()
-                print(f"Connection verified to ArangoDB at {db_config.hostname}:{db_config.port}")
-            except Exception as e:
-                print(f"Warning: Connected to ArangoDB but verification failed: {e}")
-                # Don't raise here, as basic connection succeeded
-                
         print(f"Connected to database: {db_config.database}")
         return db_config
     except Exception as e:
@@ -328,12 +287,7 @@ def setup_database(db_config_path: Optional[str] = None,
             print("Continuing with dry run despite database connection error")
             return None
         else:
-            print("Database connection failed. Use --simulate to run without a database connection")
-            print("or --dry-run to continue despite connection errors.")
-            if not input("Would you like to continue in simulation mode? (y/n): ").lower().startswith('y'):
-                raise
-            print("Continuing in simulation mode...")
-            return None
+            raise
 
 
 def create_hot_tier_recorder(db_config: Optional[IndalekoDBConfig], 
@@ -836,8 +790,6 @@ def parse_arguments():
     db_group.add_argument("--db-config", type=str, help="Path to database configuration file")
     db_group.add_argument("--ttl-days", type=int, default=4, help="Number of days to keep data in hot tier")
     db_group.add_argument("--collection", type=str, help="Custom collection name for hot tier")
-    db_group.add_argument("--connection-timeout", type=int, default=30, help="Database connection timeout in seconds")
-    db_group.add_argument("--skip-verify", action="store_true", help="Skip database connection verification")
     
     # Operation modes
     mode_group = parser.add_argument_group('Operation Modes')
@@ -949,9 +901,7 @@ def main():
         db_config = setup_database(
             args.db_config, 
             simulate=args.simulate,
-            dry_run=args.dry_run,
-            connection_timeout=args.connection_timeout,
-            verify_connection=not args.skip_verify
+            dry_run=args.dry_run
         )
         
         # Create hot tier recorder
