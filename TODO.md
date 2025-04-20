@@ -38,6 +38,14 @@ This document outlines planned enhancements, features, and improvements for the 
 
 ### Query System Enhancements
 
+- [ ] **Query Context Integration**
+  - Implement query activity provider for activity context system
+  - Add query-to-context relationship tracking
+  - Create query navigation system based on shared contexts
+  - Build contextual query recommendation engine
+  - Develop visualization of query relationships over time
+  - Implement query backtracking and exploration branching
+
 - [ ] **Advanced Query Pattern Analysis**
   - Create sophisticated analysis of query history using EXPLAIN outputs
   - Generate optimized indexing recommendations based on query patterns
@@ -328,4 +336,4 @@ When contributing to Indaleko, keep these core values in mind:
 5. **Transparency**: Users should understand how their data is used
 6. **Performance**: Efficient and responsive operation
 
-Last updated: April 21, 2025
+Last updated: April 20, 2025
