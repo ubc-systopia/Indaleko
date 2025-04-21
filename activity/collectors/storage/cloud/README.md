@@ -60,6 +60,41 @@ The Google Drive Activity collector monitors changes to files and folders in a u
      ./setup_gdrive_collector.sh
      ```
 
+### Authentication
+
+The Google Drive collector uses a shared OAuth authentication system that can:
+
+1. Use existing credentials from the legacy Google Drive collector (`storage/collectors/cloud/g_drive.py`)
+2. Load OAuth tokens from a token file
+3. Authenticate with a client secrets file
+4. Request new tokens interactively when needed
+
+This allows multiple collectors to share the same authentication credentials, providing a seamless experience for users.
+
+```python
+# The OAuth flow is managed by the GoogleOAuthManager class
+from activity.collectors.storage.cloud.oauth_utils import GoogleOAuthManager
+
+# Create OAuth manager
+oauth_manager = GoogleOAuthManager(
+    credentials_file="path/to/client_secrets.json",
+    token_file="path/to/token.json",
+    scopes=["https://www.googleapis.com/auth/drive.activity.readonly"],
+    debug=True
+)
+
+# Get credentials
+credentials = oauth_manager.load_credentials()
+
+# Get user information
+user_info = oauth_manager.get_user_info()
+print(f"Authenticated as {user_info.get('name')} ({user_info.get('email')})")
+
+# Build API services
+drive_service = oauth_manager.build_service('drive', 'v3')
+activity_service = oauth_manager.build_service('driveactivity', 'v2')
+```
+
 ### Usage
 
 ```bash
@@ -118,6 +153,70 @@ The cloud storage collectors integrate with Indaleko's activity system by:
 2. Classifying activities along multiple dimensions (ambient, consumption, productivity, etc.)
 3. Linking activities to user identities and content entities
 4. Supporting cross-referencing with other activity sources
+
+## Google Drive Activity Recorder
+
+The Google Drive Activity Recorder stores the activities collected by the Google Drive Activity Collector in the Indaleko database. It provides specialized queries and statistics for Google Drive-specific data.
+
+### Usage
+
+```python
+from activity.collectors.storage.cloud.gdrive_activity_collector import GoogleDriveActivityCollector
+from activity.recorders.storage.cloud.gdrive.recorder import GoogleDriveActivityRecorder
+
+# Create collector
+collector = GoogleDriveActivityCollector(debug=True)
+
+# Create recorder
+recorder = GoogleDriveActivityRecorder(
+    collector=collector,
+    debug=True
+)
+
+# Collect activities
+collector.collect_data()
+
+# Convert to storage activities
+storage_activities = [activity.to_storage_activity() for activity in collector.activities]
+
+# Store in database
+activity_ids = recorder.store_activities(storage_activities)
+
+# Get statistical information
+stats = recorder.get_google_drive_specific_statistics()
+print(f"Total activities: {stats.get('total_count', 0)}")
+```
+
+### Special Queries
+
+The recorder provides specialized queries for Google Drive data:
+
+```python
+# Get activities for a specific file
+activities = recorder.get_activities_by_drive_id("file-id-123")
+
+# Get activities for files in a specific folder
+activities = recorder.get_activities_by_folder("folder-id-456")
+
+# Get activities for files with a specific MIME type
+activities = recorder.get_activities_by_mime_type("application/vnd.google-apps.document")
+
+# Get activities for shared files only
+activities = recorder.get_shared_activities()
+```
+
+### Example Script
+
+A complete example script is provided in `examples/gdrive_example.py`:
+
+```bash
+python -m activity.collectors.storage.cloud.examples.gdrive_example \
+    --credentials=/path/to/credentials.json \
+    --days=7 \
+    --limit=20 \
+    --to-db \
+    --debug
+```
 
 ## Troubleshooting
 

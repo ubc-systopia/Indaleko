@@ -265,72 +265,54 @@ class GoogleDriveActivityCollector(CollectorBase):
     
     def _authenticate(self) -> None:
         """Authenticate with Google Drive API."""
-        creds = None
+        from activity.collectors.storage.cloud.oauth_utils import GoogleOAuthManager
         
-        # Check if credentials file exists
-        if not os.path.exists(self.credentials_file):
-            logger.error(f"Credentials file not found at {self.credentials_file}")
-            raise FileNotFoundError(f"Credentials file not found at {self.credentials_file}")
+        # Create OAuth manager
+        oauth_manager = GoogleOAuthManager(
+            credentials_file=self.credentials_file,
+            token_file=self.token_file,
+            scopes=SCOPES,
+            debug=self.debug
+        )
         
-        # Check if token file exists and load it
-        if os.path.exists(self.token_file):
-            try:
-                creds = Credentials.from_authorized_user_info(
-                    json.load(open(self.token_file, 'r')), 
-                    SCOPES
-                )
-                logger.info("Loaded credentials from token file")
-            except Exception as e:
-                logger.error(f"Error loading token file: {e}")
-                creds = None
+        # Get credentials
+        self.credentials = oauth_manager.load_credentials()
+        if not self.credentials:
+            raise RuntimeError("Failed to authenticate: No valid credentials obtained")
         
-        # If no valid credentials, do OAuth flow
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                try:
-                    # Refresh credentials
-                    request = google.auth.transport.requests.Request()
-                    creds.refresh(request)
-                    logger.info("Refreshed expired credentials")
-                except Exception as e:
-                    logger.error(f"Error refreshing credentials: {e}")
-                    creds = None
-            
-            # If still no valid credentials, run OAuth flow
-            if not creds:
-                try:
-                    flow = InstalledAppFlow.from_client_secrets_file(
-                        self.credentials_file, SCOPES
-                    )
-                    creds = flow.run_local_server(port=0)
-                    logger.info("Completed OAuth authentication flow")
-                except Exception as e:
-                    logger.error(f"Error running authentication flow: {e}")
-                    raise RuntimeError(f"Failed to authenticate: {e}")
-            
-            # Save the credentials for the next run
-            try:
-                # Create token directory if it doesn't exist
-                os.makedirs(os.path.dirname(self.token_file), exist_ok=True)
-                
-                with open(self.token_file, 'w') as token:
-                    token.write(creds.to_json())
-                logger.info(f"Saved credentials to {self.token_file}")
-            except Exception as e:
-                logger.error(f"Error saving credentials: {e}")
+        # Get user info if available
+        try:
+            user_info = oauth_manager.get_user_info()
+            if user_info:
+                logger.info(f"Authenticated as {user_info.get('name')} ({user_info.get('email')})")
+        except Exception as e:
+            logger.debug(f"Error getting user info: {e}")
         
-        self.credentials = creds
         logger.info("Authentication successful")
     
     def _init_apis(self) -> None:
         """Initialize Google Drive API clients."""
+        from activity.collectors.storage.cloud.oauth_utils import GoogleOAuthManager
+        
+        # Create OAuth manager
+        oauth_manager = GoogleOAuthManager(
+            credentials_file=self.credentials_file,
+            token_file=self.token_file,
+            scopes=SCOPES,
+            debug=self.debug
+        )
+        
         try:
             # Initialize Drive API client
-            self.drive_service = build('drive', 'v3', credentials=self.credentials)
+            self.drive_service = oauth_manager.build_service('drive', 'v3')
+            if not self.drive_service:
+                raise RuntimeError("Failed to initialize Drive API client")
             logger.info("Initialized Drive API client")
             
             # Initialize Drive Activity API client
-            self.activity_service = build('driveactivity', 'v2', credentials=self.credentials)
+            self.activity_service = oauth_manager.build_service('driveactivity', 'v2')
+            if not self.activity_service:
+                raise RuntimeError("Failed to initialize Drive Activity API client")
             logger.info("Initialized Drive Activity API client")
         except Exception as e:
             logger.error(f"Error initializing API clients: {e}")
@@ -338,6 +320,8 @@ class GoogleDriveActivityCollector(CollectorBase):
     
     def _get_user_info(self, actor: Dict[str, Any]) -> GDriveUserInfo:
         """Extract user information from actor data."""
+        from activity.collectors.storage.cloud.oauth_utils import GoogleOAuthManager
+        
         user_id = None
         email = None
         display_name = None
@@ -354,23 +338,33 @@ class GoogleDriveActivityCollector(CollectorBase):
                 # Try to get additional user info from People API
                 if self.credentials and user_id != 'unknown':
                     try:
-                        people_service = build('people', 'v1', credentials=self.credentials)
-                        profile = people_service.people().get(
-                            resourceName=f'people/{user_id}',
-                            personFields='emailAddresses,names,photos'
-                        ).execute()
+                        # Create OAuth manager
+                        oauth_manager = GoogleOAuthManager(
+                            credentials_file=self.credentials_file,
+                            token_file=self.token_file,
+                            scopes=SCOPES,
+                            debug=self.debug
+                        )
                         
-                        # Extract email
-                        if 'emailAddresses' in profile and profile['emailAddresses']:
-                            email = profile['emailAddresses'][0].get('value')
-                        
-                        # Extract display name
-                        if 'names' in profile and profile['names']:
-                            display_name = profile['names'][0].get('displayName')
-                        
-                        # Extract photo URL
-                        if 'photos' in profile and profile['photos']:
-                            photo_url = profile['photos'][0].get('url')
+                        # Get People API service
+                        people_service = oauth_manager.build_service('people', 'v1')
+                        if people_service:
+                            profile = people_service.people().get(
+                                resourceName=f'people/{user_id}',
+                                personFields='emailAddresses,names,photos'
+                            ).execute()
+                            
+                            # Extract email
+                            if 'emailAddresses' in profile and profile['emailAddresses']:
+                                email = profile['emailAddresses'][0].get('value')
+                            
+                            # Extract display name
+                            if 'names' in profile and profile['names']:
+                                display_name = profile['names'][0].get('displayName')
+                            
+                            # Extract photo URL
+                            if 'photos' in profile and profile['photos']:
+                                photo_url = profile['photos'][0].get('url')
                     except Exception as e:
                         logger.debug(f"Error getting user details: {e}")
             
@@ -848,16 +842,25 @@ class GoogleDriveActivityCollector(CollectorBase):
             
             # If direct DB writing is enabled, write to database
             if self.direct_to_db:
-                # Import late to avoid circular import
-                from activity.recorders.storage.cloud.gdrive.recorder import GoogleDriveActivityRecorder
-                
-                # Create recorder
-                recorder = GoogleDriveActivityRecorder(collector=self)
-                
-                # Store activities
-                recorder.store_activities(storage_activities)
-                
-                logger.info(f"Stored {len(self.activities)} activities to database")
+                try:
+                    # Import late to avoid circular import
+                    from activity.recorders.storage.cloud.gdrive.recorder import GoogleDriveActivityRecorder
+                    
+                    # Create recorder
+                    recorder = GoogleDriveActivityRecorder(
+                        collector=self,
+                        auto_connect=True,
+                        debug=self.debug
+                    )
+                    
+                    # Store activities
+                    recorder.store_activities(storage_activities)
+                    
+                    logger.info(f"Stored {len(self.activities)} activities to database")
+                except ImportError as e:
+                    logger.error(f"Recorder not found: {e}. Make sure activity/recorders/storage/cloud/gdrive/recorder.py exists")
+                except Exception as e:
+                    logger.error(f"Error storing activities in database: {e}")
         except Exception as e:
             logger.error(f"Error storing activities: {e}")
             return False
@@ -872,33 +875,15 @@ class GoogleDriveActivityCollector(CollectorBase):
     def get_collector_characteristics(self) -> List[ActivityDataCharacteristics]:
         """Get characteristics of this collector."""
         logger.debug("Getting collector characteristics")
-        # Create a list of ActivityDataCharacteristics
-        characteristics = [
-            ActivityDataCharacteristics(
-                Name="name",
-                Value=self.get_collector_name()
-            ),
-            ActivityDataCharacteristics(
-                Name="uuid",
-                Value=str(self.get_provider_id())
-            ),
-            ActivityDataCharacteristics(
-                Name="type",
-                Value="storage"
-            ),
-            ActivityDataCharacteristics(
-                Name="platform",
-                Value="Google Drive"
-            ),
-            ActivityDataCharacteristics(
-                Name="incremental",
-                Value=True
-            ),
-            ActivityDataCharacteristics(
-                Name="schedulable",
-                Value=True
-            )
-        ]
+        
+        # Initialize characteristics object
+        characteristics = []
+        
+        # Add storage characteristic
+        storage_char = ActivityDataCharacteristics()
+        characteristics.append(storage_char)
+        
+        # Return characteristics
         return characteristics
     
     def get_collector_name(self) -> str:
