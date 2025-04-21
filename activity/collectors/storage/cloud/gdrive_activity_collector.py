@@ -57,6 +57,7 @@ except ImportError:
 
 # pylint: disable=wrong-import-position
 from activity.collectors.base import CollectorBase
+from activity.collectors.storage.data_models.storage_activity_data_model import GoogleDriveStorageActivityData
 from activity.data_model.activity_classification import IndalekoActivityClassification
 from activity.collectors.storage.cloud.data_models.gdrive_activity_model import (
     GDriveActivityData, 

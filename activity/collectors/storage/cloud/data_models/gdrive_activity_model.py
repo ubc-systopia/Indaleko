@@ -39,7 +39,13 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from activity.data_model.activity_classification import IndalekoActivityClassification
-from activity.data_model.activity import IndalekoStorageActivityData
+from activity.collectors.storage.data_models.storage_activity_data_model import (
+    GoogleDriveStorageActivityData,
+    CloudStorageActivityData,
+    StorageActivityType,
+    StorageProviderType,
+    StorageItemType
+)
 from data_models.base import IndalekoBaseModel
 from pydantic import Field, field_validator
 
@@ -219,83 +225,80 @@ class GDriveActivityData(IndalekoBaseModel):
             return v.replace(tzinfo=timezone.utc)
         return v
     
-    def to_storage_activity(self) -> IndalekoStorageActivityData:
-        """Convert to a standardized Indaleko storage activity."""
-        activity_data = IndalekoStorageActivityData(
-            # Core fields
-            ObjectIdentifier=uuid.uuid4(),
-            Origin=str(uuid.UUID("3e7d8f29-7c73-41c5-b3d4-1a9b42567890")),  # Google Drive Collector UUID
-            Timestamp=self.timestamp,
+    def to_storage_activity(self) -> GoogleDriveStorageActivityData:
+        """Convert to a standardized Google Drive storage activity."""
+        # Map activity type
+        storage_activity_type = StorageActivityType.OTHER
+        if self.activity_type == GDriveActivityType.CREATE:
+            storage_activity_type = StorageActivityType.CREATE
+        elif self.activity_type == GDriveActivityType.EDIT:
+            storage_activity_type = StorageActivityType.MODIFY
+        elif self.activity_type == GDriveActivityType.DELETE:
+            storage_activity_type = StorageActivityType.DELETE
+        elif self.activity_type == GDriveActivityType.MOVE:
+            storage_activity_type = StorageActivityType.MOVE
+        elif self.activity_type == GDriveActivityType.RENAME:
+            storage_activity_type = StorageActivityType.RENAME
+        elif self.activity_type == GDriveActivityType.SHARE:
+            storage_activity_type = StorageActivityType.SHARE
+        elif self.activity_type == GDriveActivityType.DOWNLOAD:
+            storage_activity_type = StorageActivityType.DOWNLOAD
+        elif self.activity_type == GDriveActivityType.VIEW:
+            storage_activity_type = StorageActivityType.READ
+        elif self.activity_type == GDriveActivityType.TRASH:
+            storage_activity_type = StorageActivityType.TRASH
+        elif self.activity_type == GDriveActivityType.RESTORE:
+            storage_activity_type = StorageActivityType.RESTORE
+        elif self.activity_type == GDriveActivityType.COPY:
+            storage_activity_type = StorageActivityType.COPY
+        
+        # Map item type
+        item_type = StorageItemType.FILE
+        if self.file.file_type == GDriveFileType.FOLDER:
+            item_type = StorageItemType.DIRECTORY
+        
+        # Create storage activity
+        return GoogleDriveStorageActivityData(
+            # Core fields from BaseStorageActivityData
+            activity_id=uuid.uuid4(),
+            timestamp=self.timestamp,
+            activity_type=storage_activity_type,
+            item_type=item_type,
+            file_name=self.file.name,
+            file_path=f"gdrive://{self.file.file_id}",
+            file_id=self.file.file_id,
+            provider_type=StorageProviderType.GOOGLE_DRIVE,
+            provider_id=uuid.UUID("3e7d8f29-7c73-41c5-b3d4-1a9b42567890"),  # Google Drive Collector UUID
+            user_id=self.user.user_id,
+            user_name=self.user.display_name or self.user.email,
+            previous_file_name=self.previous_file_name,
             
-            # Activity type mapping
-            Access={
-                GDriveActivityType.VIEW: True,
-                GDriveActivityType.DOWNLOAD: True,
-            }.get(self.activity_type, False),
-            
-            Create={
-                GDriveActivityType.CREATE: True,
-                GDriveActivityType.COPY: True,
-            }.get(self.activity_type, False),
-            
-            Delete={
-                GDriveActivityType.DELETE: True,
-                GDriveActivityType.TRASH: True,
-            }.get(self.activity_type, False),
-            
-            Modify={
-                GDriveActivityType.EDIT: True,
-                GDriveActivityType.RENAME: True,
-                GDriveActivityType.COMMENT: True,
-            }.get(self.activity_type, False),
-            
-            Move=self.activity_type == GDriveActivityType.MOVE,
-            Restore=self.activity_type == GDriveActivityType.RESTORE,
-            
-            # File info
-            URI=f"gdrive://{self.file.file_id}",
-            Name=self.file.name,
-            
-            # Additional fields mapped to attributes
-            Attributes={
+            # Additional attributes
+            attributes={
                 "gdrive_activity_id": self.activity_id,
                 "gdrive_activity_type": self.activity_type,
-                "gdrive_file_id": self.file.file_id,
                 "gdrive_file_type": self.file.file_type,
                 "gdrive_mime_type": self.file.mime_type,
-                "gdrive_user_id": self.user.user_id,
                 "gdrive_user_email": self.user.email,
-                "gdrive_web_view_link": self.file.web_view_link,
                 "gdrive_parent_folder_id": self.file.parent_folder_id,
                 "gdrive_parent_folder_name": self.file.parent_folder_name,
-            }
-        )
-        
-        # Add rename info if available
-        if self.previous_file_name:
-            activity_data.Attributes["previous_name"] = self.previous_file_name
-        
-        # Add move info if available
-        if self.destination_folder_id:
-            activity_data.Attributes["destination_folder_id"] = self.destination_folder_id
-            if self.destination_folder_name:
-                activity_data.Attributes["destination_folder_name"] = self.destination_folder_name
-        
-        # Add comment info if available
-        if self.comment_id:
-            activity_data.Attributes["comment_id"] = self.comment_id
-            if self.comment_content:
-                activity_data.Attributes["comment_content"] = self.comment_content
-        
-        # Add sharing info if available
-        if self.shared_with:
-            activity_data.Attributes["shared_with"] = [user.email for user in self.shared_with if user.email]
+            },
             
-        # Add classification if available
-        if self.activity_classification:
-            activity_data.Classification = self.activity_classification
-        
-        return activity_data
+            # CloudStorageActivityData fields
+            cloud_item_id=self.file.file_id,
+            cloud_parent_id=self.file.parent_folder_id,
+            shared=self.file.shared,
+            web_url=self.file.web_view_link,
+            mime_type=self.file.mime_type,
+            size=self.file.size,
+            is_directory=self.file.file_type == GDriveFileType.FOLDER,
+            created_time=self.file.created_time,
+            modified_time=self.file.modified_time,
+            
+            # GoogleDriveStorageActivityData fields
+            parents=[self.file.parent_folder_id] if self.file.parent_folder_id else None,
+            version=self.file.version
+        )
     
     class Config:
         """Sample configuration for the data model."""
