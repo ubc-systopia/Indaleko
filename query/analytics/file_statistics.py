@@ -60,25 +60,9 @@ class FileStatistics:
         Args:
             db_config: Optional database configuration. If not provided, a new one will be created.
         """
-        try:
-            self.db_config = db_config or IndalekoDBConfig()
-            self.db = self.db_config.db
-            logger.info("FileStatistics initialized with database connection")
-            
-            # Check if the Objects collection exists
-            collections = self.db.collections()
-            collection_names = [c['name'] for c in collections]
-            self.has_objects_collection = 'Objects' in collection_names
-            
-            if not self.has_objects_collection:
-                logger.warning("Objects collection not found in database. Analytics will return empty results.")
-                logger.info("Available collections: " + ", ".join(collection_names))
-            else:
-                logger.info("Objects collection found in database.")
-        except Exception as e:
-            logger.error(f"Error initializing FileStatistics: {e}")
-            self.db = None
-            self.has_objects_collection = False
+        self.db_config = db_config or IndalekoDBConfig()
+        self.db = self.db_config.db
+        logger.info("FileStatistics initialized with database connection")
     
     def count_total_objects(self) -> int:
         """
@@ -89,15 +73,13 @@ class FileStatistics:
         """
         try:
             # First check if the Objects collection exists
-            collections = self.db.collections()
-            collection_names = [c['name'] for c in collections]
-            
-            if 'Objects' not in collection_names:
+            if not hasattr(self, 'has_objects_collection') or not self.has_objects_collection:
                 logger.warning("Objects collection not found in database")
                 return 0
                 
-            query = """
-            RETURN COUNT(FOR obj IN Objects RETURN 1)
+            objects_collection_name = IndalekoDBCollections.Indaleko_Object_Collection
+            query = f"""
+            RETURN COUNT(FOR obj IN {objects_collection_name} RETURN 1)
             """
             
             logger.info("Counting total objects in the system")
@@ -125,17 +107,15 @@ class FileStatistics:
         """
         try:
             # First check if the Objects collection exists
-            collections = self.db.collections()
-            collection_names = [c['name'] for c in collections]
-            
-            if 'Objects' not in collection_names:
+            if not hasattr(self, 'has_objects_collection') or not self.has_objects_collection:
                 logger.warning("Objects collection not found in database")
                 return 0
                 
+            objects_collection_name = IndalekoDBCollections.Indaleko_Object_Collection
             # Query to count objects that have a "Type" semantic attribute with value "file"
-            query = """
+            query = f"""
             RETURN COUNT(
-                FOR obj IN Objects
+                FOR obj IN {objects_collection_name}
                 FILTER obj.Record != null 
                 AND obj.Record.Attributes != null
                 AND obj.Record.Attributes.Type != null
@@ -167,18 +147,13 @@ class FileStatistics:
             int: The total count of directories
         """
         try:
-            # First check if the Objects collection exists
-            collections = self.db.collections()
-            collection_names = [c['name'] for c in collections]
-            
-            if 'Objects' not in collection_names:
-                logger.warning("Objects collection not found in database")
-                return 0
+            # Get the collection name from IndalekoDBCollections
+            collection_name = IndalekoDBCollections.Indaleko_Object_Collection
                 
             # Query to count objects that have a "Type" semantic attribute with value "directory"
-            query = """
+            query = f"""
             RETURN COUNT(
-                FOR obj IN Objects
+                FOR obj IN {collection_name}
                 FILTER obj.Record != null 
                 AND obj.Record.Attributes != null
                 AND obj.Record.Attributes.Type != null
@@ -210,18 +185,13 @@ class FileStatistics:
             Dict[str, int]: A dictionary mapping file extensions to counts
         """
         try:
-            # First check if the Objects collection exists
-            collections = self.db.collections()
-            collection_names = [c['name'] for c in collections]
-            
-            if 'Objects' not in collection_names:
-                logger.warning("Objects collection not found in database")
-                return {}
+            # Get the collection name from IndalekoDBCollections
+            collection_name = IndalekoDBCollections.Indaleko_Object_Collection
                 
             # Query to group files by extension and count
-            query = """
+            query = f"""
             LET extensions = (
-                FOR obj IN Objects
+                FOR obj IN {collection_name}
                 FILTER obj.Record != null 
                 AND obj.Record.Attributes != null
                 AND obj.Record.Attributes.Type != null
@@ -238,10 +208,10 @@ class FileStatistics:
             COLLECT extension = ext INTO counts
             SORT COUNT(counts) DESC
             LIMIT 20
-            RETURN {
+            RETURN {{
                 "extension": extension,
                 "count": COUNT(counts)
-            }
+            }}
             """
             
             logger.info("Getting file type distribution")
@@ -266,25 +236,13 @@ class FileStatistics:
             Dict[str, Any]: Statistics about file sizes
         """
         try:
-            # First check if the Objects collection exists
-            collections = self.db.collections()
-            collection_names = [c['name'] for c in collections]
+            # Get the collection name from IndalekoDBCollections
+            collection_name = IndalekoDBCollections.Indaleko_Object_Collection
             
-            if 'Objects' not in collection_names:
-                logger.warning("Objects collection not found in database")
-                return {
-                    "count": 0,
-                    "total_size": 0,
-                    "average_size": 0,
-                    "median_size": 0,
-                    "min_size": 0,
-                    "max_size": 0
-                }
-                
             # Query to calculate file size statistics
-            query = """
+            query = f"""
             LET files = (
-                FOR obj IN Objects
+                FOR obj IN {collection_name}
                 FILTER obj.Record != null 
                 AND obj.Record.Attributes != null
                 AND obj.Record.Attributes.Type != null
@@ -295,7 +253,7 @@ class FileStatistics:
             
             LET count = LENGTH(files)
             
-            RETURN {
+            RETURN {{
                 "count": count,
                 "total_size": count > 0 ? SUM(files) : 0,
                 "average_size": count > 0 ? AVERAGE(files) : 0,
@@ -306,7 +264,7 @@ class FileStatistics:
                 ) : 0,
                 "min_size": count > 0 ? MIN(files) : 0,
                 "max_size": count > 0 ? MAX(files) : 0
-            }
+            }}
             """
             
             logger.info("Getting file size statistics")
@@ -350,19 +308,14 @@ class FileStatistics:
             List[Dict[str, Any]]: The distribution of files by age
         """
         try:
-            # First check if the Objects collection exists
-            collections = self.db.collections()
-            collection_names = [c['name'] for c in collections]
-            
-            if 'Objects' not in collection_names:
-                logger.warning("Objects collection not found in database")
-                return []
+            # Get the collection name from IndalekoDBCollections
+            collection_name = IndalekoDBCollections.Indaleko_Object_Collection
                 
             # Query to group files by age range
-            query = """
+            query = f"""
             LET now = DATE_NOW() / 1000
             LET files = (
-                FOR obj IN Objects
+                FOR obj IN {collection_name}
                 FILTER obj.Record != null 
                 AND obj.Record.Attributes != null
                 AND obj.Record.Attributes.Type != null
@@ -371,22 +324,22 @@ class FileStatistics:
                 
                 LET age_days = FLOOR((now - TO_NUMBER(obj.Record.Attributes.st_mtime)) / (60 * 60 * 24))
                 
-                RETURN {
+                RETURN {{
                     "age_days": age_days,
                     "size": obj.Size || 0
-                }
+                }}
             )
             
             LET age_ranges = [
-                {min: 0, max: 7, label: "Last week"},
-                {min: 8, max: 30, label: "Last month"},
-                {min: 31, max: 90, label: "Last quarter"},
-                {min: 91, max: 365, label: "Last year"},
-                {min: 366, max: 730, label: "1-2 years"},
-                {min: 731, max: 1095, label: "2-3 years"},
-                {min: 1096, max: 1825, label: "3-5 years"},
-                {min: 1826, max: 3650, label: "5-10 years"},
-                {min: 3651, max: 99999, label: "10+ years"}
+                {{min: 0, max: 7, label: "Last week"}},
+                {{min: 8, max: 30, label: "Last month"}},
+                {{min: 31, max: 90, label: "Last quarter"}},
+                {{min: 91, max: 365, label: "Last year"}},
+                {{min: 366, max: 730, label: "1-2 years"}},
+                {{min: 731, max: 1095, label: "2-3 years"}},
+                {{min: 1096, max: 1825, label: "3-5 years"}},
+                {{min: 1826, max: 3650, label: "5-10 years"}},
+                {{min: 3651, max: 99999, label: "10+ years"}}
             ]
             
             FOR range IN age_ranges
@@ -401,12 +354,12 @@ class FileStatistics:
             
             FILTER count > 0
             
-            RETURN {
+            RETURN {{
                 "age_range": range.label,
                 "count": count,
                 "total_size": total_size,
                 "avg_size": count > 0 ? total_size / count : 0
-            }
+            }}
             """
             
             logger.info("Getting file age distribution")
