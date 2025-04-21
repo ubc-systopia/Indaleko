@@ -1211,12 +1211,140 @@ class ArchivistMemory:
                         "key_takeaways": takeaways,
                         "continuation_id": state.get("continuation_id")
                     })
+        
+        # Search query activities if available
+        query_activities = self.memory.continuation_context.get("query_activities", [])
+        for activity in query_activities:
+            # Check query text
+            activity_query = activity.get("query_text", "")
+            
+            if any(keyword in activity_query.lower() for keyword in query.lower().split()):
+                results.append({
+                    "memory_id": activity.get("query_id", str(uuid.uuid4())),
+                    "memory_type": "query_activity",
+                    "relevance": 0.85,
+                    "summary": f"Query: {activity_query}",
+                    "relationship_type": activity.get("relationship_type"),
+                    "timestamp": activity.get("timestamp"),
+                    "result_count": activity.get("result_count")
+                })
                     
         # Sort by relevance
         results.sort(key=lambda x: x.get("relevance", 0), reverse=True)
         
         # Limit results
         return results[:max_results]
+    
+    def import_query_activities(self, activities: List[Any]) -> None:
+        """
+        Import query activities into the Archivist memory.
+        
+        Args:
+            activities: List of query activities
+        """
+        if not HAS_QUERY_CONTEXT:
+            ic("Query Context Integration not available, skipping import.")
+            return
+            
+        # Ensure continuation_context is properly initialized
+        if not hasattr(self.memory, "continuation_context"):
+            self.memory.continuation_context = {"conversations": [], "query_activities": []}
+        elif isinstance(self.memory.continuation_context, str):
+            # Handle legacy string format - save it and create new dict format
+            legacy_text = self.memory.continuation_context
+            self.memory.legacy_continuation_context = legacy_text
+            self.memory.continuation_context = {"conversations": [], "query_activities": []}
+        elif self.memory.continuation_context is None:
+            self.memory.continuation_context = {"conversations": [], "query_activities": []}
+        elif isinstance(self.memory.continuation_context, dict) and "query_activities" not in self.memory.continuation_context:
+            # Ensure query_activities key exists
+            self.memory.continuation_context["query_activities"] = []
+            
+        # Process each activity
+        query_activities = self.memory.continuation_context.get("query_activities", [])
+        
+        for activity in activities:
+            if isinstance(activity, QueryActivityData):
+                # Convert to dictionary for storage
+                activity_dict = {
+                    "query_id": str(activity.query_id),
+                    "query_text": activity.query_text,
+                    "execution_time": activity.execution_time,
+                    "result_count": activity.result_count,
+                    "relationship_type": activity.relationship_type,
+                    "previous_query_id": str(activity.previous_query_id) if activity.previous_query_id else None,
+                    "timestamp": activity.timestamp.isoformat() if hasattr(activity.timestamp, 'isoformat') else str(activity.timestamp)
+                }
+                
+                # Check if this activity already exists
+                existing = False
+                for i, existing_activity in enumerate(query_activities):
+                    if existing_activity.get("query_id") == activity_dict["query_id"]:
+                        # Update existing activity
+                        query_activities[i] = activity_dict
+                        existing = True
+                        break
+                
+                # Add if not existing
+                if not existing:
+                    query_activities.append(activity_dict)
+        
+        # Update memory with modified activities
+        self.memory.continuation_context["query_activities"] = query_activities
+        
+        # Derive insights from query activities
+        self._derive_query_insights(query_activities)
+        
+        # Save memory
+        self.save_memory()
+    
+    def _derive_query_insights(self, query_activities: List[Dict[str, Any]]) -> None:
+        """
+        Derive insights from query activities.
+        
+        Args:
+            query_activities: List of query activity dictionaries
+        """
+        if not query_activities:
+            return
+            
+        # Count relationship types
+        relationship_counts = {}
+        total_activities = len(query_activities)
+        
+        for activity in query_activities:
+            rel_type = activity.get("relationship_type")
+            if rel_type:
+                relationship_counts[rel_type] = relationship_counts.get(rel_type, 0) + 1
+        
+        # Generate insights based on dominant patterns
+        for rel_type, count in relationship_counts.items():
+            if count / total_activities > 0.25:  # If more than 25% of activities have this relationship
+                # Create appropriate insight based on relationship type
+                if rel_type == "refinement":
+                    self.add_insight(
+                        "query_behavior", 
+                        "User frequently refines queries to narrow down results",
+                        confidence=min(0.5 + (count / total_activities), 0.9)
+                    )
+                elif rel_type == "broadening":
+                    self.add_insight(
+                        "query_behavior", 
+                        "User often broadens queries when results are too specific",
+                        confidence=min(0.5 + (count / total_activities), 0.9)
+                    )
+                elif rel_type == "pivot":
+                    self.add_insight(
+                        "query_behavior", 
+                        "User frequently pivots to related topics during exploration",
+                        confidence=min(0.5 + (count / total_activities), 0.9)
+                    )
+                elif rel_type == "backtrack":
+                    self.add_insight(
+                        "query_behavior", 
+                        "User often backtracks to earlier queries in the exploration",
+                        confidence=min(0.5 + (count / total_activities), 0.9)
+                    )
 
 
 def main():

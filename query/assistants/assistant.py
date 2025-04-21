@@ -48,6 +48,15 @@ try:
 except ImportError:
     HAS_QUERY_CONTEXT = False
 
+# Import Recommendation Integration components if available
+try:
+    from query.context.recommendations.engine import RecommendationEngine
+    from query.context.recommendations.archivist_integration import RecommendationArchivistIntegration
+    from query.tools.recommendation import RecommendationAssistantIntegration
+    HAS_RECOMMENDATIONS = True
+except ImportError:
+    HAS_RECOMMENDATIONS = False
+
 
 class IndalekoAssistant:
     """
@@ -81,7 +90,8 @@ class IndalekoAssistant:
     """
     
     def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4o", 
-                 enable_query_context: bool = True, debug: bool = False):
+                 enable_query_context: bool = True, enable_recommendations: bool = True,
+                 archivist_memory=None, recommendation_engine=None, debug: bool = False):
         """
         Initialize the Indaleko Assistant.
         
@@ -89,6 +99,9 @@ class IndalekoAssistant:
             api_key (Optional[str]): The OpenAI API key. If None, will be loaded from config.
             model (str): The model to use for the assistant.
             enable_query_context (bool): Whether to enable Query Context Integration.
+            enable_recommendations (bool): Whether to enable Recommendation Integration.
+            archivist_memory: Optional existing ArchivistMemory instance.
+            recommendation_engine: Optional existing RecommendationEngine instance.
             debug (bool): Whether to enable debug output.
         """
         self.api_key = api_key if api_key else self._load_api_key()
@@ -107,6 +120,47 @@ class IndalekoAssistant:
             self.query_context_provider = QueryActivityProvider(debug=debug)
             self.query_relationship_detector = QueryRelationshipDetector(debug=debug)
             ic("Query Context Integration enabled for Assistant.")
+        
+        # Initialize Recommendation Integration if available and enabled
+        self.recommendation_engine = recommendation_engine
+        self.archivist_integration = None
+        self.recommendation_integration = None
+        
+        if enable_recommendations and HAS_RECOMMENDATIONS:
+            # Initialize recommendation engine if not provided
+            if not self.recommendation_engine:
+                self.recommendation_engine = RecommendationEngine(debug=debug)
+            
+            # Try to initialize Archivist integration if available
+            try:
+                from query.memory.archivist_memory import ArchivistMemory
+                from query.memory.proactive_archivist import ProactiveArchivist
+                
+                # Use provided archivist_memory or create a new one
+                archivist_memory = archivist_memory or ArchivistMemory()
+                proactive_archivist = ProactiveArchivist(archivist_memory)
+                
+                # Create archivist integration
+                self.archivist_integration = RecommendationArchivistIntegration(
+                    cli_instance=None,  # Not needed for this integration
+                    archivist_memory=archivist_memory,
+                    proactive_archivist=proactive_archivist,
+                    recommendation_engine=self.recommendation_engine,
+                    debug=debug
+                )
+                
+                ic("Archivist Integration enabled for Recommendations.")
+            except ImportError:
+                ic("Archivist Memory not available for Recommendation Integration.")
+            
+            # Create recommendation integration
+            self.recommendation_integration = RecommendationAssistantIntegration(
+                assistant=self,
+                recommendation_engine=self.recommendation_engine,
+                archivist_integration=self.archivist_integration
+            )
+            
+            ic("Recommendation Integration enabled for Assistant.")
         
         # Create or retrieve the assistant
         self._initialize_assistant()
@@ -326,10 +380,9 @@ class IndalekoAssistant:
         
         # Record the query in the activity context system if enabled
         query_activity = None
+        is_query = self._is_likely_query(message_content)
+        
         if hasattr(self, 'query_context_provider') and self.query_context_provider:
-            # First, determine if this is a query (vs. a conversation)
-            is_query = self._is_likely_query(message_content)
-            
             if is_query:
                 # Determine relationship with previous query if available
                 relationship_type = None
@@ -375,6 +428,14 @@ class IndalekoAssistant:
                         memory_type="query_activity",
                         summary=f"Query: {message_content}"
                     )
+        
+        # Update recommendations if this is a query and recommendation integration is enabled
+        if is_query and hasattr(self, 'recommendation_integration') and self.recommendation_integration:
+            # Update conversation context with recommendations
+            self.recommendation_integration.update_conversation_context(
+                conversation_id=conversation_id,
+                current_query=message_content
+            )
         
         # Get the thread ID
         thread_id = conversation.execution_context.get("thread_id")

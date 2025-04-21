@@ -97,6 +97,20 @@ try:
 except ImportError:
     HAS_SEMANTIC_PERFORMANCE = False
 
+# Import query pattern analysis components
+try:
+    from query.cli_query_pattern_integration import register_query_pattern_commands
+    HAS_QUERY_PATTERN_ANALYSIS = True
+except ImportError:
+    HAS_QUERY_PATTERN_ANALYSIS = False
+
+# Import query pattern analysis components
+try:
+    from query.cli_query_pattern_integration import register_query_pattern_commands
+    HAS_QUERY_PATTERN_ANALYSIS = True
+except ImportError:
+    HAS_QUERY_PATTERN_ANALYSIS = False
+
 # pylint: enable=wrong-import-position
 
 
@@ -312,6 +326,13 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 help="Enable semantic performance monitoring features"
             )
             
+            # Add query pattern analysis arguments
+            parser.add_argument(
+                "--query-patterns",
+                action="store_true",
+                help="Enable advanced query pattern analysis and suggestions"
+            )
+            
             # Add Query Context Integration arguments
             parser.add_argument(
                 "--query-context",
@@ -408,6 +429,12 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             self.semantic_performance_integration = register_semantic_performance_cli(self)
             print("Semantic Performance Monitoring enabled. Use /perf, /experiments, or /report to access commands.")
             
+        # Initialize Query Pattern Analysis
+        self.query_pattern_integration = None
+        if HAS_QUERY_PATTERN_ANALYSIS and hasattr(self.args, 'query_patterns') and self.args.query_patterns:
+            self.query_pattern_integration = register_query_pattern_commands(self, self.db_config)
+            print("Query Pattern Analysis enabled. Use /patterns to access commands.")
+            
         # Initialize Query Context Integration
         self.query_context_integration = None
         self.query_navigator = None
@@ -494,6 +521,16 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                                 continue
                             elif command == "/report":
                                 self.semantic_performance_integration.handle_report_command(args.split())
+                                continue
+                                
+                    # Handle Query Pattern Analysis commands
+                    elif user_query.startswith("/patterns"):
+                        if hasattr(self, 'query_pattern_integration') and self.query_pattern_integration:
+                            command_parts = user_query.split(maxsplit=1)
+                            args = command_parts[1].split() if len(command_parts) > 1 else []
+                            result = self.query_pattern_integration.handle_patterns_command(args)
+                            if result:
+                                print(result.message)
                                 continue
                                 
                     # Handle Fire Circle commands

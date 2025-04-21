@@ -38,22 +38,60 @@ from query.memory.archivist_memory import ArchivistMemory
 from query.memory.cli_integration import ArchivistCliIntegration
 from query.memory.proactive_archivist import ProactiveArchivist
 from query.memory.proactive_cli import ProactiveCliIntegration
+
+# Import Query Context Integration if available
+try:
+    from query.context.activity_provider import QueryActivityProvider
+    from query.context.navigation import QueryNavigator
+    from query.context.relationship import QueryRelationshipDetector
+    HAS_QUERY_CONTEXT = True
+except ImportError:
+    HAS_QUERY_CONTEXT = False
+
+# Import Recommendation Engine Integration if available
+try:
+    from query.context.recommendations.engine import RecommendationEngine
+    from query.context.recommendations.archivist_integration import RecommendationArchivistIntegration
+    HAS_RECOMMENDATIONS = True
+except ImportError:
+    HAS_RECOMMENDATIONS = False
 # pylint: enable=wrong-import-position
 
 
-def register_archivist_components(cli_instance, enable_proactive=True):
+def register_archivist_components(cli_instance, enable_proactive=True, enable_recommendations=True):
     """
     Register all Archivist components with the CLI.
     
     Args:
         cli_instance: The CLI instance to register with
         enable_proactive: Whether to enable proactive features
+        enable_recommendations: Whether to enable query recommendations
         
     Returns:
         Dict containing the initialized components
     """
     # Initialize components
     archivist_memory = ArchivistMemory(cli_instance.db_config)
+    
+    # Connect to Query Context Integration if available
+    query_context_provider = None
+    query_navigator = None
+    
+    if HAS_QUERY_CONTEXT:
+        # Check if CLI already has Query Context components
+        if hasattr(cli_instance, 'query_context_integration') and cli_instance.query_context_integration:
+            query_context_provider = cli_instance.query_context_integration
+            
+            # Import recent query activities into Archivist memory
+            if query_context_provider:
+                recent_activities = query_context_provider.get_recent_query_activities(limit=20)
+                if recent_activities:
+                    archivist_memory.import_query_activities(recent_activities)
+        
+        if hasattr(cli_instance, 'query_navigator') and cli_instance.query_navigator:
+            query_navigator = cli_instance.query_navigator
+    
+    # Create memory integration with Query Context awareness
     memory_integration = ArchivistCliIntegration(cli_instance, archivist_memory)
     
     # Initialize database optimizer
@@ -79,6 +117,18 @@ def register_archivist_components(cli_instance, enable_proactive=True):
             proactive_archivist
         )
     
+    # Initialize recommendation components if enabled
+    recommendation_engine = None
+    recommendation_integration = None
+    if enable_recommendations and HAS_RECOMMENDATIONS:
+        recommendation_engine = RecommendationEngine(debug=hasattr(cli_instance, "debug") and cli_instance.debug)
+        recommendation_integration = RecommendationArchivistIntegration(
+            cli_instance,
+            archivist_memory,
+            proactive_archivist,
+            recommendation_engine
+        )
+    
     # Register memory commands
     for cmd, handler in memory_integration.commands.items():
         cli_instance.register_command(cmd, memory_integration.handle_command)
@@ -92,6 +142,10 @@ def register_archivist_components(cli_instance, enable_proactive=True):
         for cmd, handler in proactive_integration.commands.items():
             cli_instance.register_command(cmd, proactive_integration.handle_command)
     
+    # Register recommendation commands if enabled
+    if enable_recommendations and recommendation_integration:
+        recommendation_integration.register_commands()
+    
     # Add help text
     cli_instance.append_help_text("\nArchivist Commands:")
     cli_instance.append_help_text("  /memory              - Show archivist memory commands")
@@ -102,6 +156,10 @@ def register_archivist_components(cli_instance, enable_proactive=True):
     cli_instance.append_help_text("  /topics              - View topics of interest")
     cli_instance.append_help_text("  /strategies          - View effective search strategies")
     cli_instance.append_help_text("  /save                - Save the current memory state")
+    
+    # Add Query Context Integration help text if available
+    if HAS_QUERY_CONTEXT:
+        cli_instance.append_help_text("  /query-insights       - View insights from Query Context Integration")
     
     cli_instance.append_help_text("\nDatabase Optimization Commands:")
     cli_instance.append_help_text("  /optimize            - Show database optimization commands")
@@ -135,18 +193,32 @@ def register_archivist_components(cli_instance, enable_proactive=True):
             "proactive_integration": proactive_integration
         })
     
+    if enable_recommendations and recommendation_integration:
+        result.update({
+            "recommendation_engine": recommendation_engine,
+            "recommendation_integration": recommendation_integration
+        })
+        
+    # Include Query Context components if available
+    if HAS_QUERY_CONTEXT:
+        result.update({
+            "query_context_provider": query_context_provider,
+            "query_navigator": query_navigator
+        })
+    
     return result
 
 
-def register_with_cli(cli_instance, enable_proactive=True):
+def register_with_cli(cli_instance, enable_proactive=True, enable_recommendations=True):
     """
     Register the Archivist with the CLI.
     
     Args:
         cli_instance: The CLI instance to register with
         enable_proactive: Whether to enable proactive features
+        enable_recommendations: Whether to enable query recommendations
         
     Returns:
         The initialized components
     """
-    return register_archivist_components(cli_instance, enable_proactive)
+    return register_archivist_components(cli_instance, enable_proactive, enable_recommendations)

@@ -1,8 +1,5 @@
 """
-Knowledge Base Updating module for Indaleko Archivist.
-
-This module provides functionality for updating the knowledge base
-based on query patterns, user feedback, and system observations.
+Recommendation tools package for Indaleko.
 
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason
@@ -21,14 +18,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from .data_models import (
-    LearningEventDataModel,
-    LearningEventType,
-    KnowledgePatternDataModel,
-    KnowledgePatternType,
-    FeedbackRecordDataModel,
-    FeedbackType
-)
+from query.tools.recommendation.recommendation_tool import RecommendationTool, RecommendationAssistantIntegration
 
-from .knowledge_manager import KnowledgeBaseManager
-from .continuous_learning import ContinuousLearningSystem
+__all__ = ["RecommendationTool", "RecommendationAssistantIntegration"]

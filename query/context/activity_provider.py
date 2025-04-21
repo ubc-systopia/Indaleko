@@ -53,7 +53,7 @@ class QueryActivityProvider:
     """
     
     # Provider ID for query activity context
-    QUERY_CONTEXT_PROVIDER_ID = uuid.UUID("a7b4c3d2-e5f6-47g8-h9i1-j2k3l4m5n6o7")
+    QUERY_CONTEXT_PROVIDER_ID = uuid.UUID("a7b4c3d2-e5f6-4708-b9a1-f2e3d4c5b6a7")
     
     def __init__(self, db_config=None, debug=False):
         """
