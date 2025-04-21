@@ -67,12 +67,12 @@ from activity.collectors.storage.cloud.data_models.gdrive_activity_model import 
     GDriveUserInfo
 )
 from utils.misc.directory_management import indaleko_default_config_dir
-from utils.i_logging import get_logger
+import logging
 
 # pylint: enable=wrong-import-position
 
 # Set up logging
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 # OAuth 2.0 scopes
 SCOPES = [
