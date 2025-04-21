@@ -104,12 +104,12 @@ try:
 except ImportError:
     HAS_QUERY_PATTERN_ANALYSIS = False
 
-# Import query pattern analysis components
+# Import analytics integration
 try:
-    from query.cli_query_pattern_integration import register_query_pattern_commands
-    HAS_QUERY_PATTERN_ANALYSIS = True
+    from query.analytics_integration import register_analytics_commands, add_analytics_arguments
+    HAS_ANALYTICS = True
 except ImportError:
-    HAS_QUERY_PATTERN_ANALYSIS = False
+    HAS_ANALYTICS = False
 
 # pylint: enable=wrong-import-position
 
@@ -345,6 +345,20 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 help="Enable visualization of query paths and relationships"
             )
             
+            # Add analytics integration arguments
+            parser.add_argument(
+                "--analytics",
+                action="store_true",
+                help="Enable analytics capabilities for file statistics"
+            )
+            
+            # Add debug flag
+            parser.add_argument(
+                "--debug", 
+                action="store_true",
+                help="Enable debug output"
+            )
+            
             # Add command subparsers
             subparsers = parser.add_subparsers(
                 dest="command",
@@ -455,6 +469,16 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 print("Query Path Visualization enabled. Use /query-path to visualize query exploration paths.")
             
             print("Query Context Integration enabled. Queries will be recorded as activities.")
+            
+        # Initialize Analytics Integration
+        self.analytics_integration = None
+        if HAS_ANALYTICS and hasattr(self.args, 'analytics') and self.args.analytics:
+            self.analytics_integration = register_analytics_commands(
+                self, 
+                self.db_config, 
+                debug=hasattr(self.args, 'debug') and self.args.debug
+            )
+            print("Analytics Integration enabled. Use /analytics to access file statistics commands.")
 
         while True:
             # Need UPI information about the database
@@ -595,6 +619,17 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                             else:
                                 print("Unknown query path command. Use '/query-path help' for available commands.")
                             
+                            continue
+                            
+                    # Handle Analytics commands
+                    elif user_query.startswith("/analytics"):
+                        if hasattr(self, 'analytics_integration') and self.analytics_integration:
+                            # Extract arguments for the analytics command
+                            args = user_query.split(maxsplit=1)[1] if len(user_query.split()) > 1 else ""
+                            
+                            # Process the analytics command
+                            result = self.analytics_integration.handle_analytics_command(args)
+                            print(result)
                             continue
 
             # Log the query
@@ -757,9 +792,17 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 deduplicate = hasattr(self.args, 'deduplicate') and self.args.deduplicate
                 similarity_threshold = self.args.similarity_threshold if hasattr(self.args, 'similarity_threshold') else 0.85
                 
+                # Use the bind variables from the translated query
+                bind_vars = getattr(translated_query, 'bind_vars', {})
+                
+                # Log the bind variables being used
+                if bind_vars:
+                    print(f"Using bind variables: {bind_vars}")
+                    
                 raw_results = self.query_executor.execute(
                     translated_query.aql_query, 
                     self.db_config, 
+                    bind_vars=bind_vars,
                     collect_performance=collect_perf,
                     deduplicate=deduplicate,
                     similarity_threshold=similarity_threshold
@@ -792,6 +835,18 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             # Update query history
             end_time = datetime.now(timezone.utc)
             time_diference = end_time - start_time
+            
+            # Convert facets to the right format for QueryHistoryData
+            facets_data = facets
+            # Check if facets is a DynamicFacets object and convert to dict
+            if hasattr(facets, 'model_dump'):
+                facets_data = facets.model_dump()
+            
+            # Convert ranked results if needed
+            ranked_data = ranked_results
+            if hasattr(ranked_results, 'model_dump'):
+                ranked_data = ranked_results.model_dump()
+                
             query_history = QueryHistoryData(
                 OriginalQuery=user_query,
                 ParsedResults=parsed_query,
@@ -801,8 +856,8 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 ExecutionPlan=explain_results,
                 RawResults=raw_results,
                 AnalyzedResults=analyzed_results,
-                Facets=facets,
-                RankedResults=ranked_results,
+                Facets=facets_data,
+                RankedResults=ranked_data,
                 StartTimestamp=start_time,
                 EndTimestamp=end_time,
                 ElapsedTime=time_diference.total_seconds(),
@@ -976,11 +1031,36 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         if self.collections_metadata is None:
             return []
         collection_metadata = []
-        for category in categories:
-            metadata = self.collections_metadata.get_collection_metadata(category)
-            if metadata is None:
-                ic(f"Failed to get metadata for category: {category}")
-            collection_metadata.append(metadata)
+        
+        # Check if get_collection_metadata method exists
+        if hasattr(self.collections_metadata, 'get_collection_metadata'):
+            # Use the existing method
+            for category in categories:
+                metadata = self.collections_metadata.get_collection_metadata(category)
+                if metadata is None:
+                    ic(f"Failed to get metadata for category: {category}")
+                else:
+                    collection_metadata.append(metadata)
+        else:
+            # Fallback implementation
+            collections_metadata = getattr(self.collections_metadata, 'collections_metadata', {})
+            for category in categories:
+                if category in collections_metadata:
+                    # Use the metadata from the collections_metadata dictionary
+                    metadata = collections_metadata[category]
+                    collection_metadata.append(metadata)
+                else:
+                    ic(f"Failed to get metadata for category: {category}")
+                    # Create a default metadata object
+                    from data_models.collection_metadata_data_model import IndalekoCollectionMetadataDataModel
+                    default_metadata = IndalekoCollectionMetadataDataModel(
+                        key=category,
+                        Description=f"Collection for {category}",
+                        QueryGuidelines=[f"Search for {category}"],
+                        Schema={}
+                    )
+                    collection_metadata.append(default_metadata)
+                    
         return collection_metadata
 
     def get_query(self) -> str:
@@ -1320,55 +1400,123 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         return schema
 
 
+def add_arguments(parser):
+    """Add arguments to the parser."""
+    # Global options
+    parser.add_argument("--explain", action="store_true", help="Explain query execution plans instead of executing queries")
+    parser.add_argument("--show-plan", action="store_true", help="Show query execution plan before executing the query")
+    parser.add_argument("--perf", action="store_true", help="Collect and display performance metrics for query execution")
+    parser.add_argument("--all-plans", action="store_true", help="Show all possible execution plans when using --explain or --show-plan")
+    parser.add_argument("--max-plans", type=int, default=5, help="Maximum number of plans to show when using --all-plans (default: 5)")
+    parser.add_argument("--verbose", action="store_true", help="Show detailed execution plan information including all plan nodes")
+    parser.add_argument("--deduplicate", action="store_true", help="Enable deduplication of similar results using Jaro-Winkler similarity")
+    parser.add_argument("--similarity-threshold", type=float, default=0.85, help="Threshold for considering items as duplicates (0.0-1.0, default: 0.85)")
+    parser.add_argument("--show-duplicates", action="store_true", help="Show duplicate items in results when using --deduplicate")
+    parser.add_argument("--dynamic-facets", action="store_true", help="Enable enhanced dynamic facets for result exploration")
+    parser.add_argument("--conversational", action="store_true", help="Enable conversational suggestions for search refinement")
+    parser.add_argument("--interactive", action="store_true", help="Enable interactive facet refinement mode")
+    parser.add_argument("--no-color", action="store_true", help="Disable colorized output for query plans and other displays")
+    parser.add_argument("--enhanced-nl", action="store_true", help="Use enhanced natural language understanding for queries")
+    parser.add_argument("--context-aware", action="store_true", help="Enable context-aware queries using query history")
+    parser.add_argument("--archivist", action="store_true", help="Enable the Archivist memory system for maintaining context across sessions")
+    parser.add_argument("--optimizer", action="store_true", help="Enable the database optimizer for analyzing and improving query performance")
+    parser.add_argument("--proactive", action="store_true", help="Enable proactive suggestions based on patterns and context")
+    parser.add_argument("--kb", "--knowledge-base", action="store_true", help="Enable Knowledge Base features for learning from interactions")
+    parser.add_argument("--fc", "--fire-circle", action="store_true", help="Enable Fire Circle features with specialized entity roles")
+    parser.add_argument("--semantic-performance", action="store_true", help="Enable semantic performance monitoring features")
+    parser.add_argument("--query-patterns", action="store_true", help="Enable advanced query pattern analysis and suggestions")
+    parser.add_argument("--query-context", action="store_true", help="Enable Query Context Integration for recording queries as activities")
+    parser.add_argument("--query-visualization", action="store_true", help="Enable visualization of query paths and relationships")
+    parser.add_argument("--analytics", action="store_true", help="Enable analytics capabilities for file statistics")
+    
+    # Add command subparsers
+    subparsers = parser.add_subparsers(dest="command", help="Mode to run the script (batch or interactive)")
+    subparsers.add_parser("interactive", help="Run the query tool in interactive mode")
+    batch_parser = subparsers.add_parser("batch", help="Run the query tool in batch mode")
+    batch_parser.add_argument("batch_input_file", help="The file containing the batch input queries")
+    parser.set_defaults(command="interactive")
+
+
 def main():
     """A CLI based query tool for Indaleko."""
     ic("Starting Indaleko Query CLI")
     
+    # Check if --help flag is provided
+    if "--help" in sys.argv or "-h" in sys.argv:
+        # Display help message without initializing problematic components
+        parser = argparse.ArgumentParser(description="Indaleko Query CLI")
+        add_arguments(parser)
+        parser.print_help()
+        
+        print("\nTIPS:")
+        print("- Use --deduplicate flag for better results using Jaro-Winkler similarity")
+        print("  Example: python -m query.cli --deduplicate --show-duplicates")
+        print("  This will group similar results and reduce information overload.")
+        print("\n- Try the new enhanced natural language capabilities:")
+        print("  Example: python -m query.cli --enhanced-nl --context-aware")
+        print("  This provides more sophisticated query understanding and more accurate results.")
+        print("  The --context-aware flag enables query history tracking for better context.")
+        print("\n- Enable the Archivist memory system to maintain context across sessions:")
+        print("  Example: python -m query.cli --archivist")
+        print("  Use /memory to see available commands for the Archivist.")
+        print("\n- Enable the database optimizer to improve query performance:")
+        print("  Example: python -m query.cli --optimizer")
+        print("  Use /optimize to see available commands for the database optimizer.")
+        print("\n- Try the new proactive features with the Archivist memory system:")
+        print("  Example: python -m query.cli --archivist --proactive")
+        print("  This enables proactive suggestions based on your search patterns.")
+        print("  Use /proactive to see available commands for the proactive features.")
+        
+        print("\n- Try the new Knowledge Base learning features:")
+        print("  Example: python -m query.cli --kb")
+        print("  This enables learning from query interactions to improve future searches.")
+        print("  Use /kb to see available commands for the Knowledge Base features.")
+        
+        print("\n- Try the new Fire Circle integration with specialized entity roles:")
+        print("  Example: python -m query.cli --fc")
+        print("  This enables multi-perspective analysis with Storyteller, Analyst, Critic, and Synthesizer roles.")
+        print("  Use /fc or /firecircle to see available commands for the Fire Circle features.")
+        
+        print("\n- Try the new Semantic Performance Monitoring:")
+        print("  Example: python -m query.cli --semantic-performance")
+        print("  This enables performance monitoring and experiments for semantic extractors.")
+        print("  Use /perf, /experiments, or /report to see available commands.")
+        
+        print("\n- Try the new Query Context Integration:")
+        print("  Example: python -m query.cli --query-context --query-visualization")
+        print("  This records queries as activities in the activity context system and enables visualization.")
+        print("  Use /query-path to visualize and explore your query exploration paths.")
+        
+        print("\n- Try the new Analytics capabilities:")
+        print("  Example: python -m query.cli --analytics")
+        print("  This enables analytical queries for statistics about your indexed files.")
+        print("  Use /analytics to see file counts, distributions, and generate reports.")
+        return
+    
+    # Display normal welcome message for interactive use
     print("\nIndaleko Query CLI")
     print("=================")
     print("Type 'exit' or 'quit' to exit the program.")
-    print("\nTIPS:")
-    print("- Use --deduplicate flag for better results using Jaro-Winkler similarity")
-    print("  Example: python -m query.cli --deduplicate --show-duplicates")
-    print("  This will group similar results and reduce information overload.")
-    print("\n- Try the new enhanced natural language capabilities:")
-    print("  Example: python -m query.cli --enhanced-nl --context-aware")
-    print("  This provides more sophisticated query understanding and more accurate results.")
-    print("  The --context-aware flag enables query history tracking for better context.")
-    print("\n- Enable the Archivist memory system to maintain context across sessions:")
-    print("  Example: python -m query.cli --archivist")
-    print("  Use /memory to see available commands for the Archivist.")
-    print("\n- Enable the database optimizer to improve query performance:")
-    print("  Example: python -m query.cli --optimizer")
-    print("  Use /optimize to see available commands for the database optimizer.")
-    print("\n- Try the new proactive features with the Archivist memory system:")
-    print("  Example: python -m query.cli --archivist --proactive")
-    print("  This enables proactive suggestions based on your search patterns.")
-    print("  Use /proactive to see available commands for the proactive features.")
     
-    print("\n- Try the new Knowledge Base learning features:")
-    print("  Example: python -m query.cli --kb")
-    print("  This enables learning from query interactions to improve future searches.")
-    print("  Use /kb to see available commands for the Knowledge Base features.")
+    # Run the full CLI with all components
+    debug_mode = '--debug' in sys.argv
     
-    print("\n- Try the new Fire Circle integration with specialized entity roles:")
-    print("  Example: python -m query.cli --fc")
-    print("  This enables multi-perspective analysis with Storyteller, Analyst, Critic, and Synthesizer roles.")
-    print("  Use /fc or /firecircle to see available commands for the Fire Circle features.")
-    
-    print("\n- Try the new Semantic Performance Monitoring:")
-    print("  Example: python -m query.cli --semantic-performance")
-    print("  This enables performance monitoring and experiments for semantic extractors.")
-    print("  Use /perf, /experiments, or /report to see available commands.")
-    
-    print("\n- Try the new Query Context Integration:")
-    print("  Example: python -m query.cli --query-context --query-visualization")
-    print("  This records queries as activities in the activity context system and enables visualization.")
-    print("  Use /query-path to visualize and explore your query exploration paths.\n")
-    
-    IndalekoQueryCLI().run()
-    print("Thank you for using Indaleko Query CLI")
-    print("Have a lovely day!")
+    try:
+        # Create the CLI instance with better error handling
+        cli = IndalekoQueryCLI()
+        
+        # Run the CLI with better error handling
+        cli.run()
+        print("Thank you for using Indaleko Query CLI")
+        print("Have a lovely day!")
+    except Exception as e:
+        print(f"Error initializing Query CLI: {str(e)}")
+        print("Try running with --help for usage information.")
+        
+        # For debugging, print more detailed error information if available
+        if debug_mode:
+            import traceback
+            traceback.print_exc()
 
 
 if __name__ == "__main__":

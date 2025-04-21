@@ -36,7 +36,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from query.query_processing.data_models.query_output import LLMTranslateQueryResponse
-from query.llm_base import IndalekoLLMBase
+from query.utils.llm_connector.llm_base import IndalekoLLMBase
 
 # pylint: enable=wrong-import-position
 
@@ -135,7 +135,7 @@ class OpenAIConnector(IndalekoLLMBase):
             list[str]: The extracted keywords
         """
         prompt = f"Extract {num_keywords} keywords from the following text:\n\n{text}"
-        response = openai.ChatCompletion.create(
+        response = self.client.chat.completions.create(
             model=self.model,
             messages=[
                 {
@@ -145,7 +145,7 @@ class OpenAIConnector(IndalekoLLMBase):
                 {"role": "user", "content": prompt},
             ],
         )
-        keywords = response.choices[0].message["content"].strip().split(",")
+        keywords = response.choices[0].message.content.strip().split(",")
         return [keyword.strip() for keyword in keywords[:num_keywords]]
 
     def classify_text(self, text: str, categories: list[str]) -> str:
@@ -161,7 +161,7 @@ class OpenAIConnector(IndalekoLLMBase):
         """
         categories_str = ", ".join(categories)
         prompt = f"Classify the following text into one of these categories: {categories_str}\n\nText: {text}"
-        response = openai.ChatCompletion.create(
+        response = self.client.chat.completions.create(
             model=self.model,
             messages=[
                 {
@@ -171,7 +171,7 @@ class OpenAIConnector(IndalekoLLMBase):
                 {"role": "user", "content": prompt},
             ],
         )
-        return response.choices[0].message["content"].strip()
+        return response.choices[0].message.content.strip()
 
     def answer_question(
         self, context: str, question: str, schema: dict[str, Any]
@@ -249,3 +249,113 @@ class OpenAIConnector(IndalekoLLMBase):
             },
         )
         return completion
+        
+    def generate_text(
+        self, 
+        prompt: str, 
+        max_tokens: int = 500, 
+        temperature: float = 0.7
+    ) -> str:
+        """
+        Generate text based on the provided prompt.
+
+        Args:
+            prompt (str): The prompt for text generation
+            max_tokens (int): Maximum number of tokens to generate
+            temperature (float): Controls randomness of generation (0.0-1.0)
+
+        Returns:
+            str: The generated text
+        """
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=temperature,
+            max_tokens=max_tokens
+        )
+        return response.choices[0].message.content.strip()
+    
+    def extract_semantic_attributes(
+        self, 
+        text: str, 
+        attr_types: list[str] = None
+    ) -> dict[str, Any]:
+        """
+        Extract semantic attributes from text.
+
+        Args:
+            text (str): The text to extract attributes from
+            attr_types (list[str]): Types of attributes to extract, defaults to 
+                                    ["entities", "keywords", "sentiment", "topics"]
+
+        Returns:
+            dict[str, Any]: Dictionary of extracted attributes
+        """
+        # Default attribute types if none provided
+        if attr_types is None:
+            attr_types = ["entities", "keywords", "sentiment", "topics"]
+        
+        attr_types_str = ", ".join(attr_types)
+        prompt = f"""Extract the following semantic attributes from the text: {attr_types_str}
+        
+For each attribute type, provide relevant information found in the text.
+Format your response as a JSON object with keys matching the requested attribute types.
+
+Text to analyze:
+{text}
+        """
+        
+        # Define a schema for the expected output
+        schema = {
+            "type": "object",
+            "properties": {
+                "entities": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Named entities found in the text"
+                },
+                "keywords": {
+                    "type": "array", 
+                    "items": {"type": "string"},
+                    "description": "Important keywords from the text"
+                },
+                "sentiment": {
+                    "type": "object",
+                    "properties": {
+                        "label": {"type": "string"},
+                        "score": {"type": "number"}
+                    },
+                    "description": "Sentiment analysis of the text"
+                },
+                "topics": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Main topics discussed in the text"
+                }
+            }
+        }
+        
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "You are a semantic analysis assistant."},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0,
+                response_format={"type": "json_object"}
+            )
+            
+            # Parse the JSON response
+            attributes = json.loads(response.choices[0].message.content)
+            
+            # Filter to only include requested attribute types
+            return {k: v for k, v in attributes.items() if k in attr_types}
+        
+        except Exception as e:
+            ic(f"Error extracting semantic attributes: {e}")
+            # Return a minimal valid response
+            return {attr: [] for attr in attr_types}
