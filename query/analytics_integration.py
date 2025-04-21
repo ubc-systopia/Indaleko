@@ -62,8 +62,22 @@ class AnalyticsIntegration:
         
     def _register_commands(self):
         """Register analytics commands with the CLI."""
-        self.cli.register_command("/analytics", self.handle_analytics_command)
-        self.cli.append_help_text("  /analytics           - Run analytics commands (stats, files, types, ages)")
+        # Check if the CLI has the command registration methods
+        if not hasattr(self.cli, 'register_command') or not callable(self.cli.register_command):
+            logger.error("CLI instance doesn't have register_command method")
+            return
+            
+        # Register the analytics command handler
+        try:
+            self.cli.register_command("/analytics", self.handle_analytics_command)
+            logger.info("Registered /analytics command handler")
+            
+            # Add help text if the method exists
+            if hasattr(self.cli, 'append_help_text') and callable(self.cli.append_help_text):
+                self.cli.append_help_text("  /analytics           - Run analytics commands (stats, files, types, ages)")
+                logger.info("Added analytics help text")
+        except Exception as e:
+            logger.error(f"Error registering analytics commands: {str(e)}", exc_info=self.debug)
         
     def handle_analytics_command(self, args_str: str) -> str:
         """

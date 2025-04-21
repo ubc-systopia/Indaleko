@@ -149,6 +149,9 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             api_key=self.openai_key,
             model="gpt-4o-mini",
         )
+        
+        # Initialize a dictionary to store command handlers
+        self.commands = {}
         # Initialize parsers based on args
         use_enhanced = hasattr(self.args, 'enhanced_nl') and self.args.enhanced_nl
         if use_enhanced:
@@ -395,6 +398,35 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         if openai_key[-1] == '"' or openai_key[-1] == "'":
             openai_key = openai_key[:-1]
         return openai_key
+        
+    def register_command(self, command: str, handler_function) -> None:
+        """
+        Register a command handler function.
+        
+        Args:
+            command: The command to register (e.g., "/analytics")
+            handler_function: The function to call when the command is invoked
+        """
+        # Make sure we have a commands dictionary
+        if not hasattr(self, 'commands'):
+            self.commands = {}
+            
+        self.commands[command] = handler_function
+        ic(f"Registered command handler for: {command}")
+        
+    def append_help_text(self, text: str) -> None:
+        """
+        Append text to the help message.
+        
+        Args:
+            text: The text to append to the help message
+        """
+        # Make sure we have a help_text list
+        if not hasattr(self, 'help_text'):
+            self.help_text = []
+            
+        self.help_text.append(text)
+        ic(f"Added help text: {text}")
 
     def run(self):
         batch = False
@@ -500,9 +532,23 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 # Reuse the last query if this is just a status check or help request
                 if hasattr(self, 'current_refined_query'):
                     user_query = self.current_refined_query
-                    
-            # Check for Archivist commands
+            
+            # Check for registered commands first (direct command handling)
             if user_query.startswith("/"):
+                command = user_query.split()[0]
+                if hasattr(self, 'commands') and command in self.commands:
+                    # Extract arguments for the command handler
+                    args = user_query.split(maxsplit=1)[1] if len(user_query.split()) > 1 else ""
+                    try:
+                        result = self.commands[command](args)
+                        if result:
+                            print(result)
+                        continue
+                    except Exception as e:
+                        print(f"Error executing command {command}: {str(e)}")
+                        continue
+            
+            # Check for Archivist commands if no direct handler was found
                 # Handle Knowledge Base commands
                 if hasattr(self, 'kb_integration') and self.kb_integration and user_query.startswith(("/kb", "/patterns", "/entities", "/feedback", "/insights")):
                     command_handler = self.kb_integration.commands.get(user_query.split()[0], None)
