@@ -60,9 +60,25 @@ class FileStatistics:
         Args:
             db_config: Optional database configuration. If not provided, a new one will be created.
         """
-        self.db_config = db_config or IndalekoDBConfig()
-        self.db = self.db_config.db
-        logger.info("FileStatistics initialized with database connection")
+        try:
+            self.db_config = db_config or IndalekoDBConfig()
+            self.db = self.db_config.db
+            logger.info("FileStatistics initialized with database connection")
+            
+            # Check if the Objects collection exists
+            collections = self.db.collections()
+            collection_names = [c['name'] for c in collections]
+            self.has_objects_collection = 'Objects' in collection_names
+            
+            if not self.has_objects_collection:
+                logger.warning("Objects collection not found in database. Analytics will return empty results.")
+                logger.info("Available collections: " + ", ".join(collection_names))
+            else:
+                logger.info("Objects collection found in database.")
+        except Exception as e:
+            logger.error(f"Error initializing FileStatistics: {e}")
+            self.db = None
+            self.has_objects_collection = False
     
     def count_total_objects(self) -> int:
         """
@@ -71,16 +87,33 @@ class FileStatistics:
         Returns:
             int: The total count of objects
         """
-        query = """
-        RETURN COUNT(FOR obj IN Objects RETURN 1)
-        """
-        
-        logger.info("Counting total objects in the system")
-        cursor = self.db.aql.execute(query)
-        result = list(cursor)[0]
-        
-        logger.info(f"Total objects found: {result}")
-        return result
+        try:
+            # First check if the Objects collection exists
+            collections = self.db.collections()
+            collection_names = [c['name'] for c in collections]
+            
+            if 'Objects' not in collection_names:
+                logger.warning("Objects collection not found in database")
+                return 0
+                
+            query = """
+            RETURN COUNT(FOR obj IN Objects RETURN 1)
+            """
+            
+            logger.info("Counting total objects in the system")
+            cursor = self.db.aql.execute(query)
+            result = list(cursor)[0]
+            
+            # Ensure the result is an integer
+            if result is None:
+                result = 0
+                
+            logger.info(f"Total objects found: {result}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error counting objects: {e}")
+            return 0
     
     def count_files(self) -> int:
         """
@@ -90,24 +123,41 @@ class FileStatistics:
         Returns:
             int: The total count of files
         """
-        # Query to count objects that have a "Type" semantic attribute with value "file"
-        query = """
-        RETURN COUNT(
-            FOR obj IN Objects
-            FILTER obj.Record != null 
-            AND obj.Record.Attributes != null
-            AND obj.Record.Attributes.Type != null
-            AND obj.Record.Attributes.Type == "file"
-            RETURN 1
-        )
-        """
-        
-        logger.info("Counting files in the system")
-        cursor = self.db.aql.execute(query)
-        result = list(cursor)[0]
-        
-        logger.info(f"Total files found: {result}")
-        return result
+        try:
+            # First check if the Objects collection exists
+            collections = self.db.collections()
+            collection_names = [c['name'] for c in collections]
+            
+            if 'Objects' not in collection_names:
+                logger.warning("Objects collection not found in database")
+                return 0
+                
+            # Query to count objects that have a "Type" semantic attribute with value "file"
+            query = """
+            RETURN COUNT(
+                FOR obj IN Objects
+                FILTER obj.Record != null 
+                AND obj.Record.Attributes != null
+                AND obj.Record.Attributes.Type != null
+                AND obj.Record.Attributes.Type == "file"
+                RETURN 1
+            )
+            """
+            
+            logger.info("Counting files in the system")
+            cursor = self.db.aql.execute(query)
+            result = list(cursor)[0]
+            
+            # Ensure the result is an integer
+            if result is None:
+                result = 0
+                
+            logger.info(f"Total files found: {result}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error counting files: {e}")
+            return 0
     
     def count_directories(self) -> int:
         """
@@ -116,24 +166,41 @@ class FileStatistics:
         Returns:
             int: The total count of directories
         """
-        # Query to count objects that have a "Type" semantic attribute with value "directory"
-        query = """
-        RETURN COUNT(
-            FOR obj IN Objects
-            FILTER obj.Record != null 
-            AND obj.Record.Attributes != null
-            AND obj.Record.Attributes.Type != null
-            AND obj.Record.Attributes.Type == "directory"
-            RETURN 1
-        )
-        """
-        
-        logger.info("Counting directories in the system")
-        cursor = self.db.aql.execute(query)
-        result = list(cursor)[0]
-        
-        logger.info(f"Total directories found: {result}")
-        return result
+        try:
+            # First check if the Objects collection exists
+            collections = self.db.collections()
+            collection_names = [c['name'] for c in collections]
+            
+            if 'Objects' not in collection_names:
+                logger.warning("Objects collection not found in database")
+                return 0
+                
+            # Query to count objects that have a "Type" semantic attribute with value "directory"
+            query = """
+            RETURN COUNT(
+                FOR obj IN Objects
+                FILTER obj.Record != null 
+                AND obj.Record.Attributes != null
+                AND obj.Record.Attributes.Type != null
+                AND obj.Record.Attributes.Type == "directory"
+                RETURN 1
+            )
+            """
+            
+            logger.info("Counting directories in the system")
+            cursor = self.db.aql.execute(query)
+            result = list(cursor)[0]
+            
+            # Ensure the result is an integer
+            if result is None:
+                result = 0
+                
+            logger.info(f"Total directories found: {result}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error counting directories: {e}")
+            return 0
     
     def get_file_type_distribution(self) -> Dict[str, int]:
         """
@@ -142,41 +209,54 @@ class FileStatistics:
         Returns:
             Dict[str, int]: A dictionary mapping file extensions to counts
         """
-        # Query to group files by extension and count
-        query = """
-        LET extensions = (
-            FOR obj IN Objects
-            FILTER obj.Record != null 
-            AND obj.Record.Attributes != null
-            AND obj.Record.Attributes.Type != null
-            AND obj.Record.Attributes.Type == "file"
-            AND obj.Label != null
+        try:
+            # First check if the Objects collection exists
+            collections = self.db.collections()
+            collection_names = [c['name'] for c in collections]
             
-            LET extension = REGEX_EXTRACT(obj.Label, '\\.([^.]+)$', 1)
-            FILTER extension != null AND LENGTH(extension) > 0
+            if 'Objects' not in collection_names:
+                logger.warning("Objects collection not found in database")
+                return {}
+                
+            # Query to group files by extension and count
+            query = """
+            LET extensions = (
+                FOR obj IN Objects
+                FILTER obj.Record != null 
+                AND obj.Record.Attributes != null
+                AND obj.Record.Attributes.Type != null
+                AND obj.Record.Attributes.Type == "file"
+                AND obj.Label != null
+                
+                LET extension = REGEX_EXTRACT(obj.Label, '\\.([^.]+)$', 1)
+                FILTER extension != null AND LENGTH(extension) > 0
+                
+                RETURN LOWER(extension)
+            )
             
-            RETURN LOWER(extension)
-        )
-        
-        FOR ext IN extensions
-        COLLECT extension = ext INTO counts
-        SORT COUNT(counts) DESC
-        LIMIT 20
-        RETURN {
-            "extension": extension,
-            "count": COUNT(counts)
-        }
-        """
-        
-        logger.info("Getting file type distribution")
-        cursor = self.db.aql.execute(query)
-        results = list(cursor)
-        
-        # Convert to dictionary
-        distribution = {item["extension"]: item["count"] for item in results}
-        
-        logger.info(f"Found {len(distribution)} different file types")
-        return distribution
+            FOR ext IN extensions
+            COLLECT extension = ext INTO counts
+            SORT COUNT(counts) DESC
+            LIMIT 20
+            RETURN {
+                "extension": extension,
+                "count": COUNT(counts)
+            }
+            """
+            
+            logger.info("Getting file type distribution")
+            cursor = self.db.aql.execute(query)
+            results = list(cursor)
+            
+            # Convert to dictionary
+            distribution = {item["extension"]: item["count"] for item in results}
+            
+            logger.info(f"Found {len(distribution)} different file types")
+            return distribution
+            
+        except Exception as e:
+            logger.error(f"Error getting file type distribution: {e}")
+            return {}
     
     def get_file_size_statistics(self) -> Dict[str, Any]:
         """
@@ -185,52 +265,82 @@ class FileStatistics:
         Returns:
             Dict[str, Any]: Statistics about file sizes
         """
-        # Query to calculate file size statistics
-        query = """
-        LET files = (
-            FOR obj IN Objects
-            FILTER obj.Record != null 
-            AND obj.Record.Attributes != null
-            AND obj.Record.Attributes.Type != null
-            AND obj.Record.Attributes.Type == "file"
-            AND obj.Size != null
-            RETURN obj.Size
-        )
-        
-        LET sorted_sizes = (
-            FOR size IN files
-            SORT size
-            RETURN size
-        )
-        
-        LET count = LENGTH(files)
-        LET total_size = SUM(files)
-        LET avg_size = AVERAGE(files)
-        LET min_size = MIN(files)
-        LET max_size = MAX(files)
-        
-        LET median_size = (
-            count == 0 ? 0 :
-            count % 2 == 1 ? NTH(sorted_sizes, FLOOR(count / 2)) :
-            (NTH(sorted_sizes, (count / 2) - 1) + NTH(sorted_sizes, count / 2)) / 2
-        )
-        
-        RETURN {
-            "count": count,
-            "total_size": total_size,
-            "average_size": avg_size,
-            "median_size": median_size,
-            "min_size": min_size,
-            "max_size": max_size
-        }
-        """
-        
-        logger.info("Getting file size statistics")
-        cursor = self.db.aql.execute(query)
-        result = list(cursor)[0]
-        
-        logger.info(f"File size statistics calculated")
-        return result
+        try:
+            # First check if the Objects collection exists
+            collections = self.db.collections()
+            collection_names = [c['name'] for c in collections]
+            
+            if 'Objects' not in collection_names:
+                logger.warning("Objects collection not found in database")
+                return {
+                    "count": 0,
+                    "total_size": 0,
+                    "average_size": 0,
+                    "median_size": 0,
+                    "min_size": 0,
+                    "max_size": 0
+                }
+                
+            # Query to calculate file size statistics
+            query = """
+            LET files = (
+                FOR obj IN Objects
+                FILTER obj.Record != null 
+                AND obj.Record.Attributes != null
+                AND obj.Record.Attributes.Type != null
+                AND obj.Record.Attributes.Type == "file"
+                AND obj.Size != null
+                RETURN obj.Size
+            )
+            
+            LET count = LENGTH(files)
+            
+            RETURN {
+                "count": count,
+                "total_size": count > 0 ? SUM(files) : 0,
+                "average_size": count > 0 ? AVERAGE(files) : 0,
+                "median_size": count > 0 ? (
+                    count % 2 == 1 ? 
+                        NTH(SORTED(files), FLOOR(count / 2)) : 
+                        (NTH(SORTED(files), (count / 2) - 1) + NTH(SORTED(files), count / 2)) / 2
+                ) : 0,
+                "min_size": count > 0 ? MIN(files) : 0,
+                "max_size": count > 0 ? MAX(files) : 0
+            }
+            """
+            
+            logger.info("Getting file size statistics")
+            cursor = self.db.aql.execute(query)
+            result = list(cursor)[0]
+            
+            # Ensure all values are valid numbers
+            default_stats = {
+                "count": 0,
+                "total_size": 0,
+                "average_size": 0,
+                "median_size": 0,
+                "min_size": 0,
+                "max_size": 0
+            }
+            
+            # Replace any None values with 0
+            for key in default_stats:
+                if key not in result or result[key] is None:
+                    result[key] = default_stats[key]
+            
+            logger.info("File size statistics calculated")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error getting file size statistics: {e}")
+            return {
+                "count": 0,
+                "total_size": 0,
+                "average_size": 0,
+                "median_size": 0,
+                "min_size": 0,
+                "max_size": 0
+            }
     
     def get_file_age_distribution(self) -> List[Dict[str, Any]]:
         """
@@ -239,63 +349,76 @@ class FileStatistics:
         Returns:
             List[Dict[str, Any]]: The distribution of files by age
         """
-        # Query to group files by age range
-        query = """
-        LET now = DATE_NOW() / 1000
-        LET files = (
-            FOR obj IN Objects
-            FILTER obj.Record != null 
-            AND obj.Record.Attributes != null
-            AND obj.Record.Attributes.Type != null
-            AND obj.Record.Attributes.Type == "file"
-            AND obj.Record.Attributes.st_mtime != null
+        try:
+            # First check if the Objects collection exists
+            collections = self.db.collections()
+            collection_names = [c['name'] for c in collections]
             
-            LET age_days = FLOOR((now - TO_NUMBER(obj.Record.Attributes.st_mtime)) / (60 * 60 * 24))
+            if 'Objects' not in collection_names:
+                logger.warning("Objects collection not found in database")
+                return []
+                
+            # Query to group files by age range
+            query = """
+            LET now = DATE_NOW() / 1000
+            LET files = (
+                FOR obj IN Objects
+                FILTER obj.Record != null 
+                AND obj.Record.Attributes != null
+                AND obj.Record.Attributes.Type != null
+                AND obj.Record.Attributes.Type == "file"
+                AND obj.Record.Attributes.st_mtime != null
+                
+                LET age_days = FLOOR((now - TO_NUMBER(obj.Record.Attributes.st_mtime)) / (60 * 60 * 24))
+                
+                RETURN {
+                    "age_days": age_days,
+                    "size": obj.Size || 0
+                }
+            )
+            
+            LET age_ranges = [
+                {min: 0, max: 7, label: "Last week"},
+                {min: 8, max: 30, label: "Last month"},
+                {min: 31, max: 90, label: "Last quarter"},
+                {min: 91, max: 365, label: "Last year"},
+                {min: 366, max: 730, label: "1-2 years"},
+                {min: 731, max: 1095, label: "2-3 years"},
+                {min: 1096, max: 1825, label: "3-5 years"},
+                {min: 1826, max: 3650, label: "5-10 years"},
+                {min: 3651, max: 99999, label: "10+ years"}
+            ]
+            
+            FOR range IN age_ranges
+            LET files_in_range = (
+                FOR file IN files
+                FILTER file.age_days >= range.min AND file.age_days <= range.max
+                RETURN file
+            )
+            
+            LET count = LENGTH(files_in_range)
+            LET total_size = SUM(files_in_range[*].size)
+            
+            FILTER count > 0
             
             RETURN {
-                "age_days": age_days,
-                "size": obj.Size || 0
+                "age_range": range.label,
+                "count": count,
+                "total_size": total_size,
+                "avg_size": count > 0 ? total_size / count : 0
             }
-        )
-        
-        LET age_ranges = [
-            {min: 0, max: 7, label: "Last week"},
-            {min: 8, max: 30, label: "Last month"},
-            {min: 31, max: 90, label: "Last quarter"},
-            {min: 91, max: 365, label: "Last year"},
-            {min: 366, max: 730, label: "1-2 years"},
-            {min: 731, max: 1095, label: "2-3 years"},
-            {min: 1096, max: 1825, label: "3-5 years"},
-            {min: 1826, max: 3650, label: "5-10 years"},
-            {min: 3651, max: 99999, label: "10+ years"}
-        ]
-        
-        FOR range IN age_ranges
-        LET files_in_range = (
-            FOR file IN files
-            FILTER file.age_days >= range.min AND file.age_days <= range.max
-            RETURN file
-        )
-        
-        LET count = LENGTH(files_in_range)
-        LET total_size = SUM(files_in_range[*].size)
-        
-        FILTER count > 0
-        
-        RETURN {
-            "age_range": range.label,
-            "count": count,
-            "total_size": total_size,
-            "avg_size": count > 0 ? total_size / count : 0
-        }
-        """
-        
-        logger.info("Getting file age distribution")
-        cursor = self.db.aql.execute(query)
-        results = list(cursor)
-        
-        logger.info(f"File age distribution calculated with {len(results)} ranges")
-        return results
+            """
+            
+            logger.info("Getting file age distribution")
+            cursor = self.db.aql.execute(query)
+            results = list(cursor)
+            
+            logger.info(f"File age distribution calculated with {len(results)} ranges")
+            return results
+            
+        except Exception as e:
+            logger.error(f"Error getting file age distribution: {e}")
+            return []
     
     def generate_report(self, output_dir: str = ".", visualize: bool = True) -> Dict[str, Any]:
         """
