@@ -74,6 +74,16 @@ import logging
 # Set up logging
 logger = logging.getLogger(__name__)
 
+# Configure logging when debug is enabled
+def configure_debug_logging():
+    """Configure logging for debug mode."""
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+    logger.debug("Debug logging enabled for Google Drive Activity Collector")
+
 # OAuth 2.0 scopes
 SCOPES = [
     'https://www.googleapis.com/auth/drive.activity.readonly',
@@ -98,8 +108,7 @@ class GoogleDriveActivityCollector(CollectorBase):
             direct_to_db: Whether to write directly to the database
             debug: Enable debug logging
         """
-        # Initialize base class
-        super().__init__(**kwargs)
+        # Do not call super().__init__() as CollectorBase is an ABC
         
         # Set collector identifier
         self._provider_id = kwargs.get("provider_id", uuid.UUID(GDRIVE_COLLECTOR_UUID))
@@ -125,7 +134,7 @@ class GoogleDriveActivityCollector(CollectorBase):
         # Debug mode
         self.debug = kwargs.get("debug", False)
         if self.debug:
-            logger.setLevel(logging.DEBUG)
+            configure_debug_logging()
         
         # Load configuration
         self.config = self._load_config()
@@ -859,16 +868,37 @@ class GoogleDriveActivityCollector(CollectorBase):
         # For this collector, processing is handled during collection
         return True
     
-    def get_collector_characteristics(self) -> Dict[str, Any]:
+    def get_collector_characteristics(self) -> List[ActivityDataCharacteristics]:
         """Get characteristics of this collector."""
-        return {
-            "name": self.get_collector_name(),
-            "uuid": str(self.get_provider_id()),
-            "type": "storage",
-            "platform": "Google Drive",
-            "incremental": True,
-            "schedulable": True
-        }
+        logger.debug("Getting collector characteristics")
+        # Create a list of ActivityDataCharacteristics
+        characteristics = [
+            ActivityDataCharacteristics(
+                Name="name",
+                Value=self.get_collector_name()
+            ),
+            ActivityDataCharacteristics(
+                Name="uuid",
+                Value=str(self.get_provider_id())
+            ),
+            ActivityDataCharacteristics(
+                Name="type",
+                Value="storage"
+            ),
+            ActivityDataCharacteristics(
+                Name="platform",
+                Value="Google Drive"
+            ),
+            ActivityDataCharacteristics(
+                Name="incremental",
+                Value=True
+            ),
+            ActivityDataCharacteristics(
+                Name="schedulable",
+                Value=True
+            )
+        ]
+        return characteristics
     
     def get_collector_name(self) -> str:
         """Get the name of this collector."""
@@ -878,18 +908,35 @@ class GoogleDriveActivityCollector(CollectorBase):
         """Get the provider ID for this collector."""
         return self._provider_id
     
-    def retrieve_data(self, identifier: str) -> Optional[Dict[str, Any]]:
+    def retrieve_data(self, data_id: uuid.UUID) -> Dict[str, Any]:
         """Retrieve specific data by ID."""
+        logger.debug(f"Retrieving data for ID: {data_id}")
+        # Convert UUID to string if needed
+        identifier = str(data_id)
+        
         # Find activity by ID
         for activity in self.activities:
             if activity.activity_id == identifier:
                 return activity.model_dump()
-        return None
+                
+        # If not found, return empty dict
+        logger.warning(f"Data not found for ID: {data_id}")
+        return {}
     
-    def get_cursor(self) -> Optional[str]:
+    def get_cursor(self, activity_context: uuid.UUID = None) -> uuid.UUID:
         """Get a position cursor for the data."""
-        # Return the last page token as cursor
-        return self.state.get('last_page_token')
+        logger.debug(f"Getting cursor for activity context: {activity_context}")
+        # Return a UUID based on the last page token
+        token = self.state.get('last_page_token')
+        if token:
+            # Create a deterministic UUID from the token
+            namespace = uuid.UUID('3e7d8f29-7c73-41c5-b3d4-1a9b42567890')  # Our collector UUID
+            cursor_uuid = uuid.uuid5(namespace, token)
+        else:
+            # Return a nil UUID if no token
+            cursor_uuid = uuid.UUID('00000000-0000-0000-0000-000000000000')
+            
+        return cursor_uuid
     
     def cache_duration(self) -> int:
         """Report how long data can be cached."""
@@ -957,6 +1004,7 @@ def main():
         kwargs["direct_to_db"] = True
     if args.debug:
         kwargs["debug"] = True
+        configure_debug_logging()
     
     # If full collection requested, reset state
     if args.full:
