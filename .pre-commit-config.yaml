@@ -1,0 +1,46 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        name: Trim trailing whitespace
+        description: This hook removes trailing whitespace from files
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+        name: Fix end of files
+        description: This hook ensures files end with a newline
+      - id: check-yaml
+        name: Check YAML syntax
+        description: This hook checks YAML files for valid syntax
+      - id: check-toml
+        name: Check TOML syntax
+        description: This hook checks TOML files for valid syntax
+      - id: check-added-large-files
+        name: Check for large files
+        description: Prevents adding large files to git
+        args: [--maxkb=500]
+
+  - repo: https://github.com/psf/black
+    rev: 24.4.0
+    hooks:
+      - id: black
+        name: Format with Black
+        description: This hook formats Python code according to Black style
+        language_version: python3
+        additional_dependencies: ['click>=8.0.0']
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.0
+    hooks:
+      - id: ruff
+        name: Run Ruff linter
+        description: This hook runs the Ruff linter to check code quality
+        args: [--fix, --exit-non-zero-on-fix]
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        name: Sort imports with isort
+        description: This hook sorts Python imports according to standards
+        args: ["--profile", "black"]
