@@ -49,8 +49,10 @@ import sys
 import time
 import traceback
 import uuid
+
 from datetime import UTC, datetime, timedelta
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -77,6 +79,7 @@ from activity.recorders.storage.ntfs.activity_context_integration import (
     NtfsActivityContextIntegration,
 )
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
+
 
 # Import ServiceManager upfront to avoid late binding issues
 
@@ -136,7 +139,8 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
         kwargs["recorder_id"] = kwargs.get("recorder_id", self.DEFAULT_RECORDER_ID)
         kwargs["provider_type"] = StorageProviderType.LOCAL_NTFS
         kwargs["description"] = kwargs.get(
-            "description", "Records recent NTFS file system activities in the hot tier",
+            "description",
+            "Records recent NTFS file system activities in the hot tier",
         )
 
         # If no_db is specified, disable database connection
@@ -301,13 +305,15 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 self._logger.exception("Error registering with service manager: %s", e)
                 # Log the error details to help troubleshoot registration issues
                 self._logger.debug(
-                    "Registration error details: %s", traceback.format_exc(),
+                    "Registration error details: %s",
+                    traceback.format_exc(),
                 )
 
         except Exception as e:
             self._logger.exception("Error creating registration data: %s", e)
             self._logger.debug(
-                "Registration data error details: %s", traceback.format_exc(),
+                "Registration data error details: %s",
+                traceback.format_exc(),
             )
 
     def _setup_collections(self) -> None:
@@ -356,22 +362,26 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
 
             # Index on timestamp for time-based queries
             self._collection.add_hash_index(
-                fields=["Record.Data.timestamp"], unique=False,
+                fields=["Record.Data.timestamp"],
+                unique=False,
             )
 
             # Index on file_reference_number for efficient FRN lookup
             self._collection.add_hash_index(
-                fields=["Record.Data.file_reference_number"], unique=False,
+                fields=["Record.Data.file_reference_number"],
+                unique=False,
             )
 
             # Index on entity_id for entity-based queries
             self._collection.add_hash_index(
-                fields=["Record.Data.entity_id"], unique=False,
+                fields=["Record.Data.entity_id"],
+                unique=False,
             )
 
             # Index on activity_type for type-based queries
             self._collection.add_hash_index(
-                fields=["Record.Data.activity_type"], unique=False,
+                fields=["Record.Data.activity_type"],
+                unique=False,
             )
 
             # Ensure entity collection has FRN and file_path hash indices
@@ -387,7 +397,8 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                         "Ensuring Properties.file_reference_number index on entity collection",
                     )
                     entity_collection.add_hash_index(
-                        fields=["Properties.file_reference_number"], unique=False,
+                        fields=["Properties.file_reference_number"],
+                        unique=False,
                     )
                 except Exception:
                     pass
@@ -397,7 +408,8 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                         "Ensuring Properties.file_path index on entity collection",
                     )
                     entity_collection.add_hash_index(
-                        fields=["Properties.file_path"], unique=False,
+                        fields=["Properties.file_path"],
+                        unique=False,
                     )
                 except Exception:
                     pass
@@ -593,7 +605,11 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
         return min(1.0, max(0.1, base_score))  # Cap between 0.1 and 1.0
 
     def _get_or_create_entity_uuid(
-        self, frn: str, volume: str, file_path: str, is_directory: bool,
+        self,
+        frn: str,
+        volume: str,
+        file_path: str,
+        is_directory: bool,
     ) -> uuid.UUID:
         """
         Get existing entity UUID or create a new one for an FRN.
@@ -616,7 +632,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
         if cache_key in self._frn_entity_cache:
             return self._frn_entity_cache[cache_key]
 
-        print(f"Looking up entity for FRN {frn} on volume {volume}")
+        self._logger.debug(f"Looking up entity for FRN {frn} on volume {volume}")
 
         try:
             # Query existing mapping
@@ -647,7 +663,9 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 # Store in cache and return
                 entity_id = uuid.UUID(entity["_key"])
                 self._frn_entity_cache[cache_key] = entity_id
-                print(f"Found existing entity with ID {entity_id} for FRN {frn}")
+                self._logger.debug(
+                    f"Found existing entity with ID {entity_id} for FRN {frn}",
+                )
                 return entity_id
 
             # Check if we have a matching path
@@ -657,12 +675,12 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 # Update with FRN mapping
                 self._update_entity_frn(entity_id, frn, volume)
                 self._frn_entity_cache[cache_key] = entity_id
-                print(f"Found entity by path with ID {entity_id} for path {path_key}")
+                self._logger.debug(f"Found entity by path with ID {entity_id}")
                 return entity_id
 
             # No existing entity, create new one using standard Objects collection format
             entity_id = uuid.uuid4()
-            print(f"Creating new entity with ID {entity_id} for FRN {frn}")
+            self._logger.debug(f"Creating new entity with ID {entity_id} for FRN {frn}")
 
             # Create simplified object document to avoid schema issues
             entity_doc = {
@@ -684,12 +702,12 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 },
             }
 
-            print(
-                f"Inserting entity document into collection {self._entity_collection_name}",
+            self._logger.debug(
+                f"Inserting entity into collection {self._entity_collection_name}",
             )
             try:
                 result = entity_collection.insert(entity_doc)
-                print(f"Entity created successfully: {result}")
+                self._logger.debug("Entity created successfully")
 
                 # Cache the mapping
                 self._frn_entity_cache[cache_key] = entity_id
@@ -697,15 +715,15 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
 
                 return entity_id
             except Exception as insert_error:
-                print(f"Failed to insert entity: {insert_error}")
+                self._logger.error(f"Failed to insert entity: {insert_error}")
                 # Still return the generated ID so we can proceed
                 return entity_id
 
         except Exception as e:
-            print(f"Entity creation error: {e}")
+            self._logger.error(f"Entity creation error: {e}")
             # Generate a v4 UUID as fallback
             fallback_id = uuid.uuid4()
-            print(f"Using fallback UUID: {fallback_id}")
+            self._logger.debug(f"Using fallback UUID: {fallback_id}")
             return fallback_id
 
     def _update_entity_frn(self, entity_id: uuid.UUID, frn: str, volume: str):
@@ -774,14 +792,16 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 timestamp = datetime.now(UTC).isoformat()
             # If timestamp is already a string, use it directly
 
-            print(
+            self._logger.debug(
                 f"Updating entity {entity_id} metadata for activity type {activity_type}",
             )
 
             # Skip if already processed recently (avoid redundant updates)
             cache_key = f"{entity_id}:{activity_type}:{timestamp}"
             if cache_key in getattr(self, "_processed_updates", set()):
-                print(f"Skipping update for recently processed entity {entity_id}")
+                self._logger.debug(
+                    f"Skipping update for recently processed entity {entity_id}",
+                )
                 return
 
             # Initialize processed updates set if not exists
@@ -805,7 +825,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                         "Properties": {"deleted": True, "last_modified": timestamp},
                         "ModifiedTimestamp": datetime.now(UTC).isoformat(),
                     }
-                    print(f"Marking entity {entity_id} as deleted")
+                    self._logger.debug(f"Marking entity {entity_id} as deleted")
 
                 elif activity_type == "rename":
                     # Update file path
@@ -819,7 +839,9 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                             },
                             "ModifiedTimestamp": datetime.now(UTC).isoformat(),
                         }
-                        print(f"Updating entity {entity_id} path to {new_path}")
+                        self._logger.debug(
+                            f"Updating entity {entity_id} path to {new_path}",
+                        )
 
                         # Update path cache
                         volume = activity_data.get("volume_name", "")
@@ -841,7 +863,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                             UTC,
                         ).isoformat()
 
-                    print(
+                    self._logger.debug(
                         f"Updating entity {entity_id} timestamps for activity {activity_type}",
                     )
 
@@ -849,15 +871,17 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 try:
                     # Use update method directly with properly structured document
                     result = entity_collection.update(str(entity_id), update_doc)
-                    print(f"Entity update result: {result}")
+                    self._logger.debug("Entity update completed")
                 except Exception as update_error:
-                    print(f"Entity update operation failed: {update_error}")
+                    self._logger.error(
+                        f"Entity update operation failed: {update_error}",
+                    )
 
             except Exception as e:
-                print(f"Entity update preparation failed: {e}")
+                self._logger.error(f"Entity update preparation failed: {e}")
 
         except Exception as e:
-            print(f"Error updating entity metadata: {e}")
+            self._logger.error(f"Error updating entity metadata: {e}")
             # Continue execution - don't let metadata updates block activity recording
 
     def _enhance_activity_data(self, activity_data: NtfsStorageActivityData) -> dict:
@@ -891,7 +915,10 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
 
         if frn and volume:
             entity_id = self._get_or_create_entity_uuid(
-                frn, volume, file_path, is_directory,
+                frn,
+                volume,
+                file_path,
+                is_directory,
             )
             data_dict["entity_id"] = str(entity_id)
 
@@ -941,8 +968,8 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
         )
         semantic_attributes.append(hot_tier_attribute)
 
-        # Build document directly - no parent class involved - to debug schema issues
-        print("DEBUG: Building hot tier document directly to avoid schema issues")
+        # Build document directly - no parent class involved - to avoid schema issues
+        self._logger.debug("Building hot tier document directly to avoid schema issues")
 
         # Create source identifier document
         source_id = {
@@ -971,11 +998,12 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             attr.model_dump() for attr in semantic_attributes
         ]
 
-        print(f"DEBUG: Created document with _key: {record_document['_key']}")
+        self._logger.debug(f"Created document with _key: {record_document['_key']}")
         return record_document
 
     def store_activities(
-        self, activities: list[NtfsStorageActivityData],
+        self,
+        activities: list[NtfsStorageActivityData],
     ) -> list[uuid.UUID]:
         """
         Store multiple activities in the hot tier.
@@ -987,11 +1015,13 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             List of UUIDs of the stored activities
         """
         if not activities:
-            print("No activities to store, returning empty list")
+            self._logger.debug("No activities to store, returning empty list")
             return []
 
         activity_ids = []
-        print(f"Starting to process {len(activities)} activities for storage")
+        self._logger.info(
+            f"Starting to process {len(activities)} activities for storage",
+        )
 
         # Batch update activity context if available
         if (
@@ -1010,18 +1040,16 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 )
             except Exception as e:
                 self._logger.error(f"Error batch updating activity context: {e}")
-                print(f"Activity context error: {e}")
 
-        # To diagnose why only the first activity gets processed, let's process in groups
-        print("Will store activities in groups of 5 to diagnose issues")
+        self._logger.debug("Will store activities in groups of 5 for stability")
 
-        # Store each activity in the database - using direct printing to ensure visibility
+        # Store each activity in the database
         stored_count = 0
         error_count = 0
 
-        # Process in smaller groups to see progress
+        # Process in smaller groups to manage memory use and provide progress reporting
         for i, activity in enumerate(activities):
-            print(
+            self._logger.debug(
                 f"Processing activity {i+1}/{len(activities)} with ID {activity.activity_id}",
             )
 
@@ -1047,21 +1075,22 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 ):
                     self._get_or_create_entity_uuid = orig_method
 
-                print(f"Successfully stored activity {i+1}: {activity_id}")
+                self._logger.debug(f"Successfully stored activity {i+1}: {activity_id}")
 
             except Exception as e:
                 error_count += 1
-                print(f"ERROR storing activity {i+1}: {e}")
+                self._logger.error(f"ERROR storing activity {i+1}: {e}")
                 # Don't let one failure stop the entire batch
                 continue
 
-        print(
+        self._logger.info(
             f"SUMMARY: Stored {stored_count} out of {len(activities)} activities. Errors: {error_count}",
         )
         return activity_ids
 
     def store_activity(
-        self, activity_data: NtfsStorageActivityData | dict,
+        self,
+        activity_data: NtfsStorageActivityData | dict,
     ) -> uuid.UUID:
         """
         Store an activity in the hot tier.
@@ -1166,40 +1195,46 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             serialized_doc = json.loads(
                 json.dumps(document, default=uuid_safe_serializer),
             )
-            print(
-                f"DEBUG: Successfully serialized document for activity {activity_data.activity_id}",
+            self._logger.debug(
+                f"Successfully serialized document for activity {activity_data.activity_id}",
             )
         except TypeError as e:
             # If serialization fails, print detailed information
-            print(f"ERROR: Document serialization failed: {e}")
-            print(f"Document keys: {list(document.keys())}")
+            self._logger.error(f"Document serialization failed: {e}")
+            self._logger.debug(f"Document keys: {list(document.keys())}")
             # Try serializing each field separately to identify the problem
             for key, value in document.items():
                 try:
                     serialized = json.dumps({key: value}, default=uuid_safe_serializer)
-                    print(f"Field '{key}' serialized OK")
+                    self._logger.debug(f"Field '{key}' serialized OK")
                 except Exception as field_err:
-                    print(f"ERROR in field '{key}': {field_err}, type: {type(value)}")
+                    self._logger.error(
+                        f"ERROR in field '{key}': {field_err}, type: {type(value)}",
+                    )
                     if isinstance(value, dict):
-                        print(f"Subkeys: {list(value.keys())}")
+                        self._logger.debug(f"Subkeys: {list(value.keys())}")
             raise
 
         # Store in database using the correct method (insert, not add_document)
-        print(
-            f"DEBUG: Attempting to insert document into collection for activity {activity_data.activity_id}",
+        self._logger.debug(
+            f"Attempting to insert document into collection for activity {activity_data.activity_id}",
         )
 
         # Use the serialized document for insertion
         result = self._collection.insert(serialized_doc)
-        print(f"SUCCESS: Inserted document with ID {activity_data.activity_id}")
-        print(f"Insert result: {result}")
+        self._logger.debug(
+            f"Successfully inserted document with ID {activity_data.activity_id}",
+        )
 
         # No try/except here - let errors propagate to show exactly what's failing
 
         return activity_data.activity_id
 
     def get_activities_by_entity(
-        self, entity_id: uuid.UUID, limit: int = 100, offset: int = 0,
+        self,
+        entity_id: uuid.UUID,
+        limit: int = 100,
+        offset: int = 0,
     ) -> list[dict]:
         """
         Get activities for a specific entity.
@@ -1301,7 +1336,10 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             return []
 
     def get_recent_activities(
-        self, hours: int = 24, limit: int = 100, offset: int = 0,
+        self,
+        hours: int = 24,
+        limit: int = 100,
+        offset: int = 0,
     ) -> list[dict]:
         """
         Get recent activities.
@@ -1320,7 +1358,11 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
         return self.get_activities_by_time_window(start_time, end_time, limit, offset)
 
     def get_recent_activities_by_type(
-        self, activity_type: str, hours: int = 24, limit: int = 100, offset: int = 0,
+        self,
+        activity_type: str,
+        hours: int = 24,
+        limit: int = 100,
+        offset: int = 0,
     ) -> list[dict]:
         """
         Get recent activities of a specific type.
@@ -1373,7 +1415,10 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             return []
 
     def get_rename_activities(
-        self, hours: int = 24, limit: int = 100, offset: int = 0,
+        self,
+        hours: int = 24,
+        limit: int = 100,
+        offset: int = 0,
     ) -> list[dict]:
         """
         Get recent rename activities.
@@ -1443,7 +1488,8 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             """
 
             count_cursor = self._db._arangodb.aql.execute(
-                count_query, bind_vars={"@collection": self._collection_name},
+                count_query,
+                bind_vars={"@collection": self._collection_name},
             )
 
             for count in count_cursor:
@@ -1458,7 +1504,8 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             """
 
             type_cursor = self._db._arangodb.aql.execute(
-                type_query, bind_vars={"@collection": self._collection_name},
+                type_query,
+                bind_vars={"@collection": self._collection_name},
             )
 
             stats["by_type"] = {item["type"]: item["count"] for item in type_cursor}
@@ -1472,7 +1519,8 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             """
 
             importance_cursor = self._db._arangodb.aql.execute(
-                importance_query, bind_vars={"@collection": self._collection_name},
+                importance_query,
+                bind_vars={"@collection": self._collection_name},
             )
 
             stats["by_importance"] = {
@@ -1495,7 +1543,8 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             """
 
             time_cursor = self._db._arangodb.aql.execute(
-                time_query, bind_vars={"@collection": self._collection_name},
+                time_query,
+                bind_vars={"@collection": self._collection_name},
             )
 
             stats["by_time"] = {
@@ -1780,7 +1829,8 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             """
 
             cursor = self._db._arangodb.aql.execute(
-                query, bind_vars={"@collection": self._collection_name},
+                query,
+                bind_vars={"@collection": self._collection_name},
             )
 
             # Return the first result, or empty dict if no results
@@ -1855,7 +1905,10 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
 
                         if frn and volume:
                             entity_id = self._get_or_create_entity_uuid(
-                                frn, volume, file_path, is_directory,
+                                frn,
+                                volume,
+                                file_path,
+                                is_directory,
                             )
                             activity["entity_id"] = str(entity_id)
 
@@ -1937,7 +1990,10 @@ if __name__ == "__main__":
 
     # Add general arguments
     parser.add_argument(
-        "--input", type=str, required=True, help="Input JSONL file with NTFS activities",
+        "--input",
+        type=str,
+        required=True,
+        help="Input JSONL file with NTFS activities",
     )
     parser.add_argument(
         "--ttl-days",
@@ -1950,7 +2006,9 @@ if __name__ == "__main__":
     # Add mode-related arguments
     mode_group = parser.add_mutually_exclusive_group()
     mode_group.add_argument(
-        "--no-db", action="store_true", help="Run without database connection",
+        "--no-db",
+        action="store_true",
+        help="Run without database connection",
     )
     mode_group.add_argument(
         "--db-config",
@@ -1966,7 +2024,10 @@ if __name__ == "__main__":
         help="Only show statistics, not individual activities",
     )
     parser.add_argument(
-        "--limit", type=int, default=10, help="Maximum number of activities to display",
+        "--limit",
+        type=int,
+        default=10,
+        help="Maximum number of activities to display",
     )
 
     # Parse arguments
@@ -1975,7 +2036,8 @@ if __name__ == "__main__":
     # Configure logging
     log_level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(
-        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
     logger = logging.getLogger("NtfsHotTierRecorder")
 

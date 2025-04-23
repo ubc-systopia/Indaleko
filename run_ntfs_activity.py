@@ -38,9 +38,11 @@ import os
 import signal
 import sys
 import time
+
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -54,6 +56,7 @@ from activity.collectors.storage.ntfs.usn_journal_collector import (
 )
 from activity.recorders.storage.ntfs.tiered.hot.recorder import NtfsHotTierRecorder
 from constants.values import IndalekoConstants
+
 
 # Create default DB config path using pathlib.Path
 DEFAULT_DB_CONFIG_PATH = (
@@ -83,13 +86,39 @@ class IntegratedNtfsActivityRunner:
             output_dir: Directory for file backups (if enabled)
             verbose: Whether to enable verbose logging
         """
-        # Set up logging
+        # Set up logging: console + file
         self.verbose = kwargs.get("verbose", False)
         log_level = logging.DEBUG if self.verbose else logging.INFO
-        logging.basicConfig(
-            level=log_level,
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        # Configure root logger
+        import socket
+
+        from logging import Formatter
+        from logging.handlers import RotatingFileHandler
+
+        from utils.logging.file_namer import build_indaleko_log_name
+        root = logging.getLogger()
+        root.setLevel(log_level)
+        fmt = Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        # Console handler
+        ch = logging.StreamHandler(sys.stdout)
+        ch.setLevel(log_level)
+        ch.setFormatter(fmt)
+        root.addHandler(ch)
+        # File handler
+        log_dir = kwargs.get("log_dir", "logs")
+        os.makedirs(log_dir, exist_ok=True)
+        machine_id = kwargs.get("machine_id") or socket.gethostname()
+        ts = datetime.now(UTC).strftime("%Y_%m_%dT%H#%M#%S.%fZ")
+        fname = build_indaleko_log_name(
+            platform="Windows", service="ntfs_activity_collector",
+            machine_uuid=machine_id, timestamp=datetime.now(UTC),
         )
+        log_path = os.path.join(log_dir, fname)
+        fh = RotatingFileHandler(log_path, maxBytes=10*1024*1024, backupCount=5, encoding="utf-8")
+        fh.setLevel(log_level)
+        fh.setFormatter(fmt)
+        root.addHandler(fh)
+        # Use named logger
         self.logger = logging.getLogger("IntegratedNtfsActivityRunner")
 
         # Runtime parameters
@@ -117,7 +146,8 @@ class IntegratedNtfsActivityRunner:
 
         # Setup state file path for collector
         state_file_path = os.path.join(
-            kwargs.get("output_dir", "data/ntfs_activity"), "ntfs_state.json",
+            kwargs.get("output_dir", "data/ntfs_activity"),
+            "ntfs_state.json",
         )
 
         # Initialize collector (only responsible for collecting data)
@@ -125,7 +155,9 @@ class IntegratedNtfsActivityRunner:
             f"Initializing NTFS USN Journal collector for volumes: {', '.join(self.volumes)}",
         )
         self.collector = NtfsUsnJournalCollector(
-            volumes=self.volumes, state_file=state_file_path, verbose=self.verbose,
+            volumes=self.volumes,
+            state_file=state_file_path,
+            verbose=self.verbose,
         )
 
         # Track errors for auto-reset purposes
@@ -309,15 +341,21 @@ class IntegratedNtfsActivityRunner:
                             >= self.empty_results_threshold
                         ):
                             self.logger.warning(
-                                f"No activities for {self.consecutive_empty_results} consecutive cycles. "
-                                "Resetting collector state.",
+                                f"No activities for {self.consecutive_empty_results} consecutive cycles - resetting collector state",
                             )
                             self.collector.reset_state()
                             self.consecutive_empty_results = 0
                 except Exception as collection_error:
-                    self.logger.error(
-                        f"Error collecting activities: {collection_error}",
-                    )
+                    if "maximum recursion depth exceeded" in str(collection_error):
+                        # Only log this error at debug level since it happens frequently
+                        self.logger.debug(
+                            "Error opening USN journal: maximum recursion depth exceeded",
+                        )
+                    else:
+                        # Log other errors normally
+                        self.logger.error(
+                            f"Error collecting activities: {collection_error}",
+                        )
 
                     # Increment consecutive error counter
                     self.consecutive_errors += 1
@@ -328,8 +366,7 @@ class IntegratedNtfsActivityRunner:
                         and self.consecutive_errors >= self.error_threshold
                     ):
                         self.logger.warning(
-                            f"{self.consecutive_errors} consecutive collection errors. "
-                            "Resetting collector state.",
+                            f"{self.consecutive_errors} consecutive collection errors - resetting collector state",
                         )
                         self.collector.reset_state()
                         self.consecutive_errors = 0
@@ -425,7 +462,10 @@ def main():
         help="Duration to run in hours (0 for unlimited)",
     )
     parser.add_argument(
-        "--interval", type=int, default=30, help="Collection interval in seconds",
+        "--interval",
+        type=int,
+        default=30,
+        help="Collection interval in seconds",
     )
 
     # Recorder parameters
@@ -463,6 +503,16 @@ def main():
 
     # General parameters
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
+    # Logging parameters
+    parser.add_argument(
+        "--log-dir", type=str, default="logs", help="Directory to write log files to",
+    )
+    parser.add_argument(
+        "--machine-id",
+        type=str,
+        default=None,
+        help="Machine UUID for log naming (overrides auto-detection)",
+    )
 
     # Auto-reset parameters
     parser.add_argument(
@@ -496,6 +546,9 @@ def main():
         "output_dir": args.output_dir,
         "max_file_size": args.max_file_size,
         "verbose": args.verbose,
+        # Log file settings
+        "log_dir": args.log_dir,
+        "machine_id": args.machine_id,
         "auto_reset": not args.no_auto_reset,
         "error_threshold": args.error_threshold,
         "empty_results_threshold": args.empty_threshold,
