@@ -1,4 +1,4 @@
-#\!/usr/bin/env python
+# \!/usr/bin/env python
 """
 NTFS Sensory Memory Recorder for Indaleko.
 
@@ -22,12 +22,11 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import logging
 import os
 import sys
 import uuid
-import logging
-from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Any, Optional
+from datetime import UTC, datetime, timedelta
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -39,31 +38,35 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # Import required modules
 try:
-    from activity.recorders.storage.base import StorageActivityRecorder
-    from activity.collectors.storage.data_models.storage_activity_data_model import (
-        StorageProviderType,
-        StorageActivityType
-    )
     from activity.characteristics import ActivityDataCharacteristics
+    from activity.collectors.storage.data_models.storage_activity_data_model import (
+        StorageActivityType,
+        StorageProviderType,
+    )
+    from activity.recorders.storage.base import StorageActivityRecorder
 except ImportError as e:
-    logging.error(f"Error importing required modules: {e}")
+    logging.exception(f"Error importing required modules: {e}")
+
     # Create dummy classes for testing
     class StorageActivityRecorder:
         """Dummy base class for testing."""
-        pass
-        
+
+
     class StorageProviderType:
         """Dummy enum for testing."""
+
         LOCAL_NTFS = "LOCAL_NTFS"
-        
+
     class StorageActivityType:
         """Dummy enum for testing."""
+
         CREATE = "CREATE"
         MODIFY = "MODIFY"
         DELETE = "DELETE"
-        
+
     class ActivityDataCharacteristics:
         """Dummy enum for testing."""
+
         ACTIVITY_DATA_SYSTEM_ACTIVITY = "ACTIVITY_DATA_SYSTEM_ACTIVITY"
         ACTIVITY_DATA_FILE_ACTIVITY = "ACTIVITY_DATA_FILE_ACTIVITY"
 
@@ -71,98 +74,108 @@ except ImportError as e:
 class NtfsSensoryMemoryRecorder:
     """
     Sensory Memory recorder for NTFS storage activities.
-    
+
     Handles the short-term, high-detail storage of raw file system activities.
     """
-    
+
     DEFAULT_RECORDER_ID = uuid.UUID("a1e93f7c-6912-42ae-b31c-8f9a01d87a4e")
-    
+
     def __init__(self, **kwargs):
         """
         Initialize the sensory memory recorder.
-        
+
         Args:
             no_db: Whether to run without database connection
             db_config_path: Path to database configuration
             debug: Whether to enable debug logging
         """
         # Configure logging
-        logging.basicConfig(level=logging.DEBUG if kwargs.get("debug", False) else logging.INFO)
+        logging.basicConfig(
+            level=logging.DEBUG if kwargs.get("debug", False) else logging.INFO,
+        )
         self._logger = logging.getLogger("NtfsSensoryMemoryRecorder")
-        
+
         # Set recorder properties
         self._name = kwargs.get("name", "NTFS Sensory Memory Recorder")
         self._recorder_id = kwargs.get("recorder_id", self.DEFAULT_RECORDER_ID)
-        self._description = kwargs.get("description", "Records raw NTFS file system activities in sensory memory")
+        self._description = kwargs.get(
+            "description", "Records raw NTFS file system activities in sensory memory",
+        )
         self._version = kwargs.get("version", "1.0.0")
         self._provider_type = StorageProviderType.LOCAL_NTFS
         self._no_db = kwargs.get("no_db", False)
-        
+
         self._logger.info(f"Initialized {self._name} (no_db={self._no_db})")
-    
+
     def connect(self):
         """Connect to the database."""
         if self._no_db:
             self._logger.info("Skipping database connection (no_db=True)")
             return
-            
+
         try:
             # In a real implementation, this would connect to the database
             self._logger.info("Connected to database")
         except Exception as e:
             self._logger.error(f"Error connecting to database: {e}")
-    
+
     def get_recorder_name(self) -> str:
         """Get the name of the recorder."""
         return self._name
-    
+
     def get_recorder_id(self) -> uuid.UUID:
         """Get the ID of the recorder."""
         return self._recorder_id
-    
+
     def get_description(self) -> str:
         """Get a description of this recorder."""
         return self._description
-    
-    def get_recorder_characteristics(self) -> List[str]:
+
+    def get_recorder_characteristics(self) -> list[str]:
         """Get the characteristics of this recorder."""
         return [
             ActivityDataCharacteristics.ACTIVITY_DATA_SYSTEM_ACTIVITY,
-            ActivityDataCharacteristics.ACTIVITY_DATA_FILE_ACTIVITY
+            ActivityDataCharacteristics.ACTIVITY_DATA_FILE_ACTIVITY,
         ]
-    
-    def search_sensory_memory(self, query: str, importance_min: float = 0.0, limit: int = 10) -> List[Dict]:
+
+    def search_sensory_memory(
+        self, query: str, importance_min: float = 0.0, limit: int = 10,
+    ) -> list[dict]:
         """
         Search for activities in sensory memory.
-        
+
         Args:
             query: Search query
             importance_min: Minimum importance score
             limit: Maximum number of results
-            
+
         Returns:
             List of matching activities
         """
-        self._logger.info(f"Searching sensory memory for {query} (min importance: {importance_min}, limit: {limit})")
-        
+        self._logger.info(
+            f"Searching sensory memory for {query} (min importance: {importance_min}, limit: {limit})",
+        )
+
         # Mock implementation for testing
         results = []
         for i in range(min(3, limit)):
-            results.append({
-                "_key": str(uuid.uuid4()),
-                "Record": {
-                    "Data": {
-                        "file_path": f"/path/to/sensory_result_{i}.txt",
-                        "activity_type": StorageActivityType.MODIFY,
-                        "timestamp": datetime.now(timezone.utc).isoformat(),
-                        "importance_score": 0.5 + (i * 0.1),
-                        "memory_tier": "sensory"
-                    }
-                }
-            })
-        
+            results.append(
+                {
+                    "_key": str(uuid.uuid4()),
+                    "Record": {
+                        "Data": {
+                            "file_path": f"/path/to/sensory_result_{i}.txt",
+                            "activity_type": StorageActivityType.MODIFY,
+                            "timestamp": datetime.now(UTC).isoformat(),
+                            "importance_score": 0.5 + (i * 0.1),
+                            "memory_tier": "sensory",
+                        },
+                    },
+                },
+            )
+
         return results
-    
+
     def cache_duration(self) -> timedelta:
         """Get the cache duration for this recorder's data."""
         return timedelta(minutes=15)

@@ -20,8 +20,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-import json
-from pprint import pprint
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -46,7 +44,7 @@ def load_sample_explain_result():
                     "dependencies": [],
                     "id": 1,
                     "estimatedCost": 1,
-                    "estimatedNrItems": 1
+                    "estimatedNrItems": 1,
                 },
                 {
                     "type": "EnumerateCollectionNode",
@@ -55,12 +53,9 @@ def load_sample_explain_result():
                     "estimatedCost": 12,
                     "estimatedNrItems": 10,
                     "collection": "Objects",
-                    "outVariable": {
-                        "id": 0,
-                        "name": "obj"
-                    },
+                    "outVariable": {"id": 0, "name": "obj"},
                     "random": False,
-                    "satellite": False
+                    "satellite": False,
                 },
                 {
                     "type": "FilterNode",
@@ -84,20 +79,17 @@ def load_sample_explain_result():
                                                     {
                                                         "type": "reference",
                                                         "name": "obj",
-                                                        "id": 0
-                                                    }
-                                                ]
+                                                        "id": 0,
+                                                    },
+                                                ],
                                             },
-                                            {
-                                                "type": "value",
-                                                "value": 1000000
-                                            }
-                                        ]
-                                    }
-                                ]
-                            }
-                        ]
-                    }
+                                            {"type": "value", "value": 1000000},
+                                        ],
+                                    },
+                                ],
+                            },
+                        ],
+                    },
                 },
                 {
                     "type": "LimitNode",
@@ -107,7 +99,7 @@ def load_sample_explain_result():
                     "estimatedNrItems": 5,
                     "offset": 0,
                     "limit": 10,
-                    "fullCount": False
+                    "fullCount": False,
                 },
                 {
                     "type": "ReturnNode",
@@ -115,11 +107,8 @@ def load_sample_explain_result():
                     "id": 5,
                     "estimatedCost": 32,
                     "estimatedNrItems": 5,
-                    "inVariable": {
-                        "id": 0,
-                        "name": "obj"
-                    }
-                }
+                    "inVariable": {"id": 0, "name": "obj"},
+                },
             ],
             "rules": [
                 "move-calculations-up",
@@ -132,27 +121,18 @@ def load_sample_explain_result():
                 "remove-filter-covered-by-index",
                 "use-index-for-sort",
                 "remove-unnecessary-filters-2",
-                "use-indexes-for-sort"
+                "use-indexes-for-sort",
             ],
             "collections": ["Objects"],
-            "variables": [
-                {
-                    "id": 0,
-                    "name": "obj"
-                }
-            ],
+            "variables": [{"id": 0, "name": "obj"}],
             "estimatedCost": 32,
             "estimatedNrItems": 5,
-            "isModificationQuery": False
+            "isModificationQuery": False,
         },
         "cacheable": True,
         "warnings": [],
-        "stats": {
-            "rulesExecuted": 11,
-            "rulesSkipped": 0,
-            "plansCreated": 1
-        },
-        "query": "FOR obj IN Objects FILTER obj.size > 1000000 LIMIT 10 RETURN obj"
+        "stats": {"rulesExecuted": 11, "rulesSkipped": 0, "plansCreated": 1},
+        "query": "FOR obj IN Objects FILTER obj.size > 1000000 LIMIT 10 RETURN obj",
     }
 
 
@@ -168,7 +148,7 @@ def load_optimized_explain_result():
                     "dependencies": [],
                     "id": 1,
                     "estimatedCost": 1,
-                    "estimatedNrItems": 1
+                    "estimatedNrItems": 1,
                 },
                 {
                     "type": "IndexNode",
@@ -177,10 +157,7 @@ def load_optimized_explain_result():
                     "estimatedCost": 5,
                     "estimatedNrItems": 5,
                     "collection": "Objects",
-                    "outVariable": {
-                        "id": 0,
-                        "name": "obj"
-                    },
+                    "outVariable": {"id": 0, "name": "obj"},
                     "indexes": [
                         {
                             "id": "12345",
@@ -189,8 +166,8 @@ def load_optimized_explain_result():
                             "fields": ["size"],
                             "selectivityEstimate": 0.1,
                             "unique": False,
-                            "sparse": False
-                        }
+                            "sparse": False,
+                        },
                     ],
                     "condition": {
                         "type": "n-ary and",
@@ -205,20 +182,17 @@ def load_optimized_explain_result():
                                             {
                                                 "type": "reference",
                                                 "name": "obj",
-                                                "id": 0
-                                            }
-                                        ]
+                                                "id": 0,
+                                            },
+                                        ],
                                     },
-                                    {
-                                        "type": "value",
-                                        "value": 1000000
-                                    }
-                                ]
-                            }
-                        ]
+                                    {"type": "value", "value": 1000000},
+                                ],
+                            },
+                        ],
                     },
                     "reverse": False,
-                    "satellite": False
+                    "satellite": False,
                 },
                 {
                     "type": "LimitNode",
@@ -228,7 +202,7 @@ def load_optimized_explain_result():
                     "estimatedNrItems": 5,
                     "offset": 0,
                     "limit": 10,
-                    "fullCount": False
+                    "fullCount": False,
                 },
                 {
                     "type": "ReturnNode",
@@ -236,11 +210,8 @@ def load_optimized_explain_result():
                     "id": 4,
                     "estimatedCost": 15,
                     "estimatedNrItems": 5,
-                    "inVariable": {
-                        "id": 0,
-                        "name": "obj"
-                    }
-                }
+                    "inVariable": {"id": 0, "name": "obj"},
+                },
             ],
             "rules": [
                 "move-calculations-up",
@@ -253,27 +224,18 @@ def load_optimized_explain_result():
                 "remove-filter-covered-by-index",
                 "use-index-for-sort",
                 "remove-unnecessary-filters-2",
-                "use-indexes-for-sort"
+                "use-indexes-for-sort",
             ],
             "collections": ["Objects"],
-            "variables": [
-                {
-                    "id": 0,
-                    "name": "obj"
-                }
-            ],
+            "variables": [{"id": 0, "name": "obj"}],
             "estimatedCost": 15,
             "estimatedNrItems": 5,
-            "isModificationQuery": False
+            "isModificationQuery": False,
         },
         "cacheable": True,
         "warnings": [],
-        "stats": {
-            "rulesExecuted": 11,
-            "rulesSkipped": 0,
-            "plansCreated": 1
-        },
-        "query": "FOR obj IN Objects FILTER obj.size > 1000000 LIMIT 10 RETURN obj"
+        "stats": {"rulesExecuted": 11, "rulesSkipped": 0, "plansCreated": 1},
+        "query": "FOR obj IN Objects FILTER obj.size > 1000000 LIMIT 10 RETURN obj",
     }
 
 
@@ -289,7 +251,7 @@ def load_complex_explain_result():
                     "dependencies": [],
                     "id": 1,
                     "estimatedCost": 1,
-                    "estimatedNrItems": 1
+                    "estimatedNrItems": 1,
                 },
                 {
                     "type": "EnumerateCollectionNode",
@@ -298,12 +260,9 @@ def load_complex_explain_result():
                     "estimatedCost": 1002,
                     "estimatedNrItems": 1000,
                     "collection": "Users",
-                    "outVariable": {
-                        "id": 0,
-                        "name": "u"
-                    },
+                    "outVariable": {"id": 0, "name": "u"},
                     "random": False,
-                    "satellite": False
+                    "satellite": False,
                 },
                 {
                     "type": "EnumerateCollectionNode",
@@ -312,12 +271,9 @@ def load_complex_explain_result():
                     "estimatedCost": 12002,
                     "estimatedNrItems": 10000,
                     "collection": "Objects",
-                    "outVariable": {
-                        "id": 1,
-                        "name": "obj"
-                    },
+                    "outVariable": {"id": 1, "name": "obj"},
                     "random": False,
-                    "satellite": False
+                    "satellite": False,
                 },
                 {
                     "type": "FilterNode",
@@ -338,25 +294,21 @@ def load_complex_explain_result():
                                             {
                                                 "type": "reference",
                                                 "name": "obj",
-                                                "id": 1
-                                            }
-                                        ]
+                                                "id": 1,
+                                            },
+                                        ],
                                     },
                                     {
                                         "type": "attribute access",
                                         "name": "_id",
                                         "subNodes": [
-                                            {
-                                                "type": "reference",
-                                                "name": "u",
-                                                "id": 0
-                                            }
-                                        ]
-                                    }
-                                ]
-                            }
-                        ]
-                    }
+                                            {"type": "reference", "name": "u", "id": 0},
+                                        ],
+                                    },
+                                ],
+                            },
+                        ],
+                    },
                 },
                 {
                     "type": "CalculationNode",
@@ -371,31 +323,20 @@ def load_complex_explain_result():
                                 "type": "object element",
                                 "name": "user",
                                 "subNodes": [
-                                    {
-                                        "type": "reference",
-                                        "name": "u",
-                                        "id": 0
-                                    }
-                                ]
+                                    {"type": "reference", "name": "u", "id": 0},
+                                ],
                             },
                             {
                                 "type": "object element",
                                 "name": "object",
                                 "subNodes": [
-                                    {
-                                        "type": "reference",
-                                        "name": "obj",
-                                        "id": 1
-                                    }
-                                ]
-                            }
-                        ]
+                                    {"type": "reference", "name": "obj", "id": 1},
+                                ],
+                            },
+                        ],
                     },
-                    "outVariable": {
-                        "id": 2,
-                        "name": "result"
-                    },
-                    "canThrow": False
+                    "outVariable": {"id": 2, "name": "result"},
+                    "canThrow": False,
                 },
                 {
                     "type": "SortNode",
@@ -405,16 +346,11 @@ def load_complex_explain_result():
                     "estimatedNrItems": 5000,
                     "elements": [
                         {
-                            "inVariable": {
-                                "id": 1,
-                                "name": "obj"
-                            },
+                            "inVariable": {"id": 1, "name": "obj"},
                             "ascending": False,
-                            "attributePath": [
-                                "size"
-                            ]
-                        }
-                    ]
+                            "attributePath": ["size"],
+                        },
+                    ],
                 },
                 {
                     "type": "LimitNode",
@@ -424,7 +360,7 @@ def load_complex_explain_result():
                     "estimatedNrItems": 25,
                     "offset": 0,
                     "limit": 25,
-                    "fullCount": False
+                    "fullCount": False,
                 },
                 {
                     "type": "ReturnNode",
@@ -432,11 +368,8 @@ def load_complex_explain_result():
                     "id": 8,
                     "estimatedCost": 47052,
                     "estimatedNrItems": 25,
-                    "inVariable": {
-                        "id": 2,
-                        "name": "result"
-                    }
-                }
+                    "inVariable": {"id": 2, "name": "result"},
+                },
             ],
             "rules": [
                 "move-calculations-up",
@@ -449,38 +382,25 @@ def load_complex_explain_result():
                 "remove-filter-covered-by-index",
                 "use-index-for-sort",
                 "remove-unnecessary-filters-2",
-                "use-indexes-for-sort"
+                "use-indexes-for-sort",
             ],
             "collections": ["Users", "Objects"],
             "variables": [
-                {
-                    "id": 0,
-                    "name": "u"
-                },
-                {
-                    "id": 1,
-                    "name": "obj"
-                },
-                {
-                    "id": 2,
-                    "name": "result"
-                }
+                {"id": 0, "name": "u"},
+                {"id": 1, "name": "obj"},
+                {"id": 2, "name": "result"},
             ],
             "estimatedCost": 47052,
             "estimatedNrItems": 25,
-            "isModificationQuery": False
+            "isModificationQuery": False,
         },
         "cacheable": True,
         "warnings": [
             "Large collection scan on 'Objects'",
-            "Expensive join operation detected"
+            "Expensive join operation detected",
         ],
-        "stats": {
-            "rulesExecuted": 11,
-            "rulesSkipped": 0,
-            "plansCreated": 1
-        },
-        "query": "FOR u IN Users FOR obj IN Objects FILTER obj.owner == u._id SORT obj.size DESC LIMIT 25 RETURN { user: u, object: obj }"
+        "stats": {"rulesExecuted": 11, "rulesSkipped": 0, "plansCreated": 1},
+        "query": "FOR u IN Users FOR obj IN Objects FILTER obj.owner == u._id SORT obj.size DESC LIMIT 25 RETURN { user: u, object: obj }",
     }
 
 
@@ -488,41 +408,41 @@ def main():
     """Test the query plan visualization."""
     print("Testing Indaleko Query Plan Visualization")
     print("=========================================\n")
-    
+
     # Create the plan visualizer
     visualizer = PlanVisualizer(colorize=True, max_depth=10)
-    
+
     # Test cases
     test_cases = [
         {
             "name": "Basic query with full collection scan",
             "explain_result": load_sample_explain_result(),
-            "verbose": False
+            "verbose": False,
         },
         {
             "name": "Optimized query using index",
             "explain_result": load_optimized_explain_result(),
-            "verbose": False
+            "verbose": False,
         },
         {
             "name": "Complex query with join",
             "explain_result": load_complex_explain_result(),
-            "verbose": True
-        }
+            "verbose": True,
+        },
     ]
-    
+
     # Process each test case
     for i, test_case in enumerate(test_cases, 1):
         print(f"\n\n===== Test {i}: {test_case['name']} =====\n")
-        
+
         # Parse and visualize the execution plan
         explain_result = test_case["explain_result"]
         plan = visualizer.parse_plan(explain_result)
-        
+
         # Display the execution plan
         visualization = visualizer.visualize_text(plan, verbose=test_case["verbose"])
         print(visualization)
-        
+
         # Print plan statistics
         print("\nPlan Statistics:")
         print(f"  Total Cost: {plan.total_cost}")
@@ -531,7 +451,7 @@ def main():
         print(f"  Optimizations Count: {len(plan.optimizations)}")
         print(f"  Bottlenecks Count: {len(plan.bottlenecks)}")
         print(f"  Recommendations Count: {len(plan.recommendations)}")
-    
+
     print("\nTest completed successfully!")
 
 

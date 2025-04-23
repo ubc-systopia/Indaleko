@@ -20,11 +20,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+from datetime import UTC, datetime
+from typing import Any, ClassVar
 
-from typing import Dict, Any, Union
-
-from datetime import datetime, timezone
-from pydantic import Field, field_validator, AwareDatetime
+from pydantic import AwareDatetime, Field, field_validator
 
 # from icecream import ic
 
@@ -36,17 +35,15 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from data_models.base import IndalekoBaseModel
+from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from utils.misc.data_management import encode_binary_data
 
 # pylint: enable=wrong-import-position
 
 
 class IndalekoRecordDataModel(IndalekoBaseModel):
-    """
-    This class defines the UUID data model for Indaleko.
-    """
+    """This class defines the UUID data model for Indaleko."""
 
     SourceIdentifier: IndalekoSourceIdentifierDataModel = Field(
         ...,
@@ -55,31 +52,35 @@ class IndalekoRecordDataModel(IndalekoBaseModel):
     )
 
     Timestamp: AwareDatetime = Field(
-        datetime.now(timezone.utc),
+        datetime.now(UTC),
         title="Timestamp",
         description="Record creation timestamp.",
     )
 
-    Attributes: Union[Dict[str, Any], None] = Field(
+    Attributes: ClassVar[dict[str, Any] | None] = Field(
         None,
         title="Attributes",
         description="Optional field, do not rely upon its contents or presence."
         "Attributes from the metadata source.",
     )
 
-    Data: str = Field(
+    Data: ClassVar[str] = Field(
         default=encode_binary_data(b""),
         title="Data",
-        description="The raw (uninterpreted) data from the original source.",
+        description="The raw (uninterpreted) data from the original source. "
+        "It should be a UUENCODED binary string. Do not use any data from this field",
     )
 
     @field_validator("Timestamp", mode="before")
     @classmethod
-    def ensure_timezone(cls, value: datetime):
+    def ensure_timezone(cls, value: datetime) -> datetime:
+        """
+        Ensure that the timestamp is timezone-aware.
+        """
         if isinstance(value, str):
             value = datetime.fromisoformat(value)
         if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
+            value = value.replace(tzinfo=UTC)
         return value
 
     class Config:
@@ -108,7 +109,7 @@ class IndalekoRecordDataModel(IndalekoBaseModel):
                 "VtZSBHVUlEIjogIjMzOTdkOTdiLTJjYTUtMTFlZC1iMmZjLWI0MGVkZTlhNWEzYyIsIC"
                 "JPYmplY3RJZGVudGlmaWVyIjogIjJjNzNkNmU1LWVhYmEtNGYwYS1hY2YzLWUwMmM1Mj"
                 "lmMDk3YSJ9",
-            }
+            },
         }
 
 

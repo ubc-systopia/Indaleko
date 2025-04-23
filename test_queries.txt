@@ -1,0 +1,3 @@
+Show me files
+Find PDF documents
+Search for files modified today

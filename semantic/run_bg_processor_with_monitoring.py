@@ -25,15 +25,14 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import os
-import sys
-import time
-import json
-import logging
 import argparse
 import datetime
+import json
+import logging
+import os
+import sys
 import threading
-from pathlib import Path
+import time
 
 # Ensure INDALEKO_ROOT is set
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -50,25 +49,21 @@ log_file = os.path.join(log_dir, "indaleko_bg_processor_monitor.log")
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(log_file),
-        logging.StreamHandler()
-    ]
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.FileHandler(log_file), logging.StreamHandler()],
 )
 logger = logging.getLogger("IndalekoBgProcessorMonitor")
 
 # pylint: disable=wrong-import-position
 from semantic.background_processor import IndalekoBackgroundProcessor
-from semantic.performance_monitor import SemanticExtractorPerformance, monitor_semantic_extraction
-from semantic.collectors.mime.mime_collector import IndalekoSemanticMimeType
-from semantic.collectors.checksum.checksum import IndalekoSemanticChecksum
-from semantic.collectors.exif.exif_collector import IndalekoSemanticExif
-from db import IndalekoCollections, IndalekoDBCollections
-from utils.db.db_file_picker import IndalekoFilePicker
+from semantic.performance_monitor import (
+    SemanticExtractorPerformance,
+    monitor_semantic_extraction,
+)
 
 try:
     import matplotlib.pyplot as plt
+
     PLOTTING_AVAILABLE = True
 except ImportError:
     logger.warning("Matplotlib not available - plotting will be disabled")
@@ -80,93 +75,93 @@ except ImportError:
 class MonitoredBackgroundProcessor(IndalekoBackgroundProcessor):
     """
     Extended background processor with integrated performance monitoring.
-    
+
     This class adds performance monitoring to all semantic extractors.
     """
-    
+
     def __init__(self, **kwargs):
         """Initialize the monitored background processor."""
         super().__init__(**kwargs)
-        
+
         # Initialize performance monitor
         self.performance_monitor = SemanticExtractorPerformance(
             record_to_db=kwargs.get("record_to_db", True),
             record_to_file=kwargs.get("record_to_file", True),
-            perf_file_name=kwargs.get("perf_file_name")
+            perf_file_name=kwargs.get("perf_file_name"),
         )
-        
+
         # Setup reporting
         self.stats_file = kwargs.get("stats_file")
         self.stats_interval = kwargs.get("stats_interval", 300)  # 5 minutes default
         self.stats_thread = None
         self.stopping = False
-        
+
         # Total statistics
         self.start_time = time.time()
         self.mime_count = 0
         self.checksum_count = 0
         self.exif_count = 0
-        
+
         # Apply monitoring to all extractors
         self._apply_monitoring()
-        
+
         logger.info("Monitored background processor initialized")
-        
+
     def _apply_monitoring(self):
         """Apply performance monitoring to all extractors."""
         # Patch MIME detector
         if hasattr(self, "_mime_detector") and self._mime_detector:
             original_mime_detect = self._mime_detector.detect_mime_type
-            
+
             @monitor_semantic_extraction(extractor_name="MimeDetector")
             def monitored_mime_detect(file_path):
                 return original_mime_detect(file_path)
-            
+
             self._mime_detector.detect_mime_type = monitored_mime_detect
             logger.info("Applied monitoring to MIME detector")
-            
+
         # Patch checksum calculator
         if hasattr(self, "_checksum_calculator") and self._checksum_calculator:
             original_checksum_calc = self._checksum_calculator.calculate_checksums
-            
+
             @monitor_semantic_extraction(extractor_name="ChecksumCalculator")
             def monitored_checksum_calc(file_path):
                 return original_checksum_calc(file_path)
-            
+
             self._checksum_calculator.calculate_checksums = monitored_checksum_calc
             logger.info("Applied monitoring to checksum calculator")
-            
+
         # Patch EXIF extractor
         if hasattr(self, "_exif_extractor") and self._exif_extractor:
             original_exif_extract = self._exif_extractor.extract_exif
-            
+
             @monitor_semantic_extraction(extractor_name="ExifExtractor")
             def monitored_exif_extract(file_path):
                 return original_exif_extract(file_path)
-            
+
             self._exif_extractor.extract_exif = monitored_exif_extract
             logger.info("Applied monitoring to EXIF extractor")
-            
+
     def _run_stats_thread(self):
         """Run the statistics reporting thread."""
         while not self.stopping:
             # Wait for the specified interval
             time.sleep(self.stats_interval)
-            
+
             # Generate and save stats
             try:
                 self._generate_and_save_stats()
             except Exception as e:
                 logger.error(f"Error generating stats: {e}")
-    
+
     def _generate_and_save_stats(self):
         """Generate and save performance statistics."""
         stats = self.performance_monitor.get_stats()
-        
+
         # Add runtime information
         now = time.time()
         elapsed = now - self.start_time
-        
+
         # Create summary stats
         summary = {
             "timestamp": datetime.datetime.now().isoformat(),
@@ -178,40 +173,40 @@ class MonitoredBackgroundProcessor(IndalekoBackgroundProcessor):
             "files_per_second": stats.get("files_per_second", 0),
             "bytes_per_second": stats.get("bytes_per_second", 0),
             "extractor_stats": stats["extractor_stats"],
-            "file_type_stats": stats.get("file_type_stats", {})
+            "file_type_stats": stats.get("file_type_stats", {}),
         }
-        
+
         # Log summary
         logger.info(f"Performance summary (runtime: {summary['runtime_formatted']}):")
         logger.info(f"  Total files: {summary['total_files_processed']}")
         logger.info(f"  Files/sec: {summary['files_per_second']:.2f}")
         logger.info(f"  MB/sec: {summary['bytes_per_second'] / (1024*1024):.2f}")
-        
+
         # Save to file if specified
         if self.stats_file:
             try:
-                with open(self.stats_file, 'w') as f:
+                with open(self.stats_file, "w") as f:
                     json.dump(summary, f, indent=2)
                 logger.info(f"Statistics saved to {self.stats_file}")
-                
+
                 # Generate plots if matplotlib is available
                 if PLOTTING_AVAILABLE:
                     self._generate_plots(stats, os.path.dirname(self.stats_file))
-                    
+
             except Exception as e:
                 logger.error(f"Error saving stats to {self.stats_file}: {e}")
-                
+
         return summary
-    
+
     def _generate_plots(self, stats, output_dir):
         """Generate performance visualization plots."""
         # Get extractor statistics
         extractor_stats = stats["extractor_stats"]
         extractors = list(extractor_stats.keys())
-        
+
         if not extractors:
             return
-        
+
         # Plot files processed by extractor
         plt.figure(figsize=(10, 6))
         files_processed = [extractor_stats[e]["files_processed"] for e in extractors]
@@ -221,39 +216,40 @@ class MonitoredBackgroundProcessor(IndalekoBackgroundProcessor):
         plt.tight_layout()
         plt.savefig(os.path.join(output_dir, "files_by_extractor.png"))
         plt.close()
-        
+
         # Plot average time per file by extractor
         plt.figure(figsize=(10, 6))
         avg_times = []
         for e in extractors:
             if extractor_stats[e]["files_processed"] > 0:
-                avg_time = extractor_stats[e]["total_time"] / extractor_stats[e]["files_processed"]
+                avg_time = (
+                    extractor_stats[e]["total_time"]
+                    / extractor_stats[e]["files_processed"]
+                )
             else:
                 avg_time = 0
             avg_times.append(avg_time)
-        
+
         plt.bar(extractors, avg_times)
         plt.title("Average Processing Time by Extractor")
         plt.ylabel("Seconds per File")
         plt.tight_layout()
         plt.savefig(os.path.join(output_dir, "time_by_extractor.png"))
         plt.close()
-        
+
         # Plot file type distribution if available
         file_type_stats = stats.get("file_type_stats", {})
         if file_type_stats:
             plt.figure(figsize=(12, 6))
-            
+
             # Get top 10 file types by count
             top_types = sorted(
-                file_type_stats.items(), 
-                key=lambda x: x[1]["count"], 
-                reverse=True
+                file_type_stats.items(), key=lambda x: x[1]["count"], reverse=True,
             )[:10]
-            
+
             mime_types = [t[0] for t in top_types]
             counts = [t[1]["count"] for t in top_types]
-            
+
             plt.bar(mime_types, counts)
             plt.title("Top 10 File Types Processed")
             plt.ylabel("Number of Files")
@@ -261,13 +257,13 @@ class MonitoredBackgroundProcessor(IndalekoBackgroundProcessor):
             plt.tight_layout()
             plt.savefig(os.path.join(output_dir, "file_type_distribution.png"))
             plt.close()
-    
+
     def _format_elapsed_time(self, seconds):
         """Format elapsed time in a human-readable format."""
         hours, remainder = divmod(int(seconds), 3600)
         minutes, seconds = divmod(remainder, 60)
         return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-    
+
     def start(self):
         """Start the monitored background processor."""
         # Start the stats thread if stats file is specified
@@ -275,87 +271,87 @@ class MonitoredBackgroundProcessor(IndalekoBackgroundProcessor):
             self.stats_thread = threading.Thread(target=self._run_stats_thread)
             self.stats_thread.daemon = True
             self.stats_thread.start()
-            
+
         # Start the processor
         super().start()
-        
+
     def stop(self):
         """Stop the monitored background processor."""
         self.stopping = True
-        
+
         # Generate final statistics
         try:
             self._generate_and_save_stats()
         except Exception as e:
             logger.error(f"Error generating final stats: {e}")
-            
+
         # Stop the processor
         super().stop()
-        
-        
+
+
 def main():
     """Main function for the monitored background processor."""
-    parser = argparse.ArgumentParser(description="Indaleko Background Processor with Performance Monitoring")
-    
+    parser = argparse.ArgumentParser(
+        description="Indaleko Background Processor with Performance Monitoring",
+    )
+
     # Configuration
     parser.add_argument(
-        "--config", 
-        type=str, 
+        "--config",
+        type=str,
         default=os.path.join(os.path.dirname(__file__), "bg_processor_config.json"),
-        help="Path to background processor configuration file"
+        help="Path to background processor configuration file",
     )
-    
+
     # Performance monitoring options
     parser.add_argument(
         "--no-db-record",
         action="store_false",
         dest="record_to_db",
-        help="Disable recording performance data to database"
+        help="Disable recording performance data to database",
     )
     parser.add_argument(
         "--no-file-record",
         action="store_false",
         dest="record_to_file",
-        help="Disable recording performance data to file"
+        help="Disable recording performance data to file",
     )
     parser.add_argument(
         "--perf-file",
         type=str,
         default=os.path.join(log_dir, "semantic_extractor_perf.jsonl"),
-        help="Path to performance data file"
+        help="Path to performance data file",
     )
     parser.add_argument(
         "--stats-file",
         type=str,
         default=os.path.join(log_dir, "bg_processor_stats.json"),
-        help="Path to statistics summary file"
+        help="Path to statistics summary file",
     )
     parser.add_argument(
         "--stats-interval",
         type=int,
         default=300,
-        help="Statistics reporting interval in seconds (default: 300)"
+        help="Statistics reporting interval in seconds (default: 300)",
     )
-    
+
     # Runtime options
     parser.add_argument(
-        "--reset",
-        action="store_true",
-        help="Reset all statistics and start fresh"
+        "--reset", action="store_true", help="Reset all statistics and start fresh",
     )
     parser.add_argument(
         "--report-only",
         action="store_true",
-        help="Generate performance report without running the processor"
+        help="Generate performance report without running the processor",
     )
-    
+
     args = parser.parse_args()
-    
+
     # Report-only mode
     if args.report_only:
         generate_performance_report(args.stats_file, args.perf_file)
         return
-    
+
     # Create and start the processor
     processor = MonitoredBackgroundProcessor(
         config_path=args.config,
@@ -363,14 +359,14 @@ def main():
         record_to_file=args.record_to_file,
         perf_file_name=args.perf_file,
         stats_file=args.stats_file,
-        stats_interval=args.stats_interval
+        stats_interval=args.stats_interval,
     )
-    
+
     # Reset statistics if requested
     if args.reset:
         processor.performance_monitor.reset_stats()
         logger.info("Statistics reset")
-    
+
     try:
         logger.info("Starting monitored background processor")
         processor.start()
@@ -384,32 +380,33 @@ def main():
 def generate_performance_report(stats_file, perf_file):
     """Generate a comprehensive performance report from existing data."""
     logger.info("Generating performance report...")
-    
+
     # Check if files exist
     if not os.path.exists(stats_file):
         logger.error(f"Stats file not found: {stats_file}")
         return
-        
+
     if not os.path.exists(perf_file):
         logger.warning(f"Performance data file not found: {perf_file}")
-    
+
     # Load stats
     try:
-        with open(stats_file, 'r') as f:
+        with open(stats_file) as f:
             stats = json.load(f)
-            
+
         # Create report
         report_dir = os.path.join(os.path.dirname(stats_file), "reports")
         os.makedirs(report_dir, exist_ok=True)
-        
+
         report_file = os.path.join(
-            report_dir, 
-            f"performance_report_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
+            report_dir,
+            f"performance_report_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.html",
         )
-        
+
         # Create HTML report
-        with open(report_file, 'w') as f:
-            f.write(f"""<!DOCTYPE html>
+        with open(report_file, "w") as f:
+            f.write(
+                f"""<!DOCTYPE html>
 <html>
 <head>
     <title>Indaleko Semantic Extractor Performance Report</title>
@@ -429,7 +426,7 @@ def generate_performance_report(stats_file, perf_file):
     <h1>Indaleko Semantic Extractor Performance Report</h1>
     <p><strong>Generated:</strong> {datetime.datetime.now().isoformat()}</p>
     <p><strong>Runtime:</strong> {stats.get('runtime_formatted', 'N/A')}</p>
-    
+
     <div class="section">
         <h2>Summary</h2>
         <table>
@@ -459,7 +456,7 @@ def generate_performance_report(stats_file, perf_file):
             </tr>
         </table>
     </div>
-    
+
     <div class="section">
         <h2>Extractor Performance</h2>
         <table>
@@ -472,22 +469,32 @@ def generate_performance_report(stats_file, perf_file):
                 <th>MB/Second</th>
                 <th>Success Rate</th>
             </tr>
-""")
-            
+""",
+            )
+
             # Add extractor stats
-            for extractor, extractor_stats in stats.get('extractor_stats', {}).items():
-                files = extractor_stats.get('files_processed', 0)
-                bytes_processed = extractor_stats.get('bytes_processed', 0)
-                total_time = extractor_stats.get('total_time', 0)
-                
+            for extractor, extractor_stats in stats.get("extractor_stats", {}).items():
+                files = extractor_stats.get("files_processed", 0)
+                bytes_processed = extractor_stats.get("bytes_processed", 0)
+                total_time = extractor_stats.get("total_time", 0)
+
                 avg_time = total_time / files if files > 0 else 0
-                mb_per_second = (bytes_processed / (1024*1024)) / total_time if total_time > 0 else 0
-                
-                success = extractor_stats.get('success_count', 0)
-                errors = extractor_stats.get('error_count', 0)
-                success_rate = (success / (success + errors)) * 100 if (success + errors) > 0 else 0
-                
-                f.write(f"""
+                mb_per_second = (
+                    (bytes_processed / (1024 * 1024)) / total_time
+                    if total_time > 0
+                    else 0
+                )
+
+                success = extractor_stats.get("success_count", 0)
+                errors = extractor_stats.get("error_count", 0)
+                success_rate = (
+                    (success / (success + errors)) * 100
+                    if (success + errors) > 0
+                    else 0
+                )
+
+                f.write(
+                    f"""
             <tr>
                 <td>{extractor}</td>
                 <td>{files:,}</td>
@@ -496,12 +503,14 @@ def generate_performance_report(stats_file, perf_file):
                 <td>{avg_time:.4f}</td>
                 <td>{mb_per_second:.2f}</td>
                 <td>{success_rate:.2f}% ({success:,}/{success+errors:,})</td>
-            </tr>""")
-            
-            f.write("""
+            </tr>""",
+                )
+
+            f.write(
+                """
         </table>
     </div>
-    
+
     <div class="section">
         <h2>MIME Type Distribution</h2>
         <table>
@@ -512,34 +521,38 @@ def generate_performance_report(stats_file, perf_file):
                 <th>Avg Size</th>
                 <th>Avg Processing Time</th>
             </tr>
-""")
-            
+""",
+            )
+
             # Add MIME type stats
             for mime_type, mime_stats in sorted(
-                stats.get('file_type_stats', {}).items(), 
-                key=lambda x: x[1].get('count', 0), 
-                reverse=True
+                stats.get("file_type_stats", {}).items(),
+                key=lambda x: x[1].get("count", 0),
+                reverse=True,
             ):
-                count = mime_stats.get('count', 0)
-                total_bytes = mime_stats.get('total_bytes', 0)
-                total_time = mime_stats.get('total_time', 0)
-                
+                count = mime_stats.get("count", 0)
+                total_bytes = mime_stats.get("total_bytes", 0)
+                total_time = mime_stats.get("total_time", 0)
+
                 avg_size = total_bytes / count if count > 0 else 0
                 avg_time = total_time / count if count > 0 else 0
-                
-                f.write(f"""
+
+                f.write(
+                    f"""
             <tr>
                 <td>{mime_type}</td>
                 <td>{count:,}</td>
                 <td>{total_bytes:,} ({total_bytes / (1024*1024):.2f} MB)</td>
                 <td>{avg_size / 1024:.2f} KB</td>
                 <td>{avg_time:.4f} seconds</td>
-            </tr>""")
-            
-            f.write("""
+            </tr>""",
+                )
+
+            f.write(
+                """
         </table>
     </div>
-    
+
     <div class="section">
         <h2>Visualizations</h2>
         <div class="image-container">
@@ -550,7 +563,7 @@ def generate_performance_report(stats_file, perf_file):
             <img src="../file_type_distribution.png" alt="File Type Distribution">
         </div>
     </div>
-    
+
     <div class="section">
         <h2>Recommendations</h2>
         <ul>
@@ -563,10 +576,11 @@ def generate_performance_report(stats_file, perf_file):
     </div>
 </body>
 </html>
-""")
-            
+""",
+            )
+
         logger.info(f"Report generated: {report_file}")
-        
+
     except Exception as e:
         logger.error(f"Error generating report: {e}")
 

@@ -21,7 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 
 class LLMBase(ABC):
@@ -40,7 +40,6 @@ class LLMBase(ABC):
         Returns:
             str: The generated query
         """
-        pass
 
     @abstractmethod
     def summarize_text(self, text: str, max_length: int = 100) -> str:
@@ -54,7 +53,6 @@ class LLMBase(ABC):
         Returns:
             str: The summarized text
         """
-        pass
 
     @abstractmethod
     def extract_keywords(self, text: str, num_keywords: int = 5) -> list[str]:
@@ -68,7 +66,6 @@ class LLMBase(ABC):
         Returns:
             list[str]: The extracted keywords
         """
-        pass
 
     @abstractmethod
     def classify_text(self, text: str, categories: list[str]) -> str:
@@ -82,10 +79,11 @@ class LLMBase(ABC):
         Returns:
             str: The predicted category
         """
-        pass
 
     @abstractmethod
-    def answer_question(self, context: str, question: str, schema: Optional[Dict[str, Any]] = None) -> str:
+    def answer_question(
+        self, context: str, question: str, schema: dict[str, Any] | None = None,
+    ) -> str:
         """
         Answer a question based on the given context.
 
@@ -97,7 +95,6 @@ class LLMBase(ABC):
         Returns:
             str: The answer to the question
         """
-        pass
 
 
 class IndalekoLLMBase(ABC):
@@ -107,10 +104,7 @@ class IndalekoLLMBase(ABC):
 
     @abstractmethod
     def get_completion(
-        self, 
-        context: str, 
-        question: str, 
-        schema: Optional[Dict[str, Any]] = None
+        self, context: str, question: str, schema: dict[str, Any] | None = None,
     ) -> Any:
         """
         Get a completion from the LLM based on the given context and question.
@@ -123,14 +117,10 @@ class IndalekoLLMBase(ABC):
         Returns:
             Any: The completion response object
         """
-        pass
 
     @abstractmethod
     def answer_question(
-        self, 
-        context: str, 
-        question: str, 
-        schema: Optional[Dict[str, Any]] = None
+        self, context: str, question: str, schema: dict[str, Any] | None = None,
     ) -> str:
         """
         Answer a question based on the given context.
@@ -143,14 +133,10 @@ class IndalekoLLMBase(ABC):
         Returns:
             str: The answer to the question
         """
-        pass
 
     @abstractmethod
     def generate_text(
-        self, 
-        prompt: str, 
-        max_tokens: int = 500, 
-        temperature: float = 0.7
+        self, prompt: str, max_tokens: int = 500, temperature: float = 0.7,
     ) -> str:
         """
         Generate text based on the provided prompt.
@@ -163,14 +149,11 @@ class IndalekoLLMBase(ABC):
         Returns:
             str: The generated text
         """
-        pass
 
     @abstractmethod
     def extract_semantic_attributes(
-        self, 
-        text: str, 
-        attr_types: Optional[list[str]] = None
-    ) -> Dict[str, Any]:
+        self, text: str, attr_types: list[str] | None = None,
+    ) -> dict[str, Any]:
         """
         Extract semantic attributes from text.
 
@@ -181,4 +164,3 @@ class IndalekoLLMBase(ABC):
         Returns:
             Dict[str, Any]: Dictionary of extracted attributes
         """
-        pass

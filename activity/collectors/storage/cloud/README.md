@@ -226,15 +226,15 @@ python -m activity.collectors.storage.cloud.examples.gdrive_example \
    - Verify that OAuth credentials are correct
    - Check for expired refresh tokens
    - Ensure redirect URIs match configuration
-   
+
 2. **API Rate Limits**
    - Implement exponential backoff for retries
    - Adjust collection frequency in configuration
-   
+
 3. **Missing Events**
    - Check change token validity (some APIs expire change tokens)
    - Verify correct timestamp ranges for incremental collection
-   
+
 4. **Database Connection Issues**
    - Check ArangoDB connection
    - Verify database credentials and permissions

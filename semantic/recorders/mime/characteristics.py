@@ -38,6 +38,12 @@ SEMANTIC_MIME_IS_VIDEO = "b0a6f7c4-9d5e-4a3b-9c8d-2e1f0b7a9c3d"
 SEMANTIC_MIME_IS_APPLICATION = "1d7e9a2f-5c3b-4e8d-9f7a-6b3c1d0e5a8f"
 
 # Format-specific markers
-SEMANTIC_MIME_IS_CONTAINER = "9c3d5a7e-1f4b-8a2e-6d9c-5b7a3f1e8d2c"  # For formats that contain other formats
-SEMANTIC_MIME_IS_COMPRESSED = "3e8d1c5a-7f9b-2e6d-4a1c-9f5e3d7b8a2c"  # For compressed formats
-SEMANTIC_MIME_IS_ENCRYPTED = "5a9c3e7d-1b8f-4e2d-7a9c-3e5d1b8f4a2e"  # For encrypted formats
+SEMANTIC_MIME_IS_CONTAINER = (
+    "9c3d5a7e-1f4b-8a2e-6d9c-5b7a3f1e8d2c"  # For formats that contain other formats
+)
+SEMANTIC_MIME_IS_COMPRESSED = (
+    "3e8d1c5a-7f9b-2e6d-4a1c-9f5e3d7b8a2c"  # For compressed formats
+)
+SEMANTIC_MIME_IS_ENCRYPTED = (
+    "5a9c3e7d-1b8f-4e2d-7a9c-3e5d1b8f4a2e"  # For encrypted formats
+)

@@ -105,16 +105,16 @@ The recommendation engine analyzes multiple data sources to generate query sugge
 ```python
 class RecommendationEngine:
     """Central coordinator for generating contextual query recommendations."""
-    
+
     def get_recommendations(
-        self, 
+        self,
         current_query: Optional[str] = None,
         context_data: Dict[str, Any] = None,
         max_results: int = 5
     ) -> List[QuerySuggestion]:
         """Generate recommendations based on current context."""
         pass
-        
+
     def record_feedback(
         self,
         suggestion_id: UUID,
@@ -130,7 +130,7 @@ class RecommendationEngine:
 ```python
 class RecommendationSource(ABC):
     """Interface for components that generate query suggestions."""
-    
+
     @abstractmethod
     def generate_suggestions(
         self,
@@ -140,7 +140,7 @@ class RecommendationSource(ABC):
     ) -> List[QuerySuggestion]:
         """Generate query suggestions based on the given context."""
         pass
-        
+
     @abstractmethod
     def update_from_feedback(
         self,
@@ -157,7 +157,7 @@ class RecommendationSource(ABC):
 ```python
 class QuerySuggestion(IndalekoBaseModel):
     """Model representing a suggested query."""
-    
+
     suggestion_id: UUID = Field(default_factory=uuid.uuid4)
     query_text: str
     rationale: str

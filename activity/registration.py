@@ -23,8 +23,7 @@ import json
 import os
 import sys
 import uuid
-
-from typing import Any, Dict, Union
+from typing import Any
 
 from icecream import ic
 
@@ -35,12 +34,13 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
-# pylint: disable=wrong-import-position
-from Indaleko import Indaleko
-from db import IndalekoCollection
 from data_models.activity_data_registration import (
     IndalekoActivityDataRegistrationDataModel,
 )
+from db import IndalekoCollection
+
+# pylint: disable=wrong-import-position
+from Indaleko import Indaleko
 
 # pylint: enable=wrong-import-position
 
@@ -59,17 +59,15 @@ class IndalekoActivityDataRegistration:
 
     def __init__(
         self,
-        registration_data: Union[
-            Dict[str, Any], IndalekoActivityDataRegistrationDataModel
-        ],
-    ):
+        registration_data: dict[str, Any] | IndalekoActivityDataRegistrationDataModel,
+    ) -> None:
         """Initialize an activity data provider registration."""
         self.registration_data = registration_data
         ic(registration_data)
         if isinstance(registration_data, dict):
             ic(registration_data)
             self.registration_object = IndalekoActivityDataRegistrationDataModel(
-                **registration_data
+                **registration_data,
             )
         elif isinstance(registration_data, IndalekoActivityDataRegistrationDataModel):
             self.registration_object = registration_data
@@ -77,17 +75,17 @@ class IndalekoActivityDataRegistration:
             raise ValueError("Invalid registration data type")
         ic(self.registration_object.Identifier)
         self.activity_collection_name = IndalekoActivityDataRegistration.generate_activity_data_provider_collection_name(
-            str(self.registration_object.Identifier)
+            str(self.registration_object.Identifier),
         )
 
     @staticmethod
     def generate_activity_data_provider_collection_name(identifier: str) -> str:
         """Return the name of the collection for the activity provider."""
         assert isinstance(
-            identifier, str
+            identifier, str,
         ), f"Identifier {identifier} must be a string is {type(identifier)}"
         assert Indaleko.validate_uuid_string(
-            identifier
+            identifier,
         ), f"Identifier {identifier} must be a valid UUID"
         prefix = IndalekoActivityDataRegistration.provider_prefix
         return f"{prefix}{identifier}"

@@ -20,15 +20,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import os
+
 import streamlit as st
 
-from utils.gui.streamlit.components.connection import render_connection_status, connect_to_db
+from utils.gui.streamlit.components.connection import (
+    connect_to_db,
+    render_connection_status,
+)
 from utils.gui.streamlit.services.config import get_config_files
+
 
 def render_sidebar():
     """
     Render the navigation sidebar for the application
-    
+
     Includes:
     - Logo/title
     - Database connection management
@@ -38,7 +43,9 @@ def render_sidebar():
     with st.sidebar:
         # Try to show logo, fall back to text if not found
         try:
-            image_path = os.path.join(os.environ.get("INDALEKO_ROOT"), "figures", "indaleko-arch.png")
+            image_path = os.path.join(
+                os.environ.get("INDALEKO_ROOT"), "figures", "indaleko-arch.png",
+            )
             if os.path.exists(image_path):
                 st.image(image_path, use_container_width=True)
             else:
@@ -48,7 +55,7 @@ def render_sidebar():
 
         # Database connection section
         st.subheader("Database Connection")
-        
+
         # Show connection status
         render_connection_status()
 
@@ -67,7 +74,9 @@ def render_sidebar():
 
         with col2:
             # Add a debug toggle
-            st.session_state.connect_debug = st.checkbox("Debug", value=st.session_state.connect_debug)
+            st.session_state.connect_debug = st.checkbox(
+                "Debug", value=st.session_state.connect_debug,
+            )
 
         # Connection button - full width
         if config_files:
@@ -87,19 +96,19 @@ def render_sidebar():
 
         # Navigation section
         st.subheader("Navigation")
-        
+
         if st.button("Dashboard", key="nav_dashboard"):
             st.session_state.current_page = "dashboard"
-            
+
         if st.button("Search", key="nav_search"):
             st.session_state.current_page = "search"
-            
+
         if st.button("Analytics", key="nav_analytics"):
             st.session_state.current_page = "analytics"
-            
+
         if st.button("Activity", key="nav_activity"):
             st.session_state.current_page = "activity"
-            
+
         if st.button("Settings", key="nav_settings"):
             st.session_state.current_page = "settings"
 

@@ -4,19 +4,24 @@ This module defines a recorder for WiFi-based location data.
 It registers the WiFiLocation collector as an activity data provider,
 builds and inserts location activity documents into its ArangoDB collection.
 """
+
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Union
+from typing import Any
 
-from activity.recorders.location.location_data_recorder import BaseLocationDataRecorder
-from activity.recorders.registration_service import IndalekoActivityDataRegistrationService
+from activity.collectors.location.data_models.wifi_location_data_model import (
+    WiFiLocationDataModel,
+)
 from activity.collectors.location.wifi_location import WiFiLocation
-from activity.collectors.location.data_models.wifi_location_data_model import WiFiLocationDataModel
-from data_models.record import IndalekoRecordDataModel
-from data_models.source_identifier import IndalekoSourceIdentifierDataModel
-from data_models.i_uuid import IndalekoUUIDDataModel
-from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
+from activity.recorders.location.location_data_recorder import BaseLocationDataRecorder
+from activity.recorders.registration_service import (
+    IndalekoActivityDataRegistrationService,
+)
 from activity.semantic_attributes import KnownSemanticAttributes
+from data_models.i_uuid import IndalekoUUIDDataModel
+from data_models.record import IndalekoRecordDataModel
+from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
+from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from utils.misc.data_management import decode_binary_data
 
 
@@ -53,32 +58,34 @@ class WiFiLocationRecorder(BaseLocationDataRecorder):
         registrar = IndalekoActivityDataRegistrationService()
         existing = registrar.lookup_provider_by_identifier(str(self.identifier))
         if existing is None:
-            self.collector_data, self.collection = registrar.register_provider(**record_kwargs)
+            self.collector_data, self.collection = registrar.register_provider(
+                **record_kwargs,
+            )
         else:
             self.collector_data = existing
             self.collection = IndalekoActivityDataRegistrationService.lookup_activity_provider_collection(
-                str(self.identifier)
+                str(self.identifier),
             )
 
-    def get_recorder_characteristics(self) -> List[Any]:
+    def get_recorder_characteristics(self) -> list[Any]:
         return self.provider.get_collector_characteristics()
 
     def get_recorder_name(self) -> str:
         return "wifi_location"
 
-    def get_collector_class_model(self) -> Dict[str, type]:
+    def get_collector_class_model(self) -> dict[str, type]:
         return {"WiFiLocation": WiFiLocationDataModel}
 
     def get_recorder_id(self) -> uuid.UUID:
         return self.identifier
 
-    def process_data(self, data: Any) -> Dict[str, Any]:
+    def process_data(self, data: Any) -> dict[str, Any]:
         return data if isinstance(data, dict) else data.serialize()
 
-    def store_data(self, data: Dict[str, Any]) -> None:
+    def store_data(self, data: dict[str, Any]) -> None:
         pass
 
-    def update_data(self) -> Union[WiFiLocationDataModel, None]:
+    def update_data(self) -> WiFiLocationDataModel | None:
         """Collect new data, compare to last DB entry, and insert if changed."""
         # Trigger collector to gather latest WiFi location
         self.provider.collect_data()
@@ -134,7 +141,7 @@ class WiFiLocationRecorder(BaseLocationDataRecorder):
         self.collection.insert(doc)
         return model
 
-    def get_latest_db_update(self) -> Union[WiFiLocationDataModel, None]:
+    def get_latest_db_update(self) -> WiFiLocationDataModel | None:
         """Fetch and deserialize the latest stored activity document."""
         entry = BaseLocationDataRecorder.get_latest_db_update_dict(self.collection)
         if entry is None:

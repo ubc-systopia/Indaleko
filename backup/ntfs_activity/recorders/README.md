@@ -209,16 +209,16 @@ try:
         new_activities = collector.get_activities(
             filters={"stored": False}
         )
-        
+
         # Store the activities
         if new_activities:
             recorder.store_activities(new_activities)
             print(f"Stored {len(new_activities)} new activities")
-            
+
             # Mark activities as stored
             for activity in new_activities:
                 activity.stored = True
-                
+
         # Wait before checking again
         time.sleep(30)
 except KeyboardInterrupt:

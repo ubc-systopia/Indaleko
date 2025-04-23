@@ -134,7 +134,7 @@ Compares performance across different file types:
 
 Evaluates how performance scales with file size:
 - Processing time versus file size
-- Bandwidth scaling characteristics 
+- Bandwidth scaling characteristics
 - Resource usage growth patterns
 
 ### Coverage Projection

@@ -22,11 +22,10 @@ import json
 import math
 import os
 import sys
-from textwrap import dedent
 import uuid
-
 from datetime import datetime, timedelta
-from typing import Union, List, Dict
+from textwrap import dedent
+
 from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -36,20 +35,21 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
-# pylint: disable=wrong-import-position
-from Indaleko import Indaleko
-from db import IndalekoDBConfig, IndalekoCollection
-from data_models.record import IndalekoRecordDataModel
-from data_models.source_identifier import IndalekoSourceIdentifierDataModel
-from data_models.location_data_model import BaseLocationDataModel
-from activity.data_model.activity import IndalekoActivityDataModel
-from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
+from activity.characteristics import ActivityDataCharacteristics
 from activity.collectors.base import CollectorBase
+from activity.data_model.activity import IndalekoActivityDataModel
+from activity.recorders.base import RecorderBase
 
 # from activity.collectors.location
 from activity.semantic_attributes import KnownSemanticAttributes
-from activity.characteristics import ActivityDataCharacteristics
-from activity.recorders.base import RecorderBase
+from data_models.location_data_model import BaseLocationDataModel
+from data_models.record import IndalekoRecordDataModel
+from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
+from data_models.source_identifier import IndalekoSourceIdentifierDataModel
+from db import IndalekoCollection, IndalekoDBConfig
+
+# pylint: disable=wrong-import-position
+from Indaleko import Indaleko
 
 # pylint: enable=wrong-import-position
 
@@ -69,15 +69,15 @@ class BaseLocationDataRecorder(RecorderBase):
     def __init__(self, **kwargs):
         """Initialize the base location data collector."""
         self.min_movement_change_required = kwargs.get(
-            "min_movement_change_required", self.default_min_movement_change_required
+            "min_movement_change_required", self.default_min_movement_change_required,
         )
         self.max_time_between_updates = kwargs.get(
-            "max_time_between_updates", self.default_max_time_between_updates
+            "max_time_between_updates", self.default_max_time_between_updates,
         )
         self.provider = kwargs.get("provider", None)
         if self.provider is not None:
             assert isinstance(
-                self.provider, CollectorBase
+                self.provider, CollectorBase,
             ), f"provider is not an CollectorBase {type(self.provider)}"
 
     @staticmethod
@@ -115,7 +115,7 @@ class BaseLocationDataRecorder(RecorderBase):
 
     @staticmethod
     def compute_time_difference(
-        time1: Union[datetime, str], time2: Union[datetime, str]
+        time1: datetime | str, time2: datetime | str,
     ) -> float:
         """
         Compute the time difference between two times.
@@ -130,10 +130,10 @@ class BaseLocationDataRecorder(RecorderBase):
         Note: this is a simple implementation of the time difference.
         """
         assert isinstance(time1, datetime) or isinstance(
-            time1, str
+            time1, str,
         ), "time1 is not a datetime or string"
         assert isinstance(time2, datetime) or isinstance(
-            time2, str
+            time2, str,
         ), "time2 is not a datetime or string"
         if isinstance(time1, str):
             time1 = datetime.fromisoformat(time1)
@@ -143,7 +143,7 @@ class BaseLocationDataRecorder(RecorderBase):
         return delta.total_seconds()
 
     def has_data_changed(
-        self, data1: BaseLocationDataModel, data2: BaseLocationDataModel
+        self, data1: BaseLocationDataModel, data2: BaseLocationDataModel,
     ) -> bool:
         """Check if the data has changed materially.
 
@@ -160,17 +160,19 @@ class BaseLocationDataRecorder(RecorderBase):
         if data1 is None or data2 is None:
             return True
         assert isinstance(
-            data1, BaseLocationDataModel
+            data1, BaseLocationDataModel,
         ), f"data1 is not a BaseLocationDataModel {type(data1)}"
         assert isinstance(
-            data2, BaseLocationDataModel
+            data2, BaseLocationDataModel,
         ), f"data2 is not a BaseLocationDataModel {type(data2)}"
         distance = BaseLocationDataRecorder.compute_distance(
-            data1.Location.latitude, data1.Location.longitude,
-            data2.Location.latitude, data2.Location.longitude
+            data1.Location.latitude,
+            data1.Location.longitude,
+            data2.Location.latitude,
+            data2.Location.longitude,
         )
         time_delta = BaseLocationDataRecorder.compute_time_difference(
-            data1.Location.timestamp, data2.Location.timestamp
+            data1.Location.timestamp, data2.Location.timestamp,
         )
         return (
             distance > self.min_movement_change_required
@@ -178,7 +180,7 @@ class BaseLocationDataRecorder(RecorderBase):
         )
 
     @staticmethod
-    def get_latest_db_update_dict(collection: IndalekoCollection) -> Union[dict, None]:
+    def get_latest_db_update_dict(collection: IndalekoCollection) -> dict | None:
         """
         Get the latest update from the database.
 
@@ -194,7 +196,7 @@ class BaseLocationDataRecorder(RecorderBase):
         special characters (e.g., the UUID we use).
         """
         assert isinstance(
-            collection, IndalekoCollection
+            collection, IndalekoCollection,
         ), f"collection is not an IndalekoCollection {type(collection)}"
         query = """
             FOR doc IN @@collection
@@ -203,7 +205,7 @@ class BaseLocationDataRecorder(RecorderBase):
                 RETURN doc
         """
         bind_vars = {"@collection": collection.name}
-        results = IndalekoDBConfig().db.aql.execute(query, bind_vars=bind_vars)
+        results = IndalekoDBConfig()._arangodb.aql.execute(query, bind_vars=bind_vars)
         entries = [entry for entry in results]
         if len(entries) == 0:
             return None
@@ -212,9 +214,9 @@ class BaseLocationDataRecorder(RecorderBase):
 
     @staticmethod
     def build_location_activity_document(
-        source_data: Union[IndalekoSourceIdentifierDataModel, dict],
-        location_data: Union[BaseLocationDataModel, dict],
-        semantic_attributes: List[IndalekoSemanticAttributeDataModel],
+        source_data: IndalekoSourceIdentifierDataModel | dict,
+        location_data: BaseLocationDataModel | dict,
+        semantic_attributes: list[IndalekoSemanticAttributeDataModel],
     ) -> dict:
         """
         This builds a dictionary that can be used to generate the json
@@ -234,18 +236,18 @@ class BaseLocationDataRecorder(RecorderBase):
             insert the record into the database.
         """
         assert isinstance(source_data, IndalekoSourceIdentifierDataModel) or isinstance(
-            source_data, dict
+            source_data, dict,
         ), f"source_data is not an IndalekoSourceIdentifierDataModel or dict {type(source_data)}"
         assert isinstance(location_data, BaseLocationDataModel) or isinstance(
-            location_data, dict
+            location_data, dict,
         ), f"location_data is not a BaseLocationDataModel or dict {type(location_data)}"
         assert isinstance(
-            semantic_attributes, List
+            semantic_attributes, list,
         ), f"semantic_attributes is not a List {type(semantic_attributes)}"
         if isinstance(location_data, BaseLocationDataModel):
             location_data = json.loads(location_data.model_dump_json())
         assert len(semantic_attributes) > 0, "No semantic attributes provided"
-        timestamp = location_data['Location']["timestamp"]
+        timestamp = location_data["Location"]["timestamp"]
         activity_data_args = {
             "Record": IndalekoRecordDataModel(
                 SourceIdentifier=source_data,
@@ -258,7 +260,7 @@ class BaseLocationDataRecorder(RecorderBase):
         ic(activity_data_args)
         activity_data = IndalekoActivityDataModel(**activity_data_args)
         return json.loads(
-            activity_data.model_dump_json(exclude_none=True, exclude_unset=True)
+            activity_data.model_dump_json(exclude_none=True, exclude_unset=True),
         )
 
     def retrieve_temporal_data(
@@ -267,7 +269,7 @@ class BaseLocationDataRecorder(RecorderBase):
         prior_time_window: timedelta,
         subsequent_time_window: timedelta,
         max_entries: int = 0,
-    ) -> Union[list[dict], None]:
+    ) -> list[dict] | None:
         """
         This call retrieves temporal data available to the data provider within
         the specified time window.
@@ -293,7 +295,7 @@ class BaseLocationDataRecorder(RecorderBase):
     # we handle the database interactions.
     def get_provider_characteristics(
         self,
-    ) -> Union[list[ActivityDataCharacteristics], None]:
+    ) -> list[ActivityDataCharacteristics] | None:
         """
         This call returns the characteristics of the data provider.  This is
         intended to be used to help users understand the data provider and to
@@ -304,12 +306,12 @@ class BaseLocationDataRecorder(RecorderBase):
         """
         if hasattr(self, "provider"):
             assert isinstance(
-                self.provider, CollectorBase
+                self.provider, CollectorBase,
             ), f"provider is not an CollectorBase {type(self.provider)}"
             return self.provider.get_collector_characteristics()
         return None
 
-    def get_provider_semantic_attributes(self) -> Union[list[str], None]:
+    def get_provider_semantic_attributes(self) -> list[str] | None:
         """
         This call returns the semantic attributes that the provider
         supports/uses.  It is used in prompt construction, so if you do not
@@ -332,30 +334,30 @@ class BaseLocationDataRecorder(RecorderBase):
             KnownSemanticAttributes.ACTIVITY_DATA_LOCATION_ACCURACY,
         ]
 
-    def get_provider_name(self) -> Union[str, None]:
+    def get_provider_name(self) -> str | None:
         """
         Get the name of the provider
 
-            Returns:
+        Returns:
                 str: The name of the provider
         """
         if hasattr(self, "provider"):
             assert isinstance(
-                self.provider, CollectorBase
+                self.provider, CollectorBase,
             ), f"provider is not an CollectorBase {type(self.provider)}"
             return self.provider.get_collectorr_name()
         return None
 
-    def get_provider_id(self) -> Union[uuid.UUID, None]:
+    def get_provider_id(self) -> uuid.UUID | None:
         """Get the UUID for the provider"""
         if hasattr(self, "provider"):
             assert isinstance(
-                self.provider, CollectorBase
+                self.provider, CollectorBase,
             ), f"provider is not an CollectorBase {type(self.provider)}"
             return self.provider.get_provider_id()
         return None
 
-    def retrieve_data(self, data_id: uuid.UUID) -> Union[Dict, None]:
+    def retrieve_data(self, data_id: uuid.UUID) -> dict | None:
         """
         This call retrieves the data associated with the provided data_id.
 
@@ -371,24 +373,24 @@ class BaseLocationDataRecorder(RecorderBase):
         """
         if hasattr(self, "provider"):
             assert isinstance(
-                self.provider, CollectorBase
+                self.provider, CollectorBase,
             ), f"provider is not an CollectorBase {type(self.provider)}"
             return self.provider.retrieve_data(data_id)
         return None
 
-    def cache_duration(self) -> Union[timedelta, None]:
+    def cache_duration(self) -> timedelta | None:
         """
         Retrieve the maximum duration that data from this provider may be
         cached.
         """
         if hasattr(self, "provider"):
             assert isinstance(
-                self.provider, CollectorBase
+                self.provider, CollectorBase,
             ), f"provider is not an CollectorBase {type(self.provider)}"
             return self.provider.cache_duration()
         return None
 
-    def get_description(self) -> Union[str, None]:
+    def get_description(self) -> str | None:
         """
         Retrieve a description of the data provider. Note: this is used for
         prompt construction, so please be concise and specific in your
@@ -401,7 +403,7 @@ class BaseLocationDataRecorder(RecorderBase):
         provider_description = ""
         if hasattr(self, "provider"):
             assert isinstance(
-                self.provider, CollectorBase
+                self.provider, CollectorBase,
             ), f"provider is not an CollectorBase {type(self.provider)}"
             provider_description += self.provider.get_description()
         semantic_attributes = "\n"
@@ -409,7 +411,7 @@ class BaseLocationDataRecorder(RecorderBase):
             semantic_attributes += dedent(
                 f"""\n
                 {KnownSemanticAttributes.get_attribute_by_uuid(semantic_attribute)} :
-                {semantic_attribute}"""
+                {semantic_attribute}""",
             )
         provider_description += f"""\n
             It stores its data inside the
@@ -422,7 +424,7 @@ class BaseLocationDataRecorder(RecorderBase):
         """
         return provider_description
 
-    def get_json_schema(self) -> Union[dict, None]:
+    def get_json_schema(self) -> dict | None:
         """
         Retrieve the JSON data schema to use for the database.
 
@@ -432,12 +434,12 @@ class BaseLocationDataRecorder(RecorderBase):
         """
         if hasattr(self, "provider"):
             assert isinstance(
-                self.provider, CollectorBase
+                self.provider, CollectorBase,
             ), f"provider is not an CollectorBase {type(self.provider)}"
             return self.provider.get_json_schema()
         return None
 
-    def get_cursor(self, activity_context: uuid.UUID) -> Union[uuid.UUID, None]:
+    def get_cursor(self, activity_context: uuid.UUID) -> uuid.UUID | None:
         """
         Retrieve the current cursor for this data provider
 
@@ -455,7 +457,7 @@ class BaseLocationDataRecorder(RecorderBase):
         """
         if hasattr(self, "provider"):
             assert isinstance(
-                self.provider, CollectorBase
+                self.provider, CollectorBase,
             ), f"provider is not an CollectorBase {type(self.provider)}"
             return self.provider.get_cursor(activity_context)
         return None

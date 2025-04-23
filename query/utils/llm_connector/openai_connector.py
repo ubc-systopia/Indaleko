@@ -21,11 +21,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import json
 import os
 import sys
+from typing import Any
 
 import openai
-from icecream import ic
 import tiktoken
-from typing import Any
+from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -174,7 +174,7 @@ class OpenAIConnector(IndalekoLLMBase):
         return response.choices[0].message.content.strip()
 
     def answer_question(
-        self, context: str, question: str, schema: dict[str, Any]
+        self, context: str, question: str, schema: dict[str, Any],
     ) -> dict[str, Any]:
         """
         Answer a question based on the given context using OpenAI's model.
@@ -218,7 +218,7 @@ class OpenAIConnector(IndalekoLLMBase):
         return completion.choices[0].message.content
 
     def get_completion(
-        self, context: str, question: str, schema: dict[str, Any]
+        self, context: str, question: str, schema: dict[str, Any],
     ) -> openai.types.chat.parsed_chat_completion.ParsedChatCompletion:
         """
         Answer a question based on the given context using OpenAI's model.
@@ -249,12 +249,9 @@ class OpenAIConnector(IndalekoLLMBase):
             },
         )
         return completion
-        
+
     def generate_text(
-        self, 
-        prompt: str, 
-        max_tokens: int = 500, 
-        temperature: float = 0.7
+        self, prompt: str, max_tokens: int = 500, temperature: float = 0.7,
     ) -> str:
         """
         Generate text based on the provided prompt.
@@ -274,21 +271,19 @@ class OpenAIConnector(IndalekoLLMBase):
                 {"role": "user", "content": prompt},
             ],
             temperature=temperature,
-            max_tokens=max_tokens
+            max_tokens=max_tokens,
         )
         return response.choices[0].message.content.strip()
-    
+
     def extract_semantic_attributes(
-        self, 
-        text: str, 
-        attr_types: list[str] = None
+        self, text: str, attr_types: list[str] = None,
     ) -> dict[str, Any]:
         """
         Extract semantic attributes from text.
 
         Args:
             text (str): The text to extract attributes from
-            attr_types (list[str]): Types of attributes to extract, defaults to 
+            attr_types (list[str]): Types of attributes to extract, defaults to
                                     ["entities", "keywords", "sentiment", "topics"]
 
         Returns:
@@ -297,17 +292,17 @@ class OpenAIConnector(IndalekoLLMBase):
         # Default attribute types if none provided
         if attr_types is None:
             attr_types = ["entities", "keywords", "sentiment", "topics"]
-        
+
         attr_types_str = ", ".join(attr_types)
         prompt = f"""Extract the following semantic attributes from the text: {attr_types_str}
-        
+
 For each attribute type, provide relevant information found in the text.
 Format your response as a JSON object with keys matching the requested attribute types.
 
 Text to analyze:
 {text}
         """
-        
+
         # Define a schema for the expected output
         schema = {
             "type": "object",
@@ -315,46 +310,49 @@ Text to analyze:
                 "entities": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "Named entities found in the text"
+                    "description": "Named entities found in the text",
                 },
                 "keywords": {
-                    "type": "array", 
+                    "type": "array",
                     "items": {"type": "string"},
-                    "description": "Important keywords from the text"
+                    "description": "Important keywords from the text",
                 },
                 "sentiment": {
                     "type": "object",
                     "properties": {
                         "label": {"type": "string"},
-                        "score": {"type": "number"}
+                        "score": {"type": "number"},
                     },
-                    "description": "Sentiment analysis of the text"
+                    "description": "Sentiment analysis of the text",
                 },
                 "topics": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "Main topics discussed in the text"
-                }
-            }
+                    "description": "Main topics discussed in the text",
+                },
+            },
         }
-        
+
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You are a semantic analysis assistant."},
+                    {
+                        "role": "system",
+                        "content": "You are a semantic analysis assistant.",
+                    },
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0,
-                response_format={"type": "json_object"}
+                response_format={"type": "json_object"},
             )
-            
+
             # Parse the JSON response
             attributes = json.loads(response.choices[0].message.content)
-            
+
             # Filter to only include requested attribute types
             return {k: v for k, v in attributes.items() if k in attr_types}
-        
+
         except Exception as e:
             ic(f"Error extracting semantic attributes: {e}")
             # Return a minimal valid response

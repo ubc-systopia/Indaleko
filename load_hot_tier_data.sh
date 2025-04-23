@@ -1,5 +1,5 @@
 #!/bin/bash
-# 
+#
 # Load NTFS activity data into the hot tier database
 #
 # This script provides an easy way to run the NTFS Hot Tier Recorder

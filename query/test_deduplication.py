@@ -20,7 +20,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-from pprint import pprint
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -30,8 +29,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 from query.result_analysis.result_formatter import (
-    deduplicate_results, 
-    format_results_for_display
+    deduplicate_results,
+    format_results_for_display,
 )
 
 
@@ -48,9 +47,9 @@ def create_sample_results():
                     "Label": "report-2023.pdf",
                     "Path": "/home/user/documents/report-2023.pdf",
                     "st_mtime": 1672531200,
-                    "mimeType": "application/pdf"
-                }
-            }
+                    "mimeType": "application/pdf",
+                },
+            },
         },
         {
             "name": "report-2023-backup.pdf",
@@ -61,11 +60,10 @@ def create_sample_results():
                     "Label": "report-2023-backup.pdf",
                     "Path": "/home/user/backups/report-2023-backup.pdf",
                     "st_mtime": 1672617600,  # One day later
-                    "mimeType": "application/pdf"
-                }
-            }
+                    "mimeType": "application/pdf",
+                },
+            },
         },
-        
         # Similar files with different content
         {
             "name": "thesis-draft-v1.docx",
@@ -76,9 +74,9 @@ def create_sample_results():
                     "Label": "thesis-draft-v1.docx",
                     "Path": "/home/user/documents/thesis/thesis-draft-v1.docx",
                     "st_mtime": 1669852800,
-                    "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                }
-            }
+                    "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                },
+            },
         },
         {
             "name": "thesis-draft-v2.docx",
@@ -89,11 +87,10 @@ def create_sample_results():
                     "Label": "thesis-draft-v2.docx",
                     "Path": "/home/user/documents/thesis/thesis-draft-v2.docx",
                     "st_mtime": 1671667200,  # Later timestamp
-                    "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                }
-            }
+                    "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                },
+            },
         },
-        
         # Completely different file
         {
             "name": "presentation.pptx",
@@ -104,10 +101,10 @@ def create_sample_results():
                     "Label": "presentation.pptx",
                     "Path": "/home/user/documents/presentations/presentation.pptx",
                     "st_mtime": 1673827200,
-                    "mimeType": "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-                }
-            }
-        }
+                    "mimeType": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                },
+            },
+        },
     ]
 
 
@@ -115,37 +112,36 @@ def main():
     """Test the deduplication functionality."""
     print("Testing Indaleko Result Deduplication")
     print("=====================================\n")
-    
+
     # Create sample results
     sample_results = create_sample_results()
     print(f"Original results count: {len(sample_results)}")
-    
+
     # Test with different similarity thresholds
     for threshold in [0.75, 0.85, 0.95]:
         print(f"\nTesting with similarity threshold: {threshold}")
-        
+
         # Deduplicate results
         deduped_results = deduplicate_results(
-            sample_results, 
-            similarity_threshold=threshold
+            sample_results, similarity_threshold=threshold,
         )
-        
+
         # Print statistics
         print(f"Original count: {deduped_results.original_count}")
         print(f"Unique count: {deduped_results.unique_count}")
         print(f"Suppressed count: {deduped_results.suppressed_count}")
         print(f"Categories: {deduped_results.categories}")
-        
+
         # Display results
         print("\nFormatted Results:")
         formatted_display = format_results_for_display(
             deduped_results,
             include_duplicates=True,
             max_groups=10,
-            include_summary=True
+            include_summary=True,
         )
         print(formatted_display)
-    
+
     print("\nTest completed successfully!")
 
 

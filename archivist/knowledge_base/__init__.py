@@ -21,14 +21,13 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+from .continuous_learning import ContinuousLearningSystem
 from .data_models import (
-    LearningEventDataModel,
-    LearningEventType,
+    FeedbackRecordDataModel,
+    FeedbackType,
     KnowledgePatternDataModel,
     KnowledgePatternType,
-    FeedbackRecordDataModel,
-    FeedbackType
+    LearningEventDataModel,
+    LearningEventType,
 )
-
 from .knowledge_manager import KnowledgeBaseManager
-from .continuous_learning import ContinuousLearningSystem

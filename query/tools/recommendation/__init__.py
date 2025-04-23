@@ -18,6 +18,9 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from query.tools.recommendation.recommendation_tool import RecommendationTool, RecommendationAssistantIntegration
+from query.tools.recommendation.recommendation_tool import (
+    RecommendationAssistantIntegration,
+    RecommendationTool,
+)
 
 __all__ = ["RecommendationTool", "RecommendationAssistantIntegration"]

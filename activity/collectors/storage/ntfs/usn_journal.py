@@ -22,20 +22,20 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import os
-import sys
-import struct
-import logging
 import ctypes
+import logging
+import os
+import struct
+import sys
 from ctypes import wintypes
-from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional, Union, Tuple
+from datetime import UTC, datetime
+from typing import Any
 
 # Constants for USN journal operations (these might not be defined in pywin32)
-FSCTL_QUERY_USN_JOURNAL = 0x000900f4
-FSCTL_ENUM_USN_DATA = 0x000900b3
-FSCTL_READ_USN_JOURNAL = 0x000900bb
-FSCTL_CREATE_USN_JOURNAL = 0x000900e7
+FSCTL_QUERY_USN_JOURNAL = 0x000900F4
+FSCTL_ENUM_USN_DATA = 0x000900B3
+FSCTL_READ_USN_JOURNAL = 0x000900BB
+FSCTL_CREATE_USN_JOURNAL = 0x000900E7
 
 # USN reason flags
 USN_REASON_DATA_OVERWRITE = 0x00000001
@@ -79,7 +79,7 @@ FILE_ATTRIBUTE_ENCRYPTED = 0x00004000
 logger = logging.getLogger(__name__)
 
 # Check if we're on Windows
-IS_WINDOWS = sys.platform.startswith('win')
+IS_WINDOWS = sys.platform.startswith("win")
 
 # Windows API constants for ctypes approach
 FILE_READ_DATA = 0x0001
@@ -88,17 +88,19 @@ FILE_SHARE_WRITE = 0x00000002
 OPEN_EXISTING = 3
 FILE_FLAG_BACKUP_SEMANTICS = 0x02000000
 
+
 # Define USN_JOURNAL_DATA structure for ctypes
 class USN_JOURNAL_DATA(ctypes.Structure):
     _fields_ = [
         ("UsnJournalID", ctypes.c_ulonglong),  # 64-bit unsigned
-        ("FirstUsn", ctypes.c_longlong),       # 64-bit signed
+        ("FirstUsn", ctypes.c_longlong),  # 64-bit signed
         ("NextUsn", ctypes.c_longlong),
         ("LowestValidUsn", ctypes.c_longlong),
         ("MaxUsn", ctypes.c_longlong),
         ("MaximumSize", ctypes.c_ulonglong),
-        ("AllocationDelta", ctypes.c_ulonglong)
+        ("AllocationDelta", ctypes.c_ulonglong),
     ]
+
 
 # Define READ_USN_JOURNAL_DATA structure for ctypes
 class READ_USN_JOURNAL_DATA(ctypes.Structure):
@@ -108,8 +110,9 @@ class READ_USN_JOURNAL_DATA(ctypes.Structure):
         ("ReturnOnlyOnClose", wintypes.DWORD),
         ("Timeout", ctypes.c_ulonglong),
         ("BytesToWaitFor", ctypes.c_ulonglong),
-        ("UsnJournalID", ctypes.c_ulonglong)
+        ("UsnJournalID", ctypes.c_ulonglong),
     ]
+
 
 # Define USN_RECORD structure for ctypes
 class USN_RECORD(ctypes.Structure):
@@ -127,17 +130,21 @@ class USN_RECORD(ctypes.Structure):
         ("FileAttributes", wintypes.DWORD),
         ("FileNameLength", wintypes.WORD),
         ("FileNameOffset", wintypes.WORD),
-        ("FileName", wintypes.WCHAR * 1)  # Variable length
+        ("FileName", wintypes.WCHAR * 1),  # Variable length
     ]
+
 
 # Check if PyWin32 is available for compatibility with existing code
 if IS_WINDOWS:
     try:
-        import win32file
         import pywintypes
+        import win32file
+
         WIN32_AVAILABLE = True
     except ImportError:
-        logger.warning("PyWin32 is not installed. Using ctypes for all USN Journal functions.")
+        logger.warning(
+            "PyWin32 is not installed. Using ctypes for all USN Journal functions.",
+        )
         WIN32_AVAILABLE = False
 else:
     logger.warning("Not running on Windows. USN Journal functions will not work.")
@@ -224,15 +231,17 @@ def get_file_attributes_text(file_attributes: int) -> str:
     return " | ".join(attributes) if attributes else "NONE"
 
 
-def parse_usn_record_v2(data: bytes, offset: int, debug: bool = False) -> Tuple[Dict[str, Any], int]:
+def parse_usn_record_v2(
+    data: bytes, offset: int, debug: bool = False,
+) -> tuple[dict[str, Any], int]:
     """
     Parse a Version 2 USN record from binary data.
-    
+
     Args:
         data: The binary data containing the record
         offset: Offset into the data where the record starts
         debug: Whether to print debug information
-        
+
     Returns:
         Tuple of (record_dict, next_offset) or (None, next_offset) if invalid
     """
@@ -241,58 +250,60 @@ def parse_usn_record_v2(data: bytes, offset: int, debug: bool = False) -> Tuple[
         return None, len(data)
 
     # Record header (56 bytes)
-    record_length = struct.unpack("<L", data[offset:offset+4])[0]
+    record_length = struct.unpack("<L", data[offset : offset + 4])[0]
     if record_length == 0 or record_length < 60:  # Minimum valid size for a USN record
         return None, offset + 4
-        
+
     # Make sure we have enough data
     if offset + record_length > len(data):
         return None, len(data)
-    
+
     try:
         # Parse common fields (56 bytes total for V2 header)
-        major_version = struct.unpack("<H", data[offset+4:offset+6])[0]
-        minor_version = struct.unpack("<H", data[offset+6:offset+8])[0]
-        file_ref_num = struct.unpack("<Q", data[offset+8:offset+16])[0]
-        parent_ref_num = struct.unpack("<Q", data[offset+16:offset+24])[0]
-        usn = struct.unpack("<Q", data[offset+24:offset+32])[0]
-        timestamp = struct.unpack("<Q", data[offset+32:offset+40])[0]
-        reason = struct.unpack("<L", data[offset+40:offset+44])[0]
-        source_info = struct.unpack("<L", data[offset+44:offset+48])[0]
-        security_id = struct.unpack("<L", data[offset+48:offset+52])[0]
-        file_attributes = struct.unpack("<L", data[offset+52:offset+56])[0]
-        
+        major_version = struct.unpack("<H", data[offset + 4 : offset + 6])[0]
+        minor_version = struct.unpack("<H", data[offset + 6 : offset + 8])[0]
+        file_ref_num = struct.unpack("<Q", data[offset + 8 : offset + 16])[0]
+        parent_ref_num = struct.unpack("<Q", data[offset + 16 : offset + 24])[0]
+        usn = struct.unpack("<Q", data[offset + 24 : offset + 32])[0]
+        timestamp = struct.unpack("<Q", data[offset + 32 : offset + 40])[0]
+        reason = struct.unpack("<L", data[offset + 40 : offset + 44])[0]
+        source_info = struct.unpack("<L", data[offset + 44 : offset + 48])[0]
+        security_id = struct.unpack("<L", data[offset + 48 : offset + 52])[0]
+        file_attributes = struct.unpack("<L", data[offset + 52 : offset + 56])[0]
+
         # Extract filename (variable length, starts after the header)
-        file_name_length = struct.unpack("<H", data[offset+56:offset+58])[0]
-        file_name_offset = struct.unpack("<H", data[offset+58:offset+60])[0]
-        
+        file_name_length = struct.unpack("<H", data[offset + 56 : offset + 58])[0]
+        file_name_offset = struct.unpack("<H", data[offset + 58 : offset + 60])[0]
+
         # Calculate the offset where the filename starts
         filename_start = offset + file_name_offset
-        
+
         # Extract the filename (as UTF-16)
         filename = ""
         if filename_start + file_name_length <= len(data):
             try:
-                filename = data[filename_start:filename_start+file_name_length].decode('utf-16-le')
+                filename = data[
+                    filename_start : filename_start + file_name_length
+                ].decode("utf-16-le")
             except Exception as e:
                 filename = f"<Decode Error: {data[filename_start:filename_start+file_name_length].hex()}>"
                 if debug:
                     logger.debug(f"Error decoding filename: {e}")
-        
+
         # Convert Windows timestamp (100-nanosecond intervals since Jan 1, 1601)
         # to Unix timestamp (seconds since Jan 1, 1970)
         try:
             # Windows timestamp is in 100-nanosecond intervals since Jan 1, 1601
             # 116444736000000000 = number of 100-nanosecond intervals from Jan 1, 1601 to Jan 1, 1970
             unix_time = (timestamp - 116444736000000000) / 10000000
-            timestamp_str = datetime.fromtimestamp(unix_time, timezone.utc).isoformat()
-            timestamp_dt = datetime.fromtimestamp(unix_time, timezone.utc)
+            timestamp_str = datetime.fromtimestamp(unix_time, UTC).isoformat()
+            timestamp_dt = datetime.fromtimestamp(unix_time, UTC)
         except Exception as e:
             timestamp_str = f"<Invalid: {timestamp}>"
-            timestamp_dt = datetime.now(timezone.utc)
+            timestamp_dt = datetime.now(UTC)
             if debug:
                 logger.debug(f"Error converting timestamp: {e}")
-        
+
         # Create record dictionary
         record = {
             "record_length": record_length,
@@ -310,9 +321,9 @@ def parse_usn_record_v2(data: bytes, offset: int, debug: bool = False) -> Tuple[
             "file_attributes": file_attributes,
             "file_attributes_text": get_file_attributes_text(file_attributes),
             "file_name": filename,
-            "is_directory": bool(file_attributes & FILE_ATTRIBUTE_DIRECTORY)
+            "is_directory": bool(file_attributes & FILE_ATTRIBUTE_DIRECTORY),
         }
-        
+
         # Return record and next offset
         return record, offset + record_length
     except Exception as e:
@@ -327,14 +338,14 @@ def parse_usn_record_v2(data: bytes, offset: int, debug: bool = False) -> Tuple[
             return None, offset + 4
 
 
-def parse_usn_data(data: bytes, debug: bool = False) -> List[Dict[str, Any]]:
+def parse_usn_data(data: bytes, debug: bool = False) -> list[dict[str, Any]]:
     """
     Parse USN journal data into records.
-    
+
     Args:
         data: The binary data from DeviceIoControl
         debug: Whether to print debug information
-        
+
     Returns:
         List of parsed USN records
     """
@@ -345,26 +356,26 @@ def parse_usn_data(data: bytes, debug: bool = False) -> List[Dict[str, Any]]:
     next_usn = struct.unpack("<Q", data[:8])[0]
     if debug:
         logger.debug(f"Next USN from data: {next_usn}")
-    
+
     records = []
     offset = 8  # Start after the next USN
-    
+
     while offset < len(data):
         record, offset = parse_usn_record_v2(data, offset, debug)
         if record:
             records.append(record)
-    
+
     return records
 
 
-def open_volume(volume: str, debug: bool = False) -> Optional[int]:
+def open_volume(volume: str, debug: bool = False) -> int | None:
     """
     Open a volume for USN journal operations.
-    
+
     Args:
         volume: Volume to open (e.g., "C:")
         debug: Whether to print debug information
-        
+
     Returns:
         Volume handle or None if failed
     """
@@ -376,18 +387,18 @@ def open_volume(volume: str, debug: bool = False) -> Optional[int]:
     # Standardize volume path
     if not volume.endswith(":"):
         volume = f"{volume}:"
-    
+
     volume_path = f"\\\\.\\{volume}"
     if debug:
         logger.debug(f"Opening volume {volume_path}")
-    
+
     # Try various volume path formats
     volume_path_variants = [
         volume_path,
         f"\\\\.\\{volume}",  # Physical drive syntax
-        f"{volume}\\"       # Standard path
+        f"{volume}\\",  # Standard path
     ]
-    
+
     # Try each variant until one works
     for path_variant in volume_path_variants:
         try:
@@ -400,7 +411,7 @@ def open_volume(volume: str, debug: bool = False) -> Optional[int]:
                 None,
                 win32file.OPEN_EXISTING,
                 win32file.FILE_ATTRIBUTE_NORMAL,
-                None
+                None,
             )
             if debug:
                 logger.debug(f"Successfully opened volume with path: {path_variant}")
@@ -408,20 +419,22 @@ def open_volume(volume: str, debug: bool = False) -> Optional[int]:
         except Exception as e:
             if debug:
                 logger.debug(f"Failed to open volume with path {path_variant}: {e}")
-    
+
     # If all variants failed
     logger.warning(f"Could not open volume {volume} with any path variant")
     return None
 
 
-def query_journal_info_ctypes(handle: int, debug: bool = False) -> Optional[Dict[str, Any]]:
+def query_journal_info_ctypes(
+    handle: int, debug: bool = False,
+) -> dict[str, Any] | None:
     """
     Query USN journal information using ctypes.
-    
+
     Args:
         handle: Volume handle from open_volume()
         debug: Whether to print debug information
-        
+
     Returns:
         Dictionary with journal information or None if failed
     """
@@ -429,17 +442,17 @@ def query_journal_info_ctypes(handle: int, debug: bool = False) -> Optional[Dict
         if debug:
             logger.debug("Not on Windows")
         return None
-    
+
     if not handle or handle == -1:
         logger.error("Invalid volume handle")
         return None
-    
+
     # Query USN journal info using ctypes
     try:
         # Create journal data structure and bytes returned
         journal_data = USN_JOURNAL_DATA()
         bytes_returned = wintypes.DWORD()
-        
+
         # Call DeviceIoControl
         success = ctypes.windll.kernel32.DeviceIoControl(
             handle,
@@ -449,15 +462,15 @@ def query_journal_info_ctypes(handle: int, debug: bool = False) -> Optional[Dict
             ctypes.byref(journal_data),
             ctypes.sizeof(journal_data),
             ctypes.byref(bytes_returned),
-            None
+            None,
         )
-        
+
         if not success:
             error = ctypes.get_last_error()
             if debug:
                 logger.debug(f"DeviceIoControl failed with Win32 error code: {error}")
             raise ctypes.WinError(error)
-        
+
         # Convert to dictionary
         journal_info = {
             "journal_id": journal_data.UsnJournalID,
@@ -466,27 +479,27 @@ def query_journal_info_ctypes(handle: int, debug: bool = False) -> Optional[Dict
             "lowest_valid_usn": journal_data.LowestValidUsn,
             "max_usn": journal_data.MaxUsn,
             "max_size": journal_data.MaximumSize,
-            "allocation_delta": journal_data.AllocationDelta
+            "allocation_delta": journal_data.AllocationDelta,
         }
-        
+
         if debug:
             logger.debug(f"Journal info (ctypes): {journal_info}")
-        
+
         return journal_info
-    
+
     except Exception as e:
         logger.error(f"Error querying USN journal with ctypes: {e}")
         return None
 
 
-def query_journal_info(handle: int, debug: bool = False) -> Optional[Dict[str, Any]]:
+def query_journal_info(handle: int, debug: bool = False) -> dict[str, Any] | None:
     """
     Query USN journal information.
-    
+
     Args:
         handle: Volume handle from open_volume()
         debug: Whether to print debug information
-        
+
     Returns:
         Dictionary with journal information or None if failed
     """
@@ -494,45 +507,56 @@ def query_journal_info(handle: int, debug: bool = False) -> Optional[Dict[str, A
     try:
         if debug:
             logger.debug("Trying to query journal info with ctypes")
-        
+
         journal_info = query_journal_info_ctypes(handle, debug)
         if journal_info:
             return journal_info
     except Exception as e:
         if debug:
             logger.debug(f"Ctypes approach failed: {e}, falling back to PyWin32")
-    
+
     # Fall back to PyWin32 if ctypes fails or not available
     if not IS_WINDOWS or not WIN32_AVAILABLE:
         if debug:
             logger.debug("Not on Windows or PyWin32 not available")
         return None
-    
+
     if not handle:
         logger.error("Invalid volume handle")
         return None
-    
+
     # Query USN journal info
     try:
         journal_data = win32file.DeviceIoControl(
-            handle,
-            FSCTL_QUERY_USN_JOURNAL,
-            None,
-            1024
+            handle, FSCTL_QUERY_USN_JOURNAL, None, 1024,
         )
         if debug:
-            logger.debug(f"Successfully queried USN journal, received {len(journal_data)} bytes")
+            logger.debug(
+                f"Successfully queried USN journal, received {len(journal_data)} bytes",
+            )
             logger.debug(f"Raw journal data: {journal_data.hex()}")
-            
+
         # Parse journal info
         journal_id = struct.unpack("<Q", journal_data[:8])[0]
         first_usn = struct.unpack("<Q", journal_data[8:16])[0]
         next_usn = struct.unpack("<Q", journal_data[16:24])[0]
         lowest_valid_usn = struct.unpack("<Q", journal_data[24:32])[0]
-        max_usn = struct.unpack("<Q", journal_data[32:40])[0] if len(journal_data) >= 40 else 0
-        max_size = struct.unpack("<Q", journal_data[40:48])[0] if len(journal_data) >= 48 else 0
-        alloc_delta = struct.unpack("<Q", journal_data[48:56])[0] if len(journal_data) >= 56 else 0
-        
+        max_usn = (
+            struct.unpack("<Q", journal_data[32:40])[0]
+            if len(journal_data) >= 40
+            else 0
+        )
+        max_size = (
+            struct.unpack("<Q", journal_data[40:48])[0]
+            if len(journal_data) >= 48
+            else 0
+        )
+        alloc_delta = (
+            struct.unpack("<Q", journal_data[48:56])[0]
+            if len(journal_data) >= 56
+            else 0
+        )
+
         journal_info = {
             "journal_id": journal_id,
             "first_usn": first_usn,
@@ -540,29 +564,33 @@ def query_journal_info(handle: int, debug: bool = False) -> Optional[Dict[str, A
             "lowest_valid_usn": lowest_valid_usn,
             "max_usn": max_usn,
             "max_size": max_size,
-            "allocation_delta": alloc_delta
+            "allocation_delta": alloc_delta,
         }
-        
+
         if debug:
             logger.debug(f"Journal info: {journal_info}")
-        
+
         return journal_info
     except Exception as e:
         logger.error(f"Error querying USN journal: {e}")
         return None
 
 
-def create_journal(handle: int, max_size: int = 32*1024*1024, allocation_delta: int = 4*1024*1024, 
-                  debug: bool = False) -> bool:
+def create_journal(
+    handle: int,
+    max_size: int = 32 * 1024 * 1024,
+    allocation_delta: int = 4 * 1024 * 1024,
+    debug: bool = False,
+) -> bool:
     """
     Create a USN journal on the volume.
-    
+
     Args:
         handle: Volume handle from open_volume()
         max_size: Maximum size of the journal in bytes (default: 32MB)
         allocation_delta: Allocation delta in bytes (default: 4MB)
         debug: Whether to print debug information
-        
+
     Returns:
         True if successful, False if failed
     """
@@ -570,46 +598,44 @@ def create_journal(handle: int, max_size: int = 32*1024*1024, allocation_delta: 
         if debug:
             logger.debug("Not on Windows or PyWin32 not available")
         return False
-    
+
     if not handle:
         logger.error("Invalid volume handle")
         return False
-    
+
     try:
         if debug:
-            logger.debug(f"Creating USN journal with max_size={max_size}, delta={allocation_delta}")
-        
+            logger.debug(
+                f"Creating USN journal with max_size={max_size}, delta={allocation_delta}",
+            )
+
         # Create buffer for CREATE_USN_JOURNAL
         buffer = struct.pack("<QQ", max_size, allocation_delta)
-        
+
         # Create the journal
-        win32file.DeviceIoControl(
-            handle,
-            FSCTL_CREATE_USN_JOURNAL,
-            buffer,
-            0
-        )
-        
+        win32file.DeviceIoControl(handle, FSCTL_CREATE_USN_JOURNAL, buffer, 0)
+
         if debug:
             logger.debug("Successfully created USN journal")
-        
+
         return True
     except Exception as e:
         logger.error(f"Error creating USN journal: {e}")
         return False
 
 
-def read_journal_records_ctypes(handle: int, journal_id: int, start_usn: int, 
-                           debug: bool = False) -> List[Dict[str, Any]]:
+def read_journal_records_ctypes(
+    handle: int, journal_id: int, start_usn: int, debug: bool = False,
+) -> list[dict[str, Any]]:
     """
     Read records from the USN journal using ctypes approach.
-    
+
     Args:
         handle: Volume handle from open_volume()
         journal_id: The USN journal ID
         start_usn: Starting USN to read from
         debug: Whether to print debug information
-        
+
     Returns:
         List of USN records
     """
@@ -617,17 +643,19 @@ def read_journal_records_ctypes(handle: int, journal_id: int, start_usn: int,
         if debug:
             logger.debug("Not on Windows")
         return []
-    
+
     if not handle or handle == -1:
         logger.error("Invalid volume handle")
         return []
-    
+
     records = []
-    
+
     try:
         if debug:
-            logger.debug(f"Reading USN journal with ctypes approach. JournalID={journal_id}, StartUSN={start_usn}")
-        
+            logger.debug(
+                f"Reading USN journal with ctypes approach. JournalID={journal_id}, StartUSN={start_usn}",
+            )
+
         # Create READ_USN_JOURNAL_DATA structure
         read_data = READ_USN_JOURNAL_DATA(
             StartUsn=start_usn,
@@ -635,18 +663,18 @@ def read_journal_records_ctypes(handle: int, journal_id: int, start_usn: int,
             ReturnOnlyOnClose=0,
             Timeout=0,
             BytesToWaitFor=0,
-            UsnJournalID=journal_id
+            UsnJournalID=journal_id,
         )
-        
+
         # Allocate buffer and bytes returned variable
         buffer_size = 65536
         buffer = ctypes.create_string_buffer(buffer_size)
         bytes_returned = wintypes.DWORD()
-        
+
         # Call DeviceIoControl using ctypes
         if debug:
             logger.debug("Calling DeviceIoControl with FSCTL_READ_USN_JOURNAL")
-        
+
         success = ctypes.windll.kernel32.DeviceIoControl(
             handle,
             FSCTL_READ_USN_JOURNAL,
@@ -655,36 +683,36 @@ def read_journal_records_ctypes(handle: int, journal_id: int, start_usn: int,
             buffer,
             buffer_size,
             ctypes.byref(bytes_returned),
-            None
+            None,
         )
-        
+
         if not success:
             error = ctypes.get_last_error()
             if debug:
                 logger.debug(f"DeviceIoControl failed with Win32 error code: {error}")
             raise ctypes.WinError(error)
-        
+
         if debug:
             logger.debug(f"Successfully read {bytes_returned.value} bytes using ctypes")
             if bytes_returned.value > 0:
                 logger.debug(f"First 32 bytes: {buffer.raw[:32].hex()}")
-        
+
         # First 8 bytes is NextUSN
         next_usn = struct.unpack("<Q", buffer.raw[:8])[0]
         if debug:
             logger.debug(f"Next USN: {next_usn}")
-        
+
         # Start parsing at offset 8 (after NextUSN)
         offset = 8
         while offset < bytes_returned.value:
             # Read record length
             if offset + 4 > bytes_returned.value:
                 break
-            
-            record_length = struct.unpack("<I", buffer.raw[offset:offset+4])[0]
+
+            record_length = struct.unpack("<I", buffer.raw[offset : offset + 4])[0]
             if record_length == 0 or offset + record_length > bytes_returned.value:
                 break
-            
+
             # Parse the USN record
             try:
                 # Use our existing parser
@@ -697,28 +725,32 @@ def read_journal_records_ctypes(handle: int, journal_id: int, start_usn: int,
                     logger.debug(f"Error parsing record at offset {offset}: {e}")
                 # Skip this record
                 offset += record_length if record_length > 0 else 4
-        
+
         if debug:
             logger.debug(f"Found {len(records)} records using ctypes approach")
-        
+
         return records
-    
+
     except Exception as e:
         logger.warning(f"Error reading USN journal with ctypes: {e}")
         return []
 
 
-def read_journal_records(handle: int, journal_info: Dict[str, Any], start_usn: Optional[int] = None, 
-                        debug: bool = False) -> List[Dict[str, Any]]:
+def read_journal_records(
+    handle: int,
+    journal_info: dict[str, Any],
+    start_usn: int | None = None,
+    debug: bool = False,
+) -> list[dict[str, Any]]:
     """
     Read records from the USN journal.
-    
+
     Args:
         handle: Volume handle from open_volume()
         journal_info: Journal info from query_journal_info()
         start_usn: Starting USN to read from (default: recent entries)
         debug: Whether to print debug information
-        
+
     Returns:
         List of USN records
     """
@@ -726,112 +758,128 @@ def read_journal_records(handle: int, journal_info: Dict[str, Any], start_usn: O
         if debug:
             logger.debug("Not on Windows or PyWin32 not available")
         return []
-    
+
     if not handle:
         logger.error("Invalid volume handle")
         return []
-    
+
     if not journal_info:
         logger.error("No journal info provided")
         return []
-    
+
     # Use provided start_usn or default to something further back in time
     if start_usn is None:
         next_usn = journal_info.get("next_usn", 0)
         lowest_valid_usn = journal_info.get("lowest_valid_usn", 0)
         # Start from records further back (last 100,000 entries) to make sure we get some data
         start_usn = max(lowest_valid_usn, next_usn - 100000)
-    
+
     records = []
-    
+
     # Method 1: Try FSCTL_ENUM_USN_DATA first (recommended for newer Windows)
     try:
         if debug:
             logger.debug(f"Trying FSCTL_ENUM_USN_DATA with start_usn={start_usn}")
-        
+
         # Create input buffer for ENUM_USN_DATA
         buffer_in = bytearray(28)  # 28 bytes for MFT_ENUM_DATA
-        struct.pack_into("<QQQHH", buffer_in, 0,
-                       0,               # StartFileReferenceNumber 
-                       start_usn,       # LowUsn
-                       0xFFFFFFFFFFFFFFFF,  # HighUsn
-                       2, 2)            # MinMajorVersion, MaxMajorVersion
-        
+        struct.pack_into(
+            "<QQQHH",
+            buffer_in,
+            0,
+            0,  # StartFileReferenceNumber
+            start_usn,  # LowUsn
+            0xFFFFFFFFFFFFFFFF,  # HighUsn
+            2,
+            2,
+        )  # MinMajorVersion, MaxMajorVersion
+
         if debug:
             logger.debug(f"ENUM_USN_DATA input buffer: {buffer_in.hex()}")
-        
+
         # Read journal data
         try:
             read_data = win32file.DeviceIoControl(
-                handle,
-                FSCTL_ENUM_USN_DATA,
-                buffer_in,
-                65536
+                handle, FSCTL_ENUM_USN_DATA, buffer_in, 65536,
             )
-            
+
             if debug:
-                logger.debug(f"Successfully read {len(read_data)} bytes using ENUM_USN_DATA")
+                logger.debug(
+                    f"Successfully read {len(read_data)} bytes using ENUM_USN_DATA",
+                )
                 if len(read_data) > 0:
                     logger.debug(f"First 32 bytes: {read_data[:32].hex()}")
-                
+
             # Parse the records
             enum_records = parse_usn_data(read_data, debug)
             if debug:
                 logger.debug(f"Found {len(enum_records)} records using ENUM_USN_DATA")
-            
+
             records.extend(enum_records)
-        
+
         except pywintypes.error as win_err:
             # Handle specific errors
             if win_err.winerror == 38:  # ERROR_HANDLE_EOF - no more records
                 if debug:
                     logger.debug("No more USN records available (reached end of file)")
-                
+
                 # Try again with a lower USN if we have enough room
                 if start_usn > 10000:
                     adjusted_start_usn = start_usn - 10000
                     if debug:
                         logger.debug(f"Trying lower start_usn={adjusted_start_usn}")
-                    
+
                     try:
                         # Update buffer with new USN
-                        struct.pack_into("<QQQHH", buffer_in, 0,
-                                       0,                    # StartFileReferenceNumber 
-                                       adjusted_start_usn,   # LowUsn
-                                       0xFFFFFFFFFFFFFFFF,   # HighUsn
-                                       2, 2)                # MinMajorVersion, MaxMajorVersion
-                        
+                        struct.pack_into(
+                            "<QQQHH",
+                            buffer_in,
+                            0,
+                            0,  # StartFileReferenceNumber
+                            adjusted_start_usn,  # LowUsn
+                            0xFFFFFFFFFFFFFFFF,  # HighUsn
+                            2,
+                            2,
+                        )  # MinMajorVersion, MaxMajorVersion
+
                         # Try with adjusted start_usn
                         read_data = win32file.DeviceIoControl(
-                            handle,
-                            FSCTL_ENUM_USN_DATA,
-                            buffer_in,
-                            65536
+                            handle, FSCTL_ENUM_USN_DATA, buffer_in, 65536,
                         )
-                        
+
                         if debug:
-                            logger.debug(f"Successfully read {len(read_data)} bytes after adjusting USN")
-                        
+                            logger.debug(
+                                f"Successfully read {len(read_data)} bytes after adjusting USN",
+                            )
+
                         # Parse and add records
                         enum_records = parse_usn_data(read_data, debug)
                         if debug:
-                            logger.debug(f"Found {len(enum_records)} records with adjusted USN")
-                        
+                            logger.debug(
+                                f"Found {len(enum_records)} records with adjusted USN",
+                            )
+
                         records.extend(enum_records)
                     except Exception as retry_err:
                         if debug:
-                            logger.debug(f"Error retrying with adjusted USN: {retry_err}")
+                            logger.debug(
+                                f"Error retrying with adjusted USN: {retry_err}",
+                            )
             else:
-                logger.warning(f"Error reading USN journal with ENUM_USN_DATA: {win_err}")
+                logger.warning(
+                    f"Error reading USN journal with ENUM_USN_DATA: {win_err}",
+                )
     except Exception as e:
         logger.warning(f"General error with ENUM_USN_DATA: {e}")
-    
+
     # Method 2: If ENUM_USN_DATA fails or returns no records, try READ_USN_JOURNAL
     if len(records) == 0:
         try:
             if debug:
-                logger.debug(f"Trying FSCTL_READ_USN_JOURNAL with start_usn={start_usn}")
-            
+                logger.debug(
+                    f"Trying FSCTL_READ_USN_JOURNAL with start_usn={start_usn}",
+                )
+
             # Create input buffer for READ_USN_JOURNAL
             # The complete structure requires more fields:
             # struct READ_USN_JOURNAL_DATA {
@@ -845,83 +893,92 @@ def read_journal_records(handle: int, journal_info: Dict[str, Any], start_usn: O
             #   DWORDLONG ReadFlags;
             # };
             journal_id = journal_info.get("journal_id", 0)
-            
+
             # Try a different approach with a simpler structure first
             # Just the first 3 fields (may be all Windows needs)
-            buffer_in = struct.pack("<QQL", 
-                                  journal_id,    # UsnJournalID (8 bytes)
-                                  start_usn,     # StartUsn (8 bytes)
-                                  0xFFFFFFFF)    # ReasonMask (4 bytes) - all reasons
-                            
+            buffer_in = struct.pack(
+                "<QQL",
+                journal_id,  # UsnJournalID (8 bytes)
+                start_usn,  # StartUsn (8 bytes)
+                0xFFFFFFFF,
+            )  # ReasonMask (4 bytes) - all reasons
+
             # Try with a similar approach to the GitHub example
-            
+
             # Create a 36-byte buffer (matching the GitHub example)
             buffer = bytearray(36)  # 36 byte buffer initialized with zeros
-            
+
             # Pack only the first two fields (JournalID and StartUSN)
-            struct.pack_into("<QQ", buffer, 0, 
-                          journal_id,    # JournalID (8 bytes)
-                          start_usn)     # StartUSN (8 bytes)
-            
+            struct.pack_into(
+                "<QQ", buffer, 0, journal_id, start_usn,  # JournalID (8 bytes)
+            )  # StartUSN (8 bytes)
+
             # The rest of the buffer is left as zeros
-            
+
             if debug:
-                logger.debug(f"Using 36-byte buffer with first 16 bytes set: {buffer.hex()}")
-            
+                logger.debug(
+                    f"Using 36-byte buffer with first 16 bytes set: {buffer.hex()}",
+                )
+
             # Use this as our only format to try
             buffer_formats = [
-                {"buffer": buffer, "description": "36-byte buffer (GitHub approach)"}
+                {"buffer": buffer, "description": "36-byte buffer (GitHub approach)"},
             ]
-            
+
             success = False
-            
+
             for format_info in buffer_formats:
                 if success:
                     break
-                    
+
                 try:
                     if debug:
-                        logger.debug(f"Trying READ_USN_JOURNAL with format: {format_info['description']}")
-                    
+                        logger.debug(
+                            f"Trying READ_USN_JOURNAL with format: {format_info['description']}",
+                        )
+
                     # Use the pre-created buffer if it exists, otherwise create one
                     if "buffer" in format_info:
                         buffer_in = format_info["buffer"]
                     else:
                         # Create the buffer with this format (for backward compatibility)
-                        buffer_in = struct.pack(format_info["format"], *format_info["args"])
-                    
+                        buffer_in = struct.pack(
+                            format_info["format"], *format_info["args"],
+                        )
+
                     if debug:
                         logger.debug(f"Buffer: {buffer_in.hex()}")
-                    
+
                     # Read journal data
                     read_data = win32file.DeviceIoControl(
-                        handle,
-                        FSCTL_READ_USN_JOURNAL,
-                        buffer_in,
-                        65536
+                        handle, FSCTL_READ_USN_JOURNAL, buffer_in, 65536,
                     )
-                    
+
                     if debug:
-                        logger.debug(f"Successfully read {len(read_data)} bytes using READ_USN_JOURNAL")
+                        logger.debug(
+                            f"Successfully read {len(read_data)} bytes using READ_USN_JOURNAL",
+                        )
                         if len(read_data) > 0:
                             logger.debug(f"First 32 bytes: {read_data[:32].hex()}")
-                    
+
                     # Parse the records
                     read_records = parse_usn_data(read_data, debug)
                     if debug:
-                        logger.debug(f"Found {len(read_records)} records using READ_USN_JOURNAL")
-                    
+                        logger.debug(
+                            f"Found {len(read_records)} records using READ_USN_JOURNAL",
+                        )
+
                     records.extend(read_records)
                     success = True
-                    
+
                     # If success, log which format worked
                     if debug:
                         logger.debug(f"Successful format: {format_info['description']}")
-                
+
                 except Exception as e:
                     if debug:
                         logger.debug(f"Format {format_info['description']} failed: {e}")
-            
+
             # If all formats failed, raise the last error
             if not success:
                 if debug:
@@ -929,33 +986,33 @@ def read_journal_records(handle: int, journal_info: Dict[str, Any], start_usn: O
                 raise Exception("Failed to read USN journal with any buffer format")
         except Exception as e:
             logger.warning(f"Error reading USN journal with READ_USN_JOURNAL: {e}")
-    
+
     return records
 
 
-def get_open_volume_handle_ctypes(volume: str, debug: bool = False) -> Optional[int]:
+def get_open_volume_handle_ctypes(volume: str, debug: bool = False) -> int | None:
     """
     Open a handle to a volume using ctypes for direct Windows API access.
-    
+
     Args:
         volume: Volume to open (e.g., "C:")
         debug: Whether to print debug information
-        
+
     Returns:
         Volume handle or None if failed
     """
     if not IS_WINDOWS:
         logger.debug("Not on Windows")
         return None
-    
+
     # Standardize volume path
     if not volume.endswith(":"):
         volume = f"{volume}:"
-    
+
     volume_path = f"\\\\.\\{volume}"
     if debug:
         logger.debug(f"Opening volume {volume_path} with ctypes")
-    
+
     try:
         # Open the volume using CreateFileW
         handle = ctypes.windll.kernel32.CreateFileW(
@@ -965,35 +1022,36 @@ def get_open_volume_handle_ctypes(volume: str, debug: bool = False) -> Optional[
             None,
             OPEN_EXISTING,
             FILE_FLAG_BACKUP_SEMANTICS,
-            None
+            None,
         )
-        
+
         if handle == -1 or handle == 0xFFFFFFFFFFFFFFFF:  # INVALID_HANDLE_VALUE
             error = ctypes.get_last_error()
             if debug:
                 logger.debug(f"CreateFileW failed with Win32 error code: {error}")
             return None
-        
+
         if debug:
             logger.debug(f"Successfully opened volume with ctypes, handle: {handle}")
-        
+
         return handle
-    
+
     except Exception as e:
         logger.error(f"Error opening volume with ctypes: {e}")
         return None
 
 
-def get_usn_journal_records(volume: str, start_usn: Optional[int] = None, 
-                           debug: bool = False) -> Tuple[Optional[Dict[str, Any]], List[Dict[str, Any]]]:
+def get_usn_journal_records(
+    volume: str, start_usn: int | None = None, debug: bool = False,
+) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
     """
     Get records from the USN journal for a specific volume.
-    
+
     Args:
         volume: Volume to query (e.g., "C:")
         start_usn: Starting USN to read from (default: recent entries)
         debug: Whether to print debug information
-        
+
     Returns:
         Tuple of (journal_info, records) or (None, []) if failed
     """
@@ -1001,13 +1059,13 @@ def get_usn_journal_records(volume: str, start_usn: Optional[int] = None,
         if debug:
             logger.debug("Not on Windows")
         return None, []
-    
+
     # First try with ctypes (direct Windows API)
     ctypes_handle = None
     try:
         if debug:
             logger.debug("Trying to open volume and access USN journal using ctypes")
-        
+
         # Open the volume with ctypes
         ctypes_handle = get_open_volume_handle_ctypes(volume, debug)
         if ctypes_handle:
@@ -1020,40 +1078,45 @@ def get_usn_journal_records(volume: str, start_usn: Optional[int] = None,
                     lowest_valid_usn = journal_info.get("lowest_valid_usn", 0)
                     # Start from records further back to make sure we get some data
                     start_usn = max(lowest_valid_usn, next_usn - 100000)
-                
+
                 journal_id = journal_info.get("journal_id", 0)
-                records = read_journal_records_ctypes(ctypes_handle, journal_id, start_usn, debug)
-                
+                records = read_journal_records_ctypes(
+                    ctypes_handle, journal_id, start_usn, debug,
+                )
+
                 # Close the handle
                 if ctypes_handle:
                     ctypes.windll.kernel32.CloseHandle(ctypes_handle)
-                
+
                 if records:
                     if debug:
-                        logger.debug(f"Successfully read {len(records)} records using ctypes approach")
+                        logger.debug(
+                            f"Successfully read {len(records)} records using ctypes approach",
+                        )
                     return journal_info, records
-                else:
-                    if debug:
-                        logger.debug("No records found using ctypes approach, will try PyWin32")
+                elif debug:
+                    logger.debug(
+                        "No records found using ctypes approach, will try PyWin32",
+                    )
     except Exception as e:
         if debug:
             logger.debug(f"Ctypes approach failed: {e}, will try PyWin32")
         # Close the handle if we have one
         if ctypes_handle:
             ctypes.windll.kernel32.CloseHandle(ctypes_handle)
-    
+
     # Fall back to PyWin32 approach
     if not WIN32_AVAILABLE:
         if debug:
             logger.debug("PyWin32 not available for fallback. Ctypes approach failed.")
         return None, []
-    
+
     # Open the volume with PyWin32
     handle = open_volume(volume, debug)
     if not handle:
         logger.error(f"Could not open volume {volume}")
         return None, []
-    
+
     try:
         # Query journal info
         journal_info = query_journal_info(handle, debug)
@@ -1072,10 +1135,10 @@ def get_usn_journal_records(volume: str, start_usn: Optional[int] = None,
                 logger.error("Failed to create USN journal")
                 win32file.CloseHandle(handle)
                 return None, []
-        
+
         # Read the records
         records = read_journal_records(handle, journal_info, start_usn, debug)
-        
+
         # Return the results
         return journal_info, records
     finally:
@@ -1087,16 +1150,18 @@ def get_usn_journal_records(volume: str, start_usn: Optional[int] = None,
 def determine_activity_type(reason_flags: int) -> str:
     """
     Determine activity type from USN reason flags.
-    
+
     Args:
         reason_flags: USN reason flags
-        
+
     Returns:
         StorageActivityType as string
     """
     # Import only when needed to avoid circular imports
-    from activity.collectors.storage.data_models.storage_activity_data_model import StorageActivityType
-    
+    from activity.collectors.storage.data_models.storage_activity_data_model import (
+        StorageActivityType,
+    )
+
     # First priority: file lifecycle events
     if reason_flags & USN_REASON_FILE_CREATE:
         return StorageActivityType.CREATE
@@ -1104,30 +1169,36 @@ def determine_activity_type(reason_flags: int) -> str:
     if reason_flags & USN_REASON_FILE_DELETE:
         return StorageActivityType.DELETE
 
-    if (reason_flags & USN_REASON_RENAME_OLD_NAME or
-        reason_flags & USN_REASON_RENAME_NEW_NAME):
+    if (
+        reason_flags & USN_REASON_RENAME_OLD_NAME
+        or reason_flags & USN_REASON_RENAME_NEW_NAME
+    ):
         return StorageActivityType.RENAME
 
     # Second priority: content changes
-    if (reason_flags & USN_REASON_DATA_OVERWRITE or
-        reason_flags & USN_REASON_DATA_EXTEND or
-        reason_flags & USN_REASON_DATA_TRUNCATION or
-        reason_flags & USN_REASON_NAMED_DATA_OVERWRITE or
-        reason_flags & USN_REASON_NAMED_DATA_EXTEND or
-        reason_flags & USN_REASON_NAMED_DATA_TRUNCATION):
+    if (
+        reason_flags & USN_REASON_DATA_OVERWRITE
+        or reason_flags & USN_REASON_DATA_EXTEND
+        or reason_flags & USN_REASON_DATA_TRUNCATION
+        or reason_flags & USN_REASON_NAMED_DATA_OVERWRITE
+        or reason_flags & USN_REASON_NAMED_DATA_EXTEND
+        or reason_flags & USN_REASON_NAMED_DATA_TRUNCATION
+    ):
         return StorageActivityType.MODIFY
 
     # Third priority: attribute changes
-    if (reason_flags & USN_REASON_EA_CHANGE or
-        reason_flags & USN_REASON_SECURITY_CHANGE or
-        reason_flags & USN_REASON_BASIC_INFO_CHANGE or
-        reason_flags & USN_REASON_COMPRESSION_CHANGE or
-        reason_flags & USN_REASON_ENCRYPTION_CHANGE or
-        reason_flags & USN_REASON_OBJECT_ID_CHANGE or
-        reason_flags & USN_REASON_REPARSE_POINT_CHANGE or
-        reason_flags & USN_REASON_INDEXABLE_CHANGE or
-        reason_flags & USN_REASON_HARD_LINK_CHANGE or
-        reason_flags & USN_REASON_STREAM_CHANGE):
+    if (
+        reason_flags & USN_REASON_EA_CHANGE
+        or reason_flags & USN_REASON_SECURITY_CHANGE
+        or reason_flags & USN_REASON_BASIC_INFO_CHANGE
+        or reason_flags & USN_REASON_COMPRESSION_CHANGE
+        or reason_flags & USN_REASON_ENCRYPTION_CHANGE
+        or reason_flags & USN_REASON_OBJECT_ID_CHANGE
+        or reason_flags & USN_REASON_REPARSE_POINT_CHANGE
+        or reason_flags & USN_REASON_INDEXABLE_CHANGE
+        or reason_flags & USN_REASON_HARD_LINK_CHANGE
+        or reason_flags & USN_REASON_STREAM_CHANGE
+    ):
         return StorageActivityType.ATTRIBUTE_CHANGE
 
     # Last priority: close events
@@ -1141,15 +1212,17 @@ def determine_activity_type(reason_flags: int) -> str:
     return StorageActivityType.OTHER
 
 
-def create_test_files(volume: str, num_files: int = 3, debug: bool = False) -> List[str]:
+def create_test_files(
+    volume: str, num_files: int = 3, debug: bool = False,
+) -> list[str]:
     """
     Create test files on the specified volume to generate USN journal activity.
-    
+
     Args:
         volume: Volume to create files on (e.g., "C:")
         num_files: Number of files to create
         debug: Whether to print debug information
-        
+
     Returns:
         List of created file paths
     """
@@ -1157,60 +1230,60 @@ def create_test_files(volume: str, num_files: int = 3, debug: bool = False) -> L
         if debug:
             logger.debug("Not on Windows, cannot create test files")
         return []
-    
+
     # Standardize volume path
     if not volume.endswith(":"):
         volume = f"{volume}:"
-    
+
     # Create test directory
     test_dir = os.path.join(volume, "Indaleko_Test")
     os.makedirs(test_dir, exist_ok=True)
-    
+
     created_files = []
-    
+
     # Create test files
     for i in range(num_files):
         timestamp = int(datetime.now().timestamp())
         filename = f"test_file_{timestamp}_{i}.txt"
         filepath = os.path.join(test_dir, filename)
-        
+
         # Create the file
-        with open(filepath, 'w') as f:
+        with open(filepath, "w") as f:
             f.write(f"Test file created at {datetime.now()}\n")
             f.write(f"This is test file {i+1} of {num_files}\n")
             f.flush()
             os.fsync(f.fileno())
-        
+
         created_files.append(filepath)
-        
+
         if debug:
             logger.debug(f"Created test file: {filepath}")
-        
+
         # Also read the file to generate read activity
-        with open(filepath, 'r') as f:
+        with open(filepath) as f:
             content = f.read()
-        
+
         # And modify it to generate write activity
-        with open(filepath, 'a') as f:
+        with open(filepath, "a") as f:
             f.write(f"Additional content added at {datetime.now()}\n")
             f.flush()
             os.fsync(f.fileno())
-    
+
     # Create a file and rename it
     if num_files > 0:
         timestamp = int(datetime.now().timestamp())
         orig_name = os.path.join(test_dir, f"rename_test_{timestamp}.txt")
         new_name = os.path.join(test_dir, f"renamed_{timestamp}.txt")
-        
+
         # Create file
-        with open(orig_name, 'w') as f:
+        with open(orig_name, "w") as f:
             f.write(f"Rename test file created at {datetime.now()}\n")
-        
+
         # Rename it
         os.rename(orig_name, new_name)
         created_files.append(new_name)
-        
+
         if debug:
             logger.debug(f"Created and renamed file: {orig_name} -> {new_name}")
-    
+
     return created_files

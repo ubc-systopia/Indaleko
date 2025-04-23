@@ -40,7 +40,7 @@ class MySpecializedRegistrationService(IndalekoRegistrationService):
     service_description = "My specialized registration service"
     service_version = "1.0.0"
     service_type = "my_provider_registrar"
-    
+
     def __init__(self):
         super().__init__(
             service_uuid=self.service_uuid_str,
@@ -51,7 +51,7 @@ class MySpecializedRegistrationService(IndalekoRegistrationService):
             collection_name=self.collection_name,
             collection_prefix=self.collection_prefix
         )
-    
+
     def _process_registration_data(self, kwargs):
         # Process and validate provider-specific data
         # ...

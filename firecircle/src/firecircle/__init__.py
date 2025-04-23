@@ -28,17 +28,16 @@ __author__ = "Tony Mason and contributors"
 __email__ = "noreply@indaleko.io"
 
 # Import submodules to make them available
+from firecircle.entities import Entity, EntityCapability, EntityRegistry
+from firecircle.memory import CircleContext, ContextVariable, MemoryStore
+
 from firecircle.protocol import (
-    Message, MessageType, CircleRequest, CircleResponse,
-    CircleOrchestrator, TurnTakingPolicy
-)
-
-from firecircle.entities import (
-    Entity, EntityCapability, EntityRegistry
-)
-
-from firecircle.memory import (
-    CircleContext, ContextVariable, MemoryStore
+    CircleOrchestrator,
+    CircleRequest,
+    CircleResponse,
+    Message,
+    MessageType,
+    TurnTakingPolicy,
 )
 
 # Setup version variable to make it available in module

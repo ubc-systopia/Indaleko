@@ -1,7 +1,7 @@
 """
 Common UI utility functions and components
 
-This module provides shared UI components and helper functions 
+This module provides shared UI components and helper functions
 used across the Indaleko GUI.
 
 Copyright (C) 2024-2025 Tony Mason
@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import streamlit as st
+
 
 def normalize_for_display(item):
     """
@@ -52,6 +53,7 @@ def normalize_for_display(item):
             result[key] = value
     return result
 
+
 def display_search_results(search_results):
     """
     Display search results in the UI, with proper handling of different result types.
@@ -66,9 +68,12 @@ def display_search_results(search_results):
         return
 
     # Check if this is an explain result that needs special handling
-    if isinstance(search_results, dict) and ("_is_explain_result" in search_results or
-                                         "plan" in search_results or
-                                         "nodes" in search_results and len(search_results.get("nodes", [])) > 0):
+    if isinstance(search_results, dict) and (
+        "_is_explain_result" in search_results
+        or "plan" in search_results
+        or "nodes" in search_results
+        and len(search_results.get("nodes", [])) > 0
+    ):
         # It's a query plan, use dedicated display function
         display_query_plan(search_results)
         return
@@ -77,7 +82,9 @@ def display_search_results(search_results):
     if isinstance(search_results, (list, tuple)):
         if len(search_results) > 0:
             # Display up to 20 items
-            items_to_show = search_results[:20] if len(search_results) > 20 else search_results
+            items_to_show = (
+                search_results[:20] if len(search_results) > 20 else search_results
+            )
 
             # Use a simple table for display first
             table_data = []
@@ -87,9 +94,9 @@ def display_search_results(search_results):
             for item in items_to_show[:5]:
                 if isinstance(item, dict):
                     for key in item.keys():
-                        if key not in headers and not key.startswith('_'):
+                        if key not in headers and not key.startswith("_"):
                             # Prioritize common fields
-                            if key in ['Label', 'name', 'type', 'size', 'timestamp']:
+                            if key in ["Label", "name", "type", "size", "timestamp"]:
                                 headers.insert(0, key)
                             else:
                                 headers.append(key)
@@ -136,25 +143,26 @@ def display_search_results(search_results):
             for i, item in enumerate(items_to_show):
                 if isinstance(item, dict):
                     # Get a display name for the item
-                    item_name = item.get('Label', item.get('name', f"Result {i+1}"))
-                    with st.expander(f"Details: {item_name}", expanded=i==0):
+                    item_name = item.get("Label", item.get("name", f"Result {i+1}"))
+                    with st.expander(f"Details: {item_name}", expanded=i == 0):
                         st.json(item)
                 else:
                     # For non-dict items
-                    with st.expander(f"Result {i+1}", expanded=i==0):
+                    with st.expander(f"Result {i+1}", expanded=i == 0):
                         st.code(str(item))
         else:
             st.info("No results found")
 
     # Display single result
     elif isinstance(search_results, dict):
-        item_name = search_results.get('Label', search_results.get('name', "Result"))
+        item_name = search_results.get("Label", search_results.get("name", "Result"))
         with st.expander(f"Details: {item_name}", expanded=True):
             st.json(search_results)
 
     # Display other types
     else:
         st.code(str(search_results))
+
 
 def display_query_plan(explain_results):
     """
@@ -172,7 +180,9 @@ def display_query_plan(explain_results):
         return
 
     # Show a user-friendly message
-    st.info("This is a query execution plan showing how ArangoDB would execute this query.")
+    st.info(
+        "This is a query execution plan showing how ArangoDB would execute this query.",
+    )
 
     # Format metrics in a top row
     metrics_col1, metrics_col2, metrics_col3 = st.columns(3)
@@ -181,24 +191,46 @@ def display_query_plan(explain_results):
     with metrics_col1:
         if isinstance(explain_results, dict) and "estimatedCost" in explain_results:
             st.metric("Estimated Cost", f"{explain_results['estimatedCost']:,.0f}")
-        elif isinstance(explain_results, dict) and "plan" in explain_results and "estimatedCost" in explain_results["plan"]:
-            st.metric("Estimated Cost", f"{explain_results['plan']['estimatedCost']:,.0f}")
+        elif (
+            isinstance(explain_results, dict)
+            and "plan" in explain_results
+            and "estimatedCost" in explain_results["plan"]
+        ):
+            st.metric(
+                "Estimated Cost", f"{explain_results['plan']['estimatedCost']:,.0f}",
+            )
 
     # Handle estimated number of items
     with metrics_col2:
         if isinstance(explain_results, dict):
             if "estimatedNrItems" in explain_results:
-                st.metric("Estimated Results", f"{explain_results.get('estimatedNrItems', 0):,}")
-            elif "plan" in explain_results and "estimatedNrItems" in explain_results["plan"]:
-                st.metric("Estimated Results", f"{explain_results['plan'].get('estimatedNrItems', 0):,}")
+                st.metric(
+                    "Estimated Results",
+                    f"{explain_results.get('estimatedNrItems', 0):,}",
+                )
+            elif (
+                "plan" in explain_results
+                and "estimatedNrItems" in explain_results["plan"]
+            ):
+                st.metric(
+                    "Estimated Results",
+                    f"{explain_results['plan'].get('estimatedNrItems', 0):,}",
+                )
 
     # Handle execution time if available
     with metrics_col3:
         exec_time = None
         if isinstance(explain_results, dict):
-            if "stats" in explain_results and "executionTime" in explain_results["stats"]:
+            if (
+                "stats" in explain_results
+                and "executionTime" in explain_results["stats"]
+            ):
                 exec_time = explain_results["stats"]["executionTime"]
-            elif "plan" in explain_results and "stats" in explain_results["plan"] and "executionTime" in explain_results["plan"]["stats"]:
+            elif (
+                "plan" in explain_results
+                and "stats" in explain_results["plan"]
+                and "executionTime" in explain_results["plan"]["stats"]
+            ):
                 exec_time = explain_results["plan"]["stats"]["executionTime"]
 
         if exec_time is not None:

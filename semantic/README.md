@@ -22,7 +22,7 @@ Indaleko's semantic processor can run as a Windows service or scheduled task. Th
 python semantic/run_bg_processor.py
 
 # Install as a Windows service (requires NSSM utility)
-python semantic/run_bg_processor.py --install-service 
+python semantic/run_bg_processor.py --install-service
 
 # Uninstall the Windows service
 python semantic/run_bg_processor.py --uninstall-service
@@ -156,8 +156,8 @@ Note: This only works on Windows (due to file path conventions that are differen
 ### Collector ###
 
 2. Run `semantic\collectors\unstructured\unstructuredd.py` with parameter `lookup`. This command does two things:
-    - Creates a configuration file in the config folder. For now, we assume that all files are located 
-        in the C:\ drive. If files from other drives need to be analyzed, simply change the 'HostDrive' parameter 
+    - Creates a configuration file in the config folder. For now, we assume that all files are located
+        in the C:\ drive. If files from other drives need to be analyzed, simply change the 'HostDrive' parameter
         in the configuration file. This tells Docker to create a bind mount to your specified drive instead of the default C:\ drive.
 
     - Creates the file `unstructured_inputs.jsonl` in the `data\semantic` folder. Each line specifies a file that is eligible to be
@@ -177,6 +177,6 @@ Note: This only works on Windows (due to file path conventions that are differen
 
 ### Recorder ###
 
-6. Now that the collector stage is finished, we now normalize the outputs from unstructured. This is done by running 
+6. Now that the collector stage is finished, we now normalize the outputs from unstructured. This is done by running
     `semantic\recorders\unstructured\recorder.py`, which creates the file `unstructured_recorder.jsonl`, which contains the normalized
     entry of each file. This is the final file that will get uploaded to ArangoDB via arangoimport.

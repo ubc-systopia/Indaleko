@@ -17,18 +17,17 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+
 import argparse
-from datetime import datetime
 import inspect
-from pathlib import Path
 import os
 import sys
 import time
 import uuid
-
+from datetime import datetime
+from pathlib import Path
 
 from icecream import ic
-from typing import Union
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -46,6 +45,7 @@ from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.runner import IndalekoCLIRunner
+
 # pylint: enable=wrong-import-position
 
 
@@ -84,12 +84,12 @@ class TestCollectorV2(BaseActivityCollector):
         if "platform" not in kwargs:
             kwargs["platform"] = "Windows"
         if "collector_data" not in kwargs:
-            kwargs["collector_data"] = (
-                TestCollectorV2.collector_data
-            )
+            kwargs["collector_data"] = TestCollectorV2.collector_data
 
         # Import our actual NTFS collector implementation
-        from activity.collectors.storage.ntfs.ntfs_collector_v2 import NtfsStorageActivityCollectorV2
+        from activity.collectors.storage.ntfs.ntfs_collector_v2 import (
+            NtfsStorageActivityCollectorV2,
+        )
 
         # Create the NTFS collector that will do the actual work
         ntfs_collector_args = {}
@@ -100,8 +100,8 @@ class TestCollectorV2(BaseActivityCollector):
         if "path" in kwargs:
             # Extract drive letter from path if needed
             path = kwargs["path"]
-            if path and len(path) >= 2 and path[1] == ':':
-                ntfs_collector_args["volumes"] = [path[0] + ':']
+            if path and len(path) >= 2 and path[1] == ":":
+                ntfs_collector_args["volumes"] = [path[0] + ":"]
 
         ntfs_collector_args["auto_start"] = False  # We'll start it manually
         ntfs_collector_args["debug"] = kwargs.get("debug", False)
@@ -112,7 +112,10 @@ class TestCollectorV2(BaseActivityCollector):
                 ntfs_collector_args["timestamp"] = kwargs["timestamp"]
             if "output_path" in kwargs and "output_path" not in ntfs_collector_args:
                 ntfs_collector_args["output_path"] = kwargs["output_path"]
-            if "machine_config" in kwargs and "machine_config" not in ntfs_collector_args:
+            if (
+                "machine_config" in kwargs
+                and "machine_config" not in ntfs_collector_args
+            ):
                 ntfs_collector_args["machine_config"] = kwargs["machine_config"]
             if "configdir" in kwargs and "config_dir" not in ntfs_collector_args:
                 ntfs_collector_args["config_dir"] = kwargs["configdir"]
@@ -125,6 +128,7 @@ class TestCollectorV2(BaseActivityCollector):
         except Exception as e:
             print(f"Warning: Failed to create NTFS collector: {e}")
             import traceback
+
             traceback.print_exc()
             self.ntfs_collector = None
 
@@ -141,15 +145,18 @@ class TestCollectorV2(BaseActivityCollector):
             # Check for admin rights - accessing USN journal typically requires this
             try:
                 import ctypes
+
                 is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
                 if not is_admin:
                     print("\n*** WARNING: Not running as administrator. ***")
                     print("*** USN Journal access typically requires admin rights. ***")
-                    print("*** Consider running this script as administrator for best results. ***\n")
+                    print(
+                        "*** Consider running this script as administrator for best results. ***\n",
+                    )
             except Exception:
                 # Ignore if we can't check admin status
                 pass
-                
+
             # Start monitoring
             try:
                 self.ntfs_collector.start_monitoring()
@@ -157,6 +164,7 @@ class TestCollectorV2(BaseActivityCollector):
             except Exception as e:
                 print(f"Error starting monitoring: {e}")
                 import traceback
+
                 traceback.print_exc()
 
             # Create some test files to generate activity
@@ -174,13 +182,13 @@ class TestCollectorV2(BaseActivityCollector):
                 timestamp = int(time.time())
                 for i in range(3):
                     test_file = os.path.join(test_dir, f"test_file_{timestamp}_{i}.txt")
-                    with open(test_file, "wt", encoding="utf-8") as f:
+                    with open(test_file, "w", encoding="utf-8") as f:
                         f.write(f"Test file created at {datetime.now()}\n")
                         f.write(f"This is test file {i+1} of 3\n")
                         f.flush()
 
                     # Read the file to generate read activity
-                    with open(test_file, "r", encoding="utf-8") as f:
+                    with open(test_file, encoding="utf-8") as f:
                         _ = f.read()
 
                     # Modify the file to generate write activity
@@ -192,7 +200,7 @@ class TestCollectorV2(BaseActivityCollector):
 
                 # Create and rename a file
                 orig_name = os.path.join(test_dir, f"rename_test_{timestamp}.txt")
-                with open(orig_name, "wt", encoding="utf-8") as f:
+                with open(orig_name, "w", encoding="utf-8") as f:
                     f.write(f"Test file for renaming, created at {datetime.now()}\n")
                     f.flush()
 
@@ -203,6 +211,7 @@ class TestCollectorV2(BaseActivityCollector):
             except Exception as e:
                 print(f"Error creating test files: {e}")
                 import traceback
+
                 traceback.print_exc()
 
             # Collect data from the NTFS collector
@@ -212,6 +221,7 @@ class TestCollectorV2(BaseActivityCollector):
             except Exception as e:
                 print(f"Error collecting data: {e}")
                 import traceback
+
                 traceback.print_exc()
         else:
             print("Warning: NTFS collector not available")
@@ -220,7 +230,9 @@ class TestCollectorV2(BaseActivityCollector):
         """Get the collected activities."""
         if hasattr(self, "ntfs_collector") and self.ntfs_collector:
             activities = self.ntfs_collector.get_activities()
-            print(f"TestCollectorV2.get_activities(): Got {len(activities)} activities from ntfs_collector")
+            print(
+                f"TestCollectorV2.get_activities(): Got {len(activities)} activities from ntfs_collector",
+            )
             return activities
         else:
             print("TestCollectorV2.get_activities(): No ntfs_collector available")
@@ -235,7 +247,7 @@ class TestCollectorV2(BaseActivityCollector):
         """This is the CLI handler mixin for the NTFS activity collector."""
 
         @staticmethod
-        def get_pre_parser() -> Union[argparse.ArgumentParser, None]:
+        def get_pre_parser() -> argparse.ArgumentParser | None:
             """This method is used to get the pre-parser"""
             parser = argparse.ArgumentParser(add_help=False)
             default_drive = "C:"
@@ -262,18 +274,18 @@ class TestCollectorV2(BaseActivityCollector):
             if "machine_config_file" not in keys:
                 raise ValueError(
                     f"{inspect.currentframe().f_code.co_name}: "
-                    "machine_config_file must be specified"
+                    "machine_config_file must be specified",
                 )
             offline = keys.get("offline", False)
             platform_class = keys["class"]  # must exist
             return platform_class.load_config_from_file(
-                config_file=str(keys["machine_config_file"]), offline=offline
+                config_file=str(keys["machine_config_file"]), offline=offline,
             )
 
     cli_handler_mixin = collector_mixin
 
     @staticmethod
-    def local_run(keys: dict[str, str]) -> Union[dict, None]:
+    def local_run(keys: dict[str, str]) -> dict | None:
         """Run the test"""
         args = keys["args"]  # must be here
         cli = keys["cli"]  # must be here
@@ -291,12 +303,12 @@ class TestCollectorV2(BaseActivityCollector):
         if hasattr(args, "path") and args.path:
             path = args.path
             # Try to extract drive letter from path
-            if path and len(path) >= 2 and path[1] == ':':
-                drive = path[0] + ':'
+            if path and len(path) >= 2 and path[1] == ":":
+                drive = path[0] + ":"
         elif hasattr(args, "drive") and args.drive:
             drive = args.drive
             # Convert drive to a full path
-            if drive.endswith(':'):
+            if drive.endswith(":"):
                 path = f"{drive}\\"
             else:
                 drive = f"{drive}:"
@@ -310,18 +322,22 @@ class TestCollectorV2(BaseActivityCollector):
             "machine_config": cli.handler_mixin.load_machine_config(
                 {
                     "machine_config_file": str(
-                        Path(args.configdir) / args.machine_config
+                        Path(args.configdir) / args.machine_config,
                     ),
                     "offline": args.offline,
                     "class": machine_config_class,
-                }
+                },
             ),
             "timestamp": config_data["Timestamp"],
             "path": path,
             "drive": drive,
             "offline": args.offline,
             "volumes": [drive],
-            "output_path": os.path.join(args.datadir, config_data["OutputFile"]) if "OutputFile" in config_data else None,
+            "output_path": (
+                os.path.join(args.datadir, config_data["OutputFile"])
+                if "OutputFile" in config_data
+                else None
+            ),
             "configdir": args.configdir,  # Pass the config directory for state persistence
         }
         collector = collector_class(**kwargs)
@@ -337,40 +353,48 @@ class TestCollectorV2(BaseActivityCollector):
             for i in range(15):
                 time.sleep(1)
                 print(".", end="", flush=True)
-                
+
                 # Create a new file every 5 seconds to generate more activity
                 if i % 5 == 0:
                     try:
                         test_dir = os.path.join(drive, "Indaleko_Test")
                         if os.path.exists(test_dir):
-                            test_file = os.path.join(test_dir, f"extra_test_{int(time.time())}.txt")
-                            with open(test_file, 'w') as f:
-                                f.write(f"Extra test file created at {datetime.now()}\n")
+                            test_file = os.path.join(
+                                test_dir, f"extra_test_{int(time.time())}.txt",
+                            )
+                            with open(test_file, "w") as f:
+                                f.write(
+                                    f"Extra test file created at {datetime.now()}\n",
+                                )
                             print(f"\nCreated extra test file: {test_file}")
                     except Exception as e:
                         print(f"\nError creating extra test file: {e}")
-            
+
             print("\nFinished waiting. Checking for collected activities...")
-            
+
             # Get the activities
             activities = collector.get_activities()
             print(f"Collector reports {len(activities)} activities collected")
             print(f"Collector object: {collector}")
-            
+
             # If activities is empty but the collector has internal activities, use those
             if len(activities) == 0 and hasattr(collector, "ntfs_collector"):
-                print(f"Checking internal NTFS collector directly...")
+                print("Checking internal NTFS collector directly...")
                 if collector.ntfs_collector:
                     direct_activities = collector.ntfs_collector.get_activities()
-                    print(f"Internal NTFS collector has {len(direct_activities)} activities")
+                    print(
+                        f"Internal NTFS collector has {len(direct_activities)} activities",
+                    )
                     activities = direct_activities
-            
+
             # Print out what we found
             if debug or True:  # Always show activities for now
                 print(f"\nCollected {len(activities)} activities:")
                 for i, activity in enumerate(activities[:10], 1):  # Show first 10
-                    print(f"{i}. {activity.file_name} - "
-                          f"{activity.activity_type} - {activity.timestamp}")
+                    print(
+                        f"{i}. {activity.file_name} - "
+                        f"{activity.activity_type} - {activity.timestamp}",
+                    )
 
                 if len(activities) > 10:
                     print(f"... and {len(activities) - 10} more")
@@ -382,22 +406,21 @@ class TestCollectorV2(BaseActivityCollector):
 
         except Exception as e:
             import traceback
+
             print(f"Error collecting data: {e}")
             traceback.print_exc()
             return None
 
     @staticmethod
     def local_collector_runner(
-        collector_class: 'TestCollectorV2',
+        collector_class: "TestCollectorV2",
         machine_config_class: IndalekoMachineConfig,
     ) -> None:
         """This is the CLI handler for local storage collectors."""
         IndalekoCLIRunner(
             cli_data=IndalekoBaseCliDataModel(
-                RegistrationServiceName=collector_class
-                .get_collector_service_registration_name(),
-                FileServiceName=collector_class
-                .get_collector_service_file_name(),
+                RegistrationServiceName=collector_class.get_collector_service_registration_name(),
+                FileServiceName=collector_class.get_collector_service_file_name(),
             ),
             handler_mixin=collector_class.get_collector_cli_handler_mixin(),
             features=IndalekoBaseCLI.cli_features(input=False),
@@ -412,7 +435,7 @@ class TestCollectorV2(BaseActivityCollector):
 def main():
     """The CLI handler for the NTFS activity collector test."""
     TestCollectorV2.local_collector_runner(
-        TestCollectorV2, IndalekoWindowsMachineConfig
+        TestCollectorV2, IndalekoWindowsMachineConfig,
     )
 
 

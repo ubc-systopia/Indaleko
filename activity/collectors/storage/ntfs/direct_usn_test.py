@@ -22,21 +22,21 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import os
-import sys
-import struct
-import json
-import time
 import argparse
-import winioctlcon
 import ctypes
+import json
+import os
+import struct
+import subprocess
+import sys
+import tempfile
+import time
+import uuid
 from ctypes import wintypes
 from datetime import datetime, timezone
-from typing import Any, Optional, List, Dict, Tuple
-import uuid
-import subprocess
-import tempfile
+from typing import Any, Dict, List, Optional, Tuple
 
+import winioctlcon
 from icecream import ic
 
 # Make sure we're on Windows
@@ -45,8 +45,8 @@ if not sys.platform.startswith('win'):
     sys.exit(1)
 
 try:
-    import win32file
     import pywintypes
+    import win32file
 except ImportError:
     print("This script requires pywin32. Please install it with 'pip install pywin32'")
     sys.exit(1)
@@ -262,7 +262,7 @@ def parse_usn_record_v2(data: bytes, offset: int) -> tuple[dict[str, Any], int]:
             "file_attributes": file_attributes,
             "file_attributes_text": get_file_attributes_text(file_attributes),
             "file_name": filename,
-            "is_directory": bool(file_attributes & FILE_ATTRIBUTE_DIRECTORY)
+            "is_directory": bool(file_attributes & FILE_ATTRIBUTE_DIRECTORY),
         }
 
         # Return record and next offset
@@ -314,7 +314,7 @@ class READ_USN_JOURNAL_DATA(ctypes.Structure):
         ("ReturnOnlyOnClose", wintypes.DWORD),
         ("Timeout", ctypes.c_ulonglong),
         ("BytesToWaitFor", ctypes.c_ulonglong),
-        ("UsnJournalID", ctypes.c_ulonglong)
+        ("UsnJournalID", ctypes.c_ulonglong),
     ]
 
 def is_admin() -> bool:
@@ -327,22 +327,22 @@ def is_admin() -> bool:
 def read_usn_journal(handle: int, journal_id: int, start_usn: int, verbose: bool = False) -> tuple[bytes, int]:
     """
     Read USN journal entries.
-    
+
     This implementation matches the working implementation in ntfs_collector_v2.py,
     which was adapted from the successful approach in foo.py.
-    
+
     Args:
         handle: Volume handle
         journal_id: USN journal ID
         start_usn: Starting USN for reading journal entries
         verbose: Whether to print verbose debugging information
-    
+
     Returns:
         Tuple of (buffer, bytes_returned)
     """
     if verbose:
         print(f"Reading USN journal: handle={handle}, journal_id={journal_id}, start_usn={start_usn}")
-    
+
     # Prepare the data structure - exactly as in the working implementation
     read_data = READ_USN_JOURNAL_DATA(
         StartUsn=start_usn,
@@ -350,19 +350,19 @@ def read_usn_journal(handle: int, journal_id: int, start_usn: int, verbose: bool
         ReturnOnlyOnClose=0,
         Timeout=0,
         BytesToWaitFor=0,
-        UsnJournalID=journal_id
+        UsnJournalID=journal_id,
     )
-    
+
     # Create the buffer
     buffer_size = 8192  # Increased from 4096 for more data
     buffer = ctypes.create_string_buffer(buffer_size)
     bytes_returned = wintypes.DWORD()
-    
-    if verbose:
+
+        if verbose:
         print(f"Using FILE_READ_DATA access flag")
         print(f"ReadData structure: StartUsn={read_data.StartUsn}, JournalID={read_data.UsnJournalID}")
         print(f"Buffer size: {buffer_size} bytes")
-    
+
     try:
         # Call DeviceIoControl - matching the working implementation
         success = ctypes.windll.kernel32.DeviceIoControl(
@@ -373,11 +373,11 @@ def read_usn_journal(handle: int, journal_id: int, start_usn: int, verbose: bool
             buffer,
             buffer_size,
             ctypes.byref(bytes_returned),
-            None
+            None,
         )
-        
+
         if success:
-            if verbose:
+        if verbose:
                 print(f"Successfully read {bytes_returned.value} bytes from USN journal")
                 if bytes_returned.value > 0:
                     print(f"First 32 bytes: {buffer.raw[:32].hex()}")
@@ -386,28 +386,28 @@ def read_usn_journal(handle: int, journal_id: int, start_usn: int, verbose: bool
             error = ctypes.get_last_error()
             if verbose:
                 print(f"DeviceIoControl failed with Win32 error code: {error}")
-            
+
             # Try unprivileged access as fallback
             if error == 5:  # 5 = ERROR_ACCESS_DENIED
                 if verbose:
                     print("Access denied, trying unprivileged USN journal access...")
-                
+
                 # Reset buffer for clean attempt
                 buffer = ctypes.create_string_buffer(buffer_size)
                 bytes_returned = wintypes.DWORD()
-                
+
                 try:
                     success = ctypes.windll.kernel32.DeviceIoControl(
-                        handle,
+                handle,
                         FSCTL_READ_UNPRIVILEGED_USN_JOURNAL,
                         ctypes.byref(read_data),
                         ctypes.sizeof(read_data),
-                        buffer,
+                buffer,
                         buffer_size,
                         ctypes.byref(bytes_returned),
                         None
                     )
-                    
+
                     if success:
                         if verbose:
                             print(f"Unprivileged USN journal access succeeded, got {bytes_returned.value} bytes")
@@ -419,31 +419,31 @@ def read_usn_journal(handle: int, journal_id: int, start_usn: int, verbose: bool
                 except Exception as e:
                     if verbose:
                         print(f"Error during unprivileged access attempt: {e}")
-            
+
             # If we get here, all attempts failed
             raise ctypes.WinError(error)
-            
+
     except Exception as e:
         if verbose:
             print(f"Error reading USN journal: {e}")
-            
+
         # Check if it's an access denied error
         is_access_denied = False
         if hasattr(e, 'winerror') and e.winerror == 5:
             is_access_denied = True
         elif hasattr(e, 'args') and len(e.args) > 0 and e.args[0] == 5:
             is_access_denied = True
-            
+
         if is_access_denied:
             print("\nAccess denied. Some USN journal operations require administrative privileges.")
             print("Please run this script with elevated privileges (Run as Administrator).")
-            
+
         raise e
 
 def get_volume_handle(volume_path: str) -> int:
     """
     Get a volume handle using ctypes with FILE_READ_DATA access.
-    
+
     This is critical - using FILE_READ_DATA (0x0001) instead of GENERIC_READ (0x80000000)
     allows proper access to the USN journal even without admin privileges in some cases.
     """
@@ -480,15 +480,15 @@ def get_volume_handle(volume_path: str) -> int:
 
 def read_usn_journal_from_foo(handle: int, journal_id: int, start_usn: int, verbose: bool = False) -> tuple[bytes, int]:
     """Read USN journal entries by importing and using the working implementation from foo.py."""
-    if verbose:
+        if verbose:
         print(f"Reading USN journal by importing foo.py implementation")
         print(f"Parameters: journal_id={journal_id}, start_usn={start_usn}")
 
     try:
         # Import foo.py from the same directory
+        import importlib.util
         import os
         import sys
-        import importlib.util
 
         # Get the current directory where our script is located
         script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -500,7 +500,7 @@ def read_usn_journal_from_foo(handle: int, journal_id: int, start_usn: int, verb
             print(f"Looking for foo.py at: {foo_path}")
 
         if os.path.exists(foo_path):
-            if verbose:
+        if verbose:
                 print("foo.py found, importing...")
 
             # Import foo.py as a module
@@ -535,12 +535,12 @@ def query_usn_journal(volume, start_usn=None, verbose=False):
     """
     Query the USN journal for a specified volume using usn_bridge.py
 
-    Args:
+            Args:
         volume (str): Volume name (e.g. "C:")
         start_usn (int, optional): Starting USN for the query
         verbose (bool, optional): Enable verbose output
 
-    Returns:
+            Returns:
         list: List of USN journal records
     """
     if verbose:
@@ -578,7 +578,7 @@ def query_usn_journal(volume, start_usn=None, verbose=False):
         result = subprocess.run(cmd, capture_output=True, text=True)
 
         if result.returncode != 0:
-            if verbose:
+        if verbose:
                 print(f"Error running usn_bridge.py: {result.stderr}")
             return []
 
@@ -844,10 +844,10 @@ def main():
     volume = args.volume
     if not volume.endswith(':'):
         volume = f"{volume}:"
-        
+
     # Format volume path for Windows API
     volume_path = fr"\\.\{volume}"
-    
+
     # Print test mode information
     print(f"USN Journal Test Tool running in {'verbose' if args.verbose else 'normal'} mode")
     print(f"Target volume: {volume} (path: {volume_path})")
@@ -857,12 +857,12 @@ def main():
     if args.fsutil:
         print(f"\nUSN Journal info for {volume} (via fsutil):")
         journal_info = check_usn_journal_status(volume, args.verbose)
-        
+
         if journal_info and "usn_journal" in journal_info:
             print("\nUSN Journal Status:")
             for key, value in journal_info["usn_journal"].items():
-                print(f"  {key}: {value}")
-            
+                        print(f"  {key}: {value}")
+
             # Extract USN journal ID if present
             journal_id = None
             if "USN Journal ID" in journal_info["usn_journal"]:
@@ -879,15 +879,15 @@ def main():
     if args.create_test_files:
         print(f"\nCreating test files on {volume}")
         created_files = create_test_files(volume, num_files=3, verbose=args.verbose)
-        
+
         if created_files:
             print(f"Created {len(created_files)} test files for USN activity")
             for i, file in enumerate(created_files[:5], 1):  # Show at most 5 files
                 print(f"  {i}. {file}")
-            
+
             if len(created_files) > 5:
                 print(f"  ... and {len(created_files) - 5} more files")
-        
+
         print()
 
     # Try direct access if requested
@@ -898,53 +898,53 @@ def main():
             # Get a handle to the volume
             handle = get_volume_handle(volume_path)
             print(f"Successfully opened volume handle: {handle}")
-            
+
             # Query USN journal information
             journal_info = check_usn_journal_status(volume, args.verbose)
             journal_id = None
-            
+
             if journal_info and "usn_journal" in journal_info and "USN Journal ID" in journal_info["usn_journal"]:
                 try:
                     journal_id = int(journal_info["usn_journal"]["USN Journal ID"], 16)
                 except:
                     pass
-            
+
             if journal_id is None:
                 # Use a fallback mechanism to get journal ID
                 # For test purposes, use a hardcoded ID (should be replaced with proper detection)
                 journal_id = 0x2000000000005
                 print(f"Using fallback USN Journal ID: {journal_id} (0x{journal_id:x})")
-            
+
             # Read USN journal entries
             start_usn = args.start_usn or 0
             print(f"Reading USN journal entries starting from USN {start_usn}...")
-            
+
             buffer, bytes_returned = read_usn_journal(handle, journal_id, start_usn, args.verbose)
-            
+
             if bytes_returned > 0:
                 print(f"Successfully read {bytes_returned} bytes from USN journal")
                 # Parse USN records
                 usn_records = parse_usn_data(buffer[:bytes_returned], args.verbose)
                 print(f"Found {len(usn_records)} USN records")
-                
+
                 # Save records to the output file
                 with open(args.output, 'w') as f:
                     for record in usn_records:
                         f.write(json.dumps(record) + '\n')
-                
+
                 print(f"Wrote {len(usn_records)} USN records to {args.output}")
                 records = usn_records
-            else:
+                    else:
                 print("No USN data returned (0 bytes)")
-            
+
             # Close the handle
             ctypes.windll.kernel32.CloseHandle(handle)
-            
+
         except Exception as e:
             print(f"Error during direct USN journal access: {e}")
             import traceback
             traceback.print_exc()
-    
+
     # Import and use foo.py directly if requested
     elif args.use_foo:
         print(f"\nImporting and using foo.py implementation...")
@@ -952,97 +952,99 @@ def main():
             handle = get_volume_handle(volume_path)
             journal_info = check_usn_journal_status(volume, args.verbose)
             journal_id = None
-            
+
             if journal_info and "usn_journal" in journal_info and "USN Journal ID" in journal_info["usn_journal"]:
                 try:
                     journal_id = int(journal_info["usn_journal"]["USN Journal ID"], 16)
                 except:
                     pass
-            
+
             if journal_id is None:
                 journal_id = 0x2000000000005
                 print(f"Using fallback USN Journal ID: {journal_id} (0x{journal_id:x})")
-            
+
             start_usn = args.start_usn or 0
             buffer, bytes_returned = read_usn_journal_from_foo(handle, journal_id, start_usn, args.verbose)
-            
+
             if bytes_returned > 0:
                 usn_records = parse_usn_data(buffer[:bytes_returned], args.verbose)
                 print(f"Found {len(usn_records)} USN records")
-                
+
                 with open(args.output, 'w') as f:
                     for record in usn_records:
-                        f.write(json.dumps(record) + '\n')
-                
+            f.write(json.dumps(record) + '\n')
+
                 print(f"Wrote {len(usn_records)} USN records to {args.output}")
                 records = usn_records
             else:
                 print("No USN data returned (0 bytes)")
-            
+
             # Close the handle
             ctypes.windll.kernel32.CloseHandle(handle)
-            
+
         except Exception as e:
             print(f"Error using foo.py implementation: {e}")
             import traceback
             traceback.print_exc()
-    
+
     # Use the module if available and requested
     elif args.use_module and MODULE_AVAILABLE:
         print(f"\nUsing usn_journal module...")
         try:
             start_usn = args.start_usn or 0
             volume_letter = volume[0]
-            
-            from activity.collectors.storage.ntfs.usn_journal import get_usn_journal_records
+
+            from activity.collectors.storage.ntfs.usn_journal import (
+                get_usn_journal_records,
+            )
             usn_records = get_usn_journal_records(volume_letter, start_usn, args.verbose)
-            
+
             if usn_records:
                 print(f"Found {len(usn_records)} USN records")
-                
+
                 with open(args.output, 'w') as f:
                     for record in usn_records:
                         f.write(json.dumps(record) + '\n')
-                
+
                 print(f"Wrote {len(usn_records)} USN records to {args.output}")
                 records = usn_records
             else:
                 print("No USN records found")
-            
+
         except Exception as e:
             print(f"Error using usn_journal module: {e}")
             import traceback
             traceback.print_exc()
-    
+
     # Fall back to the bridge method
     else:
         print(f"\nUsing bridge method to query USN journal...")
         records = query_usn_journal(volume, args.start_usn, args.verbose)
-        
+
         if records:
             # Write records to the output file
             with open(args.output, 'w') as f:
                 for record in records:
                     f.write(json.dumps(record) + '\n')
-    
+
             print(f"Wrote {len(records)} USN records to {args.output}")
         else:
             print("No USN records found or an error occurred using bridge method.")
-    
+
     # Print a summary
     print("\nSummary:")
     print(f"  Test volume: {volume}")
     print(f"  Admin privileges: {is_admin()}")
     print(f"  Records found: {len(records)}")
     print(f"  Output file: {args.output}")
-    
+
     if records:
         print("\nSample records (up to 5):")
         for i, record in enumerate(records[:5], 1):
             filename = record.get("file_name", "unknown")
             reason = record.get("reason_text", "unknown")
             print(f"  {i}. {filename} - {reason}")
-    
+
     print("\nTest completed.")
 
 if __name__ == "__main__":

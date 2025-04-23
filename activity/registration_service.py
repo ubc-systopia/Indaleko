@@ -22,8 +22,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-import uuid
-from typing import Dict, Any, Union, Tuple
+from typing import Any
+
+from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -33,32 +34,34 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from Indaleko import Indaleko
-from db.collection import IndalekoCollection
-from utils.registration_service import IndalekoRegistrationService
-from data_models.record import IndalekoRecordDataModel
 from activity.registration import IndalekoActivityDataRegistration
+from data_models.record import IndalekoRecordDataModel
+from db.collection import IndalekoCollection
+from db.db_collections import IndalekoDBCollections
+from db.service_manager import IndalekoServiceManager
+from utils.registration_service import IndalekoRegistrationService
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoActivityRegistrationService(IndalekoRegistrationService):
     """
     Registration service for Indaleko activity data providers.
-    
+
     This service manages the registration of activity data providers,
     which collect and record user and system activities.
     """
-    
+
     # Service details
     service_uuid_str = "5ef4125d-4e46-4e35-bea5-f23a9fcb3f63"
-    collection_name = Indaleko.Indaleko_ActivityDataProvider_Collection
+    collection_name = IndalekoDBCollections.Indaleko_ActivityDataProvider_Collection
     collection_prefix = IndalekoActivityDataRegistration.provider_prefix
     service_name = "IndalekoActivityDataProviderRegistrationService"
     service_description = "Indaleko Activity Data Provider Registration Service"
     service_version = "1.0.0"
     service_type = IndalekoServiceManager.service_type_activity_data_registrar
-    
-    def __init__(self):
+
+    def __init__(self) -> None:
         """Initialize the activity registration service."""
         super().__init__(
             service_uuid=self.service_uuid_str,
@@ -67,16 +70,16 @@ class IndalekoActivityRegistrationService(IndalekoRegistrationService):
             service_version=self.service_version,
             service_type=self.service_type,
             collection_name=self.collection_name,
-            collection_prefix=self.collection_prefix
+            collection_prefix=self.collection_prefix,
         )
-    
-    def _process_registration_data(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
+
+    def _process_registration_data(self, kwargs: dict[str, Any]) -> dict[str, Any]:
         """
         Process registration data for activity providers.
-        
+
         Args:
             kwargs: Registration parameters
-            
+
         Returns:
             Processed registration data
         """
@@ -86,8 +89,10 @@ class IndalekoActivityRegistrationService(IndalekoRegistrationService):
         assert "Description" in kwargs, "Description must be provided"
         assert "Version" in kwargs, "Version must be provided"
         assert "Record" in kwargs, "Record must be provided"
-        assert isinstance(kwargs["Record"], IndalekoRecordDataModel), "Record must be an IndalekoRecordDataModel"
-        
+        assert isinstance(
+            kwargs["Record"], IndalekoRecordDataModel,
+        ), "Record must be an IndalekoRecordDataModel"
+
         # Optional activity-specific fields with defaults
         kwargs.setdefault("DataProviderType", "Activity")
         kwargs.setdefault("DataProviderSubType", "Generic")
@@ -97,58 +102,67 @@ class IndalekoActivityRegistrationService(IndalekoRegistrationService):
         kwargs.setdefault("SourceIdentifiers", [])
         kwargs.setdefault("SchemaIdentifiers", [])
         kwargs.setdefault("Tags", [])
-        
+
         # Process through IndalekoActivityDataRegistration
         activity_registration = IndalekoActivityDataRegistration(
-            registration_data=kwargs
+            registration_data=kwargs,
         )
-        
+
         # Use the model_dump_json method to process the data
-        registration_data = activity_registration.model_dump_json()
-        
-        return registration_data
-    
-    def register_activity_provider(self, **kwargs) -> Tuple[dict, IndalekoCollection]:
+        return activity_registration.model_dump_json()
+
+    def register_activity_provider(
+        self,
+        **kwargs: dict[str, Any],
+    ) -> tuple[dict, IndalekoCollection]:
         """
         Register an activity data provider.
-        
+
         Args:
             **kwargs: Provider configuration
-            
+
         Returns:
             Tuple of (registration_data, collection)
         """
         return self.register_provider(**kwargs)
-    
+
     @staticmethod
     def get_activity_providers_by_type(provider_type: str) -> list:
         """
         Get activity providers of a specific type.
-        
+
         Args:
             provider_type: The type of provider to find
-            
+
         Returns:
             List of matching providers
         """
         service = IndalekoActivityRegistrationService()
         providers = service.get_provider_list()
-        
+
         matching_providers = []
         for provider in providers:
-            if "DataProviderSubType" in provider and provider["DataProviderSubType"] == provider_type:
-                matching_providers.append(provider)
-        
+            if (
+                "DataProviderSubType" in provider
+                and provider["DataProviderSubType"] == provider_type
+            ):
+                matching_providers = [
+                    provider
+                    for provider in providers
+                    if "DataProviderSubType" in provider
+                    and provider["DataProviderSubType"] == provider_type
+                ]
+
         return matching_providers
 
 
-def main():
+def main() -> None:
     """Test the activity registration service."""
     service = IndalekoActivityRegistrationService()
-    print(f"Initialized {service.__class__.__name__}")
-    print(f"Service UUID: {service.service_uuid_str}")
-    print(f"Collection name: {service.collection_name}")
-    print(f"Provider count: {len(service.get_provider_list())}")
+    ic(f"Initialized {service.__class__.__name__}")
+    ic(f"Service UUID: {service.service_uuid_str}")
+    ic(f"Collection name: {service.collection_name}")
+    ic(f"Provider count: {len(service.get_provider_list())}")
 
 
 if __name__ == "__main__":

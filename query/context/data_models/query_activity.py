@@ -24,9 +24,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import uuid
-import json
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any, Union
+from datetime import UTC, datetime
+from typing import Any
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -37,61 +36,49 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from pydantic import BaseModel, Field, validator
+from pydantic import Field, validator
+
 from data_models.base import IndalekoBaseModel
+
 # pylint: enable=wrong-import-position
 
 
 class QueryActivityData(IndalekoBaseModel):
     """Data model for query activities in the activity context system."""
-    
-    query_id: uuid.UUID = Field(
-        ..., 
-        description="Unique identifier for the query"
+
+    query_id: uuid.UUID = Field(..., description="Unique identifier for the query")
+    query_text: str = Field(..., description="The text of the query")
+    execution_time: float | None = Field(
+        None, description="Query execution time in milliseconds",
     )
-    query_text: str = Field(
-        ..., 
-        description="The text of the query"
+    result_count: int | None = Field(None, description="Number of results returned")
+    context_handle: uuid.UUID | None = Field(
+        None, description="Associated activity context",
     )
-    execution_time: Optional[float] = Field(
-        None, 
-        description="Query execution time in milliseconds"
-    )
-    result_count: Optional[int] = Field(
-        None, 
-        description="Number of results returned"
-    )
-    context_handle: Optional[uuid.UUID] = Field(
-        None, 
-        description="Associated activity context"
-    )
-    query_params: Optional[Dict[str, Any]] = Field(
-        None, 
-        description="Query parameters"
-    )
-    relationship_type: Optional[str] = Field(
+    query_params: dict[str, Any] | None = Field(None, description="Query parameters")
+    relationship_type: str | None = Field(
         None,
-        description="Relationship to previous query (refinement, broadening, pivot)"
+        description="Relationship to previous query (refinement, broadening, pivot)",
     )
-    previous_query_id: Optional[uuid.UUID] = Field(
-        None,
-        description="ID of the previous query in the exploration path"
+    previous_query_id: uuid.UUID | None = Field(
+        None, description="ID of the previous query in the exploration path",
     )
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-        description="When the query was executed"
+        default_factory=lambda: datetime.now(UTC),
+        description="When the query was executed",
     )
-    
+
     # Add pydantic validator to ensure timezone awareness
     @validator("timestamp")
     def ensure_timezone(cls, v):
         """Ensure the timestamp has a timezone."""
         if v.tzinfo is None:
-            return v.replace(tzinfo=timezone.utc)
+            return v.replace(tzinfo=UTC)
         return v
-        
+
     class Config:
         """Configuration for the QueryActivityData model."""
+
         json_schema_extra = {
             "example": {
                 "query_id": "00000000-0000-0000-0000-000000000000",
@@ -99,14 +86,11 @@ class QueryActivityData(IndalekoBaseModel):
                 "execution_time": 123.45,
                 "result_count": 5,
                 "context_handle": "00000000-0000-0000-0000-000000000000",
-                "query_params": {
-                    "database": "main",
-                    "limit": 10
-                },
+                "query_params": {"database": "main", "limit": 10},
                 "relationship_type": "refinement",
                 "previous_query_id": "00000000-0000-0000-0000-000000000000",
-                "timestamp": "2025-04-20T15:30:45.123456Z"
-            }
+                "timestamp": "2025-04-20T15:30:45.123456Z",
+            },
         }
 
 
@@ -121,16 +105,16 @@ def main():
         context_handle=uuid.uuid4(),
         query_params={"database": "main", "limit": 10},
         relationship_type="refinement",
-        previous_query_id=uuid.uuid4()
+        previous_query_id=uuid.uuid4(),
     )
-    
+
     # Print as JSON
     print(test_instance.model_dump_json(indent=2))
-    
+
     # Test serialization to dictionary
     print("\nSerialized to dictionary:")
     print(test_instance.model_dump())
-    
+
     # Test building ArangoDB document
     print("\nArangoDB document:")
     print(test_instance.build_arangodb_doc())

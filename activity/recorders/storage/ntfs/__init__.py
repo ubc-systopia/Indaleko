@@ -22,4 +22,4 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from activity.recorders.storage.ntfs.ntfs_recorder import NtfsStorageActivityRecorder
 
-__all__ = ['NtfsStorageActivityRecorder']
+__all__ = ["NtfsStorageActivityRecorder"]

@@ -20,18 +20,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import streamlit as st
+
 from utils.gui.streamlit.mock_modules import MockQueryProcessor
+
 
 def execute_query(query_text, db_service, explain=False, debug=False):
     """
     Execute a query against the database.
-    
+
     Args:
         query_text (str): The natural language query text
         db_service: IndalekoServiceManager or MockServiceManager object
         explain (bool): Whether to explain the query instead of executing it
         debug (bool): Whether to show debug information
-        
+
     Returns:
         Results or explanation
     """
@@ -92,9 +94,9 @@ def execute_query(query_text, db_service, explain=False, debug=False):
         try:
             # Import the query tools
             import query.tools.registry as registry
-            from query.tools.translation.nl_parser import NLParserTool
-            from query.tools.translation.aql_translator import AQLTranslatorTool
             from query.tools.database.executor import QueryExecutorTool
+            from query.tools.translation.aql_translator import AQLTranslatorTool
+            from query.tools.translation.nl_parser import NLParserTool
 
             log_debug("✅ Successfully imported query tools")
             use_enhanced_query = True
@@ -130,7 +132,7 @@ def execute_query(query_text, db_service, explain=False, debug=False):
                 log_debug(f"Parsing query: {query_text}")
                 parser_result = tool_registry.execute_tool(
                     "nl_parser",
-                    {"query": query_text}
+                    {"query": query_text},
                 )
                 log_debug(f"Parser result: {parser_result}")
 
@@ -138,7 +140,7 @@ def execute_query(query_text, db_service, explain=False, debug=False):
                 log_debug("Translating to AQL")
                 translator_result = tool_registry.execute_tool(
                     "aql_translator",
-                    {"structured_query": parser_result.result}
+                    {"structured_query": parser_result.result},
                 )
                 log_debug(f"Translator result: {translator_result}")
 
@@ -160,8 +162,8 @@ def execute_query(query_text, db_service, explain=False, debug=False):
                             "query": aql_query,
                             "bind_vars": bind_vars,
                             "explain_only": True,
-                            "include_plan": True
-                        }
+                            "include_plan": True,
+                        },
                     )
                     result = executor_result.result
 
@@ -176,8 +178,8 @@ def execute_query(query_text, db_service, explain=False, debug=False):
                         "query_executor",
                         {
                             "query": aql_query,
-                            "bind_vars": bind_vars
-                        }
+                            "bind_vars": bind_vars,
+                        },
                     )
                     log_debug(f"Found {len(executor_result.result)} results")
                     return executor_result.result
@@ -203,8 +205,8 @@ def execute_query(query_text, db_service, explain=False, debug=False):
                 query = """
                 FOR doc IN ObjectsTextView
                 SEARCH ANALYZER(
-                    LIKE(doc.Label, @query) OR 
-                    LIKE(doc.Record.Attributes.URI, @query) OR 
+                    LIKE(doc.Label, @query) OR
+                    LIKE(doc.Record.Attributes.URI, @query) OR
                     LIKE(doc.Record.Attributes.Description, @query) OR
                     LIKE(doc.Tags, @query),
                     "text_en"
@@ -219,7 +221,7 @@ def execute_query(query_text, db_service, explain=False, debug=False):
                 # Check the collections in the database
                 collections = db.collections()
                 collection_names = [c["name"] for c in collections]
-                
+
                 if "Objects" in collection_names:
                     # Adapt query to the real DB schema
                     query = """
@@ -239,7 +241,7 @@ def execute_query(query_text, db_service, explain=False, debug=False):
                         log_debug(f"Bind vars: {{'query': '{query_text}'}}")
                         plan = db.aql.explain(
                             query,
-                            bind_vars={"query": query_text}
+                            bind_vars={"query": query_text},
                         )
                         log_debug("Explain successful!")
                     except Exception as explain_error:
@@ -256,7 +258,7 @@ def execute_query(query_text, db_service, explain=False, debug=False):
                             plan = {
                                 "_is_explain_result": True,
                                 "error": str(explain_error),
-                                "query": query
+                                "query": query,
                             }
 
                     # Mark this as an explain result to handle it specially in the UI
@@ -277,7 +279,7 @@ def execute_query(query_text, db_service, explain=False, debug=False):
                         cursor = db.aql.execute(
                             query,
                             bind_vars={"query": query_text},
-                            max_runtime=10  # 10 seconds
+                            max_runtime=10,  # 10 seconds
                         )
                         results = list(cursor)
                         log_debug(f"Query returned {len(results)} results")
@@ -319,7 +321,7 @@ def execute_query(query_text, db_service, explain=False, debug=False):
                             cursor = db.aql.execute(
                                 alt_query,
                                 bind_vars={"query": query_text},
-                                max_runtime=10  # 10 seconds
+                                max_runtime=10,  # 10 seconds
                             )
                             results = list(cursor)
                             log_debug(f"Alternative query returned {len(results)} results")
@@ -359,7 +361,7 @@ def execute_query(query_text, db_service, explain=False, debug=False):
                             cursor = db.aql.execute(
                                 fallback_query,
                                 bind_vars={"query": query_text},
-                                max_runtime=10  # 10 seconds
+                                max_runtime=10,  # 10 seconds
                             )
                             results = list(cursor)
                             log_debug(f"Record.Attributes query returned {len(results)} results")

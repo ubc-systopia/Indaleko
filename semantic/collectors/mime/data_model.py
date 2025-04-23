@@ -21,12 +21,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # standard imports
 import os
 import sys
-
 from uuid import UUID, uuid4
 
 # third-party imports
 from pydantic import Field, field_validator
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -45,10 +43,10 @@ from semantic.data_models.base_data_model import BaseSemanticDataModel
 class SemanticMimeDataModel(BaseSemanticDataModel):
     """
     This class defines the data model for file MIME type detection.
-    
+
     It includes:
     - Content-based detected MIME type (e.g., "application/pdf", "image/jpeg")
-    - Detection confidence level 
+    - Detection confidence level
     - Extension-based MIME type (for comparison)
     - Optional additional metadata (e.g., for specialized formats)
     """
@@ -57,32 +55,28 @@ class SemanticMimeDataModel(BaseSemanticDataModel):
         default_factory=uuid4,
         description="The unique identifier for the MIME type data record.",
     )
-    
+
     mime_type: str = Field(
-        ..., 
-        description="The detected MIME type based on content analysis."
+        ..., description="The detected MIME type based on content analysis.",
     )
-    
+
     mime_type_from_extension: str = Field(
-        None, 
-        description="The MIME type based on file extension (if available)."
+        None, description="The MIME type based on file extension (if available).",
     )
-    
+
     confidence: float = Field(
-        ..., 
+        ...,
         description="Confidence level in the detected MIME type (0.0-1.0).",
         ge=0.0,
-        le=1.0
+        le=1.0,
     )
-    
+
     encoding: str = Field(
-        None, 
-        description="Character encoding if detected (for text files)."
+        None, description="Character encoding if detected (for text files).",
     )
-    
+
     additional_metadata: dict = Field(
-        default_factory=dict,
-        description="Additional format-specific metadata."
+        default_factory=dict, description="Additional format-specific metadata.",
     )
 
     @classmethod
@@ -123,11 +117,8 @@ class SemanticMimeDataModel(BaseSemanticDataModel):
                     "mime_type_from_extension": "application/pdf",
                     "confidence": 0.95,
                     "encoding": None,
-                    "additional_metadata": {
-                        "version": "1.7",
-                        "is_encrypted": False
-                    }
-                }
+                    "additional_metadata": {"version": "1.7", "is_encrypted": False},
+                },
             }
 
         json_schema_extra = {
@@ -138,11 +129,8 @@ class SemanticMimeDataModel(BaseSemanticDataModel):
                 "mime_type_from_extension": "application/pdf",
                 "confidence": 0.95,
                 "encoding": None,
-                "additional_metadata": {
-                    "version": "1.7",
-                    "is_encrypted": False
-                }
-            }
+                "additional_metadata": {"version": "1.7", "is_encrypted": False},
+            },
         }
 
 

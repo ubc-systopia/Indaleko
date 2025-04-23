@@ -170,7 +170,7 @@ try:
         # Store current activities
         activity_ids = recorder.collect_and_store_activities()
         print(f"Stored {len(activity_ids)} new activities")
-            
+
         # Wait before checking again
         time.sleep(30)
 except KeyboardInterrupt:
@@ -332,7 +332,7 @@ python direct_usn_test.py --volume C: --use-module --verbose
    - Script is not running with administrative privileges
    - Using GENERIC_READ instead of FILE_READ_DATA for volume access
    - USN journal is disabled on the volume
-   
+
 2. **Solution for Access Denied**:
    - Run the script as Administrator (right-click, Run as Administrator)
    - Use FILE_READ_DATA (0x0001) access flag instead of GENERIC_READ (0x80000000)

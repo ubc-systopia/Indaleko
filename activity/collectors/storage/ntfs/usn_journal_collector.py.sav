@@ -1,0 +1,812 @@
+#!/usr/bin/env python
+"""
+NTFS USN Journal Collector for Indaleko.
+
+This module provides a clean implementation for collecting NTFS file system
+activities from the USN Journal and converting them to standardized data model objects.
+
+Project Indaleko
+Copyright (C) 2024-2025 Tony Mason
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+"""
+
+import argparse
+import json
+import os
+import sys
+import uuid
+from datetime import UTC, datetime
+from typing import Any
+
+# Set up environment
+if os.environ.get("INDALEKO_ROOT") is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
+        current_path = os.path.dirname(current_path)
+    os.environ["INDALEKO_ROOT"] = current_path
+    sys.path.append(current_path)
+
+# Check Windows availability
+WINDOWS_AVAILABLE = sys.platform.startswith("win")
+
+# Import local modules (only if on Windows)
+if WINDOWS_AVAILABLE:
+    # Import the UsnJournalReader class
+    # Import storage activity models
+    from activity.collectors.storage.data_models.storage_activity_data_model import (
+        NtfsStorageActivityData,
+        StorageActivityType,
+        StorageItemType,
+        StorageProviderType,
+    )
+    from activity.collectors.storage.ntfs.bar import UsnJournalReader, is_admin
+
+
+def determine_activity_type(reason_flags: list[str]) -> str:
+    """
+    Determine the activity type from the reason flags.
+
+    Note on rename handling:
+    - USN Journal creates two separate records for rename operations:
+      1. A record with RENAME_OLD_NAME for the original filename
+      2. A record with RENAME_NEW_NAME for the new filename
+    - We preserve the raw reason flags in the activity data to allow recorders
+      to correlate these events using the file reference numbers
+    - The activity type for rename operations is preserved as OTHER with
+      specific USN reason flags to avoid validation issues while maintaining
+      all information needed for correlation
+
+    Args:
+        reason_flags: The reason flags from the USN record
+
+    Returns:
+        The determined activity type
+    """
+    if not WINDOWS_AVAILABLE:
+        return "other"
+
+    try:
+        if "FILE_CREATE" in reason_flags:
+            return StorageActivityType.CREATE
+        elif "FILE_DELETE" in reason_flags:
+            return StorageActivityType.DELETE
+        # For rename events, we'll use OTHER to avoid validation issues
+        # but keep the original reason flags for the recorder to use
+        elif "RENAME_OLD_NAME" in reason_flags or "RENAME_NEW_NAME" in reason_flags:
+            return (
+                StorageActivityType.OTHER
+            )  # Use OTHER to avoid validation error but preserve reason flags
+        elif "SECURITY_CHANGE" in reason_flags:
+            return StorageActivityType.SECURITY_CHANGE
+        elif (
+            "EA_CHANGE" in reason_flags
+            or "BASIC_INFO_CHANGE" in reason_flags
+            or "COMPRESSION_CHANGE" in reason_flags
+            or "ENCRYPTION_CHANGE" in reason_flags
+        ):
+            return StorageActivityType.ATTRIBUTE_CHANGE
+        elif "CLOSE" in reason_flags:
+            return StorageActivityType.CLOSE
+        elif (
+            "DATA_OVERWRITE" in reason_flags
+            or "DATA_EXTEND" in reason_flags
+            or "DATA_TRUNCATION" in reason_flags
+        ):
+            return StorageActivityType.MODIFY
+        else:
+            return StorageActivityType.OTHER
+    except Exception as e:
+        print(f"Error determining activity type: {e}, using default OTHER")
+        return StorageActivityType.OTHER
+
+
+def convert_record_to_model(
+    record: dict[str, Any], volume: str, provider_id: str,
+) -> NtfsStorageActivityData:
+    """
+    Convert a raw USN record dictionary to a NtfsStorageActivityData model.
+
+    Args:
+        record: The raw USN record dictionary
+        volume: The volume name (e.g., "C:")
+        provider_id: Provider ID for the activity
+
+    Returns:
+        NtfsStorageActivityData object
+    """
+    if not WINDOWS_AVAILABLE:
+        raise RuntimeError("This function only works on Windows")
+
+    # Determine if it's a directory
+    is_directory = "DIRECTORY" in record.get("Attributes", [])
+
+    # Create a proper file path
+    file_name = record.get("FileName", "")
+    file_path = f"{volume}\\{file_name}"
+
+    # Get the raw reasons
+    reasons = record.get("Reasons", [])
+
+    # Determine activity type
+    activity_type = determine_activity_type(reasons)
+
+    # Get timestamp and ensure it has timezone info
+    timestamp = record.get("Timestamp", datetime.now(UTC))
+    # Double-check timestamp has timezone info (should be handled by bar.py now)
+    if timestamp and not timestamp.tzinfo:
+        timestamp = timestamp.replace(tzinfo=UTC)
+
+    # Create additional attributes to store reason flags
+    attributes = {
+        "usn_reason_flags": reasons,  # Preserve original reason flags
+        "usn_record_number": record.get("USN", 0),  # Original USN record number
+    }
+
+    # For rename operations, add specific info
+    if "RENAME_OLD_NAME" in reasons:
+        attributes["rename_type"] = "old_name"
+    elif "RENAME_NEW_NAME" in reasons:
+        attributes["rename_type"] = "new_name"
+
+    # Create activity data
+    activity_data = NtfsStorageActivityData(
+        timestamp=timestamp,
+        file_reference_number=str(record.get("FileReferenceNumber", "")),
+        parent_file_reference_number=str(record.get("ParentFileReferenceNumber", "")),
+        activity_type=activity_type,
+        reason_flags=0,  # We'd need to convert the string reasons back to flags if needed
+        file_name=file_name,
+        file_path=file_path,
+        volume_name=volume,
+        is_directory=is_directory,
+        provider_type=StorageProviderType.LOCAL_NTFS,
+        provider_id=(
+            uuid.UUID(provider_id) if isinstance(provider_id, str) else provider_id
+        ),
+        item_type=StorageItemType.DIRECTORY if is_directory else StorageItemType.FILE,
+        attributes=attributes,  # Store additional information
+    )
+
+    return activity_data
+
+
+class NtfsUsnJournalCollector:
+    """
+    Collector for NTFS storage activities using the USN Journal.
+
+    This class uses the UsnJournalReader to read USN journal entries and converts
+    them to NtfsStorageActivityData objects. It also handles state persistence to allow
+    for incremental collection across multiple runs.
+    """
+
+    # Default provider ID for NTFS USN journal collection
+    DEFAULT_PROVIDER_ID = "7d8f5a92-35c7-41e6-b13d-6c4e89e7f2a5"
+
+    def __init__(
+        self,
+        volumes: str | list[str] = "C:",
+        provider_id: str = DEFAULT_PROVIDER_ID,
+        max_records: int = 1000,
+        state_file: str = None,
+        verbose: bool = False,
+    ):
+        """
+        Initialize the NTFS USN journal collector.
+
+        Args:
+            volumes: Volume or list of volumes to monitor (e.g., "C:" or ["C:", "D:"])
+            provider_id: Provider ID for activity data
+            max_records: Maximum number of records to collect per batch
+            state_file: Path to the state file for persisting USN positions
+            verbose: Whether to print verbose output
+        """
+        if not WINDOWS_AVAILABLE:
+            raise RuntimeError("This collector only works on Windows")
+
+        # Normalize volumes to a list
+        if isinstance(volumes, str):
+            volumes = [volumes]
+        self.volumes = volumes
+
+        self.provider_id = provider_id
+        self.max_records = max_records
+        self.state_file = state_file
+        self.verbose = verbose
+
+        # State tracking
+        self.last_usn_positions = {}
+        self.activities = []
+
+        # Load state if available
+        self._load_state()
+
+        if self.verbose:
+            print(f"NtfsUsnJournalCollector initialized with volumes: {self.volumes}")
+            print(f"Provider ID: {self.provider_id}")
+            print(f"State file: {self.state_file}")
+            print(f"Last USN positions: {self.last_usn_positions}")
+
+    def collect_activities(self) -> list[NtfsStorageActivityData]:
+        """
+        Collect activities from all configured volumes.
+
+        Returns:
+            List of NtfsStorageActivityData objects
+        """
+        activities = []
+
+        for volume in self.volumes:
+            volume_activities = self._collect_from_volume(volume)
+            activities.extend(volume_activities)
+
+        # Save the collected activities for later retrieval
+        self.activities = activities
+
+        # Save state after collection
+        self._save_state()
+
+        return activities
+
+    def _collect_from_volume(self, volume: str) -> list[NtfsStorageActivityData]:
+        """
+        Collect activities from a specific volume.
+
+        Args:
+            volume: The volume to collect from (e.g., "C:")
+
+        Returns:
+            List of NtfsStorageActivityData objects
+        """
+        activities = []
+
+        # Get the starting USN from saved state or None for first run
+        start_usn = self.last_usn_positions.get(volume, None)
+
+        if self.verbose:
+            print(f"Collecting from volume {volume}, starting from USN: {start_usn}")
+
+        # Use the UsnJournalReader to get records
+        with UsnJournalReader(volume=volume, verbose=self.verbose) as reader:
+            records, next_usn = reader.read_records(
+                start_usn=start_usn, max_records=self.max_records,
+            )
+
+            if self.verbose:
+                print(f"Read {len(records)} records from volume {volume}")
+                print(f"Next USN position: {next_usn}")
+
+            # Convert records to activity data models
+            for record in records:
+                activity = convert_record_to_model(record, volume, self.provider_id)
+                activities.append(activity)
+
+            # Save the next USN position
+            if next_usn:
+                self.last_usn_positions[volume] = next_usn
+
+        return activities
+
+    def get_activities(self) -> list[NtfsStorageActivityData]:
+        """
+        Get the collected activities.
+
+        Returns:
+            List of NtfsStorageActivityData objects
+        """
+        return self.activities
+
+    def save_activities_to_file(self, output_file: str) -> bool:
+        """
+        Save collected activities to a JSONL file.
+
+        Args:
+            output_file: Path to the output file
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            with open(output_file, "w", encoding="utf-8") as f:
+                for activity in self.activities:
+                    # Use model_dump with proper JSON serialization options
+                    activity_dict = activity.model_dump(mode="json")
+
+                    # Handle any remaining JSON serialization issues manually
+                    def json_serializable(obj):
+                        if isinstance(obj, uuid.UUID):
+                            return str(obj)
+                        if isinstance(obj, datetime):
+                            return obj.isoformat()
+                        return str(obj)
+
+                    # Write as JSON line
+                    json_line = json.dumps(activity_dict, default=json_serializable)
+                    f.write(json_line + "\n")
+
+            if self.verbose:
+                print(f"Wrote {len(self.activities)} activities to {output_file}")
+
+            return True
+        except Exception as e:
+            print(f"Error writing activities to file: {e}")
+            return False
+
+    def _load_state(self):
+        """Load the collector state from a file."""
+        if not self.state_file or not os.path.exists(self.state_file):
+            if self.verbose:
+                print("No state file found, starting with empty state")
+            return
+
+        try:
+            with open(self.state_file) as f:
+                state = json.load(f)
+
+            # Load last processed USN values
+            if "last_usn_positions" in state:
+                self.last_usn_positions = state["last_usn_positions"]
+                if self.verbose:
+                    print(f"Loaded last USN positions: {self.last_usn_positions}")
+
+            if self.verbose:
+                print(f"Loaded collector state from {self.state_file}")
+        except Exception as e:
+            print(f"Error loading state from {self.state_file}: {e}")
+
+    def _save_state(self):
+        """Save the collector state to a file."""
+        if not self.state_file:
+            if self.verbose:
+                print("No state file specified, skipping state save")
+            return
+
+        try:
+            # Create state dictionary
+            state = {
+                "last_usn_positions": self.last_usn_positions,
+                "timestamp": datetime.now(UTC).isoformat(),
+                "provider_id": self.provider_id,
+            }
+
+            # Handle UUID serialization properly
+            def json_serializable(obj):
+                if isinstance(obj, uuid.UUID):
+                    return str(obj)
+                if isinstance(obj, datetime):
+                    return obj.isoformat()
+                return str(obj)
+
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(self.state_file), exist_ok=True)
+
+            # Save to file
+            with open(self.state_file, "w") as f:
+                json.dump(state, f, indent=2, default=json_serializable)
+
+            if self.verbose:
+                print(f"Saved collector state to {self.state_file}")
+        except Exception as e:
+            print(f"Error saving state to {self.state_file}: {e}")
+
+
+def test_collector():
+    """Test the collector functionality with various record types."""
+    if not WINDOWS_AVAILABLE:
+        print("This test only works on Windows")
+        return False
+
+    print("\n=== Testing USN Journal Collector ===\n")
+
+    # Test timezone awareness
+    print("Testing timezone awareness...")
+    from activity.collectors.storage.ntfs.bar import filetime_to_datetime
+
+    # Use a current filetime for testing
+    filetime = int((datetime.now().timestamp() + 11644473600) * 10000000)
+    dt = filetime_to_datetime(filetime)
+
+    print(f"Original datetime: {dt}")
+    print(f"Has timezone: {dt.tzinfo is not None}")
+
+    # Test standard record (no specific reason flags)
+    print("\nTesting standard record processing...")
+    standard_record = {
+        "Timestamp": dt,
+        "FileReferenceNumber": "12345",
+        "ParentFileReferenceNumber": "12345",
+        "FileName": "test.txt",
+        "Attributes": [],
+        "Reasons": ["DATA_OVERWRITE"],
+    }
+
+    try:
+        model = convert_record_to_model(
+            standard_record, "C:", NtfsUsnJournalCollector.DEFAULT_PROVIDER_ID,
+        )
+        print(f"Standard model created - Activity type: {model.activity_type}")
+        expected_type = StorageActivityType.MODIFY
+        assert (
+            model.activity_type == expected_type
+        ), f"Expected {expected_type}, got {model.activity_type}"
+        print("✓ Standard record test passed")
+    except Exception as e:
+        print(f"Error processing standard record: {e}")
+        return False
+
+    # Test RENAME_OLD_NAME record
+    print("\nTesting RENAME_OLD_NAME record...")
+    rename_old_record = {
+        "Timestamp": dt,
+        "FileReferenceNumber": "12345",
+        "ParentFileReferenceNumber": "12345",
+        "FileName": "oldname.txt",
+        "Attributes": [],
+        "Reasons": ["RENAME_OLD_NAME"],
+        "USN": 12345,
+    }
+
+    try:
+        model = convert_record_to_model(
+            rename_old_record, "C:", NtfsUsnJournalCollector.DEFAULT_PROVIDER_ID,
+        )
+        print(f"RENAME_OLD_NAME model created - Activity type: {model.activity_type}")
+        expected_type = StorageActivityType.OTHER
+        assert (
+            model.activity_type == expected_type
+        ), f"Expected {expected_type}, got {model.activity_type}"
+        assert (
+            model.attributes.get("rename_type") == "old_name"
+        ), "Missing rename_type attribute"
+        assert "RENAME_OLD_NAME" in model.attributes.get(
+            "usn_reason_flags", [],
+        ), "Missing reason flag"
+        print("✓ RENAME_OLD_NAME record test passed")
+    except Exception as e:
+        print(f"Error processing RENAME_OLD_NAME record: {e}")
+        return False
+
+    # Test RENAME_NEW_NAME record
+    print("\nTesting RENAME_NEW_NAME record...")
+    rename_new_record = {
+        "Timestamp": dt,
+        "FileReferenceNumber": "12345",
+        "ParentFileReferenceNumber": "12345",
+        "FileName": "newname.txt",
+        "Attributes": [],
+        "Reasons": ["RENAME_NEW_NAME"],
+        "USN": 12346,
+    }
+
+    try:
+        model = convert_record_to_model(
+            rename_new_record, "C:", NtfsUsnJournalCollector.DEFAULT_PROVIDER_ID,
+        )
+        print(f"RENAME_NEW_NAME model created - Activity type: {model.activity_type}")
+        expected_type = StorageActivityType.OTHER
+        assert (
+            model.activity_type == expected_type
+        ), f"Expected {expected_type}, got {model.activity_type}"
+        assert (
+            model.attributes.get("rename_type") == "new_name"
+        ), "Missing rename_type attribute"
+        assert "RENAME_NEW_NAME" in model.attributes.get(
+            "usn_reason_flags", [],
+        ), "Missing reason flag"
+        print("✓ RENAME_NEW_NAME record test passed")
+    except Exception as e:
+        print(f"Error processing RENAME_NEW_NAME record: {e}")
+        return False
+
+    # Test full collector process with a small sample
+    print("\nTesting full collector process...")
+    try:
+        collector = NtfsUsnJournalCollector(
+            volumes=["C:"],
+            max_records=5,  # Just get a few records for testing
+            verbose=True,
+        )
+
+        # Collect activities (limited to max_records=5)
+        activities = collector.collect_activities()
+
+        print(f"Collected {len(activities)} activities")
+        print("✓ Full collector test passed")
+    except Exception as e:
+        print(f"Error in full collector process: {e}")
+        return False
+
+    print("\n=== All tests passed! ===\n")
+    return True
+
+
+def main():
+    """Main entry point for the script."""
+    # Add argument parsing for better integration
+    parser = argparse.ArgumentParser(description="NTFS USN Journal Collector")
+    parser.add_argument(
+        "--volumes",
+        type=str,
+        default="C:",
+        help="Comma-separated list of volumes to collect from (default: C:)",
+    )
+    parser.add_argument(
+        "--max-records",
+        type=int,
+        default=1000,
+        help="Maximum number of records to collect per batch (default: 1000)",
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="ntfs_activities.jsonl",
+        help="Output file for activities (default: ntfs_activities.jsonl)",
+    )
+    parser.add_argument(
+        "--state-file", type=str, help="State file for persisting USN positions",
+    )
+    parser.add_argument("--verbose", action="store_true", help="Show verbose output")
+    parser.add_argument("--test", action="store_true", help="Run the test suite")
+    args = parser.parse_args()
+
+    # Check if this is a test run
+    if args.test:
+        success = test_collector()
+        sys.exit(0 if success else 1)
+
+    if not WINDOWS_AVAILABLE:
+        print("This script only works on Windows")
+        sys.exit(1)
+
+    if not is_admin():
+        print("This script must be run with administrative privileges")
+        print("Please run as administrator (right-click, Run as Administrator)")
+        sys.exit(1)
+
+    # Parse volumes
+    volumes = args.volumes.split(",")
+
+    # Create the collector
+    collector = NtfsUsnJournalCollector(
+        volumes=volumes,
+        max_records=args.max_records,
+        state_file=args.state_file,
+        verbose=args.verbose,
+    )
+
+    # Collect activities
+    activities = collector.collect_activities()
+
+    # Save to file
+    if activities:
+        collector.save_activities_to_file(args.output)
+        print(f"Collected {len(activities)} activities from volumes {volumes}")
+        print(f"Activities saved to {args.output}")
+    else:
+        print("No activities collected")
+
+
+if __name__ == "__main__":
+    main()
+
+
+class NtfsUsnJournalCollector:
+    """
+    Collector for NTFS storage activities using the USN Journal.
+
+    This class uses the UsnJournalReader to read USN journal entries and converts
+    them to NtfsStorageActivityData objects. It also handles state persistence to allow
+    for incremental collection across multiple runs.
+    """
+
+    # Default provider ID for NTFS USN journal collection
+    DEFAULT_PROVIDER_ID = "7d8f5a92-35c7-41e6-b13d-6c4e89e7f2a5"
+
+    def __init__(
+        self,
+        volumes: str | list[str] = "C:",
+        provider_id: str = DEFAULT_PROVIDER_ID,
+        max_records: int = 1000,
+        state_file: str = None,
+        *,
+        verbose: bool = False,
+    ) -> None:
+        """
+        Initialize the NTFS USN journal collector.
+
+        Args:
+            volumes: Volume or list of volumes to monitor (e.g., "C:" or ["C:", "D:"])
+            provider_id: Provider ID for activity data
+            max_records: Maximum number of records to collect per batch
+            state_file: Path to the state file for persisting USN positions
+            verbose: Whether to print verbose output
+        """
+        if not WINDOWS_AVAILABLE:
+            raise RuntimeError("This collector only works on Windows")
+
+        # Normalize volumes to a list
+        if isinstance(volumes, str):
+            volumes = [volumes]
+        self.volumes = volumes
+
+        self.provider_id = provider_id
+        self.max_records = max_records
+        self.state_file = state_file
+        self.verbose = verbose
+
+        # State tracking
+        self.last_usn_positions = {}
+        self.activities = []
+
+        # Load state if available
+        self._load_state()
+
+        if self.verbose:
+            ic(f"NtfsUsnJournalCollector initialized with volumes: {self.volumes}")
+            ic(f"Provider ID: {self.provider_id}")
+            ic(f"State file: {self.state_file}")
+            ic(f"Last USN positions: {self.last_usn_positions}")
+
+    def collect_activities(self) -> list[NtfsStorageActivityData]:
+        """
+        Collect activities from all configured volumes.
+
+        Returns:
+            list of NtfsStorageActivityData objects
+        """
+        activities = []
+
+        for volume in self.volumes:
+            volume_activities = self._collect_from_volume(volume)
+            activities.extend(volume_activities)
+
+        # Save the collected activities for later retrieval
+        self.activities = activities
+
+        # Save state after collection
+        self._save_state()
+
+        return activities
+
+    def _collect_from_volume(self, volume: str) -> list[NtfsStorageActivityData]:
+        """
+        Collect activities from a specific volume.
+
+        Args:
+            volume: The volume to collect from (e.g., "C:")
+
+        Returns:
+            list of NtfsStorageActivityData objects
+        """
+        activities = []
+
+        # Get the starting USN from saved state or None for first run
+        start_usn = self.last_usn_positions.get(volume, None)
+
+        if self.verbose:
+            ic(f"Collecting from volume {volume}, starting from USN: {start_usn}")
+
+        # Use the UsnJournalReader to get records
+        with UsnJournalReader(volume=volume, verbose=self.verbose) as reader:
+            records, next_usn = reader.read_records(
+                start_usn=start_usn,
+                max_records=self.max_records,
+            )
+
+            if self.verbose:
+                ic(f"Read {len(records)} records from volume {volume}")
+                ic(f"Next USN position: {next_usn}")
+
+            # Convert records to activity data models
+            for record in records:
+                activity = convert_record_to_model(record, volume, self.provider_id)
+                activities.append(activity)
+
+            # Save the next USN position
+            if next_usn:
+                self.last_usn_positions[volume] = next_usn
+
+        return activities
+
+    def get_activities(self) -> list[NtfsStorageActivityData]:
+        """
+        Get the collected activities.
+
+        Returns:
+            list of NtfsStorageActivityData objects
+        """
+        return self.activities
+
+    def save_activities_to_file(self, output_file: str) -> bool:
+        """
+        Save collected activities to a JSONL file.
+
+        Args:
+            output_file: Path to the output file
+
+        Returns:
+            True if successful, False otherwise
+        """
+        with Path(output_file).open("w", encoding="utf-8") as f:
+            for activity in self.activities:
+                # Use model_dump with proper JSON serialization options
+                activity_dict = activity.model_dump(mode="json")
+
+                # Handle any remaining JSON serialization issues manually
+                def json_serializable(obj: uuid.UUID | datetime) -> str:
+                    if isinstance(obj, uuid.UUID):
+                        return str(obj)
+                    if isinstance(obj, datetime):
+                        return obj.isoformat()
+                    return str(obj)
+
+                # Write as JSON line
+                json_line = json.dumps(activity_dict, default=json_serializable)
+                f.write(json_line + "\n")
+
+        if self.verbose:
+            ic(f"Wrote {len(self.activities)} activities to {output_file}")
+
+        return True
+
+    def _load_state(self) -> None:
+        """Load the collector state from a file."""
+        if not self.state_file or not Path(self.state_file).exists():
+            if self.verbose:
+                ic("No state file found, starting with empty state")
+            return
+
+        with Path.open(self.state_file, encoding="utf-8") as f:
+            state = json.load(f)
+
+        # Load last processed USN values
+        if "last_usn_positions" in state:
+            self.last_usn_positions = state["last_usn_positions"]
+            if self.verbose:
+                ic(f"Loaded last USN positions: {self.last_usn_positions}")
+
+        if self.verbose:
+            ic(f"Loaded collector state from {self.state_file}")
+
+    def _save_state(self) -> None:
+        """Save the collector state to a file."""
+        if not self.state_file:
+            if self.verbose:
+                ic("No state file specified, skipping state save")
+            return
+
+        # Create state dictionary
+        state = {
+            "last_usn_positions": self.last_usn_positions,
+            "timestamp": datetime.now(UTC).isoformat(),
+            "provider_id": self.provider_id,
+        }
+
+        # Handle UUID serialization properly
+        def json_serializable(obj: uuid.UUID | datetime) -> str:
+            if isinstance(obj, uuid.UUID):
+                return str(obj)
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            return str(obj)
+
+        # Ensure directory exists
+        Path.mkdir(Path(self.state_file).parent, parents=True)
+
+        # Save to file
+        with Path.open(self.state_file, "w", encoding="utf-8") as f:
+            json.dump(state, f, indent=2, default=json_serializable)
+
+        if self.verbose:
+            ic(f"Saved collector state to {self.state_file}")

@@ -81,7 +81,7 @@ ArangoSearch views are referenced in AQL using the `SEARCH` operation:
 ```aql
 FOR doc IN ObjectsTextView
 SEARCH ANALYZER(
-    LIKE(doc.Label, @query) OR 
+    LIKE(doc.Label, @query) OR
     LIKE(doc.Record.Attributes.URI, @query),
     "text_en"
 )
@@ -127,7 +127,7 @@ python -m db.test_views --list
 # Create all defined views
 python -m db.test_views --ensure
 
-# Test search query 
+# Test search query
 python -m db.test_views --query "indaleko project"
 ```
 
@@ -150,7 +150,7 @@ The trade-offs to consider:
 Potential enhancements to the view implementation:
 
 1. **Multiple analyzers** - Using language-specific and specialized analyzers
-2. **Faceted search** - Leveraging views for faceted navigation 
+2. **Faceted search** - Leveraging views for faceted navigation
 3. **Synonyms and thesaurus** - Adding synonyms to improve search quality
 4. **Cross-collection search** - Creating views that span multiple collections
 5. **Performance tuning** - Optimizing stored values and primary sort

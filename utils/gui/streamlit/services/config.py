@@ -21,10 +21,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 
+
 def get_config_files():
     """
     Get a list of available database configuration files
-    
+
     Returns:
         list: Available configuration file names
     """
@@ -35,18 +36,20 @@ def get_config_files():
     # Look for files with typical INI or config extensions
     candidates = []
     for filename in os.listdir(config_dir):
-        if filename.endswith('.ini') or 'config' in filename.lower():
+        if filename.endswith(".ini") or "config" in filename.lower():
             candidates.append(filename)
-    
+
     # If we didn't find any, check for any file
     if not candidates:
         for filename in os.listdir(config_dir):
             # Skip any directories or hidden files
-            if not os.path.isdir(os.path.join(config_dir, filename)) and not filename.startswith('.'):
+            if not os.path.isdir(
+                os.path.join(config_dir, filename),
+            ) and not filename.startswith("."):
                 candidates.append(filename)
-    
+
     # Fall back to default name if we're still empty
     if not candidates:
         return ["indaleko-db-config.ini"]
-        
+
     return candidates

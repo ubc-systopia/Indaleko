@@ -19,15 +19,17 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import streamlit as st
 from datetime import datetime
 
+import streamlit as st
+
 from utils.gui.streamlit.components.connection import connect_to_db
+
 
 def render_settings():
     """
     Render the settings page with configuration options
-    
+
     Includes tabs for:
     - Database configuration
     - Collections management
@@ -35,7 +37,10 @@ def render_settings():
     - User preferences
     """
     st.markdown("<div class='main-header'>Settings</div>", unsafe_allow_html=True)
-    st.markdown("<div class='sub-header'>Configure your Indaleko experience</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='sub-header'>Configure your Indaleko experience</div>",
+        unsafe_allow_html=True,
+    )
 
     # Auto-connect in demo mode if not connected
     if not st.session_state.db_connected:
@@ -45,7 +50,9 @@ def render_settings():
         st.session_state.db_info = db_info
 
     # Settings tabs
-    tab1, tab2, tab3, tab4 = st.tabs(["Database", "Collections", "Indexing", "Preferences"])
+    tab1, tab2, tab3, tab4 = st.tabs(
+        ["Database", "Collections", "Indexing", "Preferences"],
+    )
 
     with tab1:
         st.subheader("Database Configuration")
@@ -53,29 +60,61 @@ def render_settings():
         db_info = st.session_state.db_info
 
         # Check if we're using real IndalekoDBInfo or mock
-        if hasattr(db_info, 'db_config') and not hasattr(db_info, 'get_host'):
+        if hasattr(db_info, "db_config") and not hasattr(db_info, "get_host"):
             # Real IndalekoDBInfo - adapt to expected interface
-            host = db_info.db_config.hosts[0] if hasattr(db_info.db_config, 'hosts') and db_info.db_config.hosts else "localhost"
-            port = db_info.db_config.port if hasattr(db_info.db_config, 'port') else 8529
-            database = db_info.db_config.database if hasattr(db_info.db_config, 'database') else "indaleko"
-            username = db_info.db_config.username if hasattr(db_info.db_config, 'username') else "indaleko"
+            host = (
+                db_info.db_config.hosts[0]
+                if hasattr(db_info.db_config, "hosts") and db_info.db_config.hosts
+                else "localhost"
+            )
+            port = (
+                db_info.db_config.port if hasattr(db_info.db_config, "port") else 8529
+            )
+            database = (
+                db_info.db_config.database
+                if hasattr(db_info.db_config, "database")
+                else "indaleko"
+            )
+            username = (
+                db_info.db_config.username
+                if hasattr(db_info.db_config, "username")
+                else "indaleko"
+            )
 
-            st.json({
-                "host": host,
-                "port": port,
-                "database": database,
-                "username": username,
-                "connected": True
-            })
+            st.json(
+                {
+                    "host": host,
+                    "port": port,
+                    "database": database,
+                    "username": username,
+                    "connected": True,
+                },
+            )
         else:
             # Mock DBInfo with the expected methods
-            st.json({
-                "host": db_info.get_host() if hasattr(db_info, 'get_host') else "localhost",
-                "port": db_info.get_port() if hasattr(db_info, 'get_port') else 8529,
-                "database": db_info.get_database_name() if hasattr(db_info, 'get_database_name') else "indaleko",
-                "username": db_info.get_username() if hasattr(db_info, 'get_username') else "indaleko",
-                "connected": True
-            })
+            st.json(
+                {
+                    "host": (
+                        db_info.get_host()
+                        if hasattr(db_info, "get_host")
+                        else "localhost"
+                    ),
+                    "port": (
+                        db_info.get_port() if hasattr(db_info, "get_port") else 8529
+                    ),
+                    "database": (
+                        db_info.get_database_name()
+                        if hasattr(db_info, "get_database_name")
+                        else "indaleko"
+                    ),
+                    "username": (
+                        db_info.get_username()
+                        if hasattr(db_info, "get_username")
+                        else "indaleko"
+                    ),
+                    "connected": True,
+                },
+            )
 
         if st.button("Disconnect"):
             st.session_state.db_connected = False
@@ -89,37 +128,56 @@ def render_settings():
 
         # Get collections - handle different formats
         try:
-            if hasattr(st.session_state.db_info, 'db_config') and hasattr(st.session_state.db_info.db_config, 'db'):
+            if hasattr(st.session_state.db_info, "db_config") and hasattr(
+                st.session_state.db_info.db_config, "db",
+            ):
                 # Using real IndalekoDBInfo
                 # Get raw collection data from ArangoDB
-                collections_data = st.session_state.db_info.db_config.db.collections()
+                collections_data = (
+                    st.session_state.db_info.db_config._arangodb.collections()
+                )
                 collections = []
 
                 # Format collections consistently
                 for collection in collections_data:
-                    if not collection["name"].startswith("_"):  # Skip system collections
+                    if not collection["name"].startswith(
+                        "_",
+                    ):  # Skip system collections
                         # Get collection object
-                        coll_obj = st.session_state.db_info.db_config.db.collection(collection["name"])
+                        coll_obj = (
+                            st.session_state.db_info.db_config._arangodb.collection(
+                                collection["name"],
+                            )
+                        )
                         # Get count
                         try:
                             count = coll_obj.count()
                         except:
                             count = "Unknown"
 
-                        collections.append({
-                            "name": collection["name"],
-                            "type": collection["type"],
-                            "status": collection.get("status", "unknown"),
-                            "count": count
-                        })
+                        collections.append(
+                            {
+                                "name": collection["name"],
+                                "type": collection["type"],
+                                "status": collection.get("status", "unknown"),
+                                "count": count,
+                            },
+                        )
             else:
                 # Using mock or custom format
                 collections = st.session_state.db_info.get_collections()
 
                 # Convert string collections to dict format if needed
                 if collections and isinstance(collections[0], str):
-                    collections = [{"name": name, "type": "unknown", "status": "loaded", "count": "Unknown"}
-                                 for name in collections]
+                    collections = [
+                        {
+                            "name": name,
+                            "type": "unknown",
+                            "status": "loaded",
+                            "count": "Unknown",
+                        }
+                        for name in collections
+                    ]
         except Exception as e:
             st.error(f"Error getting collections: {e}")
             collections = []
@@ -181,7 +239,15 @@ def render_settings():
             if selected_schedule == "Daily":
                 st.time_input("Time of day", value=datetime.strptime("03:00", "%H:%M"))
             elif selected_schedule == "Weekly":
-                days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+                days = [
+                    "Monday",
+                    "Tuesday",
+                    "Wednesday",
+                    "Thursday",
+                    "Friday",
+                    "Saturday",
+                    "Sunday",
+                ]
                 st.selectbox("Day of week", days, index=6)
                 st.time_input("Time of day", value=datetime.strptime("03:00", "%H:%M"))
 
@@ -193,7 +259,11 @@ def render_settings():
         col1, col2 = st.columns(2)
         with col1:
             st.selectbox("Theme", ["Light", "Dark", "System Default"], index=2)
-            st.selectbox("Default View", ["Dashboard", "Search", "Analytics", "Activity"], index=0)
+            st.selectbox(
+                "Default View",
+                ["Dashboard", "Search", "Analytics", "Activity"],
+                index=0,
+            )
 
         with col2:
             st.checkbox("Show welcome screen on startup", value=True)

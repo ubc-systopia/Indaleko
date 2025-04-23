@@ -224,5 +224,3 @@ or information.  The function of the various elements is to capture this
 metadata in whatever format "makes sense" for the original source.  This permits
 us to then mine the data, find relationships, iterate over how we extract the
 necessary information, and answer our sample queries.
-
-

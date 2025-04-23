@@ -30,12 +30,11 @@ import os
 # import argparse
 import sys
 import threading
+from typing import Any
 
 # from arango import ArangoClient
 # import requests
-
 from icecream import ic
-from typing import Any
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -101,20 +100,20 @@ class IndalekoDBInfo:
         """
         self.__init_semantic_labels()
         db_config_file = kwargs.get(
-            "db_config_file", IndalekoDBConfig.default_db_config_file
+            "db_config_file", IndalekoDBConfig.default_db_config_file,
         )
         no_new_config = kwargs.get("no_new_config", True)
         start = kwargs.get("start", True)
         ic(db_config_file, no_new_config, start)
         self.db_config = IndalekoDBConfig(
-            config_file=db_config_file, no_new_config=no_new_config, start=start
+            config_file=db_config_file, no_new_config=no_new_config, start=start,
         )
 
     def get_collections(self) -> list[str]:
         """
         Get the collections from the database
         """
-        collections = self.db_config.db.collections()
+        collections = self.db_config._arangodb.collections()
         return [
             collection["name"]
             for collection in collections
@@ -123,7 +122,7 @@ class IndalekoDBInfo:
 
     def get_collection_info(self, collection: str) -> list[dict[str, Any]]:
         """Retrieve and return the statistics for the collection."""
-        collection_data = self.db_config.db.collection(collection)
+        collection_data = self.db_config._arangodb.collection(collection)
         return [
             {
                 "Identifier": {
@@ -194,7 +193,7 @@ class IndalekoDBInfo:
                     "Description": self.source_description,
                 },
                 "Data": encode_binary_data(
-                    bytes(json.dumps(collection_data).encode("utf-8"))
+                    bytes(json.dumps(collection_data).encode("utf-8")),
                 ),
             },
             DataAttributes=[

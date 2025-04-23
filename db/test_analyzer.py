@@ -19,10 +19,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import argparse
+import logging
 import os
 import sys
-import logging
-from typing import List, Dict, Any
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -32,10 +31,10 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 from db.analyzer_manager import (
-    IndalekoAnalyzerManager, 
+    IndalekoAnalyzerManager,
     create_custom_analyzers,
     execute_analyzer_creation,
-    get_arangosh_command
+    get_arangosh_command,
 )
 from utils import IndalekoLogging
 
@@ -43,23 +42,26 @@ from utils import IndalekoLogging
 def list_analyzers(manager: IndalekoAnalyzerManager, verbose: bool = False) -> None:
     """List all analyzers in the database."""
     analyzers = manager.list_analyzers()
-    
+
     print(f"\nFound {len(analyzers)} analyzers:")
     for analyzer in analyzers:
-        name = analyzer.get('name', 'unknown')
-        analyzer_type = analyzer.get('type', 'unknown')
+        name = analyzer.get("name", "unknown")
+        analyzer_type = analyzer.get("type", "unknown")
         print(f"  - {name} (type: {analyzer_type})")
-        
+
         if verbose:
             try:
                 import json
-                properties = json.loads(analyzer.get('properties', '{}'))
+
+                properties = json.loads(analyzer.get("properties", "{}"))
                 print(f"    Properties: {json.dumps(properties, indent=2)}")
             except json.JSONDecodeError:
                 print("    Could not parse properties")
 
 
-def test_analyzer_creation(manager: IndalekoAnalyzerManager, direct: bool = False) -> None:
+def test_analyzer_creation(
+    manager: IndalekoAnalyzerManager, direct: bool = False,
+) -> None:
     """Test analyzer creation using different methods."""
     if direct:
         print("\nTesting direct analyzer creation...")
@@ -80,24 +82,24 @@ def test_tokenization(manager: IndalekoAnalyzerManager, verbose: bool = False) -
             "IndalekoObjectDataModel",
             "camelCaseExample",
             "HTTPRequest",
-            "XMLParser"
+            "XMLParser",
         ],
         "indaleko_snake_case": [
             "indaleko_object_data_model",
             "snake_case_example",
             "http_request",
-            "xml_parser"
+            "xml_parser",
         ],
         "indaleko_filename": [
             "IndalekoObject-data_model.py",
             "camel-snake_mixed.txt",
             "README(important).md",
-            "project-v1.2.3.zip"
-        ]
+            "project-v1.2.3.zip",
+        ],
     }
-    
+
     print("\nTesting tokenization with different analyzers:")
-    
+
     for analyzer_name, texts in test_texts.items():
         print(f"\nAnalyzer: {analyzer_name}")
         for text in texts:
@@ -117,40 +119,47 @@ def show_arangosh_command() -> None:
 
 def main() -> None:
     """Main function for the test script."""
-    parser = argparse.ArgumentParser(description="Test ArangoDB custom analyzers for Indaleko")
-    parser.add_argument('--list', action='store_true', help='List existing analyzers')
-    parser.add_argument('--verbose', action='store_true', help='Show detailed analyzer information')
-    parser.add_argument('--create', action='store_true', help='Create custom analyzers')
-    parser.add_argument('--direct', action='store_true', help='Use direct arangosh execution for creation')
-    parser.add_argument('--test', action='store_true', help='Test tokenization with different analyzers')
-    parser.add_argument('--command', action='store_true', help='Show arangosh command')
-    parser.add_argument('--all', action='store_true', help='Run all tests')
-    parser.add_argument('--debug', action='store_true', help='Enable debug output')
+    parser = argparse.ArgumentParser(
+        description="Test ArangoDB custom analyzers for Indaleko",
+    )
+    parser.add_argument("--list", action="store_true", help="List existing analyzers")
+    parser.add_argument(
+        "--verbose", action="store_true", help="Show detailed analyzer information",
+    )
+    parser.add_argument("--create", action="store_true", help="Create custom analyzers")
+    parser.add_argument(
+        "--direct",
+        action="store_true",
+        help="Use direct arangosh execution for creation",
+    )
+    parser.add_argument(
+        "--test", action="store_true", help="Test tokenization with different analyzers",
+    )
+    parser.add_argument("--command", action="store_true", help="Show arangosh command")
+    parser.add_argument("--all", action="store_true", help="Run all tests")
+    parser.add_argument("--debug", action="store_true", help="Enable debug output")
     args = parser.parse_args()
-    
+
     # Set up logging
     log_level = logging.DEBUG if args.debug else logging.INFO
-    IndalekoLogging(
-        service_name="test_analyzers",
-        log_level=log_level
-    )
-    
+    IndalekoLogging(service_name="test_analyzers", log_level=log_level)
+
     # Create analyzer manager
     manager = IndalekoAnalyzerManager()
-    
+
     # Execute requested operations
     if args.list or args.all:
         list_analyzers(manager, args.verbose)
-        
+
     if args.create or args.all:
         test_analyzer_creation(manager, args.direct)
-        
+
     if args.test or args.all:
         test_tokenization(manager, args.verbose)
-        
+
     if args.command or args.all:
         show_arangosh_command()
-        
+
     # If no arguments provided, show help
     if len(sys.argv) == 1:
         parser.print_help()

@@ -2,11 +2,11 @@
 """
 Tests for IP and WiFi Location Collectors.
 """
+import datetime
 import os
 import sys
 import unittest
-from unittest.mock import patch, MagicMock
-import datetime
+from unittest.mock import MagicMock, patch
 
 # Setup project root path
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -16,10 +16,11 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
+from activity.collectors.location.data_models.ip_location_data_model import (
+    IPLocationDataModel,
+)
 from activity.collectors.location.ip_location import IPLocation
 from activity.collectors.location.wifi_location import WiFiLocation
-from activity.collectors.location.data_models.ip_location_data_model import IPLocationDataModel
-from activity.collectors.location.data_models.wifi_location_data_model import WiFiLocationDataModel
 
 
 class TestIPLocation(unittest.TestCase):
@@ -33,7 +34,7 @@ class TestIPLocation(unittest.TestCase):
             "lat": 10.0,
             "lon": 20.0,
             "accuracy": 50.0,
-            "query": "123.123.123.123"
+            "query": "123.123.123.123",
         }
         patcher_get = patch("activity.collectors.location.ip_location.requests.get")
         self.mock_get = patcher_get.start()
@@ -43,8 +44,10 @@ class TestIPLocation(unittest.TestCase):
             class MockResponse:
                 def __init__(self, json_data):
                     self._json = json_data
+
                 def json(self):
                     return self._json
+
             if "api.ipify.org" in url:
                 return MockResponse(self.mock_ipify_response)
             elif "ip-api.com" in url:
@@ -83,8 +86,10 @@ class TestIPLocation(unittest.TestCase):
         latest = loc.data[-1]
         data = loc.retrieve_data(loc.get_provider_id())
         self.assertEqual(data, latest)
-        now = datetime.datetime.now(datetime.timezone.utc)
-        history = loc.retrieve_temporal_data(now, datetime.timedelta(minutes=1), datetime.timedelta(minutes=1))
+        now = datetime.datetime.now(datetime.UTC)
+        history = loc.retrieve_temporal_data(
+            now, datetime.timedelta(minutes=1), datetime.timedelta(minutes=1),
+        )
         self.assertIsInstance(history, list)
         self.assertIn(latest, history)
 
@@ -111,8 +116,10 @@ class TestWiFiLocation(unittest.TestCase):
             class MockResponse:
                 def __init__(self, json_data):
                     self._json = json_data
+
                 def json(self):
                     return self._json
+
             return MockResponse(self.mock_location)
 
         self.mock_post.side_effect = post_side_effect
@@ -148,10 +155,13 @@ class TestWiFiLocation(unittest.TestCase):
         latest = loc.data[-1]
         data = loc.retrieve_data(loc.get_provider_id())
         self.assertEqual(data, latest)
-        now = datetime.datetime.now(datetime.timezone.utc)
-        history = loc.retrieve_temporal_data(now, datetime.timedelta(minutes=1), datetime.timedelta(minutes=1))
+        now = datetime.datetime.now(datetime.UTC)
+        history = loc.retrieve_temporal_data(
+            now, datetime.timedelta(minutes=1), datetime.timedelta(minutes=1),
+        )
         self.assertIsInstance(history, list)
         self.assertIn(latest, history)
+
 
 if __name__ == "__main__":
     unittest.main()

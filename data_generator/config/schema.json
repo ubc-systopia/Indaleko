@@ -10,7 +10,7 @@
             "Attributes": {
                 "Name": "name of the file",
                 "Path": "path of the file",
-                "st_birthtime": "birthtime timestamp", 
+                "st_birthtime": "birthtime timestamp",
                 "st_birthtime_ns": "birthtime timestamp in ns",
                 "st_mtime": "modified time in ns",
                 "st_mtime_ns": "in ns",
@@ -46,7 +46,7 @@
                 "Data": "the accuracy value in integer"
             }
         ]
-    }, 
+    },
     "MusicActivity": {"Record": {
         "SourceIdentifier": {
             "Identifier": "uuid for the record",
@@ -57,7 +57,7 @@
         "Attributes": {
             "Name": "name of the file",
             "Path": "path of the file",
-            "st_birthtime": "birthtime timestamp", 
+            "st_birthtime": "birthtime timestamp",
             "st_birthtime_ns": "birthtime timestamp in ns",
             "st_mtime": "modified time in ns",
             "st_mtime_ns": "in ns",
@@ -125,7 +125,7 @@
         "Attributes": {
             "Name": "name of the file",
             "Path": "path of the file",
-            "st_birthtime": "birthtime timestamp", 
+            "st_birthtime": "birthtime timestamp",
             "st_birthtime_ns": "birthtime timestamp in ns",
             "st_mtime": "modified time in ns",
             "st_mtime_ns": "in ns",
@@ -186,7 +186,7 @@
                 "Attributes": {
                     "Name": "name is 'title.extension'",
                     "Path": "path to the file",
-                    "st_birthtime": "birthtime timestamp in posix", 
+                    "st_birthtime": "birthtime timestamp in posix",
                     "st_birthtime_ns": "birthtime timestamp in ns",
                     "st_mtime": "modified time in ns",
                     "st_mtime_ns": "in ns",

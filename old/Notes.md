@@ -255,5 +255,3 @@ Enumerated 3129887 in 0:05:32.352318 time (0.00010618668277800445 seconds per en
 So, there is substantial overhead in extracting the metadata, but it is _not_ at
 the same order of magnitude as sending it to the database.  This does suggest I
 may be able to speed this up.
-
-

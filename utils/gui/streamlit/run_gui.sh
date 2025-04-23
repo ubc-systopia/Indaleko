@@ -10,7 +10,7 @@ echo "Setting INDALEKO_ROOT to $INDALEKO_ROOT"
 # Check if we have an active virtual environment
 if [ -z "$VIRTUAL_ENV" ]; then
     echo "No active virtual environment detected. Activating..."
-    
+
     # Try to find and activate a virtual environment
     if [ -f "$INDALEKO_ROOT/.venv-linux-python3.13/bin/activate" ]; then
         echo "Found .venv-linux-python3.13, activating..."

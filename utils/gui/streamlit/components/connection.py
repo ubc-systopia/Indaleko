@@ -20,13 +20,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import os
+
 import streamlit as st
-import sys
+
 
 def render_connection_status():
     """
     Display the current database connection status.
-    
+
     This component shows if the database is connected, what type of connection
     it is (real or mock), and any relevant database details.
     """
@@ -36,33 +37,34 @@ def render_connection_status():
             st.success("✅ Connected to REAL ArangoDB Database")
 
             # Show database details if available
-            if hasattr(st.session_state, 'db_info') and st.session_state.db_info:
+            if hasattr(st.session_state, "db_info") and st.session_state.db_info:
                 db_info = st.session_state.db_info
-                if hasattr(db_info, 'db_config') and hasattr(db_info.db_config, 'database'):
+                if hasattr(db_info, "db_config") and hasattr(
+                    db_info.db_config, "database",
+                ):
                     st.info(f"Database: {db_info.db_config.database}")
         else:
             st.warning("⚠️ Using MOCK Database Connection")
     else:
         st.error("❌ Not Connected")
 
+
 def connect_to_db(config_file):
     """
     Connect to the database using the specified configuration file.
-    
+
     Args:
         config_file (str): The database configuration file
-        
+
     Returns:
         tuple: (db_service, db_info) connection objects, or (None, None) if connection fails
     """
     # Create a container for connection status that we can update
     status_container = st.empty()
-    status_container.info(
-        f"Connecting to database using config file: {config_file}..."
-    )
+    status_container.info(f"Connecting to database using config file: {config_file}...")
 
     # Debug log container that's only shown in debug mode
-    if 'connect_debug' in st.session_state and st.session_state.connect_debug:
+    if "connect_debug" in st.session_state and st.session_state.connect_debug:
         debug_container = st.expander("Connection Debug Info", expanded=True)
         debug_log = debug_container.empty()
     else:
@@ -91,14 +93,17 @@ def connect_to_db(config_file):
 
             try:
                 from db.db_config import IndalekoDBConfig as RealDBConfig
+
                 log_debug("✅ Imported db_config", "success")
             except ImportError as e:
                 log_debug(f"❌ Failed to import db_config: {e}", "error")
                 raise
 
             try:
-                from db.service_manager import IndalekoServiceManager \
-                    as RealServiceManager
+                from db.service_manager import (
+                    IndalekoServiceManager as RealServiceManager,
+                )
+
                 log_debug("✅ Imported service_manager", "success")
             except ImportError as e:
                 log_debug(f"❌ Failed to import service_manager: {e}", "error")
@@ -106,14 +111,14 @@ def connect_to_db(config_file):
 
             try:
                 from db.db_info import IndalekoDBInfo as RealDBInfo
+
                 log_debug("✅ Imported db_info", "success")
             except ImportError as e:
                 log_debug(f"❌ Failed to import db_info: {e}", "error")
                 raise
 
             config_path = os.path.join(
-                os.environ.get("INDALEKO_ROOT"),
-                "config", config_file
+                os.environ.get("INDALEKO_ROOT"), "config", config_file,
             )
             log_debug(f"Looking for config file at: {config_path}", "info")
 
@@ -142,36 +147,36 @@ def connect_to_db(config_file):
                     try:
                         # Check if we can access collections - this
                         # will fail if not connected
-                        collection_names = \
-                            db_service.db_config.db.collections()
+                        collection_names = db_service.db_config._arangodb.collections()
                         if collection_names:
-                            log_debug("✅ Connected to real ArangoDB database "
-                                      f"with {len(collection_names)} "
-                                      "collections!",
-                                      "success"
-                                      )
-                            status_container.success(
+                            log_debug(
                                 "✅ Connected to real ArangoDB database "
+                                f"with {len(collection_names)} "
+                                "collections!",
+                                "success",
+                            )
+                            status_container.success(
+                                "✅ Connected to real ArangoDB database ",
                             )
                             real_db_connection = True
                             # Set flag to indicate we're using a real database
                             st.session_state.using_real_db = True
                             return db_service, db_info
                         else:
-                            log_debug("⚠️ Connected but no collections"
-                                      " found", "warning")
+                            log_debug(
+                                "⚠️ Connected but no collections found", "warning",
+                            )
                             status_container.warning(
-                                "⚠️ Connected but no collections found"
+                                "⚠️ Connected but no collections found",
                             )
                     except Exception as e:
-                        log_debug(
-                            f"❌ Failed to verify connection: {e}",
-                            "error"
-                        )
+                        log_debug(f"❌ Failed to verify connection: {e}", "error")
                         status_container.error(f"❌ Failed to verify connection: {e}")
                 except Exception as e:
                     log_debug(f"❌ Error creating database connection: {e}", "error")
-                    status_container.error(f"❌ Error creating database connection: {e}")
+                    status_container.error(
+                        f"❌ Error creating database connection: {e}",
+                    )
             else:
                 log_debug(f"⚠️ Config file not found: {config_path}", "warning")
                 status_container.warning(f"⚠️ Config file not found: {config_path}")
@@ -184,7 +189,8 @@ def connect_to_db(config_file):
             log_debug("Falling back to mock database connection", "info")
             status_container.info("Falling back to mock database connection")
             # Import mock classes inside this function to avoid circular imports
-            from utils.gui.streamlit.mock_modules import MockServiceManager, MockDBInfo
+            from utils.gui.streamlit.mock_modules import MockDBInfo, MockServiceManager
+
             db_service = MockServiceManager()
             db_info = MockDBInfo()
             st.session_state.using_real_db = False

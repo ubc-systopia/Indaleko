@@ -19,17 +19,18 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+from datetime import UTC, datetime, timedelta
+
 import streamlit as st
-from datetime import datetime, timezone, timedelta
-from utils.gui.streamlit.mock_modules import MockDb
+
 
 def get_db_stats(db_info):
     """
     Get database statistics for dashboard display
-    
+
     Args:
         db_info: IndalekoDBInfo or MockDBInfo object
-        
+
     Returns:
         dict: Statistics about the database (collections, documents, indexes, size)
     """
@@ -37,7 +38,7 @@ def get_db_stats(db_info):
         stats = {}
 
         # Handle both mock and real IndalekoDBInfo objects
-        if hasattr(db_info, 'get_collections'):
+        if hasattr(db_info, "get_collections"):
             # Real IndalekoDBInfo
             collections = db_info.get_collections()
             stats["collections"] = len(collections)
@@ -66,7 +67,9 @@ def get_db_stats(db_info):
             # Get size from DB statistics
             try:
                 db_stats = db_info.db_config.db.statistics()
-                stats["size"] = f"{db_stats.get('database', {}).get('file_size', 0) / (1024*1024):.1f} MB"
+                stats["size"] = (
+                    f"{db_stats.get('database', {}).get('file_size', 0) / (1024*1024):.1f} MB"
+                )
             except Exception:
                 stats["size"] = "Unknown"
 
@@ -82,19 +85,20 @@ def get_db_stats(db_info):
         st.error(f"Error getting database stats: {e}")
         return None
 
+
 def get_storage_summary(db_service):
     """
     Get storage volume distribution data for charts
-    
+
     Args:
         db_service: IndalekoServiceManager or MockServiceManager object
-        
+
     Returns:
         list: List of dictionaries with storage volume counts
     """
     try:
         # Determine if this is a real service manager or a mock
-        if hasattr(db_service, 'db_config') and hasattr(db_service.db_config, 'db'):
+        if hasattr(db_service, "db_config") and hasattr(db_service.db_config, "db"):
             # Real IndalekoServiceManager
             db = db_service.db_config.db
             # Check if the Objects collection exists
@@ -110,13 +114,15 @@ def get_storage_summary(db_service):
                         FILTER obj.Record != null AND obj.Record.Attributes != null
                         COLLECT storage = obj.Record.Attributes.Volume WITH COUNT INTO count
                         RETURN {storage, count}
-                        """
+                        """,
                     )
                     results = list(cursor)
                     if results:
                         return results
                 except Exception as e:
-                    st.warning(f"Error querying Objects collection: {e}. Trying alternative query.")
+                    st.warning(
+                        f"Error querying Objects collection: {e}. Trying alternative query.",
+                    )
 
                 # Try alternative fields
                 try:
@@ -130,19 +136,21 @@ def get_storage_summary(db_service):
                                           obj.Record.Attributes.Volume : "Unknown"))
                         WITH COUNT INTO count
                         RETURN {storage, count}
-                        """
+                        """,
                     )
                     results = list(cursor)
                     if results:
                         return results
                 except Exception as e:
-                    st.warning(f"Error running alternative query: {e}. Falling back to mock data.")
+                    st.warning(
+                        f"Error running alternative query: {e}. Falling back to mock data.",
+                    )
             else:
                 st.warning("Objects collection not found. Falling back to mock data.")
         else:
             # Mock object
             return db_service.get_db().aql.execute(
-                "FOR obj IN Objects FILTER obj.type == 'file' COLLECT storage = obj.volume WITH COUNT INTO count RETURN {storage, count}"
+                "FOR obj IN Objects FILTER obj.type == 'file' COLLECT storage = obj.volume WITH COUNT INTO count RETURN {storage, count}",
             )
     except Exception as e:
         st.error(f"Error getting storage summary: {e}")
@@ -152,22 +160,23 @@ def get_storage_summary(db_service):
         {"storage": "C:", "count": 1200},
         {"storage": "D:", "count": 800},
         {"storage": "OneDrive", "count": 450},
-        {"storage": "Dropbox", "count": 200}
+        {"storage": "Dropbox", "count": 200},
     ]
+
 
 def get_file_type_distribution(db_service):
     """
     Get file extension distribution data for charts
-    
+
     Args:
         db_service: IndalekoServiceManager or MockServiceManager object
-        
+
     Returns:
         list: List of dictionaries with file extension counts
     """
     try:
         # Determine if this is a real service manager or a mock
-        if hasattr(db_service, 'db_config') and hasattr(db_service.db_config, 'db'):
+        if hasattr(db_service, "db_config") and hasattr(db_service.db_config, "db"):
             # Real IndalekoServiceManager
             db = db_service.db_config.db
             # Check if the Objects collection exists
@@ -186,13 +195,15 @@ def get_file_type_distribution(db_service):
                         COLLECT extension = ext WITH COUNT INTO count
                         SORT count DESC LIMIT 10
                         RETURN {extension, count}
-                        """
+                        """,
                     )
                     results = list(cursor)
                     if results:
                         return results
                 except Exception as e:
-                    st.warning(f"Error querying Objects collection: {e}. Trying alternative query.")
+                    st.warning(
+                        f"Error querying Objects collection: {e}. Trying alternative query.",
+                    )
 
                 # Try alternative fields
                 try:
@@ -206,19 +217,21 @@ def get_file_type_distribution(db_service):
                         COLLECT extension = ext WITH COUNT INTO count
                         SORT count DESC LIMIT 10
                         RETURN {extension, count}
-                        """
+                        """,
                     )
                     results = list(cursor)
                     if results:
                         return results
                 except Exception as e:
-                    st.warning(f"Error running alternative query: {e}. Falling back to mock data.")
+                    st.warning(
+                        f"Error running alternative query: {e}. Falling back to mock data.",
+                    )
             else:
                 st.warning("Objects collection not found. Falling back to mock data.")
         else:
             # Mock object
             return db_service.get_db().aql.execute(
-                "FOR obj IN Objects FILTER obj.type == 'file' LET ext = REVERSE(SPLIT(obj.name, '.', 1))[0] FILTER ext != obj.name COLLECT extension = ext WITH COUNT INTO count SORT count DESC LIMIT 10 RETURN {extension, count}"
+                "FOR obj IN Objects FILTER obj.type == 'file' LET ext = REVERSE(SPLIT(obj.name, '.', 1))[0] FILTER ext != obj.name COLLECT extension = ext WITH COUNT INTO count SORT count DESC LIMIT 10 RETURN {extension, count}",
             )
     except Exception as e:
         st.error(f"Error getting file type distribution: {e}")
@@ -229,22 +242,23 @@ def get_file_type_distribution(db_service):
         {"extension": "docx", "count": 180},
         {"extension": "jpg", "count": 320},
         {"extension": "png", "count": 150},
-        {"extension": "xlsx", "count": 90}
+        {"extension": "xlsx", "count": 90},
     ]
+
 
 def get_activity_timeline(db_service):
     """
     Get activity timeline data for charts
-    
+
     Args:
         db_service: IndalekoServiceManager or MockServiceManager object
-        
+
     Returns:
         list: List of dictionaries with activity dates and counts
     """
     try:
         # Determine if this is a real service manager or a mock
-        if hasattr(db_service, 'db_config') and hasattr(db_service.db_config, 'db'):
+        if hasattr(db_service, "db_config") and hasattr(db_service.db_config, "db"):
             # Real IndalekoServiceManager
             db = db_service.db_config.db
 
@@ -252,7 +266,9 @@ def get_activity_timeline(db_service):
             collections = db.collections()
             collection_names = [c["name"] for c in collections]
 
-            activity_collections = [name for name in collection_names if "Activity" in name]
+            activity_collections = [
+                name for name in collection_names if "Activity" in name
+            ]
 
             if activity_collections:
                 # Try each possible activity collection
@@ -298,7 +314,7 @@ def get_activity_timeline(db_service):
         else:
             # Mock object
             return db_service.get_db().aql.execute(
-                "FOR act IN Activity COLLECT date = DATE_TRUNC(act.timestamp, 'day') WITH COUNT INTO count SORT date RETURN {date: DATE_ISO8601(date), count}"
+                "FOR act IN Activity COLLECT date = DATE_TRUNC(act.timestamp, 'day') WITH COUNT INTO count SORT date RETURN {date: DATE_ISO8601(date), count}",
             )
     except Exception as e:
         st.error(f"Error getting activity timeline: {e}")
@@ -311,84 +327,85 @@ def get_activity_timeline(db_service):
         {"date": "2025-04-04", "count": 51},
         {"date": "2025-04-05", "count": 29},
         {"date": "2025-04-06", "count": 15},
-        {"date": "2025-04-07", "count": 42}
+        {"date": "2025-04-07", "count": 42},
     ]
+
 
 def get_cross_source_patterns(db_service):
     """
     Get cross-source pattern data for visualization
-    
+
     Args:
         db_service: IndalekoServiceManager or MockServiceManager object
-        
+
     Returns:
         dict: Dictionary with patterns, correlations, and suggestions data
     """
     try:
         # Determine if this is a real service manager or a mock
-        if hasattr(db_service, 'db_config') and hasattr(db_service.db_config, 'db'):
+        if hasattr(db_service, "db_config") and hasattr(db_service.db_config, "db"):
             # Real IndalekoServiceManager
             db = db_service.db_config.db
-            
+
             # Get patterns, correlations, and suggestions
             patterns = _get_patterns_from_db(db)
             correlations = _get_correlations_from_db(db)
             suggestions = _get_suggestions_from_db(db)
-            
+
             if patterns or correlations or suggestions:
-                recent_correlations = [c for c in correlations if c.get("is_recent", False)]
-                active_suggestions = [s for s in suggestions if not s.get("is_expired", False)]
-                
+                recent_correlations = [
+                    c for c in correlations if c.get("is_recent", False)
+                ]
+                active_suggestions = [
+                    s for s in suggestions if not s.get("is_expired", False)
+                ]
+
                 return {
                     "patterns": patterns,
                     "correlations": correlations,
                     "suggestions": suggestions,
                     "recent_correlations": recent_correlations,
-                    "active_suggestions": active_suggestions
+                    "active_suggestions": active_suggestions,
                 }
-        else:
-            # Mock object
-            if hasattr(db_service, 'get_cross_source_patterns'):
-                return db_service.get_cross_source_patterns()
+        elif hasattr(db_service, "get_cross_source_patterns"):
+            return db_service.get_cross_source_patterns()
     except Exception as e:
         st.error(f"Error getting cross-source pattern data: {e}")
-    
+
     # Return mock data as fallback
     return _get_mock_pattern_data()
+
 
 def _get_patterns_from_db(db):
     """Get patterns from database"""
     collection_name = "CrossSourcePatterns"
     if not db.has_collection(collection_name):
         return []
-        
+
     try:
         collection = db.collection(collection_name)
-        cursor = collection.all(
-            limit=100  # Limit to 100 patterns
-        )
-        
+        cursor = collection.all(limit=100)  # Limit to 100 patterns
+
         return list(cursor)
     except Exception as e:
         st.warning(f"Error getting patterns from database: {e}")
         return []
-    
+
+
 def _get_correlations_from_db(db):
     """Get correlations from database"""
     collection_name = "CrossSourceCorrelations"
     if not db.has_collection(collection_name):
         return []
-        
+
     try:
         collection = db.collection(collection_name)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         one_day_ago = (now - timedelta(days=1)).isoformat()
-        
+
         # Get all correlations, mark recent ones
-        cursor = collection.all(
-            limit=100  # Limit to 100 correlations
-        )
-        
+        cursor = collection.all(limit=100)  # Limit to 100 correlations
+
         # Process results to add is_recent flag
         results = []
         for doc in cursor:
@@ -396,22 +413,23 @@ def _get_correlations_from_db(db):
             if "timestamp" in doc:
                 doc["is_recent"] = doc["timestamp"] > one_day_ago
             results.append(doc)
-            
+
         return results
     except Exception as e:
         st.warning(f"Error getting correlations from database: {e}")
         return []
-    
+
+
 def _get_suggestions_from_db(db):
     """Get suggestions from database"""
     collection_name = "ProactiveSuggestions"
     if not db.has_collection(collection_name):
         return []
-        
+
     try:
         collection = db.collection(collection_name)
-        now = datetime.now(timezone.utc)
-        
+        now = datetime.now(UTC)
+
         # Get active (not expired, not dismissed) suggestions
         cursor = db.aql.execute(
             f"""
@@ -421,28 +439,29 @@ def _get_suggestions_from_db(db):
             SORT s.priority ASC, s.confidence DESC
             LIMIT 20
             RETURN s
-            """
+            """,
         )
-        
+
         # Process results to add is_expired flag
         results = []
         for doc in cursor:
             # Add is_expired flag
-            if "expires_at" in doc and doc["expires_at"]:
+            if doc.get("expires_at"):
                 doc["is_expired"] = doc["expires_at"] < now.isoformat()
             else:
                 doc["is_expired"] = False
             results.append(doc)
-            
+
         return results
     except Exception as e:
         st.warning(f"Error getting suggestions from database: {e}")
         return []
 
+
 def _get_mock_pattern_data():
     """Return mock pattern data for testing"""
-    now = datetime.now(timezone.utc)
-    
+    now = datetime.now(UTC)
+
     # Create mock patterns
     patterns = [
         {
@@ -452,7 +471,7 @@ def _get_mock_pattern_data():
             "confidence": 0.82,
             "source_types": ["ntfs", "collaboration"],
             "observation_count": 15,
-            "last_observed": (now - timedelta(hours=3)).isoformat()
+            "last_observed": (now - timedelta(hours=3)).isoformat(),
         },
         {
             "pattern_id": "p2",
@@ -461,7 +480,7 @@ def _get_mock_pattern_data():
             "confidence": 0.67,
             "source_types": ["location", "ntfs"],
             "observation_count": 8,
-            "last_observed": (now - timedelta(hours=5)).isoformat()
+            "last_observed": (now - timedelta(hours=5)).isoformat(),
         },
         {
             "pattern_id": "p3",
@@ -470,7 +489,7 @@ def _get_mock_pattern_data():
             "confidence": 0.75,
             "source_types": ["ambient", "collaboration"],
             "observation_count": 12,
-            "last_observed": (now - timedelta(hours=8)).isoformat()
+            "last_observed": (now - timedelta(hours=8)).isoformat(),
         },
         {
             "pattern_id": "p4",
@@ -479,7 +498,7 @@ def _get_mock_pattern_data():
             "confidence": 0.79,
             "source_types": ["ntfs"],
             "observation_count": 21,
-            "last_observed": (now - timedelta(hours=2)).isoformat()
+            "last_observed": (now - timedelta(hours=2)).isoformat(),
         },
         {
             "pattern_id": "p5",
@@ -488,10 +507,10 @@ def _get_mock_pattern_data():
             "confidence": 0.63,
             "source_types": ["collaboration"],
             "observation_count": 9,
-            "last_observed": (now - timedelta(days=2)).isoformat()
-        }
+            "last_observed": (now - timedelta(days=2)).isoformat(),
+        },
     ]
-    
+
     # Create mock correlations
     correlations = [
         {
@@ -500,7 +519,7 @@ def _get_mock_pattern_data():
             "confidence": 0.85,
             "source_types": ["ntfs", "collaboration"],
             "timestamp": (now - timedelta(hours=2)).isoformat(),
-            "is_recent": True
+            "is_recent": True,
         },
         {
             "correlation_id": "c2",
@@ -508,7 +527,7 @@ def _get_mock_pattern_data():
             "confidence": 0.72,
             "source_types": ["location", "ntfs"],
             "timestamp": (now - timedelta(hours=4)).isoformat(),
-            "is_recent": True
+            "is_recent": True,
         },
         {
             "correlation_id": "c3",
@@ -516,7 +535,7 @@ def _get_mock_pattern_data():
             "confidence": 0.68,
             "source_types": ["ambient", "collaboration"],
             "timestamp": (now - timedelta(hours=6)).isoformat(),
-            "is_recent": True
+            "is_recent": True,
         },
         {
             "correlation_id": "c4",
@@ -524,10 +543,10 @@ def _get_mock_pattern_data():
             "confidence": 0.76,
             "source_types": ["query", "ntfs"],
             "timestamp": (now - timedelta(hours=12)).isoformat(),
-            "is_recent": False
-        }
+            "is_recent": False,
+        },
     ]
-    
+
     # Create mock suggestions
     suggestions = [
         {
@@ -540,7 +559,7 @@ def _get_mock_pattern_data():
             "created_at": (now - timedelta(hours=1)).isoformat(),
             "expires_at": (now + timedelta(days=1)).isoformat(),
             "is_expired": False,
-            "dismissed": False
+            "dismissed": False,
         },
         {
             "suggestion_id": "s2",
@@ -552,7 +571,7 @@ def _get_mock_pattern_data():
             "created_at": (now - timedelta(hours=3)).isoformat(),
             "expires_at": (now + timedelta(days=3)).isoformat(),
             "is_expired": False,
-            "dismissed": False
+            "dismissed": False,
         },
         {
             "suggestion_id": "s3",
@@ -564,14 +583,16 @@ def _get_mock_pattern_data():
             "created_at": (now - timedelta(hours=0.5)).isoformat(),
             "expires_at": (now + timedelta(days=2)).isoformat(),
             "is_expired": False,
-            "dismissed": False
-        }
+            "dismissed": False,
+        },
     ]
-    
+
     return {
         "patterns": patterns,
         "correlations": correlations,
         "suggestions": suggestions,
         "recent_correlations": [c for c in correlations if c.get("is_recent", False)],
-        "active_suggestions": [s for s in suggestions if not s.get("is_expired", False)]
+        "active_suggestions": [
+            s for s in suggestions if not s.get("is_expired", False)
+        ],
     }

@@ -39,6 +39,7 @@ numpy>=1.24.0
 pandas>=2.0.0
 pytest>=6.0
 lazy_import>=0.2.2
+ruff>=0.6.9
 
 [:platform_system == "Windows"]
 winsdk==1.0.0b10

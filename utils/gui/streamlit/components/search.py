@@ -20,25 +20,30 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 import streamlit as st
 
-from utils.gui.streamlit.services.query import execute_query
 from utils.gui.streamlit.components.common import display_search_results
 from utils.gui.streamlit.components.connection import connect_to_db
-from utils.gui.streamlit.mock_modules import MockQueryProcessor, FacetGenerator
+from utils.gui.streamlit.mock_modules import FacetGenerator, MockQueryProcessor
+from utils.gui.streamlit.services.query import execute_query
+
 
 def render_search():
     """
     Render the search interface with natural language query capabilities
-    
+
     Provides:
     - Query input with explain and debug options
     - Advanced search options (facets, deduplication)
     - Results display with detailed view
     """
     st.markdown("<div class='main-header'>Search</div>", unsafe_allow_html=True)
-    st.markdown("<div class='sub-header'>Find what you need using natural language queries</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='sub-header'>Find what you need using natural language queries</div>",
+        unsafe_allow_html=True,
+    )
 
     # Auto-connect in demo mode if not connected
     if not st.session_state.db_connected:
@@ -51,8 +56,7 @@ def render_search():
     col1, col2 = st.columns([3, 1])
     with col1:
         query = st.text_input(
-            "Enter your query",
-            placeholder="Find documents about Indaleko"
+            "Enter your query", placeholder="Find documents about Indaleko",
         )
     with col2:
         explain = st.checkbox("Explain query")
@@ -66,12 +70,7 @@ def render_search():
             context_aware = st.checkbox("Context Aware", value=True)
         with col2:
             deduplicate = st.checkbox("Deduplicate Results", value=True)
-            similarity_threshold = st.slider(
-                "Similarity Threshold",
-                0.0,
-                1.0,
-                0.85
-            )
+            similarity_threshold = st.slider("Similarity Threshold", 0.0, 1.0, 0.85)
         with col3:
             dynamic_facets = st.checkbox("Dynamic Facets", value=True)
             max_results = st.number_input("Max Results", value=100, min_value=1)
@@ -99,58 +98,85 @@ def render_search():
             with st.spinner("Searching..."):
                 try:
                     # First run query execution regardless of explain mode
-                    search_results = execute_query(query, st.session_state.db_service, debug=debug_mode)
-                    
+                    search_results = execute_query(
+                        query, st.session_state.db_service, debug=debug_mode,
+                    )
+
                     # If we didn't get any results, or got an error, fall back to mock data
-                    if not search_results or (isinstance(search_results, dict) and "error" in search_results):
+                    if not search_results or (
+                        isinstance(search_results, dict) and "error" in search_results
+                    ):
                         if debug_mode:
-                            st.warning("No results found or error encountered. Using mock data.")
+                            st.warning(
+                                "No results found or error encountered. Using mock data.",
+                            )
                         # Use mock processor as fallback
                         processor = MockQueryProcessor()
                         search_results = processor.execute(query, explain=False)
-                    
+
                     # If explain mode is enabled, also show the query explanation
                     if explain:
                         st.subheader("Query Explanation")
-                        
+
                         # Get explanation results
-                        explain_results = execute_query(query, st.session_state.db_service, explain=True, debug=debug_mode)
-                        
+                        explain_results = execute_query(
+                            query,
+                            st.session_state.db_service,
+                            explain=True,
+                            debug=debug_mode,
+                        )
+
                         if explain_results:
                             # Check if we have a valid query plan
-                            if isinstance(explain_results, dict) and ("nodes" in explain_results or 
-                                                                    "plan" in explain_results or 
-                                                                    "_is_explain_result" in explain_results):
+                            if isinstance(explain_results, dict) and (
+                                "nodes" in explain_results
+                                or "plan" in explain_results
+                                or "_is_explain_result" in explain_results
+                            ):
                                 # Use our dedicated display function for query plans
                                 display_search_results(explain_results)
                             else:
                                 # Regular JSON display for other result types
                                 st.json(explain_results)
-                    
+
                     # Check if search results are actually explain results (error case)
-                    if isinstance(search_results, dict) and "_is_explain_result" in search_results:
-                        if not explain:  # Only show this if we're not already in explain mode
+                    if (
+                        isinstance(search_results, dict)
+                        and "_is_explain_result" in search_results
+                    ):
+                        if (
+                            not explain
+                        ):  # Only show this if we're not already in explain mode
                             st.subheader("Query Explanation (Error)")
-                            st.warning("Your search returned an explanation instead of results. This may indicate a problem.")
+                            st.warning(
+                                "Your search returned an explanation instead of results. This may indicate a problem.",
+                            )
                             display_search_results(search_results)
-                            
+
                         # Generate mock results for display
                         processor = MockQueryProcessor()
                         search_results = processor.execute(query, explain=False)
-                    
+
                     # Process and display the actual search results
                     st.session_state.query_results = search_results
                     st.session_state.search_running = False
-                    
+
                     # Display the results immediately
-                    result_count = len(search_results) if isinstance(search_results, (list, tuple)) else 1
+                    result_count = (
+                        len(search_results)
+                        if isinstance(search_results, (list, tuple))
+                        else 1
+                    )
                     st.success(f"Found {result_count} results")
 
                     # Debug info in debug mode
                     if debug_mode:
                         result_type = type(search_results).__name__
                         st.info(f"Result type: {result_type}")
-                        if isinstance(search_results, (list, tuple)) and len(search_results) > 0:
+                        if (
+                            isinstance(search_results, (list, tuple))
+                            and len(search_results) > 0
+                        ):
                             sample_item = search_results[0]
                             st.info(f"First result type: {type(sample_item).__name__}")
                             if isinstance(sample_item, dict):
@@ -169,7 +195,10 @@ def render_search():
                                 for facet_name, facet_values in facets.items():
                                     st.write(f"**{facet_name}**")
                                     for value, count in facet_values.items():
-                                        st.checkbox(f"{value} ({count})", key=f"{facet_name}_{value}")
+                                        st.checkbox(
+                                            f"{value} ({count})",
+                                            key=f"{facet_name}_{value}",
+                                        )
 
                             with col2:
                                 # Display results with facets
@@ -216,8 +245,8 @@ def render_search():
                 "Label": "sample_document.pdf",
                 "type": "file",
                 "size": 1024 * 5,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "description": "Sample PDF document for UI demonstration"
+                "timestamp": datetime.now(UTC).isoformat(),
+                "description": "Sample PDF document for UI demonstration",
             },
             {
                 "_id": f"Objects/{uuid.uuid4()}",
@@ -225,8 +254,8 @@ def render_search():
                 "Label": "project_report.docx",
                 "type": "file",
                 "size": 2048 * 3,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "description": "Word document with project details"
+                "timestamp": datetime.now(UTC).isoformat(),
+                "description": "Word document with project details",
             },
             {
                 "_id": f"Objects/{uuid.uuid4()}",
@@ -234,9 +263,9 @@ def render_search():
                 "Label": "presentation.pptx",
                 "type": "file",
                 "size": 4096,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "description": "Presentation slides for upcoming meeting"
-            }
+                "timestamp": datetime.now(UTC).isoformat(),
+                "description": "Presentation slides for upcoming meeting",
+            },
         ]
 
         # Display the sample results

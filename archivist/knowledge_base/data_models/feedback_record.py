@@ -20,10 +20,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any
 from uuid import UUID, uuid4
-from datetime import datetime, timezone
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -34,11 +34,13 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
+
 # pylint: enable=wrong-import-position
 
 
 class FeedbackType(str, Enum):
     """Types of feedback records."""
+
     explicit_positive = "explicit_positive"
     explicit_negative = "explicit_negative"
     implicit_positive = "implicit_positive"
@@ -47,22 +49,24 @@ class FeedbackType(str, Enum):
 
 class FeedbackRecordDataModel(IndalekoBaseModel):
     """Record of user feedback on system performance."""
+
     feedback_id: UUID = uuid4()
     feedback_type: FeedbackType
-    timestamp: datetime = datetime.now(timezone.utc)
-    user_id: Optional[UUID] = None  # Anonymous if None
-    query_id: Optional[UUID] = None  # Associated query if relevant
-    pattern_id: Optional[UUID] = None  # Pattern being evaluated
+    timestamp: datetime = datetime.now(UTC)
+    user_id: UUID | None = None  # Anonymous if None
+    query_id: UUID | None = None  # Associated query if relevant
+    pattern_id: UUID | None = None  # Pattern being evaluated
     feedback_strength: float  # How strong the feedback is (0-1)
-    feedback_data: Dict[str, Any]  # Detailed feedback information
-    
+    feedback_data: dict[str, Any]  # Detailed feedback information
+
     class Config:
         """Sample configuration data for the data model."""
+
         json_schema_extra = {
             "example": {
                 "feedback_id": "b81c3522-c394-40b0-a82c-a9d7fa1f7e05",
                 "feedback_type": FeedbackType.explicit_positive,
-                "timestamp": datetime.now(timezone.utc),
+                "timestamp": datetime.now(UTC),
                 "user_id": "user123",
                 "query_id": "query789",
                 "pattern_id": "a81b3522-c394-40b0-a82c-a9d7fa1f7e03",
@@ -71,7 +75,7 @@ class FeedbackRecordDataModel(IndalekoBaseModel):
                     "comment": "These results were exactly what I was looking for",
                     "result_relevance": 0.95,
                     "result_completeness": 0.85,
-                    "interaction": "clicked_result"
-                }
-            }
+                    "interaction": "clicked_result",
+                },
+            },
         }

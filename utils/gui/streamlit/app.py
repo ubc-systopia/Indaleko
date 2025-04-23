@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 import streamlit as st
 
 # Set up path to include Indaleko modules
@@ -41,7 +42,8 @@ st.set_page_config(
 )
 
 # Custom styling (after page config)
-st.markdown("""
+st.markdown(
+    """
 <style>
     .main-header {
         font-size: 2.5rem;
@@ -71,17 +73,19 @@ st.markdown("""
         color: #757575;
     }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 # Import components
 from utils.gui.streamlit.components import (
+    connect_to_db,
+    render_activity,
+    render_analytics,
     render_dashboard,
     render_search,
-    render_analytics,
-    render_activity,
     render_settings,
     render_sidebar,
-    connect_to_db
 )
 
 # Initialize session state
@@ -103,13 +107,17 @@ if "query_results" not in st.session_state:
 # Show demo mode notice (after page config & styling)
 # - only if not using real DB
 if not st.session_state.using_real_db:
-    st.warning("⚠️ **DEMO MODE** - Running with simulated data. "
-              "Database connections are mocked.")
-    st.info("""
+    st.warning(
+        "⚠️ **DEMO MODE** - Running with simulated data. "
+        "Database connections are mocked.",
+    )
+    st.info(
+        """
     This is a prototype of the Indaleko GUI showing the interface design
     and navigation. The displayed data is simulated and does not reflect
     actual database content.
-    """)
+    """,
+    )
 
 # Render sidebar (always present)
 render_sidebar()
@@ -117,38 +125,53 @@ render_sidebar()
 # Render main content based on current page
 if not st.session_state.db_connected and st.session_state.current_page != "setup":
     # Welcome screen (shown when not connected)
-    st.markdown("<div class='main-header'>Welcome to Indaleko</div>", unsafe_allow_html=True)
-    st.markdown("<div class='sub-header'>Unified Personal Index</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='main-header'>Welcome to Indaleko</div>", unsafe_allow_html=True,
+    )
+    st.markdown(
+        "<div class='sub-header'>Unified Personal Index</div>", unsafe_allow_html=True,
+    )
 
     st.warning("Please connect to a database to continue.")
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.markdown("""
+        st.markdown(
+            """
         <div class="card">
             <h3>Unified Storage View</h3>
             <p>View all your storage across devices and cloud services in one place.</p>
         </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
     with col2:
-        st.markdown("""
+        st.markdown(
+            """
         <div class="card">
             <h3>Natural Language Search</h3>
             <p>Find your data using natural language queries powered by AI.</p>
         </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
     with col3:
-        st.markdown("""
+        st.markdown(
+            """
         <div class="card">
             <h3>Activity Context</h3>
             <p>Understand your data in the context of your activities and collaborations.</p>
         </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
     try:
-        image_path = os.path.join(os.environ.get("INDALEKO_ROOT"), "figures", "arch-diagram-solid.png")
+        image_path = os.path.join(
+            os.environ.get("INDALEKO_ROOT"), "figures", "arch-diagram-solid.png",
+        )
         if os.path.exists(image_path):
             st.image(image_path, use_container_width=True)
     except Exception:
@@ -156,7 +179,10 @@ if not st.session_state.db_connected and st.session_state.current_page != "setup
 
 elif st.session_state.current_page == "setup":
     st.markdown("<div class='main-header'>Database Setup</div>", unsafe_allow_html=True)
-    st.markdown("<div class='sub-header'>Configure your Indaleko database</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='sub-header'>Configure your Indaleko database</div>",
+        unsafe_allow_html=True,
+    )
 
     st.info("This wizard will help you set up an ArangoDB database for Indaleko.")
 
@@ -190,7 +216,9 @@ elif st.session_state.current_page == "setup":
                 try:
                     # Here we'd call the actual setup code
                     # For demo purposes, we'll just show success
-                    st.success("Database setup successfully! Redirecting to dashboard...")
+                    st.success(
+                        "Database setup successfully! Redirecting to dashboard...",
+                    )
                     st.session_state.current_page = "dashboard"
                     db_service, db_info = connect_to_db("mock_config")
                     if db_service:
@@ -221,6 +249,7 @@ if not st.session_state.get("tried_auto_connect", False):
     st.session_state.tried_auto_connect = True
     st.info("🔄 Trying automatic database connection on startup...")
     from utils.gui.streamlit.services.config import get_config_files
+
     config_files = get_config_files()
     if config_files:
         db_service, db_info = connect_to_db(config_files[0])

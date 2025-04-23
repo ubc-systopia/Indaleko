@@ -18,26 +18,26 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+from .activity import render_activity
+from .analytics import render_analytics
+from .common import display_query_plan, display_search_results, normalize_for_display
+from .connection import connect_to_db, render_connection_status
 from .dashboard import render_dashboard
 from .search import render_search
-from .analytics import render_analytics
-from .activity import render_activity
 from .settings import render_settings
 from .sidebar import render_sidebar
-from .connection import render_connection_status, connect_to_db
-from .common import normalize_for_display, display_search_results, display_query_plan
 
 # Make these available at the component module level
 __all__ = [
-    'render_dashboard',
-    'render_search',
-    'render_analytics',
-    'render_activity',
-    'render_settings',
-    'render_sidebar',
-    'render_connection_status',
-    'connect_to_db',
-    'normalize_for_display',
-    'display_search_results',
-    'display_query_plan',
+    "render_dashboard",
+    "render_search",
+    "render_analytics",
+    "render_activity",
+    "render_settings",
+    "render_sidebar",
+    "render_connection_status",
+    "connect_to_db",
+    "normalize_for_display",
+    "display_search_results",
+    "display_query_plan",
 ]

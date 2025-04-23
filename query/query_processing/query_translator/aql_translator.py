@@ -21,7 +21,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import json
 import os
 import sys
-
 from typing import Any
 
 from icecream import ic
@@ -59,10 +58,29 @@ class AQLTranslator(TranslatorBase):
             collections_metadata: Metadata for the collections in the database.
         """
         self.db_collections_metadata = collections_metadata
-        self.db_config = self.db_collections_metadata.db_config
-        self.collection_data = (
-            self.db_collections_metadata.get_all_collections_metadata()
-        )
+        self.db_config = getattr(self.db_collections_metadata, "db_config", None)
+
+        # Handle collection metadata correctly
+        if hasattr(self.db_collections_metadata, "get_all_collections_metadata"):
+            self.collection_data = (
+                self.db_collections_metadata.get_all_collections_metadata()
+            )
+        else:
+            # Fallback to using collections_metadata directly if it's a dictionary
+            self.collection_data = getattr(
+                self.db_collections_metadata, "collections_metadata", {},
+            )
+            if not self.collection_data:
+                # If that's also empty, create a minimal default structure with Objects
+                self.collection_data = {
+                    "Objects": {
+                        "Name": "Objects",
+                        "Description": "Storage objects collection",
+                        "Indices": [],
+                        "Schema": {},
+                        "QueryGuidelines": ["Search for files and folders"],
+                    },
+                }
 
     def translate(self, input_data: TranslatorInput) -> TranslatorOutput:
         """
@@ -127,7 +145,7 @@ class AQLTranslator(TranslatorBase):
                 explanation.append("Missing 'RETURN' clause.")
             if not any(keyword in query for keyword in required_fields):
                 explanation.append(
-                    f"No instance of any required field {" ".join(required_fields)}."
+                    f"No instance of any required field {" ".join(required_fields)}.",
                 )
             ic("Invalid AQL query:", query, explanation)
         return result
@@ -234,10 +252,10 @@ class AQLTranslator(TranslatorBase):
             The query should only include the AQL code, without any additional explanations or  comments.
             You must return one single code block enclosed in '```'s with only one FOR and RETURN statement.\n"""
             + f"""
-            Dictionary of attributes: {str(selected_md_attributes)}
-            Number of truth attributes: {str(n_truth_md)}
+            Dictionary of attributes: {selected_md_attributes!s}
+            Number of truth attributes: {n_truth_md!s}
             Additional Notes: {additional_notes}
-            Schema: {str(parsed_query['schema'])}
+            Schema: {parsed_query['schema']!s}
             """
         )
 
@@ -284,7 +302,6 @@ class AQLTranslator(TranslatorBase):
         Returns:
             List[str]: A list of relevant collections for AQL generation.
         """
-
         relevant_collections = set()
 
         # Step 1: Fetch dynamic keyword → collection mapping from CollectionMetadata
@@ -315,7 +332,7 @@ class AQLTranslator(TranslatorBase):
         if needs_activity_data:
             # Step 5: Query `ActivityDataProviders` to find available sources
             activity_providers = self.db_config.db.aql.execute(
-                "FOR provider IN ActivityDataProviders RETURN provider.Name"
+                "FOR provider IN ActivityDataProviders RETURN provider.Name",
             )
             provider_collections = list(activity_providers)
 
@@ -336,7 +353,44 @@ class AQLTranslator(TranslatorBase):
         available_collections = []
         for collection_name in self.collection_data:
             available_collections.append(collection_name)
-        
+
+        # Get available views if db_config is available
+        available_views = []
+        try:
+            if hasattr(self.db_config, "db"):
+                for view_name in self.db_config.db.views():
+                    available_views.append(view_name)
+        except Exception:
+            # Default views from db_collections.py if we can't access the database
+            available_views = [
+                "ObjectsTextView",
+                "NamedEntityTextView",
+                "ActivityTextView",
+                "EntityEquivalenceTextView",
+                "KnowledgeTextView",
+            ]
+
+        # Create collection to view mapping for text search
+        collection_view_mapping = {
+            "Objects": "ObjectsTextView",
+            "NamedEntities": "NamedEntityTextView",
+            "ActivityContext": "ActivityTextView",
+            "EntityEquivalenceNodes": "EntityEquivalenceTextView",
+            "LearningEvents": "KnowledgeTextView",
+        }
+
+        # Determine if this is a text search query
+        is_text_search = False
+        query_keywords = ["show", "find", "search", "contain", "like", "where", "text"]
+        query_lower = input_data.Query.original_query.lower()
+        if any(keyword in query_lower for keyword in query_keywords):
+            is_text_search = True
+
+        # Look for entities that suggest text search
+        if hasattr(input_data.Query, "entities"):
+            if len(input_data.Query.entities.entities) > 0:
+                is_text_search = True
+
         system_prompt = f"""
         You are **Archivist**, an expert at working with Indaleko to find pertinent
         digital objects (e.g., files).
@@ -345,28 +399,73 @@ class AQLTranslator(TranslatorBase):
         Your task is to generate an optimized AQL query
         that retrieves matching information based on the user query and selected
         metadata attributes.
-        
+
         In forming this query, you will need to consider the schema of the database,
         including the relevant collections and their fields, as well as the needs of the user.
-        
+
         IMPORTANT: Use ONLY the following available collections in your query:
         {available_collections}
-        
+
         The most important collections are:
-        - Objects: Contains file and directory information
+        - Objects: Contains file and directory information (Label is the filename field)
         - SemanticData: Contains semantic information extracted from objects
         - ActivityContext: Contains activity information related to objects
         - NamedEntities: Contains named entities referenced in objects
-        
-        Your query MUST use one of these existing collections or the query will fail.
+
+        CRITICAL: The database has the following ArangoSearch views available for text search:
+        {available_views}
+
+        For ANY text search operations (searching for file names, descriptions, content, etc.),
+        you MUST use the appropriate view instead of filtering directly on a collection:
+
+        - Use ObjectsTextView instead of Objects when searching file names or text
+        - Use NamedEntityTextView instead of NamedEntities when searching entity names
+        - Use ActivityTextView instead of ActivityContext when searching activity descriptions
+
+        When using views, follow this pattern:
+        ```aql
+        FOR doc IN ObjectsTextView  // Use the view, not the collection
+        SEARCH ANALYZER(            // Use SEARCH ANALYZER instead of FILTER
+            LIKE(doc.Label, @searchTerm),  // Use LIKE for text matching
+            "text_en"               // Specify the analyzer
+        )
+        SORT BM25(doc) DESC         // Sort by relevance using BM25
+        LIMIT 50
+        RETURN doc
+        ```
+
+        DO NOT use queries like these for text search (they are inefficient):
+        ```aql
+        // WRONG - Do NOT use this pattern
+        FOR obj IN Objects
+        FILTER CONTAINS(obj.Label, @searchTerm)  // FILTER with CONTAINS is inefficient
+        RETURN obj
+        ```
+
+        Your query MUST use one of the existing collections or views or the query will fail.
         DO NOT use collections that don't exist in the database like "documents" or "files".
-        
-        Please take sufficient time to return a query that is both efficient and accurate, 
-        as our primary goal is to minimize the time our user spends looking for the specific 
+
+        Please take sufficient time to return a query that is both efficient and accurate,
+        as our primary goal is to minimize the time our user spends looking for the specific
         information that they need and to also minimize our user's abandonment rate.
-        
+
         The structured data that follows provides information about the database.
         {input_data}
         """
+
+        # Add specific recommendation for text search
+        if is_text_search:
+            system_prompt += """
+
+            IMPORTANT RECOMMENDATION: The user's query appears to be a TEXT SEARCH.
+            THIS QUERY SHOULD USE AN ARANGOSEARCH VIEW RATHER THAN FILTERING A COLLECTION.
+
+            Collection → View mapping for text search:
+            - Objects → ObjectsTextView
+            - NamedEntities → NamedEntityTextView
+            - ActivityContext → ActivityTextView
+            - EntityEquivalenceNodes → EntityEquivalenceTextView
+            - LearningEvents → KnowledgeTextView
+            """
 
         return {"system": system_prompt, "user": user_prompt}

@@ -121,7 +121,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   echo "3. Enable the Drive API and Drive Activity API"
   echo "4. Create OAuth 2.0 credentials (Desktop app)"
   echo "5. Download the credentials JSON file"
-  
+
   read -p "Enter the path to the downloaded credentials file: " CREDS_FILE
   if [ -f "$CREDS_FILE" ]; then
     cp "$CREDS_FILE" "$CONFIG_DIR/gdrive_client_secrets.json"
@@ -140,7 +140,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   # Get current crontab
   TMPFILE=$(mktemp)
   crontab -l > "$TMPFILE" 2>/dev/null || true
-  
+
   # Check if job already exists
   if grep -q "$SCRIPT_PATH" "$TMPFILE"; then
     echo "Cron job already exists."
@@ -148,11 +148,11 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     # Set up cron job to run every 15 minutes
     echo "# Indaleko Google Drive Activity Collector - runs every 15 minutes" >> "$TMPFILE"
     echo "*/15 * * * * $SCRIPT_PATH" >> "$TMPFILE"
-    
+
     # Install new crontab
     crontab "$TMPFILE"
     rm "$TMPFILE"
-    
+
     echo "Cron job installed to run every 15 minutes."
   fi
 else

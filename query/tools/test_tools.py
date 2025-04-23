@@ -18,12 +18,12 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import argparse
+import datetime
+import json
 import os
 import sys
-import argparse
-import json
-import datetime
-from typing import Dict, List, Any
+from typing import Any
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -32,11 +32,11 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
-from query.tools.registry import get_registry
 from query.tools.base import ToolInput, ToolOutput
-from query.tools.translation.nl_parser import NLParserTool
-from query.tools.translation.aql_translator import AQLTranslatorTool
 from query.tools.database.executor import QueryExecutorTool
+from query.tools.registry import get_registry
+from query.tools.translation.aql_translator import AQLTranslatorTool
+from query.tools.translation.nl_parser import NLParserTool
 
 
 def json_serializable(obj):
@@ -49,142 +49,152 @@ def json_serializable(obj):
 def test_nl_parser(query: str, debug: bool = False) -> ToolOutput:
     """
     Test the NL parser tool.
-    
+
     Args:
         query (str): The query to parse.
         debug (bool): Whether to print debug information.
-        
+
     Returns:
         ToolOutput: The result of the tool execution.
     """
     registry = get_registry()
-    
+
     # Register the NL parser tool
     registry.register_tool(NLParserTool)
-    
+
     # Create the tool input
     tool_input = ToolInput(
-        tool_name="nl_parser",
-        parameters={"query": query},
-        invocation_id="test-1"
+        tool_name="nl_parser", parameters={"query": query}, invocation_id="test-1",
     )
-    
+
     # Execute the tool
     result = registry.execute_tool(tool_input)
-    
+
     # Print the result if debug is enabled
     if debug:
         # Convert to dict and handle datetime objects
         result_dict = result.model_dump()
-        print(f"NL Parser Result: {json.dumps(result_dict, indent=2, default=json_serializable)}")
-        
+        print(
+            f"NL Parser Result: {json.dumps(result_dict, indent=2, default=json_serializable)}",
+        )
+
     return result
 
 
-def test_aql_translator(structured_query: Dict[str, Any], debug: bool = False) -> ToolOutput:
+def test_aql_translator(
+    structured_query: dict[str, Any], debug: bool = False,
+) -> ToolOutput:
     """
     Test the AQL translator tool.
-    
+
     Args:
         structured_query (Dict[str, Any]): The structured query to translate.
         debug (bool): Whether to print debug information.
-        
+
     Returns:
         ToolOutput: The result of the tool execution.
     """
     registry = get_registry()
-    
+
     # Register the AQL translator tool
     registry.register_tool(AQLTranslatorTool)
-    
+
     # Create the tool input
     tool_input = ToolInput(
         tool_name="aql_translator",
         parameters={"structured_query": structured_query},
-        invocation_id="test-2"
+        invocation_id="test-2",
     )
-    
+
     # Execute the tool
     result = registry.execute_tool(tool_input)
-    
+
     # Print the result if debug is enabled
     if debug:
         result_dict = result.model_dump()
-        print(f"AQL Translator Result: {json.dumps(result_dict, indent=2, default=json_serializable)}")
-        
+        print(
+            f"AQL Translator Result: {json.dumps(result_dict, indent=2, default=json_serializable)}",
+        )
+
     return result
 
 
-def test_query_executor(query: str, bind_vars: Dict[str, Any] = None, debug: bool = False) -> ToolOutput:
+def test_query_executor(
+    query: str, bind_vars: dict[str, Any] = None, debug: bool = False,
+) -> ToolOutput:
     """
     Test the query executor tool.
-    
+
     Args:
         query (str): The AQL query to execute.
         bind_vars (Dict[str, Any]): The bind variables for the query.
         debug (bool): Whether to print debug information.
-        
+
     Returns:
         ToolOutput: The result of the tool execution.
     """
     registry = get_registry()
-    
+
     # Register the query executor tool
     registry.register_tool(QueryExecutorTool)
-    
+
     # Create parameters with default values
     parameters = {
         "query": query,
         "explain_only": True,  # Only explain the query, don't execute it
         "include_plan": True,
         "all_plans": False,
-        "max_plans": 5
+        "max_plans": 5,
     }
-    
+
     # Add bind variables if provided
     if bind_vars:
         parameters["bind_vars"] = bind_vars
-    
+
     # Create the tool input
     tool_input = ToolInput(
-        tool_name="query_executor",
-        parameters=parameters,
-        invocation_id="test-3"
+        tool_name="query_executor", parameters=parameters, invocation_id="test-3",
     )
-    
+
     # Execute the tool
     result = registry.execute_tool(tool_input)
-    
+
     # Print the result if debug is enabled
     if debug:
         result_dict = result.model_dump()
-        print(f"Query Executor Result: {json.dumps(result_dict, indent=2, default=json_serializable)}")
-        
+        print(
+            f"Query Executor Result: {json.dumps(result_dict, indent=2, default=json_serializable)}",
+        )
+
     return result
 
 
-def test_full_pipeline(query: str, debug: bool = False) -> Dict[str, Any]:
+def test_full_pipeline(query: str, debug: bool = False) -> dict[str, Any]:
     """
     Test the full query pipeline.
-    
+
     Args:
         query (str): The query to test.
         debug (bool): Whether to print debug information.
-        
+
     Returns:
         Dict[str, Any]: The combined results of all tools.
     """
     # Step 1: Parse the query
     nl_result = test_nl_parser(query, debug)
-    
+
     if not nl_result.success:
         print(f"Error parsing query: {nl_result.error}")
         return {"error": nl_result.error}
-    
+
     # Step 2: Translate to AQL
     # Need to convert entities to a format the translator can understand
-    from data_models.named_entity import NamedEntityCollection, IndalekoNamedEntityDataModel, IndalekoNamedEntityType
-    
+    from data_models.named_entity import (
+        IndalekoNamedEntityDataModel,
+        IndalekoNamedEntityType,
+        NamedEntityCollection,
+    )
+
     entities = []
     for entity in nl_result.result["entities"]:
         # Convert entity type string to valid IndalekoNamedEntityType
@@ -195,38 +205,40 @@ def test_full_pipeline(query: str, debug: bool = False) -> Dict[str, Any]:
         except ValueError:
             # If not a valid type, default to "item"
             entity_category = IndalekoNamedEntityType.item
-            
-        entities.append(IndalekoNamedEntityDataModel(
-            name=entity["name"],
-            category=entity_category,
-            description=entity.get("value", entity["name"])
-        ))
-    
+
+        entities.append(
+            IndalekoNamedEntityDataModel(
+                name=entity["name"],
+                category=entity_category,
+                description=entity.get("value", entity["name"]),
+            ),
+        )
+
     # Create a properly formatted NamedEntityCollection
     entity_collection = NamedEntityCollection(entities=entities)
-    
+
     structured_query = {
         "original_query": query,
         "intent": nl_result.result["intent"],
-        "entities": entity_collection
+        "entities": entity_collection,
     }
-    
+
     aql_result = test_aql_translator(structured_query, debug)
-    
+
     if not aql_result.success:
         print(f"Error translating query: {aql_result.error}")
         return {"error": aql_result.error}
-    
+
     # Step 3: Execute the query
     aql_query = aql_result.result["aql_query"]
     bind_vars = aql_result.result["bind_vars"]
-    
+
     executor_result = test_query_executor(aql_query, bind_vars, debug)
-    
+
     if not executor_result.success:
         print(f"Error executing query: {executor_result.error}")
         return {"error": executor_result.error}
-    
+
     # Combine results
     return {
         "query": query,
@@ -237,7 +249,9 @@ def test_full_pipeline(query: str, debug: bool = False) -> Dict[str, Any]:
         "nl_parser_time": nl_result.elapsed_time,
         "aql_translator_time": aql_result.elapsed_time,
         "query_executor_time": executor_result.elapsed_time,
-        "total_time": nl_result.elapsed_time + aql_result.elapsed_time + executor_result.elapsed_time
+        "total_time": nl_result.elapsed_time
+        + aql_result.elapsed_time
+        + executor_result.elapsed_time,
     }
 
 
@@ -248,42 +262,42 @@ def main():
     parser.add_argument("--batch", help="Path to a file containing queries to test")
     parser.add_argument("--debug", action="store_true", help="Print debug information")
     parser.add_argument("--output", help="Output file for results")
-    
+
     args = parser.parse_args()
-    
+
     # Register all tools
     registry = get_registry()
     registry.register_tool(NLParserTool)
     registry.register_tool(AQLTranslatorTool)
     registry.register_tool(QueryExecutorTool)
-    
+
     # Run tests
     results = []
-    
+
     if args.query:
         # Test a single query
         result = test_full_pipeline(args.query, args.debug)
         results.append(result)
-        
+
     elif args.batch:
         # Test multiple queries from a file
         try:
-            with open(args.batch, "r") as f:
+            with open(args.batch) as f:
                 queries = f.readlines()
-                
+
             for query in queries:
                 query = query.strip()
                 if not query or query.startswith("#"):
                     continue
-                    
+
                 print(f"Testing query: {query}")
                 result = test_full_pipeline(query, args.debug)
                 results.append(result)
-                
+
         except FileNotFoundError:
             print(f"Error: Batch file not found: {args.batch}")
             return
-            
+
     else:
         # Use default exemplar queries
         default_queries = [
@@ -292,25 +306,25 @@ def main():
             "Get documents I exchanged with Dr. Jones regarding the conference paper.",
             "Show me files I created while on vacation in Hawaii last June.",
             "Show me photos taken within 16 kilometers of my house.",
-            "Find PDFs I opened in the last week."
+            "Find PDFs I opened in the last week.",
         ]
-        
+
         for query in default_queries:
             print(f"Testing query: {query}")
             result = test_full_pipeline(query, args.debug)
             results.append(result)
-    
+
     # Write results to output file if specified
     if args.output:
         with open(args.output, "w") as f:
             json.dump(results, f, indent=2)
-            
+
     print(f"Tested {len(results)} queries.")
-    
+
     # Print summary of results
     success_count = sum(1 for r in results if "error" not in r)
     print(f"Success: {success_count}/{len(results)}")
-    
+
     if success_count < len(results):
         print("Errors:")
         for i, result in enumerate(results):

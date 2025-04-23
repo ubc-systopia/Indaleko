@@ -54,7 +54,7 @@ for (const test of testQueries) {
   if (test.description) {
     print(`Description: ${test.description}`);
   }
-  
+
   try {
     // Simple query against Objects collection
     const query = `
@@ -63,24 +63,24 @@ for (const test of testQueries) {
       LIMIT 5
       RETURN { _key: doc._key, Label: doc.Label }
     `;
-    
+
     const bindVars = {
       query: `%${test.query}%`,
       analyzer: test.analyzer
     };
-    
+
     print(`Executing query: ${query}`);
     print(`Bind variables: ${JSON.stringify(bindVars)}`);
-    
+
     const cursor = db._query(query, bindVars);
     const results = cursor.toArray();
-    
+
     // Show results
     print(`Found ${results.length} results:`);
     for (let i = 0; i < results.length; i++) {
       print(`  ${i+1}. ${results[i].Label} (key: ${results[i]._key})`);
     }
-    
+
     if (results.length === 0) {
       print("  No matching results found");
     }

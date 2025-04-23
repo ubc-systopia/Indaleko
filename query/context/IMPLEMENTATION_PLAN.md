@@ -37,23 +37,23 @@ The `QueryActivityProvider` class will be responsible for:
 ```python
 class QueryActivityProvider:
     """Provides query activities to the Activity Context system."""
-    
+
     QUERY_CONTEXT_PROVIDER_ID = uuid.UUID("a7b4c3d2-e5f6-47g8-h9i1-j2k3l4m5n6o7")
-    
+
     def __init__(self, db_config=None):
         self._context_service = IndalekoActivityContextService(db_config=db_config)
-        
+
     def record_query(self, query_text, results=None, execution_time=None, query_params=None):
         """Record a query as an activity and associate it with current context."""
         # Get current activity context
         current_context_handle = self._context_service.get_activity_handle()
-        
+
         # Create query reference and attributes
         query_id = uuid.uuid4()
         attributes = self._build_query_attributes(
             query_text, results, execution_time, query_params, current_context_handle
         )
-        
+
         # Update activity context with this query
         self._context_service.update_cursor(
             provider=self.QUERY_CONTEXT_PROVIDER_ID,
@@ -61,12 +61,12 @@ class QueryActivityProvider:
             provider_data=f"Query: {query_text[:50]}...",
             provider_attributes=attributes
         )
-        
+
         # Write updated context to database
         self._context_service.write_activity_context_to_database()
-        
+
         return query_id, current_context_handle
-        
+
     def _build_query_attributes(self, query_text, results, execution_time, query_params, context_handle):
         """Build the attributes dictionary for the query activity."""
         attributes = {
@@ -74,22 +74,22 @@ class QueryActivityProvider:
             "result_count": len(results) if results else 0,
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
-        
+
         if execution_time is not None:
             attributes["execution_time"] = execution_time
-            
+
         if query_params is not None:
             attributes["query_params"] = json.dumps(query_params)
-            
+
         if context_handle is not None:
             attributes["context_handle"] = str(context_handle)
-            
+
         return attributes
-        
+
     def get_query_by_id(self, query_id):
         """Retrieve a query by its ID."""
         # Implementation to fetch query data from the activity context system
-        
+
     def get_recent_queries(self, limit=10):
         """Get the most recent queries."""
         # Implementation to fetch recent queries from the activity context system
@@ -100,7 +100,7 @@ class QueryActivityProvider:
 ```python
 class QueryActivityData(IndalekoBaseModel):
     """Data model for query activities in the activity context system."""
-    
+
     query_id: uuid.UUID = Field(..., description="Unique identifier for the query")
     query_text: str = Field(..., description="The text of the query")
     execution_time: Optional[float] = Field(None, description="Query execution time in ms")
@@ -108,14 +108,14 @@ class QueryActivityData(IndalekoBaseModel):
     context_handle: Optional[uuid.UUID] = Field(None, description="Associated activity context")
     query_params: Optional[Dict[str, Any]] = Field(None, description="Query parameters")
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    
+
     # Add pydantic validator to ensure timezone awareness
     @validator("timestamp")
     def ensure_timezone(cls, v):
         if v.tzinfo is None:
             return v.replace(tzinfo=timezone.utc)
         return v
-        
+
     class Config:
         """Configuration for the QueryActivityData model."""
         json_schema_extra = {
@@ -188,27 +188,27 @@ if tool_name == "query_executor":
 ```python
 class QueryNavigator:
     """Provides navigation between related queries based on shared context."""
-    
+
     def __init__(self, db_config=None):
         self._db_config = db_config
         self._context_service = IndalekoActivityContextService(db_config=db_config)
-        
+
     def get_related_queries(self, query_id=None, context_handle=None, limit=10):
         """Get queries related to the specified query or context."""
         # Implementation retrieves queries sharing contexts with the specified query
-        
+
         if query_id:
             # Get the context handle for this query
             query_data = self.get_query_by_id(query_id)
             if query_data and "context_handle" in query_data:
                 context_handle = query_data["context_handle"]
-        
+
         if not context_handle:
             return []
-            
+
         # Query the database for activities with this context handle
         # This returns queries that were part of the same context
-        
+
         query = """
             FOR ctx IN ActivityContext
             FILTER ctx.Handle == @context_handle
@@ -216,38 +216,38 @@ class QueryNavigator:
             FILTER cursor.Provider == @provider_id
             RETURN cursor
         """
-        
+
         # Process and return the results
-        
+
     def get_query_path(self, query_id):
         """Get the sequence of queries leading to the specified query."""
         # Implementation reconstructs the query exploration path
-        
+
         query_data = self.get_query_by_id(query_id)
         if not query_data or "context_handle" not in query_data:
             return []
-            
+
         context_handle = query_data["context_handle"]
-        
+
         # Retrieve the chain of contexts that led to this one
         # This requires traversing the context graph backwards
-        
+
         query = """
         FOR ctx IN ActivityContext
         FILTER ctx.Handle == @context_handle
-        
+
         // Find previous contexts that this one refers to
         // This is a complex traversal based on cursor references
-        
+
         RETURN ctx
         """
-        
+
         # Process and return the results
-        
+
     def get_exploration_branches(self, query_id):
         """Get different exploration branches from a common query point."""
         # Implementation identifies divergent query paths
-        
+
         # Similar to get_query_path, but identifies branches
         # where the path diverges into multiple directions
 ```
@@ -259,93 +259,93 @@ class QueryNavigator:
 ```python
 class QueryRelationshipDetector:
     """Detects relationships between queries."""
-    
+
     def detect_refinements(self, query1, query2):
         """Detect if query2 is a refinement of query1."""
         # Analyze query structure for added constraints
-        
+
         # If query1 is "Find documents about Indaleko"
         # and query2 is "Find PDF documents about Indaleko"
         # then query2 is a refinement of query1
-        
+
         # We'll need to analyze query structure, which can be done by:
         # 1. Comparing parsed query structures
         # 2. Using LLM-based classification
         # 3. Simple text pattern analysis
-        
+
     def detect_broadening(self, query1, query2):
         """Detect if query2 is a broadening of query1."""
         # Analyze query structure for removed constraints
-        
+
         # Similar to detect_refinements but in reverse
-        
+
     def detect_pivot(self, query1, query2):
         """Detect if query2 is a pivot from query1 (related but different focus)."""
         # Analyze entity focus and context overlap
-        
+
         # If query1 is "Find documents about Indaleko"
         # and query2 is "Show me the authors of Indaleko documents"
         # then query2 is a pivot from query1
-        
+
         # This will likely use entity analysis to identify
         # when the focus changes while maintaining some similarity
 ```
 
-### Path Visualization 
+### Path Visualization
 
 ```python
 class QueryPathVisualizer:
     """Visualizes query paths and relationships."""
-    
+
     def __init__(self):
         self.graph = None
-        
+
     def generate_path_graph(self, query_id=None, context_handle=None):
         """Generate a visual graph of related queries."""
         # Creates a graph visualization using networkx
         import networkx as nx
-        
+
         # Create a new graph
         self.graph = nx.DiGraph()
-        
+
         # Get query path or related queries
         navigator = QueryNavigator()
-        
+
         if query_id:
             path = navigator.get_query_path(query_id)
-            
+
             # Add nodes and edges for the path
             for i, query in enumerate(path):
                 self.graph.add_node(query["query_id"], label=query["query_text"])
-                
+
                 if i > 0:
                     # Connect to previous query
                     self.graph.add_edge(path[i-1]["query_id"], query["query_id"])
-                    
+
             # Add branches
             branches = navigator.get_exploration_branches(query_id)
-            
+
             # Add nodes and edges for branches
-        
+
         return self.graph
-        
+
     def export_graph(self, file_path, format="png"):
         """Export the graph in the specified format."""
         # Exports the visualization
         import networkx as nx
         import matplotlib.pyplot as plt
-        
+
         if not self.graph:
             raise ValueError("No graph has been generated")
-            
+
         plt.figure(figsize=(12, 8))
-        
+
         # Create a layout for the graph
         pos = nx.spring_layout(self.graph)
-        
+
         # Draw the graph
         nx.draw(
-            self.graph, pos, 
+            self.graph, pos,
             with_labels=True,
             node_color="skyblue",
             node_size=1500,
@@ -353,11 +353,11 @@ class QueryPathVisualizer:
             arrows=True,
             font_size=8
         )
-        
+
         # Save the graph
         plt.savefig(file_path, format=format)
         plt.close()
-        
+
         return file_path
 ```
 
@@ -368,46 +368,46 @@ class QueryPathVisualizer:
 ```python
 class TestQueryActivityProvider(unittest.TestCase):
     """Tests for the QueryActivityProvider class."""
-    
+
     def setUp(self):
         # Setup test environment with mock database
         self.provider = QueryActivityProvider()
-        
+
     def test_record_query(self):
         # Test query recording functionality
         query_text = "Find documents about Indaleko"
         results = [{"id": 1, "name": "Doc1"}, {"id": 2, "name": "Doc2"}]
-        
+
         query_id, context_handle = self.provider.record_query(query_text, results)
-        
+
         self.assertIsNotNone(query_id)
         self.assertIsNotNone(context_handle)
-        
+
         # Verify query was recorded in the database
-        
+
     def test_context_association(self):
         # Test context association
         query_text = "Find documents about Indaleko"
         query_id, context_handle = self.provider.record_query(query_text)
-        
+
         # Get query by ID
         query_data = self.provider.get_query_by_id(query_id)
-        
+
         self.assertEqual(query_data["context_handle"], str(context_handle))
-        
+
     def test_query_attributes(self):
         # Test query attribute handling
         query_text = "Find documents about Indaleko"
         results = [{"id": 1, "name": "Doc1"}, {"id": 2, "name": "Doc2"}]
         execution_time = 123.45
         query_params = {"limit": 10}
-        
+
         query_id, _ = self.provider.record_query(
             query_text, results, execution_time, query_params
         )
-        
+
         query_data = self.provider.get_query_by_id(query_id)
-        
+
         self.assertEqual(query_data["query_text"], query_text)
         self.assertEqual(query_data["result_count"], 2)
         self.assertEqual(query_data["execution_time"], execution_time)
@@ -421,49 +421,49 @@ def test_query_context_integration():
     """Test the full query context integration."""
     # Initialize query CLI with context integration
     cli = QueryCLI(context_integration=True)
-    
+
     # Execute a sequence of related queries
     query1_id = cli.execute_query("Find documents about Indaleko")
     query2_id = cli.execute_query("Find PDF documents about Indaleko")
     query3_id = cli.execute_query("Find PDF documents about Indaleko created last week")
-    
+
     # Navigate between queries
     navigator = QueryNavigator()
     related = navigator.get_related_queries(query1_id)
-    
+
     # Verify query2 and query3 are related to query1
     related_ids = [q["query_id"] for q in related]
     assert query2_id in related_ids
     assert query3_id in related_ids
-    
+
     # Verify relationships
     detector = QueryRelationshipDetector()
     assert detector.detect_refinements(query1_id, query2_id)
     assert detector.detect_refinements(query2_id, query3_id)
-    
+
     # Get query path
     path = navigator.get_query_path(query3_id)
     path_ids = [q["query_id"] for q in path]
-    
+
     # Verify path contains the sequence of queries
     assert query1_id in path_ids
     assert query2_id in path_ids
     assert query3_id in path_ids
-    
+
     # Verify correct order
     assert path_ids.index(query1_id) < path_ids.index(query2_id)
     assert path_ids.index(query2_id) < path_ids.index(query3_id)
-    
+
     # Test path visualization
     visualizer = QueryPathVisualizer()
     graph = visualizer.generate_path_graph(query3_id)
     visualizer.export_graph("query_path.png")
-    
+
     # Verify graph structure
     assert query1_id in graph.nodes
     assert query2_id in graph.nodes
     assert query3_id in graph.nodes
-    
+
     # Verify edges
     assert (query1_id, query2_id) in graph.edges
     assert (query2_id, query3_id) in graph.edges

@@ -20,10 +20,10 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import os
-import sys
-import subprocess
 import argparse
+import os
+import subprocess
+import sys
 
 # Set up path to include Indaleko modules
 # Find the Indaleko root directory
@@ -50,54 +50,61 @@ sys.path = new_path
 if current_path in sys.path:
     sys.path.remove(current_path)
 sys.path.insert(0, current_path)
-    
+
 print(f"INDALEKO_ROOT set to: {os.environ['INDALEKO_ROOT']}")
 print(f"Python path first entry: {sys.path[0]}")
 print(f"Full Python path: {sys.path}")
 
+
 def main():
     """Main function to run the Streamlit app"""
     parser = argparse.ArgumentParser(description="Run the Indaleko Streamlit GUI")
-    parser.add_argument("--port", type=int, default=8501, help="Port to run Streamlit on")
-    parser.add_argument("--browser", action="store_true", help="Open browser automatically")
+    parser.add_argument(
+        "--port", type=int, default=8501, help="Port to run Streamlit on",
+    )
+    parser.add_argument(
+        "--browser", action="store_true", help="Open browser automatically",
+    )
     args = parser.parse_args()
-    
+
     # Get the path to app.py
     app_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "app.py")
-    
+
     # Check that we can find the app
     if not os.path.exists(app_path):
         print(f"Error: Could not find app.py at {app_path}")
         sys.exit(1)
-    
+
     # Build the command
-    cmd = [
-        "streamlit", "run", app_path, 
-        "--server.port", str(args.port)
-    ]
-    
+    cmd = ["streamlit", "run", app_path, "--server.port", str(args.port)]
+
     if not args.browser:
         cmd.extend(["--server.headless", "true"])
-    
+
     try:
         # Run Streamlit
         print(f"Starting Indaleko GUI on port {args.port}...")
-        subprocess.run(cmd)
+        subprocess.run(cmd, check=False)
     except KeyboardInterrupt:
         print("\nShutting down Indaleko GUI...")
     except Exception as e:
         print(f"Error running Streamlit: {e}")
-        
+
         # Check if streamlit is installed
         try:
-            subprocess.run(["streamlit", "--version"], 
-                         stdout=subprocess.PIPE, 
-                         stderr=subprocess.PIPE)
+            subprocess.run(
+                ["streamlit", "--version"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, check=False,
+            )
         except:
-            print("\nStreamlit does not appear to be installed. Please install it with:")
-            print("\nuv pip install -e \".[gui]\"")
-            
+            print(
+                "\nStreamlit does not appear to be installed. Please install it with:",
+            )
+            print('\nuv pip install -e ".[gui]"')
+
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

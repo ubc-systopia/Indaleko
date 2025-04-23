@@ -25,7 +25,7 @@ import os
 import sys
 import uuid
 from enum import Enum
-from typing import Dict, List, Any, Optional
+from typing import Any
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -35,12 +35,13 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 from activity.collectors.storage.data_models.storage_activity_data_model import (
     StorageActivityType,
+    StorageItemType,
     StorageProviderType,
-    StorageItemType
 )
+from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
+
 # pylint: enable=wrong-import-position
 
 # Legacy attributes (preserved for backward compatibility)
@@ -51,6 +52,7 @@ ADP_STORAGE_IDENTITY = "df17c079-4d6d-4b9b-ad98-04dd37d05907"
 
 class StorageActivityAttributes(Enum):
     """UUIDs for storage activity semantic attributes."""
+
     # Common storage activity attributes
     STORAGE_ACTIVITY = uuid.UUID("f1a0c5d0-8e59-4c00-8c80-f80c1a3b4567")
     FILE_CREATE = uuid.UUID("f1a0c5d0-8e59-4c00-8c80-f80c1a3b4568")
@@ -71,7 +73,7 @@ class StorageActivityAttributes(Enum):
     FILE_VERSION = uuid.UUID("f1a0c5d0-8e59-4c00-8c80-f80c1a3b4583")
     FILE_RESTORE = uuid.UUID("f1a0c5d0-8e59-4c00-8c80-f80c1a3b4584")
     FILE_TRASH = uuid.UUID("f1a0c5d0-8e59-4c00-8c80-f80c1a3b4585")
-    
+
     # Storage provider types
     PROVIDER_LOCAL_NTFS = uuid.UUID("f1a0c5d0-8e59-4c00-8c80-f80c1a3b4590")
     PROVIDER_DROPBOX = uuid.UUID("f1a0c5d0-8e59-4c00-8c80-f80c1a3b4591")
@@ -81,7 +83,7 @@ class StorageActivityAttributes(Enum):
     PROVIDER_NETWORK_SHARE = uuid.UUID("f1a0c5d0-8e59-4c00-8c80-f80c1a3b4595")
     PROVIDER_S3 = uuid.UUID("f1a0c5d0-8e59-4c00-8c80-f80c1a3b4596")
     PROVIDER_AZURE_BLOB = uuid.UUID("f1a0c5d0-8e59-4c00-8c80-f80c1a3b4597")
-    
+
     # Storage implementation-specific attributes
     STORAGE_NTFS = uuid.UUID("f1a0c5d0-8e59-4c00-8c80-f80c1a3b4620")
     STORAGE_DROPBOX = uuid.UUID("f1a0c5d0-8e59-4c00-8c80-f80c1a3b4621")
@@ -89,14 +91,14 @@ class StorageActivityAttributes(Enum):
     STORAGE_GDRIVE = uuid.UUID("f1a0c5d0-8e59-4c00-8c80-f80c1a3b4623")
     STORAGE_ICLOUD = uuid.UUID("f1a0c5d0-8e59-4c00-8c80-f80c1a3b4624")
     STORAGE_SHARED = uuid.UUID("f1a0c5d0-8e59-4c00-8c80-f80c1a3b4625")
-    
+
     # Storage item types
     ITEM_FILE = uuid.UUID("f1a0c5d0-8e59-4c00-8c80-f80c1a3b4600")
     ITEM_DIRECTORY = uuid.UUID("f1a0c5d0-8e59-4c00-8c80-f80c1a3b4601")
     ITEM_SYMLINK = uuid.UUID("f1a0c5d0-8e59-4c00-8c80-f80c1a3b4602")
     ITEM_SHORTCUT = uuid.UUID("f1a0c5d0-8e59-4c00-8c80-f80c1a3b4603")
     ITEM_VIRTUAL = uuid.UUID("f1a0c5d0-8e59-4c00-8c80-f80c1a3b4604")
-    
+
     # File metadata attributes
     FILE_NAME = uuid.UUID("f1a0c5d0-8e59-4c00-8c80-f80c1a3b4610")
     FILE_PATH = uuid.UUID("f1a0c5d0-8e59-4c00-8c80-f80c1a3b4611")
@@ -152,96 +154,144 @@ ITEM_TYPE_TO_SEMANTIC_ATTRIBUTE = {
 }
 
 
-def get_storage_activity_semantic_attributes() -> List[IndalekoSemanticAttributeDataModel]:
+def get_storage_activity_semantic_attributes() -> (
+    list[IndalekoSemanticAttributeDataModel]
+):
     """
     Get all defined semantic attributes for storage activities.
-    
+
     Returns:
         List of semantic attribute data models
     """
     attributes = []
     for attr in StorageActivityAttributes:
+        # Convert UUID to string for compatibility with IndalekoSemanticAttributeDataModel
+        identifier = uuid_to_str(attr.value)
+
         attribute = IndalekoSemanticAttributeDataModel(
-            Identifier=attr.value,
+            Identifier=identifier,
             Label=attr.name,
-            Description=f"Storage activity: {attr.name}"
+            Description=f"Storage activity: {attr.name}",
         )
         attributes.append(attribute)
     return attributes
 
 
-def get_semantic_attributes_for_activity(activity_data: Dict[str, Any]) -> List[IndalekoSemanticAttributeDataModel]:
+def uuid_to_str(value):
+    """
+    Convert UUID objects to strings for compatibility with IndalekoSemanticAttributeDataModel.
+
+    Args:
+        value: Value to convert if it's a UUID
+
+    Returns:
+        String representation of UUID or the original value
+    """
+    if isinstance(value, uuid.UUID):
+        return str(value)
+    return value
+
+
+def get_semantic_attributes_for_activity(
+    activity_data: dict[str, Any],
+) -> list[IndalekoSemanticAttributeDataModel]:
     """
     Get semantic attributes for a storage activity.
-    
+
     Args:
         activity_data: Dictionary containing activity data
-        
+
     Returns:
         List of semantic attribute data models
     """
     attributes = []
-    
+
     # Add common storage activity attribute
-    attributes.append(IndalekoSemanticAttributeDataModel(
-        Identifier=StorageActivityAttributes.STORAGE_ACTIVITY.value
-    ))
-    
+    attributes.append(
+        IndalekoSemanticAttributeDataModel(
+            Identifier=uuid_to_str(StorageActivityAttributes.STORAGE_ACTIVITY.value),
+        ),
+    )
+
     # Add activity type attribute
     activity_type = activity_data.get("activity_type")
     if activity_type and activity_type in ACTIVITY_TYPE_TO_SEMANTIC_ATTRIBUTE:
-        attributes.append(IndalekoSemanticAttributeDataModel(
-            Identifier=ACTIVITY_TYPE_TO_SEMANTIC_ATTRIBUTE[activity_type].value
-        ))
-    
+        attributes.append(
+            IndalekoSemanticAttributeDataModel(
+                Identifier=uuid_to_str(
+                    ACTIVITY_TYPE_TO_SEMANTIC_ATTRIBUTE[activity_type].value,
+                ),
+            ),
+        )
+
     # Add provider type attribute
     provider_type = activity_data.get("provider_type")
     if provider_type and provider_type in PROVIDER_TYPE_TO_SEMANTIC_ATTRIBUTE:
-        attributes.append(IndalekoSemanticAttributeDataModel(
-            Identifier=PROVIDER_TYPE_TO_SEMANTIC_ATTRIBUTE[provider_type].value
-        ))
-    
+        attributes.append(
+            IndalekoSemanticAttributeDataModel(
+                Identifier=uuid_to_str(
+                    PROVIDER_TYPE_TO_SEMANTIC_ATTRIBUTE[provider_type].value,
+                ),
+            ),
+        )
+
     # Add item type attribute
     item_type = activity_data.get("item_type")
     if item_type and item_type in ITEM_TYPE_TO_SEMANTIC_ATTRIBUTE:
-        attributes.append(IndalekoSemanticAttributeDataModel(
-            Identifier=ITEM_TYPE_TO_SEMANTIC_ATTRIBUTE[item_type].value
-        ))
-    
+        attributes.append(
+            IndalekoSemanticAttributeDataModel(
+                Identifier=uuid_to_str(ITEM_TYPE_TO_SEMANTIC_ATTRIBUTE[item_type].value),
+            ),
+        )
+
     # Add file name attribute if present
-    if "file_name" in activity_data and activity_data["file_name"]:
-        attributes.append(IndalekoSemanticAttributeDataModel(
-            Identifier=StorageActivityAttributes.FILE_NAME.value,
-            Value=activity_data["file_name"]
-        ))
-    
+    if activity_data.get("file_name"):
+        attributes.append(
+            IndalekoSemanticAttributeDataModel(
+                Identifier=uuid_to_str(StorageActivityAttributes.FILE_NAME.value),
+                Value=activity_data["file_name"],
+            ),
+        )
+
     # Add file path attribute if present
-    if "file_path" in activity_data and activity_data["file_path"]:
-        attributes.append(IndalekoSemanticAttributeDataModel(
-            Identifier=StorageActivityAttributes.FILE_PATH.value,
-            Value=activity_data["file_path"]
-        ))
-    
+    if activity_data.get("file_path"):
+        attributes.append(
+            IndalekoSemanticAttributeDataModel(
+                Identifier=uuid_to_str(StorageActivityAttributes.FILE_PATH.value),
+                Value=activity_data["file_path"],
+            ),
+        )
+
     # Add file size attribute if present
     if "size" in activity_data and activity_data["size"] is not None:
-        attributes.append(IndalekoSemanticAttributeDataModel(
-            Identifier=StorageActivityAttributes.FILE_SIZE.value,
-            Value=activity_data["size"]
-        ))
-    
+        attributes.append(
+            IndalekoSemanticAttributeDataModel(
+                Identifier=uuid_to_str(StorageActivityAttributes.FILE_SIZE.value),
+                Value=activity_data["size"],
+            ),
+        )
+
     # Add file mime type attribute if present
-    if "mime_type" in activity_data and activity_data["mime_type"]:
-        attributes.append(IndalekoSemanticAttributeDataModel(
-            Identifier=StorageActivityAttributes.FILE_MIME_TYPE.value,
-            Value=activity_data["mime_type"]
-        ))
-    
+    if activity_data.get("mime_type"):
+        attributes.append(
+            IndalekoSemanticAttributeDataModel(
+                Identifier=uuid_to_str(StorageActivityAttributes.FILE_MIME_TYPE.value),
+                Value=activity_data["mime_type"],
+            ),
+        )
+
     # Add file extension attribute if present
-    if "file_name" in activity_data and activity_data["file_name"] and "." in activity_data["file_name"]:
+    if (
+        "file_name" in activity_data
+        and activity_data["file_name"]
+        and "." in activity_data["file_name"]
+    ):
         extension = activity_data["file_name"].split(".")[-1].lower()
-        attributes.append(IndalekoSemanticAttributeDataModel(
-            Identifier=StorageActivityAttributes.FILE_EXTENSION.value,
-            Value=extension
-        ))
-    
+        attributes.append(
+            IndalekoSemanticAttributeDataModel(
+                Identifier=uuid_to_str(StorageActivityAttributes.FILE_EXTENSION.value),
+                Value=extension,
+            ),
+        )
+
     return attributes

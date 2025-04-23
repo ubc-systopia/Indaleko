@@ -23,7 +23,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
-from typing import Union
 from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -38,12 +37,12 @@ from activity.activity_metadata import ActivityCollectionMetadata
 from activity.recorders.registration_service import (
     IndalekoActivityDataRegistrationService,
 )
-from db import IndalekoDBConfig, IndalekoDBCollections
 from data_models.collection_info import CollectionInfo
 from data_models.collection_metadata_data_model import (
     IndalekoCollectionMetadataDataModel,
 )
 from data_models.db_index import IndalekoCollectionIndexDataModel
+from db import IndalekoDBCollections, IndalekoDBConfig
 from platforms.machine_config_metadata import MachineConfigCollectionMetadata
 from storage.object_metadata import ObjectCollectionMetadata
 from storage.relationship_metadata import RelationshipCollectionMetadata
@@ -73,7 +72,7 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
             return
         self.collections = {}
         self.db_config = db_config
-        self.collections = self.db_config.db.collections()
+        self.collections = self.db_config._arangodb.collections()
         self.collections_metadata = {}
         self.collections_additional_data = {}
         self._initialized = True
@@ -101,18 +100,18 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
             self._collection_handlers[collection["name"]](self)
 
     def generate_new_collection_metadata(
-        self, name: str
+        self, name: str,
     ) -> IndalekoCollectionMetadataDataModel:
         """Generate a new collection metadata object."""
         if self.default_collection_metadata.get(name):
             return self.default_collection_metadata[name]
-        db_collection = self.db_config.db.collection(name)
+        db_collection = self.db_config._arangodb.collection(name)
         assert db_collection is not None, f"Failed to get collection {name}"
         description = db_collection.properties().get(
-            "description", "No description available"
+            "description", "No description available",
         )
         query_guidelines = [
-            db_collection.properties().get("query_guidelines", "No guidelines provided")
+            db_collection.properties().get("query_guidelines", "No guidelines provided"),
         ]
         schema = db_collection.properties().get("schema", {})
         if not schema:
@@ -127,11 +126,11 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
         )
 
     def get_collection_metadata(
-        self, collection_name: str
-    ) -> Union[IndalekoCollectionMetadataDataModel, None]:
+        self, collection_name: str,
+    ) -> IndalekoCollectionMetadataDataModel | None:
         """Get the metadata for the specified collection."""
-        db_collection = self.db_config.db.collection(
-            IndalekoDBCollections.Indaleko_Collection_Metadata
+        db_collection = self.db_config._arangodb.collection(
+            IndalekoDBCollections.Indaleko_Collection_Metadata,
         )
         assert (
             db_collection is not None
@@ -154,7 +153,7 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
         """
         collection_data = {}
         for name, data in self.collections_metadata.items():
-            collection = self.db_config.db.collection(name)
+            collection = self.db_config._arangodb.collection(name)
             if collection is None:
                 ic(f"Failed to get collection {name}")
                 continue
@@ -184,10 +183,10 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
         collections_metadata = IndalekoDBCollectionsMetadata()
         for provider in IndalekoActivityDataRegistrationService.get_provider_list():
             collection = IndalekoActivityDataRegistrationService.lookup_activity_provider_collection(
-                provider["Identifier"]
+                provider["Identifier"],
             )
             collection_metadata = collections_metadata.get_collection_metadata(
-                collection.name
+                collection.name,
             )
             self.collections_metadata[collection.name] = collection_metadata
         return collection_data
@@ -218,7 +217,7 @@ class IndalekoCollectorMetadataCLI(IndalekoBaseCLI):
         super().__init__(cli_data, handler_mixin, features)
         config_data = self.get_config_data()
         config_file_path = os.path.join(
-            config_data["ConfigDirectory"], config_data["DBConfigFile"]
+            config_data["ConfigDirectory"], config_data["DBConfigFile"],
         )
         self.db_config = IndalekoDBConfig(config_file=config_file_path, start=True)
         self.collections_metadata = IndalekoDBCollectionsMetadata()

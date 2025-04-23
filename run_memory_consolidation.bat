@@ -1,7 +1,7 @@
 @echo off
 :: Memory Consolidation Runner for Indaleko Cognitive Memory System
 :: For Windows environments
-:: 
+::
 :: This script runs the memory consolidation process for the Indaleko cognitive memory system,
 :: which transfers information between different memory tiers (sensory → short-term → long-term → archival).
 ::

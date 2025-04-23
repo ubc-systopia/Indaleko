@@ -91,17 +91,17 @@ The system uses a sliding window approach to detect sequential patterns:
 # Scan through timeline with sliding window
 for i in range(len(timeline) - window_size + 1):
     window = timeline[i:i+window_size]
-    
+
     # Create sequence signature from event types
     event_signatures = []
     for event_id in window:
         event = self.data.events.get(event_id)
         if event:
             event_signatures.append(event.get_event_signature())
-    
+
     # Create a sequence signature
     sequence_sig = "|".join(event_signatures)
-    
+
     # Update counter
     sequence_counter[sequence_sig] += 1
 ```
@@ -119,12 +119,12 @@ for window in time_windows:
         event = self.data.events.get(event_id)
         if event:
             events_by_source[event.source_type].append(event_id)
-    
+
     # Check pairs of source types
     for i, source_type1 in enumerate(source_types):
         for j in range(i+1, len(source_types)):
             source_type2 = source_types[j]
-            
+
             # Calculate correlation strength
             correlation = CrossSourceCorrelation(
                 source_events=events1 + events2,

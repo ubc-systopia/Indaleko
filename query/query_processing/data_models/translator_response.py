@@ -19,12 +19,12 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from datetime import datetime, timezone
 import os
 import sys
+from datetime import UTC, datetime
+from typing import Any
 
 from pydantic import Field, validator
-from typing import Any, Optional
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -46,10 +46,10 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 # from query.llm_base import IndalekoLLMBase
-# from data_models.collection_metadata_data_model import IndalekoCollectionMetadataDataModel  # noqa: E402
-# from data_models.db_index import IndalekoCollectionIndexDataModel  # noqa: E402
-# from data_models.named_entity import NamedEntityCollection  # noqa: E402
-# from query.query_processing.data_models.query_output import StructuredQuery  # noqa: E402
+# from data_models.collection_metadata_data_model import IndalekoCollectionMetadataDataModel
+# from data_models.db_index import IndalekoCollectionIndexDataModel
+# from data_models.named_entity import NamedEntityCollection
+# from query.query_processing.data_models.query_output import StructuredQuery
 # pylint: enable=wrong-import-position
 
 
@@ -61,17 +61,17 @@ class TranslatorOutput(IndalekoBaseModel):
     aql_query: str
     explanation: str
     confidence: float
-    observations: Optional[str] = None
+    observations: str | None = None
     performance_info: dict[str, Any] = {}
-    additional_notes: Optional[str] = None
+    additional_notes: str | None = None
     bind_vars: dict[str, Any] = {}
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    
-    @validator('timestamp')
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    @validator("timestamp")
     def ensure_timezone(cls, v):
         """Ensure the timestamp has a timezone."""
         if v.tzinfo is None:
-            return v.replace(tzinfo=timezone.utc)
+            return v.replace(tzinfo=UTC)
         return v
 
     class Config:
@@ -89,10 +89,8 @@ class TranslatorOutput(IndalekoBaseModel):
                     "input_tokens": 75,
                     "output_tokens": 50,
                 },
-                "bind_vars": {
-                    "value": "example"
-                },
+                "bind_vars": {"value": "example"},
                 "additional_notes": "Have a nice day!",
                 "timestamp": "2025-02-17T12:34:56.789Z",
-            }
+            },
         }

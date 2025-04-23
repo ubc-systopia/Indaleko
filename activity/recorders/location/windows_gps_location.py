@@ -19,14 +19,11 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-# import json
-# import math
 import os
 import sys
 import uuid
+from datetime import UTC, datetime
 
-from typing import Union
-from datetime import datetime
 from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -37,22 +34,23 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from db.db_config import IndalekoDBConfig
+from location_data_recorder import BaseLocationDataRecorder
+
 from activity.collectors.known_semantic_attributes import KnownSemanticAttributes
+from activity.collectors.location.data_models.windows_gps_location_data_model import (
+    WindowsGPSLocationDataModel,
+)
+from activity.collectors.location.windows_gps_location import WindowsGPSLocation
 
 # from activity.registration import IndalekoActivityDataRegistration
 from activity.recorders.registration_service import (
     IndalekoActivityDataRegistrationService,
 )
-from activity.collectors.location.windows_gps_location import WindowsGPSLocation
-from activity.collectors.location.data_models.windows_gps_location_data_model import (
-    WindowsGPSLocationDataModel,
-)
-from data_models.record import IndalekoRecordDataModel
-from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from data_models.i_uuid import IndalekoUUIDDataModel
+from data_models.record import IndalekoRecordDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
-from location_data_recorder import BaseLocationDataRecorder
+from data_models.source_identifier import IndalekoSourceIdentifierDataModel
+from db.db_config import IndalekoDBConfig
 from utils.misc.data_management import decode_binary_data
 
 # pylint: enable=wrong-import-position
@@ -60,7 +58,8 @@ from utils.misc.data_management import decode_binary_data
 
 class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
     """This class provides a utility for acquiring GPS data for a windows system
-    and recording it in the database."""
+    and recording it in the database.
+    """
 
     identifier = uuid.UUID("7e85669b-ecc7-4d57-8b51-8d325ea84930")
     version = "1.0.0"
@@ -75,10 +74,10 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
     def __init__(self, **kwargs):
         """Initialize the Windows GPS Location Recorder."""
         self.min_movement_change_required = kwargs.get(
-            "min_movement_change_required", self.default_min_movement_change_required
+            "min_movement_change_required", self.default_min_movement_change_required,
         )
         self.max_time_between_updates = kwargs.get(
-            "max_time_between_updates", self.default_max_time_between_updates
+            "max_time_between_updates", self.default_max_time_between_updates,
         )
         self.db_config = IndalekoDBConfig()
         assert self.db_config is not None, "Failed to get the database configuration"
@@ -94,7 +93,7 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
             "Description": self.description,
             "Record": IndalekoRecordDataModel(
                 SourceIdentifier=source_identifier,
-                Timestamp=datetime.now(),
+                Timestamp=datetime.now(UTC),
                 Attributes={},
                 Data="",
             ),
@@ -104,27 +103,27 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
             self.provider_registrar is not None
         ), "Failed to get the provider registrar"
         collector_data = self.provider_registrar.lookup_provider_by_identifier(
-            str(self.identifier)
+            str(self.identifier),
         )
         if collector_data is None:
             ic("Registering the provider")
             collector_data, collection = self.provider_registrar.register_provider(
-                **record_kwargs
+                **record_kwargs,
             )
         else:
             ic("Provider already registered")
             collection = IndalekoActivityDataRegistrationService.lookup_activity_provider_collection(
-                str(self.identifier)
+                str(self.identifier),
             )
         ic(collection)
         self.collector_data = collector_data
         self.collector = WindowsGPSLocation()
         self.collection = collection
 
-    def get_latest_db_update(self) -> Union[WindowsGPSLocationDataModel, None]:
+    def get_latest_db_update(self) -> WindowsGPSLocationDataModel | None:
         """Get the latest update from the database."""
         doc = BaseLocationDataRecorder.get_latest_db_update_dict(self.collection)
-        data = decode_binary_data(doc['Record']['Data'])
+        data = decode_binary_data(doc["Record"]["Data"])
         cleaned_data = {}
         for key, value in data.items():
             if value is not None:
@@ -133,13 +132,13 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
         ic(location_data)
         return location_data
 
-    def update_data(self) -> Union[WindowsGPSLocationDataModel, None]:
+    def update_data(self) -> WindowsGPSLocationDataModel | None:
         """Update the data in the database."""
         ksa = KnownSemanticAttributes
         current_data = WindowsGPSLocation().get_coords()
         ic(current_data)
         assert isinstance(
-            current_data, WindowsGPSLocationDataModel
+            current_data, WindowsGPSLocationDataModel,
         ), f"current_data is not a WindowsGPSLocationDataModel {type(current_data)}"
         latest_db_data = self.get_latest_db_update()
         if not self.has_data_changed(current_data, latest_db_data):
@@ -209,7 +208,7 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
         """Store the processed data"""
         ksa = KnownSemanticAttributes
         assert isinstance(
-            data, WindowsGPSLocationDataModel
+            data, WindowsGPSLocationDataModel,
         ), f"current_data is not a WindowsGPSLocationDataModel {type(data)}"
         ic(type(data))
         latest_db_data = self.get_latest_db_update()

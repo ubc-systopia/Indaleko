@@ -1,9 +1,8 @@
-import platform
-import sys
-import subprocess
 import argparse
-import typing
 import os
+import platform
+import subprocess
+import sys
 
 # Check if Python version is >= 3.12
 
@@ -33,7 +32,7 @@ class Command:
         self.args.extend(arg)
 
     """
-    returns a list consisting of the command and all of its arguments. 
+    returns a list consisting of the command and all of its arguments.
     e.g: For the command 'docker ps -a', it will return ['docker', 'ps', '-a']
     """
 
@@ -64,7 +63,7 @@ class CommandBuilder:
         return self.command
 
 
-def run_commands(commands: typing.List[Command]):
+def run_commands(commands: list[Command]):
     # Create necessary folders
     folders_to_create = ["./config", "./data", "./logs"]
     for folder in folders_to_create:

@@ -20,7 +20,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-from typing import Any, Dict, List, Optional
 
 from icecream import ic
 
@@ -31,20 +30,26 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
-from query.tools.base import BaseTool, ToolDefinition, ToolInput, ToolOutput, ToolParameter
-from query.search_execution.query_executor.aql_executor import AQLExecutor
 from db import IndalekoDBConfig
+from query.search_execution.query_executor.aql_executor import AQLExecutor
+from query.tools.base import (
+    BaseTool,
+    ToolDefinition,
+    ToolInput,
+    ToolOutput,
+    ToolParameter,
+)
 
 
 class QueryExecutorTool(BaseTool):
     """Tool for executing AQL queries with optional EXPLAIN analysis."""
-    
+
     def __init__(self):
         """Initialize the query executor tool."""
         super().__init__()
         self._db_config = None
         self._executor = AQLExecutor()
-    
+
     @property
     def definition(self) -> ToolDefinition:
         """Get the tool definition."""
@@ -56,98 +61,98 @@ class QueryExecutorTool(BaseTool):
                     name="query",
                     description="The AQL query to execute",
                     type="string",
-                    required=True
+                    required=True,
                 ),
                 ToolParameter(
                     name="bind_vars",
                     description="Bind variables for the query",
                     type="object",
                     required=False,
-                    default={}
+                    default={},
                 ),
                 ToolParameter(
                     name="db_config_path",
                     description="Path to the database configuration file",
                     type="string",
-                    required=False
+                    required=False,
                 ),
                 ToolParameter(
                     name="explain_only",
                     description="Only return the query plan without executing the query",
                     type="boolean",
                     required=False,
-                    default=False
+                    default=False,
                 ),
                 ToolParameter(
                     name="include_plan",
                     description="Include the query plan in the results",
                     type="boolean",
                     required=False,
-                    default=True
+                    default=True,
                 ),
                 ToolParameter(
                     name="all_plans",
                     description="Include alternative query plans",
                     type="boolean",
                     required=False,
-                    default=False
+                    default=False,
                 ),
                 ToolParameter(
                     name="max_plans",
                     description="Maximum number of alternative plans to include",
                     type="integer",
                     required=False,
-                    default=5
+                    default=5,
                 ),
                 ToolParameter(
                     name="collect_performance",
                     description="Collect and include performance metrics",
                     type="boolean",
                     required=False,
-                    default=True
-                )
+                    default=True,
+                ),
             ],
             returns={
                 "results": "The query results (if query was executed)",
                 "execution_plan": "The query execution plan",
-                "performance": "Performance metrics (if collected)"
+                "performance": "Performance metrics (if collected)",
             },
             examples=[
                 {
                     "parameters": {
                         "query": "FOR doc IN Objects FILTER doc.Record.Attributes.Path LIKE '%pdf' RETURN doc",
                         "include_plan": True,
-                        "collect_performance": True
+                        "collect_performance": True,
                     },
                     "returns": {
                         "results": ["..."],
                         "execution_plan": {"...": "..."},
-                        "performance": {"execution_time_seconds": 0.123}
-                    }
-                }
-            ]
+                        "performance": {"execution_time_seconds": 0.123},
+                    },
+                },
+            ],
         )
-    
-    def _initialize_db_config(self, db_config_path: Optional[str] = None) -> None:
+
+    def _initialize_db_config(self, db_config_path: str | None = None) -> None:
         """
         Initialize the database configuration.
-        
+
         Args:
             db_config_path (Optional[str]): Path to the database configuration file.
         """
         if db_config_path is None:
             config_dir = os.path.join(os.environ.get("INDALEKO_ROOT"), "config")
             db_config_path = os.path.join(config_dir, "indaleko-db-config.ini")
-        
+
         self._db_config = IndalekoDBConfig(config_file=db_config_path)
-    
+
     def execute(self, input_data: ToolInput) -> ToolOutput:
         """
         Execute the query executor tool.
-        
+
         Args:
             input_data (ToolInput): The input data for the tool.
-            
+
         Returns:
             ToolOutput: The result of the tool execution.
         """
@@ -160,13 +165,13 @@ class QueryExecutorTool(BaseTool):
         all_plans = input_data.parameters.get("all_plans", False)
         max_plans = input_data.parameters.get("max_plans", 5)
         collect_performance = input_data.parameters.get("collect_performance", True)
-        
+
         # Initialize DB config if needed
         if self._db_config is None:
             self._initialize_db_config(db_config_path)
-        
+
         ic(query)
-        
+
         try:
             # Always get the execution plan
             execution_plan = None
@@ -176,9 +181,9 @@ class QueryExecutorTool(BaseTool):
                     data_connector=self._db_config,
                     bind_vars=bind_vars,
                     all_plans=all_plans,
-                    max_plans=max_plans
+                    max_plans=max_plans,
                 )
-            
+
             # Execute the query if not in explain-only mode
             results = None
             if not explain_only:
@@ -186,9 +191,9 @@ class QueryExecutorTool(BaseTool):
                     query=query,
                     data_connector=self._db_config,
                     bind_vars=bind_vars,
-                    collect_performance=collect_performance
+                    collect_performance=collect_performance,
                 )
-            
+
             # Extract performance metrics if present
             performance = None
             if results and isinstance(results, list) and len(results) > 0:
@@ -198,7 +203,7 @@ class QueryExecutorTool(BaseTool):
                         # Remove the performance item from the results
                         results.remove(item)
                         break
-            
+
             # Return the result
             result_data = {}
             if results is not None:
@@ -207,19 +212,19 @@ class QueryExecutorTool(BaseTool):
                 result_data["execution_plan"] = execution_plan
             if performance is not None:
                 result_data["performance"] = performance
-            
+
             return ToolOutput(
                 tool_name=self.definition.name,
                 success=True,
                 result=result_data,
-                elapsed_time=0.0  # Will be filled by wrapper
+                elapsed_time=0.0,  # Will be filled by wrapper
             )
-            
+
         except Exception as e:
             ic(f"Error executing query: {e}")
             return ToolOutput(
                 tool_name=self.definition.name,
                 success=False,
                 error=str(e),
-                elapsed_time=0.0  # Will be filled by wrapper
+                elapsed_time=0.0,  # Will be filled by wrapper
             )

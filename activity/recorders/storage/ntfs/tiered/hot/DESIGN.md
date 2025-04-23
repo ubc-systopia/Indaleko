@@ -29,38 +29,38 @@ The main recorder class that implements the recorder interface and manages activ
 class NtfsHotTierRecorder(StorageActivityRecorder):
     """
     Hot tier recorder for NTFS storage activities.
-    
+
     Handles high-volume, recent NTFS file system activities collected from the USN Journal,
     preserving full fidelity before eventual transition to warm tier.
     """
-    
+
     def __init__(self, **kwargs):
         """Initialize the hot tier recorder."""
         # Core configuration
         self._collection_name = "ntfs_activities_hot"
         self._ttl_days = kwargs.get("ttl_days", 4)  # Default 4-day retention
-        
+
         # Initialize recorder base
         super().__init__(**kwargs)
-        
+
         # Set up TTL index for automatic expiration
         self._setup_ttl_index()
-        
+
         # Initialize FRN to UUID mapping cache
         self._frn_entity_cache = {}
-        
+
     def process_jsonl_file(self, file_path: str) -> List[uuid.UUID]:
         """Process a JSONL file containing NTFS activities."""
         # Implementation for file-based processing
-        
+
     def process_collector_activities(self, collector) -> List[uuid.UUID]:
         """Process activities directly from a collector instance."""
         # Implementation for direct collector integration
-        
+
     def _setup_ttl_index(self):
         """Set up TTL index for automatic expiration of hot tier data."""
         # Implementation for TTL index creation
-        
+
     def _map_frn_to_entity(self, frn: str, volume: str) -> uuid.UUID:
         """Map a file reference number to an entity UUID."""
         # Implementation for entity mapping
@@ -127,14 +127,14 @@ def get_or_create_entity_uuid(frn: str, volume: str, file_path: str, is_director
     cache_key = f"{volume}:{frn}"
     if cache_key in self._frn_entity_cache:
         return self._frn_entity_cache[cache_key]
-    
+
     # Query existing mapping
     entity = self._query_entity_by_frn(frn, volume)
     if entity:
         # Store in cache and return
         self._frn_entity_cache[cache_key] = entity["_id"]
         return entity["_id"]
-    
+
     # No existing entity, create new one
     entity_uuid = self._create_entity(frn, volume, file_path, is_directory)
     self._frn_entity_cache[cache_key] = entity_uuid
@@ -157,13 +157,13 @@ def _setup_ttl_index(self):
     """Set up TTL index for automatic expiration of hot tier data."""
     # Calculate TTL in seconds
     ttl_seconds = self._ttl_days * 24 * 60 * 60
-    
+
     # Create TTL index on ttl_timestamp field
     self._collection.add_ttl_index(
         fields=["ttl_timestamp"],
         expireAfter=ttl_seconds
     )
-    
+
     self._logger.info(f"Created TTL index with {self._ttl_days} day expiration")
 ```
 
@@ -177,20 +177,20 @@ Even in the hot tier, we begin tracking an importance score that will influence 
 def _calculate_initial_importance(self, activity_data: Dict) -> float:
     """Calculate initial importance score for an activity."""
     base_score = 0.3  # Start with modest importance
-    
+
     # Factor 1: Activity type importance
     if activity_data["activity_type"] in ["create", "security_change"]:
         base_score += 0.2  # Creation events matter more
-    
+
     # Factor 2: File type importance (basic version)
     file_path = activity_data.get("file_path", "")
     if any(file_path.lower().endswith(ext) for ext in [".docx", ".xlsx", ".pdf", ".py", ".md"]):
         base_score += 0.1  # Document types matter more
-    
+
     # Factor 3: Path significance
     if "\\Documents\\" in file_path or "\\Projects\\" in file_path:
         base_score += 0.1  # User document areas matter more
-    
+
     return min(1.0, base_score)  # Cap at 1.0
 ```
 
@@ -209,12 +209,12 @@ def _update_entity_metadata(self, entity_id: uuid.UUID, activity_data: Dict):
     if activity_data["activity_type"] == "delete":
         self._mark_entity_deleted(entity_id)
         return
-    
+
     # For renames, update the entity's name and path
     if activity_data["activity_type"] == "rename":
         self._update_entity_name_path(entity_id, activity_data)
         return
-    
+
     # For other activities, update last_modified and access timestamps
     self._update_entity_timestamps(entity_id, activity_data)
 ```

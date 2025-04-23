@@ -11,16 +11,16 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from activity.recorders.location.ip_location_recorder import IPLocationRecorder
 from db.db_config import IndalekoDBConfig
 
 # pylint: enable=wrong-import-position
+
 
 def test_registration_and_collection_created(ip_recorder):
     cfg = IndalekoDBConfig()
     # The collection should exist in ArangoDB
     # Extract collection names from ArangoDB
-    names = [col['name'] for col in cfg.db.collections()]
+    names = [col["name"] for col in cfg._arangodb.collections()]
     assert ip_recorder.collection.name in names
 
 
@@ -49,12 +49,17 @@ def test_change_triggers_new_insert(monkeypatch, ip_recorder):
     count1 = ip_recorder.collection.collection.count()
     # Monkey-patch provider to return a new, shifted location
     fake_ip = "9.9.9.9"
+
     def fake_capture(timeout=None):
         return fake_ip
+
     def fake_get_data():
-        return {"lat": orig.Location.latitude + 1.0,
-                "lon": orig.Location.longitude,
-                "query": fake_ip}
+        return {
+            "lat": orig.Location.latitude + 1.0,
+            "lon": orig.Location.longitude,
+            "query": fake_ip,
+        }
+
     monkeypatch.setattr(ip_recorder.provider, "capture_public_ip_address", fake_capture)
     monkeypatch.setattr(ip_recorder.provider, "get_ip_location_data", fake_get_data)
     # Trigger update again

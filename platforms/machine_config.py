@@ -22,7 +22,6 @@ import argparse
 
 # import datetime
 import json
-import uuid
 
 # import socket
 # import platform
@@ -31,12 +30,9 @@ import os
 # import logging
 # import re
 import sys
-import time
+import uuid
 
 import arango
-
-from typing import List, Union
-
 from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -53,7 +49,7 @@ os.environ["INDALEKO_SKIP_VIEWS"] = "1"
 # pylint: disable=wrong-import-position
 from constants import IndalekoConstants
 from data_models import IndalekoMachineConfigDataModel
-from db.db_collections import IndalekoDBCollections  # noqa: E402
+from db.db_collections import IndalekoDBCollections
 from db.i_collections import IndalekoCollections
 from db.service_manager import IndalekoServiceManager
 
@@ -63,10 +59,12 @@ from db.service_manager import IndalekoServiceManager
 # Original IndalekoCollections.get_collection method
 original_get_collection = IndalekoCollections.get_collection
 
+
 # Faster replacement that always skips views
 @staticmethod
 def fast_get_collection(name, skip_views=True):
     return original_get_collection(name, skip_views=True)
+
 
 # Replace the method
 IndalekoCollections.get_collection = fast_get_collection
@@ -81,7 +79,7 @@ class IndalekoMachineConfig:
     default_config_dir = IndalekoConstants.default_config_dir
     indaleko_machine_config_captured_label_str = "eb7eaeed-6b21-4b6a-a586-dddca6a1d5a4"
     indaleko_machine_config_captured_label_uuid = uuid.UUID(
-        indaleko_machine_config_captured_label_str
+        indaleko_machine_config_captured_label_str,
     )
 
     def __init__(self, **kwargs):
@@ -105,22 +103,22 @@ class IndalekoMachineConfig:
         if not self.offline:
             self.collection = IndalekoCollections().get_collection(
                 IndalekoDBCollections.Indaleko_MachineConfig_Collection,
-                skip_views=True  # Skip view creation for performance
+                skip_views=True,  # Skip view creation for performance
             )
             assert (
                 self.collection is not None
             ), "Failed to get the machine configuration collection"
 
     @staticmethod
-    def find_configs_in_db(source_id: Union[str, None] = None) -> list:
+    def find_configs_in_db(source_id: str | None = None) -> list:
         """Find the machine configurations in the database."""
         assert source_id is not None and validate_uuid_string(
-            source_id
+            source_id,
         ), "Invalid source identifier"
         return [
             IndalekoMachineConfig.serialize(config)
             for config in IndalekoMachineConfig.lookup_machine_configurations(
-                source_id=source_id
+                source_id=source_id,
             )
         ]
 
@@ -141,7 +139,7 @@ class IndalekoMachineConfig:
         if not overwrite:
             existing_machine_config = (
                 IndalekoMachineConfig.lookup_machine_configuration_by_machine_id(
-                    self.machine_id
+                    self.machine_id,
                 )
             )
             if existing_machine_config:
@@ -168,8 +166,7 @@ class IndalekoMachineConfig:
         """Delete the configuration from the database"""
         assert validate_uuid_string(machine_id), "Invalid machine identifier"
         IndalekoCollections(skip_views=True).get_collection(
-            IndalekoDBCollections.Indaleko_MachineConfig_Collection,
-            skip_views=True
+            IndalekoDBCollections.Indaleko_MachineConfig_Collection, skip_views=True,
         ).delete(machine_id)
 
     @staticmethod
@@ -180,7 +177,7 @@ class IndalekoMachineConfig:
         assert isinstance(machine_id, str), "Machine ID must be a UUID string"
         assert validate_uuid_string(machine_id), "Invalid machine identifier"
         collections = IndalekoCollections()
-        results = collections.db_config.db.aql.execute(
+        results = collections.db_config._arangodb.aql.execute(
             "FOR doc IN @@collection FILTER doc._key == @machine_id RETURN doc",
             bind_vars={
                 "@collection": IndalekoDBCollections.Indaleko_MachineConfig_Collection,
@@ -192,12 +189,14 @@ class IndalekoMachineConfig:
     @staticmethod
     def lookup_machine_configurations(
         source_id: str = None,
-    ) -> List["IndalekoMachineConfig"]:
+    ) -> list["IndalekoMachineConfig"]:
         """Lookup all machine configurations"""
-        collections = IndalekoCollections(skip_views=True)  # Skip view creation for performance
+        collections = IndalekoCollections(
+            skip_views=True,
+        )  # Skip view creation for performance
         query = "FOR doc IN @@collection RETURN doc"
         bind_vars = {
-            "@collection": IndalekoDBCollections.Indaleko_MachineConfig_Collection
+            "@collection": IndalekoDBCollections.Indaleko_MachineConfig_Collection,
         }
         if source_id is not None:
             assert validate_uuid_string(source_id), "Invalid source identifier"
@@ -208,7 +207,9 @@ class IndalekoMachineConfig:
                 "@collection": IndalekoDBCollections.Indaleko_MachineConfig_Collection,
                 "source": source_id,
             }
-        results = collections.db_config.db.aql.execute(query, bind_vars=bind_vars)
+        results = collections.db_config._arangodb.aql.execute(
+            query, bind_vars=bind_vars,
+        )
         return [IndalekoMachineConfig(**entry) for entry in results]
 
     def serialize(self) -> dict:
@@ -302,7 +303,7 @@ class TestMachineConfig:
         ic("Create a test machine configuration")
         existing_machine_config = (
             IndalekoMachineConfig.lookup_machine_configuration_by_machine_id(
-                TestMachineConfig.test_machine_config_data["machine_id"]
+                TestMachineConfig.test_machine_config_data["machine_id"],
             )
         )
         if existing_machine_config:
@@ -310,12 +311,12 @@ class TestMachineConfig:
             ic(existing_machine_config)
             return
         machine_config = IndalekoMachineConfig(
-            **TestMachineConfig.test_machine_config_data
+            **TestMachineConfig.test_machine_config_data,
         )
         machine_config.write_config_to_db()
         retrieved_config = (
             IndalekoMachineConfig.lookup_machine_configuration_by_machine_id(
-                TestMachineConfig.test_machine_config_data["machine_id"]
+                TestMachineConfig.test_machine_config_data["machine_id"],
             )
         )
         ic(retrieved_config)
@@ -327,7 +328,7 @@ class TestMachineConfig:
             assert validate_uuid_string(machine_id), "Invalid machine identifier"
             retrieve_configs = (
                 IndalekoMachineConfig.lookup_machine_configuration_by_machine_id(
-                    machine_id
+                    machine_id,
                 )
             )
             ic("List the test machine configuration")
@@ -398,7 +399,7 @@ def test_handler(args: argparse.Namespace) -> None:
     }
     existing_machine_config = (
         IndalekoMachineConfig.lookup_machine_configuration_by_machine_id(
-            test_machine_config_data["machine_id"]
+            test_machine_config_data["machine_id"],
         )
     )
     if existing_machine_config:
@@ -408,7 +409,7 @@ def test_handler(args: argparse.Namespace) -> None:
     machine_config = IndalekoMachineConfig(data=test_machine_config_data)
     machine_config.write_config_to_db()
     retrieved_config = IndalekoMachineConfig.lookup_machine_configuration_by_machine_id(
-        test_machine_config_data["machine_id"]
+        test_machine_config_data["machine_id"],
     )
     ic(retrieved_config)
 
@@ -418,27 +419,27 @@ def main():
     parser = argparse.ArgumentParser(description="Indaleko Machine Configuration")
     command_subparser = parser.add_subparsers(title="commands", dest="command")
     command_register = command_subparser.add_parser(
-        "register", help="Register a test machine configuration"
+        "register", help="Register a test machine configuration",
     )
     command_register.set_defaults(func=register_handler)
     command_list = command_subparser.add_parser(
-        "list", help="List all machine configurations"
+        "list", help="List all machine configurations",
     )
     command_list.add_argument(
-        "--machine_id", nargs=1, type=str, default=None, help="Machine ID to list"
+        "--machine_id", nargs=1, type=str, default=None, help="Machine ID to list",
     )
     command_list.set_defaults(func=list_handler)
     command_test = command_subparser.add_parser(
-        "test", help="Test creating a machine configuration"
+        "test", help="Test creating a machine configuration",
     )
     command_test.add_argument(
-        "--delete", action="store_true", help="Delete the test machine configuration"
+        "--delete", action="store_true", help="Delete the test machine configuration",
     )
     command_test.add_argument(
-        "--list", action="store_true", help="List the test machine configuration"
+        "--list", action="store_true", help="List the test machine configuration",
     )
     command_test.add_argument(
-        "--machine_id", nargs=1, type=str, default=None, help="Machine ID to list"
+        "--machine_id", nargs=1, type=str, default=None, help="Machine ID to list",
     )
     command_test.set_defaults(func=TestMachineConfig.test_handler)
     parser.set_defaults(func=list_handler)

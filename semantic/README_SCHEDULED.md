@@ -152,9 +152,9 @@ function Install-Task {
     $trigger = New-ScheduledTaskTrigger -Daily -At 2AM
     $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -DontStopOnIdleEnd -IdleSettings (New-ScheduledTaskIdleSettings -IdleDuration 00:10:00 -WaitTimeout 01:00:00)
     $principal = New-ScheduledTaskPrincipal -UserId (Get-CimInstance -ClassName Win32_ComputerSystem | Select-Object -ExpandProperty UserName) -LogonType S4U -RunLevel Lowest
-    
+
     Register-ScheduledTask -TaskName "Indaleko_Semantic_Processing" -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Description "Runs Indaleko semantic processing at low priority during idle time"
-    
+
     Write-Host "Scheduled task 'Indaleko_Semantic_Processing' installed successfully"
 }
 
@@ -236,11 +236,11 @@ We'll implement dynamic resource control through:
 def limit_cpu_usage(max_percent=30):
     """Limit CPU usage to specified percentage."""
     process = psutil.Process(os.getpid())
-    
+
     if platform.system() == "Linux":
         # Set nice level on Linux
         os.nice(19)  # Lowest priority
-    
+
     # Monitor and control CPU usage
     while True:
         cpu_percent = process.cpu_percent(interval=1)
@@ -260,10 +260,10 @@ def process_batch(files, extractor, max_cpu=30, max_memory=1024):
             # Sleep to allow memory release
             time.sleep(5)
             gc.collect()
-        
+
         # Limit CPU usage
         limit_cpu_usage(max_cpu)
-        
+
         # Process file
         try:
             extractor.process_file(file)
@@ -279,7 +279,7 @@ For Unstructured extractor, we'll enhance Docker container management:
 def run_unstructured_container(files_batch, config):
     """Run Unstructured in Docker container with resource limits."""
     client = docker.from_env()
-    
+
     # Configure container with resource limits
     container = client.containers.run(
         "unstructured-io/unstructured-api:latest",
@@ -293,11 +293,11 @@ def run_unstructured_container(files_batch, config):
         cpu_period=100000,
         remove=True
     )
-    
+
     # Monitor container for completion
     for line in container.logs(stream=True):
         logger.debug(line.decode("utf-8").strip())
-    
+
     # Process results
     process_unstructured_output("output")
 ```
@@ -312,21 +312,21 @@ def test_scheduler():
     # Test configuration loading
     config = load_config()
     assert "extractors" in config
-    
+
     # Test resource monitoring
     process = psutil.Process(os.getpid())
     start_cpu = process.cpu_percent()
-    
+
     # Run a small test batch
     run_small_test_batch()
-    
+
     # Verify resource control worked
     end_cpu = process.cpu_percent()
     assert end_cpu <= config["resources"]["max_cpu_percent"]
-    
+
     # Test state persistence
     assert os.path.exists(config["processing"]["state_file"])
-    
+
     # Test database connection
     test_db_connection()
 ```
@@ -338,16 +338,16 @@ All extractors will write their results directly to ArangoDB using the existing 
 ```python
 class IndalekoDBCollections:
     # Existing collections...
-    
+
     # Semantic collections
     Indaleko_Semantic_MIME = "SemanticMIME"
     Indaleko_Semantic_Checksum = "SemanticChecksum"
     Indaleko_Semantic_EXIF = "SemanticEXIF"
     Indaleko_Semantic_Unstructured = "SemanticUnstructured"
-    
+
     Collections = {
         # Existing collections...
-        
+
         Indaleko_Semantic_MIME: {
             "internal": False,
             "schema": MimeTypeDataModel.get_arangodb_schema(),
@@ -386,7 +386,7 @@ def setup_logging(config):
     """Set up logging based on configuration."""
     log_level = getattr(logging, config["processing"]["log_level"])
     log_file = os.path.join("logs", "semantic_processing.log")
-    
+
     # Configure logger
     logging.basicConfig(
         level=log_level,
@@ -396,13 +396,13 @@ def setup_logging(config):
             logging.StreamHandler()
         ]
     )
-    
+
     # Create performance logger
     perf_logger = logging.getLogger("semantic.performance")
     perf_handler = logging.FileHandler(os.path.join("logs", "semantic_performance.log"))
     perf_handler.setFormatter(logging.Formatter("%(asctime)s,%(message)s"))
     perf_logger.addHandler(perf_handler)
-    
+
     return logging.getLogger("semantic.scheduler")
 ```
 

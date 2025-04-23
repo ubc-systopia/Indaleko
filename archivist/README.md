@@ -2,7 +2,7 @@
 
 ## Vision
 
-The Personal Digital Archivist is an advanced evolution of Indaleko that proactively supports users by understanding their work context and history. 
+The Personal Digital Archivist is an advanced evolution of Indaleko that proactively supports users by understanding their work context and history.
 
 Rather than merely responding to explicit queries, the archivist:
 
@@ -32,22 +32,22 @@ def compare_current_project(current_activities, historical_projects):
     """Compare current work to historical projects."""
     # Generate embeddings for current activities
     current_embedding = embed_project(current_activities)
-    
+
     # Compare to historical projects
     similarities = []
     for project in historical_projects:
         project_embedding = embed_project(project.activities)
         similarity = cosine_similarity(current_embedding, project_embedding)
-        
+
         # Enhance with topic and temporal factors
         topical_overlap = calculate_topic_overlap(current_activities, project)
         temporal_recency = calculate_recency_factor(project.end_date)
-        
+
         # Weighted final score
         adjusted_similarity = similarity * 0.6 + topical_overlap * 0.3 + temporal_recency * 0.1
-        
+
         similarities.append((project, adjusted_similarity))
-    
+
     return sorted(similarities, key=lambda x: x[1], reverse=True)
 ```
 
@@ -63,19 +63,19 @@ This component builds a comprehensive model of the user's work patterns:
 ```python
 class UserModel:
     """Models user preferences, work patterns, and information needs."""
-    
+
     def __init__(self, user_id):
         self.user_id = user_id
         self.projects = []
         self.activity_patterns = ActivityPatternLearner()
         self.suggestion_preferences = SuggestionPreferenceModel()
         self.resource_importance = ResourceImportanceModel()
-    
+
     def predict_information_needs(self, context):
         """Predict what information the user might need in a given context."""
         # Find similar historical contexts
         similar_contexts = self.find_similar_contexts(context)
-        
+
         # Extract resources accessed in similar contexts
         candidate_resources = []
         for similar_context, similarity in similar_contexts:
@@ -85,7 +85,7 @@ class UserModel:
                     resource, context
                 )
                 candidate_resources.append((resource, predicted_importance * similarity))
-        
+
         return sorted(candidate_resources, key=lambda x: x[1], reverse=True)
 ```
 
@@ -101,35 +101,35 @@ This component decides what to suggest and when:
 ```python
 class ProactiveSuggestionEngine:
     """Generates timely, contextual suggestions based on user activities."""
-    
+
     def generate_suggestions(self, current_context):
         # Get relevant historical projects
         similar_projects = find_similar_projects(current_context)
-        
+
         # Extract candidate resources
         candidates = []
         for project, similarity in similar_projects:
             if similarity > 0.7:  # Threshold for relevance
                 resources = project.get_key_resources()
-                
+
                 for resource in resources:
                     importance = predict_resource_importance(
                         resource, current_context, similarity
                     )
-                    
+
                     candidates.append({
                         "resource": resource,
                         "relevance": similarity,
                         "importance": importance,
                         "source_project": project
                     })
-        
+
         # Determine if this is a good time to suggest
         timing_score = evaluate_suggestion_timing(current_context)
-        
+
         if timing_score > 0.8:  # Good time to suggest
             top_candidates = sort_and_filter_candidates(candidates)
-            
+
             suggestions = []
             for candidate in top_candidates:
                 explanation = generate_explanation(
@@ -137,15 +137,15 @@ class ProactiveSuggestionEngine:
                     candidate["source_project"],
                     current_context
                 )
-                
+
                 suggestions.append({
                     "resource": candidate["resource"],
                     "explanation": explanation,
                     "confidence": candidate["relevance"] * candidate["importance"]
                 })
-                
+
             return suggestions
-        
+
         return []  # Not a good time for suggestions
 ```
 
@@ -170,7 +170,7 @@ def generate_suggestion_message(suggestion, confidence):
     else:
         # Lower confidence template
         template = "You might want to check out some {resource_type} from {past_project} that seem somewhat related to what you're doing now."
-    
+
     # Fill in template
     message = fill_template(
         template,
@@ -179,7 +179,7 @@ def generate_suggestion_message(suggestion, confidence):
         time_ago=format_relative_time(suggestion["resource"].source_project.end_date),
         resource_type=suggestion["resource"].type_description
     )
-    
+
     return message
 ```
 
@@ -195,7 +195,7 @@ This component improves the system based on user feedback:
 ```python
 class FeedbackLearningSystem:
     """Learns from explicit and implicit user feedback."""
-    
+
     def record_explicit_feedback(self, suggestion, feedback):
         """Record explicit user feedback on a suggestion."""
         self.explicit_feedback.append({
@@ -204,14 +204,14 @@ class FeedbackLearningSystem:
             "timestamp": datetime.now(),
             "context": current_context
         })
-        
+
         # Update models immediately
         update_models_from_explicit(suggestion, feedback)
-    
+
     def record_implicit_feedback(self, suggestion, user_actions):
         """Record implicit feedback based on user actions."""
         engagement_level = calculate_engagement(user_actions)
-        
+
         self.implicit_feedback.append({
             "suggestion": suggestion,
             "actions": user_actions,
@@ -219,7 +219,7 @@ class FeedbackLearningSystem:
             "timestamp": datetime.now(),
             "context": current_context
         })
-        
+
         # Update models from implicit feedback
         update_models_from_implicit(suggestion, engagement_level)
 ```
@@ -270,30 +270,30 @@ The `EntityEquivalenceManager` class provides comprehensive functionality for ma
 class EntityEquivalenceManager:
     """
     Manages entity equivalence classes in Indaleko.
-    
+
     This class is responsible for:
     1. Maintaining equivalence relationships between entity references
     2. Identifying potential equivalences using string similarity and context
     3. Resolving entity references to their canonical forms
     4. Managing the persistence of equivalence data
     """
-    
+
     def add_entity_reference(self, name, entity_type, canonical=False, source=None, context=None):
         """Add a new entity reference to the system."""
         # Implementation...
-    
+
     def add_relation(self, source_id, target_id, relation_type, confidence=1.0, evidence=None):
         """Add a relation between two entity references."""
         # Implementation...
-    
+
     def merge_entities(self, source_id, target_id, relation_type="same_entity", confidence=1.0):
         """Merge two entities into the same equivalence class."""
         # Implementation...
-    
+
     def get_canonical_reference(self, entity_id):
         """Get the canonical reference for an entity."""
         # Implementation...
-    
+
     def get_all_references(self, entity_id):
         """Get all equivalent references for an entity."""
         # Implementation...
@@ -307,31 +307,31 @@ The system leverages the Jaro-Winkler string similarity algorithm from `utils/mi
 def _find_potential_matches(self, node, similarity_threshold=0.85):
     """Find potential matching entities for a given node."""
     matches = []
-    
+
     # Check against all existing nodes of the same type
     for existing_id, existing_node in self._nodes_cache.items():
         # Skip if not the same entity type
         if existing_node.entity_type != node.entity_type:
             continue
-            
+
         # Skip self-comparison
         if existing_id == node.entity_id:
             continue
-            
+
         # Compute similarity
         similarity = jaro_winkler_similarity(
-            node.name.lower(), 
+            node.name.lower(),
             existing_node.name.lower()
         )
-        
+
         # If similarity is above threshold, add to matches
         if similarity >= similarity_threshold:
             matches.append((existing_id, similarity))
-            
+
             # Suggest relation if high confidence
             if similarity >= 0.9:
                 self._suggest_relation(node.entity_id, existing_id, similarity)
-    
+
     return matches
 ```
 
@@ -344,14 +344,14 @@ def get_entity_graph(self, entity_id):
     """Get a representation of the entity's equivalence graph."""
     nodes = []
     edges = []
-    
+
     # Find the group containing this entity
     target_group = None
     for group in self._groups_cache.values():
         if entity_id in group.members:
             target_group = group
             break
-            
+
     # Add all members from the group
     for member_id in target_group.members:
         node = self._nodes_cache.get(member_id)
@@ -362,7 +362,7 @@ def get_entity_graph(self, entity_id):
                 "type": node.entity_type,
                 "canonical": node.canonical
             })
-            
+
     # Add all relations between group members
     for source_id in target_group.members:
         for target_id in target_group.members:
@@ -376,7 +376,7 @@ def get_entity_graph(self, entity_id):
                         "type": relation.relation_type,
                         "confidence": relation.confidence
                     })
-                    
+
     return {"nodes": nodes, "edges": edges}
 ```
 
@@ -392,15 +392,15 @@ The implementation uses ArangoDB to store entity equivalence data:
 def _setup_collections(self):
     """Set up the necessary collections in the database."""
     db = self.db_config.db
-    
+
     # Entity equivalence nodes collection
     if not db.has_collection("EntityEquivalenceNodes"):
         db.create_collection("EntityEquivalenceNodes")
-        
+
     # Entity equivalence relations collection
     if not db.has_collection("EntityEquivalenceRelations"):
         db.create_collection("EntityEquivalenceRelations", edge=True)
-        
+
     # Entity equivalence groups collection
     if not db.has_collection("EntityEquivalenceGroups"):
         db.create_collection("EntityEquivalenceGroups")

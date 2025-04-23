@@ -10,12 +10,9 @@ across different AI models regardless of their underlying implementation.
 """
 
 # Export adapter classes
-from .base import ModelAdapter, FireCircleMessage, FireCircleRequest, FireCircleResponse
-from .openai import OpenAIAdapter
 from .anthropic import AnthropicAdapter
+from .base import FireCircleMessage, FireCircleRequest, FireCircleResponse, ModelAdapter
+from .openai import OpenAIAdapter
 
 # Dictionary of available adapter classes, keyed by provider name
-AVAILABLE_ADAPTERS = {
-    "openai": OpenAIAdapter,
-    "anthropic": AnthropicAdapter
-}
+AVAILABLE_ADAPTERS = {"openai": OpenAIAdapter, "anthropic": AnthropicAdapter}

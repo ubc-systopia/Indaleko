@@ -1,6 +1,6 @@
 #!/bin/bash
 # create_analyzers.sh - Script to create custom analyzers for Indaleko
-# 
+#
 # This script uses the analyzer_manager.py module to create custom analyzers
 # for Indaleko using either the direct arangosh method or the Python API.
 #
@@ -31,7 +31,7 @@ export PYTHONPATH="$INDALEKO_ROOT:$PYTHONPATH"
 if [[ -z "$VIRTUAL_ENV" ]]; then
   echo "Warning: No virtual environment detected."
   echo "It's recommended to activate your Indaleko virtual environment before running this script."
-  
+
   # Try to find and activate a virtual environment
   for venv in ".venv-linux-python3.13" ".venv-win32-python3.12" ".venv-macos-python3.12"; do
     if [[ -d "$INDALEKO_ROOT/$venv" ]]; then
@@ -41,7 +41,7 @@ if [[ -z "$VIRTUAL_ENV" ]]; then
       break
     fi
   done
-  
+
   if [[ -z "$VIRTUAL_ENV" ]]; then
     echo "Could not find or activate a virtual environment."
     echo "Continuing with system Python, which may cause issues if dependencies are missing."

@@ -23,8 +23,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # Import submodules to make them available
 from firecircle.protocol.message import (
-    Message, MessageType, CircleRequest, CircleResponse
+    CircleRequest,
+    CircleResponse,
+    Message,
+    MessageType,
 )
-from firecircle.protocol.orchestrator import (
-    CircleOrchestrator, TurnTakingPolicy
-)
+from firecircle.protocol.orchestrator import CircleOrchestrator, TurnTakingPolicy

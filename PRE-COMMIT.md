@@ -14,6 +14,9 @@ The following hooks are configured in our pre-commit setup:
 6. **Black Formatter**: Formats Python code according to Black style guidelines
 7. **Ruff Linter**: Runs the Ruff linter to check code quality and fix simple issues
 8. **isort**: Sorts imports according to standards (configured to work with Black)
+9. **Check No Pip Usage**: Prevents direct use of pip (use uv instead)
+10. **Check Create Collection Usage**: Ensures create_collection is only called from authorized locations
+11. **Check Collection Constants**: Ensures collection names are referenced via IndalekoDBCollections constants
 
 ## Installation
 
@@ -83,3 +86,61 @@ The hooks are configured to provide clear, semantically meaningful error message
 3. How to fix it
 
 This helps developers understand and resolve issues quickly rather than just enforcing rules without explanation.
+
+## Custom Hooks
+
+### No Pip Usage Check
+
+This hook prevents direct use of pip in Python files, enforcing the project standard of using `uv` for package management instead. It checks for:
+
+- Direct pip imports (`import pip` or `from pip import ...`)
+- Calls to `pip.main()`
+- Subprocess calls that invoke pip (`subprocess.call(["pip", ...])`)
+- Shell commands with pip (`os.system("pip install ...")`)
+
+**Why**: The project standardizes on `uv` for faster, more consistent package management across platforms.
+
+**Fix**: Use `uv pip install -e .` or update your dependencies in `pyproject.toml`.
+
+### Create Collection Usage Check
+
+This hook ensures that `create_collection` is only called from authorized locations:
+
+1. `db/db_collections.py` - For static collections
+2. `utils/registration_service.py` - For dynamic collections
+
+**Why**: Centralized collection management is a critical security feature that ensures:
+- Consistent schema validation
+- Proper indexing
+- UUID-based collection names for security
+- Controlled security checks at a single point
+
+**Fix**: Replace direct `create_collection` calls with:
+- `IndalekoCollections.get_collection()` for static collections
+- Registration service for dynamic collections
+
+This enforces the architectural pattern described in CLAUDE.md that reduces attack surface area and allows for security monitoring.
+
+### Collection Constants Check
+
+This hook ensures that collection names are referenced using the constants defined in the IndalekoDBCollections class rather than hardcoded strings:
+
+- BAD: `db.get_collection("Objects")`
+- GOOD: `db.get_collection(IndalekoDBCollections.Indaleko_Object_Collection)`
+
+**Why**: Using constants instead of hardcoded strings provides several benefits:
+- Makes collection name changes easier (only need to update in one place)
+- Prevents typos in collection names
+- Improves code readability by self-documenting the intent
+- Makes references to collections easier to find with automated tools
+
+**Fix**: Import and use the appropriate constant from `IndalekoDBCollections` instead of the hardcoded string:
+```python
+from db.db_collections import IndalekoDBCollections
+
+# Instead of this:
+db.get_collection("Objects")
+
+# Do this:
+db.get_collection(IndalekoDBCollections.Indaleko_Object_Collection)
+```

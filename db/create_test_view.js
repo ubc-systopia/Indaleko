@@ -32,7 +32,7 @@ try {
       "Label"
     ]
   };
-  
+
   const result = db._createView(testViewName, "arangosearch", viewProps);
   print(`Successfully created view '${testViewName}'`);
   print(`View properties: ${JSON.stringify(viewProps, null, 2)}`);

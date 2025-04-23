@@ -23,8 +23,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 # Import core functionality
-from activity.collectors.storage.cloud.google_drive.google_drive_collector import GoogleDriveActivityCollector
-from activity.collectors.storage.cloud.google_drive.data_models import GDriveActivityData, GDriveActivityType, GDriveFileInfo, GDriveFileType, GDriveUserInfo
+from activity.collectors.storage.cloud.google_drive.data_models import (
+    GDriveActivityData,
+    GDriveActivityType,
+    GDriveFileInfo,
+    GDriveFileType,
+    GDriveUserInfo,
+)
+from activity.collectors.storage.cloud.google_drive.google_drive_collector import (
+    GoogleDriveActivityCollector,
+)
 
 # Import version info
 __version__ = "0.1.0"

@@ -182,23 +182,23 @@ class ActivityImportanceScorer:
     def calculate_score(self, activity_record, context):
         # Start with base importance
         score = 0.3
-        
+
         # Activity type importance
         if activity_record.activity_type in ["CREATE", "SECURITY_CHANGE"]:
             score += 0.2  # These are typically more significant
-        
+
         # File characteristics
         if context.is_document(activity_record.file_path):
             score += 0.1
-            
+
         # Usage patterns
         search_hits = context.get_search_hit_count(activity_record.file_reference)
         score += min(0.3, search_hits * 0.05)  # Cap at 0.3
-        
+
         # Cross-source references
         references = context.get_entity_references(activity_record.file_reference)
         score += min(0.2, len(references) * 0.04)
-        
+
         return min(1.0, score)  # Cap at 1.0
 ```
 
@@ -215,7 +215,7 @@ class CompressionManager:
             return RelationshipPreservingStrategy()
         else:
             return MinimalStrategy()
-            
+
     def compress_record(self, record, importance_score):
         strategy = self.select_strategy(importance_score)
         return strategy.compress(record)

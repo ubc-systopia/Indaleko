@@ -20,8 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-from typing import Optional, List, Dict
-from pydantic import Field, field_validator, AwareDatetime
+
+from pydantic import Field, field_validator
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -49,40 +49,40 @@ class AmbientMusicData(BaseAmbientConditionDataModel):
 
     artist_name: str = Field(..., description="Name of the track's primary artist")
 
-    album_name: Optional[str] = Field(
-        None, description="Name of the album (if applicable)"
+    album_name: str | None = Field(
+        None, description="Name of the album (if applicable)",
     )
 
     # Playback state
     is_playing: bool = Field(..., description="Whether music is currently playing")
 
     playback_position_ms: int = Field(
-        ..., description="Current playback position in milliseconds", ge=0
+        ..., description="Current playback position in milliseconds", ge=0,
     )
 
     track_duration_ms: int = Field(
-        ..., description="Total track duration in milliseconds", gt=0
+        ..., description="Total track duration in milliseconds", gt=0,
     )
 
-    volume_percent: Optional[int] = Field(
-        None, description="Current volume level as percentage", ge=0, le=100
+    volume_percent: int | None = Field(
+        None, description="Current volume level as percentage", ge=0, le=100,
     )
 
     # Additional track metadata
-    genre: Optional[List[str]] = Field(
-        None, description="Musical genres associated with the track"
+    genre: list[str] | None = Field(
+        None, description="Musical genres associated with the track",
     )
 
-    release_date: Optional[str] = Field(None, description="Release date of the track")
+    release_date: str | None = Field(None, description="Release date of the track")
 
-    is_explicit: Optional[bool] = Field(
-        None, description="Whether the track contains explicit content"
+    is_explicit: bool | None = Field(
+        None, description="Whether the track contains explicit content",
     )
 
     # Audio features
-    tempo: Optional[float] = Field(None, description="Track tempo in BPM", ge=0, le=300)
+    tempo: float | None = Field(None, description="Track tempo in BPM", ge=0, le=300)
 
-    key: Optional[int] = Field(
+    key: int | None = Field(
         None,
         description="Musical key of the track (-1 to 11, where -1 represents no key detected)",
         ge=-1,
@@ -91,12 +91,15 @@ class AmbientMusicData(BaseAmbientConditionDataModel):
 
     @field_validator("playback_position_ms")
     @classmethod
-    def validate_position(cls, value: int, values: Dict) -> int:
+    def validate_position(cls, value: int, values: dict) -> int:
         """Validate playback position is within track duration"""
-        if "playback_position_ms" in values.data and value > values.data['track_duration_ms']:
+        if (
+            "playback_position_ms" in values.data
+            and value > values.data["track_duration_ms"]
+        ):
             raise ValueError("Playback position cannot exceed track duration")
         return value
-      
+
     class Config:
         """Configuration and example data for the ambient music data model"""
 
@@ -118,7 +121,7 @@ class AmbientMusicData(BaseAmbientConditionDataModel):
                 "tempo": 72.5,
                 "key": 0,  # C major
                 "source": "music_player",
-            }
+            },
         }
 
 

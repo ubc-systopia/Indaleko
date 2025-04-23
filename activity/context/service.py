@@ -1,6 +1,7 @@
 """
-This module provides the implementation of the Indaleko Activity Context
-service. This service is responsible for creating and managing activity contexts
+This module provides the implementation of the Indaleko Activity Context service.
+
+This service is responsible for creating and managing activity contexts
 to other components that seek to associate their own data with the activity
 context.
 
@@ -27,37 +28,35 @@ import logging
 import os
 import sys
 import uuid
-
-from typing import Union
+from pathlib import Path
 
 from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
-        current_path = os.path.dirname(current_path)
-    os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
+    current_path = Path(__file__).parent.resolve()
+    while not (current_path / "Indaleko.py").exists():
+        current_path = current_path.parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.append(str(current_path))
 
 # pylint: disable=wrong-import-position
+from activity.context.data_models.activity_data import ActivityDataModel
 from activity.context.data_models.context_data_model import (
     IndalekoActivityContextDataModel,
 )
-from activity.context.data_models.activity_data import ActivityDataModel
-from Indaleko import Indaleko
-from db import IndalekoDBConfig, IndalekoCollections
-from utils import IndalekoSingleton, IndalekoLogging
-from utils import IndalekoLogging
+from constants import IndalekoConstants
+from db import IndalekoCollections, IndalekoDBConfig
+from db.db_collections import IndalekoDBCollections
+from utils import IndalekoLogging, IndalekoSingleton
+from utils.misc.file_name_management import generate_file_name
 
 # pylint: enable=wrong-import-position
 
 
 class IndalekoActivityContextService(IndalekoSingleton):
-    """
-    This class is the service interface for managing Activity Context.
-    """
+    """This class is the service interface for managing Activity Context."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: dict) -> None:
         """Create an instance of the IndalekoActivityContext class."""
         if self._initialized:
             return
@@ -67,19 +66,27 @@ class IndalekoActivityContextService(IndalekoSingleton):
             self.db_config = kwargs["db_config"]
         else:
             self.db_config = IndalekoDBConfig()
-        self.collection = IndalekoCollections.get_collection(
-            Indaleko.Indaleko_ActivityContext_Collection
+
+        # Get the activity context collection
+        activity_collection_name = (
+            IndalekoDBCollections.Indaleko_ActivityContext_Collection
         )
-        assert self.collection is not None, "Collection must be pre-defined"
+        self._private_collection = IndalekoCollections.get_collection(
+            activity_collection_name,
+        )
+        if self._private_collection is None:
+            raise RuntimeError(
+                f"Collection {activity_collection_name} not found in the database.",
+            )
+
         self.handle = uuid.uuid4()
-        self.timestamp = datetime.datetime.now(datetime.timezone.utc)
+        self.timestamp = datetime.datetime.now(datetime.UTC)
         self.schema = IndalekoActivityContextDataModel.model_json_schema()
         self.arangodb_schema = {
             "rule": self.schema,
             "level": "strict",
             "message": "The document failed schema validation.  Sorry!",
         }
-        # TODO: need to define the indices.
         self.cursors = {}
         self.updated = False
         self.referenced = False
@@ -88,8 +95,8 @@ class IndalekoActivityContextService(IndalekoSingleton):
         self,
         provider: uuid.UUID,
         provider_reference: uuid.UUID,
-        provider_data: str = None,
-        provider_attributes: dict = None,
+        provider_data: str | None = None,
+        provider_attributes: dict | None = None,
     ) -> bool:
         """
         Update the given provider's cursor.
@@ -108,9 +115,11 @@ class IndalekoActivityContextService(IndalekoSingleton):
             exists, it will be updated **if and only if** the reference has
             changed.  We do not evaluate the data or attributes for changes.
         """
-        if provider in self.cursors:
-            if self.cursors[provider].ProviderReference == provider_reference:
-                return False
+        if (
+            provider in self.cursors
+            and self.cursors[provider].ProviderReference == provider_reference
+        ):
+            return False
         # Otherwise, it either didn't exist, or it needs to be updated. Build
         # the new cursor.
         args = {
@@ -132,8 +141,9 @@ class IndalekoActivityContextService(IndalekoSingleton):
         return self.handle
 
     def get_activity_context_data(
-        self, handle: uuid.UUID = None
-    ) -> Union[IndalekoActivityContextDataModel, None]:
+        self,
+        handle: uuid.UUID | None = None,
+    ) -> IndalekoActivityContextDataModel | None:
         """
         Given an optional handle, retrieve the record from the database.
 
@@ -151,11 +161,13 @@ class IndalekoActivityContextService(IndalekoSingleton):
         """
         if handle is None:
             return IndalekoActivityContextService.get_latest_db_update_dict()
+        return handle
 
     @staticmethod
-    def get_latest_db_update_dict() -> Union[dict, None]:
+    def get_latest_db_update_dict() -> dict | None:
         """
         Get the most recent activity context data.
+
         Output:
             dict : The most recent activity context data.
             None : If there is no data in the database.
@@ -169,9 +181,13 @@ class IndalekoActivityContextService(IndalekoSingleton):
             LIMIT 1
             RETURN doc
         """
-        bind_vars = {"@collection": Indaleko.Indaleko_ActivityContext_Collection}
-        results = IndalekoDBConfig.get_db().aql.execute(query, bind_vars=bind_vars)
-        entries = [entry for entry in results]
+        bind_vars = {
+            "@collection": IndalekoDBCollections.Indaleko_ActivityContext_Collection,
+        }
+        results = (
+            IndalekoDBConfig().get_arangodb().aql.execute(query, bind_vars=bind_vars)
+        )
+        entries = list(results)
         if len(entries) == 0:
             return None
         assert len(entries) == 1, f"Expected 1 entry, got {len(entries)}"
@@ -195,14 +211,15 @@ class IndalekoActivityContextService(IndalekoSingleton):
         """
         if not self.updated or not self.referenced:
             return False
+
         doc = IndalekoActivityContextDataModel(
             Handle=self.handle,
             Timestamp=self.timestamp,
-            Cursors=[cursor for cursor in self.cursors.values()],
+            Cursors=list(self.cursors.values()),
         )
         self.handle = uuid.uuid4()
         data = doc.build_arangodb_doc(_key=self.handle)
-        self.collection.insert(data)
+        self._private_collection.insert(data)
         self.updated = False
         self.referenced = False
         return True
@@ -211,40 +228,43 @@ class IndalekoActivityContextService(IndalekoSingleton):
 class IndalekoActivityContextTest:
     """This class is used to test the IndalekoActivityContext class."""
 
-    def __init__(self, args: argparse.Namespace):
+    def __init__(self, args: argparse.Namespace) -> None:
         """Create an instance of the IndalekoActivityContextTest class."""
         self.args = args
 
-    def show_command(self):
+    def show_command(self) -> None:
         """Command to show the current activity context."""
         ic("show_command called")
 
-    def check_command(self):
+    def check_command(self) -> None:
         """Check the activity context database connectivity."""
         ic("check_command called")
 
-    def test_command(self):
+    def test_command(self) -> None:
         """Test the activity context data."""
         ic("test_command called")
 
-    def schema_command(self):
-        """Show the data schema"""
+    def schema_command(self) -> None:
+        """Show the data schema."""
         ic("show schema")
         ic(IndalekoActivityContextDataModel.get_arangodb_schema())
 
 
-def main():
+def main() -> None:
     """Test the IndalekoActivityContext class."""
     ic("Testing IndalekoActivityContext")
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     timestamp = now.isoformat()
 
     parser = argparse.ArgumentParser(
-        description="Test the IndalekoActivityContext class"
+        description="Test the IndalekoActivityContext class",
     )
     parser.add_argument("--debug", action="store_true", help="Debug flag")
     parser.add_argument(
-        "--logdir", type=str, default=Indaleko.default_log_dir, help="Log directory"
+        "--logdir",
+        type=str,
+        default=IndalekoConstants.default_log_dir,
+        help="Log directory",
     )
     parser.add_argument("--log", type=str, default=None, help="Log file name")
     parser.add_argument(
@@ -255,31 +275,38 @@ def main():
         help="Log level",
     )
     command_subparsers = parser.add_subparsers(
-        help="Command subparsers", dest="command"
+        help="Command subparsers",
+        dest="command",
     )
     parser_check = command_subparsers.add_parser(
-        "check", help="Check the activity context database connectivity"
+        "check",
+        help="Check the activity context database connectivity",
     )
     parser_check.set_defaults(func=IndalekoActivityContextTest.check_command)
     parser_show = command_subparsers.add_parser(
-        "show", help="Show the current activity context"
+        "show",
+        help="Show the current activity context",
     )
     parser_show.set_defaults(func=IndalekoActivityContextTest.show_command)
     parser_test = command_subparsers.add_parser(
-        "test", help="Test the activity context data"
+        "test",
+        help="Test the activity context data",
     )
     parser_test.set_defaults(func=IndalekoActivityContextTest.test_command)
     parser.set_defaults(func=IndalekoActivityContextTest.check_command)
     parser_schema = command_subparsers.add_parser(
-        "schema", help="Display ArangoDB schema"
+        "schema",
+        help="Display ArangoDB schema",
     )
     parser_schema.set_defaults(func=IndalekoActivityContextTest.schema_command)
     args = parser.parse_args()
     if args.debug:
         ic("Testing IndalekoActivityContext")
     if args.log is None:
-        args.log = Indaleko.generate_file_name(
-            suffix="log", service="IndalekoActivtyContext", timestamp=timestamp
+        args.log = generate_file_name(
+            suffix="log",
+            service="IndalekoActivtyContext",
+            timestamp=timestamp,
         )
     indaleko_logging = IndalekoLogging(
         service_name="IndalekoActivtyContext",

@@ -32,8 +32,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from db import IndalekoDBConfig, IndalekoDBCollections
 from data_models.named_entity import IndalekoNamedEntityDataModel
+from db import IndalekoDBCollections, IndalekoDBConfig
 
 # pylint: enable=wrong-import-position
 
@@ -49,8 +49,8 @@ class IndalekoNamedEntity:
         """
         self.named_entities = {}
         self.db_config = db_config
-        self.collection = self.db_config.db.collection(
-            IndalekoDBCollections.Indaleko_Named_Entity_Collection
+        self.collection = self.db_config._arangodb.collection(
+            IndalekoDBCollections.Indaleko_Named_Entity_Collection,
         )
         assert self.collection is not None, "Failed to get the named entity collection"
         self.named_entities = self.get_named_entities()
@@ -66,7 +66,7 @@ class IndalekoNamedEntity:
             bool: True if the named entity was added successfully, False otherwise
         """
         assert isinstance(
-            named_entity, IndalekoNamedEntityDataModel
+            named_entity, IndalekoNamedEntityDataModel,
         ), f"named_entity must be a NamedEntity, not {type(named_entity)}"
 
         self.named_entities[named_entity.name] = named_entity
@@ -94,7 +94,7 @@ class IndalekoNamedEntity:
         return self.named_entities.get(name, None)
 
     def get_named_entities(
-        self, allow_cached: bool = False
+        self, allow_cached: bool = False,
     ) -> dict[str, IndalekoNamedEntityDataModel]:
         """
         Get all named entities from the handler.
@@ -102,7 +102,6 @@ class IndalekoNamedEntity:
         Returns:
             Dict[str, NamedEntity]: The named entities
         """
-
         if allow_cached and self.named_entities:
             return self.named_entities
 
@@ -115,7 +114,7 @@ class IndalekoNamedEntity:
                 entity = cursor.next()
                 ic(entity)
                 self.named_entities[entity["name"]] = IndalekoNamedEntityDataModel(
-                    **entity
+                    **entity,
                 )
             if not cursor.has_more():
                 break

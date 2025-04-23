@@ -2,8 +2,8 @@
 
 ## Overview
 
-This document describes the custom analyzers implemented for Indaleko to improve file name searching capabilities. 
-The standard text analyzer in ArangoDB doesn't handle various naming conventions like CamelCase or snake_case well, 
+This document describes the custom analyzers implemented for Indaleko to improve file name searching capabilities.
+The standard text analyzer in ArangoDB doesn't handle various naming conventions like CamelCase or snake_case well,
 which are common in file names.
 
 ## Motivation
@@ -163,7 +163,7 @@ analyzer_manager.create_all_analyzers()
 
 # Test the analyzers
 success, tokens = analyzer_manager.test_analyzer(
-    "Indaleko::indaleko_camel_case", 
+    "Indaleko::indaleko_camel_case",
     "IndalekoObjectDataModel"
 )
 print(f"Tokens: {tokens}")  # ['indaleko', 'object', 'data', 'model']

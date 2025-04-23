@@ -157,7 +157,7 @@ def taskpane():
         <title>Custom Indaleko File Tracker</title>
         <style>
             /* Your custom styles here */
-            body { 
+            body {
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 background-color: #f0f0f0;
             }
@@ -181,14 +181,14 @@ function extractGoogleDriveLinks(htmlContent) {
     var parser = new DOMParser();
     var doc = parser.parseFromString(htmlContent, "text/html");
     var anchors = doc.querySelectorAll("a");
-    
+
     anchors.forEach(function(anchor) {
         var href = anchor.getAttribute("href");
         if (href && href.includes("drive.google.com")) {
             links.push(href);
         }
     });
-    
+
     return links;
 }
 ```

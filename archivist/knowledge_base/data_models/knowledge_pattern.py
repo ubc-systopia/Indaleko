@@ -20,10 +20,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID, uuid4
-from datetime import datetime, timezone
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -34,11 +34,13 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
+
 # pylint: enable=wrong-import-position
 
 
 class KnowledgePatternType(str, Enum):
     """Types of knowledge patterns."""
+
     query_pattern = "query_pattern"
     entity_relationship = "entity_relationship"
     schema_update = "schema_update"
@@ -47,23 +49,25 @@ class KnowledgePatternType(str, Enum):
 
 class KnowledgePatternDataModel(IndalekoBaseModel):
     """A learned pattern in the knowledge base."""
+
     pattern_id: UUID = uuid4()
     pattern_type: KnowledgePatternType
-    created_at: datetime = datetime.now(timezone.utc)
-    updated_at: datetime = datetime.now(timezone.utc)
+    created_at: datetime = datetime.now(UTC)
+    updated_at: datetime = datetime.now(UTC)
     confidence: float  # Confidence score (0-1)
     usage_count: int = 1  # How often this pattern has been used
-    pattern_data: Dict[str, Any]  # The actual pattern information
-    source_events: List[UUID] = []  # Learning events that contributed to this pattern
-    
+    pattern_data: dict[str, Any]  # The actual pattern information
+    source_events: list[UUID] = []  # Learning events that contributed to this pattern
+
     class Config:
         """Sample configuration data for the data model."""
+
         json_schema_extra = {
             "example": {
                 "pattern_id": "a81b3522-c394-40b0-a82c-a9d7fa1f7e03",
                 "pattern_type": KnowledgePatternType.query_pattern,
-                "created_at": datetime.now(timezone.utc),
-                "updated_at": datetime.now(timezone.utc),
+                "created_at": datetime.now(UTC),
+                "updated_at": datetime.now(UTC),
                 "confidence": 0.92,
                 "usage_count": 5,
                 "pattern_data": {
@@ -71,11 +75,11 @@ class KnowledgePatternDataModel(IndalekoBaseModel):
                     "entity_types": ["topic"],
                     "collection": "Objects",
                     "query_template": "FOR doc IN @@collection FILTER LIKE(doc.Label, @entity) RETURN doc",
-                    "success_rate": 0.88
+                    "success_rate": 0.88,
                 },
                 "source_events": [
                     "981a3522-c394-40b0-a82c-a9d7fa1f7e01",
-                    "a91b3522-c394-40b0-a82c-a9d7fa1f7e04"
-                ]
-            }
+                    "a91b3522-c394-40b0-a82c-a9d7fa1f7e04",
+                ],
+            },
         }

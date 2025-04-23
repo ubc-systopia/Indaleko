@@ -18,13 +18,12 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from datetime import datetime, timezone
 import json
 import os
 import sys
+from datetime import UTC, datetime
 from textwrap import dedent
-
-from typing import List, Dict, Any
+from typing import Any
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -36,9 +35,9 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from data_models import IndalekoRecordDataModel, IndalekoSourceIdentifierDataModel
 from data_models.query_history import IndalekoQueryHistoryDataModel
-from query.history.data_models.query_history import QueryHistoryData  # noqa: E402
-from db import IndalekoDBConfig, IndalekoDBCollections  # noqa: E402
-from utils.misc.data_management import encode_binary_data  # noqa: E402
+from db import IndalekoDBCollections, IndalekoDBConfig
+from query.history.data_models.query_history import QueryHistoryData
+from utils.misc.data_management import encode_binary_data
 
 # pylint: enable=wrong-import-position
 
@@ -55,8 +54,8 @@ class QueryHistory:
     def __init__(self, db_config: IndalekoDBConfig = IndalekoDBConfig()):
         """Set up the query history"""
         self.db_config = db_config
-        self.query_history_collection = self.db_config.db.collection(
-            IndalekoDBCollections.Indaleko_Query_History_Collection
+        self.query_history_collection = self.db_config._arangodb.collection(
+            IndalekoDBCollections.Indaleko_Query_History_Collection,
         )
 
     def add(self, query_history: QueryHistoryData) -> None:
@@ -75,14 +74,14 @@ class QueryHistory:
                     Version=self.query_history_version,
                     Description=self.query_history_description,
                 ),
-                Timestamp=datetime.now(timezone.utc),
+                Timestamp=datetime.now(UTC),
                 Data=encode_binary_data(
                     bytes(
                         query_history.model_dump_json(
-                            exclude_none=True, exclude_unset=True
+                            exclude_none=True, exclude_unset=True,
                         ),
                         "utf-8",
-                    )
+                    ),
                 ),
             ),
             QueryHistory=query_history,
@@ -90,7 +89,7 @@ class QueryHistory:
         doc = json.loads(query_history.model_dump_json())
         self.query_history_collection.insert(doc)
 
-    def get_recent_queries(self, n: int = 5) -> List[QueryHistoryData]:
+    def get_recent_queries(self, n: int = 5) -> list[QueryHistoryData]:
         """
         Get the n most recent queries.
 
@@ -103,7 +102,7 @@ class QueryHistory:
         return [
             IndalekoQueryHistoryDataModel(**doc).QueryHistory
             for doc in self.query_history_collection.find(
-                {}, sort=[("Record.Timestamp", -1)], limit=n
+                {}, sort=[("Record.Timestamp", -1)], limit=n,
             )
         ]
 
@@ -126,7 +125,7 @@ class QueryHistory:
         """
         self.history.clear()
 
-    def get_full_history(self) -> List[Dict[str, Any]]:
+    def get_full_history(self) -> list[dict[str, Any]]:
         """
         Get the full query history.
 
@@ -136,7 +135,7 @@ class QueryHistory:
         raise NotImplementedError("This method is not yet implemented")
         # This is going to require an iterator, most likely.
 
-    def find_similar_queries(self, query: str) -> List[Dict[str, Any]]:
+    def find_similar_queries(self, query: str) -> list[dict[str, Any]]:
         """
         Find queries in the history that are similar to the given query.
 

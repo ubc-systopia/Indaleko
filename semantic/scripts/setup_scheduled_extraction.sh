@@ -24,62 +24,62 @@ print_header() {
 
 check_dependencies() {
     echo "Checking dependencies..."
-    
+
     # Check Python
     if ! command -v python3 &> /dev/null; then
         echo "Error: Python 3 not found"
         exit 1
     fi
-    
+
     # Check if virtual environment exists
     if [ ! -d "$VENV_PATH" ]; then
         echo "Error: Virtual environment not found at $VENV_PATH"
         echo "Please create it with: python3 -m venv $VENV_PATH"
         exit 1
     fi
-    
+
     # Check for cron
     if ! command -v crontab &> /dev/null; then
         echo "Error: crontab not found. Please install cron."
         exit 1
     fi
-    
+
     echo "All dependencies found."
     echo ""
 }
 
 update_scripts() {
     echo "Updating script paths..."
-    
+
     # Update run_semantic.sh with correct paths
     if [ -f "$SCRIPT_PATH" ]; then
         # Make backup
         cp "$SCRIPT_PATH" "$SCRIPT_PATH.bak"
-        
+
         # Update paths
         sed -i "s|INDALEKO_PATH=.*|INDALEKO_PATH=\"$INDALEKO_PATH\"|" "$SCRIPT_PATH"
         sed -i "s|VENV_PATH=.*|VENV_PATH=\"$VENV_PATH\"|" "$SCRIPT_PATH"
         sed -i "s|LOG_PATH=.*|LOG_PATH=\"$LOG_DIR/semantic_processing.log\"|" "$SCRIPT_PATH"
         sed -i "s|CONFIG_PATH=.*|CONFIG_PATH=\"$CONFIG_PATH\"|" "$SCRIPT_PATH"
-        
+
         # Make executable
         chmod +x "$SCRIPT_PATH"
-        
+
         echo "Updated paths in $SCRIPT_PATH"
     else
         echo "Error: Script not found at $SCRIPT_PATH"
         exit 1
     fi
-    
+
     echo ""
 }
 
 setup_config() {
     echo "Setting up configuration..."
-    
+
     # Create config directory if it doesn't exist
     mkdir -p "$(dirname "$CONFIG_PATH")"
-    
+
     # Create default config if it doesn't exist
     if [ ! -f "$CONFIG_PATH" ]; then
         cat > "$CONFIG_PATH" << EOF
@@ -118,52 +118,52 @@ EOF
     else
         echo "Configuration already exists at $CONFIG_PATH"
     fi
-    
+
     # Create log directory
     mkdir -p "$LOG_DIR"
-    
+
     echo ""
 }
 
 install_cron_job() {
     echo "Installing cron job..."
-    
+
     # Extract hour and minute from SCHEDULE_TIME
     HOUR=$(echo "$SCHEDULE_TIME" | cut -d ':' -f 1)
     MINUTE=$(echo "$SCHEDULE_TIME" | cut -d ':' -f 2)
-    
+
     # Create temporary file for crontab
     TMP_CRON=$(mktemp)
-    
+
     # Get existing crontab
     crontab -l > "$TMP_CRON" 2>/dev/null || true
-    
+
     # Check if job already exists
     if grep -q "$SCRIPT_PATH" "$TMP_CRON"; then
         echo "Cron job for semantic extraction already exists. Updating..."
         sed -i "/.*$SCRIPT_PATH.*/d" "$TMP_CRON"
     fi
-    
+
     # Add new job
     echo "$MINUTE $HOUR * * * $SCRIPT_PATH" >> "$TMP_CRON"
-    
+
     # Install new crontab
     crontab "$TMP_CRON"
     rm "$TMP_CRON"
-    
+
     echo "Installed cron job to run at $SCHEDULE_TIME daily"
     echo ""
 }
 
 test_extraction() {
     echo "Testing semantic extraction..."
-    
+
     # Activate virtual environment
     source "$VENV_PATH/bin/activate"
-    
+
     # Run in test mode
     python -m semantic.run_scheduled --extractors mime --batch-size 1 --run-time 60 --debug
-    
+
     echo "Test completed. Please check the output for any errors."
     echo ""
 }

@@ -72,7 +72,7 @@ To properly register an activity recorder, follow these steps:
        ],
        "Tags": ["your", "relevant", "tags"]
    }
-   
+
    service = IndalekoActivityDataRegistrationService()
    service.register_provider(**registration_kwargs)
    ```
@@ -134,27 +134,27 @@ from activity.recorders.template import TemplateRecorder
 
 class YourCustomRecorder(TemplateRecorder):
     """Your custom recorder implementation."""
-    
+
     def __init__(self, **kwargs):
         # Set your defaults
         kwargs.setdefault("name", "Your Custom Recorder")
         kwargs.setdefault("recorder_id", uuid.UUID("your-custom-uuid"))
         # ...other defaults
-        
+
         # Initialize template
         super().__init__(**kwargs)
-        
+
         # Your custom setup
         # ...
-    
+
     def collect_and_process_data(self) -> List[Any]:
         """Implement your data collection logic here."""
         # ...
-    
+
     def get_collector_class_model(self) -> Dict[str, Type]:
         """Return your collector class model."""
         # ...
-    
+
     def get_json_schema(self) -> dict:
         """Return your JSON schema."""
         # ...

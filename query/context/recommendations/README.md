@@ -126,7 +126,7 @@ from query.context.data_models.recommendation import RecommendationSource
 class MyCustomRecommender(RecommendationProvider):
     def __init__(self, **kwargs):
         super().__init__(RecommendationSource.CUSTOM, **kwargs)
-        
+
     def generate_suggestions(self, current_query=None, context_data=None, max_suggestions=10):
         # Implementation here
         return suggestions

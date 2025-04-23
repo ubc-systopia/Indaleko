@@ -26,5 +26,5 @@ from activity.collectors.storage.cloud.google_drive.data_models.google_drive_act
     GDriveActivityType,
     GDriveFileInfo,
     GDriveFileType,
-    GDriveUserInfo
+    GDriveUserInfo,
 )

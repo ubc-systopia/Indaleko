@@ -20,11 +20,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import datetime
 import os
+import subprocess
 import sys
 import uuid
-import subprocess
+from typing import Any
 
-from typing import List, Dict, Any
 import requests
 
 # from icecream import ic
@@ -37,17 +37,15 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from activity.collectors.location import LocationCollector
+# pylint: enable=wrong-import-position
+
+
 from activity.characteristics import ActivityDataCharacteristics
+from activity.collectors.location import LocationCollector
 from activity.collectors.location.data_models.wifi_location_data_model import (
     WiFiLocationDataModel,
 )
 
-# pylint: enable=wrong-import-position
-
-
-import subprocess
-import requests
 
 class WiFiLocation(LocationCollector):
     """This is the WiFi-based Location Service"""
@@ -60,7 +58,7 @@ class WiFiLocation(LocationCollector):
         # Initialize in-memory storage for collected data
         self.data: list[dict] = []
 
-    def get_collector_characteristics(self) -> List[ActivityDataCharacteristics]:
+    def get_collector_characteristics(self) -> list[ActivityDataCharacteristics]:
         """Get the provider characteristics"""
         return [
             ActivityDataCharacteristics.ACTIVITY_DATA_SPATIAL,
@@ -71,6 +69,7 @@ class WiFiLocation(LocationCollector):
     def get_collector_name(self) -> str:
         """Get the provider name"""
         return self._name
+
     # alias for backwards compatibility
     get_collectorr_name = get_collector_name
 
@@ -78,7 +77,7 @@ class WiFiLocation(LocationCollector):
         """Get the provider ID"""
         return self._provider_id
 
-    def retrieve_data(self, data_id: uuid.UUID) -> Dict[str, Any]:
+    def retrieve_data(self, data_id: uuid.UUID) -> dict[str, Any]:
         """Retrieve the data associated with the given data_id"""
         if data_id == self.get_provider_id() and self.data:
             return self.data[-1]
@@ -90,7 +89,7 @@ class WiFiLocation(LocationCollector):
         prior_time_window: datetime.timedelta,
         subsequent_time_window: datetime.timedelta,
         max_entries: int = 0,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Retrieve temporal data from the provider"""
         # Return historical records within the time window
         start = reference_time - prior_time_window
@@ -134,18 +133,21 @@ class WiFiLocation(LocationCollector):
             location = ""
         return location
 
-    def get_coordinates(self) -> Dict[str, float]:
+    def get_coordinates(self) -> dict[str, float]:
         """Get the coordinates for the most recent location"""
         if self.data:
             loc = self.data[-1].get("Location", {})
-            return {"latitude": loc.get("latitude", 0.0), "longitude": loc.get("longitude", 0.0)}
+            return {
+                "latitude": loc.get("latitude", 0.0),
+                "longitude": loc.get("longitude", 0.0),
+            }
         return {"latitude": 0.0, "longitude": 0.0}
 
     def get_location_history(
-        self, start_time: datetime.datetime, end_time: datetime.datetime
-    ) -> List[Dict[str, Any]]:
+        self, start_time: datetime.datetime, end_time: datetime.datetime,
+    ) -> list[dict[str, Any]]:
         """Get the location history for the location"""
-        events: List[Dict[str, Any]] = []
+        events: list[dict[str, Any]] = []
         for record in self.data:
             loc = record.get("Location", {})
             ts_str = loc.get("timestamp")
@@ -156,7 +158,7 @@ class WiFiLocation(LocationCollector):
             if start_time <= ts <= end_time:
                 events.append(record)
         return events
-    
+
     def collect_data(self) -> None:
         """Collect and store the latest WiFi-based location data"""
         # Scan nearby WiFi access points
@@ -199,7 +201,7 @@ class WiFiLocation(LocationCollector):
         # Store result if available
         if location:
             loc = location["location"]
-            timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            timestamp = datetime.datetime.now(datetime.UTC).isoformat()
             record = {
                 "Location": {
                     "latitude": loc.get("lat"),
@@ -207,12 +209,12 @@ class WiFiLocation(LocationCollector):
                     "accuracy": location.get("accuracy"),
                     "timestamp": timestamp,
                     "source": "WiFi",
-                }
+                },
             }
             # Directly store the record dict without model validation
             self.store_data(record)
 
-    def process_data(self, data: Any) -> Dict[str, Any]:
+    def process_data(self, data: Any) -> dict[str, Any]:
         """Process collected data into a serializable dict"""
         if isinstance(data, WiFiLocationDataModel):
             return data.model_dump()
@@ -221,16 +223,16 @@ class WiFiLocation(LocationCollector):
             return model.model_dump()
         raise TypeError(f"Unsupported data type: {type(data)}")
 
-    def store_data(self, data: Dict[str, Any]) -> None:
+    def store_data(self, data: dict[str, Any]) -> None:
         """Store processed data in memory"""
         self.data.append(data)
 
     def get_distance(
-        self, location1: Dict[str, float], location2: Dict[str, float]
+        self, location1: dict[str, float], location2: dict[str, float],
     ) -> float:
         """Get the distance between two locations in meters using Haversine formula"""
         # Earth radius in meters
-        from math import radians, sin, cos, sqrt, atan2
+        from math import atan2, cos, radians, sin, sqrt
 
         lat1, lon1 = location1.get("latitude"), location1.get("longitude")
         lat2, lon2 = location2.get("latitude"), location2.get("longitude")

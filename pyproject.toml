@@ -51,7 +51,9 @@ dependencies = [
     "pandas>=2.0.0",
     "pytest>=6.0",
     "lazy_import>=0.2.2",
+    "ruff>=0.6.9",
 ]
+
 requires-python = ">=3.12"
 
 [project.optional-dependencies]
@@ -69,3 +71,17 @@ target-version = ['py38']
 
 [tool.pylint]
 init-hook = "import sys; sys.path.insert(0, '${workspaceFolder}')"
+
+[tool.ruff]
+# Select specific linting rules to reduce noise
+select = [
+    "E",  # pycodestyle errors
+    "F",  # pyflakes
+    "B",  # flake8-bugbear
+]
+# Ignore overly verbose rules
+ignore = [
+    "E501",  # Line too long
+]
+# Formatting settings
+line-length = 120

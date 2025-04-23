@@ -6,9 +6,10 @@ Inherits from IndalekoBaseCLI and indexes local storage via LocalStorageCollecto
 import json
 from pathlib import Path
 
+from activity.collectors.storage.local.collector import LocalStorageCollector
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
-from activity.collectors.storage.local.collector import LocalStorageCollector
+
 
 class StorageIndexerCLI(IndalekoBaseCLI):
     def __init__(self):
@@ -26,6 +27,7 @@ class StorageIndexerCLI(IndalekoBaseCLI):
         with output_path.open("w", encoding="utf-8") as f:
             json.dump(records, f, default=str, indent=2)
         print(f"Written {len(records)} records to {output_path}")
+
 
 if __name__ == "__main__":
     StorageIndexerCLI().main()

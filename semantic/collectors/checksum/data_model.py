@@ -21,12 +21,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # standard imports
 import os
 import sys
-
 from uuid import UUID, uuid4
 
 # third-party imports
 from pydantic import Field, field_validator
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -45,7 +43,7 @@ from semantic.data_models.base_data_model import BaseSemanticDataModel
 class SemanticChecksumDataModel(BaseSemanticDataModel):
     """
     This class defines the data model for the file checksum semantic data.
-    
+
     It includes multiple checksum types:
     - MD5: Fast but collision-prone hash (32 characters)
     - SHA1: Widely used but no longer cryptographically secure (40 characters)
@@ -97,7 +95,7 @@ class SemanticChecksumDataModel(BaseSemanticDataModel):
         if not all(c in "0123456789abcdefABCDEF" for c in value):
             raise ValueError("SHA256 checksum must be a valid hexadecimal string")
         return value
-        
+
     @classmethod
     @field_validator("sha512_checksum")
     def validate_sha512_checksum(cls, value):
@@ -131,7 +129,7 @@ class SemanticChecksumDataModel(BaseSemanticDataModel):
                     "sha256_checksum": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                     "sha512_checksum": "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e",
                     "dropbox_checksum": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                }
+                },
             }
 
         json_schema_extra = {
@@ -143,7 +141,7 @@ class SemanticChecksumDataModel(BaseSemanticDataModel):
                 "sha256_checksum": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                 "sha512_checksum": "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e",
                 "dropbox_checksum": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            }
+            },
         }
 
 

@@ -25,9 +25,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Dict, List, Optional, Union, Any
+from typing import Any
 
 # Import path setup
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -38,22 +38,23 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from activity.data_model.activity_classification import IndalekoActivityClassification
+from pydantic import Field, field_validator
+
 from activity.collectors.storage.data_models.storage_activity_data_model import (
     GoogleDriveStorageActivityData,
-    CloudStorageActivityData,
     StorageActivityType,
+    StorageItemType,
     StorageProviderType,
-    StorageItemType
 )
+from activity.data_model.activity_classification import IndalekoActivityClassification
 from data_models.base import IndalekoBaseModel
-from pydantic import Field, field_validator
 
 # pylint: enable=wrong-import-position
 
 
 class GDriveActivityType(str, Enum):
     """Type of Google Drive activity."""
+
     CREATE = "create"
     EDIT = "edit"
     DELETE = "delete"
@@ -71,6 +72,7 @@ class GDriveActivityType(str, Enum):
 
 class GDriveFileType(str, Enum):
     """Type of Google Drive file."""
+
     DOCUMENT = "document"
     SPREADSHEET = "spreadsheet"
     PRESENTATION = "presentation"
@@ -89,44 +91,53 @@ class GDriveFileType(str, Enum):
 
 class GDriveUserInfo(IndalekoBaseModel):
     """Information about a Google Drive user."""
+
     user_id: str = Field(..., description="Google Drive user ID")
-    email: Optional[str] = Field(None, description="User email address")
-    display_name: Optional[str] = Field(None, description="User display name")
-    photo_url: Optional[str] = Field(None, description="User profile photo URL")
-    
+    email: str | None = Field(None, description="User email address")
+    display_name: str | None = Field(None, description="User display name")
+    photo_url: str | None = Field(None, description="User profile photo URL")
+
     class Config:
         """Sample configuration for the data model."""
+
         json_schema_extra = {
             "example": {
                 "user_id": "12345678901234567890",
                 "email": "user@example.com",
                 "display_name": "Example User",
-                "photo_url": "https://lh3.googleusercontent.com/a/example"
-            }
+                "photo_url": "https://lh3.googleusercontent.com/a/example",
+            },
         }
 
 
 class GDriveFileInfo(IndalekoBaseModel):
     """Information about a Google Drive file."""
+
     file_id: str = Field(..., description="Google Drive file ID")
     name: str = Field(..., description="File name")
     mime_type: str = Field(..., description="File MIME type")
     file_type: GDriveFileType = Field(..., description="File type category")
-    description: Optional[str] = Field(None, description="File description")
-    size: Optional[int] = Field(None, description="File size in bytes")
-    md5_checksum: Optional[str] = Field(None, description="MD5 checksum of file content")
-    version: Optional[str] = Field(None, description="File version")
-    starred: Optional[bool] = Field(None, description="Whether the file is starred")
-    trashed: Optional[bool] = Field(None, description="Whether the file is trashed")
-    created_time: Optional[datetime] = Field(None, description="File creation time")
-    modified_time: Optional[datetime] = Field(None, description="File last modification time")
-    viewed_time: Optional[datetime] = Field(None, description="File last viewed time")
-    shared: Optional[bool] = Field(None, description="Whether the file is shared")
-    web_view_link: Optional[str] = Field(None, description="Link to view the file in browser")
-    parent_folder_id: Optional[str] = Field(None, description="ID of parent folder")
-    parent_folder_name: Optional[str] = Field(None, description="Name of parent folder")
-    
-    @field_validator('created_time', 'modified_time', 'viewed_time', mode='before')
+    description: str | None = Field(None, description="File description")
+    size: int | None = Field(None, description="File size in bytes")
+    md5_checksum: str | None = Field(
+        None, description="MD5 checksum of file content",
+    )
+    version: str | None = Field(None, description="File version")
+    starred: bool | None = Field(None, description="Whether the file is starred")
+    trashed: bool | None = Field(None, description="Whether the file is trashed")
+    created_time: datetime | None = Field(None, description="File creation time")
+    modified_time: datetime | None = Field(
+        None, description="File last modification time",
+    )
+    viewed_time: datetime | None = Field(None, description="File last viewed time")
+    shared: bool | None = Field(None, description="Whether the file is shared")
+    web_view_link: str | None = Field(
+        None, description="Link to view the file in browser",
+    )
+    parent_folder_id: str | None = Field(None, description="ID of parent folder")
+    parent_folder_name: str | None = Field(None, description="Name of parent folder")
+
+    @field_validator("created_time", "modified_time", "viewed_time", mode="before")
     @classmethod
     def ensure_timezone(cls, v):
         """Ensure that datetime values have timezone information."""
@@ -135,22 +146,25 @@ class GDriveFileInfo(IndalekoBaseModel):
         if isinstance(v, str):
             try:
                 # Try to parse ISO format string
-                v = datetime.fromisoformat(v.replace('Z', '+00:00'))
+                v = datetime.fromisoformat(v.replace("Z", "+00:00"))
             except ValueError:
                 try:
                     # Try RFC 3339 format
-                    v = datetime.strptime(v, '%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=timezone.utc)
+                    v = datetime.strptime(v, "%Y-%m-%dT%H:%M:%S.%fZ").replace(
+                        tzinfo=UTC,
+                    )
                 except ValueError:
                     # Return original value if parsing fails
                     return v
-        
+
         # Ensure datetime has timezone
         if isinstance(v, datetime) and v.tzinfo is None:
-            return v.replace(tzinfo=timezone.utc)
+            return v.replace(tzinfo=UTC)
         return v
-    
+
     class Config:
         """Sample configuration for the data model."""
+
         json_schema_extra = {
             "example": {
                 "file_id": "1ABCdefGHIjklMNOpqrsTUVwxyz12345",
@@ -169,62 +183,79 @@ class GDriveFileInfo(IndalekoBaseModel):
                 "shared": True,
                 "web_view_link": "https://docs.google.com/document/d/1abc...",
                 "parent_folder_id": "0ABCdefGHIjklMNOpqrsTUVwxyz12345",
-                "parent_folder_name": "Projects"
-            }
+                "parent_folder_name": "Projects",
+            },
         }
 
 
 class GDriveActivityData(IndalekoBaseModel):
     """Google Drive activity data model."""
+
     # Core activity fields
     activity_id: str = Field(..., description="Unique identifier for this activity")
     activity_type: GDriveActivityType = Field(..., description="Type of activity")
     timestamp: datetime = Field(..., description="When the activity occurred")
-    
+
     # User information
     user: GDriveUserInfo = Field(..., description="User who performed the activity")
-    
+
     # File information
     file: GDriveFileInfo = Field(..., description="File involved in the activity")
-    
+
     # Additional metadata
-    destination_folder_id: Optional[str] = Field(None, description="For move/copy: destination folder ID")
-    destination_folder_name: Optional[str] = Field(None, description="For move/copy: destination folder name")
-    previous_file_name: Optional[str] = Field(None, description="For rename: previous file name")
-    comment_id: Optional[str] = Field(None, description="For comment: comment ID")
-    comment_content: Optional[str] = Field(None, description="For comment: comment content")
-    shared_with: Optional[List[GDriveUserInfo]] = Field(None, description="For share: users the file was shared with")
-    permission_changes: Optional[Dict[str, str]] = Field(None, description="For share: permission changes")
-    
-    # Original API response for reference
-    raw_data: Optional[Dict[str, Any]] = Field(None, description="Original API response")
-    
-    # Classification for activity context system
-    activity_classification: Optional[IndalekoActivityClassification] = Field(
-        None, description="Multi-dimensional classification of this activity"
+    destination_folder_id: str | None = Field(
+        None, description="For move/copy: destination folder ID",
     )
-    
-    @field_validator('timestamp', mode='before')
+    destination_folder_name: str | None = Field(
+        None, description="For move/copy: destination folder name",
+    )
+    previous_file_name: str | None = Field(
+        None, description="For rename: previous file name",
+    )
+    comment_id: str | None = Field(None, description="For comment: comment ID")
+    comment_content: str | None = Field(
+        None, description="For comment: comment content",
+    )
+    shared_with: list[GDriveUserInfo] | None = Field(
+        None, description="For share: users the file was shared with",
+    )
+    permission_changes: dict[str, str] | None = Field(
+        None, description="For share: permission changes",
+    )
+
+    # Original API response for reference
+    raw_data: dict[str, Any] | None = Field(
+        None, description="Original API response",
+    )
+
+    # Classification for activity context system
+    activity_classification: IndalekoActivityClassification | None = Field(
+        None, description="Multi-dimensional classification of this activity",
+    )
+
+    @field_validator("timestamp", mode="before")
     @classmethod
     def ensure_timezone(cls, v):
         """Ensure that datetime values have timezone information."""
         if isinstance(v, str):
             try:
                 # Try to parse ISO format string
-                v = datetime.fromisoformat(v.replace('Z', '+00:00'))
+                v = datetime.fromisoformat(v.replace("Z", "+00:00"))
             except ValueError:
                 try:
                     # Try RFC 3339 format
-                    v = datetime.strptime(v, '%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=timezone.utc)
+                    v = datetime.strptime(v, "%Y-%m-%dT%H:%M:%S.%fZ").replace(
+                        tzinfo=UTC,
+                    )
                 except ValueError:
                     # Return original value if parsing fails
                     return v
-        
+
         # Ensure datetime has timezone
         if isinstance(v, datetime) and v.tzinfo is None:
-            return v.replace(tzinfo=timezone.utc)
+            return v.replace(tzinfo=UTC)
         return v
-    
+
     def to_storage_activity(self) -> GoogleDriveStorageActivityData:
         """Convert to a standardized Google Drive storage activity."""
         # Map activity type
@@ -251,12 +282,12 @@ class GDriveActivityData(IndalekoBaseModel):
             storage_activity_type = StorageActivityType.RESTORE
         elif self.activity_type == GDriveActivityType.COPY:
             storage_activity_type = StorageActivityType.COPY
-        
+
         # Map item type
         item_type = StorageItemType.FILE
         if self.file.file_type == GDriveFileType.FOLDER:
             item_type = StorageItemType.DIRECTORY
-        
+
         # Create storage activity
         return GoogleDriveStorageActivityData(
             # Core fields from BaseStorageActivityData
@@ -268,11 +299,12 @@ class GDriveActivityData(IndalekoBaseModel):
             file_path=f"gdrive://{self.file.file_id}",
             file_id=self.file.file_id,
             provider_type=StorageProviderType.GOOGLE_DRIVE,
-            provider_id=uuid.UUID("3e7d8f29-7c73-41c5-b3d4-1a9b42567890"),  # Google Drive Collector UUID
+            provider_id=uuid.UUID(
+                "3e7d8f29-7c73-41c5-b3d4-1a9b42567890",
+            ),  # Google Drive Collector UUID
             user_id=self.user.user_id,
             user_name=self.user.display_name or self.user.email,
             previous_file_name=self.previous_file_name,
-            
             # Additional attributes
             attributes={
                 "gdrive_activity_id": self.activity_id,
@@ -283,7 +315,6 @@ class GDriveActivityData(IndalekoBaseModel):
                 "gdrive_parent_folder_id": self.file.parent_folder_id,
                 "gdrive_parent_folder_name": self.file.parent_folder_name,
             },
-            
             # CloudStorageActivityData fields
             cloud_item_id=self.file.file_id,
             cloud_parent_id=self.file.parent_folder_id,
@@ -294,14 +325,16 @@ class GDriveActivityData(IndalekoBaseModel):
             is_directory=self.file.file_type == GDriveFileType.FOLDER,
             created_time=self.file.created_time,
             modified_time=self.file.modified_time,
-            
             # GoogleDriveStorageActivityData fields
-            parents=[self.file.parent_folder_id] if self.file.parent_folder_id else None,
-            version=self.file.version
+            parents=(
+                [self.file.parent_folder_id] if self.file.parent_folder_id else None
+            ),
+            version=self.file.version,
         )
-    
+
     class Config:
         """Sample configuration for the data model."""
+
         json_schema_extra = {
             "example": {
                 "activity_id": "1234567890abcdef",
@@ -311,7 +344,7 @@ class GDriveActivityData(IndalekoBaseModel):
                     "user_id": "12345678901234567890",
                     "email": "user@example.com",
                     "display_name": "Example User",
-                    "photo_url": "https://lh3.googleusercontent.com/a/example"
+                    "photo_url": "https://lh3.googleusercontent.com/a/example",
                 },
                 "file": {
                     "file_id": "1ABCdefGHIjklMNOpqrsTUVwxyz12345",
@@ -324,7 +357,7 @@ class GDriveActivityData(IndalekoBaseModel):
                     "shared": True,
                     "web_view_link": "https://docs.google.com/document/d/1abc...",
                     "parent_folder_id": "0ABCdefGHIjklMNOpqrsTUVwxyz12345",
-                    "parent_folder_name": "Projects"
-                }
-            }
+                    "parent_folder_name": "Projects",
+                },
+            },
         }

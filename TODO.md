@@ -47,7 +47,7 @@ This document outlines planned enhancements, features, and improvements for the 
   - ✅ Build contextual query recommendation engine
   - ✅ Integrate recommendation engine with Archivist system
   - ✅ Integrate with Assistant API conversation model
-  
+
 - [x] **Recommendation Engine Testing and Refinement**
   - ✅ Create comprehensive testing framework for recommendation components
   - ✅ Implement framework for recommendation provider extensibility
@@ -84,7 +84,7 @@ This document outlines planned enhancements, features, and improvements for the 
   - Implement GUI for reviewing and approving suggested equivalences
   - Add context-based entity disambiguation
   - Create export/import functionality for entity graphs
-  
+
 - [ ] **Fire Circle Integration**
   - Implement specialized entity roles (Storyteller, Analyst, Critic, Synthesizer)
   - Create persistent memory system shared across circle members
@@ -100,7 +100,8 @@ This document outlines planned enhancements, features, and improvements for the 
   - ✅ Preserve USN journal event details including rename operations
   - ✅ Add state preservation between runs
   - ✅ Create JSONL serialization for activities
-  
+  - [ ] Fix hot tier recorder to define indices in the registration parameters instead of manually
+
 - [x] **NTFS Activity Context Integration**
   - ✅ Add optional activity context association to NTFS activity records
   - ✅ Modify data model to include activity context reference field
@@ -169,7 +170,7 @@ This document outlines planned enhancements, features, and improvements for the 
 
 - [ ] **Desktop Activity Integration**
   - Create application focus/usage data collector
-  - Add window management tracking 
+  - Add window management tracking
   - Implement task switching pattern analysis
   - Develop productivity pattern recognition
 
@@ -204,7 +205,7 @@ This document outlines planned enhancements, features, and improvements for the 
   - Create pluggable extractor framework for third-party tools
 
 - [ ] **Content Classification**
-  - Implement ML-based document classification 
+  - Implement ML-based document classification
   - Add topic modeling for document collections
   - Create semantic similarity search
   - Develop cross-document concept mapping
@@ -377,11 +378,11 @@ This document outlines planned enhancements, features, and improvements for the 
   - Add integration test framework
   - Create performance benchmark suite
   - Develop automated UI testing
-  
+
 - [ ] **Synthetic Test Data Generator**
   - Create a dedicated test data generation system separate from data_generator
   - Implement realistic activity data generation across different sources
-  - Build metadata generators for all collector types 
+  - Build metadata generators for all collector types
   - Add relationship generation between synthetic entities
   - Create time-correlated activities across different sources
   - Implement configurable data volume and complexity settings

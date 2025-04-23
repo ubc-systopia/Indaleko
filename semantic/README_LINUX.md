@@ -26,7 +26,7 @@ Indaleko's semantic extractors work well on Linux systems, offering:
    - Access to ArangoDB instance (local or remote)
    - Valid database credentials
 
-## Installation 
+## Installation
 
 1. **Set up Python environment**
 

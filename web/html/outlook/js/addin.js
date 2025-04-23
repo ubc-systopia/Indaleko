@@ -65,7 +65,7 @@ function onSendHandler(event) {
                 attachments: null
             };
             Office.context.mailbox.item.getAttachmentsAsync(function (result) {
-                
+
                 if (result.status === Office.AsyncResultStatus.Succeeded) {
                     var attachments = result.value;
                     var dataToSend = []; // Array to hold attachment and OneDrive link data
@@ -96,7 +96,7 @@ function onSendHandler(event) {
                         }
 
                         const item = Office.context.mailbox.item;
-                        
+
                         item.getItemIdAsync(function(result) {
                             if (result.status === Office.AsyncResultStatus.Succeeded) {
                                 finalData.emailId = result.value;
@@ -116,7 +116,7 @@ function onSendHandler(event) {
                                     } else {
                                     }
                                 });
-                            
+
                                 // Get recipient's email addresses
                                 item.to.getAsync(async function(result) {
                                     if (result.status === Office.AsyncResultStatus.Succeeded) {
@@ -225,7 +225,7 @@ Office.onReady(function () {
         saveAccessToken(null);
         authenticateGraph();
     }
-    
+
     function authenticateGraph() {
         // Construct the authorization URL with necessary parameters
         const CODE_VERIFIER = generateCodeVerifier(128);
@@ -248,13 +248,13 @@ Office.onReady(function () {
                                         var response = JSON.parse(xhr.responseText);
                                         if(response.od_token) {
                                             clearInterval(interval);
-                                            saveAccessToken(response.od_token); 
+                                            saveAccessToken(response.od_token);
                                             // Update UI to indicate successful authentication
                                             updateUIAfterAuthentication(response.od_token);
                                             dialog.close();
                                         } else {
                                             document.getElementById("authResult").insertAdjacentHTML('beforeend', `ElseData == ${response}`);
-                                        } 
+                                        }
                                     }
                                 };
                                 xhr.send();
@@ -273,7 +273,7 @@ Office.onReady(function () {
                 console.error("Error during authentication:", error);
             });
     }
-    
+
     // Function to update UI after successful authentication
     function updateUIAfterAuthentication(accessToken) {
         document.getElementById("authenticateButton").innerHTML = "Re-Login";

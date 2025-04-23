@@ -20,33 +20,32 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from query.memory.pattern_types import (
     DataSourceType,
-    SuggestionType,
+    ProactiveSuggestion,
     SuggestionPriority,
-    ProactiveSuggestion
+    SuggestionType,
 )
-
 from query.memory.query_pattern_analysis import (
-    QueryPatternAnalyzer,
-    QueryPattern,
     QueryChain,
-    QueryEntityUsage,
     QueryChainType,
-    QueryRefinementType,
+    QueryEntityUsage,
     QueryIntentType,
-    QueryPatternAnalysisData
+    QueryPattern,
+    QueryPatternAnalysisData,
+    QueryPatternAnalyzer,
+    QueryRefinementType,
 )
 
 __all__ = [
-    'DataSourceType',
-    'SuggestionType',
-    'SuggestionPriority',
-    'ProactiveSuggestion',
-    'QueryPatternAnalyzer',
-    'QueryPattern',
-    'QueryChain',
-    'QueryEntityUsage',
-    'QueryChainType',
-    'QueryRefinementType',
-    'QueryIntentType',
-    'QueryPatternAnalysisData'
+    "DataSourceType",
+    "SuggestionType",
+    "SuggestionPriority",
+    "ProactiveSuggestion",
+    "QueryPatternAnalyzer",
+    "QueryPattern",
+    "QueryChain",
+    "QueryEntityUsage",
+    "QueryChainType",
+    "QueryRefinementType",
+    "QueryIntentType",
+    "QueryPatternAnalysisData",
 ]
