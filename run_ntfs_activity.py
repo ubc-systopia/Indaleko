@@ -38,11 +38,9 @@ import os
 import signal
 import sys
 import time
-
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
-
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -57,12 +55,8 @@ from activity.collectors.storage.ntfs.usn_journal_collector import (
 from activity.recorders.storage.ntfs.tiered.hot.recorder import NtfsHotTierRecorder
 from constants.values import IndalekoConstants
 
-
 # Create default DB config path using pathlib.Path
-DEFAULT_DB_CONFIG_PATH = (
-    Path(IndalekoConstants.default_config_dir)
-    / IndalekoConstants.default_db_config_file_name
-)
+DEFAULT_DB_CONFIG_PATH = Path(IndalekoConstants.default_config_dir) / IndalekoConstants.default_db_config_file_name
 
 
 class IntegratedNtfsActivityRunner:
@@ -91,11 +85,11 @@ class IntegratedNtfsActivityRunner:
         log_level = logging.DEBUG if self.verbose else logging.INFO
         # Configure root logger
         import socket
-
         from logging import Formatter
         from logging.handlers import RotatingFileHandler
 
         from utils.logging.file_namer import build_indaleko_log_name
+
         root = logging.getLogger()
         root.setLevel(log_level)
         fmt = Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -110,11 +104,18 @@ class IntegratedNtfsActivityRunner:
         machine_id = kwargs.get("machine_id") or socket.gethostname()
         ts = datetime.now(UTC).strftime("%Y_%m_%dT%H#%M#%S.%fZ")
         fname = build_indaleko_log_name(
-            platform="Windows", service="ntfs_activity_collector",
-            machine_uuid=machine_id, timestamp=datetime.now(UTC),
+            platform="Windows",
+            service="ntfs_activity_collector",
+            machine_uuid=machine_id,
+            timestamp=datetime.now(UTC),
         )
         log_path = os.path.join(log_dir, fname)
-        fh = RotatingFileHandler(log_path, maxBytes=10*1024*1024, backupCount=5, encoding="utf-8")
+        fh = RotatingFileHandler(
+            log_path,
+            maxBytes=10 * 1024 * 1024,
+            backupCount=5,
+            encoding="utf-8",
+        )
         fh.setLevel(log_level)
         fh.setFormatter(fmt)
         root.addHandler(fh)
@@ -137,9 +138,7 @@ class IntegratedNtfsActivityRunner:
         self.current_file_size = 0
         if self.backup_to_files:
             self.output_dir = kwargs.get("output_dir", "data/ntfs_activity")
-            self.max_file_size = (
-                kwargs.get("max_file_size", 100) * 1024 * 1024
-            )  # MB to bytes
+            self.max_file_size = kwargs.get("max_file_size", 100) * 1024 * 1024  # MB to bytes
 
             # Create output directory if needed
             os.makedirs(self.output_dir, exist_ok=True)
@@ -335,36 +334,50 @@ class IntegratedNtfsActivityRunner:
                         self.consecutive_empty_results += 1
 
                         # Check if we should reset state due to persistent empty results
-                        if (
-                            self.auto_reset_enabled
-                            and self.consecutive_empty_results
-                            >= self.empty_results_threshold
-                        ):
+                        if self.auto_reset_enabled and self.consecutive_empty_results >= self.empty_results_threshold:
                             self.logger.warning(
                                 f"No activities for {self.consecutive_empty_results} consecutive cycles - resetting collector state",
                             )
                             self.collector.reset_state()
                             self.consecutive_empty_results = 0
+                except RecursionError as recursion_error:
+                    # Handle recursion errors specifically with proper diagnostics
+                    self.logger.warning(
+                        "Maximum recursion depth exceeded in USN Journal processing"
+                    )
+                    
+                    # Log more details about the recursion error at debug level
+                    import traceback
+                    recursion_trace = traceback.format_exc()
+                    self.logger.debug(f"Recursion error details: {recursion_trace}")
+                    
+                    # For recursion errors, reset state more aggressively
+                    if self.auto_reset_enabled:
+                        self.logger.warning(
+                            "Recursion error detected - resetting collector state to recover"
+                        )
+                        self.collector.reset_state()
+                        self.consecutive_errors = 0
+                        # Skip normal error handling
+                        continue
+                        
                 except Exception as collection_error:
-                    if "maximum recursion depth exceeded" in str(collection_error):
-                        # Only log this error at debug level since it happens frequently
-                        self.logger.debug(
-                            "Error opening USN journal: maximum recursion depth exceeded",
-                        )
-                    else:
-                        # Log other errors normally
-                        self.logger.error(
-                            f"Error collecting activities: {collection_error}",
-                        )
+                    # Log other errors normally with full details
+                    self.logger.error(
+                        f"Error collecting activities: {collection_error}"
+                    )
+                    
+                    # Include stack trace for debugging
+                    if self.verbose:
+                        import traceback
+                        error_trace = traceback.format_exc()
+                        self.logger.debug(f"Error details: {error_trace}")
 
                     # Increment consecutive error counter
                     self.consecutive_errors += 1
 
                     # Check if we should reset state due to persistent errors
-                    if (
-                        self.auto_reset_enabled
-                        and self.consecutive_errors >= self.error_threshold
-                    ):
+                    if self.auto_reset_enabled and self.consecutive_errors >= self.error_threshold:
                         self.logger.warning(
                             f"{self.consecutive_errors} consecutive collection errors - resetting collector state",
                         )
@@ -505,7 +518,10 @@ def main():
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
     # Logging parameters
     parser.add_argument(
-        "--log-dir", type=str, default="logs", help="Directory to write log files to",
+        "--log-dir",
+        type=str,
+        default="logs",
+        help="Directory to write log files to",
     )
     parser.add_argument(
         "--machine-id",

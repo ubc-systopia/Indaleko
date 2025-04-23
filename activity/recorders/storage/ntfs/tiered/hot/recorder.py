@@ -49,10 +49,8 @@ import sys
 import time
 import traceback
 import uuid
-
 from datetime import UTC, datetime, timedelta
 from typing import Any
-
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -79,7 +77,6 @@ from activity.recorders.storage.ntfs.activity_context_integration import (
     NtfsActivityContextIntegration,
 )
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
-
 
 # Import ServiceManager upfront to avoid late binding issues
 
@@ -178,9 +175,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                         f"Could not find collection for recorder {self._recorder_id}",
                     )
                     # Use a fallback name if needed
-                    self._collection_name = (
-                        f"ntfs_activities_hot_{str(self._recorder_id)[:8]}"
-                    )
+                    self._collection_name = f"ntfs_activities_hot_{str(self._recorder_id)[:8]}"
 
         # Initialize activity context integration
         self._activity_context_integration = NtfsActivityContextIntegration(
@@ -250,9 +245,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             # Generate a dynamic collection name using the UUID
             if self._collection_name is None:
                 # We'll get the actual collection name from the registration service
-                temp_collection_name = (
-                    f"ntfs_activities_hot_{str(self._recorder_id)[:8]}"
-                )
+                temp_collection_name = f"ntfs_activities_hot_{str(self._recorder_id)[:8]}"
             else:
                 temp_collection_name = self._collection_name
 
@@ -327,9 +320,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 from db.i_collections import IndalekoCollections
 
                 # Make sure we're using the standard Objects collection
-                self._entity_collection_name = (
-                    IndalekoDBCollections.Indaleko_Object_Collection
-                )
+                self._entity_collection_name = IndalekoDBCollections.Indaleko_Object_Collection
 
                 self._logger.info(
                     f"Getting entity collection: {self._entity_collection_name}",
@@ -580,22 +571,13 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
 
         # Factor 2: File type importance (basic version)
         file_path = activity_data.get("file_path", "")
-        if any(
-            file_path.lower().endswith(ext)
-            for ext in [".docx", ".xlsx", ".pdf", ".py", ".md"]
-        ):
+        if any(file_path.lower().endswith(ext) for ext in [".docx", ".xlsx", ".pdf", ".py", ".md"]):
             base_score += 0.1  # Document types matter more
 
         # Factor 3: Path significance
-        if any(
-            segment in file_path
-            for segment in ["\\Documents\\", "\\Projects\\", "\\src\\", "\\source\\"]
-        ):
+        if any(segment in file_path for segment in ["\\Documents\\", "\\Projects\\", "\\src\\", "\\source\\"]):
             base_score += 0.1  # User document areas matter more
-        elif any(
-            segment in file_path
-            for segment in ["\\Temp\\", "\\tmp\\", "\\Cache\\", "\\Downloaded\\"]
-        ):
+        elif any(segment in file_path for segment in ["\\Temp\\", "\\tmp\\", "\\Cache\\", "\\Downloaded\\"]):
             base_score -= 0.1  # Temporary areas matter less
 
         # Factor 4: Is directory
@@ -685,11 +667,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             # Create simplified object document to avoid schema issues
             entity_doc = {
                 "_key": str(entity_id),
-                "Label": (
-                    os.path.basename(file_path)
-                    if file_path
-                    else f"Object-{str(entity_id)[:8]}"
-                ),
+                "Label": (os.path.basename(file_path) if file_path else f"Object-{str(entity_id)[:8]}"),
                 "CreatedTimestamp": datetime.now(UTC).isoformat(),
                 "ModifiedTimestamp": datetime.now(UTC).isoformat(),
                 "Properties": {
@@ -780,28 +758,75 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
         if not hasattr(self, "_db") or self._db is None:
             return
 
-        try:
-            entity_collection = self._db.get_collection(self._entity_collection_name)
-            activity_type = activity_data.get("activity_type", "")
+        # Validate inputs
+        if not isinstance(entity_id, uuid.UUID):
+            self._logger.error(f"Invalid entity_id type: {type(entity_id).__name__}, expected uuid.UUID")
+            return
 
-            # Ensure timestamp is a string - this fixes the 'str' has no 'isoformat' error
+        if not isinstance(activity_data, dict):
+            self._logger.error(f"Invalid activity_data type: {type(activity_data).__name__}, expected dict")
+            return
+
+        try:
+            # Get the entity collection
+            entity_collection = self._db.get_collection(self._entity_collection_name)
+
+            # Extract activity type with validation
+            activity_type = activity_data.get("activity_type", "")
+            if not isinstance(activity_type, str):
+                self._logger.error(f"Invalid activity_type: {activity_type} ({type(activity_type).__name__})")
+                return
+
+            # Extract and validate timestamp
             timestamp = activity_data.get("timestamp")
             if isinstance(timestamp, datetime):
                 timestamp = timestamp.isoformat()
             elif timestamp is None:
                 timestamp = datetime.now(UTC).isoformat()
-            # If timestamp is already a string, use it directly
+            elif not isinstance(timestamp, str):
+                self._logger.error(f"Invalid timestamp type: {type(timestamp).__name__}")
+                timestamp = datetime.now(UTC).isoformat()
 
-            self._logger.debug(
-                f"Updating entity {entity_id} metadata for activity type {activity_type}",
-            )
+            self._logger.debug(f"Updating entity {entity_id} metadata for activity type '{activity_type}'")
 
-            # Skip if already processed recently (avoid redundant updates)
+            # Get current entity document to validate its structure and perform safe updates
+            try:
+                current_doc = entity_collection.get(str(entity_id))
+                if not current_doc:
+                    self._logger.info(f"Entity {entity_id} does not exist in collection, skipping update")
+                    return
+
+                # Log the actual document structure for debugging
+                self._logger.debug(f"Current entity document structure: {list(current_doc.keys())}")
+
+                # Validate document has expected structure or initialize it
+                if "Properties" not in current_doc:
+                    self._logger.info(f"Entity {entity_id} missing Properties field, initializing it")
+                    current_doc["Properties"] = {}
+                elif not isinstance(current_doc["Properties"], dict):
+                    self._logger.error(
+                        f"Entity {entity_id} has invalid Properties type: {type(current_doc['Properties']).__name__}, expected dict",
+                    )
+                    # Fix the structure - convert to dict if possible or initialize new
+                    try:
+                        if hasattr(current_doc["Properties"], "__dict__"):
+                            # Try to convert object to dict
+                            current_doc["Properties"] = current_doc["Properties"].__dict__
+                        else:
+                            # Initialize new dict
+                            current_doc["Properties"] = {}
+                    except Exception as convert_error:
+                        self._logger.error(f"Could not fix Properties structure: {convert_error}")
+                        return
+
+            except Exception as get_error:
+                self._logger.error(f"Failed to retrieve entity {entity_id}: {get_error}")
+                return
+
+            # De-duplicate updates using cache
             cache_key = f"{entity_id}:{activity_type}:{timestamp}"
             if cache_key in getattr(self, "_processed_updates", set()):
-                self._logger.debug(
-                    f"Skipping update for recently processed entity {entity_id}",
-                )
+                self._logger.debug(f"Skipping duplicate update for entity {entity_id}")
                 return
 
             # Initialize processed updates set if not exists
@@ -814,74 +839,94 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             if len(self._processed_updates) > 10000:
                 self._processed_updates = set(list(self._processed_updates)[-5000:])
 
-            # Use direct update method instead of AQL to avoid format issues
-            try:
-                # Create a properly structured document for updating
-                # ArangoDB expects nested structures, not dot notation in keys
-                if activity_type == "delete":
-                    # Mark entity as deleted
-                    update_doc = {
-                        "_key": str(entity_id),
-                        "Properties": {"deleted": True, "last_modified": timestamp},
+            # Create a clone of Properties to avoid modifying the retrieved document
+            # This prevents side effects if the update fails
+            properties = dict(current_doc.get("Properties", {}))
+
+            # Prepare update based on activity type
+            if activity_type == "delete":
+                # Mark entity as deleted
+                properties["deleted"] = True
+                properties["last_modified"] = timestamp
+                update_fields = {
+                    "Properties": properties,
+                    "ModifiedTimestamp": datetime.now(UTC).isoformat(),
+                }
+                self._logger.debug(f"Marking entity {entity_id} as deleted")
+
+            elif activity_type == "rename":
+                # Update file path
+                new_path = activity_data.get("file_path", "")
+                if not new_path:
+                    self._logger.debug("Rename operation missing file_path, skipping update")
+                    return
+
+                properties["file_path"] = new_path
+                properties["last_modified"] = timestamp
+                update_fields = {
+                    "Properties": properties,
+                    "ModifiedTimestamp": datetime.now(UTC).isoformat(),
+                }
+                self._logger.debug(f"Updating entity {entity_id} path to '{new_path}'")
+
+                # Update path cache if volume information available
+                volume = activity_data.get("volume_name", "")
+                if volume:
+                    self._path_entity_cache[f"{volume}:{new_path}"] = entity_id
+
+            elif activity_type == "create":
+                # For create, ensure the entity is marked as not deleted
+                properties["deleted"] = False
+                properties["last_accessed"] = timestamp
+                properties["last_modified"] = timestamp
+
+                # Ensure file path and other essential properties are present
+                file_path = activity_data.get("file_path", "")
+                if file_path:
+                    properties["file_path"] = file_path
+
+                is_directory = activity_data.get("is_directory", False)
+                properties["is_directory"] = is_directory
+
+                update_fields = {
+                    "Properties": properties,
+                    "ModifiedTimestamp": datetime.now(UTC).isoformat(),
+                }
+                self._logger.debug(f"Updating entity {entity_id} for creation")
+
+            else:
+                # For other activities, just update timestamps
+                properties["last_accessed"] = timestamp
+
+                if activity_type in ["modify", "attribute_change"]:
+                    properties["last_modified"] = timestamp
+                    update_fields = {
+                        "Properties": properties,
                         "ModifiedTimestamp": datetime.now(UTC).isoformat(),
                     }
-                    self._logger.debug(f"Marking entity {entity_id} as deleted")
-
-                elif activity_type == "rename":
-                    # Update file path
-                    new_path = activity_data.get("file_path", "")
-                    if new_path:
-                        update_doc = {
-                            "_key": str(entity_id),
-                            "Properties": {
-                                "file_path": new_path,
-                                "last_modified": timestamp,
-                            },
-                            "ModifiedTimestamp": datetime.now(UTC).isoformat(),
-                        }
-                        self._logger.debug(
-                            f"Updating entity {entity_id} path to {new_path}",
-                        )
-
-                        # Update path cache
-                        volume = activity_data.get("volume_name", "")
-                        if volume:
-                            self._path_entity_cache[f"{volume}:{new_path}"] = entity_id
-                    else:
-                        return  # Skip if no new path
-
                 else:
-                    # For other activities, just update timestamps
-                    update_doc = {
-                        "_key": str(entity_id),
-                        "Properties": {"last_accessed": timestamp},
-                    }
+                    update_fields = {"Properties": properties}
 
-                    if activity_type in ["create", "modify", "attribute_change"]:
-                        update_doc["Properties"]["last_modified"] = timestamp
-                        update_doc["ModifiedTimestamp"] = datetime.now(
-                            UTC,
-                        ).isoformat()
+                self._logger.debug(f"Updating entity {entity_id} timestamps for activity '{activity_type}'")
 
-                    self._logger.debug(
-                        f"Updating entity {entity_id} timestamps for activity {activity_type}",
-                    )
+            # Make sure update_fields contain the correct _key
+            update_fields["_key"] = str(entity_id)
 
-                # Perform update with simplified document structure
-                try:
-                    # Use update method directly with properly structured document
-                    result = entity_collection.update(str(entity_id), update_doc)
-                    self._logger.debug("Entity update completed")
-                except Exception as update_error:
-                    self._logger.error(
-                        f"Entity update operation failed: {update_error}",
-                    )
-
-            except Exception as e:
-                self._logger.error(f"Entity update preparation failed: {e}")
+            # Perform the update with proper error handling
+            try:
+                result = entity_collection.update(str(entity_id), update_fields)
+                self._logger.debug(f"Entity update completed: {result}")
+            except Exception as update_error:
+                self._logger.error(f"Entity update operation failed: {update_error}")
+                # Log the update document for debugging
+                self._logger.error(f"Failed update document: {update_fields}")
+                # Don't re-raise - we want to continue processing other activities
 
         except Exception as e:
             self._logger.error(f"Error updating entity metadata: {e}")
+            import traceback
+
+            self._logger.debug(f"Error details: {traceback.format_exc()}")
             # Continue execution - don't let metadata updates block activity recording
 
     def _enhance_activity_data(self, activity_data: NtfsStorageActivityData) -> dict:
@@ -994,9 +1039,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             activity_data.activity_id,
         )  # Use activity ID as document key
         record_document["Record"] = record
-        record_document["SemanticAttributes"] = [
-            attr.model_dump() for attr in semantic_attributes
-        ]
+        record_document["SemanticAttributes"] = [attr.model_dump() for attr in semantic_attributes]
 
         self._logger.debug(f"Created document with _key: {record_document['_key']}")
         return record_document
@@ -1024,10 +1067,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
         )
 
         # Batch update activity context if available
-        if (
-            hasattr(self, "_activity_context_integration")
-            and self._activity_context_integration.is_context_available()
-        ):
+        if hasattr(self, "_activity_context_integration") and self._activity_context_integration.is_context_available():
             try:
                 self._logger.info(
                     f"Batch updating activity context with {len(activities)} activities",
@@ -1059,9 +1099,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 if hasattr(self, "_get_or_create_entity_uuid"):
                     # Temporarily bypass the entity creation just to test database insertion
                     orig_method = self._get_or_create_entity_uuid
-                    self._get_or_create_entity_uuid = (
-                        lambda frn, volume, file_path, is_directory: uuid.uuid4()
-                    )
+                    self._get_or_create_entity_uuid = lambda frn, volume, file_path, is_directory: uuid.uuid4()
 
                 # Process the activity
                 activity_id = self.store_activity(activity)
@@ -1069,10 +1107,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 stored_count += 1
 
                 # Restore the original method if we patched it
-                if (
-                    hasattr(self, "_get_or_create_entity_uuid")
-                    and "orig_method" in locals()
-                ):
+                if hasattr(self, "_get_or_create_entity_uuid") and "orig_method" in locals():
                     self._get_or_create_entity_uuid = orig_method
 
                 self._logger.debug(f"Successfully stored activity {i+1}: {activity_id}")
@@ -1123,19 +1158,14 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 raise
 
         # Integrate with activity context if available
-        if (
-            hasattr(self, "_activity_context_integration")
-            and self._activity_context_integration.is_context_available()
-        ):
+        if hasattr(self, "_activity_context_integration") and self._activity_context_integration.is_context_available():
             # Associate with current activity context
             try:
                 self._logger.debug(
                     f"Associating activity {activity_data.activity_id} with activity context",
                 )
-                enhanced_data = (
-                    self._activity_context_integration.associate_with_activity_context(
-                        activity_data,
-                    )
+                enhanced_data = self._activity_context_integration.associate_with_activity_context(
+                    activity_data,
                 )
                 self._logger.debug("Activity context association successful")
 
@@ -1523,9 +1553,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 bind_vars={"@collection": self._collection_name},
             )
 
-            stats["by_importance"] = {
-                f"{item['importance']:.1f}": item["count"] for item in importance_cursor
-            }
+            stats["by_importance"] = {f"{item['importance']:.1f}": item["count"] for item in importance_cursor}
 
             # Get time-based statistics
             time_query = """
@@ -1547,9 +1575,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 bind_vars={"@collection": self._collection_name},
             )
 
-            stats["by_time"] = {
-                f"{item['days_ago']} days ago": item["count"] for item in time_cursor
-            }
+            stats["by_time"] = {f"{item['days_ago']} days ago": item["count"] for item in time_cursor}
 
             # Add configuration information
             stats["ttl_days"] = self._ttl_days
@@ -1840,9 +1866,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 # Add hot tier information
                 latest["tier"] = "hot"
                 latest["ttl_days"] = self._ttl_days
-                latest["expiration_date"] = (
-                    datetime.now(UTC) + timedelta(days=self._ttl_days)
-                ).isoformat()
+                latest["expiration_date"] = (datetime.now(UTC) + timedelta(days=self._ttl_days)).isoformat()
 
                 return latest
             except StopIteration:
@@ -2093,12 +2117,7 @@ if __name__ == "__main__":
                     print(f"    {time_range}: {count}")
 
         # Display some activities if not in stats-only mode
-        if (
-            not args.stats_only
-            and hasattr(recorder, "_db")
-            and recorder._db
-            and len(activity_ids) > 0
-        ):
+        if not args.stats_only and hasattr(recorder, "_db") and recorder._db and len(activity_ids) > 0:
             print(f"\nShowing {min(args.limit, len(activity_ids))} recent activities:")
 
             # Get recent activities
