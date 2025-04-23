@@ -68,3 +68,10 @@ repos:
         entry: scripts/check_collection_constants.py
         language: python
         types: [python]
+
+      - id: check-no-data-field-usage
+        name: Forbid direct Record.Data field access
+        description: Ensure no code references sub-fields of Record.Data
+        entry: scripts/check_no_data_field_usage.py
+        language: python
+        types: [python]
