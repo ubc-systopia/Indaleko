@@ -49,8 +49,10 @@ import sys
 import time
 import traceback
 import uuid
+
 from datetime import UTC, datetime, timedelta
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -77,6 +79,7 @@ from activity.recorders.storage.ntfs.activity_context_integration import (
     NtfsActivityContextIntegration,
 )
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
+
 
 # Import ServiceManager upfront to avoid late binding issues
 
@@ -385,12 +388,9 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 # Try to add FRN index; ignore duplicates
                 try:
                     self._logger.info(
-                        "Ensuring Properties.file_reference_number index on entity collection",
+                        "LocalIdentifier index already exists per IndalekoDBCollections configuration",
                     )
-                    entity_collection.add_hash_index(
-                        fields=["Properties.file_reference_number"],
-                        unique=False,
-                    )
+                    # No need to add this index as it's already defined in IndalekoDBCollections
                 except Exception:
                     pass
                 # Try to add file_path index; ignore duplicates
@@ -428,7 +428,8 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             # Create TTL index on ttl_timestamp field via Arango-style index dict
             ttl_index = {
                 "type": "ttl",
-                "fields": ["Record.Data.ttl_timestamp"],
+                # Index the top-level ttl_timestamp field, not inside Data
+                "fields": ["ttl_timestamp"],
                 "expireAfter": ttl_seconds,
             }
             # Use low-level add_index(data=...) API on our wrapper
@@ -596,6 +597,11 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
         """
         Get existing entity UUID or create a new one for an FRN.
 
+        This method implements the correct lookup pattern described in ENTITY_MAPPING.md:
+        1. First try to find by FRN + Volume (platform-specific identifiers)
+        2. If not found, check by path + Volume as fallback
+        3. If still not found, create a new entity with proper identifiers
+
         Args:
             frn: File reference number
             volume: Volume name
@@ -620,9 +626,11 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             # Query existing mapping
             entity_collection = self._db.get_collection(self._entity_collection_name)
 
+            # First try to find entity using standard format from ENTITY_MAPPING.md
+            # which uses LocalIdentifier and Volume fields
             query = """
                 FOR doc IN @@collection
-                FILTER doc.Properties.file_reference_number == @frn AND doc.Properties.volume == @volume
+                FILTER doc.LocalIdentifier == @frn AND doc.Volume == @volume
                 LIMIT 1
                 RETURN doc
             """
@@ -641,12 +649,56 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 entity = doc
                 break
 
+            # If found using standard format
             if entity:
                 # Store in cache and return
                 entity_id = uuid.UUID(entity["_key"])
                 self._frn_entity_cache[cache_key] = entity_id
                 self._logger.debug(
-                    f"Found existing entity with ID {entity_id} for FRN {frn}",
+                    f"Found existing entity with ID {entity_id} for FRN {frn} using LocalIdentifier field",
+                )
+                return entity_id
+
+            # If not found with standard format, try with LocalPath as a fallback
+            # This provides a second lookup path if needed
+            query = """
+                FOR doc IN @@collection
+                FILTER doc.LocalIdentifier == @frn AND doc.LocalPath LIKE CONCAT(@volume, '%')
+                LIMIT 1
+                RETURN doc
+            """
+
+            # Time the query execution
+            import time
+            start_time = time.time()
+            cursor = self._db._arangodb.aql.execute(
+                query,
+                bind_vars={
+                    "@collection": self._entity_collection_name,
+                    "frn": frn,
+                    "volume": volume,  # This will be the drive letter like "C:" for the fallback query
+                },
+            )
+            query_time = time.time() - start_time
+            
+            # Log a warning if the query takes more than 5 seconds
+            if query_time > 5.0:
+                self._logger.warning(
+                    f"Slow fallback AQL query (took {query_time:.2f} seconds): {query}",
+                    extra={"bind_vars": {"frn": frn, "volume": volume}}
+                )
+
+            entity = None
+            for doc in cursor:
+                entity = doc
+                break
+
+            if entity:
+                # Store in cache and return
+                entity_id = uuid.UUID(entity["_key"])
+                self._frn_entity_cache[cache_key] = entity_id
+                self._logger.debug(
+                    f"Found existing entity with ID {entity_id} for FRN {frn} using LocalPath fallback",
                 )
                 return entity_id
 
@@ -660,16 +712,22 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 self._logger.debug(f"Found entity by path with ID {entity_id}")
                 return entity_id
 
-            # No existing entity, create new one using standard Objects collection format
+            # No existing entity, create new one using best practices from ENTITY_MAPPING.md
             entity_id = uuid.uuid4()
             self._logger.debug(f"Creating new entity with ID {entity_id} for FRN {frn}")
 
-            # Create simplified object document to avoid schema issues
+            # Create entity document with both standard top-level fields AND Properties
+            # This ensures compatibility with both lookup patterns
             entity_doc = {
                 "_key": str(entity_id),
                 "Label": (os.path.basename(file_path) if file_path else f"Object-{str(entity_id)[:8]}"),
+                # Add standard ENTITY_MAPPING.md fields at top level
+                "LocalIdentifier": frn,
+                "Volume": volume,
+                "LocalPath": file_path,
                 "CreatedTimestamp": datetime.now(UTC).isoformat(),
                 "ModifiedTimestamp": datetime.now(UTC).isoformat(),
+                # Keep Properties for backward compatibility
                 "Properties": {
                     "file_reference_number": frn,
                     "volume": volume,
@@ -721,8 +779,11 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             # Update entity with new FRN
             entity_collection = self._db.get_collection(self._entity_collection_name)
 
+            # Use both top-level fields and Properties to ensure compatibility with both lookup patterns
             query = """
                 UPDATE @entity_id WITH {
+                    LocalIdentifier: @frn,
+                    Volume: @volume,
                     Properties: {
                         file_reference_number: @frn,
                         volume: @volume
@@ -743,8 +804,11 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 },
             )
 
+            self._logger.debug(f"Updated entity {entity_id} with FRN={frn}, Volume={volume}")
+
         except Exception as e:
             self._logger.error(f"Error updating entity FRN: {e}")
+            self._logger.debug(f"Update error details: {traceback.format_exc()}")
 
     def _update_entity_metadata(self, entity_id: uuid.UUID, activity_data: dict):
         """
@@ -760,11 +824,15 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
 
         # Validate inputs
         if not isinstance(entity_id, uuid.UUID):
-            self._logger.error(f"Invalid entity_id type: {type(entity_id).__name__}, expected uuid.UUID")
+            self._logger.error(
+                f"Invalid entity_id type: {type(entity_id).__name__}, expected uuid.UUID",
+            )
             return
 
         if not isinstance(activity_data, dict):
-            self._logger.error(f"Invalid activity_data type: {type(activity_data).__name__}, expected dict")
+            self._logger.error(
+                f"Invalid activity_data type: {type(activity_data).__name__}, expected dict",
+            )
             return
 
         try:
@@ -774,7 +842,9 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             # Extract activity type with validation
             activity_type = activity_data.get("activity_type", "")
             if not isinstance(activity_type, str):
-                self._logger.error(f"Invalid activity_type: {activity_type} ({type(activity_type).__name__})")
+                self._logger.error(
+                    f"Invalid activity_type: {activity_type} ({type(activity_type).__name__})",
+                )
                 return
 
             # Extract and validate timestamp
@@ -784,44 +854,146 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             elif timestamp is None:
                 timestamp = datetime.now(UTC).isoformat()
             elif not isinstance(timestamp, str):
-                self._logger.error(f"Invalid timestamp type: {type(timestamp).__name__}")
+                self._logger.error(
+                    f"Invalid timestamp type: {type(timestamp).__name__}",
+                )
                 timestamp = datetime.now(UTC).isoformat()
 
-            self._logger.debug(f"Updating entity {entity_id} metadata for activity type '{activity_type}'")
+            # Extract file reference number and volume for proper entity lookup
+            frn = activity_data.get("file_reference_number", "")
+            volume = activity_data.get("volume_name", "")
 
-            # Get current entity document to validate its structure and perform safe updates
-            try:
-                current_doc = entity_collection.get(str(entity_id))
-                if not current_doc:
-                    self._logger.info(f"Entity {entity_id} does not exist in collection, skipping update")
-                    return
+            # Log the lookup attempt for debugging
+            self._logger.debug(
+                f"Looking up entity by FRN={frn} and Volume={volume} for activity type '{activity_type}'",
+            )
 
-                # Log the actual document structure for debugging
-                self._logger.debug(f"Current entity document structure: {list(current_doc.keys())}")
+            # First attempt to get the entity by the platform-specific identifiers (FRN+Volume)
+            # This is the correct pattern from ENTITY_MAPPING.md
+            if frn and volume:
+                try:
+                    query = """
+                        FOR doc IN @@collection
+                        FILTER doc.LocalIdentifier == @frn 
+                           AND doc.Volume == @volume
+                        LIMIT 1
+                        RETURN doc
+                    """
 
-                # Validate document has expected structure or initialize it
-                if "Properties" not in current_doc:
-                    self._logger.info(f"Entity {entity_id} missing Properties field, initializing it")
-                    current_doc["Properties"] = {}
-                elif not isinstance(current_doc["Properties"], dict):
-                    self._logger.error(
-                        f"Entity {entity_id} has invalid Properties type: {type(current_doc['Properties']).__name__}, expected dict",
+                    # Time the query execution
+                    import time
+                    start_time = time.time()
+                    cursor = self._db._arangodb.aql.execute(
+                        query,
+                        bind_vars={
+                            "@collection": self._entity_collection_name,
+                            "frn": frn,
+                            "volume": volume,
+                        },
                     )
-                    # Fix the structure - convert to dict if possible or initialize new
-                    try:
-                        if hasattr(current_doc["Properties"], "__dict__"):
-                            # Try to convert object to dict
-                            current_doc["Properties"] = current_doc["Properties"].__dict__
-                        else:
-                            # Initialize new dict
-                            current_doc["Properties"] = {}
-                    except Exception as convert_error:
-                        self._logger.error(f"Could not fix Properties structure: {convert_error}")
+                    query_time = time.time() - start_time
+                    
+                    # Log a warning if the query takes more than 5 seconds
+                    if query_time > 5.0:
+                        self._logger.warning(
+                            f"Slow AQL query (took {query_time:.2f} seconds): {query}",
+                            extra={"bind_vars": {"frn": frn, "volume": volume}}
+                        )
+
+                    found_by_frn = False
+                    current_doc = None
+
+                    for doc in cursor:
+                        current_doc = doc
+                        found_by_frn = True
+                        self._logger.debug(f"Found entity by FRN+Volume: {current_doc['_key']}")
+                        break
+
+                    # If found by FRN+Volume, update our entity_id to match
+                    if found_by_frn and current_doc:
+                        actual_entity_id = uuid.UUID(current_doc["_key"])
+                        if actual_entity_id != entity_id:
+                            self._logger.info(
+                                f"Entity ID mismatch: Using ID {actual_entity_id} from database instead of {entity_id}",
+                            )
+                            entity_id = actual_entity_id
+
+                            # Update our cache with the correct mapping
+                            cache_key = f"{volume}:{frn}"
+                            self._frn_entity_cache[cache_key] = entity_id
+
+                            # Also update path cache if path available
+                            file_path = activity_data.get("file_path", "")
+                            if file_path:
+                                path_key = f"{volume}:{file_path}"
+                                self._path_entity_cache[path_key] = entity_id
+
+                except Exception as lookup_error:
+                    self._logger.error(f"Error looking up entity by FRN+Volume: {lookup_error}")
+                    self._logger.debug(f"Lookup error details: {traceback.format_exc()}")
+                    # Continue with UUID-based lookup as fallback
+
+            # If we didn't find it by FRN+Volume (or couldn't try), fall back to UUID lookup
+            if not locals().get("current_doc"):
+                try:
+                    self._logger.debug(f"Falling back to lookup by UUID {entity_id}")
+                    
+                    # Time the entity lookup
+                    import time
+                    start_time = time.time()
+                    current_doc = entity_collection.get(str(entity_id))
+                    query_time = time.time() - start_time
+                    
+                    # Log a warning if the lookup takes more than 5 seconds
+                    if query_time > 5.0:
+                        self._logger.warning(
+                            f"Slow entity lookup by UUID (took {query_time:.2f} seconds): {entity_id}"
+                        )
+                        
+                    if not current_doc:
+                        self._logger.info(
+                            f"Entity {entity_id} does not exist in collection, skipping update",
+                        )
+
+                        # Suggest the proper approach in the logs to help debug
+                        if frn and volume:
+                            self._logger.info(f"Consider creating entity with FRN={frn}, Volume={volume} first")
                         return
 
-            except Exception as get_error:
-                self._logger.error(f"Failed to retrieve entity {entity_id}: {get_error}")
-                return
+                    # Log the actual document structure for debugging
+                    self._logger.debug(
+                        f"Found entity by UUID with structure: {list(current_doc.keys())}",
+                    )
+
+                except Exception as get_error:
+                    self._logger.error(
+                        f"Failed to retrieve entity {entity_id}: {get_error}",
+                    )
+                    return
+
+            # Validate document has expected structure or initialize it
+            if "Properties" not in current_doc:
+                self._logger.info(
+                    f"Entity {entity_id} missing Properties field, initializing it",
+                )
+                current_doc["Properties"] = {}
+            elif not isinstance(current_doc["Properties"], dict):
+                self._logger.error(
+                    f"Entity {entity_id} has invalid Properties type: {type(current_doc['Properties']).__name__}, expected dict",
+                )
+                # Fix the structure - convert to dict if possible or initialize new
+                try:
+                    if hasattr(current_doc["Properties"], "__dict__"):
+                        # Try to convert object to dict
+                        current_doc["Properties"] = current_doc["Properties"].__dict__
+                    else:
+                        # Initialize new dict
+                        current_doc["Properties"] = {}
+                except Exception as convert_error:
+                    self._logger.error(
+                        f"Could not fix Properties structure: {convert_error}",
+                    )
+                    return
 
             # De-duplicate updates using cache
             cache_key = f"{entity_id}:{activity_type}:{timestamp}"
@@ -858,7 +1030,9 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 # Update file path
                 new_path = activity_data.get("file_path", "")
                 if not new_path:
-                    self._logger.debug("Rename operation missing file_path, skipping update")
+                    self._logger.debug(
+                        "Rename operation missing file_path, skipping update",
+                    )
                     return
 
                 properties["file_path"] = new_path
@@ -885,6 +1059,12 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 if file_path:
                     properties["file_path"] = file_path
 
+                # Store FRN and volume for future lookups - this is critical!
+                if frn:
+                    properties["file_reference_number"] = frn
+                if volume:
+                    properties["volume"] = volume
+
                 is_directory = activity_data.get("is_directory", False)
                 properties["is_directory"] = is_directory
 
@@ -907,7 +1087,9 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 else:
                     update_fields = {"Properties": properties}
 
-                self._logger.debug(f"Updating entity {entity_id} timestamps for activity '{activity_type}'")
+                self._logger.debug(
+                    f"Updating entity {entity_id} timestamps for activity '{activity_type}'",
+                )
 
             # Make sure update_fields contain the correct _key
             update_fields["_key"] = str(entity_id)
@@ -940,10 +1122,6 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             Enhanced activity data
         """
         data_dict = activity_data.model_dump(mode="json")
-
-        # Calculate TTL timestamp
-        ttl_timestamp = datetime.now(UTC) + timedelta(days=self._ttl_days)
-        data_dict["ttl_timestamp"] = ttl_timestamp.isoformat()
 
         # Calculate importance score
         importance_score = self._calculate_initial_importance(data_dict)
@@ -1040,6 +1218,9 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
         )  # Use activity ID as document key
         record_document["Record"] = record
         record_document["SemanticAttributes"] = [attr.model_dump() for attr in semantic_attributes]
+        # Top-level TTL timestamp (separate from Data blob)
+        ttl_ts = datetime.now(UTC) + timedelta(days=self._ttl_days)
+        record_document["ttl_timestamp"] = ttl_ts.isoformat()
 
         self._logger.debug(f"Created document with _key: {record_document['_key']}")
         return record_document
