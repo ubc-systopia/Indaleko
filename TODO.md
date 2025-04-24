@@ -168,13 +168,68 @@ This document outlines planned enhancements, features, and improvements for the 
   - Implement scheduled collection across platforms
   - Add cross-platform unified activity view
 
-- [ ] **Desktop Activity Integration**
-  - Create application focus/usage data collector
-  - Add window management tracking
-  - Implement task switching pattern analysis
-  - Develop productivity pattern recognition
+ - [ ] **Desktop Activity Integration**
+   - Create application focus/usage data collector
+   - Add window management tracking
+   - Implement task switching pattern analysis
+   - Develop productivity pattern recognition
+
+## New Indexing and Compression Features
+
+- [ ] **Incremental File System Indexer**
+  - [ ] Create `FsIncrementalCollector` that scans configured volumes, compares file mtimes to a JSON state file, and emits new/modified files
+  - [ ] Create `FsIncrementalRecorder` that upserts new file records into the dynamic ArangoDB collection (using file path as document key)
+  - [ ] Build CLI script `run_incremental_indexer.py` wiring the collector and recorder, with flags for volumes, state file path, and include patterns
+  - [ ] Add pre-commit/lint rules to forbid `Record.Data.*` field access in indexer code
+  - [ ] Write tests validating state file load/compare logic and database upsert behavior
+
+- [ ] **NTFS Journal Warm-Tier Compression**
+  - [x] Complete the Tier 1 (warm tier) implementation for NTFS activity data
+  - [x] Create importance-based retention logic for warm tier
+  - [x] Implement TTL-based expiration for warm tier data
+  - [x] Create core functionality tests for importance scoring component
+  - [ ] Implement enhanced aggregation rules based on entity relationships and context
+  - [x] Fix missing ImportScorer semantic attribute dependency in recorder.py
+  - [ ] Extend test suite for warm tier transitions and integration
+  - [ ] Add transaction support for tier transitions to prevent data loss
+  - [x] Implement CLI for manual warm tier management and inspection
+  - [ ] Add monitoring dashboard for tier storage efficiency
+  - [ ] Develop adaptive importance threshold tuning based on storage patterns
+  - [ ] Optimize batch processing for large volumes of data
+  - [ ] Add content-based aggregation beyond simple time windows
+  - [ ] Fix entity metadata lookup for enriched importance scoring
+  - [ ] Implement query support spanning hot and warm tiers
+  - [ ] Benchmark compression ratios and storage efficiency
+
+- [ ] **NTFS Journal Performance Improvements**
+  - [ ] Fix USN Journal polling to use event notification instead of timed polling
+  - [ ] Optimize entity lookup with batch processing of FRN to entity mapping
+  - [ ] Add parallel processing support for multi-volume systems
+  - [ ] Implement transaction batching for database operations
+  - [ ] Add recovery checkpoints for long-running operations
+  - [ ] Create performance monitoring and alerting for bottlenecks
+  - [ ] Optimize memory usage for large record volumes
+  - [ ] Add query caching for common entity resolutions
 
 ## Medium Priority Items
+
+### Database Performance Monitoring
+
+- [x] **AQL Query Performance Monitoring**
+  - ✅ Create `timed_aql_execute` wrapper function to measure query performance
+  - ✅ Add automatic EXPLAIN capture for queries exceeding threshold (default 5s)
+  - ✅ Integrate with existing logging infrastructure
+  - [ ] Retrofit to high-usage database components first
+  - ✅ Implement warning mechanism for missing index usage
+
+- [ ] **Centralized Query Performance Analytics**
+  - Create schema for storing query performance data
+  - Implement background task to persist query metrics to analytics collection
+  - Add metadata: originating component, machine ID, timestamp
+  - Create dashboard views for query performance analysis
+  - Add alerting for recurring slow query patterns
+  - Implement trend analysis for query performance over time
+  - Create performance regression testing tools
 
 ### Semantic Processing Improvements
 
@@ -435,4 +490,4 @@ When contributing to Indaleko, keep these core values in mind:
 5. **Transparency**: Users should understand how their data is used
 6. **Performance**: Efficient and responsive operation
 
-Last updated: April 21, 2025
+Last updated: April 24, 2025
