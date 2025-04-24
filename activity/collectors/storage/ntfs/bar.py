@@ -300,6 +300,20 @@ class UsnJournalReader:
         max_retries = 1
         retries = 0
         
+        # Check if the requested USN is below the first valid USN
+        # If so, immediately use the low water mark instead of retrying with an invalid USN
+        if self.journal_data and start_usn < self.journal_data.FirstUsn:
+            print(f"Requested USN {start_usn} is below First USN {self.journal_data.FirstUsn}")
+            print(f"Using First USN {self.journal_data.FirstUsn} as the starting point")
+            
+            # Update the starting USN to use the first valid USN
+            start_usn = self.journal_data.FirstUsn
+            
+            # Return special buffer with the new starting USN
+            empty_buffer = ctypes.create_string_buffer(8)
+            struct.pack_into("<Q", empty_buffer, 0, start_usn)
+            return empty_buffer, 8
+        
         while retries <= max_retries:
             read_data = READ_USN_JOURNAL_DATA(
                 StartUsn=start_usn,
@@ -377,7 +391,8 @@ class UsnJournalReader:
                     except Exception:
                         nt_status_str = "NT Status: Error retrieving"
                     
-                    # Log more detailed error information
+                    # Log more detailed error information (only once per error type)
+                    # This reduces verbosity while still providing diagnostic info
                     error_msg = f"DeviceIoControl failed with Win32 error code: {error} (0x{error:X}), {nt_status_str}"
                     if error == 0 and self.journal_data:
                         # For error 0, include USN journal state for diagnostics

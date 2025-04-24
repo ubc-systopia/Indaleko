@@ -160,6 +160,7 @@ class IntegratedNtfsActivityRunner:
         self.collector = NtfsUsnJournalCollector(
             volumes=self.volumes,
             state_file=state_file_path,
+            use_state_file=kwargs.get("use_state_file", False),
             verbose=self.verbose,
         )
 
@@ -483,7 +484,7 @@ def main():
     parser.add_argument(
         "--interval",
         type=int,
-        default=30,
+        default=15,
         help="Collection interval in seconds",
     )
 
@@ -554,6 +555,13 @@ def main():
         default=3,
         help="Number of consecutive empty results before automatic state reset (default: 3)",
     )
+    
+    # State file parameters
+    parser.add_argument(
+        "--use-state-file",
+        action="store_true",
+        help="Enable state file persistence (disabled by default)",
+    )
 
     args = parser.parse_args()
 
@@ -574,6 +582,7 @@ def main():
         "auto_reset": not args.no_auto_reset,
         "error_threshold": args.error_threshold,
         "empty_results_threshold": args.empty_threshold,
+        "use_state_file": args.use_state_file if hasattr(args, "use_state_file") else False,
     }
 
     # Display configuration
@@ -594,6 +603,7 @@ def main():
     if not args.no_auto_reset:
         print(f"  Error Threshold:   {args.error_threshold} consecutive errors")
         print(f"  Empty Threshold:   {args.empty_threshold} consecutive empty results")
+    print(f"State File:        {'Enabled' if getattr(args, 'use_state_file', False) else 'Disabled'}")
     print("\nPress Ctrl+C to stop at any time...")
 
     try:

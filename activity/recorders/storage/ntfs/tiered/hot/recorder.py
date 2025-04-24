@@ -49,10 +49,8 @@ import sys
 import time
 import traceback
 import uuid
-
 from datetime import UTC, datetime, timedelta
 from typing import Any
-
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -79,7 +77,6 @@ from activity.recorders.storage.ntfs.activity_context_integration import (
     NtfsActivityContextIntegration,
 )
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
-
 
 # Import ServiceManager upfront to avoid late binding issues
 
@@ -178,7 +175,9 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                         f"Could not find collection for recorder {self._recorder_id}",
                     )
                     # Use a fallback name if needed
-                    self._collection_name = f"ntfs_activities_hot_{str(self._recorder_id)[:8]}"
+                    self._collection_name = (
+                        f"ntfs_activities_hot_{str(self._recorder_id)[:8]}"
+                    )
 
         # Initialize activity context integration
         self._activity_context_integration = NtfsActivityContextIntegration(
@@ -248,7 +247,9 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             # Generate a dynamic collection name using the UUID
             if self._collection_name is None:
                 # We'll get the actual collection name from the registration service
-                temp_collection_name = f"ntfs_activities_hot_{str(self._recorder_id)[:8]}"
+                temp_collection_name = (
+                    f"ntfs_activities_hot_{str(self._recorder_id)[:8]}"
+                )
             else:
                 temp_collection_name = self._collection_name
 
@@ -323,7 +324,9 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 from db.i_collections import IndalekoCollections
 
                 # Make sure we're using the standard Objects collection
-                self._entity_collection_name = IndalekoDBCollections.Indaleko_Object_Collection
+                self._entity_collection_name = (
+                    IndalekoDBCollections.Indaleko_Object_Collection
+                )
 
                 self._logger.info(
                     f"Getting entity collection: {self._entity_collection_name}",
@@ -572,13 +575,22 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
 
         # Factor 2: File type importance (basic version)
         file_path = activity_data.get("file_path", "")
-        if any(file_path.lower().endswith(ext) for ext in [".docx", ".xlsx", ".pdf", ".py", ".md"]):
+        if any(
+            file_path.lower().endswith(ext)
+            for ext in [".docx", ".xlsx", ".pdf", ".py", ".md"]
+        ):
             base_score += 0.1  # Document types matter more
 
         # Factor 3: Path significance
-        if any(segment in file_path for segment in ["\\Documents\\", "\\Projects\\", "\\src\\", "\\source\\"]):
+        if any(
+            segment in file_path
+            for segment in ["\\Documents\\", "\\Projects\\", "\\src\\", "\\source\\"]
+        ):
             base_score += 0.1  # User document areas matter more
-        elif any(segment in file_path for segment in ["\\Temp\\", "\\tmp\\", "\\Cache\\", "\\Downloaded\\"]):
+        elif any(
+            segment in file_path
+            for segment in ["\\Temp\\", "\\tmp\\", "\\Cache\\", "\\Downloaded\\"]
+        ):
             base_score -= 0.1  # Temporary areas matter less
 
         # Factor 4: Is directory
@@ -670,6 +682,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
 
             # Time the query execution
             import time
+
             start_time = time.time()
             cursor = self._db._arangodb.aql.execute(
                 query,
@@ -680,12 +693,12 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 },
             )
             query_time = time.time() - start_time
-            
+
             # Log a warning if the query takes more than 5 seconds
             if query_time > 5.0:
                 self._logger.warning(
                     f"Slow fallback AQL query (took {query_time:.2f} seconds): {query}",
-                    extra={"bind_vars": {"frn": frn, "volume": volume}}
+                    extra={"bind_vars": {"frn": frn, "volume": volume}},
                 )
 
             entity = None
@@ -720,7 +733,11 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             # This ensures compatibility with both lookup patterns
             entity_doc = {
                 "_key": str(entity_id),
-                "Label": (os.path.basename(file_path) if file_path else f"Object-{str(entity_id)[:8]}"),
+                "Label": (
+                    os.path.basename(file_path)
+                    if file_path
+                    else f"Object-{str(entity_id)[:8]}"
+                ),
                 # Add standard ENTITY_MAPPING.md fields at top level
                 "LocalIdentifier": frn,
                 "Volume": volume,
@@ -804,7 +821,9 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 },
             )
 
-            self._logger.debug(f"Updated entity {entity_id} with FRN={frn}, Volume={volume}")
+            self._logger.debug(
+                f"Updated entity {entity_id} with FRN={frn}, Volume={volume}",
+            )
 
         except Exception as e:
             self._logger.error(f"Error updating entity FRN: {e}")
@@ -874,7 +893,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 try:
                     query = """
                         FOR doc IN @@collection
-                        FILTER doc.LocalIdentifier == @frn 
+                        FILTER doc.LocalIdentifier == @frn
                            AND doc.Volume == @volume
                         LIMIT 1
                         RETURN doc
@@ -882,6 +901,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
 
                     # Time the query execution
                     import time
+
                     start_time = time.time()
                     cursor = self._db._arangodb.aql.execute(
                         query,
@@ -892,12 +912,12 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                         },
                     )
                     query_time = time.time() - start_time
-                    
+
                     # Log a warning if the query takes more than 5 seconds
                     if query_time > 5.0:
                         self._logger.warning(
                             f"Slow AQL query (took {query_time:.2f} seconds): {query}",
-                            extra={"bind_vars": {"frn": frn, "volume": volume}}
+                            extra={"bind_vars": {"frn": frn, "volume": volume}},
                         )
 
                     found_by_frn = False
@@ -906,7 +926,9 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                     for doc in cursor:
                         current_doc = doc
                         found_by_frn = True
-                        self._logger.debug(f"Found entity by FRN+Volume: {current_doc['_key']}")
+                        self._logger.debug(
+                            f"Found entity by FRN+Volume: {current_doc['_key']}",
+                        )
                         break
 
                     # If found by FRN+Volume, update our entity_id to match
@@ -929,27 +951,32 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                                 self._path_entity_cache[path_key] = entity_id
 
                 except Exception as lookup_error:
-                    self._logger.error(f"Error looking up entity by FRN+Volume: {lookup_error}")
-                    self._logger.debug(f"Lookup error details: {traceback.format_exc()}")
+                    self._logger.error(
+                        f"Error looking up entity by FRN+Volume: {lookup_error}",
+                    )
+                    self._logger.debug(
+                        f"Lookup error details: {traceback.format_exc()}",
+                    )
                     # Continue with UUID-based lookup as fallback
 
             # If we didn't find it by FRN+Volume (or couldn't try), fall back to UUID lookup
             if not locals().get("current_doc"):
                 try:
                     self._logger.debug(f"Falling back to lookup by UUID {entity_id}")
-                    
+
                     # Time the entity lookup
                     import time
+
                     start_time = time.time()
                     current_doc = entity_collection.get(str(entity_id))
                     query_time = time.time() - start_time
-                    
+
                     # Log a warning if the lookup takes more than 5 seconds
                     if query_time > 5.0:
                         self._logger.warning(
-                            f"Slow entity lookup by UUID (took {query_time:.2f} seconds): {entity_id}"
+                            f"Slow entity lookup by UUID (took {query_time:.2f} seconds): {entity_id}",
                         )
-                        
+
                     if not current_doc:
                         self._logger.info(
                             f"Entity {entity_id} does not exist in collection, skipping update",
@@ -957,7 +984,9 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
 
                         # Suggest the proper approach in the logs to help debug
                         if frn and volume:
-                            self._logger.info(f"Consider creating entity with FRN={frn}, Volume={volume} first")
+                            self._logger.info(
+                                f"Consider creating entity with FRN={frn}, Volume={volume} first",
+                            )
                         return
 
                     # Log the actual document structure for debugging
@@ -1217,7 +1246,9 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             activity_data.activity_id,
         )  # Use activity ID as document key
         record_document["Record"] = record
-        record_document["SemanticAttributes"] = [attr.model_dump() for attr in semantic_attributes]
+        record_document["SemanticAttributes"] = [
+            attr.model_dump() for attr in semantic_attributes
+        ]
         # Top-level TTL timestamp (separate from Data blob)
         ttl_ts = datetime.now(UTC) + timedelta(days=self._ttl_days)
         record_document["ttl_timestamp"] = ttl_ts.isoformat()
@@ -1248,7 +1279,10 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
         )
 
         # Batch update activity context if available
-        if hasattr(self, "_activity_context_integration") and self._activity_context_integration.is_context_available():
+        if (
+            hasattr(self, "_activity_context_integration")
+            and self._activity_context_integration.is_context_available()
+        ):
             try:
                 self._logger.info(
                     f"Batch updating activity context with {len(activities)} activities",
@@ -1280,7 +1314,9 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 if hasattr(self, "_get_or_create_entity_uuid"):
                     # Temporarily bypass the entity creation just to test database insertion
                     orig_method = self._get_or_create_entity_uuid
-                    self._get_or_create_entity_uuid = lambda frn, volume, file_path, is_directory: uuid.uuid4()
+                    self._get_or_create_entity_uuid = (
+                        lambda frn, volume, file_path, is_directory: uuid.uuid4()
+                    )
 
                 # Process the activity
                 activity_id = self.store_activity(activity)
@@ -1288,7 +1324,10 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 stored_count += 1
 
                 # Restore the original method if we patched it
-                if hasattr(self, "_get_or_create_entity_uuid") and "orig_method" in locals():
+                if (
+                    hasattr(self, "_get_or_create_entity_uuid")
+                    and "orig_method" in locals()
+                ):
                     self._get_or_create_entity_uuid = orig_method
 
                 self._logger.debug(f"Successfully stored activity {i+1}: {activity_id}")
@@ -1302,6 +1341,23 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
         self._logger.info(
             f"SUMMARY: Stored {stored_count} out of {len(activities)} activities. Errors: {error_count}",
         )
+        
+        # After processing all activities, log FRN lookup statistics if available
+        if hasattr(self, "_frn_lookup_stats"):
+            total = self._frn_lookup_stats["success"] + self._frn_lookup_stats["failed"]
+            if total > 0:
+                success_rate = (self._frn_lookup_stats["success"] / total) * 100
+                self._logger.info(
+                    f"FRN lookups: {self._frn_lookup_stats['success']} successful, "
+                    f"{self._frn_lookup_stats['failed']} failed "
+                    f"({success_rate:.1f}% success rate)"
+                )
+                
+                # Reset batch counters every 1000 operations to avoid number overflow in long-running sessions
+                if total % 1000 == 0:
+                    self._logger.info("Resetting FRN lookup statistics counters")
+                    self._frn_lookup_stats = {"success": 0, "failed": 0}
+        
         return activity_ids
 
     def store_activity(
@@ -1321,6 +1377,14 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             f"Begin storing activity {getattr(activity_data, 'activity_id', 'unknown')}",
         )
 
+        # Initialize FRN lookup tracking state if not exists
+        if not hasattr(self, "_frn_lookup_stats"):
+            self._frn_lookup_stats = {"success": 0, "failed": 0}
+        
+        # Track if this activity has FRN data for lookup
+        has_frn_data = False
+        frn_lookup_success = False
+
         # Convert dict to NtfsStorageActivityData if needed
         if isinstance(activity_data, dict):
             self._logger.debug("Converting dict to NtfsStorageActivityData")
@@ -1339,14 +1403,19 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 raise
 
         # Integrate with activity context if available
-        if hasattr(self, "_activity_context_integration") and self._activity_context_integration.is_context_available():
+        if (
+            hasattr(self, "_activity_context_integration")
+            and self._activity_context_integration.is_context_available()
+        ):
             # Associate with current activity context
             try:
                 self._logger.debug(
                     f"Associating activity {activity_data.activity_id} with activity context",
                 )
-                enhanced_data = self._activity_context_integration.associate_with_activity_context(
-                    activity_data,
+                enhanced_data = (
+                    self._activity_context_integration.associate_with_activity_context(
+                        activity_data,
+                    )
                 )
                 self._logger.debug("Activity context association successful")
 
@@ -1369,6 +1438,14 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 )
                 # Continue with original activity data
 
+        # Check if activity has FRN data for tracking
+        if hasattr(activity_data, "file_reference_number") and hasattr(activity_data, "volume_name"):
+            frn = activity_data.file_reference_number
+            volume = activity_data.volume_name
+            
+            if frn and volume:
+                has_frn_data = True
+        
         # Build document with hot tier enhancements
         self._logger.debug(
             f"Building hot tier document for activity {activity_data.activity_id}",
@@ -1376,11 +1453,22 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
         try:
             document = self._build_hot_tier_document(activity_data)
             self._logger.debug("Hot tier document built successfully")
+            
+            # Consider this a successful FRN lookup if we have entity_id in the document
+            if has_frn_data and "entity_id" in document and document["entity_id"]:
+                frn_lookup_success = True
+                self._frn_lookup_stats["success"] += 1
+            elif has_frn_data:
+                self._frn_lookup_stats["failed"] += 1
+                
         except Exception as e:
             self._logger.error(f"Error building hot tier document: {e}")
             self._logger.debug(
                 f"Document building error details: {traceback.format_exc()}",
             )
+            # Count as failure if we had FRN data
+            if has_frn_data:
+                self._frn_lookup_stats["failed"] += 1
             raise
 
         # Check collection status
@@ -1734,7 +1822,9 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 bind_vars={"@collection": self._collection_name},
             )
 
-            stats["by_importance"] = {f"{item['importance']:.1f}": item["count"] for item in importance_cursor}
+            stats["by_importance"] = {
+                f"{item['importance']:.1f}": item["count"] for item in importance_cursor
+            }
 
             # Get time-based statistics
             time_query = """
@@ -1756,7 +1846,9 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 bind_vars={"@collection": self._collection_name},
             )
 
-            stats["by_time"] = {f"{item['days_ago']} days ago": item["count"] for item in time_cursor}
+            stats["by_time"] = {
+                f"{item['days_ago']} days ago": item["count"] for item in time_cursor
+            }
 
             # Add configuration information
             stats["ttl_days"] = self._ttl_days
@@ -2047,7 +2139,9 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 # Add hot tier information
                 latest["tier"] = "hot"
                 latest["ttl_days"] = self._ttl_days
-                latest["expiration_date"] = (datetime.now(UTC) + timedelta(days=self._ttl_days)).isoformat()
+                latest["expiration_date"] = (
+                    datetime.now(UTC) + timedelta(days=self._ttl_days)
+                ).isoformat()
 
                 return latest
             except StopIteration:
@@ -2298,7 +2392,12 @@ if __name__ == "__main__":
                     print(f"    {time_range}: {count}")
 
         # Display some activities if not in stats-only mode
-        if not args.stats_only and hasattr(recorder, "_db") and recorder._db and len(activity_ids) > 0:
+        if (
+            not args.stats_only
+            and hasattr(recorder, "_db")
+            and recorder._db
+            and len(activity_ids) > 0
+        ):
             print(f"\nShowing {min(args.limit, len(activity_ids))} recent activities:")
 
             # Get recent activities
