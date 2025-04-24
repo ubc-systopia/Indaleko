@@ -210,9 +210,7 @@ class MimeTypeRecorder:
 
                 # Skip files with unwanted extensions if filter is provided
                 if file_extensions:
-                    if not any(
-                        file.lower().endswith(ext.lower()) for ext in file_extensions
-                    ):
+                    if not any(file.lower().endswith(ext.lower()) for ext in file_extensions):
                         continue
 
                 file_list.append(file_path)
@@ -227,7 +225,9 @@ class MimeTypeRecorder:
         return self.batch_process_files(file_list)
 
     def export_results_to_json(
-        self, results: list[dict[str, Any]], output_file: str,
+        self,
+        results: list[dict[str, Any]],
+        output_file: str,
     ) -> None:
         """
         Export processing results to a JSON file.
@@ -283,12 +283,8 @@ class MimeTypeRecorder:
         return {
             "total_files": len(results),
             "mime_type_counts": mime_type_counts,
-            "avg_confidence": (
-                confidence_sum / confidence_count if confidence_count > 0 else 0
-            ),
-            "extension_match_percentage": (
-                (extension_match_count / len(results)) * 100 if results else 0
-            ),
+            "avg_confidence": (confidence_sum / confidence_count if confidence_count > 0 else 0),
+            "extension_match_percentage": ((extension_match_count / len(results)) * 100 if results else 0),
         }
 
 
@@ -309,14 +305,23 @@ def main():
         help="Process subdirectories recursively",
     )
     parser.add_argument(
-        "--extensions", "-e", nargs="+", help="Only process files with these extensions",
+        "--extensions",
+        "-e",
+        nargs="+",
+        help="Only process files with these extensions",
     )
     parser.add_argument("--output", "-o", help="Output file for results (JSON)")
     parser.add_argument(
-        "--summary", "-s", action="store_true", help="Print summary of results",
+        "--summary",
+        "-s",
+        action="store_true",
+        help="Print summary of results",
     )
     parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Enable verbose output",
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable verbose output",
     )
 
     args = parser.parse_args()
@@ -337,7 +342,9 @@ def main():
             results = [result]
     else:  # args.directory
         results = recorder.process_directory(
-            args.directory, recursive=args.recursive, file_extensions=args.extensions,
+            args.directory,
+            recursive=args.recursive,
+            file_extensions=args.extensions,
         )
 
     # Output results
@@ -353,7 +360,9 @@ def main():
         print(f"  Extension match rate: {summary['extension_match_percentage']:.1f}%")
         print("\nMIME Type Distribution:")
         for mime_type, count in sorted(
-            summary["mime_type_counts"].items(), key=lambda x: x[1], reverse=True,
+            summary["mime_type_counts"].items(),
+            key=lambda x: x[1],
+            reverse=True,
         )[:10]:
             print(f"  {mime_type}: {count} files")
 

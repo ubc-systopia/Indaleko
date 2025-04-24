@@ -112,15 +112,14 @@ class ActivityRecommender:
                     "file_name": doc.get("fileName", ""),
                     "file_path": doc.get("filePath", ""),
                     "timestamp": doc.get(
-                        "timestamp", datetime.now(UTC).isoformat(),
+                        "timestamp",
+                        datetime.now(UTC).isoformat(),
                     ),
                 }
 
                 # Add file type if available
                 if "." in attributes["file_name"]:
-                    attributes["file_type"] = (
-                        attributes["file_name"].split(".")[-1].lower()
-                    )
+                    attributes["file_type"] = attributes["file_name"].split(".")[-1].lower()
 
                 # Add folder path
                 attributes["folder_path"] = os.path.dirname(attributes["file_path"])
@@ -165,9 +164,7 @@ class ActivityRecommender:
                     "file_path": "/documents/reports/report.docx",
                     "file_type": "docx",
                     "folder_path": "/documents/reports",
-                    "timestamp": (
-                        datetime.now(UTC) - timedelta(minutes=30)
-                    ).isoformat(),
+                    "timestamp": (datetime.now(UTC) - timedelta(minutes=30)).isoformat(),
                 },
             },
         ]
@@ -300,9 +297,7 @@ class ActivityRecommender:
         """
         if feedback in [FeedbackType.ACCEPTED, FeedbackType.HELPFUL]:
             # Positive feedback
-            self.successful_templates[template] = (
-                self.successful_templates.get(template, 0) + 1
-            )
+            self.successful_templates[template] = self.successful_templates.get(template, 0) + 1
         else:
             # Negative feedback
             self.failed_templates[template] = self.failed_templates.get(template, 0) + 1

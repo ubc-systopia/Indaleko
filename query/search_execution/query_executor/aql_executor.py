@@ -76,7 +76,8 @@ class AQLExecutor(ExecutorBase):
                 - A FormattedResults object with deduplicated results (when explain=False, deduplicate=True)
         """
         assert isinstance(
-            data_connector, IndalekoDBConfig,
+            data_connector,
+            IndalekoDBConfig,
         ), "Data connector must be an instance of IndalekoDBConfig"
 
         # Initialize bind variables if not provided
@@ -99,7 +100,8 @@ class AQLExecutor(ExecutorBase):
         try:
             # Execute the AQL query
             raw_results = data_connector._arangodb.aql.execute(
-                query, bind_vars=bind_vars,
+                query,
+                bind_vars=bind_vars,
             )
 
             # If collecting performance metrics, prepare performance info
@@ -180,7 +182,8 @@ class AQLExecutor(ExecutorBase):
             Dict[str, Any]: The query execution plan(s) with analysis
         """
         assert isinstance(
-            data_connector, IndalekoDBConfig,
+            data_connector,
+            IndalekoDBConfig,
         ), "Data connector must be an instance of IndalekoDBConfig"
 
         # Initialize bind variables if not provided
@@ -308,16 +311,12 @@ class AQLExecutor(ExecutorBase):
 
             # Extract plan details
             nodes = plan.get("nodes", [])
-            collection_scans = [
-                n for n in nodes if n.get("type") == "EnumerateCollectionNode"
-            ]
+            collection_scans = [n for n in nodes if n.get("type") == "EnumerateCollectionNode"]
             index_nodes = [n for n in nodes if n.get("type") == "IndexNode"]
 
             # Add warnings for full collection scans
             if collection_scans:
-                scan_collections = [
-                    n.get("collection", "unknown") for n in collection_scans
-                ]
+                scan_collections = [n.get("collection", "unknown") for n in collection_scans]
                 analysis["warnings"].append(
                     f"Full collection scan(s) detected on: {', '.join(scan_collections)}",
                 )
@@ -424,7 +423,9 @@ class AQLExecutor(ExecutorBase):
 
     @staticmethod
     def format_results(
-        raw_results: Any, deduplicate: bool = False, similarity_threshold: float = 0.85,
+        raw_results: Any,
+        deduplicate: bool = False,
+        similarity_threshold: float = 0.85,
     ) -> list[dict[str, Any]] | FormattedResults:
         """
         Format the raw AQL query results into a standardized format.
@@ -482,15 +483,14 @@ class AQLExecutor(ExecutorBase):
         # Apply deduplication if requested
         if deduplicate:
             deduped_results = deduplicate_results(
-                formatted_results, similarity_threshold=similarity_threshold,
+                formatted_results,
+                similarity_threshold=similarity_threshold,
             )
 
             # Add performance info if available
             if performance_info and "performance" in performance_info:
                 if "execution_time_seconds" in performance_info["performance"]:
-                    deduped_results.query_time = performance_info["performance"][
-                        "execution_time_seconds"
-                    ]
+                    deduped_results.query_time = performance_info["performance"]["execution_time_seconds"]
 
             return deduped_results
 

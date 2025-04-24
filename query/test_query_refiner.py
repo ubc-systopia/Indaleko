@@ -61,10 +61,14 @@ def create_sample_facets():
         type=FacetType.DATE,
         values=[
             FacetValue(
-                value="This month", count=10, query_refinement='date:"this month"',
+                value="This month",
+                count=10,
+                query_refinement='date:"this month"',
             ),
             FacetValue(
-                value="Last month", count=12, query_refinement='date:"last month"',
+                value="Last month",
+                count=12,
+                query_refinement='date:"last month"',
             ),
             FacetValue(value="Last year", count=8, query_refinement='date:"last year"'),
         ],
@@ -79,7 +83,9 @@ def create_sample_facets():
         type=FacetType.AUTHOR,
         values=[
             FacetValue(
-                value="John Smith", count=8, query_refinement='author:"John Smith"',
+                value="John Smith",
+                count=8,
+                query_refinement='author:"John Smith"',
             ),
             FacetValue(value="Jane Doe", count=7, query_refinement='author:"Jane Doe"'),
             FacetValue(
@@ -99,10 +105,14 @@ def create_sample_facets():
         type=FacetType.LOCATION,
         values=[
             FacetValue(
-                value="documents", count=20, query_refinement="location:documents",
+                value="documents",
+                count=20,
+                query_refinement="location:documents",
             ),
             FacetValue(
-                value="downloads", count=8, query_refinement="location:downloads",
+                value="downloads",
+                count=8,
+                query_refinement="location:downloads",
             ),
             FacetValue(value="desktop", count=12, query_refinement="location:desktop"),
         ],
@@ -184,7 +194,8 @@ def main():
         if "facet" in test_case and "value" in test_case:
             # Apply a refinement
             refined_query, state = refiner.apply_refinement(
-                test_case["facet"], test_case["value"],
+                test_case["facet"],
+                test_case["value"],
             )
             print(f"Refined query: {refined_query}")
             print("Active refinements:")

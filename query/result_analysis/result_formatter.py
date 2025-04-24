@@ -41,19 +41,24 @@ class ResultGroup(IndalekoBaseModel):
     """Represents a group of similar results with a primary result and duplicates."""
 
     primary: dict[str, Any] = Field(
-        ..., description="The primary (representative) result",
+        ...,
+        description="The primary (representative) result",
     )
     duplicates: list[dict[str, Any]] = Field(
-        default_factory=list, description="Duplicate results",
+        default_factory=list,
+        description="Duplicate results",
     )
     similarity_scores: list[float] = Field(
-        default_factory=list, description="Similarity scores of duplicates to primary",
+        default_factory=list,
+        description="Similarity scores of duplicates to primary",
     )
     last_modified: datetime | None = Field(
-        default=None, description="Last modification time of primary item",
+        default=None,
+        description="Last modification time of primary item",
     )
     item_count: int = Field(
-        default=1, description="Total number of items in this group",
+        default=1,
+        description="Total number of items in this group",
     )
 
     class Config:
@@ -72,23 +77,29 @@ class FormattedResults(IndalekoBaseModel):
     """Formatted results with grouping, statistics, and summary information."""
 
     result_groups: list[ResultGroup] = Field(
-        default_factory=list, description="Groups of similar results",
+        default_factory=list,
+        description="Groups of similar results",
     )
     original_count: int = Field(
-        default=0, description="Original number of results before deduplication",
+        default=0,
+        description="Original number of results before deduplication",
     )
     unique_count: int = Field(
-        default=0, description="Number of unique results after deduplication",
+        default=0,
+        description="Number of unique results after deduplication",
     )
     suppressed_count: int = Field(
-        default=0, description="Number of suppressed duplicate results",
+        default=0,
+        description="Number of suppressed duplicate results",
     )
     summary: str = Field(default="", description="Summary of the results")
     query_time: float | None = Field(
-        default=None, description="Query execution time in seconds",
+        default=None,
+        description="Query execution time in seconds",
     )
     categories: dict[str, int] = Field(
-        default_factory=dict, description="Counts of result categories",
+        default_factory=dict,
+        description="Counts of result categories",
     )
 
     class Config:
@@ -289,10 +300,7 @@ def deduplicate_results(
 
                     if "checksum" in other_result:
                         other_id = f"checksum:{other_result['checksum']}"
-                    elif (
-                        "Record" in other_result
-                        and "Attributes" in other_result["Record"]
-                    ):
+                    elif "Record" in other_result and "Attributes" in other_result["Record"]:
                         other_attrs = other_result["Record"]["Attributes"]
                         if "ObjectIdentifier" in other_attrs:
                             other_id = f"id:{other_attrs['ObjectIdentifier']}"
@@ -323,7 +331,9 @@ def deduplicate_results(
 
                 # Use identity resolution to determine if items are similar
                 is_same, score = resolve_indaleko_objects(
-                    result, other_result, threshold=similarity_threshold,
+                    result,
+                    other_result,
+                    threshold=similarity_threshold,
                 )
 
                 if is_same:
@@ -346,7 +356,9 @@ def deduplicate_results(
 
                 # Calculate similarity score if not already identical
                 _, score = resolve_indaleko_objects(
-                    primary_result, dup_result, threshold=0.0,
+                    primary_result,
+                    dup_result,
+                    threshold=0.0,
                 )
 
                 duplicates.append(dup_result)
@@ -392,7 +404,8 @@ def deduplicate_results(
 
 
 def format_result_for_display(
-    result: dict[str, Any], include_details: bool = True,
+    result: dict[str, Any],
+    include_details: bool = True,
 ) -> str:
     """
     Format a result item for display in the console.
@@ -482,7 +495,8 @@ def format_result_for_display(
 
 
 def format_result_group_for_display(
-    group: ResultGroup, include_duplicates: bool = True,
+    group: ResultGroup,
+    include_duplicates: bool = True,
 ) -> str:
     """
     Format a result group for display in the console.
@@ -507,13 +521,15 @@ def format_result_group_for_display(
         # Include duplicate details if requested
         if include_duplicates:
             for i, (duplicate, score) in enumerate(
-                zip(group.duplicates, group.similarity_scores, strict=False), 1,
+                zip(group.duplicates, group.similarity_scores, strict=False),
+                1,
             ):
                 formatted.append(f"\n  Duplicate {i} (similarity: {score:.2f}):")
 
                 # Format with less detail for duplicates
                 dup_formatted = format_result_for_display(
-                    duplicate, include_details=False,
+                    duplicate,
+                    include_details=False,
                 )
 
                 # Indent the duplicate details
@@ -556,7 +572,9 @@ def format_results_for_display(
 
             # Sort categories by count (descending)
             sorted_categories = sorted(
-                formatted_results.categories.items(), key=lambda x: x[1], reverse=True,
+                formatted_results.categories.items(),
+                key=lambda x: x[1],
+                reverse=True,
             )
 
             for category, count in sorted_categories[:5]:

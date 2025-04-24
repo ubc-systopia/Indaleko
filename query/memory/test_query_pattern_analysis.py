@@ -154,19 +154,22 @@ class TestQueryPatternAnalysis(unittest.TestCase):
         """Test calculating similarity between queries."""
         # Test identical queries
         similarity = self.analyzer._calculate_query_similarity(
-            "test query", "test query",
+            "test query",
+            "test query",
         )
         self.assertEqual(similarity, 1.0)
 
         # Test similar queries
         similarity = self.analyzer._calculate_query_similarity(
-            "test query", "test queries",
+            "test query",
+            "test queries",
         )
         self.assertGreater(similarity, 0.7)
 
         # Test dissimilar queries
         similarity = self.analyzer._calculate_query_similarity(
-            "test query", "completely different",
+            "test query",
+            "completely different",
         )
         self.assertLess(similarity, 0.3)
 
@@ -525,24 +528,24 @@ class TestQueryPatternAnalysis(unittest.TestCase):
         # Mock the component methods
         with patch.object(self.analyzer, "load_query_history", return_value=5):
             with patch.object(
-                self.analyzer, "analyze_query_chains",
+                self.analyzer,
+                "analyze_query_chains",
             ) as mock_analyze_chains:
                 with patch.object(
-                    self.analyzer, "detect_query_patterns",
+                    self.analyzer,
+                    "detect_query_patterns",
                 ) as mock_detect_patterns:
                     with patch.object(
-                        self.analyzer, "calculate_metrics",
+                        self.analyzer,
+                        "calculate_metrics",
                     ) as mock_calculate_metrics:
                         with patch.object(
-                            self.analyzer, "generate_query_suggestions",
+                            self.analyzer,
+                            "generate_query_suggestions",
                         ) as mock_generate_suggestions:
                             # Mock return values
-                            mock_analyze_chains.return_value = [
-                                MagicMock(spec=QueryChain) for _ in range(2)
-                            ]
-                            mock_detect_patterns.return_value = [
-                                MagicMock(spec=QueryPattern) for _ in range(3)
-                            ]
+                            mock_analyze_chains.return_value = [MagicMock(spec=QueryChain) for _ in range(2)]
+                            mock_detect_patterns.return_value = [MagicMock(spec=QueryPattern) for _ in range(3)]
                             mock_calculate_metrics.return_value = MagicMock()
                             mock_calculate_metrics.return_value.success_rate = 0.75
                             mock_calculate_metrics.return_value.refinement_rate = 0.5
@@ -717,11 +720,17 @@ class MockQueryGeneratorTests(unittest.TestCase):
         has_hour_pattern = any(p.pattern_type == "temporal_hour" for p in patterns)
         # Note: This might fail if not enough patterns for the hours, but should generally work
         self.assertTrue(
-            has_hour_pattern, "Should detect at least one temporal hour pattern",
+            has_hour_pattern,
+            "Should detect at least one temporal hour pattern",
         )
 
     def generate_mock_query(
-        self, query_id, timestamp, query_text, entities, has_results,
+        self,
+        query_id,
+        timestamp,
+        query_text,
+        entities,
+        has_results,
     ):
         """Generate a mock query document."""
         entity_objects = [{"name": entity} for entity in entities]
@@ -805,7 +814,9 @@ def main():
     parser = argparse.ArgumentParser(description="Test Query Pattern Analysis")
     parser.add_argument("--test", action="store_true", help="Run unit tests")
     parser.add_argument(
-        "--demo", action="store_true", help="Run demonstration with mock data",
+        "--demo",
+        action="store_true",
+        help="Run demonstration with mock data",
     )
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
 
@@ -814,7 +825,8 @@ def main():
     # Configure logging
     log_level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(
-        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
     if args.test:

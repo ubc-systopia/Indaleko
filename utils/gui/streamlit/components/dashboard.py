@@ -135,13 +135,16 @@ def render_dashboard():
         quick_query = st.text_input("Search your personal index")
     with col2:
         quick_debug = st.checkbox(
-            "Debug", help="Show detailed diagnostic information during search",
+            "Debug",
+            help="Show detailed diagnostic information during search",
         )
 
     if quick_query:
         with st.spinner("Searching..."):
             results = execute_query(
-                quick_query, st.session_state.db_service, debug=quick_debug,
+                quick_query,
+                st.session_state.db_service,
+                debug=quick_debug,
             )
             if results:
                 st.subheader("Results")

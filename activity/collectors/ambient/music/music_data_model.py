@@ -50,33 +50,43 @@ class AmbientMusicData(BaseAmbientConditionDataModel):
     artist_name: str = Field(..., description="Name of the track's primary artist")
 
     album_name: str | None = Field(
-        None, description="Name of the album (if applicable)",
+        None,
+        description="Name of the album (if applicable)",
     )
 
     # Playback state
     is_playing: bool = Field(..., description="Whether music is currently playing")
 
     playback_position_ms: int = Field(
-        ..., description="Current playback position in milliseconds", ge=0,
+        ...,
+        description="Current playback position in milliseconds",
+        ge=0,
     )
 
     track_duration_ms: int = Field(
-        ..., description="Total track duration in milliseconds", gt=0,
+        ...,
+        description="Total track duration in milliseconds",
+        gt=0,
     )
 
     volume_percent: int | None = Field(
-        None, description="Current volume level as percentage", ge=0, le=100,
+        None,
+        description="Current volume level as percentage",
+        ge=0,
+        le=100,
     )
 
     # Additional track metadata
     genre: list[str] | None = Field(
-        None, description="Musical genres associated with the track",
+        None,
+        description="Musical genres associated with the track",
     )
 
     release_date: str | None = Field(None, description="Release date of the track")
 
     is_explicit: bool | None = Field(
-        None, description="Whether the track contains explicit content",
+        None,
+        description="Whether the track contains explicit content",
     )
 
     # Audio features

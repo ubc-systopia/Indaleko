@@ -22,10 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
-from pydantic import Field, HttpUrl, EmailStr
-from typing import Union
-
-from icecream import ic
+from pydantic import EmailStr, Field
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -35,40 +32,50 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from activity.collectors.collaboration.data_models.shared_file import SharedFileData
 from activity.collectors.collaboration.data_models.collaboration_data_model import (
     BaseCollaborationDataModel,
 )
+from activity.collectors.collaboration.data_models.shared_file import SharedFileData
 
 # pylint: enable=wrong-import-position
 
+
 class EmailFileShareCollaborationDataModel(BaseCollaborationDataModel):
-    MessageID: Union[str, None] = Field(None, description="Email message ID (if known)")
-    Subject: Union[str, None] = Field(None, description="Subject line of the email")
-    From: Union[EmailStr, None] = Field(None, description="Sender email address")
-    To: Union[list[EmailStr], None] = Field(None, description="Primary recipients")
-    CC: Union[list[EmailStr], None] = Field(None, description="CC’d recipients")
-    BCC: Union[list[EmailStr], None] = Field(None, description="BCC’d recipients (if visible)")
-    Date: Union[AwareDatetime, None] = Field(None, description="Date and time of the email")
-    ThreadID: Union[str, None] = Field(None, description="Conversation/thread identifier, if extractable")
-    Files : list[SharedFileData] = Field([], description="Files attached to the email")
+    MessageID: str | None = Field(None, description="Email message ID (if known)")
+    Subject: str | None = Field(None, description="Subject line of the email")
+    From: EmailStr | None = Field(None, description="Sender email address")
+    To: list[EmailStr] | None = Field(None, description="Primary recipients")
+    CC: list[EmailStr] | None = Field(None, description="CC’d recipients")
+    BCC: list[EmailStr] | None = Field(
+        None,
+        description="BCC’d recipients (if visible)",
+    )
+    Date: AwareDatetime | None = Field(
+        None,
+        description="Date and time of the email",
+    )
+    ThreadID: str | None = Field(
+        None,
+        description="Conversation/thread identifier, if extractable",
+    )
+    Files: list[SharedFileData] = Field([], description="Files attached to the email")
 
     class Config:
         @staticmethod
         def generate_example():
             base = BaseCollaborationDataModel.Config.generate_example()
-            base.update({
-                "Source": "email",
-                "MessageID": "CA+4aG3=Na+XYZ@mail.gmail.com",
-                "Subject": "Updated project timeline",
-                "From": "tony.mason@example.com",
-                "To": ["dr.jones@university.edu"],
-                "CC": ["admin@ubc.ca"],
-                "BCC": [],
-                "ThreadID": "project-timeline-thread"
-            })
+            base.update(
+                {
+                    "Source": "email",
+                    "MessageID": "CA+4aG3=Na+XYZ@mail.gmail.com",
+                    "Subject": "Updated project timeline",
+                    "From": "tony.mason@example.com",
+                    "To": ["dr.jones@university.edu"],
+                    "CC": ["admin@ubc.ca"],
+                    "BCC": [],
+                    "ThreadID": "project-timeline-thread",
+                },
+            )
             return base
 
-        json_schema_extra = {
-            "example": generate_example()
-        }
+        json_schema_extra = {"example": generate_example()}

@@ -117,19 +117,24 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
 
         # Initialize instance variables
         self._collection_name = kwargs.get(
-            "collection_name", self.DEFAULT_COLLECTION_NAME,
+            "collection_name",
+            self.DEFAULT_COLLECTION_NAME,
         )
         self._entity_collection_name = kwargs.get(
-            "entity_collection_name", self.ENTITY_COLLECTION_NAME,
+            "entity_collection_name",
+            self.ENTITY_COLLECTION_NAME,
         )
         self._long_term_collection_name = kwargs.get(
-            "long_term_collection_name", self.LONG_TERM_COLLECTION_NAME,
+            "long_term_collection_name",
+            self.LONG_TERM_COLLECTION_NAME,
         )
         self._importance_threshold = kwargs.get(
-            "importance_threshold", self.IMPORTANCE_THRESHOLD,
+            "importance_threshold",
+            self.IMPORTANCE_THRESHOLD,
         )
         self._knowledge_graph_collection_name = kwargs.get(
-            "knowledge_graph_collection_name", self.KNOWLEDGE_GRAPH_COLLECTION_NAME,
+            "knowledge_graph_collection_name",
+            self.KNOWLEDGE_GRAPH_COLLECTION_NAME,
         )
 
         # Set recorder-specific defaults
@@ -146,9 +151,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
             recorder_id_hash = hashlib.md5(
                 str(kwargs["recorder_id"]).encode(),
             ).hexdigest()
-            kwargs["collection_name"] = (
-                f"{self._collection_name}_{recorder_id_hash[:8]}"
-            )
+            kwargs["collection_name"] = f"{self._collection_name}_{recorder_id_hash[:8]}"
 
         # If no_db is specified, disable database connection
         if kwargs.get("no_db", False):
@@ -310,7 +313,8 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
                     f"Creating knowledge graph collection: {self._knowledge_graph_collection_name}",
                 )
                 knowledge_graph_collection = self._db.create_collection(
-                    self._knowledge_graph_collection_name, edge=True,
+                    self._knowledge_graph_collection_name,
+                    edge=True,
                 )
                 self._logger.info(
                     f"Created knowledge graph collection: {knowledge_graph_collection.name}",
@@ -333,35 +337,42 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
 
             # Index on entity_id for entity-based queries
             self._collection.add_hash_index(
-                fields=["Record.Data.entity_id"], unique=False,
+                fields=["Record.Data.entity_id"],
+                unique=False,
             )
 
             # Index on importance_score for consolidated queries
             self._collection.add_hash_index(
-                fields=["Record.Data.importance_score"], unique=False,
+                fields=["Record.Data.importance_score"],
+                unique=False,
             )
 
             # Index on activity_type for type-based queries
             self._collection.add_hash_index(
-                fields=["Record.Data.activity_types"], unique=False,
+                fields=["Record.Data.activity_types"],
+                unique=False,
             )
 
             # Index on timestamp for time-based queries
             self._collection.add_hash_index(
-                fields=["Record.Data.first_seen"], unique=False,
+                fields=["Record.Data.first_seen"],
+                unique=False,
             )
             self._collection.add_hash_index(
-                fields=["Record.Data.last_activity"], unique=False,
+                fields=["Record.Data.last_activity"],
+                unique=False,
             )
 
             # Index on semantic concepts for concept-based queries
             self._collection.add_hash_index(
-                fields=["Record.Data.semantic_concepts"], unique=False,
+                fields=["Record.Data.semantic_concepts"],
+                unique=False,
             )
 
             # Index on ontology concepts for advanced semantic queries
             self._collection.add_hash_index(
-                fields=["Record.Data.ontology.concepts"], unique=False,
+                fields=["Record.Data.ontology.concepts"],
+                unique=False,
             )
 
             # Set up indices for knowledge graph collection (if it exists)
@@ -375,17 +386,20 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
 
                 # Index on creation date
                 knowledge_graph_collection.add_hash_index(
-                    fields=["created_at"], unique=False,
+                    fields=["created_at"],
+                    unique=False,
                 )
 
                 # Index on strength
                 knowledge_graph_collection.add_hash_index(
-                    fields=["strength"], unique=False,
+                    fields=["strength"],
+                    unique=False,
                 )
 
                 # Index on semantic relationship
                 knowledge_graph_collection.add_hash_index(
-                    fields=["semantic_type"], unique=False,
+                    fields=["semantic_type"],
+                    unique=False,
                 )
 
             self._logger.info("Finished setting up archival memory indices")
@@ -520,26 +534,20 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
 
         # Document types category
         document_concepts = [
-            c
-            for c in w5h_concepts.get("what", [])
-            if c in ["document", "report", "memo", "letter", "resume"]
+            c for c in w5h_concepts.get("what", []) if c in ["document", "report", "memo", "letter", "resume"]
         ]
         if document_concepts:
             categories["document_types"] = document_concepts
 
         # Code types category
         code_concepts = [
-            c
-            for c in w5h_concepts.get("what", [])
-            if c in ["source_code", "python", "javascript", "java", "c_cpp"]
+            c for c in w5h_concepts.get("what", []) if c in ["source_code", "python", "javascript", "java", "c_cpp"]
         ]
         if code_concepts:
             categories["code_types"] = code_concepts
 
         # Media types category
-        media_concepts = [
-            c for c in w5h_concepts.get("what", []) if c in ["image", "video", "audio"]
-        ]
+        media_concepts = [c for c in w5h_concepts.get("what", []) if c in ["image", "video", "audio"]]
         if media_concepts:
             categories["media_types"] = media_concepts
 
@@ -603,20 +611,21 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
 
         # Infer work documents from combinations
         if "work_related" in w5h_concepts.get(
-            "why", [],
+            "why",
+            [],
         ) and "document" in w5h_concepts.get("what", []):
             inferences.append("work_document")
 
         # Infer project code from combinations
         if "project_work" in w5h_concepts.get(
-            "why", [],
+            "why",
+            [],
         ) and "source_code" in w5h_concepts.get("what", []):
             inferences.append("project_code")
 
         # Infer active project from combinations
         if "project_work" in w5h_concepts.get("why", []) and any(
-            c in w5h_concepts.get("how", [])
-            for c in ["frequently_modified", "work_in_progress"]
+            c in w5h_concepts.get("how", []) for c in ["frequently_modified", "work_in_progress"]
         ):
             inferences.append("active_project")
 
@@ -664,7 +673,9 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
         return ontology
 
     def _build_knowledge_graph_relationships(
-        self, entity_id: uuid.UUID, entity_data: dict,
+        self,
+        entity_id: uuid.UUID,
+        entity_data: dict,
     ) -> list[dict]:
         """
         Build knowledge graph relationships for the entity.
@@ -686,15 +697,9 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
 
         try:
             # Extract file path and ontology
-            file_path = (
-                entity_data.get("Record", {}).get("Data", {}).get("file_path", "")
-            )
-            volume = (
-                entity_data.get("Record", {}).get("Data", {}).get("volume_name", "")
-            )
-            w5h_concepts = (
-                entity_data.get("Record", {}).get("Data", {}).get("w5h_concepts", {})
-            )
+            file_path = entity_data.get("Record", {}).get("Data", {}).get("file_path", "")
+            volume = entity_data.get("Record", {}).get("Data", {}).get("volume_name", "")
+            w5h_concepts = entity_data.get("Record", {}).get("Data", {}).get("w5h_concepts", {})
 
             if not file_path:
                 return relationships
@@ -763,9 +768,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
                 relationships.append(relationship)
 
             # Find project-related entities
-            project_indicators = [
-                c for c in w5h_concepts.get("why", []) if c.startswith("project:")
-            ]
+            project_indicators = [c for c in w5h_concepts.get("why", []) if c.startswith("project:")]
 
             if project_indicators:
                 project_query = """
@@ -824,7 +827,10 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
             return relationships
 
     def _build_archival_memory_document(
-        self, entity_id: uuid.UUID, entity_data: dict, long_term_data: dict,
+        self,
+        entity_id: uuid.UUID,
+        entity_data: dict,
+        long_term_data: dict,
     ) -> dict:
         """
         Build a document for storing entity in archival memory.
@@ -871,7 +877,8 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
                     {
                         "Identifier": str(
                             uuid.uuid5(
-                                uuid.NAMESPACE_URL, "indaleko:attribute:archival_memory",
+                                uuid.NAMESPACE_URL,
+                                "indaleko:attribute:archival_memory",
                             ),
                         ),
                         "Label": "Archival Memory",
@@ -886,20 +893,25 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
                     "is_directory": entity_data.get("is_directory", False),
                     "is_deleted": entity_data.get("deleted", False),
                     "first_seen": entity_data.get(
-                        "created_at", datetime.now(UTC).isoformat(),
+                        "created_at",
+                        datetime.now(UTC).isoformat(),
                     ),
                     "last_modified": entity_data.get(
-                        "last_modified", datetime.now(UTC).isoformat(),
+                        "last_modified",
+                        datetime.now(UTC).isoformat(),
                     ),
                     "last_accessed": entity_data.get(
-                        "last_accessed", datetime.now(UTC).isoformat(),
+                        "last_accessed",
+                        datetime.now(UTC).isoformat(),
                     ),
                     "file_reference_number": entity_data.get(
-                        "file_reference_number", "",
+                        "file_reference_number",
+                        "",
                     ),
                     "timestamp": datetime.now(UTC).isoformat(),
                     "last_activity": long_term_data_dict.get(
-                        "last_activity", datetime.now(UTC).isoformat(),
+                        "last_activity",
+                        datetime.now(UTC).isoformat(),
                     ),
                     "search_hits": long_term_data_dict.get("search_hits", 0),
                     "consolidation_date": datetime.now(UTC).isoformat(),
@@ -910,7 +922,8 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
                         "transitions": [
                             # Include existing transitions from long-term memory
                             *long_term_data_dict.get("memory_lineage", {}).get(
-                                "transitions", [],
+                                "transitions",
+                                [],
                             ),
                             # Add new transition to archival memory
                             {
@@ -921,13 +934,15 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
                                 ).isoformat(),
                                 "source_collection": self._long_term_collection_name,
                                 "importance_at_transition": long_term_data_dict.get(
-                                    "importance_score", 0.0,
+                                    "importance_score",
+                                    0.0,
                                 ),
                             },
                         ],
                         "long_term_id": long_term_data.get("_key", ""),
                         "source_activities": long_term_data_dict.get(
-                            "source_activities", [],
+                            "source_activities",
+                            [],
                         ),
                         "archival_reason": "high_importance",  # Default reason, could be enhanced
                         "preservation_level": "permanent",
@@ -948,7 +963,8 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
         w5h_concepts = long_term_data_dict.get("w5h_concepts", {})
         document["Record"]["Data"]["w5h_concepts"] = w5h_concepts
         document["Record"]["Data"]["semantic_concepts"] = long_term_data_dict.get(
-            "semantic_concepts", [],
+            "semantic_concepts",
+            [],
         )
 
         # Add extended ontology for archival memory
@@ -961,12 +977,14 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
 
         # Add reference to source activities
         document["Record"]["Data"]["source_activities"] = long_term_data_dict.get(
-            "source_activities", [],
+            "source_activities",
+            [],
         )
 
         # Add importance score (slightly enhanced for archival memory)
         importance_score = min(
-            1.0, long_term_data_dict.get("importance_score", 0.8) * 1.05,
+            1.0,
+            long_term_data_dict.get("importance_score", 0.8) * 1.05,
         )
         document["Record"]["Data"]["importance_score"] = importance_score
 
@@ -978,7 +996,8 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
             "total_activity_count": activity_summary.get("activity_count", 0),
             "preservation_reason": "high_importance",  # Default, could be enhanced with more logic
             "contextual_note": self._generate_contextual_note(
-                long_term_data_dict, w5h_concepts,
+                long_term_data_dict,
+                w5h_concepts,
             ),
         }
 
@@ -1044,7 +1063,9 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
                 break
 
         # Build contextual note
-        note = f"This {file_type} '{file_name}' has been preserved in archival memory due to its {importance_desc} nature"
+        note = (
+            f"This {file_type} '{file_name}' has been preserved in archival memory due to its {importance_desc} nature"
+        )
 
         if usage:
             note += f" and was {usage}"
@@ -1103,12 +1124,10 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
             # Try to instantiate a long-term memory recorder to use its methods
             try:
                 long_term_recorder = NtfsLongTermMemoryRecorder(no_db=True)
-                eligible_entities = (
-                    long_term_recorder.get_entities_eligible_for_archival(
-                        min_importance=self._importance_threshold,
-                        min_age_days=min_age_days,
-                        limit=entity_limit,
-                    )
+                eligible_entities = long_term_recorder.get_entities_eligible_for_archival(
+                    min_importance=self._importance_threshold,
+                    min_age_days=min_age_days,
+                    limit=entity_limit,
                 )
                 stats["entities_found"] = len(eligible_entities)
             except Exception as e:
@@ -1116,9 +1135,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
                     f"Error getting eligible entities from long-term memory: {e}",
                 )
                 # Fall back to direct query
-                min_date = (
-                    datetime.now(UTC) - timedelta(days=min_age_days)
-                ).isoformat()
+                min_date = (datetime.now(UTC) - timedelta(days=min_age_days)).isoformat()
 
                 query = """
                     FOR doc IN @@long_term_collection
@@ -1173,18 +1190,16 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
                         continue
 
                     # Check if entity meets importance threshold for archival memory
-                    importance_score = (
-                        long_term_entity.get("Record", {})
-                        .get("Data", {})
-                        .get("importance_score", 0.0)
-                    )
+                    importance_score = long_term_entity.get("Record", {}).get("Data", {}).get("importance_score", 0.0)
                     if importance_score < self._importance_threshold:
                         stats["below_threshold"] += 1
                         continue
 
                     # Build archival memory document
                     document = self._build_archival_memory_document(
-                        uuid.UUID(entity_id), entity_data, long_term_entity,
+                        uuid.UUID(entity_id),
+                        entity_data,
+                        long_term_entity,
                     )
 
                     # Insert into archival memory collection
@@ -1192,7 +1207,8 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
 
                     # Create knowledge graph relationships
                     relationships = self._build_knowledge_graph_relationships(
-                        uuid.UUID(entity_id), long_term_entity,
+                        uuid.UUID(entity_id),
+                        long_term_entity,
                     )
 
                     # Store relationships
@@ -1209,7 +1225,9 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
 
                         # Update relationship count in entity document
                         self._update_knowledge_graph_metadata(
-                            uuid.UUID(entity_id), len(relationships), relationships,
+                            uuid.UUID(entity_id),
+                            len(relationships),
+                            relationships,
                         )
 
                     # Mark as consolidated in long-term memory
@@ -1297,7 +1315,10 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
             return False
 
     def _update_knowledge_graph_metadata(
-        self, entity_id: uuid.UUID, count: int, relationships: list[dict],
+        self,
+        entity_id: uuid.UUID,
+        count: int,
+        relationships: list[dict],
     ) -> bool:
         """
         Update the knowledge graph metadata for an entity.
@@ -1372,7 +1393,8 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
             """
 
             count_cursor = self._db._arangodb.aql.execute(
-                count_query, bind_vars={"@collection": self._collection_name},
+                count_query,
+                bind_vars={"@collection": self._collection_name},
             )
 
             for count in count_cursor:
@@ -1388,12 +1410,11 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
             """
 
             importance_cursor = self._db._arangodb.aql.execute(
-                importance_query, bind_vars={"@collection": self._collection_name},
+                importance_query,
+                bind_vars={"@collection": self._collection_name},
             )
 
-            stats["by_importance"] = {
-                f"{item['importance']:.1f}": item["count"] for item in importance_cursor
-            }
+            stats["by_importance"] = {f"{item['importance']:.1f}": item["count"] for item in importance_cursor}
 
             # Get count by ontology concept
             concept_query = """
@@ -1415,14 +1436,13 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
             """
 
             concept_cursor = self._db._arangodb.aql.execute(
-                concept_query, bind_vars={"@collection": self._collection_name},
+                concept_query,
+                bind_vars={"@collection": self._collection_name},
             )
 
             for result in concept_cursor:
                 concept_counts = result.get("concept_counts", [])
-                stats["by_concept"] = {
-                    item["concept"]: item["count"] for item in concept_counts
-                }
+                stats["by_concept"] = {item["concept"]: item["count"] for item in concept_counts}
                 break
 
             # Get knowledge graph statistics
@@ -1432,7 +1452,8 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
             """
 
             knowledge_graph_cursor = self._db._arangodb.aql.execute(
-                knowledge_graph_query, bind_vars={"@collection": self._collection_name},
+                knowledge_graph_query,
+                bind_vars={"@collection": self._collection_name},
             )
 
             for avg_relationships in knowledge_graph_cursor:
@@ -1451,7 +1472,8 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
             """
 
             age_cursor = self._db._arangodb.aql.execute(
-                age_query, bind_vars={"@collection": self._collection_name},
+                age_query,
+                bind_vars={"@collection": self._collection_name},
             )
 
             for avg_age in age_cursor:
@@ -1486,9 +1508,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
                     bind_vars={"@collection": self._knowledge_graph_collection_name},
                 )
 
-                stats["relationships_by_type"] = {
-                    item["type"]: item["count"] for item in rel_type_cursor
-                }
+                stats["relationships_by_type"] = {item["type"]: item["count"] for item in rel_type_cursor}
 
             # Add configuration information
             stats["collection_name"] = self._collection_name
@@ -1536,19 +1556,14 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
 
                 # Build W5H filter conditions
                 for i, (dimension, concepts) in enumerate(w5h_filter.items()):
-                    if (
-                        dimension in ["who", "what", "when", "where", "why", "how"]
-                        and concepts
-                    ):
+                    if dimension in ["who", "what", "when", "where", "why", "how"] and concepts:
                         filter_conditions.append(
                             f"LENGTH(INTERSECTION(doc.Record.Data.w5h_concepts.{dimension}, @{dimension}_concepts)) > 0",
                         )
                         w5h_bind_vars[f"{dimension}_concepts"] = concepts
 
                 # Build the complete query
-                w5h_filter_str = (
-                    " AND ".join(filter_conditions) if filter_conditions else "true"
-                )
+                w5h_filter_str = " AND ".join(filter_conditions) if filter_conditions else "true"
 
                 search_query = f"""
                     FOR doc IN @@collection
@@ -1571,7 +1586,8 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
                 bind_vars.update(w5h_bind_vars)
 
                 cursor = self._db._arangodb.aql.execute(
-                    search_query, bind_vars=bind_vars,
+                    search_query,
+                    bind_vars=bind_vars,
                 )
 
             elif concept_filter:
@@ -1624,10 +1640,9 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
             for doc in cursor:
                 # If requested, include knowledge graph relationships
                 if include_knowledge_graph:
-                    doc["knowledge_graph_relationships"] = (
-                        self.get_knowledge_graph_relationships(
-                            uuid.UUID(doc["_key"]), limit=5,
-                        )
+                    doc["knowledge_graph_relationships"] = self.get_knowledge_graph_relationships(
+                        uuid.UUID(doc["_key"]),
+                        limit=5,
                     )
 
                 results.append(doc)
@@ -1863,7 +1878,8 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
             """
 
             cursor = self._db._arangodb.aql.execute(
-                query, bind_vars={"@collection": self._collection_name},
+                query,
+                bind_vars={"@collection": self._collection_name},
             )
 
             # Return the first result, or empty dict if no results
@@ -1908,10 +1924,14 @@ if __name__ == "__main__":
         help="Consolidate entities from long-term memory",
     )
     mode_group.add_argument(
-        "--stats", action="store_true", help="Show statistics about archival memory",
+        "--stats",
+        action="store_true",
+        help="Show statistics about archival memory",
     )
     mode_group.add_argument(
-        "--search", type=str, help="Search for entities by name or path",
+        "--search",
+        type=str,
+        help="Search for entities by name or path",
     )
 
     # Add consolidation options
@@ -1943,7 +1963,9 @@ if __name__ == "__main__":
 
     # Add database options
     parser.add_argument(
-        "--no-db", action="store_true", help="Run without database connection",
+        "--no-db",
+        action="store_true",
+        help="Run without database connection",
     )
     parser.add_argument(
         "--db-config",
@@ -1958,14 +1980,17 @@ if __name__ == "__main__":
     # Configure logging
     log_level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(
-        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
     logger = logging.getLogger("NtfsArchivalMemoryRecorder")
 
     try:
         # Create recorder
         recorder = NtfsArchivalMemoryRecorder(
-            debug=args.debug, no_db=args.no_db, db_config_path=args.db_config,
+            debug=args.debug,
+            no_db=args.no_db,
+            db_config_path=args.db_config,
         )
 
         # Execute requested operation
@@ -2022,9 +2047,7 @@ if __name__ == "__main__":
                 )
 
         elif args.search:
-            concept_filter = (
-                args.concept_filter.split(",") if args.concept_filter else None
-            )
+            concept_filter = args.concept_filter.split(",") if args.concept_filter else None
 
             print(f'=== Searching Archival Memory for "{args.search}" ===')
             if concept_filter:
@@ -2069,18 +2092,12 @@ if __name__ == "__main__":
                     print(f"    Note: {historical.get('contextual_note', '')}")
 
                 # Show knowledge graph relationships if available
-                if (
-                    entity.get("knowledge_graph_relationships")
-                ):
+                if entity.get("knowledge_graph_relationships"):
                     print("  Related entities:")
                     for j, rel in enumerate(entity["knowledge_graph_relationships"]):
                         related_entity = rel.get("entity", {})
                         relationship = rel.get("relationship", {})
-                        related_path = (
-                            related_entity.get("Record", {})
-                            .get("Data", {})
-                            .get("file_path", "Unknown")
-                        )
+                        related_path = related_entity.get("Record", {}).get("Data", {}).get("file_path", "Unknown")
 
                         print(
                             f"    {j+1}. {os.path.basename(related_path)} ({relationship.get('type', 'related')})",

@@ -72,8 +72,7 @@ class FireCircleArchivistIntegration:
         """
         if not HAS_FIRE_CIRCLE:
             raise ImportError(
-                "Fire Circle is not available. "
-                "Please ensure the firecircle package is installed.",
+                "Fire Circle is not available. Please ensure the firecircle package is installed.",
             )
 
         self.kb_manager = kb_manager or KnowledgeBaseManager()
@@ -115,7 +114,9 @@ class FireCircleArchivistIntegration:
 
         # Process the message through the Fire Circle
         result = self.orchestrator.process_message(
-            session_id=session.session_id, message=message, gather_all_perspectives=True,
+            session_id=session.session_id,
+            message=message,
+            gather_all_perspectives=True,
         )
 
         # Record the analysis as a learning event
@@ -183,7 +184,9 @@ class FireCircleArchivistIntegration:
 
         # Process the message through the Fire Circle
         result = self.orchestrator.process_message(
-            session_id=session.session_id, message=message, gather_all_perspectives=True,
+            session_id=session.session_id,
+            message=message,
+            gather_all_perspectives=True,
         )
 
         # Record the evaluation as a learning event
@@ -217,7 +220,8 @@ class FireCircleArchivistIntegration:
         }
 
     def suggest_knowledge_patterns(
-        self, query_history: list[dict[str, Any]],
+        self,
+        query_history: list[dict[str, Any]],
     ) -> dict[str, Any]:
         """
         Suggest potential knowledge patterns based on query history.
@@ -249,7 +253,9 @@ class FireCircleArchivistIntegration:
 
         # Process the message through the Fire Circle
         result = self.orchestrator.process_message(
-            session_id=session.session_id, message=message, gather_all_perspectives=True,
+            session_id=session.session_id,
+            message=message,
+            gather_all_perspectives=True,
         )
 
         # Create knowledge patterns from the suggestions
@@ -306,8 +312,7 @@ class FireCircleCliIntegration:
         """
         if not HAS_FIRE_CIRCLE:
             raise ImportError(
-                "Fire Circle is not available. "
-                "Please ensure the firecircle package is installed.",
+                "Fire Circle is not available. Please ensure the firecircle package is installed.",
             )
 
         self.cli = cli_instance
@@ -467,11 +472,7 @@ Fire Circle Commands:
         """
         try:
             # Get recent query history
-            query_history = (
-                self.cli.get_query_history()
-                if hasattr(self.cli, "get_query_history")
-                else []
-            )
+            query_history = self.cli.get_query_history() if hasattr(self.cli, "get_query_history") else []
 
             if not query_history:
                 self.cli.display_warning("No query history available for analysis")
@@ -600,7 +601,10 @@ def add_firecircle_arguments(parser) -> None:
     """
     fc_group = parser.add_argument_group("Fire Circle")
     fc_group.add_argument(
-        "--fc", "--fire-circle", action="store_true", help="Enable Fire Circle features",
+        "--fc",
+        "--fire-circle",
+        action="store_true",
+        help="Enable Fire Circle features",
     )
     fc_group.add_argument(
         "--fc-all-perspectives",

@@ -253,11 +253,13 @@ class KnowledgeBaseManager:
             # Increase confidence if results were found, decrease if none
             if result_count > 0:
                 matching_pattern.confidence = min(
-                    1.0, matching_pattern.confidence + 0.05,
+                    1.0,
+                    matching_pattern.confidence + 0.05,
                 )
             else:
                 matching_pattern.confidence = max(
-                    0.0, matching_pattern.confidence - 0.1,
+                    0.0,
+                    matching_pattern.confidence - 0.1,
                 )
 
             # Enhanced: Track query success history
@@ -269,11 +271,7 @@ class KnowledgeBaseManager:
             if entities:
                 entity_success = matching_pattern.pattern_data.get("entity_success", {})
                 for entity in entities:
-                    entity_name = (
-                        entity
-                        if isinstance(entity, str)
-                        else entity.get("name", "unknown")
-                    )
+                    entity_name = entity if isinstance(entity, str) else entity.get("name", "unknown")
                     if entity_name not in entity_success:
                         entity_success[entity_name] = {
                             "success_count": 0,
@@ -291,7 +289,8 @@ class KnowledgeBaseManager:
             collections = event.content.get("collections", [])
             if collections:
                 collection_success = matching_pattern.pattern_data.get(
-                    "collection_success", {},
+                    "collection_success",
+                    {},
                 )
                 for collection in collections:
                     if collection not in collection_success:
@@ -379,7 +378,9 @@ class KnowledgeBaseManager:
                     self.logger.warning(f"Error detecting schema changes: {e!s}")
 
     def _find_matching_query_pattern(
-        self, query_text: str, intent: str,
+        self,
+        query_text: str,
+        intent: str,
     ) -> KnowledgePatternDataModel | None:
         """
         Find a matching query pattern for a given query text and intent.
@@ -409,7 +410,8 @@ class KnowledgeBaseManager:
             from utils.misc.string_similarity import jaro_winkler_similarity
 
             text_similarity = jaro_winkler_similarity(
-                query_text.lower(), pattern_query.lower(),
+                query_text.lower(),
+                pattern_query.lower(),
             )
 
             # Score is a combination of intent match and text similarity
@@ -580,7 +582,8 @@ class KnowledgeBaseManager:
 
             # Enhanced: Track schema evolution over time
             evolution_history = existing_pattern.pattern_data.get(
-                "evolution_history", [],
+                "evolution_history",
+                [],
             )
             evolution_history.append(
                 {
@@ -588,7 +591,8 @@ class KnowledgeBaseManager:
                     "changes": changes,
                     "event_id": str(event.event_id),
                     "backwards_compatible": event.content.get(
-                        "backwards_compatible", True,
+                        "backwards_compatible",
+                        True,
                     ),
                 },
             )
@@ -596,7 +600,8 @@ class KnowledgeBaseManager:
 
             # Enhanced: Generate migration path if needed
             if not event.content.get(
-                "backwards_compatible", True,
+                "backwards_compatible",
+                True,
             ) and not existing_pattern.pattern_data.get("migration_path"):
                 migration_path = self._generate_migration_path(collection, changes)
                 existing_pattern.pattern_data["migration_path"] = migration_path
@@ -641,7 +646,8 @@ class KnowledgeBaseManager:
                     "collection": collection,
                     "changes": changes,
                     "backwards_compatible": event.content.get(
-                        "backwards_compatible", True,
+                        "backwards_compatible",
+                        True,
                     ),
                     "migration_path": event.content.get("migration_path", ""),
                     "evolution_history": [
@@ -650,7 +656,8 @@ class KnowledgeBaseManager:
                             "changes": changes,
                             "event_id": str(event.event_id),
                             "backwards_compatible": event.content.get(
-                                "backwards_compatible", True,
+                                "backwards_compatible",
+                                True,
                             ),
                         },
                     ],
@@ -696,7 +703,9 @@ class KnowledgeBaseManager:
 
         # Handle renamed fields
         for old_field, new_field in renamed_fields.items():
-            migration_path += f"  LET updated = MERGE(UNSET(updated, '{old_field}'), {{ {new_field}: doc.{old_field} }})\n"
+            migration_path += (
+                f"  LET updated = MERGE(UNSET(updated, '{old_field}'), {{ {new_field}: doc.{old_field} }})\n"
+            )
 
         # Handle removed fields
         if removed_fields:
@@ -811,7 +820,8 @@ class KnowledgeBaseManager:
         return feedback
 
     def get_knowledge_pattern(
-        self, pattern_id: UUID,
+        self,
+        pattern_id: UUID,
     ) -> KnowledgePatternDataModel | None:
         """
         Get a knowledge pattern by ID.
@@ -825,7 +835,9 @@ class KnowledgeBaseManager:
         return self._patterns_cache.get(pattern_id)
 
     def get_patterns_by_type(
-        self, pattern_type: KnowledgePatternType, min_confidence: float = 0.0,
+        self,
+        pattern_type: KnowledgePatternType,
+        min_confidence: float = 0.0,
     ) -> list[KnowledgePatternDataModel]:
         """
         Get all patterns of a specific type.
@@ -840,12 +852,14 @@ class KnowledgeBaseManager:
         return [
             pattern
             for pattern in self._patterns_cache.values()
-            if pattern.pattern_type == pattern_type
-            and pattern.confidence >= min_confidence
+            if pattern.pattern_type == pattern_type and pattern.confidence >= min_confidence
         ]
 
     def find_matching_patterns(
-        self, query_text: str, intent: str = "", min_confidence: float = 0.7,
+        self,
+        query_text: str,
+        intent: str = "",
+        min_confidence: float = 0.7,
     ) -> list[KnowledgePatternDataModel]:
         """
         Find patterns that match a query.
@@ -878,7 +892,8 @@ class KnowledgeBaseManager:
             from utils.misc.string_similarity import jaro_winkler_similarity
 
             text_similarity = jaro_winkler_similarity(
-                query_text.lower(), pattern_query.lower(),
+                query_text.lower(),
+                pattern_query.lower(),
             )
 
             # Add if similarity is high enough
@@ -890,7 +905,10 @@ class KnowledgeBaseManager:
         return matching_patterns
 
     def apply_knowledge_to_query(
-        self, query_text: str, intent: str = "", context: dict[str, Any] = None,
+        self,
+        query_text: str,
+        intent: str = "",
+        context: dict[str, Any] = None,
     ) -> dict[str, Any]:
         """
         Apply knowledge patterns to enhance a query.
@@ -919,7 +937,8 @@ class KnowledgeBaseManager:
 
         # Enhanced: Use contextual information to select the best pattern
         best_pattern = self._select_best_pattern_with_context(
-            matching_patterns, context,
+            matching_patterns,
+            context,
         )
 
         # Apply pattern enhancements
@@ -994,7 +1013,9 @@ class KnowledgeBaseManager:
         return enhancements
 
     def _select_best_pattern_with_context(
-        self, patterns: list[KnowledgePatternDataModel], context: dict[str, Any],
+        self,
+        patterns: list[KnowledgePatternDataModel],
+        context: dict[str, Any],
     ) -> KnowledgePatternDataModel:
         """
         Select the best pattern using contextual information.
@@ -1030,18 +1051,11 @@ class KnowledgeBaseManager:
             success_history = pattern.pattern_data.get("success_history", [])
             if success_history:
                 # Calculate success rate
-                recent_history = success_history[
-                    -min(len(success_history), 10) :
-                ]  # Last 10 uses
+                recent_history = success_history[-min(len(success_history), 10) :]  # Last 10 uses
                 success_results = [
-                    h.get("result_count", 0) > 0 if isinstance(h, dict) else False
-                    for h in recent_history
+                    h.get("result_count", 0) > 0 if isinstance(h, dict) else False for h in recent_history
                 ]
-                success_rate = (
-                    sum(success_results) / len(success_results)
-                    if success_results
-                    else 0
-                )
+                success_rate = sum(success_results) / len(success_results) if success_results else 0
 
                 # Boost score based on success rate
                 score += success_rate * 0.2
@@ -1062,9 +1076,7 @@ class KnowledgeBaseManager:
 
                 # Boost score based on time patterns
                 if recent_history:
-                    time_match_score = time_matches / (
-                        len(recent_history) * 2
-                    )  # Normalize
+                    time_match_score = time_matches / (len(recent_history) * 2)  # Normalize
                     score += time_match_score * 0.1
 
             # Store the final score
@@ -1077,7 +1089,10 @@ class KnowledgeBaseManager:
         return pattern_scores[0][0]
 
     def get_related_entities(
-        self, entity_name: str, entity_type: str = "", min_confidence: float = 0.7,
+        self,
+        entity_name: str,
+        entity_type: str = "",
+        min_confidence: float = 0.7,
     ) -> list[dict[str, Any]]:
         """
         Get entities related to a given entity.
@@ -1120,7 +1135,8 @@ class KnowledgeBaseManager:
                         "entity_type": relationship.get("target_type", ""),
                         "relationship_type": relationship.get("type", "related_to"),
                         "confidence": relationship.get(
-                            "confidence", pattern.confidence,
+                            "confidence",
+                            pattern.confidence,
                         ),
                     },
                 )
@@ -1157,14 +1173,8 @@ class KnowledgeBaseManager:
         for pattern in self._patterns_cache.values():
             success_history = pattern.pattern_data.get("success_history", [])
             if success_history:
-                success_items = [
-                    h
-                    for h in success_history
-                    if isinstance(h, dict) and h.get("result_count", 0) > 0
-                ]
-                success_rate = (
-                    len(success_items) / len(success_history) if success_history else 0
-                )
+                success_items = [h for h in success_history if isinstance(h, dict) and h.get("result_count", 0) > 0]
+                success_rate = len(success_items) / len(success_history) if success_history else 0
                 pattern_effectiveness[str(pattern.pattern_id)] = {
                     "pattern_type": pattern.pattern_type.value,
                     "success_rate": success_rate,
@@ -1183,7 +1193,9 @@ class KnowledgeBaseManager:
         }
 
     def detect_schema_changes(
-        self, collection_name: str, data_sample: dict[str, Any],
+        self,
+        collection_name: str,
+        data_sample: dict[str, Any],
     ) -> dict[str, Any]:
         """
         Detect schema changes in a collection by comparing with known schema.
@@ -1301,7 +1313,10 @@ class KnowledgeBaseManager:
         }
 
     def _extract_field_types(
-        self, data: dict[str, Any], prefix: str = "", max_depth: int = 3,
+        self,
+        data: dict[str, Any],
+        prefix: str = "",
+        max_depth: int = 3,
     ) -> dict[str, str]:
         """
         Extract field types from a data sample.
@@ -1341,7 +1356,9 @@ class KnowledgeBaseManager:
                     if isinstance(first_item, dict):
                         # Extract types from the first item
                         nested_types = self._extract_field_types(
-                            first_item, f"{field_name}[0]", max_depth - 1,
+                            first_item,
+                            f"{field_name}[0]",
+                            max_depth - 1,
                         )
                         field_types.update(nested_types)
             elif isinstance(value, dict):
@@ -1349,7 +1366,9 @@ class KnowledgeBaseManager:
 
                 # Extract nested fields
                 nested_types = self._extract_field_types(
-                    value, field_name, max_depth - 1,
+                    value,
+                    field_name,
+                    max_depth - 1,
                 )
                 field_types.update(nested_types)
             else:
@@ -1408,8 +1427,7 @@ class KnowledgeBaseManager:
 
         # Calculate improvement
         improved = refined_result_count > 0 and (
-            original_result_count == 0
-            or result_info.get("quality", 0) > result_info.get("original_quality", 0)
+            original_result_count == 0 or result_info.get("quality", 0) > result_info.get("original_quality", 0)
         )
 
         # Adjust confidence based on improvement
@@ -1501,7 +1519,8 @@ def main():
 
     # Test applying knowledge
     enhanced_query = kb_manager.apply_knowledge_to_query(
-        "Show me files related to Indaleko", intent="document_search",
+        "Show me files related to Indaleko",
+        intent="document_search",
     )
 
     print(f"Enhanced Query: {enhanced_query}")

@@ -21,56 +21,67 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from query.tools.registry import get_registry, ToolRegistry
-from query.tools.base import BaseTool, ToolDefinition, ToolInput, ToolOutput, ToolParameter
+from query.tools.base import (
+    BaseTool,
+    ToolDefinition,
+    ToolInput,
+    ToolOutput,
+    ToolParameter,
+)
+from query.tools.registry import ToolRegistry, get_registry
 
 # Add CognitiveMemoryQueryTool to exports
 try:
     from query.tools.memory.cognitive_query import CognitiveMemoryQueryTool
+
     __all__ = [
-        'BaseTool',
-        'ToolDefinition',
-        'ToolInput',
-        'ToolOutput',
-        'ToolParameter',
-        'get_registry',
-        'ToolRegistry',
-        'CognitiveMemoryQueryTool'
+        "BaseTool",
+        "ToolDefinition",
+        "ToolInput",
+        "ToolOutput",
+        "ToolParameter",
+        "get_registry",
+        "ToolRegistry",
+        "CognitiveMemoryQueryTool",
     ]
 except ImportError:
     # The CognitiveMemoryQueryTool might not be available
     __all__ = [
-        'BaseTool',
-        'ToolDefinition',
-        'ToolInput',
-        'ToolOutput',
-        'ToolParameter',
-        'get_registry',
-        'ToolRegistry'
+        "BaseTool",
+        "ToolDefinition",
+        "ToolInput",
+        "ToolOutput",
+        "ToolParameter",
+        "get_registry",
+        "ToolRegistry",
     ]
 
 # Register default tools
 registry = get_registry()
 try:
     from query.tools.translation.nl_parser import NLParserTool
+
     registry.register_tool(NLParserTool)
 except ImportError:
     pass
 
 try:
     from query.tools.translation.aql_translator import AQLTranslatorTool
+
     registry.register_tool(AQLTranslatorTool)
 except ImportError:
     pass
 
 try:
     from query.tools.database.executor import QueryExecutorTool
+
     registry.register_tool(QueryExecutorTool)
 except ImportError:
     pass
 
 try:
     from query.tools.memory.cognitive_query import CognitiveMemoryQueryTool
+
     registry.register_tool(CognitiveMemoryQueryTool)
 except ImportError:
     pass

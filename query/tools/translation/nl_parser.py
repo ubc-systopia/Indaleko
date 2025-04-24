@@ -157,10 +157,7 @@ class NLParserTool(BaseTool):
             The fixed category data.
         """
         # If alternatives_considered is missing or not a list, add an empty list
-        if (
-            not hasattr(category_data, "alternatives_considered")
-            or category_data.alternatives_considered is None
-        ):
+        if not hasattr(category_data, "alternatives_considered") or category_data.alternatives_considered is None:
             category_data.alternatives_considered = []
 
         # If alternatives_considered is empty, add a placeholder
@@ -237,14 +234,18 @@ class NLParserTool(BaseTool):
 
         ic(f"Parsing query: {query}")
         self.report_progress(
-            stage="parsing", message="Starting query parsing", progress=0.3,
+            stage="parsing",
+            message="Starting query parsing",
+            progress=0.3,
         )
 
         # Parse the query
         try:
             # Report intent detection progress
             self.report_progress(
-                stage="parsing", message="Detecting query intent", progress=0.4,
+                stage="parsing",
+                message="Detecting query intent",
+                progress=0.4,
             )
 
             parsed_result = self._nl_parser.parse(query=query)
@@ -266,14 +267,8 @@ class NLParserTool(BaseTool):
                 entities.append(
                     {
                         "name": entity.name,
-                        "type": (
-                            entity.category
-                            if hasattr(entity, "category")
-                            else "unknown"
-                        ),
-                        "value": (
-                            entity.value if hasattr(entity, "value") else entity.name
-                        ),
+                        "type": (entity.category if hasattr(entity, "category") else "unknown"),
+                        "value": (entity.value if hasattr(entity, "value") else entity.name),
                     },
                 )
 

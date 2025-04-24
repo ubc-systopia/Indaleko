@@ -99,21 +99,24 @@ class QueryHistoryRecommender(RecommendationProvider):
                     # Extract pattern based on relationship type
                     if activity.relationship_type == RelationshipType.REFINEMENT.value:
                         self._extract_refinement_pattern(
-                            prev_activity.query_text, activity.query_text,
+                            prev_activity.query_text,
+                            activity.query_text,
                         )
-                    elif (
-                        activity.relationship_type == RelationshipType.BROADENING.value
-                    ):
+                    elif activity.relationship_type == RelationshipType.BROADENING.value:
                         self._extract_broadening_pattern(
-                            prev_activity.query_text, activity.query_text,
+                            prev_activity.query_text,
+                            activity.query_text,
                         )
                     elif activity.relationship_type == RelationshipType.PIVOT.value:
                         self._extract_pivot_pattern(
-                            prev_activity.query_text, activity.query_text,
+                            prev_activity.query_text,
+                            activity.query_text,
                         )
 
     def _extract_refinement_pattern(
-        self, previous_query: str, current_query: str,
+        self,
+        previous_query: str,
+        current_query: str,
     ) -> None:
         """
         Extract refinement pattern from a query pair.
@@ -127,26 +130,25 @@ class QueryHistoryRecommender(RecommendationProvider):
             if term not in self._extract_terms(previous_query):
                 # This term was added in the refinement
                 pattern = f"add_term:{term}"
-                self.refinement_patterns[pattern] = (
-                    self.refinement_patterns.get(pattern, 0) + 1
-                )
+                self.refinement_patterns[pattern] = self.refinement_patterns.get(pattern, 0) + 1
 
         # Pattern: adding constraints
         for constraint_type, constraints in self._extract_constraints(
             current_query,
         ).items():
             prev_constraints = self._extract_constraints(previous_query).get(
-                constraint_type, set(),
+                constraint_type,
+                set(),
             )
             new_constraints = constraints - prev_constraints
             for constraint in new_constraints:
                 pattern = f"add_constraint:{constraint_type}:{constraint}"
-                self.refinement_patterns[pattern] = (
-                    self.refinement_patterns.get(pattern, 0) + 1
-                )
+                self.refinement_patterns[pattern] = self.refinement_patterns.get(pattern, 0) + 1
 
     def _extract_broadening_pattern(
-        self, previous_query: str, current_query: str,
+        self,
+        previous_query: str,
+        current_query: str,
     ) -> None:
         """
         Extract broadening pattern from a query pair.
@@ -160,23 +162,20 @@ class QueryHistoryRecommender(RecommendationProvider):
             if term not in self._extract_terms(current_query):
                 # This term was removed in the broadening
                 pattern = f"remove_term:{term}"
-                self.broadening_patterns[pattern] = (
-                    self.broadening_patterns.get(pattern, 0) + 1
-                )
+                self.broadening_patterns[pattern] = self.broadening_patterns.get(pattern, 0) + 1
 
         # Pattern: removing constraints
         for constraint_type, constraints in self._extract_constraints(
             previous_query,
         ).items():
             curr_constraints = self._extract_constraints(current_query).get(
-                constraint_type, set(),
+                constraint_type,
+                set(),
             )
             removed_constraints = constraints - curr_constraints
             for constraint in removed_constraints:
                 pattern = f"remove_constraint:{constraint_type}:{constraint}"
-                self.broadening_patterns[pattern] = (
-                    self.broadening_patterns.get(pattern, 0) + 1
-                )
+                self.broadening_patterns[pattern] = self.broadening_patterns.get(pattern, 0) + 1
 
     def _extract_pivot_pattern(self, previous_query: str, current_query: str) -> None:
         """
@@ -395,28 +394,32 @@ class QueryHistoryRecommender(RecommendationProvider):
 
         # 1. Suggestions based on successful past queries
         successful_suggestions = self._generate_successful_query_suggestions(
-            current_query, context_data,
+            current_query,
+            context_data,
         )
         suggestions.extend(successful_suggestions)
 
         # 2. Suggestions based on refinement patterns
         if current_query:
             refinement_suggestions = self._generate_refinement_suggestions(
-                current_query, context_data,
+                current_query,
+                context_data,
             )
             suggestions.extend(refinement_suggestions)
 
         # 3. Suggestions based on broadening patterns
         if current_query:
             broadening_suggestions = self._generate_broadening_suggestions(
-                current_query, context_data,
+                current_query,
+                context_data,
             )
             suggestions.extend(broadening_suggestions)
 
         # 4. Suggestions based on pivot patterns
         if current_query:
             pivot_suggestions = self._generate_pivot_suggestions(
-                current_query, context_data,
+                current_query,
+                context_data,
             )
             suggestions.extend(pivot_suggestions)
 
@@ -425,7 +428,9 @@ class QueryHistoryRecommender(RecommendationProvider):
         return suggestions[:max_suggestions]
 
     def _generate_successful_query_suggestions(
-        self, current_query: str | None, context_data: dict[str, Any],
+        self,
+        current_query: str | None,
+        context_data: dict[str, Any],
     ) -> list[QuerySuggestion]:
         """
         Generate suggestions based on successful past queries.
@@ -447,10 +452,7 @@ class QueryHistoryRecommender(RecommendationProvider):
                 continue
 
             # Skip if too similar to current query
-            if (
-                current_query
-                and self._query_similarity(query_text, current_query) > 0.8
-            ):
+            if current_query and self._query_similarity(query_text, current_query) > 0.8:
                 continue
 
             recent_successful.append((query_text, result_count))
@@ -483,7 +485,9 @@ class QueryHistoryRecommender(RecommendationProvider):
         return suggestions
 
     def _generate_refinement_suggestions(
-        self, current_query: str, context_data: dict[str, Any],
+        self,
+        current_query: str,
+        context_data: dict[str, Any],
     ) -> list[QuerySuggestion]:
         """
         Generate suggestions based on refinement patterns.
@@ -499,7 +503,9 @@ class QueryHistoryRecommender(RecommendationProvider):
 
         # Find top refinement patterns
         top_patterns = sorted(
-            self.refinement_patterns.items(), key=lambda x: x[1], reverse=True,
+            self.refinement_patterns.items(),
+            key=lambda x: x[1],
+            reverse=True,
         )[:10]
 
         # Apply patterns to current query
@@ -512,9 +518,7 @@ class QueryHistoryRecommender(RecommendationProvider):
                 # Extract pattern type and details
                 pattern_parts = pattern.split(":", 2)
                 pattern_type = pattern_parts[0]
-                pattern_details = (
-                    ":".join(pattern_parts[1:]) if len(pattern_parts) > 1 else ""
-                )
+                pattern_details = ":".join(pattern_parts[1:]) if len(pattern_parts) > 1 else ""
 
                 # Create suggestion
                 suggestion = self.create_suggestion(
@@ -538,7 +542,9 @@ class QueryHistoryRecommender(RecommendationProvider):
         return suggestions
 
     def _generate_broadening_suggestions(
-        self, current_query: str, context_data: dict[str, Any],
+        self,
+        current_query: str,
+        context_data: dict[str, Any],
     ) -> list[QuerySuggestion]:
         """
         Generate suggestions based on broadening patterns.
@@ -554,7 +560,9 @@ class QueryHistoryRecommender(RecommendationProvider):
 
         # Find top broadening patterns
         top_patterns = sorted(
-            self.broadening_patterns.items(), key=lambda x: x[1], reverse=True,
+            self.broadening_patterns.items(),
+            key=lambda x: x[1],
+            reverse=True,
         )[:5]
 
         # Apply patterns to current query
@@ -563,15 +571,14 @@ class QueryHistoryRecommender(RecommendationProvider):
             if broadened_query and broadened_query != current_query:
                 # Calculate confidence based on pattern frequency
                 pattern_confidence = min(
-                    count / 5, 0.8,
+                    count / 5,
+                    0.8,
                 )  # Slightly lower base confidence than refinement
 
                 # Extract pattern type and details
                 pattern_parts = pattern.split(":", 2)
                 pattern_type = pattern_parts[0]
-                pattern_details = (
-                    ":".join(pattern_parts[1:]) if len(pattern_parts) > 1 else ""
-                )
+                pattern_details = ":".join(pattern_parts[1:]) if len(pattern_parts) > 1 else ""
 
                 # Create suggestion
                 suggestion = self.create_suggestion(
@@ -595,7 +602,9 @@ class QueryHistoryRecommender(RecommendationProvider):
         return suggestions
 
     def _generate_pivot_suggestions(
-        self, current_query: str, context_data: dict[str, Any],
+        self,
+        current_query: str,
+        context_data: dict[str, Any],
     ) -> list[QuerySuggestion]:
         """
         Generate suggestions based on pivot patterns.
@@ -611,7 +620,9 @@ class QueryHistoryRecommender(RecommendationProvider):
 
         # Find top pivot patterns
         top_patterns = sorted(
-            self.pivot_patterns.items(), key=lambda x: x[1], reverse=True,
+            self.pivot_patterns.items(),
+            key=lambda x: x[1],
+            reverse=True,
         )[:5]
 
         # Apply patterns to current query
@@ -620,7 +631,8 @@ class QueryHistoryRecommender(RecommendationProvider):
             if pivoted_query and pivoted_query != current_query:
                 # Calculate confidence based on pattern frequency
                 pattern_confidence = min(
-                    count / 5, 0.7,
+                    count / 5,
+                    0.7,
                 )  # Lower base confidence for pivots
 
                 # Extract pattern details
@@ -677,9 +689,7 @@ class QueryHistoryRecommender(RecommendationProvider):
             constraint = parts[2]
 
             if constraint_type == "time":
-                return (
-                    f"Add time constraint '{constraint}' to focus on specific timeframe"
-                )
+                return f"Add time constraint '{constraint}' to focus on specific timeframe"
             elif constraint_type == "file_type":
                 return f"Specify '{constraint}' file type to filter results"
             elif constraint_type == "location":
@@ -765,11 +775,7 @@ class QueryHistoryRecommender(RecommendationProvider):
         source_context = suggestion.source_context
 
         # Update successful queries cache
-        if (
-            self.is_positive_feedback(feedback)
-            and result_count is not None
-            and result_count > 0
-        ):
+        if self.is_positive_feedback(feedback) and result_count is not None and result_count > 0:
             self.successful_queries[query_text] = result_count
 
         # Update pattern statistics
@@ -779,36 +785,27 @@ class QueryHistoryRecommender(RecommendationProvider):
 
             if self.is_positive_feedback(feedback):
                 # Increase pattern count for positive feedback
-                if (
-                    suggestion_type == "refinement"
-                    and pattern in self.refinement_patterns
-                ):
+                if suggestion_type == "refinement" and pattern in self.refinement_patterns:
                     self.refinement_patterns[pattern] += 1
-                elif (
-                    suggestion_type == "broadening"
-                    and pattern in self.broadening_patterns
-                ):
+                elif suggestion_type == "broadening" and pattern in self.broadening_patterns:
                     self.broadening_patterns[pattern] += 1
                 elif suggestion_type == "pivot" and pattern in self.pivot_patterns:
                     self.pivot_patterns[pattern] += 1
 
             elif self.is_negative_feedback(feedback):
                 # Decrease pattern count for negative feedback
-                if (
-                    suggestion_type == "refinement"
-                    and pattern in self.refinement_patterns
-                ):
+                if suggestion_type == "refinement" and pattern in self.refinement_patterns:
                     self.refinement_patterns[pattern] = max(
-                        0, self.refinement_patterns[pattern] - 1,
+                        0,
+                        self.refinement_patterns[pattern] - 1,
                     )
-                elif (
-                    suggestion_type == "broadening"
-                    and pattern in self.broadening_patterns
-                ):
+                elif suggestion_type == "broadening" and pattern in self.broadening_patterns:
                     self.broadening_patterns[pattern] = max(
-                        0, self.broadening_patterns[pattern] - 1,
+                        0,
+                        self.broadening_patterns[pattern] - 1,
                     )
                 elif suggestion_type == "pivot" and pattern in self.pivot_patterns:
                     self.pivot_patterns[pattern] = max(
-                        0, self.pivot_patterns[pattern] - 1,
+                        0,
+                        self.pivot_patterns[pattern] - 1,
                     )

@@ -22,9 +22,8 @@ import datetime
 import os
 import sys
 import uuid
-
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any
+from typing import Any
 
 from icecream import ic
 
@@ -50,7 +49,7 @@ class RecorderBase(ABC):
     """
 
     @abstractmethod
-    def get_recorder_characteristics(self) -> List[ActivityDataCharacteristics]:
+    def get_recorder_characteristics(self) -> list[ActivityDataCharacteristics]:
         """
         This call returns the characteristics of the data provider.  This is
         intended to be used to help users understand the data provider and to
@@ -105,11 +104,11 @@ class RecorderBase(ABC):
         """
 
     @abstractmethod
-    def process_data(self, data: Any) -> Dict[str, Any]:
+    def process_data(self, data: Any) -> dict[str, Any]:
         """Process the collected data"""
 
     @abstractmethod
-    def store_data(self, data: Dict[str, Any]) -> None:
+    def store_data(self, data: dict[str, Any]) -> None:
         """Store the processed data"""
 
     @abstractmethod
@@ -117,7 +116,7 @@ class RecorderBase(ABC):
         """Update the data in the database"""
 
     @abstractmethod
-    def get_latest_db_update(self) -> Dict[str, Any]:
+    def get_latest_db_update(self) -> dict[str, Any]:
         """Get the latest data update from the database"""
 
 

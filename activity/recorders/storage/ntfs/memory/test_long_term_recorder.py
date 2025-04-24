@@ -54,7 +54,9 @@ def run_tests(verbose: bool = False, db_config_path: str = None) -> bool:
     # Create recorder with test mode (no DB)
     try:
         recorder = NtfsLongTermMemoryRecorder(
-            no_db=db_config_path is None, db_config_path=db_config_path, debug=verbose,
+            no_db=db_config_path is None,
+            db_config_path=db_config_path,
+            debug=verbose,
         )
         logger.info("Successfully created Long-Term Memory Recorder")
     except Exception as e:
@@ -88,9 +90,7 @@ def run_tests(verbose: bool = False, db_config_path: str = None) -> bool:
         "Record": {
             "Data": {
                 "activity_summary": {
-                    "first_activity_date": (
-                        datetime.now(UTC) - timedelta(days=30)
-                    ).isoformat(),
+                    "first_activity_date": (datetime.now(UTC) - timedelta(days=30)).isoformat(),
                     "last_activity_date": datetime.now(UTC).isoformat(),
                     "activity_count": 20,
                     "activity_types": {"create": 1, "modify": 15, "read": 4},
@@ -104,11 +104,7 @@ def run_tests(verbose: bool = False, db_config_path: str = None) -> bool:
     patterns = recorder._extract_activity_patterns(test_activity_data)
     logger.info(f"Extracted patterns: {patterns}")
 
-    if (
-        "usage" not in patterns
-        or "access" not in patterns
-        or "lifecycle" not in patterns
-    ):
+    if "usage" not in patterns or "access" not in patterns or "lifecycle" not in patterns:
         logger.error("Failed to extract expected activity patterns")
         return False
 

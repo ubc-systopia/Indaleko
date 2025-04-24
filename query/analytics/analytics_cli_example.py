@@ -39,7 +39,8 @@ from query.analytics.file_statistics import FileStatistics, format_size
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -97,8 +98,7 @@ def run_analytics_examples(db_config: IndalekoDBConfig | None = None):
         print(f"Found {len(age_distribution)} age ranges")
         for item in age_distribution:
             print(
-                f"{item['age_range']}: {item['count']:,} files, "
-                f"{format_size(item['total_size'])}",
+                f"{item['age_range']}: {item['count']:,} files, {format_size(item['total_size'])}",
             )
 
     # Example 5: Generate an analytical dashboard
@@ -118,12 +118,13 @@ def run_analytics_examples(db_config: IndalekoDBConfig | None = None):
         "types": {
             ext: count
             for ext, count in sorted(
-                file_types.items(), key=lambda x: x[1], reverse=True,
+                file_types.items(),
+                key=lambda x: x[1],
+                reverse=True,
             )[:10]
         },
         "age_profile": {
-            item["age_range"]: {"count": item["count"], "size": item["total_size"]}
-            for item in age_distribution
+            item["age_range"]: {"count": item["count"], "size": item["total_size"]} for item in age_distribution
         },
     }
 
@@ -197,7 +198,9 @@ def main():
     """Main entry point for the analytics examples."""
     parser = argparse.ArgumentParser(description="Indaleko Analytics Examples")
     parser.add_argument(
-        "--db-config", type=str, help="Path to database configuration file",
+        "--db-config",
+        type=str,
+        help="Path to database configuration file",
     )
     parser.add_argument("--debug", "-d", action="store_true", help="Enable debug mode")
 

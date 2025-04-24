@@ -19,7 +19,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-
 import networkx as nx
 import plotly.express as px
 import plotly.graph_objects as go
@@ -70,7 +69,10 @@ def render_analytics():
         storage_data = get_storage_summary(st.session_state.db_service)
         if storage_data:
             fig = px.bar(
-                storage_data, x="storage", y="count", title="Files by Storage Volume",
+                storage_data,
+                x="storage",
+                y="count",
+                title="Files by Storage Volume",
             )
             st.plotly_chart(fig, use_container_width=True)
 
@@ -92,7 +94,10 @@ def render_analytics():
         activity_data = get_activity_timeline(st.session_state.db_service)
         if activity_data:
             fig = px.line(
-                activity_data, x="date", y="count", title="Activity Over Time",
+                activity_data,
+                x="date",
+                y="count",
+                title="Activity Over Time",
             )
             st.plotly_chart(fig, use_container_width=True)
 
@@ -142,11 +147,13 @@ def render_analytics():
                 st.metric("Total Patterns", f"{len(pattern_data['patterns'])}")
             with col2:
                 st.metric(
-                    "Recent Correlations", f"{len(pattern_data['recent_correlations'])}",
+                    "Recent Correlations",
+                    f"{len(pattern_data['recent_correlations'])}",
                 )
             with col3:
                 st.metric(
-                    "Active Suggestions", f"{len(pattern_data['active_suggestions'])}",
+                    "Active Suggestions",
+                    f"{len(pattern_data['active_suggestions'])}",
                 )
 
             # Pattern visualization (network graph)
@@ -221,9 +228,7 @@ def create_pattern_network_graph(patterns):
             for i in range(len(pattern["source_types"]) - 1):
                 source = pattern["source_types"][i]
                 target = pattern["source_types"][i + 1]
-                weight = (
-                    pattern["confidence"] * 5
-                )  # Scale confidence for line thickness
+                weight = pattern["confidence"] * 5  # Scale confidence for line thickness
 
                 edges.append(
                     {
@@ -354,7 +359,8 @@ def display_suggestions(suggestions):
     # Sort suggestions by priority
     priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
     sorted_suggestions = sorted(
-        suggestions, key=lambda x: priority_order.get(x["priority"], 4),
+        suggestions,
+        key=lambda x: priority_order.get(x["priority"], 4),
     )
 
     # Display each suggestion

@@ -34,7 +34,8 @@ from typing import Any
 
 # Add parent directory to path to ensure imports work correctly
 sys.path.insert(
-    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../../..")),
+    0,
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../../..")),
 )
 
 from activity.recorders.storage.ntfs.tiered.hot.recorder import NtfsHotTierRecorder
@@ -56,10 +57,16 @@ def parse_arguments():
         help="URL for ArangoDB server",
     )
     parser.add_argument(
-        "--database", type=str, default="indaleko", help="Database name",
+        "--database",
+        type=str,
+        default="indaleko",
+        help="Database name",
     )
     parser.add_argument(
-        "--username", type=str, default="root", help="Database username",
+        "--username",
+        type=str,
+        default="root",
+        help="Database username",
     )
     parser.add_argument("--password", type=str, default="", help="Database password")
 
@@ -70,13 +77,20 @@ def parse_arguments():
         help="Find JSONL files with NTFS activity data",
     )
     parser.add_argument(
-        "--path", type=str, default=None, help="Path to search for JSONL files",
+        "--path",
+        type=str,
+        default=None,
+        help="Path to search for JSONL files",
     )
     parser.add_argument(
-        "--verify-connection", action="store_true", help="Verify database connection",
+        "--verify-connection",
+        action="store_true",
+        help="Verify database connection",
     )
     parser.add_argument(
-        "--load-data", action="store_true", help="Load activity data to database",
+        "--load-data",
+        action="store_true",
+        help="Load activity data to database",
     )
     parser.add_argument(
         "--verify-entities",
@@ -85,16 +99,25 @@ def parse_arguments():
     )
     parser.add_argument("--test-ttl", action="store_true", help="Test TTL expiration")
     parser.add_argument(
-        "--benchmark", action="store_true", help="Run performance benchmarks",
+        "--benchmark",
+        action="store_true",
+        help="Run performance benchmarks",
     )
     parser.add_argument(
-        "--query-test", action="store_true", help="Test query capabilities",
+        "--query-test",
+        action="store_true",
+        help="Test query capabilities",
     )
     parser.add_argument(
-        "--full-verification", action="store_true", help="Run all verification steps",
+        "--full-verification",
+        action="store_true",
+        help="Run all verification steps",
     )
     parser.add_argument(
-        "--file", type=str, default=None, help="Specific JSONL file to process",
+        "--file",
+        type=str,
+        default=None,
+        help="Specific JSONL file to process",
     )
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
     parser.add_argument(
@@ -103,7 +126,10 @@ def parse_arguments():
         help="Simulate operations without affecting database",
     )
     parser.add_argument(
-        "--limit", type=int, default=None, help="Limit the number of records to process",
+        "--limit",
+        type=int,
+        default=None,
+        help="Limit the number of records to process",
     )
 
     return parser.parse_args()
@@ -230,7 +256,8 @@ def count_activities_in_jsonl(file_path: str) -> dict[str, Any]:
                 try:
                     activity = json.loads(line.strip())
                     activity_type = activity.get("Activity", {}).get(
-                        "activity_type", "unknown",
+                        "activity_type",
+                        "unknown",
                     )
 
                     if activity_type in activity_counts:
@@ -250,7 +277,9 @@ def count_activities_in_jsonl(file_path: str) -> dict[str, Any]:
 
 
 def load_data_to_database(
-    recorder: NtfsHotTierRecorder, files: list[str], args,
+    recorder: NtfsHotTierRecorder,
+    files: list[str],
+    args,
 ) -> dict[str, Any]:
     """
     Load NTFS activity data from JSONL files into the database.
@@ -328,9 +357,7 @@ def load_data_to_database(
                     "total_activities": activity_counts["total_lines"],
                     "loaded_activities": success,
                     "processing_time": time.time() - file_start_time,
-                    "activity_ids": (
-                        [str(id) for id in activity_ids[:5]] if activity_ids else []
-                    ),
+                    "activity_ids": ([str(id) for id in activity_ids[:5]] if activity_ids else []),
                     "activity_counts": activity_counts["activity_counts"],
                 }
 
@@ -373,9 +400,7 @@ def load_data_to_database(
     results["processing_time"] = time.time() - start_time
 
     if results["processing_time"] > 0 and results["loaded_activities"] > 0:
-        results["activities_per_second"] = (
-            results["loaded_activities"] / results["processing_time"]
-        )
+        results["activities_per_second"] = results["loaded_activities"] / results["processing_time"]
     else:
         results["activities_per_second"] = 0
 
@@ -720,7 +745,9 @@ def run_performance_benchmark(recorder: NtfsHotTierRecorder, args) -> dict[str, 
 
             query_start_time = time.time()
             activities = recorder.get_activities_by_time_range(
-                start_time_dt, end_time, limit=100,
+                start_time_dt,
+                end_time,
+                limit=100,
             )
             query_time = time.time() - query_start_time
 
@@ -745,9 +772,7 @@ def run_performance_benchmark(recorder: NtfsHotTierRecorder, args) -> dict[str, 
             print(f"Error in time range activities benchmark: {e}")
 
         # Overall benchmark results
-        successful_benchmarks = sum(
-            1 for b in benchmarks.values() if b.get("success", False)
-        )
+        successful_benchmarks = sum(1 for b in benchmarks.values() if b.get("success", False))
         total_benchmarks = len(benchmarks)
 
         return {
@@ -892,9 +917,7 @@ def test_query_capabilities(recorder: NtfsHotTierRecorder, args) -> dict[str, An
             print(f"Error in path query test: {e}")
 
         # Overall test results
-        successful_tests = sum(
-            1 for t in query_tests.values() if t.get("success", False)
-        )
+        successful_tests = sum(1 for t in query_tests.values() if t.get("success", False))
         total_tests = len(query_tests)
 
         return {
@@ -916,7 +939,9 @@ def test_query_capabilities(recorder: NtfsHotTierRecorder, args) -> dict[str, An
 
 
 def run_full_verification(
-    recorder: NtfsHotTierRecorder, files: list[str], args,
+    recorder: NtfsHotTierRecorder,
+    files: list[str],
+    args,
 ) -> dict[str, Any]:
     """
     Run a full verification of the NtfsHotTierRecorder.
@@ -1004,15 +1029,11 @@ def run_full_verification(
     }
 
     # Calculate overall success
-    successful_steps = sum(
-        1 for step in results["steps"].values() if step.get("success", False)
-    )
+    successful_steps = sum(1 for step in results["steps"].values() if step.get("success", False))
     total_steps = len(results["steps"])
     results["success"] = successful_steps > 0
     results["success_ratio"] = f"{successful_steps}/{total_steps}"
-    results["message"] = (
-        f"Verification completed: {successful_steps}/{total_steps} steps successful"
-    )
+    results["message"] = f"Verification completed: {successful_steps}/{total_steps} steps successful"
     results["verification_completed"] = datetime.datetime.now(datetime.UTC).isoformat()
 
     return results

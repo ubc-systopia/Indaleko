@@ -78,7 +78,8 @@ class QueryHistory:
                 Data=encode_binary_data(
                     bytes(
                         query_history.model_dump_json(
-                            exclude_none=True, exclude_unset=True,
+                            exclude_none=True,
+                            exclude_unset=True,
                         ),
                         "utf-8",
                     ),
@@ -102,7 +103,9 @@ class QueryHistory:
         return [
             IndalekoQueryHistoryDataModel(**doc).QueryHistory
             for doc in self.query_history_collection.find(
-                {}, sort=[("Record.Timestamp", -1)], limit=n,
+                {},
+                sort=[("Record.Timestamp", -1)],
+                limit=n,
             )
         ]
 
@@ -113,11 +116,7 @@ class QueryHistory:
         Returns:
             Dict[str, Any]: The last query and its results, or None if history is empty
         """
-        return (
-            self.get_recent_queries(1)[0]
-            if self.query_history_collection.count() > 0
-            else None
-        )
+        return self.get_recent_queries(1)[0] if self.query_history_collection.count() > 0 else None
 
     def clear(self) -> None:
         """

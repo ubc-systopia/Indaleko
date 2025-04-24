@@ -20,23 +20,27 @@ from activity.recorders.registration_service import (
 def ip_recorder():
     # Ensure clean state by deleting any existing collection/registration
     IndalekoActivityDataRegistrationService.delete_activity_provider_collection(
-        str(IPLocationRecorder.identifier), delete_data_collection=True,
+        str(IPLocationRecorder.identifier),
+        delete_data_collection=True,
     )
     rec = IPLocationRecorder()
     yield rec
     # Clean up after test
     IndalekoActivityDataRegistrationService.delete_activity_provider_collection(
-        str(rec.get_recorder_id()), delete_data_collection=True,
+        str(rec.get_recorder_id()),
+        delete_data_collection=True,
     )
 
 
 @pytest.fixture(scope="function")
 def wifi_recorder():
     IndalekoActivityDataRegistrationService.delete_activity_provider_collection(
-        str(WiFiLocationRecorder.identifier), delete_data_collection=True,
+        str(WiFiLocationRecorder.identifier),
+        delete_data_collection=True,
     )
     rec = WiFiLocationRecorder()
     yield rec
     IndalekoActivityDataRegistrationService.delete_activity_provider_collection(
-        str(rec.get_recorder_id()), delete_data_collection=True,
+        str(rec.get_recorder_id()),
+        delete_data_collection=True,
     )

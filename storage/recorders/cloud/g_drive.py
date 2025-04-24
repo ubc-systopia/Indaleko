@@ -40,15 +40,15 @@ from data_models import IndalekoRecordDataModel
 from db import IndalekoServiceManager
 from platforms.unix import UnixFileAttributes
 from platforms.windows_attributes import IndalekoWindows
-from storage.i_object import IndalekoObject
 from storage.collectors.cloud.g_drive import IndalekoGDriveCloudStorageCollector
-from storage.recorders.data_model import IndalekoStorageRecorderDataModel
+from storage.i_object import IndalekoObject
 from storage.recorders.cloud.cloud_base import BaseCloudStorageRecorder
-from utils.misc.file_name_management import (
-    find_candidate_files,
-    extract_keys_from_file_name,
-)
+from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from utils.misc.data_management import encode_binary_data
+from utils.misc.file_name_management import (
+    extract_keys_from_file_name,
+    find_candidate_files,
+)
 
 # pylint: enable=wrong-import-position
 
@@ -91,9 +91,7 @@ class IndalekoGDriveCloudStorageRecorder(BaseCloudStorageRecorder):
         if "user_id_ not in kwargs":
             assert "input_file" in kwargs
             keys = extract_keys_from_file_name(kwargs["input_file"])
-            assert (
-                "userid" in keys
-            ), f'userid not found in input file name: {kwargs["input_file"]}'
+            assert "userid" in keys, f'userid not found in input file name: {kwargs["input_file"]}'
             self.user_id = keys["userid"]
         else:
             self.user_id = kwargs["user_id"]
@@ -125,9 +123,7 @@ class IndalekoGDriveCloudStorageRecorder(BaseCloudStorageRecorder):
         """Given an Indaleko object, return a valid local path to the object"""
         if "parents" in obj:  # use parent if there is one
             return obj["parents"][0]
-        return (
-            self.root_dir.indaleko_object.LocalIdentifier
-        )  # otherwise use the root directory
+        return self.root_dir.indaleko_object.LocalIdentifier  # otherwise use the root directory
 
     def build_dirmap(self) -> None:
         """
@@ -136,8 +132,7 @@ class IndalekoGDriveCloudStorageRecorder(BaseCloudStorageRecorder):
         """
         # First: build the directory map from the list of known directories.
         self.dirmap = {
-            item.indaleko_object.LocalIdentifier: item.indaleko_object.ObjectIdentifier
-            for item in self.dir_data
+            item.indaleko_object.LocalIdentifier: item.indaleko_object.ObjectIdentifier for item in self.dir_data
         }
         for item in self.file_data:
             # now, walk through all the files
@@ -153,11 +148,7 @@ class IndalekoGDriveCloudStorageRecorder(BaseCloudStorageRecorder):
             doc = item.indaleko_object.serialize()
             if "parents" in doc:
                 parent_id = doc["parents"][0]
-            item.args["Path"] = (
-                self.root_dir.indaleko_object.LocalIdentifier
-                if parent_id == "/"
-                else parent_id
-            )
+            item.args["Path"] = self.root_dir.indaleko_object.LocalIdentifier if parent_id == "/" else parent_id
 
     def normalize_collector_data(self, data: dict) -> dict:
         """
@@ -175,10 +166,10 @@ class IndalekoGDriveCloudStorageRecorder(BaseCloudStorageRecorder):
                 {
                     "Label": IndalekoObject.CREATION_TIMESTAMP,
                     "Value": datetime.datetime.fromisoformat(
-                        data["createdTime"]
+                        data["createdTime"],
                     ).isoformat(),
                     "Description": "Creation Time",
-                }
+                },
             )
         if "modifiedTime" in data:
             # No distinction between modified and changed.
@@ -186,29 +177,29 @@ class IndalekoGDriveCloudStorageRecorder(BaseCloudStorageRecorder):
                 {
                     "Label": IndalekoObject.MODIFICATION_TIMESTAMP,
                     "Value": datetime.datetime.fromisoformat(
-                        data["modifiedTime"]
+                        data["modifiedTime"],
                     ).isoformat(),
                     "Description": "Modification Time",
-                }
+                },
             )
             timestamps.append(
                 {
                     "Label": IndalekoObject.CHANGE_TIMESTAMP,
                     "Value": datetime.datetime.fromisoformat(
-                        data["modifiedTime"]
+                        data["modifiedTime"],
                     ).isoformat(),
                     "Description": "Access Time",
-                }
+                },
             )
         if "viewedByMeTime" in data:
             timestamps.append(
                 {
                     "Label": IndalekoObject.ACCESS_TIMESTAMP,
                     "Value": datetime.datetime.fromisoformat(
-                        data["viewedByMeTime"]
+                        data["viewedByMeTime"],
                     ).isoformat(),
                     "Description": "Viewed Time",
-                }
+                },
             )
         if not self.root_dir:
             path = data["id"]  # root directory
@@ -225,20 +216,20 @@ class IndalekoGDriveCloudStorageRecorder(BaseCloudStorageRecorder):
                 Timestamp=self.timestamp,
                 Data=encode_binary_data(bytes(json.dumps(data), "utf-8")),
             ),
-            "URI": data.get("webViewLink", None),
+            "URI": data.get("webViewLink"),
             "ObjectIdentifier": str(oid),
             "Timestamps": timestamps,
             "Size": int(data.get("size", 0)),
             "SemanticAttributes": None,  # add some perhaps?
             "Label": name,
             "LocalPath": path,
-            "LocalIdentifier": data.get("id", None),
+            "LocalIdentifier": data.get("id"),
             "Volume": None,
             "PosixFileAttributes": UnixFileAttributes.map_file_attributes(
-                self.map_gdrive_attributes_to_unix_attributes(data)
+                self.map_gdrive_attributes_to_unix_attributes(data),
             ),
             "WindowsFileAttributes": IndalekoWindows.map_file_attributes(
-                self.map_gdrive_attributes_to_windows_attributes(data)
+                self.map_gdrive_attributes_to_windows_attributes(data),
             ),
         }
         obj = IndalekoObject(**kwargs)
@@ -275,9 +266,7 @@ class IndalekoGDriveCloudStorageRecorder(BaseCloudStorageRecorder):
         attributes = 0
         if "mimeType" in data:
             if data["mimeType"] == "application/vnd.google-apps.folder":
-                attributes |= IndalekoWindows.FILE_ATTRIBUTES[
-                    "FILE_ATTRIBUTE_DIRECTORY"
-                ]
+                attributes |= IndalekoWindows.FILE_ATTRIBUTES["FILE_ATTRIBUTE_DIRECTORY"]
             else:
                 attributes |= IndalekoWindows.FILE_ATTRIBUTES["FILE_ATTRIBUTE_NORMAL"]
         return attributes

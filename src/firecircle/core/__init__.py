@@ -80,7 +80,9 @@ class FireCircleEntity(EntityInterface):
 
             # Create adapter
             self.adapter = ModelAdapterFactory.create_adapter(
-                provider=provider, model=model, **kwargs,
+                provider=provider,
+                model=model,
+                **kwargs,
             )
 
     def get_profile(self) -> EntityProfile:
@@ -190,35 +192,45 @@ class FireCircleEntity(EntityInterface):
 
 
 def create_storyteller(
-    model: str | None = None, provider: str | None = None, **kwargs,
+    model: str | None = None,
+    provider: str | None = None,
+    **kwargs,
 ) -> FireCircleEntity:
     """Create a Storyteller entity."""
     return FireCircleEntity(EntityRole.STORYTELLER, model, provider, **kwargs)
 
 
 def create_analyst(
-    model: str | None = None, provider: str | None = None, **kwargs,
+    model: str | None = None,
+    provider: str | None = None,
+    **kwargs,
 ) -> FireCircleEntity:
     """Create an Analyst entity."""
     return FireCircleEntity(EntityRole.ANALYST, model, provider, **kwargs)
 
 
 def create_critic(
-    model: str | None = None, provider: str | None = None, **kwargs,
+    model: str | None = None,
+    provider: str | None = None,
+    **kwargs,
 ) -> FireCircleEntity:
     """Create a Critic entity."""
     return FireCircleEntity(EntityRole.CRITIC, model, provider, **kwargs)
 
 
 def create_synthesizer(
-    model: str | None = None, provider: str | None = None, **kwargs,
+    model: str | None = None,
+    provider: str | None = None,
+    **kwargs,
 ) -> FireCircleEntity:
     """Create a Synthesizer entity."""
     return FireCircleEntity(EntityRole.SYNTHESIZER, model, provider, **kwargs)
 
 
 def create_coordinator(
-    model: str | None = None, provider: str | None = None, **kwargs,
+    model: str | None = None,
+    provider: str | None = None,
+    **kwargs,
 ) -> FireCircleEntity:
     """Create a Coordinator entity."""
     return FireCircleEntity(EntityRole.COORDINATOR, model, provider, **kwargs)

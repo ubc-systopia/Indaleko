@@ -62,7 +62,8 @@ def main():
     parser_list = command_subparser.add_parser("list", help="List the recordings")
     parser_list.set_defaults(func=RecordingInterface.list_command)
     parser_test_db = command_subparser.add_parser(
-        "test_db", help="Test the database connection"
+        "test_db",
+        help="Test the database connection",
     )
     parser_test_db.set_defaults(func=RecordingInterface.test_db_command)
     parser.set_defaults(func=RecordingInterface.list_command)

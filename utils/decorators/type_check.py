@@ -20,13 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-
-from typing import Union, get_type_hints
-from typing import get_type_hints
 from functools import wraps
-from typing import get_type_hints, Any
-
-from icecream import ic
+from typing import Any, Union, get_type_hints
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -46,22 +41,20 @@ def type_check(func):
     def wrapper(*args, **kwargs):
         hints = get_type_hints(func)
         all_args = kwargs.copy()
-        all_args.update(dict(zip(func.__code__.co_varnames, args)))
+        all_args.update(dict(zip(func.__code__.co_varnames, args, strict=False)))
         for arg, arg_type in hints.items():
             if arg in all_args:
                 if arg_type is Any:
                     continue  # Skip type checking for Any
                 if not isinstance(all_args[arg], arg_type):
                     if hasattr(arg_type, "__origin__") and arg_type.__origin__ is Union:
-                        if not any(
-                            isinstance(all_args[arg], t) for t in arg_type.__args__
-                        ):
+                        if not any(isinstance(all_args[arg], t) for t in arg_type.__args__):
                             raise TypeError(
-                                f"Argument '{arg}' must be of type {arg_type}, not {type(all_args[arg])}"
+                                f"Argument '{arg}' must be of type {arg_type}, not {type(all_args[arg])}",
                             )
                     else:
                         raise TypeError(
-                            f"Argument '{arg}' must be of type {arg_type}, not {type(all_args[arg])}"
+                            f"Argument '{arg}' must be of type {arg_type}, not {type(all_args[arg])}",
                         )
         return func(*args, **kwargs)
 
@@ -80,7 +73,7 @@ def test_func_str(s: str):
 
 
 @type_check
-def test_func_union(x: Union[int, str]):
+def test_func_union(x: int | str):
     return x
 
 

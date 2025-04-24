@@ -61,7 +61,8 @@ class ArchivistIntegration:
             )
 
     def store_conversation(
-        self, conversation_memory: ConversationMemory,
+        self,
+        conversation_memory: ConversationMemory,
     ) -> str | None:
         """
         Store a conversation from the Fire Circle in the Archivist.
@@ -82,9 +83,7 @@ class ArchivistIntegration:
                 "conversation_id": conversation_memory.conversation_id,
                 "summary": conversation_memory.summary,
                 "key_takeaways": [f"Fire Circle: {conversation_memory.topic}"],
-                "topics": (
-                    [conversation_memory.topic] if conversation_memory.topic else []
-                ),
+                "topics": ([conversation_memory.topic] if conversation_memory.topic else []),
                 "entities": conversation_memory.participants,
                 "importance_score": conversation_memory.importance,
                 "message_count": len(conversation_memory.messages),
@@ -93,7 +92,8 @@ class ArchivistIntegration:
 
             # Store in Archivist
             continuation_id = self.archivist_memory.store_conversation_state(
-                conversation_memory.conversation_id, conversation_data,
+                conversation_memory.conversation_id,
+                conversation_data,
             )
 
             self.logger.info(
@@ -122,11 +122,7 @@ class ArchivistIntegration:
         try:
             # Add insight to Archivist
             self.archivist_memory.add_insight(
-                category=(
-                    insight_memory.categories[0]
-                    if insight_memory.categories
-                    else "general"
-                ),
+                category=(insight_memory.categories[0] if insight_memory.categories else "general"),
                 insight=insight_memory.insight,
                 confidence=insight_memory.confidence,
             )
@@ -194,7 +190,9 @@ class ArchivistIntegration:
             return {}
 
     def retrieve_relevant_insights(
-        self, topic: str, limit: int = 3,
+        self,
+        topic: str,
+        limit: int = 3,
     ) -> list[dict[str, Any]]:
         """
         Get relevant insights from the Archivist.

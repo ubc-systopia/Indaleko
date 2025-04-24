@@ -18,13 +18,12 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from abc import ABC, abstractmethod
 import os
 import sys
-from typing import Any
+from abc import ABC, abstractmethod
 
 # from icecream import ic
-from typing import List
+from typing import Any
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -79,7 +78,7 @@ class IndalekoLLMBase(ABC):
         """
 
     @abstractmethod
-    def extract_keywords(self, text: str, num_keywords: int = 5) -> List[str]:
+    def extract_keywords(self, text: str, num_keywords: int = 5) -> list[str]:
         """
         Extract keywords from the given text.
 
@@ -92,7 +91,7 @@ class IndalekoLLMBase(ABC):
         """
 
     @abstractmethod
-    def classify_text(self, text: str, categories: List[str]) -> str:
+    def classify_text(self, text: str, categories: list[str]) -> str:
         """
         Classify the given text into one of the provided categories.
 
@@ -106,7 +105,10 @@ class IndalekoLLMBase(ABC):
 
     @abstractmethod
     def answer_question(
-        self, context: str, question: str, schema: dict[str, Any]
+        self,
+        context: str,
+        question: str,
+        schema: dict[str, Any],
     ) -> dict[str, Any]:
         """
         Answer a question based on the given context.

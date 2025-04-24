@@ -57,11 +57,13 @@ class SemanticMimeDataModel(BaseSemanticDataModel):
     )
 
     mime_type: str = Field(
-        ..., description="The detected MIME type based on content analysis.",
+        ...,
+        description="The detected MIME type based on content analysis.",
     )
 
     mime_type_from_extension: str = Field(
-        None, description="The MIME type based on file extension (if available).",
+        None,
+        description="The MIME type based on file extension (if available).",
     )
 
     confidence: float = Field(
@@ -72,11 +74,13 @@ class SemanticMimeDataModel(BaseSemanticDataModel):
     )
 
     encoding: str = Field(
-        None, description="Character encoding if detected (for text files).",
+        None,
+        description="Character encoding if detected (for text files).",
     )
 
     additional_metadata: dict = Field(
-        default_factory=dict, description="Additional format-specific metadata.",
+        default_factory=dict,
+        description="Additional format-specific metadata.",
     )
 
     @classmethod

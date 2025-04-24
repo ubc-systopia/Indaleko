@@ -42,7 +42,10 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from data_models.timestamp import IndalekoTimestamp
+"""
+Note: IndalekoTimestampDataModel has replaced IndalekoTimestamp.
+Use datetime.now(UTC) directly instead of IndalekoTimestamp.now().
+"""
 from db.db_collections import IndalekoDBCollections
 from db.db_config import IndalekoDBConfig
 from db.i_collections import IndalekoCollections
@@ -76,7 +79,7 @@ class IndalekoFilePicker:
     def __init__(self, db_config: IndalekoDBConfig = IndalekoDBConfig()):
         self.db_config = db_config
         self.object_collection = IndalekoCollections.get_collection(
-                IndalekoDBCollections.Indaleko_Object_Collection,
+            IndalekoDBCollections.Indaleko_Object_Collection,
         )
         self.local_machine_id = str(get_machine_id())
         self.processing_queue = PriorityQueue()
@@ -94,6 +97,7 @@ class IndalekoFilePicker:
         # This implementation will depend on the platform
         if sys.platform == "win32":
             import win32file
+
             for drive_letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
                 drive_path = f"{drive_letter}:\\"
                 if os.path.exists(drive_path):
@@ -367,10 +371,10 @@ class IndalekoFilePicker:
             return []
 
     def pick_all_files(
-            self,
-            process_func: Callable[["IndalekoObject"], None],
-            local_only: bool = False,
-            batch_size: int = 100,
+        self,
+        process_func: Callable[["IndalekoObject"], None],
+        local_only: bool = False,
+        batch_size: int = 100,
     ) -> int:
         """
         Process all files from the ArangoDB (using the Objects collection)
@@ -497,6 +501,7 @@ class IndalekoFilePicker:
             # Lower process priority
             if sys.platform == "win32":
                 import psutil
+
                 process = psutil.Process()
                 process.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
             else:
@@ -564,7 +569,8 @@ class IndalekoFilePicker:
         """
         try:
             file_id = file.get_object_id()
-            now = IndalekoTimestamp.now()
+            # Use current UTC time directly
+            now = datetime.now(UTC)
 
             # Build AQL query to update the semantic attribute
             query = """
@@ -632,7 +638,7 @@ def check_mime_type(file: IndalekoObject) -> None:
     for attribute in semantic_attributes:
         identifier = attribute.get("Identifier")
         value = attribute.get("Value")
-        match(identifier):
+        match (identifier):
             case StorageSemanticAttributes.STORAGE_ATTRIBUTES_MIMETYPE_FROM_SUFFIX:
                 ic("MIMETYPE from SUFFIX: ", value)
             case StorageSemanticAttributes.STORAGE_ATTRIBUTES_MIMETYPE_FROM_STORAGE_PROVIDER:

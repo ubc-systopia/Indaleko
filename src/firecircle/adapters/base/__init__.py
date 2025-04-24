@@ -13,7 +13,10 @@ class FireCircleMessage:
     """Represents a standardized message in the Fire Circle protocol."""
 
     def __init__(
-        self, role: str, content: str, metadata: dict[str, Any] | None = None,
+        self,
+        role: str,
+        content: str,
+        metadata: dict[str, Any] | None = None,
     ):
         """
         Initialize a new Fire Circle message.

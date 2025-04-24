@@ -40,12 +40,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import os
 import sys
+from datetime import UTC, datetime
+from typing import Any
 
-from datetime import datetime, timezone
-from typing import List, Optional, Dict, Any
-
-from pydantic import Field, AwareDatetime
 from icecream import ic
+from pydantic import AwareDatetime, Field
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -57,8 +56,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
-from data_models.record import IndalekoRecordDataModel
 from data_models.i_uuid import IndalekoUUIDDataModel
+from data_models.record import IndalekoRecordDataModel
 
 # pylint: enable=wrong-import-position
 
@@ -66,14 +65,18 @@ from data_models.i_uuid import IndalekoUUIDDataModel
 class IndalekoOptimizationDataModel(IndalekoBaseModel):
 
     Record: IndalekoRecordDataModel = Field(
-        None, title="Record", description="The record associated with the object."
+        None,
+        title="Record",
+        description="The record associated with the object.",
     )
 
     OptimizationId: IndalekoUUIDDataModel = Field(
-        None, title="OptimizationId", description="The UUID for the optimization."
+        None,
+        title="OptimizationId",
+        description="The UUID for the optimization.",
     )
 
-    QueryId: Optional[IndalekoUUIDDataModel] = Field(
+    QueryId: IndalekoUUIDDataModel | None = Field(
         None,
         title="QueryId",
         description="The UUID for the query that triggered this optimization.",
@@ -85,35 +88,41 @@ class IndalekoOptimizationDataModel(IndalekoBaseModel):
         description="The action taken (e.g., add_index, remove_index).",
     )
 
-    FieldName: Optional[str] = Field(
-        None, title="FieldName", description="The field affected by the optimization."
+    FieldName: str | None = Field(
+        None,
+        title="FieldName",
+        description="The field affected by the optimization.",
     )
 
-    IndexId: Optional[IndalekoUUIDDataModel] = Field(
-        None, title="IndexId", description="The index affected (if applicable)."
+    IndexId: IndalekoUUIDDataModel | None = Field(
+        None,
+        title="IndexId",
+        description="The index affected (if applicable).",
     )
 
-    CostBenefit: Optional[Dict[str, Any]] = Field(
-        None, title="CostBenefit", description="Analysis of cost vs. benefit."
+    CostBenefit: dict[str, Any] | None = Field(
+        None,
+        title="CostBenefit",
+        description="Analysis of cost vs. benefit.",
     )
 
     Timestamp: AwareDatetime = Field(
-        datetime.now(timezone.utc),
+        datetime.now(UTC),
         title="Timestamp",
         description="When the optimization was applied.",
     )
 
     Archived: bool = Field(
-        False, title="Archived", description="Whether the optimization is archived."
+        False,
+        title="Archived",
+        description="Whether the optimization is archived.",
     )
 
     class Config:
         json_schema_extra = {
             "example": {
                 "Record": IndalekoRecordDataModel.Config.json_schema_extra["example"],
-                "OptimizationId": IndalekoUUIDDataModel.Config.json_schema_extra[
-                    "example"
-                ],
+                "OptimizationId": IndalekoUUIDDataModel.Config.json_schema_extra["example"],
                 "QueryId": IndalekoUUIDDataModel.Config.json_schema_extra["example"],
                 "Action": "add_index",
                 "FieldName": "Name",
@@ -122,7 +131,7 @@ class IndalekoOptimizationDataModel(IndalekoBaseModel):
                     "Cost": 100.0,
                     "Benefit": 200.0,
                 },
-            }
+            },
         }
 
 

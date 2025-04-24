@@ -64,7 +64,6 @@ class LLMResponseValidationError(Exception):
     """Exception raised when the LLM returns an invalid response."""
 
 
-
 class LLMResponseValidator:
     """Validate and repair LLM responses."""
 
@@ -97,9 +96,7 @@ class LLMResponseValidator:
         for i, category in enumerate(response["category_map"]):
             # Check required fields
             required_fields = ["category", "collection", "confidence", "rationale"]
-            missing_fields = [
-                field for field in required_fields if field not in category
-            ]
+            missing_fields = [field for field in required_fields if field not in category]
 
             if missing_fields:
                 logger.warning(
@@ -109,9 +106,7 @@ class LLMResponseValidator:
                     if field == "confidence":
                         category[field] = 0.8  # Default confidence
                     elif field == "rationale":
-                        category[field] = (
-                            "Auto-generated rationale due to missing field"
-                        )
+                        category[field] = "Auto-generated rationale due to missing field"
                     else:
                         raise LLMResponseValidationError(
                             f"Category {i} missing required field: {field}",
@@ -246,13 +241,13 @@ class NLParser:
 
         # Handle collection metadata correctly
         if hasattr(self.collections_metadata, "get_all_collections_metadata"):
-            self.collection_data = (
-                self.collections_metadata.get_all_collections_metadata()
-            )
+            self.collection_data = self.collections_metadata.get_all_collections_metadata()
         else:
             # Fallback to using collections_metadata directly if it's a dictionary
             self.collection_data = getattr(
-                self.collections_metadata, "collections_metadata", {},
+                self.collections_metadata,
+                "collections_metadata",
+                {},
             )
             if not self.collection_data:
                 # If that's also empty, create a minimal default structure with Objects
@@ -290,7 +285,9 @@ class NLParser:
 
             # Create structured query
             structured_query = StructuredQuery(
-                original_query=query, intent=intent.intent, entities=entities,
+                original_query=query,
+                intent=intent.intent,
+                entities=entities,
             )
 
             return structured_query
@@ -312,13 +309,17 @@ class NLParser:
 
             # Create a fallback structured query
             entity = IndalekoNamedEntityDataModel(
-                name=query, category=IndalekoNamedEntityType.keyword, description=query,
+                name=query,
+                category=IndalekoNamedEntityType.keyword,
+                description=query,
             )
 
             entity_collection = NamedEntityCollection(entities=[entity])
 
             return StructuredQuery(
-                original_query=query, intent="search", entities=entity_collection,
+                original_query=query,
+                intent="search",
+                entities=entity_collection,
             )
 
     def _detect_intent(self, query: str) -> LLMIntentQueryResponse:
@@ -442,9 +443,7 @@ class NLParser:
             ic(type(self.collection_data["Objects"]))
 
             # Define existing category types
-            typical_categories = [
-                category.value for category in LLMCollectionCategoryEnum
-            ]
+            typical_categories = [category.value for category in LLMCollectionCategoryEnum]
             ic(typical_categories)
 
             # Create default category response
@@ -494,7 +493,9 @@ class NLParser:
 
             # Use the LLM connector to get the categories
             response = self.llm_connector.answer_question(
-                prompt, query, category_response.model_json_schema(),
+                prompt,
+                query,
+                category_response.model_json_schema(),
             )
             doc = json.loads(response)
             ic(doc)
@@ -589,7 +590,9 @@ class NLParser:
 
             # Use the LLM connector to get the entities
             response = self.llm_connector.answer_question(
-                prompt, query, example_entities.model_json_schema(),
+                prompt,
+                query,
+                example_entities.model_json_schema(),
             )
             doc = json.loads(response)
 
@@ -639,7 +642,9 @@ class NLParser:
 
             # Create default entity
             entity = IndalekoNamedEntityDataModel(
-                name=query, category=IndalekoNamedEntityType.keyword, description=query,
+                name=query,
+                category=IndalekoNamedEntityType.keyword,
+                description=query,
             )
             return NamedEntityCollection(entities=[entity])
 
@@ -647,11 +652,7 @@ class NLParser:
         """Get statistics about encountered errors."""
         return {
             "error_counts": self.error_count,
-            "error_rate": (
-                self.error_count["total"] / max(1, len(self.error_log))
-                if self.error_log
-                else 0
-            ),
+            "error_rate": (self.error_count["total"] / max(1, len(self.error_log)) if self.error_log else 0),
             "common_errors": self._analyze_common_errors(),
         }
 

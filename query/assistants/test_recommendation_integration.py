@@ -113,7 +113,8 @@ def run_test_conversation(assistant: IndalekoAssistant, model: str = "gpt-4o") -
 
     # Save the conversation for reference
     file_path = os.path.join(
-        os.environ.get("INDALEKO_ROOT"), "conversation_with_recommendations.json",
+        os.environ.get("INDALEKO_ROOT"),
+        "conversation_with_recommendations.json",
     )
     assistant.save_conversations(file_path)
     print_colored(f"\nConversation saved to {file_path}", Fore.CYAN)
@@ -140,7 +141,9 @@ def main():
         return
 
     print_colored(
-        "Testing Recommendation Integration with Assistant API", Fore.CYAN, bold=True,
+        "Testing Recommendation Integration with Assistant API",
+        Fore.CYAN,
+        bold=True,
     )
     print_colored("=" * 60, Fore.CYAN)
 
@@ -154,13 +157,19 @@ def main():
 
     # Add some test data to memory
     archivist_memory.add_long_term_goal(
-        "Knowledge Management", "Organize personal knowledge base", progress=0.4,
+        "Knowledge Management",
+        "Organize personal knowledge base",
+        progress=0.4,
     )
     archivist_memory.add_insight(
-        "document_management", "User frequently searches for recent documents", 0.8,
+        "document_management",
+        "User frequently searches for recent documents",
+        0.8,
     )
     archivist_memory.add_insight(
-        "file_types", "PDF and DOCX are the most common file types", 0.9,
+        "file_types",
+        "PDF and DOCX are the most common file types",
+        0.9,
     )
 
     # Initialize Assistant with recommendation integration

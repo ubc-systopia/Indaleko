@@ -67,19 +67,9 @@ def render_settings():
                 if hasattr(db_info.db_config, "hosts") and db_info.db_config.hosts
                 else "localhost"
             )
-            port = (
-                db_info.db_config.port if hasattr(db_info.db_config, "port") else 8529
-            )
-            database = (
-                db_info.db_config.database
-                if hasattr(db_info.db_config, "database")
-                else "indaleko"
-            )
-            username = (
-                db_info.db_config.username
-                if hasattr(db_info.db_config, "username")
-                else "indaleko"
-            )
+            port = db_info.db_config.port if hasattr(db_info.db_config, "port") else 8529
+            database = db_info.db_config.database if hasattr(db_info.db_config, "database") else "indaleko"
+            username = db_info.db_config.username if hasattr(db_info.db_config, "username") else "indaleko"
 
             st.json(
                 {
@@ -94,24 +84,10 @@ def render_settings():
             # Mock DBInfo with the expected methods
             st.json(
                 {
-                    "host": (
-                        db_info.get_host()
-                        if hasattr(db_info, "get_host")
-                        else "localhost"
-                    ),
-                    "port": (
-                        db_info.get_port() if hasattr(db_info, "get_port") else 8529
-                    ),
-                    "database": (
-                        db_info.get_database_name()
-                        if hasattr(db_info, "get_database_name")
-                        else "indaleko"
-                    ),
-                    "username": (
-                        db_info.get_username()
-                        if hasattr(db_info, "get_username")
-                        else "indaleko"
-                    ),
+                    "host": (db_info.get_host() if hasattr(db_info, "get_host") else "localhost"),
+                    "port": (db_info.get_port() if hasattr(db_info, "get_port") else 8529),
+                    "database": (db_info.get_database_name() if hasattr(db_info, "get_database_name") else "indaleko"),
+                    "username": (db_info.get_username() if hasattr(db_info, "get_username") else "indaleko"),
                     "connected": True,
                 },
             )
@@ -129,13 +105,12 @@ def render_settings():
         # Get collections - handle different formats
         try:
             if hasattr(st.session_state.db_info, "db_config") and hasattr(
-                st.session_state.db_info.db_config, "db",
+                st.session_state.db_info.db_config,
+                "db",
             ):
                 # Using real IndalekoDBInfo
                 # Get raw collection data from ArangoDB
-                collections_data = (
-                    st.session_state.db_info.db_config._arangodb.collections()
-                )
+                collections_data = st.session_state.db_info.db_config._arangodb.collections()
                 collections = []
 
                 # Format collections consistently
@@ -144,10 +119,8 @@ def render_settings():
                         "_",
                     ):  # Skip system collections
                         # Get collection object
-                        coll_obj = (
-                            st.session_state.db_info.db_config._arangodb.collection(
-                                collection["name"],
-                            )
+                        coll_obj = st.session_state.db_info.db_config._arangodb.collection(
+                            collection["name"],
                         )
                         # Get count
                         try:

@@ -127,7 +127,8 @@ class IndalekoActivityDataRegistrationService(IndalekoRegistrationService):
         return IndalekoActivityDataRegistrationDataModel.deserialize(provider)
 
     def lookup_provider_by_identifier_internal(
-        self, identifier: str,
+        self,
+        identifier: str,
     ) -> dict[str, Any] | None:
         """Internal method to lookup provider by identifier."""
         return super().lookup_provider_by_identifier(identifier)
@@ -168,17 +169,23 @@ class IndalekoActivityDataRegistrationService(IndalekoRegistrationService):
         """
         service = IndalekoActivityDataRegistrationService()
         return service.create_provider_collection(
-            identifier, schema=schema, edge=edge, indices=indices, reset=reset,
+            identifier,
+            schema=schema,
+            edge=edge,
+            indices=indices,
+            reset=reset,
         )
 
     @staticmethod
     def delete_activity_provider_collection(
-        identifier: str, delete_data_collection: bool = True,
+        identifier: str,
+        delete_data_collection: bool = True,
     ) -> bool:
         """Delete an activity provider collection."""
         service = IndalekoActivityDataRegistrationService()
         return service.delete_provider_collection(
-            identifier, delete_data=delete_data_collection,
+            identifier,
+            delete_data=delete_data_collection,
         )
 
     def register_activity_provider(self, **kwargs) -> tuple[dict, IndalekoCollection]:
@@ -201,10 +208,7 @@ class IndalekoActivityDataRegistrationService(IndalekoRegistrationService):
 
         matching_providers = []
         for provider in providers:
-            if (
-                "DataProviderSubType" in provider
-                and provider["DataProviderSubType"] == provider_type
-            ):
+            if "DataProviderSubType" in provider and provider["DataProviderSubType"] == provider_type:
                 matching_providers.append(provider)
 
         return matching_providers

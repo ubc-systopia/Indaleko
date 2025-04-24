@@ -75,10 +75,13 @@ class TestNtfsStorageActivityCollector(unittest.TestCase):
         """Test initialization with mock mode."""
         # Force mock mode and Windows availability to True for test
         with patch(
-            "activity.collectors.storage.ntfs.ntfs_collector.WINDOWS_AVAILABLE", True,
+            "activity.collectors.storage.ntfs.ntfs_collector.WINDOWS_AVAILABLE",
+            True,
         ):
             collector = NtfsStorageActivityCollector(
-                mock=True, volumes=["C:"], debug=True,
+                mock=True,
+                volumes=["C:"],
+                debug=True,
             )
 
         self.assertTrue(collector._use_mock)
@@ -91,10 +94,13 @@ class TestNtfsStorageActivityCollector(unittest.TestCase):
         """Test initialization with volume GUIDs explicitly disabled."""
         # Force Windows availability to True for test
         with patch(
-            "activity.collectors.storage.ntfs.ntfs_collector.WINDOWS_AVAILABLE", True,
+            "activity.collectors.storage.ntfs.ntfs_collector.WINDOWS_AVAILABLE",
+            True,
         ):
             collector = NtfsStorageActivityCollector(
-                mock=True, volumes=["C:"], use_volume_guids=False,
+                mock=True,
+                volumes=["C:"],
+                use_volume_guids=False,
             )
 
             self.assertFalse(collector._use_volume_guids)
@@ -103,10 +109,13 @@ class TestNtfsStorageActivityCollector(unittest.TestCase):
         """Test mapping drive letters to volume GUIDs."""
         # Force Windows availability to True for test
         with patch(
-            "activity.collectors.storage.ntfs.ntfs_collector.WINDOWS_AVAILABLE", True,
+            "activity.collectors.storage.ntfs.ntfs_collector.WINDOWS_AVAILABLE",
+            True,
         ):
             collector = NtfsStorageActivityCollector(
-                mock=True, volumes=["C:"], machine_config=self.mock_machine_config,
+                mock=True,
+                volumes=["C:"],
+                machine_config=self.mock_machine_config,
             )
 
         # Test mapping with the mock machine config
@@ -129,10 +138,13 @@ class TestNtfsStorageActivityCollector(unittest.TestCase):
         """Test getting a volume GUID path from a drive letter."""
         # Force Windows availability to True for test
         with patch(
-            "activity.collectors.storage.ntfs.ntfs_collector.WINDOWS_AVAILABLE", True,
+            "activity.collectors.storage.ntfs.ntfs_collector.WINDOWS_AVAILABLE",
+            True,
         ):
             collector = NtfsStorageActivityCollector(
-                mock=True, volumes=["C:"], machine_config=self.mock_machine_config,
+                mock=True,
+                volumes=["C:"],
+                machine_config=self.mock_machine_config,
             )
 
         # Test with a drive letter
@@ -152,16 +164,17 @@ class TestNtfsStorageActivityCollector(unittest.TestCase):
     def test_fallback_to_drive_letter(self):
         """Test fallback to drive letter when volume GUID mapping fails."""
         # Create a collector with a machine config that raises an exception
-        self.mock_machine_config.map_drive_letter_to_volume_guid.side_effect = (
-            Exception("Mapping failed")
-        )
+        self.mock_machine_config.map_drive_letter_to_volume_guid.side_effect = Exception("Mapping failed")
 
         # Force Windows availability to True for test
         with patch(
-            "activity.collectors.storage.ntfs.ntfs_collector.WINDOWS_AVAILABLE", True,
+            "activity.collectors.storage.ntfs.ntfs_collector.WINDOWS_AVAILABLE",
+            True,
         ):
             collector = NtfsStorageActivityCollector(
-                mock=True, volumes=["C:"], machine_config=self.mock_machine_config,
+                mock=True,
+                volumes=["C:"],
+                machine_config=self.mock_machine_config,
             )
 
         # Get volume GUID path should fall back to drive letter format
@@ -171,7 +184,8 @@ class TestNtfsStorageActivityCollector(unittest.TestCase):
     def test_mock_data_generation(self):
         """Test mock data generation when on non-Windows platforms."""
         with patch(
-            "activity.collectors.storage.ntfs.ntfs_collector.WINDOWS_AVAILABLE", False,
+            "activity.collectors.storage.ntfs.ntfs_collector.WINDOWS_AVAILABLE",
+            False,
         ):
             collector = NtfsStorageActivityCollector(volumes=["C:"], auto_start=True)
 
@@ -200,7 +214,9 @@ class TestNtfsStorageActivityCollector(unittest.TestCase):
     def test_usn_journal_monitoring_mock(self):
         """Test USN journal monitoring in mock mode."""
         collector = NtfsStorageActivityCollector(
-            mock=True, volumes=["C:"], auto_start=False,
+            mock=True,
+            volumes=["C:"],
+            auto_start=False,
         )
 
         # Start monitoring
@@ -237,7 +253,9 @@ class TestNtfsStorageActivityCollector(unittest.TestCase):
         ):
 
             collector = NtfsStorageActivityCollector(
-                mock=False, volumes=["C:"], auto_start=True,  # Not in mock mode
+                mock=False,
+                volumes=["C:"],
+                auto_start=True,  # Not in mock mode
             )
 
             # Should have fallen back to mock data generation
@@ -259,10 +277,13 @@ class TestNtfsStorageActivityCollector(unittest.TestCase):
         """Test that monitoring can be stopped correctly."""
         # Force Windows availability to True for test
         with patch(
-            "activity.collectors.storage.ntfs.ntfs_collector.WINDOWS_AVAILABLE", True,
+            "activity.collectors.storage.ntfs.ntfs_collector.WINDOWS_AVAILABLE",
+            True,
         ):
             collector = NtfsStorageActivityCollector(
-                mock=True, volumes=["C:"], auto_start=True,
+                mock=True,
+                volumes=["C:"],
+                auto_start=True,
             )
 
         # Let it generate some activities
@@ -293,10 +314,13 @@ class TestNtfsStorageActivityCollector(unittest.TestCase):
         """Test that all timestamps have timezone information."""
         # Force Windows availability to True for test
         with patch(
-            "activity.collectors.storage.ntfs.ntfs_collector.WINDOWS_AVAILABLE", True,
+            "activity.collectors.storage.ntfs.ntfs_collector.WINDOWS_AVAILABLE",
+            True,
         ):
             collector = NtfsStorageActivityCollector(
-                mock=True, volumes=["C:"], auto_start=True,
+                mock=True,
+                volumes=["C:"],
+                auto_start=True,
             )
 
         # Let it generate some activities

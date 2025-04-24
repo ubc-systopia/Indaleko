@@ -1,7 +1,7 @@
 import time
-from arango import ArangoClient
 import uuid
 
+from arango import ArangoClient
 
 # ArangoDB connection settings
 arango_url = "http://localhost:8529"

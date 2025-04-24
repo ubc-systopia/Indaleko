@@ -1,16 +1,16 @@
 """This module implements the Windows local ingest process.  This is a test file."""
 
-from IndalekoIngest import IndalekoIngest
 import argparse
+import datetime
+import logging
+
+from IndalekoIndex import IndalekoIndex
 from IndalekoIngest import IndalekoIngest
+from IndalekoWindowsMachineConfig import IndalekoWindowsMachineConfig
 from windows_local_index import (
     IndalekoWindowsLocalIndexer,
     IndalekoWindowsMachineConfig,
 )
-import logging
-import datetime
-from IndalekoIndex import IndalekoIndex
-from IndalekoWindowsMachineConfig import IndalekoWindowsMachineConfig
 
 
 class IndalekoWindowsLocalIngest(IndalekoIngest):
@@ -23,7 +23,7 @@ class IndalekoWindowsLocalIngest(IndalekoIngest):
         "description": "This service provides the configuration information for a Windows machine.",
         "version": "1.0",
         "identifier": WindowsMachineConfig_UUID,
-        "created": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "created": datetime.datetime.now(datetime.UTC).isoformat(),
         "type": "Indexer",
     }
 
@@ -34,7 +34,7 @@ class IndalekoWindowsLocalIngest(IndalekoIngest):
         "description": "This service indexes the local filesystems of a Windows machine.",
         "version": "1.0",
         "identifier": WindowsLocalIndexer_UUID,
-        "created": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "created": datetime.datetime.now(datetime.UTC).isoformat(),
         "type": "Indexer",
     }
 
@@ -45,7 +45,7 @@ class IndalekoWindowsLocalIngest(IndalekoIngest):
         "description": "This service ingests captured index info from the local filesystems of a Windows machine.",
         "version": "1.0",
         "identifier": WindowsLocalIngester_UUID,
-        "created": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "created": datetime.datetime.now(datetime.UTC).isoformat(),
         "type": "Ingester",
     }
 
@@ -82,8 +82,7 @@ class IndalekoWindowsLocalIngest(IndalekoIngest):
         df = [
             x
             for x in os.listdir(data_dir)
-            if x.startswith(IndalekoWindowsLocalIndexer.WindowsLocalIndexFilePrefix)
-            and x.endswith(".json")
+            if x.startswith(IndalekoWindowsLocalIndexer.WindowsLocalIndexFilePrefix) and x.endswith(".json")
         ]
         return df
 
@@ -98,27 +97,29 @@ class IndalekoWindowsLocalIngest(IndalekoIngest):
             x
             for x in os.listdir(config_dir)
             if x.startswith(
-                IndalekoWindowsMachineConfig.windows_machine_config_file_prefix
+                IndalekoWindowsMachineConfig.windows_machine_config_file_prefix,
             )
             and x.endswith(".json")
         ]
 
     def set_default_input_file(
-        self: "IndalekoWindowsLocalIngest", filename: str
+        self: "IndalekoWindowsLocalIngest",
+        filename: str,
     ) -> None:
         assert filename is not None, "filename must be a valid string"
         self.default_input_file = os.path.join(self.output_dir, filename)
         assert os.path.isfile(
-            self.default_input_file
+            self.default_input_file,
         ), "default_input_file must be a valid file"
 
     def set_default_config_file(
-        self: "IndalekoWindowsLocalIngest", filename: str
+        self: "IndalekoWindowsLocalIngest",
+        filename: str,
     ) -> None:
         assert filename is not None, "filename must be a valid string"
         self.default_config_file = os.path.join(self.config_dir, filename)
         assert os.path.isfile(
-            self.default_config_file
+            self.default_config_file,
         ), "default_config_file must be a valid file"
 
     def get_default_input_file(self: "IndalekoWindowsLocalIngest") -> str:
@@ -131,7 +132,8 @@ class IndalekoWindowsLocalIngest(IndalekoIngest):
         return f'{self.WindowsLocalIngestLogPrefix}-{datetime.datetime.now().strftime("%Y%m%d%H%M%S")}.log'
 
     def lookup_machine_config(
-        self: "IndalekoWindowsLocalIngest", machine_id: str
+        self: "IndalekoWindowsLocalIngest",
+        machine_id: str,
     ) -> dict:
         """
         This method uses the machine_id to see if the machine configuration
@@ -160,21 +162,20 @@ class IndalekoWindowsLocalIngest(IndalekoIngest):
         if not hasattr(self, "machine_config"):
             if machine_id is not None:
                 self.machine_config = IndalekoWindowsMachineConfig.load_config_from_db(
-                    machine_id
+                    machine_id,
                 )
             else:
-                self.machine_config = (
-                    IndalekoWindowsMachineConfig.load_config_from_file(
-                        config_dir=config_dir, config_file=config_file
-                    )
+                self.machine_config = IndalekoWindowsMachineConfig.load_config_from_file(
+                    config_dir=config_dir,
+                    config_file=config_file,
                 )
                 self.machine_config.write_config_to_db()
         return self.machine_config
 
     def ingest(self: "IndalekoWindowsLocalIngest") -> None:
-        logging.debug(f"Ingesting")
+        logging.debug("Ingesting")
         logging.info(
-            f"Ingesting file {self.default_input_file}, Step 1: get machine config"
+            f"Ingesting file {self.default_input_file}, Step 1: get machine config",
         )
         # Steps for ingestion:
         # 1. Make sure the machine config is in the database.  If not, capture
@@ -221,7 +222,7 @@ class IndalekoWindowsLocalIngest(IndalekoIngest):
     def start(self: "IndalekoWindowsLocalIngest", args: argparse.Namespace) -> None:
         super().start(self.get_default_logfile_name(), args.loglevel)
         logging.debug(
-            f"Starting Windows local ingest at {datetime.datetime.now(datetime.UTC).isoformat()}"
+            f"Starting Windows local ingest at {datetime.datetime.now(datetime.UTC).isoformat()}",
         )
         logging.info(f"Ingesting file {args.input}")
 
@@ -269,22 +270,18 @@ def main():
     # Step 3: pick default files
     assert len(data_files) > 0, "No data files found."
     assert len(config_files) > 0, "No config files found."
-    default_data_file = data_files[
-        -1
-    ]  # might want to date/time sort these or even iterate
-    default_config_file = config_files[
-        -1
-    ]  # might want to date/time sort these or even iterate
+    default_data_file = data_files[-1]  # might want to date/time sort these or even iterate
+    default_config_file = config_files[-1]  # might want to date/time sort these or even iterate
 
     # Step 4: call the base ingester so it can finish parsing stuff.
     ingester.set_default_input_file(default_data_file)
     ingester.set_default_config_file(default_config_file)
     args = ingester.parse_args(pre_parser=pre_parser)
     ingester.start(args)
-    logging.warning(f"Note the windows local ingester is currently NOT operational.")
+    logging.warning("Note the windows local ingester is currently NOT operational.")
     ingester.ingest()
     logging.info(
-        f"Done with ingest at {datetime.datetime.now(datetime.UTC).isoformat()}"
+        f"Done with ingest at {datetime.datetime.now(datetime.UTC).isoformat()}",
     )
 
 

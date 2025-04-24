@@ -58,7 +58,8 @@ def test_query_history_recommender():
 
     # Test with a current query
     suggestions = recommender.generate_suggestions(
-        current_query="Find documents about Indaleko", max_suggestions=3,
+        current_query="Find documents about Indaleko",
+        max_suggestions=3,
     )
 
     print(f"Generated {len(suggestions)} suggestions:")
@@ -74,7 +75,9 @@ def test_query_history_recommender():
     if suggestions:
         print("Testing feedback:")
         recommender.update_from_feedback(
-            suggestion=suggestions[0], feedback=FeedbackType.ACCEPTED, result_count=5,
+            suggestion=suggestions[0],
+            feedback=FeedbackType.ACCEPTED,
+            result_count=5,
         )
         print("Feedback recorded")
 
@@ -117,7 +120,9 @@ def test_activity_context_recommender():
     if suggestions:
         print("Testing feedback:")
         recommender.update_from_feedback(
-            suggestion=suggestions[0], feedback=FeedbackType.HELPFUL, result_count=7,
+            suggestion=suggestions[0],
+            feedback=FeedbackType.HELPFUL,
+            result_count=7,
         )
         print("Feedback recorded")
 
@@ -138,13 +143,8 @@ def test_activity_context_recommender():
 
         # Check if feedback affected confidence scores
         for i, new_suggestion in enumerate(new_suggestions):
-            if (
-                i < len(suggestions)
-                and new_suggestion.query_text == suggestions[i].query_text
-            ):
-                confidence_change = (
-                    new_suggestion.confidence - suggestions[i].confidence
-                )
+            if i < len(suggestions) and new_suggestion.query_text == suggestions[i].query_text:
+                confidence_change = new_suggestion.confidence - suggestions[i].confidence
                 if abs(confidence_change) > 0.01:
                     print(f"Suggestion confidence changed by {confidence_change:.2f}")
                     print(f"   From: {suggestions[i].confidence:.2f}")
@@ -185,7 +185,9 @@ def test_entity_relationship_recommender():
 
     # Generate suggestions
     suggestions = recommender.generate_suggestions(
-        current_query=current_query, context_data=context_data, max_suggestions=5,
+        current_query=current_query,
+        context_data=context_data,
+        max_suggestions=5,
     )
 
     print(f"Generated {len(suggestions)} suggestions:")
@@ -208,14 +210,18 @@ def test_entity_relationship_recommender():
     if suggestions:
         print("Testing feedback:")
         recommender.update_from_feedback(
-            suggestion=suggestions[0], feedback=FeedbackType.ACCEPTED, result_count=5,
+            suggestion=suggestions[0],
+            feedback=FeedbackType.ACCEPTED,
+            result_count=5,
         )
         print("Feedback recorded")
 
         # Generate new suggestions to see effect of feedback
         print("\nGenerating new suggestions after feedback:")
         new_suggestions = recommender.generate_suggestions(
-            current_query=current_query, context_data=context_data, max_suggestions=5,
+            current_query=current_query,
+            context_data=context_data,
+            max_suggestions=5,
         )
 
         print(f"Generated {len(new_suggestions)} suggestions after feedback:")
@@ -259,7 +265,8 @@ def test_temporal_pattern_recommender():
 
         # Generate suggestions
         suggestions = recommender.generate_suggestions(
-            context_data=context_data, max_suggestions=3,
+            context_data=context_data,
+            max_suggestions=3,
         )
 
         print(f"Generated {len(suggestions)} suggestions:")
@@ -288,14 +295,17 @@ def test_temporal_pattern_recommender():
     if suggestions:
         print("Testing feedback:")
         recommender.update_from_feedback(
-            suggestion=suggestions[0], feedback=FeedbackType.ACCEPTED, result_count=7,
+            suggestion=suggestions[0],
+            feedback=FeedbackType.ACCEPTED,
+            result_count=7,
         )
         print("Feedback recorded")
 
         # Generate new suggestions to see effect of feedback
         print("\nGenerating suggestions after feedback:")
         new_suggestions = recommender.generate_suggestions(
-            context_data=context_data, max_suggestions=3,
+            context_data=context_data,
+            max_suggestions=3,
         )
 
         print(f"Generated {len(new_suggestions)} suggestions after feedback:")
@@ -321,7 +331,8 @@ def test_recommendation_engine():
 
     # Generate recommendations
     recommendations = engine.get_recommendations(
-        current_query="Find documents about Indaleko", max_results=5,
+        current_query="Find documents about Indaleko",
+        max_results=5,
     )
 
     print(f"Generated {len(recommendations)} recommendations:")
@@ -365,7 +376,8 @@ def test_recommendation_engine():
     # Generate recommendations again
     print("\nGenerating recommendations with new settings:")
     new_recommendations = engine.get_recommendations(
-        current_query="Find documents about Indaleko", max_results=5,
+        current_query="Find documents about Indaleko",
+        max_results=5,
     )
 
     print(f"Generated {len(new_recommendations)} recommendations:")
@@ -384,19 +396,29 @@ def main():
         description="Test the recommendation engine components",
     )
     parser.add_argument(
-        "--history", action="store_true", help="Test query history recommender",
+        "--history",
+        action="store_true",
+        help="Test query history recommender",
     )
     parser.add_argument(
-        "--activity", action="store_true", help="Test activity context recommender",
+        "--activity",
+        action="store_true",
+        help="Test activity context recommender",
     )
     parser.add_argument(
-        "--entity", action="store_true", help="Test entity relationship recommender",
+        "--entity",
+        action="store_true",
+        help="Test entity relationship recommender",
     )
     parser.add_argument(
-        "--temporal", action="store_true", help="Test temporal pattern recommender",
+        "--temporal",
+        action="store_true",
+        help="Test temporal pattern recommender",
     )
     parser.add_argument(
-        "--engine", action="store_true", help="Test recommendation engine",
+        "--engine",
+        action="store_true",
+        help="Test recommendation engine",
     )
     parser.add_argument("--all", action="store_true", help="Test all components")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
@@ -407,9 +429,7 @@ def main():
     logging.basicConfig(level=log_level)
 
     # If no specific tests are requested, run all tests
-    run_all = args.all or not (
-        args.history or args.activity or args.entity or args.temporal or args.engine
-    )
+    run_all = args.all or not (args.history or args.activity or args.entity or args.temporal or args.engine)
 
     if args.history or run_all:
         test_query_history_recommender()

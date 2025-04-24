@@ -54,6 +54,7 @@ Requires-Dist: pytest>=6.0; extra == "test"
 Provides-Extra: dev
 Requires-Dist: black; extra == "dev"
 Requires-Dist: flake8; extra == "dev"
+Requires-Dist: pre-commit; extra == "dev"
 Provides-Extra: windows
 Requires-Dist: winsdk==1.0.0b10; extra == "windows"
 Provides-Extra: gui

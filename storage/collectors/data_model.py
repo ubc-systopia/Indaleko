@@ -23,9 +23,8 @@ import os
 import platform
 import sys
 
-from pydantic import Field
 from icecream import ic
-
+from pydantic import Field
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -57,11 +56,8 @@ class IndalekoStorageCollectorDataModel(IndalekoCollectorDataModel):
         @staticmethod
         def get_example():
             """Get an example of the activity collector data model."""
-            example = IndalekoCollectorDataModel.Config.json_schema_extra[
-                "example"
-            ].copy()
-            example["ServiceType"] = \
-                IndalekoConstants.service_type_storage_collector
+            example = IndalekoCollectorDataModel.Config.json_schema_extra["example"].copy()
+            example["ServiceType"] = IndalekoConstants.service_type_storage_collector
             return example
 
         json_schema_extra = {
@@ -73,7 +69,7 @@ def main():
     """Test code for the storage collector data model"""
     ic("Testing Storage Collector Data Model")
     storage_collector_data = IndalekoStorageCollectorDataModel(
-        **IndalekoStorageCollectorDataModel.Config.json_schema_extra["example"]
+        **IndalekoStorageCollectorDataModel.Config.json_schema_extra["example"],
     )
     ic(storage_collector_data)
     ic(platform.system())

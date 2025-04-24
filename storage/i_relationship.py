@@ -25,17 +25,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import argparse
-from enum import Enum
 import json
-import random
 import os
+import random
 import sys
 import uuid
+from enum import Enum
 
-from typing import Tuple, Union, Dict, List
-
-from pydantic import BaseModel, Field
 from icecream import ic
+from pydantic import BaseModel, Field
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -50,11 +48,11 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # from IndalekoRelationshipDataModel import IndalekoRelationshipDataModel
 # from IndalekoDataModel import IndalekoUUID
 from data_models import (
-    IndalekoRelationshipDataModel,
-    IndalekoUUIDDataModel,
     IndalekoRecordDataModel,
-    IndalekoSourceIdentifierDataModel,
+    IndalekoRelationshipDataModel,
     IndalekoSemanticAttributeDataModel,
+    IndalekoSourceIdentifierDataModel,
+    IndalekoUUIDDataModel,
 )
 from db import IndalekoDBCollections
 from utils.data_validation import validate_uuid_string
@@ -74,59 +72,40 @@ class IndalekoRelationship:
 
     # Maybe these should be externally defined?
     class RelationshipType(str, Enum):
-        CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR = (
-            "3d4b772d-b4b0-4203-a410-ecac5dc6dafa"
-        )
-        CONTAINED_BY_VOLUME_RELATIONSHIP_UUID_STR = (
-            "f38c45ce-e8d8-4c5a-adc6-fc34f5f8b8e9"
-        )
-        CONTAINED_BY_MACHINE_RELATIONSHIP_UUID_STR = (
-            "1ba5935c-8e82-4dd9-92e7-d4b085958487"
-        )
-        DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR = (
-            "cde81295-f171-45be-8607-8100f4611430"
-        )
+        CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR = "3d4b772d-b4b0-4203-a410-ecac5dc6dafa"
+        CONTAINED_BY_VOLUME_RELATIONSHIP_UUID_STR = "f38c45ce-e8d8-4c5a-adc6-fc34f5f8b8e9"
+        CONTAINED_BY_MACHINE_RELATIONSHIP_UUID_STR = "1ba5935c-8e82-4dd9-92e7-d4b085958487"
+        DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR = "cde81295-f171-45be-8607-8100f4611430"
         VOLUME_CONTAINS_RELATIONSHIP_UUID_STR = "db1a48c0-91d9-4f16-bd65-845433e6cba9"
         MACHINE_CONTAINS_RELATIONSHIP_UUID_STR = "f3dde8a2-cff5-41b9-bd00-0f41330895e1"
 
     # These definitions are for backwards compatibility
     # the goal really is to use the RelationshipType enum
-    CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR = (
-        RelationshipType.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR
-    )
-    CONTAINED_BY_VOLUME_RELATIONSHIP_UUID_STR = (
-        RelationshipType.CONTAINED_BY_VOLUME_RELATIONSHIP_UUID_STR
-    )
-    CONTAINED_BY_MACHINE_RELATIONSHIP_UUID_STR = (
-        RelationshipType.CONTAINED_BY_MACHINE_RELATIONSHIP_UUID_STR
-    )
-    DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR = (
-        RelationshipType.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR
-    )
-    VOLUME_CONTAINS_RELATIONSHIP_UUID_STR = (
-        RelationshipType.VOLUME_CONTAINS_RELATIONSHIP_UUID_STR
-    )
-    MACHINE_CONTAINS_RELATIONSHIP_UUID_STR = (
-        RelationshipType.MACHINE_CONTAINS_RELATIONSHIP_UUID_STR
-    )
+    CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR = RelationshipType.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR
+    CONTAINED_BY_VOLUME_RELATIONSHIP_UUID_STR = RelationshipType.CONTAINED_BY_VOLUME_RELATIONSHIP_UUID_STR
+    CONTAINED_BY_MACHINE_RELATIONSHIP_UUID_STR = RelationshipType.CONTAINED_BY_MACHINE_RELATIONSHIP_UUID_STR
+    DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR = RelationshipType.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR
+    VOLUME_CONTAINS_RELATIONSHIP_UUID_STR = RelationshipType.VOLUME_CONTAINS_RELATIONSHIP_UUID_STR
+    MACHINE_CONTAINS_RELATIONSHIP_UUID_STR = RelationshipType.MACHINE_CONTAINS_RELATIONSHIP_UUID_STR
 
     class IndalekoRelationshipObject(BaseModel):
         """This is the definition of the relationship object."""
 
         collection: str = Field(None, title="Collection Name")
-        object: Union[str, uuid.UUID] = Field(None, title="Object ID")
+        object: str | uuid.UUID = Field(None, title="Object ID")
 
     def __init__(
         self,
-        objects: Tuple[IndalekoRelationshipObject, IndalekoRelationshipObject],
-        relationships: Union[List[IndalekoSemanticAttributeDataModel], None] = None,
-        source_id: Union[IndalekoSourceIdentifierDataModel, None] = None,
+        objects: tuple[IndalekoRelationshipObject, IndalekoRelationshipObject],
+        relationships: list[IndalekoSemanticAttributeDataModel] | None = None,
+        source_id: IndalekoSourceIdentifierDataModel | None = None,
     ):
         """Create an empty relationship object."""
         assert len(objects) == 2, "objects must be a tuple of two objects."
         if source_id is not None:
             assert isinstance(
-                source_id, IndalekoSourceIdentifierDataModel
+                source_id,
+                IndalekoSourceIdentifierDataModel,
             ), "source_id must be an IndalekoSourceIdentifierDataModel."
             self.source_identifier = source_id
         else:
@@ -142,7 +121,8 @@ class IndalekoRelationship:
         self.record = IndalekoRecordDataModel(SourceIdentifier=self.source_identifier)
 
     def vertex_to_indaleko_uuid(
-        self, vertex: Union[uuid.UUID, str, IndalekoUUIDDataModel]
+        self,
+        vertex: uuid.UUID | str | IndalekoUUIDDataModel,
     ) -> IndalekoUUIDDataModel:
         """Convert a vertex to an IndalekoUUIDDataModel."""
         if isinstance(vertex, IndalekoUUIDDataModel):
@@ -158,7 +138,8 @@ class IndalekoRelationship:
         if self.relationships is None:
             self.relationships = {}
         assert isinstance(
-            self.relationships, dict
+            self.relationships,
+            dict,
         ), "relationships must be a dictionary."
         assert key not in self.relationships, "relationship already exists."
         self.relationships[key] = value
@@ -171,7 +152,7 @@ class IndalekoRelationship:
 
     @staticmethod
     def vertex_to_uuid(
-        vertex: Union[IndalekoUUIDDataModel, uuid.UUID, str],
+        vertex: IndalekoUUIDDataModel | uuid.UUID | str,
     ) -> IndalekoUUIDDataModel:
         """Convert a vertex to a UUID."""
         if isinstance(vertex, IndalekoUUIDDataModel):
@@ -184,19 +165,15 @@ class IndalekoRelationship:
 
     @staticmethod
     def relationships_to_list(
-        relationships: Union[List[Dict[str, str]], None],
-    ) -> List[Dict[str, str]]:
+        relationships: list[dict[str, str]] | None,
+    ) -> list[dict[str, str]]:
         """Convert a list of relationships to a list of dictionaries."""
         if relationships is None:
             return []
         for relationship in relationships:
             assert isinstance(relationship, dict), "relationship must be a dictionary."
-            assert (
-                "relationship" in relationship
-            ), "relationship must have a relationship key."
-            assert (
-                "description" in relationship
-            ), "relationship must have a description key."
+            assert "relationship" in relationship, "relationship must have a relationship key."
+            assert "description" in relationship, "relationship must have a description key."
         return relationships
 
     def serialize(self) -> dict:
@@ -205,11 +182,13 @@ class IndalekoRelationship:
             self.relationships is not None and len(self.relationships) > 0
         ), "Must have at least one relationship for serialization."
         assert isinstance(
-            self.relationships, list
+            self.relationships,
+            list,
         ), "relationships must be a dictionary."
         reldata = [
             IndalekoSemanticAttributeDataModel(
-                Identifier=item.Identifier, Value=item.Value
+                Identifier=item.Identifier,
+                Value=item.Value,
             )
             for item in self.relationships
         ]

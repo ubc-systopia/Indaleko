@@ -35,11 +35,7 @@ from tabulate import tabulate
 
 # Set up environment variables and paths
 current_path = os.path.dirname(os.path.abspath(__file__))
-os.environ["INDALEKO_ROOT"] = (
-    current_path
-    if not os.environ.get("INDALEKO_ROOT")
-    else os.environ.get("INDALEKO_ROOT")
-)
+os.environ["INDALEKO_ROOT"] = current_path if not os.environ.get("INDALEKO_ROOT") else os.environ.get("INDALEKO_ROOT")
 if os.environ["INDALEKO_ROOT"] not in sys.path:
     sys.path.append(os.environ["INDALEKO_ROOT"])
 
@@ -53,7 +49,8 @@ from query.utils.llm_connector.openai_connector import OpenAIConnector
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -121,7 +118,9 @@ def initialize_parser() -> tuple[NLParser, QueryHistory]:
     # Initialize DB config
     db_config = IndalekoDBConfig(
         config_file=os.path.join(
-            os.environ["INDALEKO_ROOT"], "config", "indaleko-db-config.ini",
+            os.environ["INDALEKO_ROOT"],
+            "config",
+            "indaleko-db-config.ini",
         ),
     )
     logger.info("DB config initialized")
@@ -146,7 +145,9 @@ def initialize_parser() -> tuple[NLParser, QueryHistory]:
 
 
 def run_queries(
-    nl_parser: NLParser, query_history: QueryHistory, queries: list[str],
+    nl_parser: NLParser,
+    query_history: QueryHistory,
+    queries: list[str],
 ) -> dict[str, Any]:
     """Run a list of queries through the parser and collect error statistics."""
     results = {
@@ -259,9 +260,7 @@ def generate_error_visualizations(nl_parser: NLParser, output_dir: str) -> None:
     os.makedirs(output_dir, exist_ok=True)
 
     # Pie chart of error types
-    error_categories = {
-        k: v for k, v in stats["error_counts"].items() if k != "total" and v > 0
-    }
+    error_categories = {k: v for k, v in stats["error_counts"].items() if k != "total" and v > 0}
     if error_categories:
         plt.figure(figsize=(10, 6))
         plt.pie(
@@ -278,10 +277,7 @@ def generate_error_visualizations(nl_parser: NLParser, output_dir: str) -> None:
     # Bar chart of common errors
     if stats["common_errors"]:
         common_errors = stats["common_errors"][:10]  # Top 10 errors
-        error_names = [
-            err["error"][:20] + "..." if len(err["error"]) > 20 else err["error"]
-            for err in common_errors
-        ]
+        error_names = [err["error"][:20] + "..." if len(err["error"]) > 20 else err["error"] for err in common_errors]
         error_counts = [err["count"] for err in common_errors]
 
         plt.figure(figsize=(12, 6))
@@ -313,7 +309,8 @@ def generate_error_visualizations(nl_parser: NLParser, output_dir: str) -> None:
 
 
 def test_parser_robustness(
-    output_file: str | None = None, visualizations_dir: str | None = None,
+    output_file: str | None = None,
+    visualizations_dir: str | None = None,
 ) -> None:
     """Test the parser's robustness by running various query types and analyzing errors."""
     # Initialize parser and query history
@@ -328,9 +325,7 @@ def test_parser_robustness(
 
     # Display overall results
     total_queries = sum(results["total_queries"] for results in all_results.values())
-    total_successful = sum(
-        results["successful_queries"] for results in all_results.values()
-    )
+    total_successful = sum(results["successful_queries"] for results in all_results.values())
 
     print("\n=== Robustness Test Results ===")
     print(f"Total queries tested: {total_queries}")
@@ -460,18 +455,26 @@ def main():
 
     # Test robustness command
     test_parser = subparsers.add_parser(
-        "test", help="Test parser robustness with predefined queries",
+        "test",
+        help="Test parser robustness with predefined queries",
     )
     test_parser.add_argument(
-        "--output", "-o", type=str, help="Output JSON file for results",
+        "--output",
+        "-o",
+        type=str,
+        help="Output JSON file for results",
     )
     test_parser.add_argument(
-        "--visualize", "-v", type=str, help="Directory for error visualizations",
+        "--visualize",
+        "-v",
+        type=str,
+        help="Directory for error visualizations",
     )
 
     # Run specific query command
     query_parser = subparsers.add_parser(
-        "query", help="Run a specific query and analyze errors",
+        "query",
+        help="Run a specific query and analyze errors",
     )
     query_parser.add_argument("query_text", type=str, help="Query text to process")
 

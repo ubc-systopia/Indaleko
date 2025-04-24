@@ -78,9 +78,7 @@ class QueryNavigator:
             self._activity_provider = None
 
         # Track whether navigation is available
-        self._nav_available = (
-            self._context_service is not None and self._activity_provider is not None
-        )
+        self._nav_available = self._context_service is not None and self._activity_provider is not None
 
         # Initialize database connection if available
         try:
@@ -222,7 +220,9 @@ class QueryNavigator:
             return []
 
     def get_query_path(
-        self, query_id: uuid.UUID, max_depth: int = 10,
+        self,
+        query_id: uuid.UUID,
+        max_depth: int = 10,
     ) -> list[dict[str, Any]]:
         """
         Get the sequence of queries leading to the specified query.
@@ -255,9 +255,7 @@ class QueryNavigator:
                 path.append(query_data)
 
                 # Move to the previous query in the chain
-                if (
-                    query_data.get("previous_query_id")
-                ):
+                if query_data.get("previous_query_id"):
                     current_id = uuid.UUID(query_data["previous_query_id"])
                 else:
                     current_id = None
@@ -351,7 +349,9 @@ class QueryNavigator:
             return {}
 
     def _get_next_queries(
-        self, query_id: uuid.UUID, limit: int = 5,
+        self,
+        query_id: uuid.UUID,
+        limit: int = 5,
     ) -> list[dict[str, Any]]:
         """
         Get queries that have the specified query as their previous_query_id.
@@ -402,7 +402,9 @@ class QueryNavigator:
             return []
 
     def get_recent_queries(
-        self, hours: int = 24, limit: int = 10,
+        self,
+        hours: int = 24,
+        limit: int = 10,
     ) -> list[dict[str, Any]]:
         """
         Get recent queries within the specified time window.

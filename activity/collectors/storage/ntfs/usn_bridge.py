@@ -22,16 +22,17 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import os
-import sys
 import argparse
+import os
 import subprocess
-import json
+import sys
 
 
 def main():
     """Main entry point for the script."""
-    parser = argparse.ArgumentParser(description="USN Bridge - Run foo.py as a subprocess")
+    parser = argparse.ArgumentParser(
+        description="USN Bridge - Run foo.py as a subprocess",
+    )
     parser.add_argument("--volume", required=True, help="Volume to query (e.g., 'C:')")
     parser.add_argument("--start-usn", type=int, help="Starting USN to query from")
     parser.add_argument("--output", required=True, help="Output file for USN records")
@@ -67,16 +68,19 @@ def main():
 
     # Run foo.py and capture its output
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
 
         if result.returncode != 0:
-            print(f"Error: foo.py exited with code {result.returncode}", file=sys.stderr)
+            print(
+                f"Error: foo.py exited with code {result.returncode}",
+                file=sys.stderr,
+            )
             print(f"Error output: {result.stderr}", file=sys.stderr)
             return 1
 
         # Parse the output
         records_found = False
-        with open(args.output, 'w') as outfile:
+        with open(args.output, "w") as outfile:
             for line in result.stdout.splitlines():
                 if "USN:" in line:
                     # Start of a record

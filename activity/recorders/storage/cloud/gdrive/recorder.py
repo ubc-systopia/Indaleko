@@ -89,14 +89,17 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
         # Set Google Drive-specific defaults
         kwargs["name"] = kwargs.get("name", "Google Drive Storage Activity Recorder")
         kwargs["recorder_id"] = kwargs.get(
-            "recorder_id", uuid.UUID("4e8d9f2a-5c6b-7d8e-9f0a-1b2c3d4e5f6a"),
+            "recorder_id",
+            uuid.UUID("4e8d9f2a-5c6b-7d8e-9f0a-1b2c3d4e5f6a"),
         )
         kwargs["provider_type"] = StorageProviderType.GOOGLE_DRIVE
         kwargs["description"] = kwargs.get(
-            "description", "Records storage activities from Google Drive",
+            "description",
+            "Records storage activities from Google Drive",
         )
         kwargs["collection_name"] = kwargs.get(
-            "collection_name", "GoogleDriveStorageActivity",
+            "collection_name",
+            "GoogleDriveStorageActivity",
         )
 
         # Get or create Google Drive collector
@@ -114,7 +117,8 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
 
         # Get default config directory for database
         default_config_dir = os.path.join(
-            os.environ.get("INDALEKO_ROOT", "."), "config",
+            os.environ.get("INDALEKO_ROOT", "."),
+            "config",
         )
         default_db_config_path = os.path.join(default_config_dir, "db_config.json")
 
@@ -275,7 +279,10 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
         return activity_data.activity_id
 
     def get_activities_by_drive_id(
-        self, drive_id: str, limit: int = 100, offset: int = 0,
+        self,
+        drive_id: str,
+        limit: int = 100,
+        offset: int = 0,
     ) -> list[dict]:
         """
         Get activities for a specific Google Drive file ID.
@@ -312,7 +319,10 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
         return [doc for doc in cursor]
 
     def get_activities_by_mime_type(
-        self, mime_type: str, limit: int = 100, offset: int = 0,
+        self,
+        mime_type: str,
+        limit: int = 100,
+        offset: int = 0,
     ) -> list[dict]:
         """
         Get activities for files with a specific MIME type.
@@ -349,7 +359,10 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
         return [doc for doc in cursor]
 
     def get_activities_by_folder(
-        self, folder_id: str, limit: int = 100, offset: int = 0,
+        self,
+        folder_id: str,
+        limit: int = 100,
+        offset: int = 0,
     ) -> list[dict]:
         """
         Get activities for files in a specific folder.
@@ -472,22 +485,21 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
         # Execute Google Drive-specific queries
         try:
             file_type_cursor = self._db._arangodb.aql.execute(
-                file_type_query, bind_vars={"@collection": self._collection_name},
+                file_type_query,
+                bind_vars={"@collection": self._collection_name},
             )
             sharing_cursor = self._db._arangodb.aql.execute(
-                sharing_query, bind_vars={"@collection": self._collection_name},
+                sharing_query,
+                bind_vars={"@collection": self._collection_name},
             )
             app_cursor = self._db._arangodb.aql.execute(
-                app_query, bind_vars={"@collection": self._collection_name},
+                app_query,
+                bind_vars={"@collection": self._collection_name},
             )
 
             # Add to statistics
-            stats["top_file_types"] = {
-                item["file_type"]: item["count"] for item in file_type_cursor
-            }
-            stats["top_mime_types"] = {
-                item["mime_type"]: item["count"] for item in app_cursor
-            }
+            stats["top_file_types"] = {item["file_type"]: item["count"] for item in file_type_cursor}
+            stats["top_mime_types"] = {item["mime_type"]: item["count"] for item in app_cursor}
 
             sharing_stats = next(sharing_cursor, {"shared": 0, "not_shared": 0})
             stats["sharing"] = sharing_stats
@@ -495,9 +507,7 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
             # Calculate sharing percentage if there are activities
             total = sharing_stats.get("shared", 0) + sharing_stats.get("not_shared", 0)
             if total > 0:
-                stats["sharing_percentage"] = (
-                    sharing_stats.get("shared", 0) / total
-                ) * 100
+                stats["sharing_percentage"] = (sharing_stats.get("shared", 0) / total) * 100
             else:
                 stats["sharing_percentage"] = 0
 
@@ -577,9 +587,7 @@ if __name__ == "__main__":
         collector.collect_data()
 
         # Store collected activities
-        storage_activities = [
-            activity.to_storage_activity() for activity in collector.activities
-        ]
+        storage_activities = [activity.to_storage_activity() for activity in collector.activities]
         activity_ids = recorder.store_activities(storage_activities)
         print(f"Stored {len(activity_ids)} activities")
 

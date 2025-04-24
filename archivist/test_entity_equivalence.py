@@ -42,15 +42,9 @@ def reset_collections():
     from db.i_collections import IndalekoCollections
 
     # Get collection names from central registry
-    nodes_collection_name = (
-        IndalekoDBCollections.Indaleko_Entity_Equivalence_Node_Collection
-    )
-    relations_collection_name = (
-        IndalekoDBCollections.Indaleko_Entity_Equivalence_Relation_Collection
-    )
-    groups_collection_name = (
-        IndalekoDBCollections.Indaleko_Entity_Equivalence_Group_Collection
-    )
+    nodes_collection_name = IndalekoDBCollections.Indaleko_Entity_Equivalence_Node_Collection
+    relations_collection_name = IndalekoDBCollections.Indaleko_Entity_Equivalence_Relation_Collection
+    groups_collection_name = IndalekoDBCollections.Indaleko_Entity_Equivalence_Group_Collection
 
     # Use central collections management
     nodes_collection = IndalekoCollections.get_collection(nodes_collection_name)
@@ -113,7 +107,10 @@ def test_entity_merging(entity1, entity2):
 
     # Merge entities
     success = manager.merge_entities(
-        entity2.entity_id, entity1.entity_id, relation_type="nickname", confidence=0.9,
+        entity2.entity_id,
+        entity1.entity_id,
+        relation_type="nickname",
+        confidence=0.9,
     )
 
     print(f"Merge result: {success}")
@@ -174,11 +171,14 @@ def test_multiple_equivalence_classes():
 
     # Person entities
     person1 = manager.add_entity_reference(
-        name="John Smith", entity_type=IndalekoNamedEntityType.person, canonical=True,
+        name="John Smith",
+        entity_type=IndalekoNamedEntityType.person,
+        canonical=True,
     )
 
     person2 = manager.add_entity_reference(
-        name="Johnny", entity_type=IndalekoNamedEntityType.person,
+        name="Johnny",
+        entity_type=IndalekoNamedEntityType.person,
     )
 
     # Location entities
@@ -189,7 +189,8 @@ def test_multiple_equivalence_classes():
     )
 
     location2 = manager.add_entity_reference(
-        name="NYC", entity_type=IndalekoNamedEntityType.location,
+        name="NYC",
+        entity_type=IndalekoNamedEntityType.location,
     )
 
     # Merge within each class
@@ -274,15 +275,21 @@ def main():
         description="Test entity equivalence functionality",
     )
     parser.add_argument(
-        "--reset", action="store_true", help="Reset equivalence collections",
+        "--reset",
+        action="store_true",
+        help="Reset equivalence collections",
     )
     parser.add_argument("--create", action="store_true", help="Test entity creation")
     parser.add_argument("--merge", action="store_true", help="Test entity merging")
     parser.add_argument(
-        "--graph", action="store_true", help="Test entity graph generation",
+        "--graph",
+        action="store_true",
+        help="Test entity graph generation",
     )
     parser.add_argument(
-        "--multi", action="store_true", help="Test multiple equivalence classes",
+        "--multi",
+        action="store_true",
+        help="Test multiple equivalence classes",
     )
     parser.add_argument("--stats", action="store_true", help="Test statistics")
     parser.add_argument("--all", action="store_true", help="Run all tests")

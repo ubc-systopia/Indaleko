@@ -162,15 +162,9 @@ class EntityEquivalenceManager:
         from db.i_collections import IndalekoCollections
 
         # Get collection names from central registry
-        nodes_collection_name = (
-            IndalekoDBCollections.Indaleko_Entity_Equivalence_Node_Collection
-        )
-        relations_collection_name = (
-            IndalekoDBCollections.Indaleko_Entity_Equivalence_Relation_Collection
-        )
-        groups_collection_name = (
-            IndalekoDBCollections.Indaleko_Entity_Equivalence_Group_Collection
-        )
+        nodes_collection_name = IndalekoDBCollections.Indaleko_Entity_Equivalence_Node_Collection
+        relations_collection_name = IndalekoDBCollections.Indaleko_Entity_Equivalence_Relation_Collection
+        groups_collection_name = IndalekoDBCollections.Indaleko_Entity_Equivalence_Group_Collection
 
         # Use the central IndalekoCollections to get or create collections
         nodes_collection = IndalekoCollections.get_collection(nodes_collection_name)
@@ -267,7 +261,9 @@ class EntityEquivalenceManager:
         return node
 
     def _find_potential_matches(
-        self, node: EntityEquivalenceNode, similarity_threshold: float = 0.85,
+        self,
+        node: EntityEquivalenceNode,
+        similarity_threshold: float = 0.85,
     ) -> list[tuple[UUID, float]]:
         """
         Find potential matching entities for a given node.
@@ -293,7 +289,8 @@ class EntityEquivalenceManager:
 
             # Compute similarity
             similarity = jaro_winkler_similarity(
-                node.name.lower(), existing_node.name.lower(),
+                node.name.lower(),
+                existing_node.name.lower(),
             )
 
             # If similarity is above threshold, add to matches
@@ -309,7 +306,10 @@ class EntityEquivalenceManager:
         return matches
 
     def _suggest_relation(
-        self, source_id: UUID, target_id: UUID, confidence: float,
+        self,
+        source_id: UUID,
+        target_id: UUID,
+        confidence: float,
     ) -> None:
         """
         Suggest a potential relation between two entity references.
@@ -399,7 +399,8 @@ class EntityEquivalenceManager:
         return relation
 
     def get_canonical_reference(
-        self, entity_id: UUID,
+        self,
+        entity_id: UUID,
     ) -> EntityEquivalenceNode | None:
         """
         Get the canonical reference for an entity.
@@ -695,7 +696,9 @@ def main():
     # Explicitly merge entities
     manager.merge_entities(node2.entity_id, node1.entity_id, relation_type="nickname")
     manager.merge_entities(
-        node3.entity_id, node1.entity_id, relation_type="professional",
+        node3.entity_id,
+        node1.entity_id,
+        relation_type="professional",
     )
 
     # Location example
@@ -706,11 +709,13 @@ def main():
     )
 
     loc2 = manager.add_entity_reference(
-        name="NYC", entity_type=IndalekoNamedEntityType.location,
+        name="NYC",
+        entity_type=IndalekoNamedEntityType.location,
     )
 
     loc3 = manager.add_entity_reference(
-        name="The Big Apple", entity_type=IndalekoNamedEntityType.location,
+        name="The Big Apple",
+        entity_type=IndalekoNamedEntityType.location,
     )
 
     # Merge location entities

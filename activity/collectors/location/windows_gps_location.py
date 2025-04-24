@@ -5,10 +5,9 @@ import datetime
 import os
 import sys
 import uuid
+from typing import Any
+
 import winsdk.windows.devices.geolocation as wdg
-
-from typing import List, Dict, Any
-
 from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -37,7 +36,7 @@ class WindowsGPSLocation(LocationCollector):
     def __init__(self):
         self._name = "GPS Location Service"
         self._location = "GPS Location"
-        self._version = '1.0.0'
+        self._version = "1.0.0"
         self._collector_id = uuid.UUID("750fd846-b6cd-4c81-b774-53ba25905e29")
         self.coords = self.get_coords()
 
@@ -71,23 +70,23 @@ class WindowsGPSLocation(LocationCollector):
             source="GPS",
         )
         kwargs = {
-            'Record': IndalekoRecordDataModel(
+            "Record": IndalekoRecordDataModel(
                 SourceIdentifier={
-                    'Identifier': self._collector_id,
-                    'Version': self._version,
-                    'Description': self._name,
+                    "Identifier": self._collector_id,
+                    "Version": self._version,
+                    "Description": self._name,
                 },
                 Timestamp=data.timestamp,
                 Data=encode_binary_data(location.model_dump_json()),
             ),
-            'Timestamp': data.timestamp,
-            'SemanticAttributes': [],
-            'Location': location,
+            "Timestamp": data.timestamp,
+            "SemanticAttributes": [],
+            "Location": location,
         }
         ic(kwargs)
         return WindowsGPSLocationDataModel(**kwargs)
 
-    def get_collector_characteristics(self) -> List[ActivityDataCharacteristics]:
+    def get_collector_characteristics(self) -> list[ActivityDataCharacteristics]:
         """Get the provider characteristics"""
         return [
             ActivityDataCharacteristics.ACTIVITY_DATA_SPATIAL,
@@ -112,7 +111,7 @@ class WindowsGPSLocation(LocationCollector):
         prior_time_window: datetime.timedelta,
         subsequent_time_window: datetime.timedelta,
         max_entries: int = 0,
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """Retrieve temporal data from the provider"""
         raise NotImplementedError("This method is not implemented yet.")
 
@@ -144,7 +143,7 @@ class WindowsGPSLocation(LocationCollector):
     def get_json_schema(self) -> dict:
         """Get the JSON schema for the provider"""
         return WindowsGPSLocationDataModel(
-            **WindowsGPSLocationDataModel.Config.json_schema_extra["example"]
+            **WindowsGPSLocationDataModel.Config.json_schema_extra["example"],
         ).model_json_schema()
 
     def get_location_name(self) -> str:
@@ -154,19 +153,23 @@ class WindowsGPSLocation(LocationCollector):
             location = ""
         return location
 
-    def get_coordinates(self) -> Dict[str, float]:
+    def get_coordinates(self) -> dict[str, float]:
         """Get the coordinates for the location"""
         return {"latitude": 0.0, "longitude": 0.0}
 
     def get_location_history(
-        self, start_time: datetime.datetime, end_time: datetime.datetime
-    ) -> List[Dict[str, Any]]:
+        self,
+        start_time: datetime.datetime,
+        end_time: datetime.datetime,
+    ) -> list[dict[str, Any]]:
         """Get the location history for the location"""
         raise NotImplementedError("This method is not implemented yet.")
         return []
 
     def get_distance(
-        self, location1: Dict[str, float], location2: Dict[str, float]
+        self,
+        location1: dict[str, float],
+        location2: dict[str, float],
     ) -> float:
         """Get the distance between two locations"""
         raise NotImplementedError("This method is not implemented yet.")

@@ -35,9 +35,6 @@ class UnixFileAttributes:
         """Given an integer representing file attributes on UNIX"""
         file_attributes = []
         for attr in UnixFileAttributes.FILE_ATTRIBUTES:
-            if (
-                attributes & UnixFileAttributes.FILE_ATTRIBUTES[attr]
-                == UnixFileAttributes.FILE_ATTRIBUTES[attr]
-            ):
+            if attributes & UnixFileAttributes.FILE_ATTRIBUTES[attr] == UnixFileAttributes.FILE_ATTRIBUTES[attr]:
                 file_attributes.append(attr)
         return " | ".join(file_attributes)

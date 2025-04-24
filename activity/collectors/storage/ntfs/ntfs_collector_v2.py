@@ -115,7 +115,8 @@ else:
             self._name = kwargs.get("name", "Mock Windows Storage Activity Collector")
             self._provider_id = kwargs.get("provider_id", uuid.uuid4())
             self._description = kwargs.get(
-                "description", "Mock Windows Storage Activity Collector",
+                "description",
+                "Mock Windows Storage Activity Collector",
             )
             self._active = False
             self._volume_handles = {}
@@ -381,15 +382,14 @@ def parse_usn_record(buffer, offset, bytes_returned):
 
     try:
         filename = buffer[offset + filename_offset : offset + filename_end].decode(
-            "utf-16-le", errors="replace",
+            "utf-16-le",
+            errors="replace",
         )
     except UnicodeDecodeError:
         filename = "<invalid filename>"
 
     reasons = [name for flag, name in REASON_FLAGS.items() if record.Reason & flag]
-    attributes = [
-        name for flag, name in ATTRIBUTE_FLAGS.items() if record.FileAttributes & flag
-    ]
+    attributes = [name for flag, name in ATTRIBUTE_FLAGS.items() if record.FileAttributes & flag]
     timestamp = filetime_to_datetime(record.TimeStamp)
 
     return {
@@ -417,18 +417,14 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
     def extract_counters(self) -> dict[str, int]:
         """Extract performance counters."""
         return {
-            "activities_collected": (
-                len(self._activities) if hasattr(self, "_activities") else 0
-            ),
+            "activities_collected": (len(self._activities) if hasattr(self, "_activities") else 0),
             "active": 1 if self._active else 0,
         }
 
     # Service registration information
     indaleko_ntfs_collector_uuid = "7d8f5a92-35c7-41e6-b13d-6c4e89e7f2a5"
     indaleko_ntfs_collector_service_name = "NTFS Storage Activity Collector V2"
-    indaleko_ntfs_collector_service_description = (
-        "Collects storage activities from the NTFS USN Journal"
-    )
+    indaleko_ntfs_collector_service_description = "Collects storage activities from the NTFS USN Journal"
     indaleko_ntfs_collector_service_version = "2.0"
     indaleko_ntfs_collector_service_file_name = "ntfs_collector_v2"
 
@@ -502,14 +498,17 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
         # Initialize with provider-specific values
         kwargs["name"] = kwargs.get("name", self.indaleko_ntfs_collector_service_name)
         kwargs["provider_id"] = kwargs.get(
-            "provider_id", uuid.UUID(self.indaleko_ntfs_collector_uuid),
+            "provider_id",
+            uuid.UUID(self.indaleko_ntfs_collector_uuid),
         )
         kwargs["provider_type"] = StorageProviderType.LOCAL_NTFS
         kwargs["description"] = kwargs.get(
-            "description", self.indaleko_ntfs_collector_service_description,
+            "description",
+            self.indaleko_ntfs_collector_service_description,
         )
         kwargs["version"] = kwargs.get(
-            "version", self.indaleko_ntfs_collector_service_version,
+            "version",
+            self.indaleko_ntfs_collector_service_version,
         )
 
         # Call parent initializer
@@ -546,7 +545,8 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
             # Try to find Indaleko config directory if not specified
             if config_dir is None and os.environ.get("INDALEKO_ROOT"):
                 potential_config_dir = os.path.join(
-                    os.environ.get("INDALEKO_ROOT"), "config",
+                    os.environ.get("INDALEKO_ROOT"),
+                    "config",
                 )
                 if os.path.isdir(potential_config_dir):
                     config_dir = potential_config_dir
@@ -719,7 +719,8 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
             # Start the processing thread
             self._logger.debug("Starting event processing thread")
             self._processing_thread = threading.Thread(
-                target=self._event_processing_thread, daemon=True,
+                target=self._event_processing_thread,
+                daemon=True,
             )
             self._processing_thread.start()
 
@@ -917,7 +918,9 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
 
         # Start a thread to monitor this volume
         journal_thread = threading.Thread(
-            target=self._monitor_usn_journal, args=(volume,), daemon=True,
+            target=self._monitor_usn_journal,
+            args=(volume,),
+            daemon=True,
         )
         self._journal_threads.append(journal_thread)
         journal_thread.start()
@@ -992,7 +995,9 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
                 try:
                     # Read the journal using our implementation
                     buffer, bytes_returned = read_usn_journal(
-                        handle, journal_id, next_usn,
+                        handle,
+                        journal_id,
+                        next_usn,
                     )
                 except Exception as e:
                     ic(f"Error reading USN journal: {e} for usn {next_usn}")
@@ -1045,9 +1050,7 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
                     )
 
                 # Update the next USN for the next read
-                next_usn = struct.unpack_from("<Q", buffer, 0)[
-                    0
-                ]  # Extract NextUsn from buffer
+                next_usn = struct.unpack_from("<Q", buffer, 0)[0]  # Extract NextUsn from buffer
 
                 # Save the USN position for this volume
                 self._last_processed_usn[volume] = next_usn
@@ -1153,10 +1156,7 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
             )
 
             # Skip close events if configured to do so
-            if (
-                activity_type == StorageActivityType.CLOSE
-                and not self._include_close_events
-            ):
+            if activity_type == StorageActivityType.CLOSE and not self._include_close_events:
                 ic(
                     f"Skipping CLOSE event for {file_name} (include_close_events is False)",
                 )
@@ -1193,9 +1193,7 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
                 is_directory=is_directory,
                 provider_type=StorageProviderType.LOCAL_NTFS,
                 provider_id=self._provider_id,
-                item_type=(
-                    StorageItemType.DIRECTORY if is_directory else StorageItemType.FILE
-                ),
+                item_type=(StorageItemType.DIRECTORY if is_directory else StorageItemType.FILE),
             )
 
             # Add the activity
@@ -1258,9 +1256,7 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
                 return StorageActivityType.CREATE
             elif reason_flags & 0x00000200:  # FILE_DELETE
                 return StorageActivityType.DELETE
-            elif (
-                reason_flags & 0x00001000 or reason_flags & 0x00002000
-            ):  # RENAME_OLD_NAME or RENAME_NEW_NAME
+            elif reason_flags & 0x00001000 or reason_flags & 0x00002000:  # RENAME_OLD_NAME or RENAME_NEW_NAME
                 return StorageActivityType.RENAME
             elif reason_flags & 0x00000800:  # SECURITY_CHANGE
                 return StorageActivityType.SECURITY_CHANGE
@@ -1274,9 +1270,7 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
             elif reason_flags & 0x80000000:  # CLOSE
                 return StorageActivityType.CLOSE
             elif (
-                reason_flags & 0x00000001
-                or reason_flags & 0x00000002
-                or reason_flags & 0x00000004
+                reason_flags & 0x00000001 or reason_flags & 0x00000002 or reason_flags & 0x00000004
             ):  # DATA_OVERWRITE, DATA_EXTEND, DATA_TRUNCATION
                 return StorageActivityType.MODIFY
             else:
@@ -1330,15 +1324,15 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
                     # Convert timezone-aware datetime to ISO format string
                     activity_dict = activity.model_dump()
                     if activity_dict.get("timestamp"):
-                        activity_dict["timestamp"] = activity_dict[
-                            "timestamp"
-                        ].isoformat()
+                        activity_dict["timestamp"] = activity_dict["timestamp"].isoformat()
                     activities_json.append(activity_dict)
 
                 json.dump(activities_json, f, indent=2)
 
             self._logger.info(
-                "Saved %d activities to %s", len(self._activities), file_path,
+                "Saved %d activities to %s",
+                len(self._activities),
+                file_path,
             )
             return file_path
         except Exception as e:
@@ -1399,7 +1393,8 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
             offline = keys.get("offline", False)
             platform_class = keys["class"]  # must exist
             return platform_class.load_config_from_file(
-                config_file=str(keys["machine_config_file"]), offline=offline,
+                config_file=str(keys["machine_config_file"]),
+                offline=offline,
             )
 
     @staticmethod
@@ -1440,7 +1435,8 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
         machine_config = cli.handler_mixin.load_machine_config(
             {
                 "machine_config_file": os.path.join(
-                    args.configdir, args.machine_config,
+                    args.configdir,
+                    args.machine_config,
                 ),
                 "offline": args.offline,
                 "class": machine_config_class,
@@ -1454,20 +1450,10 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
         collector = collector_class(
             machine_config=machine_config,
             volumes=volumes,
-            use_volume_guids=(
-                not args.no_volume_guids if hasattr(args, "no_volume_guids") else True
-            ),
-            include_close_events=(
-                args.include_close_events
-                if hasattr(args, "include_close_events")
-                else False
-            ),
-            monitor_interval=(
-                args.monitor_interval if hasattr(args, "monitor_interval") else 1.0
-            ),
-            try_unprivileged=(
-                args.try_unprivileged if hasattr(args, "try_unprivileged") else True
-            ),
+            use_volume_guids=(not args.no_volume_guids if hasattr(args, "no_volume_guids") else True),
+            include_close_events=(args.include_close_events if hasattr(args, "include_close_events") else False),
+            monitor_interval=(args.monitor_interval if hasattr(args, "monitor_interval") else 1.0),
+            try_unprivileged=(args.try_unprivileged if hasattr(args, "try_unprivileged") else True),
             debug=debug,
             timestamp=config_data["Timestamp"],
             output_path=output_file,

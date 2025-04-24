@@ -69,15 +69,18 @@ class BaseLocationDataRecorder(RecorderBase):
     def __init__(self, **kwargs):
         """Initialize the base location data collector."""
         self.min_movement_change_required = kwargs.get(
-            "min_movement_change_required", self.default_min_movement_change_required,
+            "min_movement_change_required",
+            self.default_min_movement_change_required,
         )
         self.max_time_between_updates = kwargs.get(
-            "max_time_between_updates", self.default_max_time_between_updates,
+            "max_time_between_updates",
+            self.default_max_time_between_updates,
         )
         self.provider = kwargs.get("provider", None)
         if self.provider is not None:
             assert isinstance(
-                self.provider, CollectorBase,
+                self.provider,
+                CollectorBase,
             ), f"provider is not an CollectorBase {type(self.provider)}"
 
     @staticmethod
@@ -104,10 +107,7 @@ class BaseLocationDataRecorder(RecorderBase):
         delta_lat = lat2_rad - lat1_rad
         delta_lon = lon2_rad - lon1_rad
 
-        a = (
-            math.sin(delta_lat / 2) ** 2
-            + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(delta_lon / 2) ** 2
-        )
+        a = math.sin(delta_lat / 2) ** 2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(delta_lon / 2) ** 2
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
         distance = 6371 * 1000 * c  # in meters
         ic(distance)
@@ -115,7 +115,8 @@ class BaseLocationDataRecorder(RecorderBase):
 
     @staticmethod
     def compute_time_difference(
-        time1: datetime | str, time2: datetime | str,
+        time1: datetime | str,
+        time2: datetime | str,
     ) -> float:
         """
         Compute the time difference between two times.
@@ -130,10 +131,12 @@ class BaseLocationDataRecorder(RecorderBase):
         Note: this is a simple implementation of the time difference.
         """
         assert isinstance(time1, datetime) or isinstance(
-            time1, str,
+            time1,
+            str,
         ), "time1 is not a datetime or string"
         assert isinstance(time2, datetime) or isinstance(
-            time2, str,
+            time2,
+            str,
         ), "time2 is not a datetime or string"
         if isinstance(time1, str):
             time1 = datetime.fromisoformat(time1)
@@ -143,7 +146,9 @@ class BaseLocationDataRecorder(RecorderBase):
         return delta.total_seconds()
 
     def has_data_changed(
-        self, data1: BaseLocationDataModel, data2: BaseLocationDataModel,
+        self,
+        data1: BaseLocationDataModel,
+        data2: BaseLocationDataModel,
     ) -> bool:
         """Check if the data has changed materially.
 
@@ -160,10 +165,12 @@ class BaseLocationDataRecorder(RecorderBase):
         if data1 is None or data2 is None:
             return True
         assert isinstance(
-            data1, BaseLocationDataModel,
+            data1,
+            BaseLocationDataModel,
         ), f"data1 is not a BaseLocationDataModel {type(data1)}"
         assert isinstance(
-            data2, BaseLocationDataModel,
+            data2,
+            BaseLocationDataModel,
         ), f"data2 is not a BaseLocationDataModel {type(data2)}"
         distance = BaseLocationDataRecorder.compute_distance(
             data1.Location.latitude,
@@ -172,12 +179,10 @@ class BaseLocationDataRecorder(RecorderBase):
             data2.Location.longitude,
         )
         time_delta = BaseLocationDataRecorder.compute_time_difference(
-            data1.Location.timestamp, data2.Location.timestamp,
+            data1.Location.timestamp,
+            data2.Location.timestamp,
         )
-        return (
-            distance > self.min_movement_change_required
-            or time_delta > self.max_time_between_updates
-        )
+        return distance > self.min_movement_change_required or time_delta > self.max_time_between_updates
 
     @staticmethod
     def get_latest_db_update_dict(collection: IndalekoCollection) -> dict | None:
@@ -196,7 +201,8 @@ class BaseLocationDataRecorder(RecorderBase):
         special characters (e.g., the UUID we use).
         """
         assert isinstance(
-            collection, IndalekoCollection,
+            collection,
+            IndalekoCollection,
         ), f"collection is not an IndalekoCollection {type(collection)}"
         query = """
             FOR doc IN @@collection
@@ -236,13 +242,16 @@ class BaseLocationDataRecorder(RecorderBase):
             insert the record into the database.
         """
         assert isinstance(source_data, IndalekoSourceIdentifierDataModel) or isinstance(
-            source_data, dict,
+            source_data,
+            dict,
         ), f"source_data is not an IndalekoSourceIdentifierDataModel or dict {type(source_data)}"
         assert isinstance(location_data, BaseLocationDataModel) or isinstance(
-            location_data, dict,
+            location_data,
+            dict,
         ), f"location_data is not a BaseLocationDataModel or dict {type(location_data)}"
         assert isinstance(
-            semantic_attributes, list,
+            semantic_attributes,
+            list,
         ), f"semantic_attributes is not a List {type(semantic_attributes)}"
         if isinstance(location_data, BaseLocationDataModel):
             location_data = json.loads(location_data.model_dump_json())
@@ -306,7 +315,8 @@ class BaseLocationDataRecorder(RecorderBase):
         """
         if hasattr(self, "provider"):
             assert isinstance(
-                self.provider, CollectorBase,
+                self.provider,
+                CollectorBase,
             ), f"provider is not an CollectorBase {type(self.provider)}"
             return self.provider.get_collector_characteristics()
         return None
@@ -343,7 +353,8 @@ class BaseLocationDataRecorder(RecorderBase):
         """
         if hasattr(self, "provider"):
             assert isinstance(
-                self.provider, CollectorBase,
+                self.provider,
+                CollectorBase,
             ), f"provider is not an CollectorBase {type(self.provider)}"
             return self.provider.get_collectorr_name()
         return None
@@ -352,7 +363,8 @@ class BaseLocationDataRecorder(RecorderBase):
         """Get the UUID for the provider"""
         if hasattr(self, "provider"):
             assert isinstance(
-                self.provider, CollectorBase,
+                self.provider,
+                CollectorBase,
             ), f"provider is not an CollectorBase {type(self.provider)}"
             return self.provider.get_provider_id()
         return None
@@ -373,7 +385,8 @@ class BaseLocationDataRecorder(RecorderBase):
         """
         if hasattr(self, "provider"):
             assert isinstance(
-                self.provider, CollectorBase,
+                self.provider,
+                CollectorBase,
             ), f"provider is not an CollectorBase {type(self.provider)}"
             return self.provider.retrieve_data(data_id)
         return None
@@ -385,7 +398,8 @@ class BaseLocationDataRecorder(RecorderBase):
         """
         if hasattr(self, "provider"):
             assert isinstance(
-                self.provider, CollectorBase,
+                self.provider,
+                CollectorBase,
             ), f"provider is not an CollectorBase {type(self.provider)}"
             return self.provider.cache_duration()
         return None
@@ -403,7 +417,8 @@ class BaseLocationDataRecorder(RecorderBase):
         provider_description = ""
         if hasattr(self, "provider"):
             assert isinstance(
-                self.provider, CollectorBase,
+                self.provider,
+                CollectorBase,
             ), f"provider is not an CollectorBase {type(self.provider)}"
             provider_description += self.provider.get_description()
         semantic_attributes = "\n"
@@ -434,7 +449,8 @@ class BaseLocationDataRecorder(RecorderBase):
         """
         if hasattr(self, "provider"):
             assert isinstance(
-                self.provider, CollectorBase,
+                self.provider,
+                CollectorBase,
             ), f"provider is not an CollectorBase {type(self.provider)}"
             return self.provider.get_json_schema()
         return None
@@ -457,7 +473,8 @@ class BaseLocationDataRecorder(RecorderBase):
         """
         if hasattr(self, "provider"):
             assert isinstance(
-                self.provider, CollectorBase,
+                self.provider,
+                CollectorBase,
             ), f"provider is not an CollectorBase {type(self.provider)}"
             return self.provider.get_cursor(activity_context)
         return None

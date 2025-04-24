@@ -180,11 +180,7 @@ class ExifCollector(SemanticCollector):
 
                     # Get standard EXIF data from Pillow
                     if hasattr(img, "_getexif") and img._getexif():
-                        exif = {
-                            TAGS.get(tag, tag): value
-                            for tag, value in img._getexif().items()
-                            if tag in TAGS
-                        }
+                        exif = {TAGS.get(tag, tag): value for tag, value in img._getexif().items() if tag in TAGS}
                         pil_exif.update(exif)
             except Exception as e:
                 logging.warning(
@@ -277,13 +273,15 @@ class ExifCollector(SemanticCollector):
         try:
             if "GPS GPSLatitude" in exif_data and "GPS GPSLatitudeRef" in exif_data:
                 lat = self._convert_to_decimal_degrees(
-                    exif_data["GPS GPSLatitude"], exif_data["GPS GPSLatitudeRef"],
+                    exif_data["GPS GPSLatitude"],
+                    exif_data["GPS GPSLatitudeRef"],
                 )
                 gps_latitude = lat
 
             if "GPS GPSLongitude" in exif_data and "GPS GPSLongitudeRef" in exif_data:
                 lon = self._convert_to_decimal_degrees(
-                    exif_data["GPS GPSLongitude"], exif_data["GPS GPSLongitudeRef"],
+                    exif_data["GPS GPSLongitude"],
+                    exif_data["GPS GPSLongitudeRef"],
                 )
                 gps_longitude = lon
 
@@ -366,7 +364,8 @@ class ExifCollector(SemanticCollector):
         return decimal_degrees
 
     def extract_camera_data(
-        self, exif_data: dict[str, Any],
+        self,
+        exif_data: dict[str, Any],
     ) -> ExifCameraData | None:
         """
         Extract camera equipment information from EXIF data.
@@ -418,7 +417,8 @@ class ExifCollector(SemanticCollector):
         return None
 
     def extract_capture_settings(
-        self, exif_data: dict[str, Any],
+        self,
+        exif_data: dict[str, Any],
     ) -> ExifCaptureSettings | None:
         """
         Extract capture settings from EXIF data.
@@ -640,7 +640,8 @@ class ExifCollector(SemanticCollector):
             }
             interp_str = str(exif_data["EXIF PhotometricInterpretation"])
             photometric_interpretation = interpretation_codes.get(
-                interp_str, interp_str,
+                interp_str,
+                interp_str,
             )
 
         if "EXIF Orientation" in exif_data:
@@ -897,7 +898,9 @@ class ExifCollector(SemanticCollector):
         return exif_model
 
     def extract_exif_from_file(
-        self, file_path: str, object_id: uuid.UUID,
+        self,
+        file_path: str,
+        object_id: uuid.UUID,
     ) -> ExifDataModel | None:
         """
         Extract EXIF data from a file and create an ExifDataModel.

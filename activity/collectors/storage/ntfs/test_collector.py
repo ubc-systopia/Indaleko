@@ -25,16 +25,16 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import argparse
+import logging
 import os
+import random
 import sys
 import time
-import logging
-import random
-import argparse
 import traceback
 
 # Standard Python check for Windows platform
-IS_WINDOWS = sys.platform.startswith('win')
+IS_WINDOWS = sys.platform.startswith("win")
 
 # Set up Indaleko root
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -48,11 +48,14 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # Import local modules with error handling
 try:
     # Try imports required for the collector
-    from activity.collectors.storage.ntfs.ntfs_collector \
-        import NtfsStorageActivityCollector
+    from activity.collectors.storage.ntfs.ntfs_collector import (
+        NtfsStorageActivityCollector,
+    )
 except ImportError as e:
     print(f"ERROR: Could not import required modules: {e}")
-    print("Make sure you're running from the right directory or check your Python path.")
+    print(
+        "Make sure you're running from the right directory or check your Python path.",
+    )
     sys.exit(1)
 
 
@@ -73,7 +76,7 @@ def create_test_file(volume_path):
 
         # Create test file
         filename = os.path.join(test_dir, f"test_file_{int(time.time())}.txt")
-        with open(filename, 'w') as f:
+        with open(filename, "w") as f:
             f.write(f"Test file created at {time.time()}\n")
             f.write(f"Random data: {random.randint(1000, 9999)}\n")
 
@@ -88,16 +91,22 @@ def main():
     """Main function to run the collector test."""
     parser = argparse.ArgumentParser(description="Test the NTFS activity collector")
     parser.add_argument("--volume", default="C:", help="Volume to monitor (e.g., C:)")
-    parser.add_argument("--duration", type=int, default=30,
-                      help="Duration in seconds to run the test (0 for continuous)")
+    parser.add_argument(
+        "--duration",
+        type=int,
+        default=30,
+        help="Duration in seconds to run the test (0 for continuous)",
+    )
     parser.add_argument("--mock", action="store_true", help="Use mock data")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     args = parser.parse_args()
 
     # Basic log configuration
     log_level = logging.DEBUG if args.debug else logging.INFO
-    logging.basicConfig(level=log_level,
-                       format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logging.basicConfig(
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
 
     # Print configuration
     print("=== NTFS Collector Test ===")
@@ -114,7 +123,7 @@ def main():
             volumes=[args.volume],
             auto_start=False,
             mock=args.mock,
-            debug=args.debug
+            debug=args.debug,
         )
 
         # Start monitoring
@@ -180,11 +189,11 @@ def main():
         # Show some recent activities
         if activities:
             print("\nMost recent activities:")
-            for i, activity in enumerate(activities[-min(5, len(activities)):]):
-                activity_type = getattr(activity, 'activity_type', 'Unknown')
-                file_name = getattr(activity, 'file_name', 'Unknown')
+            for i, activity in enumerate(activities[-min(5, len(activities)) :]):
+                activity_type = getattr(activity, "activity_type", "Unknown")
+                file_name = getattr(activity, "file_name", "Unknown")
                 print(f"  {i+1}. {activity_type} - {file_name}")
-                if hasattr(activity, 'file_path'):
+                if hasattr(activity, "file_path"):
                     print(f"     Path: {activity.file_path}")
         else:
             print("\nNo activities were detected.")
@@ -212,10 +221,10 @@ if __name__ == "__main__":
     # Check for required Windows dependencies if on Windows
     if IS_WINDOWS:
         try:
-            import win32file
+            import pywintypes
             import win32api
             import win32con
-            import pywintypes
+            import win32file
         except ImportError:
             print("ERROR: This test requires the pywin32 package on Windows.")
             print("       Please install it using: pip install pywin32")

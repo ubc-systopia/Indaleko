@@ -61,13 +61,16 @@ class CrossSourceEvent(BaseModel):
     )
     event_type: str = Field(..., description="Type of event")
     attributes: dict[str, Any] = Field(
-        default_factory=dict, description="Attributes of the event",
+        default_factory=dict,
+        description="Attributes of the event",
     )
     entities: list[str] = Field(
-        default_factory=list, description="Entities involved in the event",
+        default_factory=list,
+        description="Entities involved in the event",
     )
     importance: float = Field(
-        default=0.5, description="Importance score for this event (0.0-1.0)",
+        default=0.5,
+        description="Importance score for this event (0.0-1.0)",
     )
 
     def get_event_signature(self) -> str:
@@ -85,29 +88,36 @@ class CrossSourcePattern(BaseModel):
     pattern_name: str = Field(..., description="Name of the pattern")
     description: str = Field(..., description="Description of the pattern")
     confidence: float = Field(
-        default=0.5, description="Confidence in this pattern (0.0-1.0)",
+        default=0.5,
+        description="Confidence in this pattern (0.0-1.0)",
     )
     source_types: list[DataSourceType] = Field(
-        default_factory=list, description="Data sources involved in this pattern",
+        default_factory=list,
+        description="Data sources involved in this pattern",
     )
     event_sequence: list[str] = Field(
-        default_factory=list, description="Sequence of event signatures in this pattern",
+        default_factory=list,
+        description="Sequence of event signatures in this pattern",
     )
     temporal_constraints: dict[str, Any] = Field(
-        default_factory=dict, description="Temporal constraints on the pattern",
+        default_factory=dict,
+        description="Temporal constraints on the pattern",
     )
     entities_involved: list[str] = Field(
-        default_factory=list, description="Entities involved in this pattern",
+        default_factory=list,
+        description="Entities involved in this pattern",
     )
     observation_count: int = Field(
-        default=1, description="Number of times this pattern was observed",
+        default=1,
+        description="Number of times this pattern was observed",
     )
     last_observed: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         description="When this pattern was last observed",
     )
     attributes: dict[str, Any] = Field(
-        default_factory=dict, description="Additional attributes of this pattern",
+        default_factory=dict,
+        description="Additional attributes of this pattern",
     )
 
 
@@ -119,27 +129,33 @@ class CrossSourceCorrelation(BaseModel):
         description="Unique identifier for this correlation",
     )
     source_events: list[str] = Field(
-        default_factory=list, description="Event IDs involved in this correlation",
+        default_factory=list,
+        description="Event IDs involved in this correlation",
     )
     source_types: list[DataSourceType] = Field(
-        default_factory=list, description="Data sources involved in this correlation",
+        default_factory=list,
+        description="Data sources involved in this correlation",
     )
     confidence: float = Field(
-        default=0.5, description="Confidence in this correlation (0.0-1.0)",
+        default=0.5,
+        description="Confidence in this correlation (0.0-1.0)",
     )
     relationship_type: str = Field(
-        ..., description="Type of relationship between events",
+        ...,
+        description="Type of relationship between events",
     )
     description: str = Field(..., description="Description of the correlation")
     entities_involved: list[str] = Field(
-        default_factory=list, description="Entities involved in this correlation",
+        default_factory=list,
+        description="Entities involved in this correlation",
     )
     timestamp: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         description="When this correlation was detected",
     )
     attributes: dict[str, Any] = Field(
-        default_factory=dict, description="Additional attributes of this correlation",
+        default_factory=dict,
+        description="Additional attributes of this correlation",
     )
 
 
@@ -149,17 +165,21 @@ class LocationContext(BaseModel):
     location_id: str = Field(..., description="Identifier for this location")
     location_name: str | None = Field(None, description="Name of the location")
     location_type: str = Field(
-        ..., description="Type of location (e.g., 'home', 'work', 'other')",
+        ...,
+        description="Type of location (e.g., 'home', 'work', 'other')",
     )
     coordinates: dict[str, float] | None = Field(
-        None, description="Geographic coordinates",
+        None,
+        description="Geographic coordinates",
     )
     address: dict[str, str] | None = Field(None, description="Address information")
     attributes: dict[str, Any] = Field(
-        default_factory=dict, description="Additional attributes",
+        default_factory=dict,
+        description="Additional attributes",
     )
     visit_count: int = Field(
-        default=1, description="Number of times this location was visited",
+        default=1,
+        description="Number of times this location was visited",
     )
     first_visit: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
@@ -170,10 +190,12 @@ class LocationContext(BaseModel):
         description="Last visit to this location",
     )
     average_duration: float | None = Field(
-        None, description="Average duration of visits in minutes",
+        None,
+        description="Average duration of visits in minutes",
     )
     typical_activities: list[str] = Field(
-        default_factory=list, description="Typical activities at this location",
+        default_factory=list,
+        description="Typical activities at this location",
     )
 
 
@@ -185,7 +207,8 @@ class DeviceContext(BaseModel):
     device_type: str = Field(..., description="Type of device")
     platform: str | None = Field(None, description="Operating system or platform")
     attributes: dict[str, Any] = Field(
-        default_factory=dict, description="Additional attributes",
+        default_factory=dict,
+        description="Additional attributes",
     )
     usage_count: int = Field(default=1, description="Number of uses of this device")
     first_use: datetime = Field(
@@ -197,7 +220,8 @@ class DeviceContext(BaseModel):
         description="Last use of this device",
     )
     typical_activities: list[str] = Field(
-        default_factory=list, description="Typical activities on this device",
+        default_factory=list,
+        description="Typical activities on this device",
     )
 
 
@@ -205,19 +229,24 @@ class ContextualData(BaseModel):
     """Collection of contextual information for cross-source analysis."""
 
     locations: dict[str, LocationContext] = Field(
-        default_factory=dict, description="Location contexts",
+        default_factory=dict,
+        description="Location contexts",
     )
     devices: dict[str, DeviceContext] = Field(
-        default_factory=dict, description="Device contexts",
+        default_factory=dict,
+        description="Device contexts",
     )
     time_contexts: dict[str, dict[str, Any]] = Field(
-        default_factory=dict, description="Time-based contextual information",
+        default_factory=dict,
+        description="Time-based contextual information",
     )
     activity_contexts: dict[str, dict[str, Any]] = Field(
-        default_factory=dict, description="Activity-based contextual information",
+        default_factory=dict,
+        description="Activity-based contextual information",
     )
     entity_relationships: dict[str, list[str]] = Field(
-        default_factory=dict, description="Relationships between entities",
+        default_factory=dict,
+        description="Relationships between entities",
     )
 
 
@@ -225,25 +254,32 @@ class CrossSourcePatternsData(BaseModel):
     """Data model for cross-source pattern detection."""
 
     events: dict[str, CrossSourceEvent] = Field(
-        default_factory=dict, description="Collection of events from different sources",
+        default_factory=dict,
+        description="Collection of events from different sources",
     )
     event_timeline: list[str] = Field(
-        default_factory=list, description="Chronological timeline of event IDs",
+        default_factory=list,
+        description="Chronological timeline of event IDs",
     )
     patterns: list[CrossSourcePattern] = Field(
-        default_factory=list, description="Detected patterns across data sources",
+        default_factory=list,
+        description="Detected patterns across data sources",
     )
     correlations: list[CrossSourceCorrelation] = Field(
-        default_factory=list, description="Detected correlations between events",
+        default_factory=list,
+        description="Detected correlations between events",
     )
     contextual_data: ContextualData = Field(
-        default_factory=ContextualData, description="Contextual information",
+        default_factory=ContextualData,
+        description="Contextual information",
     )
     source_statistics: dict[DataSourceType, dict[str, Any]] = Field(
-        default_factory=dict, description="Statistics for each data source",
+        default_factory=dict,
+        description="Statistics for each data source",
     )
     last_update: dict[DataSourceType, datetime] = Field(
-        default_factory=dict, description="Last update timestamp for each source",
+        default_factory=dict,
+        description="Last update timestamp for each source",
     )
 
 
@@ -401,9 +437,7 @@ class CrossSourcePatternDetector:
 
             # Update last update timestamp
             if events:
-                self.data.last_update[DataSourceType.NTFS] = max(
-                    event.timestamp for event in events
-                )
+                self.data.last_update[DataSourceType.NTFS] = max(event.timestamp for event in events)
 
         except Exception as e:
             self.logger.error(f"Error collecting NTFS events: {e}")
@@ -411,7 +445,8 @@ class CrossSourcePatternDetector:
         return events
 
     def _collect_collaboration_events(
-        self, max_events: int = 1000,
+        self,
+        max_events: int = 1000,
     ) -> list[CrossSourceEvent]:
         """
         Collect collaboration events (Discord, Outlook).
@@ -427,9 +462,7 @@ class CrossSourcePatternDetector:
         try:
             # Check collections
             collab_collections = ["DiscordShares", "OutlookShares"]
-            available_collections = [
-                c for c in collab_collections if self.db_config.db.has_collection(c)
-            ]
+            available_collections = [c for c in collab_collections if self.db_config.db.has_collection(c)]
 
             if not available_collections:
                 return events
@@ -455,18 +488,12 @@ class CrossSourcePatternDetector:
 
                         # Extract attributes
                         attributes = {}
-                        if (
-                            "Collaboration" in doc
-                            and "Attributes" in doc["Collaboration"]
-                        ):
+                        if "Collaboration" in doc and "Attributes" in doc["Collaboration"]:
                             attributes = doc["Collaboration"]["Attributes"]
 
                         # Determine event type
                         event_type = "file_share"
-                        if (
-                            "Collaboration" in doc
-                            and "EventType" in doc["Collaboration"]
-                        ):
+                        if "Collaboration" in doc and "EventType" in doc["Collaboration"]:
                             event_type = doc["Collaboration"]["EventType"].lower()
 
                         # Extract entities
@@ -496,9 +523,7 @@ class CrossSourcePatternDetector:
                         events.append(event)
 
                         # Update statistics
-                        stats = self.data.source_statistics[
-                            DataSourceType.COLLABORATION
-                        ]
+                        stats = self.data.source_statistics[DataSourceType.COLLABORATION]
                         stats["event_count"] += 1
                         stats["event_types"].add(event_type)
                         if not stats["first_event"] or timestamp < stats["first_event"]:
@@ -511,9 +536,7 @@ class CrossSourcePatternDetector:
 
             # Update last update timestamp
             if events:
-                self.data.last_update[DataSourceType.COLLABORATION] = max(
-                    event.timestamp for event in events
-                )
+                self.data.last_update[DataSourceType.COLLABORATION] = max(event.timestamp for event in events)
 
         except Exception as e:
             self.logger.error(f"Error collecting collaboration events: {e}")
@@ -521,7 +544,8 @@ class CrossSourcePatternDetector:
         return events
 
     def _collect_location_events(
-        self, max_events: int = 1000,
+        self,
+        max_events: int = 1000,
     ) -> list[CrossSourceEvent]:
         """
         Collect location events.
@@ -537,9 +561,7 @@ class CrossSourcePatternDetector:
         try:
             # Check collections
             location_collections = ["GPSLocation", "WiFiLocation"]
-            available_collections = [
-                c for c in location_collections if self.db_config.db.has_collection(c)
-            ]
+            available_collections = [c for c in location_collections if self.db_config.db.has_collection(c)]
 
             if not available_collections:
                 return events
@@ -571,9 +593,7 @@ class CrossSourcePatternDetector:
                         # Set location attributes
                         if "Location" in doc:
                             if "Coordinates" in doc["Location"]:
-                                attributes["coordinates"] = doc["Location"][
-                                    "Coordinates"
-                                ]
+                                attributes["coordinates"] = doc["Location"]["Coordinates"]
                             if "Accuracy" in doc["Location"]:
                                 attributes["accuracy"] = doc["Location"]["Accuracy"]
 
@@ -613,9 +633,7 @@ class CrossSourcePatternDetector:
 
             # Update last update timestamp
             if events:
-                self.data.last_update[DataSourceType.LOCATION] = max(
-                    event.timestamp for event in events
-                )
+                self.data.last_update[DataSourceType.LOCATION] = max(event.timestamp for event in events)
 
         except Exception as e:
             self.logger.error(f"Error collecting location events: {e}")
@@ -637,9 +655,7 @@ class CrossSourcePatternDetector:
         try:
             # Check collections
             ambient_collections = ["SpotifyActivity", "SmartThermostat"]
-            available_collections = [
-                c for c in ambient_collections if self.db_config.db.has_collection(c)
-            ]
+            available_collections = [c for c in ambient_collections if self.db_config.db.has_collection(c)]
 
             if not available_collections:
                 return events
@@ -682,9 +698,7 @@ class CrossSourcePatternDetector:
                         elif collection_name == "SmartThermostat":
                             event_type = "temperature_setting"
                             if "Ambient" in doc and "Temperature" in doc["Ambient"]:
-                                attributes["temperature"] = doc["Ambient"][
-                                    "Temperature"
-                                ]
+                                attributes["temperature"] = doc["Ambient"]["Temperature"]
                             if "Ambient" in doc and "Mode" in doc["Ambient"]:
                                 attributes["mode"] = doc["Ambient"]["Mode"]
 
@@ -717,9 +731,7 @@ class CrossSourcePatternDetector:
 
             # Update last update timestamp
             if events:
-                self.data.last_update[DataSourceType.AMBIENT] = max(
-                    event.timestamp for event in events
-                )
+                self.data.last_update[DataSourceType.AMBIENT] = max(event.timestamp for event in events)
 
         except Exception as e:
             self.logger.error(f"Error collecting ambient events: {e}")
@@ -816,9 +828,7 @@ class CrossSourcePatternDetector:
 
             # Update last update timestamp
             if events:
-                self.data.last_update[DataSourceType.QUERY] = max(
-                    event.timestamp for event in events
-                )
+                self.data.last_update[DataSourceType.QUERY] = max(event.timestamp for event in events)
 
         except Exception as e:
             self.logger.error(f"Error collecting query events: {e}")
@@ -828,9 +838,7 @@ class CrossSourcePatternDetector:
     def _update_event_timeline(self) -> None:
         """Update the chronological timeline of events."""
         # Sort events by timestamp
-        event_ids_with_timestamps = [
-            (event_id, event.timestamp) for event_id, event in self.data.events.items()
-        ]
+        event_ids_with_timestamps = [(event_id, event.timestamp) for event_id, event in self.data.events.items()]
         sorted_events = sorted(event_ids_with_timestamps, key=lambda x: x[1])
 
         # Update timeline
@@ -853,11 +861,7 @@ class CrossSourcePatternDetector:
         # Try to get location ID from coordinates
         if "coordinates" in event.attributes:
             coords = event.attributes["coordinates"]
-            if (
-                isinstance(coords, dict)
-                and "latitude" in coords
-                and "longitude" in coords
-            ):
+            if isinstance(coords, dict) and "latitude" in coords and "longitude" in coords:
                 # Round coordinates for stable ID
                 lat = round(coords["latitude"], 5)
                 lon = round(coords["longitude"], 5)
@@ -896,7 +900,9 @@ class CrossSourcePatternDetector:
                 self.data.contextual_data.locations[location_id] = loc_context
 
     def detect_patterns(
-        self, window_size: int = 20, min_occurrences: int = 2,
+        self,
+        window_size: int = 20,
+        min_occurrences: int = 2,
     ) -> list[CrossSourcePattern]:
         """
         Detect cross-source patterns in the collected events.
@@ -916,7 +922,8 @@ class CrossSourcePatternDetector:
 
         # Detect sequential patterns
         sequential_patterns = self._detect_sequential_patterns(
-            window_size, min_occurrences,
+            window_size,
+            min_occurrences,
         )
         new_patterns.extend(sequential_patterns)
 
@@ -931,7 +938,9 @@ class CrossSourcePatternDetector:
         return new_patterns
 
     def _detect_sequential_patterns(
-        self, window_size: int, min_occurrences: int,
+        self,
+        window_size: int,
+        min_occurrences: int,
     ) -> list[CrossSourcePattern]:
         """
         Detect sequential patterns across different sources with enhanced statistical analysis.
@@ -968,10 +977,7 @@ class CrossSourcePatternDetector:
 
         # Calculate baseline probabilities
         total_events = len(timeline)
-        source_type_probs = {
-            source_type: count / total_events
-            for source_type, count in source_type_counts.items()
-        }
+        source_type_probs = {source_type: count / total_events for source_type, count in source_type_counts.items()}
 
         # Scan through timeline with sliding window
         for i in range(total_windows):
@@ -1031,7 +1037,8 @@ class CrossSourcePatternDetector:
                         pattern.last_observed = datetime.now(UTC)
                         # Use significance to adjust confidence
                         pattern.confidence = min(
-                            0.95, pattern.confidence + 0.05 * significance_score,
+                            0.95,
+                            pattern.confidence + 0.05 * significance_score,
                         )
                         is_known = True
                         break
@@ -1063,9 +1070,7 @@ class CrossSourcePatternDetector:
 
                         # Generate a pattern name and description
                         source_names = [s.value for s in source_types]
-                        pattern_name = (
-                            f"Cross-source pattern: {' + '.join(source_names)}"
-                        )
+                        pattern_name = f"Cross-source pattern: {' + '.join(source_names)}"
 
                         # Generate description
                         description = "Sequential pattern involving "
@@ -1088,23 +1093,18 @@ class CrossSourcePatternDetector:
                                     entities.update(event.entities)
 
                         # Create pattern with confidence based on statistical significance
-                        initial_confidence = (
-                            0.5
-                            + (significance_score * 0.3)
-                            + (temporal_clustering * 0.2)
-                        )
+                        initial_confidence = 0.5 + (significance_score * 0.3) + (temporal_clustering * 0.2)
                         pattern = CrossSourcePattern(
                             pattern_name=pattern_name,
                             description=description,
                             confidence=min(
-                                0.9, initial_confidence,
+                                0.9,
+                                initial_confidence,
                             ),  # Cap at 0.9 initially
                             source_types=list(source_types),
                             event_sequence=event_types,
                             observation_count=count,
-                            entities_involved=list(entities)[
-                                :10
-                            ],  # Limit to top 10 entities
+                            entities_involved=list(entities)[:10],  # Limit to top 10 entities
                             attributes={
                                 "significance_score": significance_score,
                                 "temporal_clustering": temporal_clustering,
@@ -1239,7 +1239,8 @@ class CrossSourcePatternDetector:
         return min(1.0, clustering_score)
 
     def _detect_location_patterns(
-        self, min_occurrences: int,
+        self,
+        min_occurrences: int,
     ) -> list[CrossSourcePattern]:
         """
         Detect patterns related to locations.
@@ -1271,11 +1272,7 @@ class CrossSourcePatternDetector:
                     # Check if this event is for the current location
                     if "coordinates" in event.attributes:
                         coords = event.attributes["coordinates"]
-                        if (
-                            isinstance(coords, dict)
-                            and "latitude" in coords
-                            and "longitude" in coords
-                        ):
+                        if isinstance(coords, dict) and "latitude" in coords and "longitude" in coords:
                             # Round coordinates for comparison
                             lat = round(coords["latitude"], 5)
                             lon = round(coords["longitude"], 5)
@@ -1314,23 +1311,19 @@ class CrossSourcePatternDetector:
                             if pattern.source_types == [
                                 DataSourceType.LOCATION,
                                 source_type,
-                            ] and any(
-                                location_id in entity
-                                for entity in pattern.entities_involved
-                            ):
+                            ] and any(location_id in entity for entity in pattern.entities_involved):
                                 pattern.observation_count += 1
                                 pattern.last_observed = datetime.now(UTC)
                                 pattern.confidence = min(
-                                    0.95, pattern.confidence + 0.05,
+                                    0.95,
+                                    pattern.confidence + 0.05,
                                 )
                                 pattern_exists = True
                                 break
 
                         if not pattern_exists:
                             # Create a new location-based pattern
-                            location_name = (
-                                location_context.location_name or location_id
-                            )
+                            location_name = location_context.location_name or location_id
                             pattern_name = f"Location pattern: {location_name} + {source_type.value}"
 
                             description = f"Activities at {location_name} frequently involve {source_type.value} events"
@@ -1353,7 +1346,8 @@ class CrossSourcePatternDetector:
         return new_patterns
 
     def _detect_temporal_patterns(
-        self, min_occurrences: int,
+        self,
+        min_occurrences: int,
     ) -> list[CrossSourcePattern]:
         """
         Detect temporal patterns across different sources.
@@ -1541,9 +1535,7 @@ class CrossSourcePatternDetector:
                 # First event
                 current_window.append(event_id)
                 last_timestamp = event.timestamp
-            elif (
-                event.timestamp - last_timestamp
-            ).total_seconds() <= time_window_minutes * 60:
+            elif (event.timestamp - last_timestamp).total_seconds() <= time_window_minutes * 60:
                 # Event is within time window of last event
                 current_window.append(event_id)
                 last_timestamp = max(last_timestamp, event.timestamp)
@@ -1601,14 +1593,10 @@ class CrossSourcePatternDetector:
                         continue
 
                     # Get event objects
-                    events1_objs = [
-                        self.data.events.get(event_id) for event_id in events1
-                    ]
+                    events1_objs = [self.data.events.get(event_id) for event_id in events1]
                     events1_objs = [e for e in events1_objs if e is not None]
 
-                    events2_objs = [
-                        self.data.events.get(event_id) for event_id in events2
-                    ]
+                    events2_objs = [self.data.events.get(event_id) for event_id in events2]
                     events2_objs = [e for e in events2_objs if e is not None]
 
                     # Check if events are close enough within the adaptive window
@@ -1619,11 +1607,7 @@ class CrossSourcePatternDetector:
                         continue
 
                     # Find minimum time difference between any event pair
-                    min_time_diff = min(
-                        abs((t1 - t2).total_seconds())
-                        for t1 in timestamps1
-                        for t2 in timestamps2
-                    )
+                    min_time_diff = min(abs((t1 - t2).total_seconds()) for t1 in timestamps1 for t2 in timestamps2)
 
                     # Skip if minimum time diff exceeds the adaptive window
                     if min_time_diff > actual_window_minutes * 60:
@@ -1649,11 +1633,7 @@ class CrossSourcePatternDetector:
                         # Calculate Jaccard similarity for entity overlap
                         common_entities = entities1.intersection(entities2)
                         all_entities = entities1.union(entities2)
-                        entity_overlap = (
-                            len(common_entities) / len(all_entities)
-                            if all_entities
-                            else 0.0
-                        )
+                        entity_overlap = len(common_entities) / len(all_entities) if all_entities else 0.0
 
                     # Skip if entity overlap is too low
                     if entity_overlap < min_entity_overlap:
@@ -1665,14 +1645,13 @@ class CrossSourcePatternDetector:
 
                     # Calculate statistical significance of correlation
                     expected_coincidence = (
-                        (len(events1_objs) / len(timeline))
-                        * (len(events2_objs) / len(timeline))
-                        * len(window)
+                        (len(events1_objs) / len(timeline)) * (len(events2_objs) / len(timeline)) * len(window)
                     )
 
                     # If observed coincidence is much higher than expected, correlation is significant
                     coincidence_lift = len(correlation_events) / max(
-                        1.0, expected_coincidence,
+                        1.0,
+                        expected_coincidence,
                     )
 
                     # Cap lift at a reasonable value
@@ -1680,7 +1659,8 @@ class CrossSourcePatternDetector:
 
                     # Calculate time proximity (normalized by adaptive window)
                     time_proximity = max(
-                        0.0, 1.0 - min_time_diff / (actual_window_minutes * 60),
+                        0.0,
+                        1.0 - min_time_diff / (actual_window_minutes * 60),
                     )
 
                     # Combine factors to calculate confidence:
@@ -1689,9 +1669,7 @@ class CrossSourcePatternDetector:
                     # - Coincidence lift: how much more often do these events co-occur than expected
                     base_confidence = min_confidence
                     confidence = base_confidence + (1.0 - base_confidence) * (
-                        (0.4 * time_proximity)
-                        + (0.3 * entity_overlap)
-                        + (0.3 * (coincidence_lift / 10.0))
+                        (0.4 * time_proximity) + (0.3 * entity_overlap) + (0.3 * (coincidence_lift / 10.0))
                     )
 
                     # If confidence is too low, skip
@@ -1702,9 +1680,7 @@ class CrossSourcePatternDetector:
                     src1_name = source_type1.value.capitalize()
                     src2_name = source_type2.value.capitalize()
 
-                    description = (
-                        f"Correlation between {src1_name} and {src2_name} events"
-                    )
+                    description = f"Correlation between {src1_name} and {src2_name} events"
 
                     # Add more detail for high-confidence correlations
                     if confidence > 0.8:
@@ -1751,7 +1727,8 @@ class CrossSourcePatternDetector:
         return new_correlations
 
     def generate_suggestions(
-        self, max_suggestions: int = 5,
+        self,
+        max_suggestions: int = 5,
     ) -> list[ProactiveSuggestion]:
         """
         Generate proactive suggestions based on detected patterns and correlations.
@@ -1774,7 +1751,9 @@ class CrossSourcePatternDetector:
 
         # Sort by confidence and limit
         sorted_suggestions = sorted(
-            suggestions, key=lambda s: s.confidence, reverse=True,
+            suggestions,
+            key=lambda s: s.confidence,
+            reverse=True,
         )
         return sorted_suggestions[:max_suggestions]
 
@@ -1800,20 +1779,13 @@ class CrossSourcePatternDetector:
 
             # Check if this is a temporal pattern matching current time
             if pattern.temporal_constraints:
-                if (
-                    "hour" in pattern.temporal_constraints
-                    and pattern.temporal_constraints["hour"] == current_hour
-                ):
+                if "hour" in pattern.temporal_constraints and pattern.temporal_constraints["hour"] == current_hour:
                     # This is a matching hour pattern
 
                     # Only generate suggestion for high or medium confidence patterns
                     if pattern.confidence >= 0.7:
                         # Create a suggestion
-                        priority = (
-                            SuggestionPriority.MEDIUM
-                            if pattern.confidence >= 0.8
-                            else SuggestionPriority.LOW
-                        )
+                        priority = SuggestionPriority.MEDIUM if pattern.confidence >= 0.8 else SuggestionPriority.LOW
 
                         # Determine suggestion type and content based on source types
                         suggestion_type = SuggestionType.QUERY
@@ -1829,7 +1801,9 @@ class CrossSourcePatternDetector:
                         elif DataSourceType.COLLABORATION in pattern.source_types:
                             suggestion_type = SuggestionType.CONTENT
                             title = "Check for collaboration updates"
-                            content = "Based on your patterns, you often check for collaboration updates around this time."
+                            content = (
+                                "Based on your patterns, you often check for collaboration updates around this time."
+                            )
 
                         # Create suggestion
                         suggestion = ProactiveSuggestion(
@@ -1880,11 +1854,7 @@ class CrossSourcePatternDetector:
                 # Only generate suggestion for high confidence patterns
                 if pattern.confidence >= 0.7:
                     # Create a suggestion based on the pattern
-                    priority = (
-                        SuggestionPriority.MEDIUM
-                        if pattern.confidence >= 0.8
-                        else SuggestionPriority.LOW
-                    )
+                    priority = SuggestionPriority.MEDIUM if pattern.confidence >= 0.8 else SuggestionPriority.LOW
 
                     # Determine suggestion type and content
                     suggestion_type = SuggestionType.SEARCH_STRATEGY
@@ -1931,28 +1901,19 @@ class CrossSourcePatternDetector:
             source_names = [s.value.capitalize() for s in correlation.source_types]
 
             # Only generate suggestions for certain combinations of sources
-            if (
-                DataSourceType.LOCATION in correlation.source_types
-                and DataSourceType.NTFS in correlation.source_types
-            ):
+            if DataSourceType.LOCATION in correlation.source_types and DataSourceType.NTFS in correlation.source_types:
                 # Location + file activity
                 title = "Files relevant to your location"
                 content = "Based on your patterns, we've noticed you typically access certain files when at this location. Would you like to see them?"
                 suggestion_type = SuggestionType.CONTENT
 
-            elif (
-                DataSourceType.AMBIENT in correlation.source_types
-                and DataSourceType.NTFS in correlation.source_types
-            ):
+            elif DataSourceType.AMBIENT in correlation.source_types and DataSourceType.NTFS in correlation.source_types:
                 # Ambient + file activity
                 title = "Content suggestion based on environment"
                 content = "Based on your patterns, you might want to check these files during your current activity."
                 suggestion_type = SuggestionType.CONTENT
 
-            elif (
-                DataSourceType.QUERY in correlation.source_types
-                and DataSourceType.NTFS in correlation.source_types
-            ):
+            elif DataSourceType.QUERY in correlation.source_types and DataSourceType.NTFS in correlation.source_types:
                 # Query + file activity
                 title = "Search strategy suggestion"
                 content = "Your search patterns and file activities show a connection. Consider using more specific file-related terms in your searches."
@@ -1981,7 +1942,9 @@ class CrossSourcePatternDetector:
         return suggestions
 
     def validate_patterns(
-        self, patterns: list[CrossSourcePattern], min_confidence: float = 0.5,
+        self,
+        patterns: list[CrossSourcePattern],
+        min_confidence: float = 0.5,
     ) -> list[CrossSourcePattern]:
         """
         Validate patterns to reduce false positives by additional filtering.
@@ -2022,10 +1985,7 @@ class CrossSourcePatternDetector:
                 continue
 
             # For temporal patterns, check if observation time points show consistency
-            if (
-                "hour" in pattern.temporal_constraints
-                or "day_of_week" in pattern.temporal_constraints
-            ):
+            if "hour" in pattern.temporal_constraints or "day_of_week" in pattern.temporal_constraints:
                 # Temporal patterns are valid by design
                 validated_patterns.append(pattern)
                 continue
@@ -2091,7 +2051,8 @@ class CrossSourcePatternDetector:
 
         # Detect correlations (with adaptive window and entity overlap)
         correlations = self.detect_correlations(
-            adaptive_window=True, min_entity_overlap=0.1,
+            adaptive_window=True,
+            min_entity_overlap=0.1,
         )
 
         # Generate suggestions

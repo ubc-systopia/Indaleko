@@ -43,19 +43,23 @@ class PlanNode(BaseModel):
     id: int = Field(..., description="The node ID")
     type: str = Field(..., description="The type of operation")
     dependencies: list[int] = Field(
-        default_factory=list, description="IDs of dependent nodes",
+        default_factory=list,
+        description="IDs of dependent nodes",
     )
     estimatedCost: float = Field(0, description="Estimated cost of this operation")
 
     # Optional fields that depend on node type
     collection: str | None = Field(
-        None, description="Collection being accessed (if applicable)",
+        None,
+        description="Collection being accessed (if applicable)",
     )
     indexes: list[dict[str, Any]] | None = Field(
-        None, description="Indexes being used (if applicable)",
+        None,
+        description="Indexes being used (if applicable)",
     )
     condition: dict[str, Any] | None = Field(
-        None, description="Filter condition (if applicable)",
+        None,
+        description="Filter condition (if applicable)",
     )
 
     # Additional fields will be stored in the extra dict
@@ -69,16 +73,20 @@ class QueryPlan(BaseModel):
     """
 
     nodes: list[PlanNode] = Field(
-        default_factory=list, description="Operation nodes in the plan",
+        default_factory=list,
+        description="Operation nodes in the plan",
     )
     rules: list[str] = Field(
-        default_factory=list, description="Optimizer rules applied",
+        default_factory=list,
+        description="Optimizer rules applied",
     )
     collections: list[dict[str, Any]] = Field(
-        default_factory=list, description="Collections used",
+        default_factory=list,
+        description="Collections used",
     )
     variables: list[dict[str, Any]] = Field(
-        default_factory=list, description="Variables used",
+        default_factory=list,
+        description="Variables used",
     )
     estimatedCost: float = Field(0, description="Total estimated cost of the plan")
 
@@ -90,13 +98,16 @@ class QueryAnalysis(BaseModel):
 
     summary: dict[str, Any] = Field(default_factory=dict, description="Summary metrics")
     warnings: list[str] = Field(
-        default_factory=list, description="Potential issues detected",
+        default_factory=list,
+        description="Potential issues detected",
     )
     recommendations: list[str] = Field(
-        default_factory=list, description="Recommendations for optimization",
+        default_factory=list,
+        description="Recommendations for optimization",
     )
     indexes_used: list[str] = Field(
-        default_factory=list, description="Indexes used in the query",
+        default_factory=list,
+        description="Indexes used in the query",
     )
 
 
@@ -106,11 +117,13 @@ class QueryPerformance(BaseModel):
     """
 
     execution_time_seconds: float = Field(
-        0, description="Total execution time in seconds",
+        0,
+        description="Total execution time in seconds",
     )
     cpu: dict[str, float] = Field(default_factory=dict, description="CPU usage metrics")
     memory: dict[str, int] = Field(
-        default_factory=dict, description="Memory usage metrics",
+        default_factory=dict,
+        description="Memory usage metrics",
     )
     io: dict[str, int] = Field(default_factory=dict, description="I/O metrics")
     threads: int = Field(0, description="Number of threads used")
@@ -149,10 +162,12 @@ class QueryPerformanceHint(BaseModel):
     severity: QueryHintSeverity = Field(..., description="Severity of the hint")
     affected_component: str = Field(..., description="Component affected by the hint")
     performance_impact: QueryPerformanceImpact = Field(
-        ..., description="Impact on query performance",
+        ...,
+        description="Impact on query performance",
     )
     recommendation: str | None = Field(
-        None, description="Recommendation for improvement",
+        None,
+        description="Recommendation for improvement",
     )
 
 
@@ -164,10 +179,12 @@ class QueryExecutionPlan(BaseModel):
     query_id: str = Field(..., description="Unique identifier for the query")
     query: str = Field(..., description="The AQL query text")
     bind_vars: dict[str, Any] = Field(
-        default_factory=dict, description="Bind variables used",
+        default_factory=dict,
+        description="Bind variables used",
     )
     timestamp: datetime.datetime = Field(
-        default_factory=datetime.datetime.now, description="When the plan was generated",
+        default_factory=datetime.datetime.now,
+        description="When the plan was generated",
     )
 
     # The main execution plan
@@ -175,22 +192,26 @@ class QueryExecutionPlan(BaseModel):
 
     # Alternative plans (if allPlans was true)
     alternative_plans: list[QueryPlan] = Field(
-        default_factory=list, description="Alternative execution plans",
+        default_factory=list,
+        description="Alternative execution plans",
     )
 
     # Analysis of the execution plan
     analysis: QueryAnalysis = Field(
-        default_factory=QueryAnalysis, description="Analysis of the plan",
+        default_factory=QueryAnalysis,
+        description="Analysis of the plan",
     )
 
     # Performance metrics (if the query was executed)
     performance: QueryPerformance | None = Field(
-        None, description="Performance metrics if executed",
+        None,
+        description="Performance metrics if executed",
     )
 
     # Query execution statistics
     stats: dict[str, Any] = Field(
-        default_factory=dict, description="Execution statistics",
+        default_factory=dict,
+        description="Execution statistics",
     )
 
     # Caching information
@@ -198,7 +219,8 @@ class QueryExecutionPlan(BaseModel):
 
     # Raw explain result from ArangoDB
     raw_explain: dict[str, Any] = Field(
-        default_factory=dict, description="Raw explain result from ArangoDB",
+        default_factory=dict,
+        description="Raw explain result from ArangoDB",
     )
 
     @classmethod

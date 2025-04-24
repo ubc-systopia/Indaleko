@@ -100,9 +100,7 @@ class EventLocation(IndalekoBaseModel):
 
     display_name: str
     address: str | None = None
-    coordinates: dict[str, float] | None = (
-        None  # {"latitude": 42.3, "longitude": -71.1}
-    )
+    coordinates: dict[str, float] | None = None  # {"latitude": 42.3, "longitude": -71.1}
     is_virtual: bool = False
     join_url: str | None = None  # For virtual meetings (Teams, Zoom, etc.)
 
@@ -195,12 +193,8 @@ class CalendarEvent(BaseCollaborationDataModel):
     # Recurrence
     is_recurring: bool = False
     recurrence: RecurrencePattern | None = None
-    series_master_id: str | None = (
-        None  # If this is a recurring instance, the ID of the master
-    )
-    instance_index: int | None = (
-        None  # For recurring events, which occurrence this is
-    )
+    series_master_id: str | None = None  # If this is a recurring instance, the ID of the master
+    instance_index: int | None = None  # For recurring events, which occurrence this is
 
     # People
     organizer: EventAttendee

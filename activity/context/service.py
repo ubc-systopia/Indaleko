@@ -68,9 +68,7 @@ class IndalekoActivityContextService(IndalekoSingleton):
             self.db_config = IndalekoDBConfig()
 
         # Get the activity context collection
-        activity_collection_name = (
-            IndalekoDBCollections.Indaleko_ActivityContext_Collection
-        )
+        activity_collection_name = IndalekoDBCollections.Indaleko_ActivityContext_Collection
         self._private_collection = IndalekoCollections.get_collection(
             activity_collection_name,
         )
@@ -115,10 +113,7 @@ class IndalekoActivityContextService(IndalekoSingleton):
             exists, it will be updated **if and only if** the reference has
             changed.  We do not evaluate the data or attributes for changes.
         """
-        if (
-            provider in self.cursors
-            and self.cursors[provider].ProviderReference == provider_reference
-        ):
+        if provider in self.cursors and self.cursors[provider].ProviderReference == provider_reference:
             return False
         # Otherwise, it either didn't exist, or it needs to be updated. Build
         # the new cursor.
@@ -184,9 +179,7 @@ class IndalekoActivityContextService(IndalekoSingleton):
         bind_vars = {
             "@collection": IndalekoDBCollections.Indaleko_ActivityContext_Collection,
         }
-        results = (
-            IndalekoDBConfig().get_arangodb().aql.execute(query, bind_vars=bind_vars)
-        )
+        results = IndalekoDBConfig().get_arangodb().aql.execute(query, bind_vars=bind_vars)
         entries = list(results)
         if len(entries) == 0:
             return None

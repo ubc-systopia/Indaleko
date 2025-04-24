@@ -67,9 +67,7 @@ def get_db_stats(db_info):
             # Get size from DB statistics
             try:
                 db_stats = db_info.db_config.db.statistics()
-                stats["size"] = (
-                    f"{db_stats.get('database', {}).get('file_size', 0) / (1024*1024):.1f} MB"
-                )
+                stats["size"] = f"{db_stats.get('database', {}).get('file_size', 0) / (1024*1024):.1f} MB"
             except Exception:
                 stats["size"] = "Unknown"
 
@@ -266,9 +264,7 @@ def get_activity_timeline(db_service):
             collections = db.collections()
             collection_names = [c["name"] for c in collections]
 
-            activity_collections = [
-                name for name in collection_names if "Activity" in name
-            ]
+            activity_collections = [name for name in collection_names if "Activity" in name]
 
             if activity_collections:
                 # Try each possible activity collection
@@ -353,12 +349,8 @@ def get_cross_source_patterns(db_service):
             suggestions = _get_suggestions_from_db(db)
 
             if patterns or correlations or suggestions:
-                recent_correlations = [
-                    c for c in correlations if c.get("is_recent", False)
-                ]
-                active_suggestions = [
-                    s for s in suggestions if not s.get("is_expired", False)
-                ]
+                recent_correlations = [c for c in correlations if c.get("is_recent", False)]
+                active_suggestions = [s for s in suggestions if not s.get("is_expired", False)]
 
                 return {
                     "patterns": patterns,
@@ -592,7 +584,5 @@ def _get_mock_pattern_data():
         "correlations": correlations,
         "suggestions": suggestions,
         "recent_correlations": [c for c in correlations if c.get("is_recent", False)],
-        "active_suggestions": [
-            s for s in suggestions if not s.get("is_expired", False)
-        ],
+        "active_suggestions": [s for s in suggestions if not s.get("is_expired", False)],
     }

@@ -20,12 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import argparse
 import json
-import logging
 import os
 import sys
-
-from typing import Type, Union, TypeVar
-from abc import ABC
 
 from icecream import ic
 
@@ -38,20 +34,12 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 
 # pylint: disable=wrong-import-position
-from platforms.machine_config import IndalekoMachineConfig
-from storage.recorders.base import BaseStorageRecorder
-from storage.collectors.base import BaseStorageCollector
-import utils.misc.directory_management
-from utils.cli.data_models.data_model import IndalekoBaseCliDataModel
-from utils.misc.file_name_management import find_candidate_files
-from utils.misc.data_management import encode_binary_data
 from utils import IndalekoLogging
-from utils.misc.directory_management import (
-    indaleko_default_config_dir,
-    indaleko_default_data_dir,
-    indaleko_default_log_dir,
+from utils.cli.data_models.data_model import IndalekoBaseCliDataModel
+from utils.misc.file_name_management import (
+    find_candidate_files,
+    indaleko_file_name_prefix,
 )
-from utils.misc.file_name_management import indaleko_file_name_prefix
 
 # pylint: enable=wrong-import-position
 
@@ -157,7 +145,9 @@ class IndalekoMainHandler:
             help="Machine configuration to use",
         )
         pre_parser.add_argument(
-            "--platform", default=self.config_data["Platform"], help="Platform to use"
+            "--platform",
+            default=self.config_data["Platform"],
+            help="Platform to use",
         )
         pre_args, unknown = pre_parser.parse_known_args()
         # Now we know the platform, we can find the potential data file(s)
@@ -188,10 +178,10 @@ class IndalekoMainHandler:
         if not config_files:
             raise ValueError(f"No config files found in {args.configdir}")
         default_config = self.machine_config_class.get_most_recent_config_file(
-            args.configdir
+            args.configdir,
         )
         return self.machine_config_class.load_config_from_file(
-            config_file=default_config
+            config_file=default_config,
         )
 
 

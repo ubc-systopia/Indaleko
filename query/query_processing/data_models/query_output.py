@@ -40,7 +40,8 @@ class LLMTranslateQueryResponse(BaseModel):
     aql_query: str = Field(..., title="AQL Query")
     rationale: str = Field(..., title="Rationale")
     alternatives_considered: list[dict[str, str]] = Field(
-        ..., title="Alternatives Considered",
+        ...,
+        title="Alternatives Considered",
     )
     index_warnings: list[dict[str, str]] = Field(..., title="Index Warnings")
 
@@ -115,7 +116,12 @@ class LLMIntentQueryResponse(BaseModel):
 
     model_config = ConfigDict(
         json_schema_extra={
-            "required": ["intent", "rationale", "alternatives_considered", "confidence"],
+            "required": [
+                "intent",
+                "rationale",
+                "alternatives_considered",
+                "confidence",
+            ],
         },
     )
 
@@ -124,7 +130,8 @@ class LLMFilterConstraintQueryResponse(BaseModel):
     filter_constraints: list[dict[str, str]] = Field(..., title="Filter Constraints")
     rationale: str = Field(..., title="Rationale")
     alternatives_considered: list[dict[str, str]] = Field(
-        ..., title="Alternatives Considered",
+        ...,
+        title="Alternatives Considered",
     )
     index_warnings: list[dict[str, str]] = Field(..., title="Index Warnings")
 
@@ -170,7 +177,9 @@ class LLMCollectionCategory(BaseModel):
     )
 
     collection: str = Field(
-        ..., title="Collection", description="The name of the collection in ArangoDB.",
+        ...,
+        title="Collection",
+        description="The name of the collection in ArangoDB.",
     )
 
     confidence: float = Field(
@@ -237,7 +246,9 @@ class LLMCollectionCategoryQueryResponse(BaseModel):
     )
 
     feedback: str | None = Field(
-        None, title="Feedback", description="General feedback on the collections.",
+        None,
+        title="Feedback",
+        description="General feedback on the collections.",
     )
 
     class Config:

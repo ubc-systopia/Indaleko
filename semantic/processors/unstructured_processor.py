@@ -164,15 +164,15 @@ class UnstructuredProcessor:
 
         # Normalize file extensions
         if file_extensions:
-            file_extensions = [
-                ext.lower() if ext.startswith(".") else f".{ext.lower()}"
-                for ext in file_extensions
-            ]
+            file_extensions = [ext.lower() if ext.startswith(".") else f".{ext.lower()}" for ext in file_extensions]
 
         # Find files
         start_time = time.time()
         files = self._find_files(
-            directory_path, recursive, file_extensions, skip_larger_than_mb,
+            directory_path,
+            recursive,
+            file_extensions,
+            skip_larger_than_mb,
         )
 
         if not files:
@@ -187,7 +187,8 @@ class UnstructuredProcessor:
                 ObjectIdentifier=uuid.uuid4(),
                 LocalPath=file_path,
                 ModificationTimestamp=datetime.fromtimestamp(
-                    os.path.getmtime(file_path), UTC,
+                    os.path.getmtime(file_path),
+                    UTC,
                 ),
                 Length=os.path.getsize(file_path),
                 Checksum=None,  # We don't calculate checksum here for performance
@@ -254,7 +255,8 @@ class UnstructuredProcessor:
                 ObjectIdentifier=uuid.uuid4(),
                 LocalPath=file_path,
                 ModificationTimestamp=datetime.fromtimestamp(
-                    os.path.getmtime(file_path), UTC,
+                    os.path.getmtime(file_path),
+                    UTC,
                 ),
                 Length=os.path.getsize(file_path),
                 Checksum=None,  # We don't calculate checksum here for performance
@@ -326,7 +328,8 @@ class UnstructuredProcessor:
             ObjectIdentifier=uuid.uuid4(),
             LocalPath=pdf_path,
             ModificationTimestamp=datetime.fromtimestamp(
-                os.path.getmtime(pdf_path), UTC,
+                os.path.getmtime(pdf_path),
+                UTC,
             ),
             Length=os.path.getsize(pdf_path),
             Checksum=None,  # We don't calculate checksum here for performance
@@ -402,7 +405,9 @@ class UnstructuredProcessor:
                 for item in os.listdir(directory):
                     file_path = os.path.join(directory, item)
                     if os.path.isfile(file_path) and self._is_valid_file(
-                        file_path, extensions, max_size_bytes,
+                        file_path,
+                        extensions,
+                        max_size_bytes,
                     ):
                         files.append(file_path)
         except Exception as e:
@@ -573,27 +578,38 @@ def main():
         help="File extensions to process (e.g., pdf docx)",
     )
     dir_parser.add_argument(
-        "--max-size", "-m", type=int, help="Skip files larger than this size in MB",
+        "--max-size",
+        "-m",
+        type=int,
+        help="Skip files larger than this size in MB",
     )
     dir_parser.add_argument(
-        "--skip-db", action="store_true", help="Skip database connection",
+        "--skip-db",
+        action="store_true",
+        help="Skip database connection",
     )
 
     # Files command
     files_parser = subparsers.add_parser("files", help="Process specific files")
     files_parser.add_argument("files", nargs="+", help="File paths to process")
     files_parser.add_argument(
-        "--skip-db", action="store_true", help="Skip database connection",
+        "--skip-db",
+        action="store_true",
+        help="Skip database connection",
     )
 
     # PDF command
     pdf_parser = subparsers.add_parser("pdf", help="Process a single PDF file")
     pdf_parser.add_argument("file", help="PDF file path to process")
     pdf_parser.add_argument(
-        "--skip-db", action="store_true", help="Skip database connection",
+        "--skip-db",
+        action="store_true",
+        help="Skip database connection",
     )
     pdf_parser.add_argument(
-        "--output", "-o", help="Output JSON file for extracted content",
+        "--output",
+        "-o",
+        help="Output JSON file for extracted content",
     )
 
     args = parser.parse_args()

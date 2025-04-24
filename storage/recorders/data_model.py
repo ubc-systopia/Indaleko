@@ -21,12 +21,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import platform
 import sys
-from typing import Optional, Union
 from uuid import UUID, uuid4
 
-from pydantic import Field, BaseModel
 from icecream import ic
-
+from pydantic import BaseModel, Field
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -45,7 +43,7 @@ from constants import IndalekoConstants
 class IndalekoStorageRecorderDataModel(BaseModel):
     """Defines the base data model for the storage recorders"""
 
-    PlatformName: Optional[Union[str, None]] = Field(
+    PlatformName: str | None = Field(
         None,
         title="PlatformName",
         description="The name of the platform (e.g., Linux, Windows, etc.) if any (default=None).",
@@ -64,15 +62,21 @@ class IndalekoStorageRecorderDataModel(BaseModel):
     )
 
     ServiceUUID: UUID = Field(
-        ..., title="ServiceUUID", description="The UUID of the recorder."
+        ...,
+        title="ServiceUUID",
+        description="The UUID of the recorder.",
     )
 
     ServiceVersion: str = Field(
-        ..., title="ServiceVersion", description="The version of the recorder."
+        ...,
+        title="ServiceVersion",
+        description="The version of the recorder.",
     )
 
     ServiceDescription: str = Field(
-        ..., title="ServiceDescription", description="The description of the recorder."
+        ...,
+        title="ServiceDescription",
+        description="The description of the recorder.",
     )
 
     ServiceType: str = Field(
@@ -93,7 +97,7 @@ class IndalekoStorageRecorderDataModel(BaseModel):
                 "ServiceVersion": "1.0",
                 "ServiceDescription": "This service record local filesystem metadata of a Linux machine.",
                 "ServiceType": IndalekoConstants.service_type_storage_recorder,  # same as default
-            }
+            },
         }
 
 
@@ -101,7 +105,7 @@ def main():
     """Test code for the base CLI data model"""
     ic("Testing Storage Recorder Data Model")
     storage_recorder_data = IndalekoStorageRecorderDataModel(
-        **IndalekoStorageRecorderDataModel.Config.json_schema_extra["example"]
+        **IndalekoStorageRecorderDataModel.Config.json_schema_extra["example"],
     )
     ic(storage_recorder_data)
     ic(platform.system())

@@ -67,7 +67,9 @@ class ResultRanker:
             List[Dict[str, Any]]: The ranked search results
         """
         ranked_results = sorted(
-            analyzed_results, key=lambda x: self._calculate_rank_score(x), reverse=True,
+            analyzed_results,
+            key=lambda x: self._calculate_rank_score(x),
+            reverse=True,
         )
         return ranked_results
 

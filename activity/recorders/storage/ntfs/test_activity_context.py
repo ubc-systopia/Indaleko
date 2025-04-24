@@ -161,8 +161,7 @@ def test_integration_with_recorder(use_hot_tier: bool = False):
         ntfs_cursors = [
             cursor
             for cursor in cursors
-            if cursor.get("Provider")
-            == str(NtfsActivityContextIntegration.NTFS_CONTEXT_PROVIDER_ID)
+            if cursor.get("Provider") == str(NtfsActivityContextIntegration.NTFS_CONTEXT_PROVIDER_ID)
         ]
         logging.info(f"Found {len(ntfs_cursors)} NTFS cursors")
     else:
@@ -175,13 +174,19 @@ def main():
         description="Test NTFS Activity Context Integration",
     )
     parser.add_argument(
-        "--direct", action="store_true", help="Test integration directly",
+        "--direct",
+        action="store_true",
+        help="Test integration directly",
     )
     parser.add_argument(
-        "--recorder", action="store_true", help="Test with standard recorder",
+        "--recorder",
+        action="store_true",
+        help="Test with standard recorder",
     )
     parser.add_argument(
-        "--hot-tier", action="store_true", help="Test with hot tier recorder",
+        "--hot-tier",
+        action="store_true",
+        help="Test with hot tier recorder",
     )
     parser.add_argument("--all", action="store_true", help="Run all tests")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
@@ -191,7 +196,8 @@ def main():
     # Setup logging
     log_level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(
-        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
     # Print banner

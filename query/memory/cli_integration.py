@@ -68,10 +68,7 @@ class ArchivistCliIntegration:
 
         if HAS_QUERY_CONTEXT:
             # Check if CLI already has these components
-            if (
-                hasattr(self.cli, "query_context_integration")
-                and self.cli.query_context_integration
-            ):
+            if hasattr(self.cli, "query_context_integration") and self.cli.query_context_integration:
                 self.query_context_provider = self.cli.query_context_integration
             elif hasattr(self.cli, "args") and hasattr(self.cli.args, "debug"):
                 self.query_context_provider = QueryActivityProvider(
@@ -83,10 +80,7 @@ class ArchivistCliIntegration:
             elif hasattr(self.cli, "args") and hasattr(self.cli.args, "debug"):
                 self.query_navigator = QueryNavigator(debug=self.cli.args.debug)
 
-            if (
-                hasattr(self.cli, "query_relationship_detector")
-                and self.cli.query_relationship_detector
-            ):
+            if hasattr(self.cli, "query_relationship_detector") and self.cli.query_relationship_detector:
                 self.query_relationship_detector = self.cli.query_relationship_detector
             elif hasattr(self.cli, "args") and hasattr(self.cli.args, "debug"):
                 self.query_relationship_detector = QueryRelationshipDetector(
@@ -147,7 +141,8 @@ class ArchivistCliIntegration:
         # Update memory with recent query history first
         if hasattr(self.cli, "query_history"):
             self.memory.distill_knowledge(
-                self.cli.query_history, self.cli.query_history,
+                self.cli.query_history,
+                self.cli.query_history,
             )
 
         # Generate and display prompt
@@ -158,11 +153,7 @@ class ArchivistCliIntegration:
 
         # Save to file if requested
         if args and args.lower().startswith("save"):
-            filename = (
-                args.split(maxsplit=1)[1]
-                if len(args.split()) > 1
-                else "archivist_prompt.txt"
-            )
+            filename = args.split(maxsplit=1)[1] if len(args.split()) > 1 else "archivist_prompt.txt"
             with open(filename, "w") as f:
                 f.write(prompt)
             print(f"\nPrompt saved to {filename}")
@@ -285,7 +276,9 @@ class ArchivistCliIntegration:
         print("\nTopics of Interest:")
         print("-----------------")
         for topic, importance in sorted(
-            topics.items(), key=lambda x: x[1], reverse=True,
+            topics.items(),
+            key=lambda x: x[1],
+            reverse=True,
         ):
             print(f"- {topic}: {importance:.2f}")
 
@@ -362,7 +355,8 @@ class ArchivistCliIntegration:
 
             # Get the query path
             path = self.query_navigator.get_query_path(
-                latest_activity.query_id, max_depth=5,
+                latest_activity.query_id,
+                max_depth=5,
             )
             if path:
                 print("Query exploration path:")
@@ -380,7 +374,8 @@ class ArchivistCliIntegration:
                     pivot_point = path[1].get("query_id")  # Get second query in path
                     if pivot_point:
                         branches = self.query_navigator.get_query_branches(
-                            uuid.UUID(pivot_point), max_depth=3,
+                            uuid.UUID(pivot_point),
+                            max_depth=3,
                         )
                         if len(branches) > 1:  # If there are multiple branches
                             print("\nAlternative exploration branches:")
@@ -403,7 +398,10 @@ class ArchivistCliIntegration:
 
                         # Add pattern to memory
                         self._add_query_pattern_to_memory(
-                            pattern_type, description, examples, frequency,
+                            pattern_type,
+                            description,
+                            examples,
+                            frequency,
                         )
 
                 # Save memory updates
@@ -415,7 +413,11 @@ class ArchivistCliIntegration:
             print("\nFor detailed analysis, use: /query-insights analyze")
 
     def _add_query_pattern_to_memory(
-        self, pattern_type, description, examples, frequency,
+        self,
+        pattern_type,
+        description,
+        examples,
+        frequency,
     ):
         """Add a query pattern to the Archivist memory."""
         if not self.memory:
@@ -425,12 +427,8 @@ class ArchivistCliIntegration:
         for pattern in self.memory.memory.search_patterns:
             if pattern.pattern_type == pattern_type:
                 # Update existing pattern
-                pattern.frequency = (
-                    pattern.frequency + frequency
-                ) / 2  # Moving average
-                pattern.examples = list(set(pattern.examples + examples))[
-                    :5
-                ]  # Keep up to 5 unique examples
+                pattern.frequency = (pattern.frequency + frequency) / 2  # Moving average
+                pattern.examples = list(set(pattern.examples + examples))[:5]  # Keep up to 5 unique examples
                 return
 
         # Add new pattern
@@ -470,9 +468,7 @@ class ArchivistCliIntegration:
                 for activity in recent_activities:
                     if activity.relationship_type == RelationshipType.REFINEMENT.value:
                         refinement_count += 1
-                    elif (
-                        activity.relationship_type == RelationshipType.BROADENING.value
-                    ):
+                    elif activity.relationship_type == RelationshipType.BROADENING.value:
                         broadening_count += 1
                     elif activity.relationship_type == RelationshipType.PIVOT.value:
                         pivot_count += 1

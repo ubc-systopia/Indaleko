@@ -94,7 +94,9 @@ class OutlookCalendarCollector(CalendarCollectorBase):
         self.token_path = kwargs.get(
             "token_path",
             os.path.join(
-                os.environ.get("INDALEKO_ROOT"), "config", "outlook_calendar_token.json",
+                os.environ.get("INDALEKO_ROOT"),
+                "config",
+                "outlook_calendar_token.json",
             ),
         )
 
@@ -108,11 +110,13 @@ class OutlookCalendarCollector(CalendarCollectorBase):
         # Client configuration
         self.client_id = kwargs.get("client_id", self.config.get("client_id"))
         self.client_secret = kwargs.get(
-            "client_secret", self.config.get("client_secret"),
+            "client_secret",
+            self.config.get("client_secret"),
         )
         self.tenant_id = kwargs.get("tenant_id", self.config.get("tenant_id", "common"))
         self.redirect_uri = kwargs.get(
-            "redirect_uri", self.config.get("redirect_uri", "http://localhost:8000"),
+            "redirect_uri",
+            self.config.get("redirect_uri", "http://localhost:8000"),
         )
 
         # MSAL app and authentication state
@@ -218,7 +222,8 @@ class OutlookCalendarCollector(CalendarCollectorBase):
             if not result:
                 # Generate auth URL
                 auth_url = self.app.get_authorization_request_url(
-                    scopes=self.SCOPES, redirect_uri=self.redirect_uri,
+                    scopes=self.SCOPES,
+                    redirect_uri=self.redirect_uri,
                 )
 
                 print("\nPlease open the following URL in your browser:")
@@ -237,7 +242,9 @@ class OutlookCalendarCollector(CalendarCollectorBase):
 
                 # Get token with code
                 result = self.app.acquire_token_by_authorization_code(
-                    code=code, scopes=self.SCOPES, redirect_uri=self.redirect_uri,
+                    code=code,
+                    scopes=self.SCOPES,
+                    redirect_uri=self.redirect_uri,
                 )
 
             # Save token cache
@@ -308,7 +315,8 @@ class OutlookCalendarCollector(CalendarCollectorBase):
                 accounts = self.app.get_accounts()
                 if accounts:
                     result = self.app.acquire_token_silent(
-                        self.SCOPES, account=accounts[0],
+                        self.SCOPES,
+                        account=accounts[0],
                     )
                     if result and "access_token" in result:
                         return result["access_token"]
@@ -340,7 +348,8 @@ class OutlookCalendarCollector(CalendarCollectorBase):
 
             # Get calendars
             response = requests.get(
-                f"{self.GRAPH_API_ENDPOINT}/me/calendars", headers=headers,
+                f"{self.GRAPH_API_ENDPOINT}/me/calendars",
+                headers=headers,
             )
 
             if response.status_code != 200:
@@ -481,7 +490,8 @@ class OutlookCalendarCollector(CalendarCollectorBase):
 
                     if attachments_response.status_code == 200:
                         event["attachments"] = attachments_response.json().get(
-                            "value", [],
+                            "value",
+                            [],
                         )
                     else:
                         self.logger.warning(
@@ -553,7 +563,8 @@ class OutlookCalendarCollector(CalendarCollectorBase):
 
                 if attachments_response.status_code == 200:
                     event_data["attachments"] = attachments_response.json().get(
-                        "value", [],
+                        "value",
+                        [],
                     )
                 else:
                     self.logger.warning(
@@ -570,7 +581,9 @@ class OutlookCalendarCollector(CalendarCollectorBase):
             return {}
 
     def convert_to_calendar_event(
-        self, event_data: dict[str, Any], calendar_id: str,
+        self,
+        event_data: dict[str, Any],
+        calendar_id: str,
     ) -> CalendarEvent:
         """Convert Outlook Calendar event data to CalendarEvent model.
 
@@ -649,7 +662,8 @@ class OutlookCalendarCollector(CalendarCollectorBase):
                     "relativeyearly": EventRecurrence.YEARLY,
                 }
                 recurrence_type = recurrence_type_map.get(
-                    type_str, EventRecurrence.CUSTOM,
+                    type_str,
+                    EventRecurrence.CUSTOM,
                 )
 
                 # Get interval
@@ -734,11 +748,7 @@ class OutlookCalendarCollector(CalendarCollectorBase):
                     continue
 
                 # Get response status
-                status_str = (
-                    attendee_data.get("status", {})
-                    .get("response", "notResponded")
-                    .lower()
-                )
+                status_str = attendee_data.get("status", {}).get("response", "notResponded").lower()
                 response_map = {
                     "accepted": EventResponse.ACCEPTED,
                     "tentativelyaccepted": EventResponse.TENTATIVE,
@@ -823,12 +833,10 @@ class OutlookCalendarCollector(CalendarCollectorBase):
                 # Get file ID and URI
                 file_id = attachment_data.get("id", "")
                 uri = None
-                if (
-                    attachment_data.get("@odata.type", "")
-                    == "#microsoft.graph.referenceAttachment"
-                ):
+                if attachment_data.get("@odata.type", "") == "#microsoft.graph.referenceAttachment":
                     uri = attachment_data.get(
-                        "referenceAttachmentLastModifiedDateTime", "",
+                        "referenceAttachmentLastModifiedDateTime",
+                        "",
                     )
 
                 attachments.append(
@@ -862,9 +870,7 @@ class OutlookCalendarCollector(CalendarCollectorBase):
                 is_organizer = user_email == organizer_email
 
             # Get the current user's response status
-            user_response = (
-                EventResponse.ORGANIZER if is_organizer else EventResponse.NOT_RESPONDED
-            )
+            user_response = EventResponse.ORGANIZER if is_organizer else EventResponse.NOT_RESPONDED
 
             # Check attendees for the current user's response
             if not is_organizer and self.user_info:
@@ -874,11 +880,7 @@ class OutlookCalendarCollector(CalendarCollectorBase):
                 for attendee_data in event_data.get("attendees", []):
                     email_data = attendee_data.get("emailAddress", {})
                     if email_data.get("address") == user_email:
-                        status_str = (
-                            attendee_data.get("status", {})
-                            .get("response", "notResponded")
-                            .lower()
-                        )
+                        status_str = attendee_data.get("status", {}).get("response", "notResponded").lower()
                         response_map = {
                             "accepted": EventResponse.ACCEPTED,
                             "tentativelyaccepted": EventResponse.TENTATIVE,
@@ -886,7 +888,8 @@ class OutlookCalendarCollector(CalendarCollectorBase):
                             "notresponded": EventResponse.NOT_RESPONDED,
                         }
                         user_response = response_map.get(
-                            status_str, EventResponse.NOT_RESPONDED,
+                            status_str,
+                            EventResponse.NOT_RESPONDED,
                         )
                         break
 

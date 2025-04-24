@@ -39,12 +39,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import os
 import sys
+from datetime import UTC, datetime
 
-from datetime import datetime, timezone
-from typing import List, Optional, Dict, Any
-
-from pydantic import Field, AwareDatetime
 from icecream import ic
+from pydantic import AwareDatetime, Field
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -56,8 +54,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
-from data_models.record import IndalekoRecordDataModel
 from data_models.i_uuid import IndalekoUUIDDataModel
+from data_models.record import IndalekoRecordDataModel
 
 # pylint: enable=wrong-import-position
 
@@ -68,15 +66,21 @@ class IndalekoMetadataDataModel(IndalekoBaseModel):
     """
 
     Record: IndalekoRecordDataModel = Field(
-        None, title="Record", description="The record associated with the object."
+        None,
+        title="Record",
+        description="The record associated with the object.",
     )
 
     FieldId: IndalekoUUIDDataModel = Field(
-        None, title="FieldId", description="The UUID for the metadata field."
+        None,
+        title="FieldId",
+        description="The UUID for the metadata field.",
     )
 
     FieldName: str = Field(
-        None, title="FieldName", description="The name of the metadata field."
+        None,
+        title="FieldName",
+        description="The name of the metadata field.",
     )
 
     FieldType: str = Field(
@@ -86,20 +90,24 @@ class IndalekoMetadataDataModel(IndalekoBaseModel):
     )
 
     UsageCount: int = Field(
-        None, title="UsageCount", description="How often this field is used in queries."
+        None,
+        title="UsageCount",
+        description="How often this field is used in queries.",
     )
 
-    LastUsed: Optional[AwareDatetime] = Field(
-        datetime.now(timezone.utc),
+    LastUsed: AwareDatetime | None = Field(
+        datetime.now(UTC),
         title="LastUsed",
         description="The timestamp of when this field was last used in a query.",
     )
 
     Indexed: bool = Field(
-        False, title="Indexed", description="Whether the field is indexed."
+        False,
+        title="Indexed",
+        description="Whether the field is indexed.",
     )
 
-    ArchiveRelevance: Optional[bool] = Field(
+    ArchiveRelevance: bool | None = Field(
         True,
         title="ArchiveRelevance",
         description="Flag for relevance to archived queries.",
@@ -115,7 +123,7 @@ class IndalekoMetadataDataModel(IndalekoBaseModel):
                 "UsageCount": 0,
                 "LastUsed": None,
                 "Indexed": False,
-            }
+            },
         }
 
 

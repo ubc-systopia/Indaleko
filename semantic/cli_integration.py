@@ -165,7 +165,8 @@ class SemanticPerformanceCliIntegration:
                     f"Running throughput experiment for {extractor_type} with {sample_size} files...",
                 )
                 results = self.experiment_driver.run_throughput_experiment(
-                    extractor_type=extractor_type, sample_size=sample_size,
+                    extractor_type=extractor_type,
+                    sample_size=sample_size,
                 )
                 self.cli.output(json.dumps(results, indent=2))
             except Exception as e:
@@ -239,9 +240,7 @@ class SemanticPerformanceCliIntegration:
                 self.cli.output(f"Generating {report_type} report to {output_file}...")
 
                 timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-                report_title = (
-                    f"Indaleko Semantic Extractor Performance Report - {timestamp}"
-                )
+                report_title = f"Indaleko Semantic Extractor Performance Report - {timestamp}"
 
                 self.experiment_driver.generate_html_report(
                     report_title=report_title,

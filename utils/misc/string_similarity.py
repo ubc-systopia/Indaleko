@@ -57,7 +57,9 @@ def jaro_winkler_similarity(s1: str, s2: str, prefix_weight: float = 0.1) -> flo
 
 
 def _jaro_winkler_similarity_pure_python(
-    s1: str, s2: str, prefix_weight: float = 0.1,
+    s1: str,
+    s2: str,
+    prefix_weight: float = 0.1,
 ) -> float:
     """
     Pure Python implementation of Jaro-Winkler similarity.
@@ -165,7 +167,9 @@ def _jaro_similarity(s1: str, s2: str) -> float:
 
 
 def weighted_filename_similarity(
-    file1: str, file2: str, weights: dict[str, float] | None = None,
+    file1: str,
+    file2: str,
+    weights: dict[str, float] | None = None,
 ) -> float:
     """
     Calculate a weighted similarity score between two filenames using multiple
@@ -294,7 +298,8 @@ def multi_attribute_identity_resolution(
     # Filename similarity (required)
     if "filename" in file1_attrs and "filename" in file2_attrs:
         scores["filename"] = weighted_filename_similarity(
-            str(file1_attrs["filename"]), str(file2_attrs["filename"]),
+            str(file1_attrs["filename"]),
+            str(file2_attrs["filename"]),
         )
         total_weight += weights["filename"]
 
@@ -352,12 +357,7 @@ def multi_attribute_identity_resolution(
 
     # Special case: files with same checksum are highly likely to be the same entity
     # This handles cases where filenames differ but content is identical
-    if (
-        "checksum" in scores
-        and scores["checksum"] == 1.0
-        and "size" in scores
-        and scores["size"] == 1.0
-    ):
+    if "checksum" in scores and scores["checksum"] == 1.0 and "size" in scores and scores["size"] == 1.0:
         # If checksums match exactly, boost the overall score to ensure they're recognized as same
         checksum_boost = 0.15 * (1.0 - weighted_score)
         weighted_score = min(1.0, weighted_score + checksum_boost)

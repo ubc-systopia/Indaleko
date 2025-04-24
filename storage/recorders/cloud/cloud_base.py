@@ -23,10 +23,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import os
-from pathlib import Path
 import sys
-
-from typing import Union, Callable, Any
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any
 
 from icecream import ic
 
@@ -41,11 +41,11 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from data_models import IndalekoSourceIdentifierDataModel
 from perf.perf_collector import IndalekoPerformanceDataCollector
 from perf.perf_recorder import IndalekoPerformanceDataRecorder
+from storage.collectors import BaseStorageCollector
+from storage.recorders.base import BaseStorageRecorder
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.runner import IndalekoCLIRunner
-from storage.collectors import BaseStorageCollector
-from storage.recorders.base import BaseStorageRecorder
 
 # pylint: enable=wrong-import-position
 
@@ -76,14 +76,14 @@ class BaseCloudStorageRecorder(BaseStorageRecorder):
         It is expected to be overridden in a subclass.
         """
         raise NotImplementedError(
-            "This function must be overridden by the derived class"
+            "This function must be overridden by the derived class",
         )
 
     @staticmethod
     def get_cloud_storage_recorder() -> "BaseCloudStorageRecorder":
         """This function is used to get the cloud storage recorder."""
         raise NotImplementedError(
-            "This function must be overridden by the derived class"
+            "This function must be overridden by the derived class",
         )
 
     class cloud_recorder_mixin(BaseStorageRecorder.base_recorder_mixin):
@@ -96,7 +96,7 @@ class BaseCloudStorageRecorder(BaseStorageRecorder):
                 if "plt" in keys["InputFileKeys"]:  # substitute the cloud platform name
                     keys["Platform"] = keys["InputFileKeys"]["plt"]
             return BaseStorageRecorder.base_recorder_mixin.generate_output_file_name(
-                keys
+                keys,
             )
 
         @staticmethod
@@ -116,7 +116,7 @@ class BaseCloudStorageRecorder(BaseStorageRecorder):
             return BaseStorageRecorder.base_recorder_mixin.generate_perf_file_name(keys)
 
     @staticmethod
-    def local_run(keys: dict[str, str]) -> Union[dict, None]:
+    def local_run(keys: dict[str, str]) -> dict | None:
         """Run the recorder"""
         args = keys["args"]  # must be there.
         cli = keys["cli"]  # must be there.
@@ -136,15 +136,9 @@ class BaseCloudStorageRecorder(BaseStorageRecorder):
             "args": args,
         }
         if "InputFileKeys" in config_data:
-            if (
-                "storage" in config_data["InputFileKeys"]
-                and config_data["InputFileKeys"]["storage"]
-            ):
+            if "storage" in config_data["InputFileKeys"] and config_data["InputFileKeys"]["storage"]:
                 kwargs["storage_description"] = config_data["InputFileKeys"]["storage"]
-            if (
-                "userid" in config_data["InputFileKeys"]
-                and config_data["InputFileKeys"]["userid"]
-            ):
+            if "userid" in config_data["InputFileKeys"] and config_data["InputFileKeys"]["userid"]:
                 kwargs["userid"] = config_data["InputFileKeys"]["userid"]
 
         def record(recorder: BaseCloudStorageRecorder, **kwargs):
@@ -160,7 +154,8 @@ class BaseCloudStorageRecorder(BaseStorageRecorder):
         recorder = recorder_class(**kwargs)
 
         def capture_performance(
-            task_func: Callable[..., Any], output_file_name: Union[Path, str] = None
+            task_func: Callable[..., Any],
+            output_file_name: Path | str = None,
         ):
             perf_data = IndalekoPerformanceDataCollector.measure_performance(
                 task_func,
@@ -180,7 +175,7 @@ class BaseCloudStorageRecorder(BaseStorageRecorder):
                 perf_recorder = IndalekoPerformanceDataRecorder()
                 if args.performance_file:
                     perf_file = str(
-                        Path(args.datadir) / config_data["PerformanceDataFile"]
+                        Path(args.datadir) / config_data["PerformanceDataFile"],
                     )
                     perf_recorder.add_data_to_file(perf_file, perf_data)
                     if debug:
@@ -208,7 +203,7 @@ class BaseCloudStorageRecorder(BaseStorageRecorder):
 
         if args.arangoimport and args.bulk:
             ic(
-                "Warning: both arangoimport and bulk upload specified.  Using arangoimport ONLY."
+                "Warning: both arangoimport and bulk upload specified.  Using arangoimport ONLY.",
             )
         if args.arangoimport:
             # Step 4: upload the data to the database using the arangoimport utility
@@ -229,7 +224,8 @@ class BaseCloudStorageRecorder(BaseStorageRecorder):
 
     @staticmethod
     def cloud_recorder_runner(
-        collector_class: BaseStorageCollector, recorder_class: BaseStorageRecorder
+        collector_class: BaseStorageCollector,
+        recorder_class: BaseStorageRecorder,
     ) -> None:
         """This is the CLI handler for cloud storage recorders."""
         runner = IndalekoCLIRunner(

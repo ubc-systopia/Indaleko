@@ -22,8 +22,7 @@ import datetime
 import os
 import sys
 import uuid
-
-from typing import List, Dict, Any
+from typing import Any
 
 from icecream import ic
 
@@ -37,8 +36,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # This logic is part of what allows me to execute it locally or as part of the
 # overall package/project.  It's a bit of a hack, but it works.
 # pylint: disable=wrong-import-position
-from activity.collectors.base import CollectorBase
 from activity.characteristics import ActivityDataCharacteristics
+from activity.collectors.base import CollectorBase
 
 # pylint: enable=wrong-import-position
 
@@ -46,7 +45,7 @@ from activity.characteristics import ActivityDataCharacteristics
 class CollaborationCollector(CollectorBase):
     """This is a collaboration activity data provider for Indaleko."""
 
-    def get_collector_characteristics(self) -> List[ActivityDataCharacteristics]:
+    def get_collector_characteristics(self) -> list[ActivityDataCharacteristics]:
         return []
 
     def get_collector_name(self) -> str:
@@ -55,7 +54,7 @@ class CollaborationCollector(CollectorBase):
     def get_provider_id(self) -> uuid.UUID:
         return uuid.uuid4()
 
-    def retrieve_data(self, data_id: uuid.UUID) -> Dict:
+    def retrieve_data(self, data_id: uuid.UUID) -> dict:
         return {}
 
     def get_cursor(self, activity_context: uuid.UUID) -> uuid.UUID:
@@ -73,16 +72,16 @@ class CollaborationCollector(CollectorBase):
     def collect_data(self) -> None:
         pass
 
-    def process_data(self, data: Any) -> Dict[str, Any]:
+    def process_data(self, data: Any) -> dict[str, Any]:
         return {}
 
-    def store_data(self, data: Dict[str, Any]) -> None:
+    def store_data(self, data: dict[str, Any]) -> None:
         pass
 
     def update_data(self) -> None:
         pass
 
-    def get_latest_db_update(self) -> Dict[str, Any]:
+    def get_latest_db_update(self) -> dict[str, Any]:
         return {}
 
 

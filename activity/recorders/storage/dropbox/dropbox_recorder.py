@@ -78,14 +78,17 @@ class DropboxStorageActivityRecorder(StorageActivityRecorder):
         # Set Dropbox-specific defaults
         kwargs["name"] = kwargs.get("name", "Dropbox Storage Activity Recorder")
         kwargs["recorder_id"] = kwargs.get(
-            "recorder_id", uuid.UUID("9c51f8a7-4b3e-5d2f-8c6b-e7f9d0c4a3b2"),
+            "recorder_id",
+            uuid.UUID("9c51f8a7-4b3e-5d2f-8c6b-e7f9d0c4a3b2"),
         )
         kwargs["provider_type"] = StorageProviderType.DROPBOX
         kwargs["description"] = kwargs.get(
-            "description", "Records storage activities from Dropbox",
+            "description",
+            "Records storage activities from Dropbox",
         )
         kwargs["collection_name"] = kwargs.get(
-            "collection_name", "DropboxStorageActivity",
+            "collection_name",
+            "DropboxStorageActivity",
         )
 
         # Get or create Dropbox collector
@@ -108,13 +111,12 @@ class DropboxStorageActivityRecorder(StorageActivityRecorder):
         self._dropbox_collector = collector
 
         # Add Dropbox-specific metadata if available
-        if (
-            hasattr(self._dropbox_collector, "_user_info")
-            and self._dropbox_collector._user_info
-        ):
+        if hasattr(self._dropbox_collector, "_user_info") and self._dropbox_collector._user_info:
             email = getattr(self._dropbox_collector._user_info, "email", "unknown")
             account_id = getattr(
-                self._dropbox_collector._user_info, "account_id", "unknown",
+                self._dropbox_collector._user_info,
+                "account_id",
+                "unknown",
             )
 
             self._metadata = StorageActivityMetadata(
@@ -125,7 +127,8 @@ class DropboxStorageActivityRecorder(StorageActivityRecorder):
             )
 
     def collect_and_store_activities(
-        self, start_monitoring: bool = True,
+        self,
+        start_monitoring: bool = True,
     ) -> list[uuid.UUID]:
         """
         Collect and store Dropbox activities in one operation.
@@ -152,7 +155,10 @@ class DropboxStorageActivityRecorder(StorageActivityRecorder):
             self._dropbox_collector.stop_monitoring()
 
     def get_activities_by_dropbox_id(
-        self, dropbox_id: str, limit: int = 100, offset: int = 0,
+        self,
+        dropbox_id: str,
+        limit: int = 100,
+        offset: int = 0,
     ) -> list[dict]:
         """
         Get activities for a specific Dropbox file ID.
@@ -189,7 +195,10 @@ class DropboxStorageActivityRecorder(StorageActivityRecorder):
         return [doc for doc in cursor]
 
     def get_activities_by_revision(
-        self, revision: str, limit: int = 100, offset: int = 0,
+        self,
+        revision: str,
+        limit: int = 100,
+        offset: int = 0,
     ) -> list[dict]:
         """
         Get activities for a specific file revision.
@@ -226,7 +235,10 @@ class DropboxStorageActivityRecorder(StorageActivityRecorder):
         return [doc for doc in cursor]
 
     def get_activities_by_shared_folder(
-        self, shared_folder_id: str, limit: int = 100, offset: int = 0,
+        self,
+        shared_folder_id: str,
+        limit: int = 100,
+        offset: int = 0,
     ) -> list[dict]:
         """
         Get activities for files in a specific shared folder.
@@ -349,22 +361,21 @@ class DropboxStorageActivityRecorder(StorageActivityRecorder):
         # Execute Dropbox-specific queries
         try:
             revision_cursor = self._db._arangodb.aql.execute(
-                revision_query, bind_vars={"@collection": self._collection_name},
+                revision_query,
+                bind_vars={"@collection": self._collection_name},
             )
             shared_cursor = self._db._arangodb.aql.execute(
-                shared_query, bind_vars={"@collection": self._collection_name},
+                shared_query,
+                bind_vars={"@collection": self._collection_name},
             )
             sharing_cursor = self._db._arangodb.aql.execute(
-                sharing_query, bind_vars={"@collection": self._collection_name},
+                sharing_query,
+                bind_vars={"@collection": self._collection_name},
             )
 
             # Add to statistics
-            stats["top_revisions"] = {
-                item["revision"]: item["count"] for item in revision_cursor
-            }
-            stats["top_shared_folders"] = {
-                item["shared_folder"]: item["count"] for item in shared_cursor
-            }
+            stats["top_revisions"] = {item["revision"]: item["count"] for item in revision_cursor}
+            stats["top_shared_folders"] = {item["shared_folder"]: item["count"] for item in shared_cursor}
 
             sharing_stats = next(sharing_cursor, {"shared": 0, "not_shared": 0})
             stats["sharing"] = sharing_stats
@@ -372,9 +383,7 @@ class DropboxStorageActivityRecorder(StorageActivityRecorder):
             # Calculate sharing percentage if there are activities
             total = sharing_stats.get("shared", 0) + sharing_stats.get("not_shared", 0)
             if total > 0:
-                stats["sharing_percentage"] = (
-                    sharing_stats.get("shared", 0) / total
-                ) * 100
+                stats["sharing_percentage"] = (sharing_stats.get("shared", 0) / total) * 100
             else:
                 stats["sharing_percentage"] = 0
 
@@ -451,7 +460,8 @@ class DropboxStorageActivityRecorder(StorageActivityRecorder):
         return super().build_activity_document(activity_data, semantic_attributes)
 
     def store_activity(
-        self, activity_data: DropboxStorageActivityData | dict,
+        self,
+        activity_data: DropboxStorageActivityData | dict,
     ) -> uuid.UUID:
         """
         Store a Dropbox activity in the database.

@@ -1,10 +1,11 @@
+import json
+import logging
 import os
 import sys
-import logging
 from datetime import datetime
+
 from unstructured.partition.auto import partition  # type: ignore
 from unstructured.staging.base import elements_to_json  # type: ignore
-import json
 
 # Paths (ensure these match the paths in IndalekoUnstructured_Main.py)
 LOGS_PATH = "/app/logs"
@@ -34,7 +35,8 @@ if logger.hasHandlers():
 file_handler = logging.FileHandler(log_file_path)
 file_handler.setLevel(logging.INFO)
 file_formatter = logging.Formatter(
-    "%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+    "%(asctime)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 file_handler.setFormatter(file_formatter)
 logger.addHandler(file_handler)
@@ -75,7 +77,7 @@ def process_files(file_list, output_file_json):
 
     try:
         with (
-            open(json_file_path, "r") as json_file,
+            open(json_file_path) as json_file,
             open(jsonl_file_path, "w") as jsonl_file,
         ):
             data = json.load(json_file)
@@ -88,11 +90,7 @@ def process_files(file_list, output_file_json):
 
 # List all files
 downloads_path = "/app/downloads"  # Adjust based on your Docker container setup
-all_files = [
-    os.path.join(dp, f)
-    for dp, dn, filenames in os.walk(downloads_path)
-    for f in filenames
-]
+all_files = [os.path.join(dp, f) for dp, dn, filenames in os.walk(downloads_path) for f in filenames]
 
 # Process in batches
 batch_size = 20  # Adjust based on your needs

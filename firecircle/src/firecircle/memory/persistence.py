@@ -59,15 +59,18 @@ class CircleMemory(BaseModel):
     entity_id: str = Field(..., description="ID of the entity that created this memory")
 
     memory_type: str = Field(
-        ..., description="Type of memory (e.g., conversation, insight, pattern)",
+        ...,
+        description="Type of memory (e.g., conversation, insight, pattern)",
     )
 
     importance: float = Field(
-        default=0.5, description="Importance of this memory (0.0-1.0)",
+        default=0.5,
+        description="Importance of this memory (0.0-1.0)",
     )
 
     metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata about this memory",
+        default_factory=dict,
+        description="Additional metadata about this memory",
     )
 
 
@@ -75,7 +78,8 @@ class ConversationMemory(CircleMemory):
     """Memory of a conversation within the Fire Circle."""
 
     conversation_id: str = Field(
-        ..., description="ID of the conversation this memory is about",
+        ...,
+        description="ID of the conversation this memory is about",
     )
 
     topic: str = Field(default="", description="The topic of the conversation")
@@ -83,7 +87,8 @@ class ConversationMemory(CircleMemory):
     summary: str = Field(default="", description="Summary of the conversation")
 
     messages: list[dict[str, Any]] = Field(
-        default_factory=list, description="Messages from the conversation",
+        default_factory=list,
+        description="Messages from the conversation",
     )
 
     participants: list[str] = Field(
@@ -103,15 +108,18 @@ class InsightMemory(CircleMemory):
     insight: str = Field(..., description="The insight content")
 
     source_memories: list[str] = Field(
-        default_factory=list, description="IDs of memories that led to this insight",
+        default_factory=list,
+        description="IDs of memories that led to this insight",
     )
 
     confidence: float = Field(
-        default=0.5, description="Confidence in this insight (0.0-1.0)",
+        default=0.5,
+        description="Confidence in this insight (0.0-1.0)",
     )
 
     categories: list[str] = Field(
-        default_factory=list, description="Categories this insight belongs to",
+        default_factory=list,
+        description="Categories this insight belongs to",
     )
 
 
@@ -121,7 +129,8 @@ class PatternMemory(CircleMemory):
     pattern_description: str = Field(..., description="Description of the pattern")
 
     pattern_type: str = Field(
-        ..., description="Type of pattern (e.g., interaction, discourse, agreement)",
+        ...,
+        description="Type of pattern (e.g., interaction, discourse, agreement)",
     )
 
     evidence: list[str] = Field(
@@ -130,11 +139,13 @@ class PatternMemory(CircleMemory):
     )
 
     frequency: int = Field(
-        default=1, description="How many times this pattern has been observed",
+        default=1,
+        description="How many times this pattern has been observed",
     )
 
     entities_involved: list[str] = Field(
-        default_factory=list, description="Entity IDs involved in this pattern",
+        default_factory=list,
+        description="Entity IDs involved in this pattern",
     )
 
 
@@ -146,7 +157,8 @@ class CommuniqueMemory(CircleMemory):
     content: str = Field(..., description="Content of the communiqué")
 
     consensus_level: float = Field(
-        default=0.0, description="Level of consensus achieved (0.0-1.0)",
+        default=0.0,
+        description="Level of consensus achieved (0.0-1.0)",
     )
 
     dissenting_views: list[dict[str, Any]] = Field(
@@ -155,11 +167,13 @@ class CommuniqueMemory(CircleMemory):
     )
 
     source_conversation: str = Field(
-        default="", description="ID of the conversation that produced this communiqué",
+        default="",
+        description="ID of the conversation that produced this communiqué",
     )
 
     endorsing_entities: list[str] = Field(
-        default_factory=list, description="Entity IDs endorsing this communiqué",
+        default_factory=list,
+        description="Entity IDs endorsing this communiqué",
     )
 
 
@@ -447,7 +461,30 @@ class FileMemoryStore(MemoryStore[T]):
                         op = value["__op"]
                         compare_value = value["value"]
 
-                        if op == "eq" and memory_value != compare_value or op == "ne" and memory_value == compare_value or (op == "gt" and memory_value <= compare_value or op == "lt" and memory_value >= compare_value) or (op == "gte" and memory_value < compare_value or op == "lte" and memory_value > compare_value or (op == "in" and memory_value not in compare_value or op == "contains" and compare_value not in memory_value)):
+                        if (
+                            op == "eq"
+                            and memory_value != compare_value
+                            or op == "ne"
+                            and memory_value == compare_value
+                            or (
+                                op == "gt"
+                                and memory_value <= compare_value
+                                or op == "lt"
+                                and memory_value >= compare_value
+                            )
+                            or (
+                                op == "gte"
+                                and memory_value < compare_value
+                                or op == "lte"
+                                and memory_value > compare_value
+                                or (
+                                    op == "in"
+                                    and memory_value not in compare_value
+                                    or op == "contains"
+                                    and compare_value not in memory_value
+                                )
+                            )
+                        ):
                             match = False
                     elif memory_value != value:
                         match = False
@@ -485,7 +522,8 @@ class FileMemoryStore(MemoryStore[T]):
 
         # Sort by modification time (newest first)
         memory_ids.sort(
-            key=lambda mid: os.path.getmtime(self._memory_path(mid)), reverse=True,
+            key=lambda mid: os.path.getmtime(self._memory_path(mid)),
+            reverse=True,
         )
 
         # Apply pagination

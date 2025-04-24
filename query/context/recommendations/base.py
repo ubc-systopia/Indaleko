@@ -94,7 +94,9 @@ class RecommendationProvider(ABC):
         return self.source_type
 
     def calculate_confidence(
-        self, factors: dict[str, float], weights: dict[str, float] | None = None,
+        self,
+        factors: dict[str, float],
+        weights: dict[str, float] | None = None,
     ) -> float:
         """
         Calculate confidence score based on weighted factors.

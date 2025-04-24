@@ -21,11 +21,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import uuid
+from datetime import UTC, datetime
+from typing import Any, TypeVar
 
-from datetime import datetime, timezone
-from typing import Dict, Any, Type, TypeVar, Union, Optional
-
-from pydantic import Field, AwareDatetime, field_validator
+from pydantic import AwareDatetime, Field, field_validator
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -54,7 +53,7 @@ class IndalekoPerformanceDataModel(IndalekoBaseModel):
         description="The record associated with the performance data.",
     )
 
-    MachineConfigurationId: Union[uuid.UUID, None] = Field(
+    MachineConfigurationId: uuid.UUID | None = Field(
         None,
         title="MachineConfigurationId",
         description="The UUID for the machine configuration (e.g. a reference "
@@ -62,74 +61,90 @@ class IndalekoPerformanceDataModel(IndalekoBaseModel):
     )
 
     StartTimestamp: AwareDatetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         title="StartTimestamp",
         description="The timestamp of when collection of this performance data was started.",
     )
 
     EndTimestamp: AwareDatetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         title="EndTimestamp",
         description="The timestamp of when collection of this performance data was ended.",
     )
 
-    ElapsedTime: Optional[float] = Field(
-        None, title="ElapsedTime", description="The elapsed time in seconds."
+    ElapsedTime: float | None = Field(
+        None,
+        title="ElapsedTime",
+        description="The elapsed time in seconds.",
     )
 
     UserCPUTime: float = Field(
-        ..., title="UserCPUTime", description="The user CPU time in seconds."
+        ...,
+        title="UserCPUTime",
+        description="The user CPU time in seconds.",
     )
 
     SystemCPUTime: float = Field(
-        ..., title="SystemCPUTime", description="The system CPU time in seconds."
+        ...,
+        title="SystemCPUTime",
+        description="The system CPU time in seconds.",
     )
 
-    InputSize: Optional[int] = Field(
-        None, title="InputSize", description="The size of the input data in bytes."
+    InputSize: int | None = Field(
+        None,
+        title="InputSize",
+        description="The size of the input data in bytes.",
     )
 
-    OutputSize: Optional[int] = Field(
-        None, title="OutputSize", description="The size of the output data in bytes."
+    OutputSize: int | None = Field(
+        None,
+        title="OutputSize",
+        description="The size of the output data in bytes.",
     )
 
-    PeakMemoryUsage: Optional[int] = Field(
-        None, title="PeakMemoryUsage", description="The peak memory usage in bytes."
+    PeakMemoryUsage: int | None = Field(
+        None,
+        title="PeakMemoryUsage",
+        description="The peak memory usage in bytes.",
     )
 
-    IOReadBytes: Optional[int] = Field(
+    IOReadBytes: int | None = Field(
         None,
         title="IOReadBytes",
         description="The number of bytes read during execution.",
     )
 
-    IOWriteBytes: Optional[int] = Field(
+    IOWriteBytes: int | None = Field(
         None,
         title="IOWriteBytes",
         description="The number of bytes written during execution.",
     )
 
-    ThreadCount: Optional[int] = Field(
-        None, title="ThreadCount", description="The number of threads used."
+    ThreadCount: int | None = Field(
+        None,
+        title="ThreadCount",
+        description="The number of threads used.",
     )
 
-    ErrorCount: Optional[int] = Field(
-        None, title="ErrorCount", description="The number of errors encountered."
+    ErrorCount: int | None = Field(
+        None,
+        title="ErrorCount",
+        description="The number of errors encountered.",
     )
 
-    AdditionalData: Optional[Dict[str, Any]] = Field(
+    AdditionalData: dict[str, Any] | None = Field(
         default_factory=dict,
         title="AdditionalData",
         description="Additional performance data.",
     )
 
     @staticmethod
-    def validate_timestamp(ts: Union[str, datetime]) -> datetime:
+    def validate_timestamp(ts: str | datetime) -> datetime:
         """Ensure that the timestamp is in UTC"""
         if isinstance(ts, str):
             ts = datetime.fromisoformat(ts)
         if ts.tzinfo is None:
-            ts = ts.replace(tzinfo=timezone.utc)
+            ts = ts.replace(tzinfo=UTC)
         return ts
 
     @field_validator("StartTimestamp", mode="before")
@@ -145,14 +160,14 @@ class IndalekoPerformanceDataModel(IndalekoBaseModel):
     @field_validator("ElapsedTime", mode="before")
     @classmethod
     def calculate_elapsed_time(
-        cls: Type[T],
-        value: Union[float, None] = None,
-        values: Union[Dict[str, Any], None] = None,
+        cls: type[T],
+        value: float | None = None,
+        values: dict[str, Any] | None = None,
     ) -> float:
         """Calculate the elapsed time if it is not provided."""
         if value is None:
-            start = values.get("StartTimestamp", datetime.now(timezone.utc))
-            end = values.get("EndTimestamp", datetime.now(timezone.utc))
+            start = values.get("StartTimestamp", datetime.now(UTC))
+            end = values.get("EndTimestamp", datetime.now(UTC))
             value = (end - start).total_seconds()
         return value
 
@@ -187,7 +202,7 @@ class IndalekoPerformanceDataModel(IndalekoBaseModel):
                     "Files": 14279384,
                     "Directories": 62172,
                 },
-            }
+            },
         }
 
 

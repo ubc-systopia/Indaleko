@@ -407,7 +407,9 @@ class TemporalPatternRecommender(RecommendationProvider):
             self._analyze_query_group(queries, {"days_of_week": [day]})
 
     def _analyze_query_group(
-        self, queries: list[dict[str, Any]], time_window: dict[str, Any],
+        self,
+        queries: list[dict[str, Any]],
+        time_window: dict[str, Any],
     ) -> None:
         """
         Analyze a group of queries to detect patterns.
@@ -572,17 +574,13 @@ class TemporalPatternRecommender(RecommendationProvider):
 
             # Adjust confidence based on usage history
             if pattern.successful_uses + pattern.unsuccessful_uses > 0:
-                success_ratio = pattern.successful_uses / (
-                    pattern.successful_uses + pattern.unsuccessful_uses
-                )
+                success_ratio = pattern.successful_uses / (pattern.successful_uses + pattern.unsuccessful_uses)
                 confidence = (confidence + success_ratio) / 2
 
             # Calculate recency boost if recently successful
             recency_boost = 0.0
             if pattern.last_used and pattern.successful_uses > 0:
-                time_since_last_use = (
-                    current_time - pattern.last_used
-                ).total_seconds() / 3600  # hours
+                time_since_last_use = (current_time - pattern.last_used).total_seconds() / 3600  # hours
                 if time_since_last_use < 24:
                     recency_boost = 0.1 * math.exp(-time_since_last_use / 24)
 
@@ -604,8 +602,7 @@ class TemporalPatternRecommender(RecommendationProvider):
                     "pattern_confidence": pattern.confidence,
                     "observation_count": min(1.0, pattern.observation_count / 10),
                     "success_ratio": (
-                        pattern.successful_uses
-                        / (pattern.successful_uses + pattern.unsuccessful_uses)
+                        pattern.successful_uses / (pattern.successful_uses + pattern.unsuccessful_uses)
                         if pattern.successful_uses + pattern.unsuccessful_uses > 0
                         else 0.5
                     ),
@@ -737,7 +734,8 @@ def main():
 
         # Generate suggestions
         suggestions = recommender.generate_suggestions(
-            context_data=context_data, max_suggestions=3,
+            context_data=context_data,
+            max_suggestions=3,
         )
 
         print(f"Generated {len(suggestions)} suggestions:")
@@ -766,14 +764,17 @@ def main():
     if suggestions:
         print("\nTesting feedback:")
         recommender.update_from_feedback(
-            suggestion=suggestions[0], feedback=FeedbackType.ACCEPTED, result_count=7,
+            suggestion=suggestions[0],
+            feedback=FeedbackType.ACCEPTED,
+            result_count=7,
         )
         print("Feedback recorded")
 
         # Generate new suggestions to see effect of feedback
         print("\nGenerating suggestions after feedback:")
         new_suggestions = recommender.generate_suggestions(
-            context_data=context_data, max_suggestions=3,
+            context_data=context_data,
+            max_suggestions=3,
         )
 
         print(f"Generated {len(new_suggestions)} suggestions after feedback:")

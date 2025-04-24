@@ -112,10 +112,7 @@ class TestCollectorV2(BaseActivityCollector):
                 ntfs_collector_args["timestamp"] = kwargs["timestamp"]
             if "output_path" in kwargs and "output_path" not in ntfs_collector_args:
                 ntfs_collector_args["output_path"] = kwargs["output_path"]
-            if (
-                "machine_config" in kwargs
-                and "machine_config" not in ntfs_collector_args
-            ):
+            if "machine_config" in kwargs and "machine_config" not in ntfs_collector_args:
                 ntfs_collector_args["machine_config"] = kwargs["machine_config"]
             if "configdir" in kwargs and "config_dir" not in ntfs_collector_args:
                 ntfs_collector_args["config_dir"] = kwargs["configdir"]
@@ -273,13 +270,13 @@ class TestCollectorV2(BaseActivityCollector):
                 ic(f"load_machine_config: {keys}")
             if "machine_config_file" not in keys:
                 raise ValueError(
-                    f"{inspect.currentframe().f_code.co_name}: "
-                    "machine_config_file must be specified",
+                    f"{inspect.currentframe().f_code.co_name}: " "machine_config_file must be specified",
                 )
             offline = keys.get("offline", False)
             platform_class = keys["class"]  # must exist
             return platform_class.load_config_from_file(
-                config_file=str(keys["machine_config_file"]), offline=offline,
+                config_file=str(keys["machine_config_file"]),
+                offline=offline,
             )
 
     cli_handler_mixin = collector_mixin
@@ -334,9 +331,7 @@ class TestCollectorV2(BaseActivityCollector):
             "offline": args.offline,
             "volumes": [drive],
             "output_path": (
-                os.path.join(args.datadir, config_data["OutputFile"])
-                if "OutputFile" in config_data
-                else None
+                os.path.join(args.datadir, config_data["OutputFile"]) if "OutputFile" in config_data else None
             ),
             "configdir": args.configdir,  # Pass the config directory for state persistence
         }
@@ -360,7 +355,8 @@ class TestCollectorV2(BaseActivityCollector):
                         test_dir = os.path.join(drive, "Indaleko_Test")
                         if os.path.exists(test_dir):
                             test_file = os.path.join(
-                                test_dir, f"extra_test_{int(time.time())}.txt",
+                                test_dir,
+                                f"extra_test_{int(time.time())}.txt",
                             )
                             with open(test_file, "w") as f:
                                 f.write(
@@ -392,8 +388,7 @@ class TestCollectorV2(BaseActivityCollector):
                 print(f"\nCollected {len(activities)} activities:")
                 for i, activity in enumerate(activities[:10], 1):  # Show first 10
                     print(
-                        f"{i}. {activity.file_name} - "
-                        f"{activity.activity_type} - {activity.timestamp}",
+                        f"{i}. {activity.file_name} - {activity.activity_type} - {activity.timestamp}",
                     )
 
                 if len(activities) > 10:
@@ -435,7 +430,8 @@ class TestCollectorV2(BaseActivityCollector):
 def main():
     """The CLI handler for the NTFS activity collector test."""
     TestCollectorV2.local_collector_runner(
-        TestCollectorV2, IndalekoWindowsMachineConfig,
+        TestCollectorV2,
+        IndalekoWindowsMachineConfig,
     )
 
 

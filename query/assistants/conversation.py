@@ -198,7 +198,10 @@ Always maintain a helpful, conversational tone while being concise and direct. Y
         return conversation.add_message("assistant", content)
 
     def execute_tool(
-        self, conversation_id: str, tool_name: str, parameters: dict[str, Any],
+        self,
+        conversation_id: str,
+        tool_name: str,
+        parameters: dict[str, Any],
     ) -> ToolOutput:
         """
         Execute a tool in the context of a conversation.
@@ -235,7 +238,10 @@ Always maintain a helpful, conversational tone while being concise and direct. Y
         return result
 
     def process_message(
-        self, conversation_id: str, message: str, context: dict[str, Any] = None,
+        self,
+        conversation_id: str,
+        message: str,
+        context: dict[str, Any] = None,
     ) -> dict[str, Any]:
         """
         Process a user message and generate a response with enhanced context management.
@@ -270,7 +276,8 @@ Always maintain a helpful, conversational tone while being concise and direct. Y
 
                     # Add system message about continuation
                     continuation_summary = continuation_data.get(
-                        "summary", "Previous conversation",
+                        "summary",
+                        "Previous conversation",
                     )
                     conversation.add_message(
                         "system",
@@ -284,7 +291,8 @@ Always maintain a helpful, conversational tone while being concise and direct. Y
 
                     # Add context variables
                     for key, value in continuation_data.get(
-                        "context_variables", {},
+                        "context_variables",
+                        {},
                     ).items():
                         conversation.set_context_variable(key, value)
 
@@ -316,12 +324,7 @@ Always maintain a helpful, conversational tone while being concise and direct. Y
                 "Can we discuss ",
             ):
                 # Extract topic
-                topic = (
-                    message.replace("Let's talk about ", "")
-                    .replace("Can we discuss ", "")
-                    .split("?")[0]
-                    .strip()
-                )
+                topic = message.replace("Let's talk about ", "").replace("Can we discuss ", "").split("?")[0].strip()
 
                 # End current segment
                 conversation.end_topic_segment()
@@ -354,7 +357,9 @@ Always maintain a helpful, conversational tone while being concise and direct. Y
         # For demonstration purposes, we'll create a more intelligent response
         # In a real implementation, this would use the assistant API
         response_content = self._generate_contextual_response(
-            conversation, message, referenced_memories,
+            conversation,
+            message,
+            referenced_memories,
         )
 
         # Create response data
@@ -392,32 +397,26 @@ Always maintain a helpful, conversational tone while being concise and direct. Y
         # In a real implementation, this would use OpenAI's API or similar
 
         # Access conversation context
-        recent_messages = (
-            conversation.messages[-5:]
-            if len(conversation.messages) >= 5
-            else conversation.messages
-        )
+        recent_messages = conversation.messages[-5:] if len(conversation.messages) >= 5 else conversation.messages
         topic = self._get_active_topic(conversation)
 
         # Simple context-aware response generation
         if "search" in message.lower() or "find" in message.lower():
-            return (
-                "I can help you search for that. What specific criteria should I use?"
-            )
+            return "I can help you search for that. What specific criteria should I use?"
         elif "remember" in message.lower() or "recall" in message.lower():
             if referenced_memories:
                 memory = referenced_memories[0]
                 return f"Yes, I remember {memory.summary or 'that'}. We can continue where we left off."
             else:
                 return "I don't have specific memories about that. Can you provide more details?"
-        elif len(recent_messages) > 3 and all(
-            m.role == "user" for m in recent_messages[-3:]
-        ):
+        elif len(recent_messages) > 3 and all(m.role == "user" for m in recent_messages[-3:]):
             return "I notice you've sent several messages. Let me address all of them together."
         elif topic != "general":
             return f"Regarding {topic}, I can provide more specific information if you'd like."
         else:
-            return f"I understand you're asking about {message.split()[0] if message else 'this'}. How can I help further?"
+            return (
+                f"I understand you're asking about {message.split()[0] if message else 'this'}. How can I help further?"
+            )
 
     def _get_active_topic(self, conversation):
         """Get the active topic from the conversation."""
@@ -463,11 +462,7 @@ Always maintain a helpful, conversational tone while being concise and direct. Y
                 content = msg.content.lower()
 
                 # Simple heuristics for takeaways
-                if (
-                    "important" in content
-                    or "remember" in content
-                    or "don't forget" in content
-                ):
+                if "important" in content or "remember" in content or "don't forget" in content:
                     # Consider this a potential takeaway
                     takeaway = msg.content
                     if len(takeaway) > 20:  # Only reasonably substantive takeaways
@@ -513,8 +508,7 @@ Always maintain a helpful, conversational tone while being concise and direct. Y
         # Create a memory entry with key conversation information
         memory_data = {
             "conversation_id": conversation.conversation_id,
-            "summary": conversation.conversation_summary
-            or "Conversation with Indaleko Assistant",
+            "summary": conversation.conversation_summary or "Conversation with Indaleko Assistant",
             "key_takeaways": conversation.key_takeaways,
             "topics": [segment.topic for segment in conversation.topic_segments],
             "entities": list(conversation.entities.keys()),
@@ -525,7 +519,8 @@ Always maintain a helpful, conversational tone while being concise and direct. Y
 
         # Store in archivist memory
         self.archivist_memory.store_conversation_state(
-            conversation.conversation_id, memory_data,
+            conversation.conversation_id,
+            memory_data,
         )
 
     def save_conversations(self, file_path: str) -> None:
@@ -536,8 +531,7 @@ Always maintain a helpful, conversational tone while being concise and direct. Y
             file_path (str): The file path.
         """
         data = {
-            conversation_id: conversation.model_dump()
-            for conversation_id, conversation in self.conversations.items()
+            conversation_id: conversation.model_dump() for conversation_id, conversation in self.conversations.items()
         }
 
         with open(file_path, "w") as f:

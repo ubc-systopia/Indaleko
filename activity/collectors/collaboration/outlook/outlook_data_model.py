@@ -5,8 +5,8 @@ an Outlook-specific implementation.
 Project Indaleko
 """
 
-from typing import Optional
 from pydantic import Field
+
 from activity.collectors.collaboration.data_models.collaboration_data_model import (
     BaseCollaborationDataModel,
 )
@@ -17,19 +17,19 @@ class OutlookDataModel(BaseCollaborationDataModel):
     Outlook-specific implementation of the collaboration data model.
     """
 
-    SharedFileName: Optional[str] = Field(
+    SharedFileName: str | None = Field(
         None,
         title="SharedFileName",
         description="The original name of the shared file.",
     )
 
-    SharedFileURI: Optional[str] = Field(
+    SharedFileURI: str | None = Field(
         None,
         title="SharedFileURI",
         description="The URI of the shared file.",
     )
 
-    EmailID: Optional[str] = Field(
+    EmailID: str | None = Field(
         None,
         title="EmailID",
         description="The ID of the email where the file was attached.",
@@ -44,7 +44,7 @@ class OutlookDataModel(BaseCollaborationDataModel):
                 "SharedFileName": "example.docx",
                 "SharedFileURI": "https://outlook.office.com/mail/inbox/id/123456789",
                 "EmailID": "123456789",
-            }
+            },
         }
 
 

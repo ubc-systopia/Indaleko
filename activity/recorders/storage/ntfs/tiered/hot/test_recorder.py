@@ -58,7 +58,9 @@ class TestNtfsHotTierRecorder(unittest.TestCase):
         # Create a recorder instance with database disabled for unit tests
         # Also disable registration with service manager
         self.recorder = NtfsHotTierRecorder(
-            no_db=True, debug=True, register_service=False,
+            no_db=True,
+            debug=True,
+            register_service=False,
         )
 
         # Create some test data
@@ -243,7 +245,9 @@ class TestNtfsHotTierRecorder(unittest.TestCase):
 
         # Test with activity data model
         with patch.object(
-            self.recorder, "_build_hot_tier_document", return_value={"test": "document"},
+            self.recorder,
+            "_build_hot_tier_document",
+            return_value={"test": "document"},
         ):
             result = self.recorder.store_activity(self.test_data)
             self.assertEqual(result, self.test_data.activity_id)
@@ -255,7 +259,9 @@ class TestNtfsHotTierRecorder(unittest.TestCase):
         # Test with dictionary
         self.recorder._collection.reset_mock()
         with patch.object(
-            self.recorder, "_build_hot_tier_document", return_value={"test": "document"},
+            self.recorder,
+            "_build_hot_tier_document",
+            return_value={"test": "document"},
         ):
             result = self.recorder.store_activity(self.test_data.model_dump())
             self.assertIsInstance(result, uuid.UUID)

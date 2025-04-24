@@ -56,21 +56,25 @@ class QuerySuggestion(IndalekoBaseModel):
     suggestion_id: uuid.UUID = Field(default_factory=uuid.uuid4)
     query_text: str = Field(..., description="The suggested query text")
     rationale: str = Field(
-        ..., description="Explanation of why this query is suggested",
+        ...,
+        description="Explanation of why this query is suggested",
     )
     confidence: float = Field(..., description="Confidence score (0.0-1.0)")
     source: RecommendationSource = Field(
-        ..., description="Source of this recommendation",
+        ...,
+        description="Source of this recommendation",
     )
     source_context: dict[str, Any] = Field(
-        default_factory=dict, description="Context information from the source",
+        default_factory=dict,
+        description="Context information from the source",
     )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         description="When this suggestion was created",
     )
     relevance_factors: dict[str, float] = Field(
-        default_factory=dict, description="Factors contributing to relevance score",
+        default_factory=dict,
+        description="Factors contributing to relevance score",
     )
     tags: list[str] = Field(default_factory=list, description="Tags for categorization")
 
@@ -104,15 +108,18 @@ class RecommendationFeedback(IndalekoBaseModel):
 
     feedback_id: uuid.UUID = Field(default_factory=uuid.uuid4)
     suggestion_id: uuid.UUID = Field(
-        ..., description="ID of the suggestion receiving feedback",
+        ...,
+        description="ID of the suggestion receiving feedback",
     )
     feedback_type: FeedbackType = Field(..., description="Type of feedback provided")
     result_count: int | None = Field(
-        None, description="Number of results from the suggested query",
+        None,
+        description="Number of results from the suggested query",
     )
     user_comments: str | None = Field(None, description="Optional user comments")
     context: dict[str, Any] = Field(
-        default_factory=dict, description="Context when feedback was given",
+        default_factory=dict,
+        description="Context when feedback was given",
     )
     timestamp: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
@@ -143,7 +150,8 @@ class RecommendationSettings(IndalekoBaseModel):
 
     enabled: bool = Field(True, description="Whether recommendations are enabled")
     max_suggestions: int = Field(
-        5, description="Maximum number of suggestions to return",
+        5,
+        description="Maximum number of suggestions to return",
     )
     min_confidence: float = Field(0.5, description="Minimum confidence threshold")
     refresh_interval: int = Field(60, description="Refresh interval in seconds")
@@ -160,7 +168,8 @@ class RecommendationSettings(IndalekoBaseModel):
     )
     enable_learning: bool = Field(True, description="Whether to learn from feedback")
     store_history: bool = Field(
-        True, description="Whether to store recommendation history",
+        True,
+        description="Whether to store recommendation history",
     )
 
     class Config:

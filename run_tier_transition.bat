@@ -40,12 +40,14 @@ set "AGE_HOURS=12"
 set "BATCH_SIZE=1000"
 set "MAX_BATCHES=10"
 set "DB_CONFIG="
+set "SCHEDULED=0"
+set "INTERVAL=60"
 
 :: Process command line arguments
 :parse_args
 if "%~1"=="" goto end_parse_args
 
-if "%~1"=="--stats-only" (
+if "%~1"=="--stats" (
     set "STATS_ONLY=1"
     shift
     goto parse_args
@@ -89,19 +91,32 @@ if "%~1"=="--db-config" (
     shift
     goto parse_args
 )
+if "%~1"=="--schedule" (
+    set "SCHEDULED=1"
+    shift
+    goto parse_args
+)
+if "%~1"=="--interval" (
+    set "INTERVAL=%~2"
+    shift
+    shift
+    goto parse_args
+)
 if "%~1"=="--help" (
     echo Indaleko NTFS Tier Transition Utility
     echo.
     echo Usage: %0 [options]
     echo.
     echo Options:
-    echo   --stats-only         Show tier transition statistics without running transition
+    echo   --stats              Show tier transition statistics
     echo   --run                Run the tier transition
     echo   --verbose            Show more detailed output
     echo   --debug              Enable debug logging
     echo   --age-hours N        Age threshold in hours for transition (default: 12)
     echo   --batch-size N       Number of activities to process in each batch (default: 1000)
     echo   --max-batches N      Maximum number of batches to process (default: 10)
+    echo   --schedule           Run scheduled transitions at regular intervals
+    echo   --interval N         Minutes between scheduled runs (default: 60)
     echo   --db-config PATH     Path to database configuration file
     echo   --help               Show this help message
     echo.
@@ -114,10 +129,15 @@ exit /b 1
 
 :end_parse_args
 
-:: If neither stats-only nor run is specified, default to stats-only
-if %STATS_ONLY%==0 if %RUN_TRANSITION%==0 (
-    set "STATS_ONLY=1"
+:: If neither stats, run, nor schedule is specified, show help
+if %STATS_ONLY%==0 if %RUN_TRANSITION%==0 if %SCHEDULED%==0 (
+    echo Error: Must specify one of --stats, --run, or --schedule
+    echo Use --help for usage information
+    exit /b 1
 )
+
+:: Make sure logs directory exists
+if not exist "%SCRIPT_DIR%\logs" mkdir "%SCRIPT_DIR%\logs"
 
 :: Build command arguments
 set "COMMAND_ARGS="
@@ -128,6 +148,10 @@ if %STATS_ONLY%==1 (
 
 if %RUN_TRANSITION%==1 (
     set "COMMAND_ARGS=!COMMAND_ARGS! --run"
+)
+
+if %SCHEDULED%==1 (
+    set "COMMAND_ARGS=!COMMAND_ARGS! --schedule --interval %INTERVAL%"
 )
 
 if %VERBOSE%==1 (
@@ -148,7 +172,12 @@ if not "%DB_CONFIG%"=="" (
 echo Running NTFS Tier Transition Utility...
 echo.
 
-python -m activity.recorders.storage.ntfs.tiered.tier_transition%COMMAND_ARGS%
+python "%SCRIPT_DIR%\run_tier_transition.py"%COMMAND_ARGS%
+
+:: Get exit code
+set ERRORLEVEL=%ERRORLEVEL%
 
 :: Deactivate the virtual environment
 call deactivate
+
+exit /b %ERRORLEVEL%

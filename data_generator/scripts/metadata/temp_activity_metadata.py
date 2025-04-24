@@ -1,12 +1,9 @@
-from typing import Dict
 import random
+import string
 import uuid
 from datetime import datetime
-from data_models.record import IndalekoRecordDataModel
-from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
-from data_models.i_uuid import IndalekoUUIDDataModel
-import string
 from typing import Any
+
 from activity.collectors.ambient.data_models.smart_thermostat import (
     ThermostatSensorData,
 )
@@ -14,6 +11,9 @@ from activity.collectors.ambient.smart_thermostat.ecobee_data_model import (
     EcobeeAmbientDataModel,
 )
 from data_generator.scripts.metadata.activity_metadata import ActivityMetadata
+from data_models.i_uuid import IndalekoUUIDDataModel
+from data_models.record import IndalekoRecordDataModel
+from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 
 
 class TempActivityData(ActivityMetadata):
@@ -28,13 +28,16 @@ class TempActivityData(ActivityMetadata):
     def generate_metadata(
         self,
         record_kwargs: IndalekoRecordDataModel,
-        timestamps: Dict[str, datetime],
+        timestamps: dict[str, datetime],
         is_truth_file: bool,
         truth_like: bool,
         truthlike_attributes: list[str],
     ) -> Any:
         is_truth_file = self._define_truth_attribute(
-            "ecobee_temp", is_truth_file, truth_like, truthlike_attributes
+            "ecobee_temp",
+            is_truth_file,
+            truth_like,
+            truthlike_attributes,
         )
         return self._generate_temp_metadata(record_kwargs, timestamps, is_truth_file)
 
@@ -42,14 +45,16 @@ class TempActivityData(ActivityMetadata):
     def _generate_temp_metadata(
         self,
         record_kwargs: IndalekoRecordDataModel,
-        timestamps: Dict[str, datetime],
+        timestamps: dict[str, datetime],
         is_truth_file: bool,
     ) -> EcobeeAmbientDataModel:
         allowed_chars = string.ascii_letters + string.digits
         device_id = "".join(random.choices(allowed_chars, k=12))
         current_state = ["home", "away", "sleep", "custom"]
         smart_thermostat_data = self._generate_thermostat_sensor_data(
-            is_truth_file, record_kwargs, timestamps
+            is_truth_file,
+            record_kwargs,
+            timestamps,
         )
         ecobee_ac_md = EcobeeAmbientDataModel(
             **smart_thermostat_data.dict(),
@@ -64,16 +69,18 @@ class TempActivityData(ActivityMetadata):
         self,
         is_truth_file: bool,
         record_kwargs: IndalekoRecordDataModel,
-        timestamps: Dict[str, datetime],
+        timestamps: dict[str, datetime],
     ) -> ThermostatSensorData:
-        """returns the thermostat sensor data"""
+        """Returns the thermostat sensor data"""
         temp_lower_bound, temp_upper_bound = -50.0, 100.0
         humidity_lower_bound, humidity_upper_bound = 0.0, 100.0
         hvac_modes = ["heat", "cool", "auto", "off"]
         hvac_states = ["heating", "cooling", "fan", "idle"]
         fan_modes = ["auto", "on", "scheduled"]
         timestamp = self._generate_ac_timestamp(
-            is_truth_file, timestamps, "ecobee_temp"
+            is_truth_file,
+            timestamps,
+            "ecobee_temp",
         )
 
         temperature = round(random.uniform(temp_lower_bound, temp_upper_bound), 1)
@@ -108,29 +115,39 @@ class TempActivityData(ActivityMetadata):
                 )
             if "hvac_mode" in ecobee_dict:
                 hvac_mode = self._choose_random_element(
-                    is_truth_file, ecobee_dict["hvac_mode"], hvac_modes
+                    is_truth_file,
+                    ecobee_dict["hvac_mode"],
+                    hvac_modes,
                 )
             if "hvac_state" in ecobee_dict:
                 hvac_state = self._choose_random_element(
-                    is_truth_file, ecobee_dict["hvac_state"], hvac_states
+                    is_truth_file,
+                    ecobee_dict["hvac_state"],
+                    hvac_states,
                 )
             if "fan_mode" in ecobee_dict:
                 fan_mode = self._choose_random_element(
-                    is_truth_file, ecobee_dict["fan_mode"], fan_modes
+                    is_truth_file,
+                    ecobee_dict["fan_mode"],
+                    fan_modes,
                 )
 
         temperature_identifier = IndalekoUUIDDataModel(
-            Identifier=uuid.uuid4(), Label="temperature"
+            Identifier=uuid.uuid4(),
+            Label="temperature",
         )
         humidity_identifier = IndalekoUUIDDataModel(
-            Identifier=uuid.uuid4(), Label="humidity"
+            Identifier=uuid.uuid4(),
+            Label="humidity",
         )
         semantic_attributes = [
             IndalekoSemanticAttributeDataModel(
-                Identifier=temperature_identifier, Value=temperature
+                Identifier=temperature_identifier,
+                Value=temperature,
             ),
             IndalekoSemanticAttributeDataModel(
-                Identifier=humidity_identifier, Value=humidity
+                Identifier=humidity_identifier,
+                Value=humidity,
             ),
         ]
 

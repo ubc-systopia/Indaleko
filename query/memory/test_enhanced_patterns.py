@@ -116,7 +116,8 @@ def generate_synthetic_events(count=1000, time_span_days=30, correlation_ratio=0
         # Random entities (0-3)
         entity_count = random.randint(0, 3)
         entities = random.sample(
-            common_entities, min(entity_count, len(common_entities)),
+            common_entities,
+            min(entity_count, len(common_entities)),
         )
 
         # Create event
@@ -177,14 +178,16 @@ def generate_synthetic_events(count=1000, time_span_days=30, correlation_ratio=0
 
         # Random timestamp for the first event
         random_seconds = random.randint(
-            0, (time_span_days - 1) * 86400,
+            0,
+            (time_span_days - 1) * 86400,
         )  # Leave room for correlated events
         base_timestamp = start_time + timedelta(seconds=random_seconds)
 
         # Random entities for this correlation group
         if pattern["shared_entities"]:
             group_entities = random.sample(
-                common_entities, min(3, len(common_entities)),
+                common_entities,
+                min(3, len(common_entities)),
             )
         else:
             group_entities = []
@@ -212,7 +215,8 @@ def generate_synthetic_events(count=1000, time_span_days=30, correlation_ratio=0
             else:
                 entity_count = random.randint(0, 2)
                 entities = random.sample(
-                    common_entities, min(entity_count, len(common_entities)),
+                    common_entities,
+                    min(entity_count, len(common_entities)),
                 )
 
             # Create event
@@ -227,7 +231,8 @@ def generate_synthetic_events(count=1000, time_span_days=30, correlation_ratio=0
                 event_type=event_type,
                 entities=entities,
                 importance=random.uniform(
-                    0.3, 0.9,
+                    0.3,
+                    0.9,
                 ),  # Correlated events tend to be more important
             )
 
@@ -283,7 +288,8 @@ def test_with_synthetic_data(args):
 
     print("\nDetecting patterns...")
     patterns = detector.detect_patterns(
-        window_size=args.window_size, min_occurrences=args.min_occurrences,
+        window_size=args.window_size,
+        min_occurrences=args.min_occurrences,
     )
 
     pattern_time = time.time() - start_time
@@ -361,9 +367,7 @@ def visualize_results(detector, patterns, correlations):
 
         # Plot pattern confidences by source type combinations
         if patterns:
-            source_combinations = [
-                "+".join(s.value for s in p.source_types) for p in patterns
-            ]
+            source_combinations = ["+".join(s.value for s in p.source_types) for p in patterns]
             confidences = [p.confidence for p in patterns]
 
             # Sort by confidence
@@ -386,9 +390,7 @@ def visualize_results(detector, patterns, correlations):
         plt.subplot(2, 1, 2)
 
         if correlations:
-            source_combinations = [
-                "+".join(s.value for s in c.source_types) for c in correlations
-            ]
+            source_combinations = ["+".join(s.value for s in c.source_types) for c in correlations]
             confidences = [c.confidence for c in correlations]
 
             # Sort by confidence
@@ -420,9 +422,7 @@ def visualize_results(detector, patterns, correlations):
 
         for i, source_type in enumerate(source_types):
             # Get events for this source type
-            events = [
-                e for e in detector.data.events.values() if e.source_type == source_type
-            ]
+            events = [e for e in detector.data.events.values() if e.source_type == source_type]
 
             if events:
                 # Get timestamps
@@ -504,7 +504,8 @@ def benchmark_performance(args):
         # Test pattern detection
         start_time = time.time()
         patterns = detector.detect_patterns(
-            window_size=args.window_size, min_occurrences=args.min_occurrences,
+            window_size=args.window_size,
+            min_occurrences=args.min_occurrences,
         )
         pattern_time = time.time() - start_time
         pattern_times.append(pattern_time)
@@ -556,7 +557,9 @@ def main():
         description="Test the enhanced cross-source pattern detection system",
     )
     parser.add_argument(
-        "--synthetic", action="store_true", help="Test with synthetic data",
+        "--synthetic",
+        action="store_true",
+        help="Test with synthetic data",
     )
     parser.add_argument(
         "--benchmark",
@@ -564,7 +567,9 @@ def main():
         help="Benchmark performance with different event counts",
     )
     parser.add_argument(
-        "--visualize", action="store_true", help="Visualize detection results",
+        "--visualize",
+        action="store_true",
+        help="Visualize detection results",
     )
     parser.add_argument(
         "--event-count",
@@ -585,7 +590,10 @@ def main():
         help="Ratio of correlated events",
     )
     parser.add_argument(
-        "--window-size", type=int, default=10, help="Window size for pattern detection",
+        "--window-size",
+        type=int,
+        default=10,
+        help="Window size for pattern detection",
     )
     parser.add_argument(
         "--min-occurrences",
@@ -617,7 +625,10 @@ def main():
         help="Use adaptive time windows for correlations",
     )
     parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Enable verbose output",
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable verbose output",
     )
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
 

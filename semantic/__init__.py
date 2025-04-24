@@ -1,7 +1,7 @@
 """initializtion logic for the activity context system"""
 
-import os
 import importlib
+import os
 import sys
 
 # from icecream import ic
@@ -22,9 +22,7 @@ from semantic.characteristics import SemanticDataCharacteristics
 
 collector_dir = os.path.join(init_path, "collectors")
 collectors = [
-    x
-    for x in os.listdir(collector_dir)
-    if os.path.isdir(os.path.join(collector_dir, x)) and not x.startswith("_")
+    x for x in os.listdir(collector_dir) if os.path.isdir(os.path.join(collector_dir, x)) and not x.startswith("_")
 ]
 # ic(collectors)
 

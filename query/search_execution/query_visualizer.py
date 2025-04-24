@@ -97,38 +97,48 @@ class ExecutionNode(IndalekoBaseModel):
     node_id: int = Field(..., description="The node ID")
     node_type: NodeType = Field(..., description="The type of the node")
     operation_type: OperationType = Field(
-        default=OperationType.UNKNOWN, description="The type of operation performed",
+        default=OperationType.UNKNOWN,
+        description="The type of operation performed",
     )
     collection: str | None = Field(
-        default=None, description="The collection accessed (if applicable)",
+        default=None,
+        description="The collection accessed (if applicable)",
     )
     index: str | None = Field(
-        default=None, description="The index used (if applicable)",
+        default=None,
+        description="The index used (if applicable)",
     )
     index_type: str | None = Field(
-        default=None, description="The type of index used (if applicable)",
+        default=None,
+        description="The type of index used (if applicable)",
     )
     estimated_cost: float = Field(
-        default=0.0, description="The estimated cost of this operation",
+        default=0.0,
+        description="The estimated cost of this operation",
     )
     expressions: list[str] = Field(
-        default_factory=list, description="Expressions or conditions used in this node",
+        default_factory=list,
+        description="Expressions or conditions used in this node",
     )
     performance_impact: PerformanceImpact = Field(
         default=PerformanceImpact.UNKNOWN,
         description="The performance impact of this operation",
     )
     parent_id: int | None = Field(
-        default=None, description="The parent node ID (if any)",
+        default=None,
+        description="The parent node ID (if any)",
     )
     children_ids: list[int] = Field(
-        default_factory=list, description="The child node IDs",
+        default_factory=list,
+        description="The child node IDs",
     )
     depth: int = Field(
-        default=0, description="The depth of this node in the execution tree",
+        default=0,
+        description="The depth of this node in the execution tree",
     )
     raw_data: dict[str, Any] = Field(
-        default_factory=dict, description="The raw node data from ArangoDB",
+        default_factory=dict,
+        description="The raw node data from ArangoDB",
     )
 
     @validator("operation_type", pre=True, always=True)
@@ -174,30 +184,38 @@ class ExecutionPlan(IndalekoBaseModel):
     """
 
     nodes: list[ExecutionNode] = Field(
-        default_factory=list, description="The nodes in the execution plan",
+        default_factory=list,
+        description="The nodes in the execution plan",
     )
     total_cost: float = Field(
-        default=0.0, description="The total estimated cost of the plan",
+        default=0.0,
+        description="The total estimated cost of the plan",
     )
     collections_used: list[str] = Field(
-        default_factory=list, description="The collections used in the plan",
+        default_factory=list,
+        description="The collections used in the plan",
     )
     indexes_used: list[dict[str, Any]] = Field(
-        default_factory=list, description="The indexes used in the plan",
+        default_factory=list,
+        description="The indexes used in the plan",
     )
     query: str = Field(default="", description="The original query")
     cacheable: bool = Field(default=False, description="Whether the query is cacheable")
     warnings: list[str] = Field(
-        default_factory=list, description="Warnings about the query",
+        default_factory=list,
+        description="Warnings about the query",
     )
     optimizations: list[str] = Field(
-        default_factory=list, description="Optimizations applied to the query",
+        default_factory=list,
+        description="Optimizations applied to the query",
     )
     bottlenecks: list[str] = Field(
-        default_factory=list, description="Identified bottlenecks in the query",
+        default_factory=list,
+        description="Identified bottlenecks in the query",
     )
     recommendations: list[str] = Field(
-        default_factory=list, description="Recommendations for improving the query",
+        default_factory=list,
+        description="Recommendations for improving the query",
     )
 
 
@@ -282,7 +300,8 @@ class PlanVisualizer:
         if not plan_data:
             # Try getting it from raw_result if wrapped
             if "raw_result" in explain_result and isinstance(
-                explain_result["raw_result"], dict,
+                explain_result["raw_result"],
+                dict,
             ):
                 plan_data = explain_result["raw_result"].get("plan", {})
                 if not plan_data:
@@ -476,16 +495,12 @@ class PlanVisualizer:
                 optimizations.append(f"Using indexes: {', '.join(index_info)}")
 
         # Check if filters are pushed down to index scans
-        if any(
-            node.node_type == NodeType.INDEX and node.expressions for node in plan.nodes
-        ):
+        if any(node.node_type == NodeType.INDEX and node.expressions for node in plan.nodes):
             optimizations.append("Filter conditions pushed down to index scan")
 
         # Check if limits are applied early
         limit_nodes = [node for node in plan.nodes if node.node_type == NodeType.LIMIT]
-        if limit_nodes and any(
-            node.depth < len(plan.nodes) // 2 for node in limit_nodes
-        ):
+        if limit_nodes and any(node.depth < len(plan.nodes) // 2 for node in limit_nodes):
             optimizations.append("Limit applied early in the execution plan")
 
         return optimizations
@@ -503,11 +518,7 @@ class PlanVisualizer:
         bottlenecks = []
 
         # Check for full collection scans
-        scan_nodes = [
-            node
-            for node in plan.nodes
-            if node.node_type == NodeType.ENUMERATE_COLLECTION
-        ]
+        scan_nodes = [node for node in plan.nodes if node.node_type == NodeType.ENUMERATE_COLLECTION]
         if scan_nodes:
             collections = [node.collection for node in scan_nodes if node.collection]
             if collections:
@@ -516,11 +527,7 @@ class PlanVisualizer:
                 )
 
         # Check for expensive sorts
-        sort_nodes = [
-            node
-            for node in plan.nodes
-            if node.node_type == NodeType.SORT and node.estimated_cost > 1000
-        ]
+        sort_nodes = [node for node in plan.nodes if node.node_type == NodeType.SORT and node.estimated_cost > 1000]
         if sort_nodes:
             bottlenecks.append("Expensive sort operation(s)")
 
@@ -548,20 +555,12 @@ class PlanVisualizer:
         recommendations = []
 
         # Recommend indexes for full collection scans
-        scan_nodes = [
-            node
-            for node in plan.nodes
-            if node.node_type == NodeType.ENUMERATE_COLLECTION
-        ]
+        scan_nodes = [node for node in plan.nodes if node.node_type == NodeType.ENUMERATE_COLLECTION]
         if scan_nodes:
             collections = [node.collection for node in scan_nodes if node.collection]
             for collection in collections:
                 # Look for filter expressions related to this collection
-                filter_nodes = [
-                    node
-                    for node in plan.nodes
-                    if node.node_type == NodeType.FILTER and node.expressions
-                ]
+                filter_nodes = [node for node in plan.nodes if node.node_type == NodeType.FILTER and node.expressions]
 
                 if filter_nodes:
                     filters = []
@@ -583,17 +582,13 @@ class PlanVisualizer:
                         )
 
         # Recommend using LIMIT if high cost
-        if plan.total_cost > 5000 and not any(
-            node.node_type == NodeType.LIMIT for node in plan.nodes
-        ):
+        if plan.total_cost > 5000 and not any(node.node_type == NodeType.LIMIT for node in plan.nodes):
             recommendations.append(
                 "Consider adding a LIMIT clause to reduce result set size",
             )
 
         # Recommend filter pushdown
-        if any(
-            node.node_type == NodeType.FILTER and node.depth > 1 for node in plan.nodes
-        ):
+        if any(node.node_type == NodeType.FILTER and node.depth > 1 for node in plan.nodes):
             recommendations.append(
                 "Consider restructuring filters to allow pushdown optimization",
             )
@@ -601,7 +596,9 @@ class PlanVisualizer:
         return recommendations
 
     def visualize_text(
-        self, plan: ExecutionPlan | dict[str, Any], verbose: bool = False,
+        self,
+        plan: ExecutionPlan | dict[str, Any],
+        verbose: bool = False,
     ) -> str:
         """
         Visualize the execution plan as formatted text.
@@ -745,7 +742,10 @@ class PlanVisualizer:
         # Recursively add children
         for child in children:
             child_lines = self._visualize_node_tree(
-                child, all_nodes, child_prefix, verbose,
+                child,
+                all_nodes,
+                child_prefix,
+                verbose,
             )
             lines.extend(child_lines)
 
@@ -785,9 +785,7 @@ class PlanVisualizer:
 
         # Add expressions for verbose mode
         if verbose and node.expressions:
-            expr_str = " ".join(
-                textwrap.shorten(expr, width=50) for expr in node.expressions
-            )
+            expr_str = " ".join(textwrap.shorten(expr, width=50) for expr in node.expressions)
             # Use a space for indentation since child_prefix isn't defined here
             desc += f"\n    {self._colorize(f'Expression: {expr_str}', 'gray')}"
 

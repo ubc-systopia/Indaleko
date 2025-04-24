@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-from typing import Optional
+
 from pydantic import Field, field_validator
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -52,13 +52,13 @@ class ThermostatSensorData(BaseAmbientConditionDataModel):
         le=100.0,  # reasonable maximum temperature
     )
 
-    humidity: Optional[float] = Field(
-        None, description="Relative humidity percentage", ge=0.0, le=100.0
+    humidity: float | None = Field(
+        None, description="Relative humidity percentage", ge=0.0, le=100.0,
     )
 
     # System state information
     hvac_mode: str = Field(
-        ..., description="Current HVAC system mode", pattern="^(heat|cool|auto|off)$"
+        ..., description="Current HVAC system mode", pattern="^(heat|cool|auto|off)$",
     )
 
     hvac_state: str = Field(
@@ -68,21 +68,21 @@ class ThermostatSensorData(BaseAmbientConditionDataModel):
     )
 
     fan_mode: str = Field(
-        ..., description="Fan operation mode", pattern="^(auto|on|scheduled)$"
+        ..., description="Fan operation mode", pattern="^(auto|on|scheduled)$",
     )
 
     # Target/Set points
     target_temperature: float = Field(
-        ..., description="Target temperature in Celsius", ge=-50.0, le=100.0
+        ..., description="Target temperature in Celsius", ge=-50.0, le=100.0,
     )
 
     # Optional enhanced sensor data
-    occupancy_detected: Optional[bool] = Field(
-        None, description="Whether occupancy is detected in the sensor's area"
+    occupancy_detected: bool | None = Field(
+        None, description="Whether occupancy is detected in the sensor's area",
     )
 
-    air_quality: Optional[int] = Field(
-        None, description="Air quality index (if available)", ge=0, le=500
+    air_quality: int | None = Field(
+        None, description="Air quality index (if available)", ge=0, le=500,
     )
 
     @field_validator("temperature", "target_temperature")
@@ -108,7 +108,7 @@ class ThermostatSensorData(BaseAmbientConditionDataModel):
                 "occupancy_detected": True,
                 "air_quality": 95,
                 "source": "ecobee",
-            }
+            },
         }
 
 

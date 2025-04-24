@@ -123,7 +123,8 @@ def main():
 
         # Deduplicate results
         deduped_results = deduplicate_results(
-            sample_results, similarity_threshold=threshold,
+            sample_results,
+            similarity_threshold=threshold,
         )
 
         # Print statistics

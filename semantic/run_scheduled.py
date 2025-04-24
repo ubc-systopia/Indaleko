@@ -103,11 +103,7 @@ def load_config(config_path: str | None = None) -> dict[str, Any]:
 
             # Deep merge the configs
             for key, value in file_config.items():
-                if (
-                    isinstance(value, dict)
-                    and key in config
-                    and isinstance(config[key], dict)
-                ):
+                if isinstance(value, dict) and key in config and isinstance(config[key], dict):
                     config[key].update(value)
                 else:
                     config[key] = value
@@ -230,7 +226,10 @@ def check_resource_usage(max_cpu: int, max_memory: int) -> bool:
 
 
 def get_file_batch_from_database(
-    extractor_type: str, batch_size: int, config: dict[str, Any], state: dict[str, Any],
+    extractor_type: str,
+    batch_size: int,
+    config: dict[str, Any],
+    state: dict[str, Any],
 ) -> list[dict[str, Any]]:
     """
     Get a batch of files from the database that need semantic processing.
@@ -248,7 +247,9 @@ def get_file_batch_from_database(
 
 
 def process_mime_batch(
-    files: list[dict[str, Any]], config: dict[str, Any], state: dict[str, Any],
+    files: list[dict[str, Any]],
+    config: dict[str, Any],
+    state: dict[str, Any],
 ) -> dict[str, int]:
     """Process a batch of files with the MIME type extractor."""
     collector = IndalekoSemanticMimeType()
@@ -297,7 +298,9 @@ def process_mime_batch(
 
 
 def process_checksum_batch(
-    files: list[dict[str, Any]], config: dict[str, Any], state: dict[str, Any],
+    files: list[dict[str, Any]],
+    config: dict[str, Any],
+    state: dict[str, Any],
 ) -> dict[str, int]:
     """Process a batch of files with the Checksum extractor."""
     collector = IndalekoSemanticChecksums()
@@ -420,9 +423,7 @@ def run_scheduled_extraction(args: argparse.Namespace) -> None:
         # Run specific extractors
         requested = args.extractors.split(",")
         for extractor in requested:
-            if extractor in config["extractors"] and config["extractors"][
-                extractor
-            ].get("enabled", False):
+            if extractor in config["extractors"] and config["extractors"][extractor].get("enabled", False):
                 extractors_to_run.append(extractor)
             else:
                 logger.warning(
@@ -459,7 +460,10 @@ def run_scheduled_extraction(args: argparse.Namespace) -> None:
 
                 # Get batch of files to process
                 files = get_file_batch_from_database(
-                    extractor, batch_size, config, state,
+                    extractor,
+                    batch_size,
+                    config,
+                    state,
                 )
 
                 if not files:
@@ -489,20 +493,13 @@ def run_scheduled_extraction(args: argparse.Namespace) -> None:
 
             # Add a short sleep to prevent tight loop if no files are found
             if not any(
-                files
-                for files in [
-                    get_file_batch_from_database(e, 1, config, state)
-                    for e in extractors_to_run
-                ]
+                files for files in [get_file_batch_from_database(e, 1, config, state) for e in extractors_to_run]
             ):
                 logger.info("No more files to process, waiting 60 seconds")
                 time.sleep(60)
 
                 # If we've gone through all extractors and found no files, we can exit
-                if all(
-                    not get_file_batch_from_database(e, 1, config, state)
-                    for e in extractors_to_run
-                ):
+                if all(not get_file_batch_from_database(e, 1, config, state) for e in extractors_to_run):
                     logger.info("No more files to process for any extractor, finishing")
                     break
     except KeyboardInterrupt:
@@ -545,7 +542,9 @@ def main():
     # Configuration options
     parser.add_argument("--config", type=str, help="Path to configuration file")
     parser.add_argument(
-        "--max-cpu", type=int, help="Maximum CPU usage percentage (0-100)",
+        "--max-cpu",
+        type=int,
+        help="Maximum CPU usage percentage (0-100)",
     )
     parser.add_argument("--max-memory", type=int, help="Maximum memory usage in MB")
     parser.add_argument("--batch-size", type=int, help="Batch size for processing")
@@ -553,10 +552,14 @@ def main():
 
     # State management
     parser.add_argument(
-        "--reset-state", action="store_true", help="Reset processing state",
+        "--reset-state",
+        action="store_true",
+        help="Reset processing state",
     )
     parser.add_argument(
-        "--status", action="store_true", help="Show current processing status and exit",
+        "--status",
+        action="store_true",
+        help="Show current processing status and exit",
     )
 
     # Logging
@@ -564,10 +567,14 @@ def main():
 
     # Testing
     parser.add_argument(
-        "--test", action="store_true", help="Run in test mode with sample files",
+        "--test",
+        action="store_true",
+        help="Run in test mode with sample files",
     )
     parser.add_argument(
-        "--directory", type=str, help="Process files in this directory (with --test)",
+        "--directory",
+        type=str,
+        help="Process files in this directory (with --test)",
     )
 
     args = parser.parse_args()

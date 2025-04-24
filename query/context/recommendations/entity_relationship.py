@@ -175,12 +175,8 @@ class EntityRelationshipRecommender(RecommendationProvider):
         }
 
         # Track successful entity-template combinations
-        self._entity_type_success = {
-            entity_type: 0 for entity_type in self._entity_types
-        }
-        self._entity_type_failure = {
-            entity_type: 0 for entity_type in self._entity_types
-        }
+        self._entity_type_success = {entity_type: 0 for entity_type in self._entity_types}
+        self._entity_type_failure = {entity_type: 0 for entity_type in self._entity_types}
         self._template_success = {}  # {template: success_count}
         self._template_failure = {}  # {template: failure_count}
 
@@ -219,7 +215,9 @@ class EntityRelationshipRecommender(RecommendationProvider):
         # Get related entities for each entity
         for entity in entities:
             entity_suggestions = self._generate_suggestions_for_entity(
-                entity, entities, max_per_entity=max_suggestions // len(entities) + 1,
+                entity,
+                entities,
+                max_per_entity=max_suggestions // len(entities) + 1,
             )
             suggestions.extend(entity_suggestions)
 
@@ -231,7 +229,9 @@ class EntityRelationshipRecommender(RecommendationProvider):
         return diverse_suggestions[:max_suggestions]
 
     def _extract_entities(
-        self, current_query: str | None, context_data: dict[str, Any],
+        self,
+        current_query: str | None,
+        context_data: dict[str, Any],
     ) -> list[dict[str, Any]]:
         """
         Extract entities from the current query and context.
@@ -368,9 +368,7 @@ class EntityRelationshipRecommender(RecommendationProvider):
                 "source": "recent_activity",
                 "metadata": {
                     "members": ["Alice", "Bob", "Charlie"],
-                    "start_date": (
-                        datetime.now(UTC) - timedelta(days=30)
-                    ).isoformat(),
+                    "start_date": (datetime.now(UTC) - timedelta(days=30)).isoformat(),
                 },
             },
             {
@@ -486,7 +484,8 @@ class EntityRelationshipRecommender(RecommendationProvider):
         # Get entity type configuration
         entity_type = entity.get("type", "default")
         entity_config = self._entity_types.get(
-            entity_type, self._entity_types["default"],
+            entity_type,
+            self._entity_types["default"],
         )
 
         # Get templates for this entity type
@@ -504,7 +503,9 @@ class EntityRelationshipRecommender(RecommendationProvider):
 
                 # Calculate confidence based on entity confidence, template success, etc.
                 confidence = self._calculate_confidence(
-                    base_confidence, entity, template,
+                    base_confidence,
+                    entity,
+                    template,
                 )
 
                 # Create suggestion
@@ -547,14 +548,13 @@ class EntityRelationshipRecommender(RecommendationProvider):
             relationship = related_entity.get("relationship")
             related_type = related_entity.get("type", "default")
             related_config = self._entity_types.get(
-                related_type, self._entity_types["default"],
+                related_type,
+                self._entity_types["default"],
             )
 
             # Generate suggestions based on relationship
             if relationship in relationships:
-                for template in related_config["templates"][
-                    :2
-                ]:  # Limit to 2 templates for diversity
+                for template in related_config["templates"][:2]:  # Limit to 2 templates for diversity
                     try:
                         # Format template with related entity name
                         query_text = template.format(
@@ -563,7 +563,9 @@ class EntityRelationshipRecommender(RecommendationProvider):
 
                         # Calculate confidence
                         rel_confidence = self._calculate_relationship_confidence(
-                            entity, related_entity, relationship,
+                            entity,
+                            related_entity,
+                            relationship,
                         )
 
                         # Create suggestion
@@ -581,7 +583,8 @@ class EntityRelationshipRecommender(RecommendationProvider):
                             },
                             relevance_factors={
                                 "entity_confidence": related_entity.get(
-                                    "confidence", 0.5,
+                                    "confidence",
+                                    0.5,
                                 ),
                                 "relationship_strength": 0.8,  # Would be based on actual relationship data
                                 "template_success": self._get_template_success_ratio(
@@ -604,7 +607,8 @@ class EntityRelationshipRecommender(RecommendationProvider):
         return suggestions[:max_per_entity]
 
     def _ensure_entity_type_diversity(
-        self, suggestions: list[QuerySuggestion],
+        self,
+        suggestions: list[QuerySuggestion],
     ) -> list[QuerySuggestion]:
         """
         Ensure diversity across entity types in suggestions.
@@ -638,9 +642,7 @@ class EntityRelationshipRecommender(RecommendationProvider):
         # Then, fill in with remaining suggestions by confidence
         all_remaining = []
         for entity_type, type_suggestions in by_type.items():
-            for suggestion in type_suggestions[
-                1:max_per_type
-            ]:  # Skip first one which was added above
+            for suggestion in type_suggestions[1:max_per_type]:  # Skip first one which was added above
                 all_remaining.append(suggestion)
 
         all_remaining.sort(key=lambda x: x.confidence, reverse=True)
@@ -649,7 +651,10 @@ class EntityRelationshipRecommender(RecommendationProvider):
         return diverse
 
     def _calculate_confidence(
-        self, base_confidence: float, entity: dict[str, Any], template: str,
+        self,
+        base_confidence: float,
+        entity: dict[str, Any],
+        template: str,
     ) -> float:
         """
         Calculate confidence score for an entity-based suggestion.
@@ -784,36 +789,24 @@ class EntityRelationshipRecommender(RecommendationProvider):
         # Update template success/failure
         if template:
             if self.is_positive_feedback(feedback):
-                self._template_success[template] = (
-                    self._template_success.get(template, 0) + 1
-                )
+                self._template_success[template] = self._template_success.get(template, 0) + 1
 
                 # Bonus for highly successful queries (many results)
                 if result_count and result_count > 5:
-                    self._template_success[template] = (
-                        self._template_success.get(template, 0) + 1
-                    )
+                    self._template_success[template] = self._template_success.get(template, 0) + 1
             elif self.is_negative_feedback(feedback):
-                self._template_failure[template] = (
-                    self._template_failure.get(template, 0) + 1
-                )
+                self._template_failure[template] = self._template_failure.get(template, 0) + 1
 
         # Update entity type success/failure
         if entity_type:
             if self.is_positive_feedback(feedback):
-                self._entity_type_success[entity_type] = (
-                    self._entity_type_success.get(entity_type, 0) + 1
-                )
+                self._entity_type_success[entity_type] = self._entity_type_success.get(entity_type, 0) + 1
 
                 # Bonus for highly successful queries (many results)
                 if result_count and result_count > 5:
-                    self._entity_type_success[entity_type] = (
-                        self._entity_type_success.get(entity_type, 0) + 1
-                    )
+                    self._entity_type_success[entity_type] = self._entity_type_success.get(entity_type, 0) + 1
             elif self.is_negative_feedback(feedback):
-                self._entity_type_failure[entity_type] = (
-                    self._entity_type_failure.get(entity_type, 0) + 1
-                )
+                self._entity_type_failure[entity_type] = self._entity_type_failure.get(entity_type, 0) + 1
 
         self._logger.debug(
             f"Updated feedback for entity type {entity_type}, template: {template}",
@@ -863,7 +856,9 @@ def main():
 
     # Generate suggestions
     suggestions = recommender.generate_suggestions(
-        current_query=current_query, context_data=context_data, max_suggestions=5,
+        current_query=current_query,
+        context_data=context_data,
+        max_suggestions=5,
     )
 
     # Print suggestions
@@ -887,14 +882,18 @@ def main():
     if suggestions:
         print("Testing feedback:")
         recommender.update_from_feedback(
-            suggestion=suggestions[0], feedback=FeedbackType.ACCEPTED, result_count=7,
+            suggestion=suggestions[0],
+            feedback=FeedbackType.ACCEPTED,
+            result_count=7,
         )
         print("Feedback recorded")
 
         # Generate new suggestions to see effect of feedback
         print("\nGenerating suggestions after feedback:")
         new_suggestions = recommender.generate_suggestions(
-            current_query=current_query, context_data=context_data, max_suggestions=5,
+            current_query=current_query,
+            context_data=context_data,
+            max_suggestions=5,
         )
 
         print(f"\nGenerated {len(new_suggestions)} suggestions after feedback:")

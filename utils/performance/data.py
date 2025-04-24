@@ -23,9 +23,10 @@ import json
 import os
 import sys
 import time
+from collections.abc import Callable
+from typing import Any
 
 from icecream import ic
-from typing import Callable, Any
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -35,8 +36,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from data_models.i_perf import IndalekoPerformanceDataModel
 from data_models import IndalekoRecordDataModel
+from data_models.i_perf import IndalekoPerformanceDataModel
 from utils.misc.data_management import encode_binary_data
 
 # pylint: enable=wrong-import-position
@@ -46,12 +47,10 @@ class IndalekoPerformance:
     """This class provides a set of utility functions for collecting performance data."""
 
 
-from typing import Callable, Any, Tuple, Dict
-from pydantic import BaseModel
-from datetime import datetime
-import psutil
 import os
-import time
+from datetime import datetime
+
+import psutil
 
 
 class PerformanceData:
@@ -62,10 +61,11 @@ class PerformanceData:
     def __init__(
         self,
         task_func: Callable[
-            ..., Any
+            ...,
+            Any,
         ],  # A callable that takes any arguments and returns any type
         *args: Any,  # Positional arguments to be passed to the task_func
-        **kwargs: Dict[str, Any],  # Keyword arguments to be passed to the task_func
+        **kwargs: dict[str, Any],  # Keyword arguments to be passed to the task_func
     ):
         """
         Measures performance data for the given task function.
@@ -94,7 +94,7 @@ class PerformanceData:
             start_clock = time.perf_counter()
             self.result = task_func(*args, **kwargs)
             end_clock = time.perf_counter()
-        except Exception as e:
+        except Exception:
             self.result = None
             error_count += 1
             end_clock = time.perf_counter()
@@ -110,16 +110,8 @@ class PerformanceData:
         # Optional: Measure file sizes if applicable
         input_file = kwargs.get("input_file")
         output_file = kwargs.get("output_file")
-        input_size = (
-            os.path.getsize(input_file)
-            if input_file and os.path.exists(input_file)
-            else None
-        )
-        output_size = (
-            os.path.getsize(output_file)
-            if output_file and os.path.exists(output_file)
-            else None
-        )
+        input_size = os.path.getsize(input_file) if input_file and os.path.exists(input_file) else None
+        output_size = os.path.getsize(output_file) if output_file and os.path.exists(output_file) else None
 
         attributes = {
             "start time": start_time.isoformat(),
@@ -131,8 +123,7 @@ class PerformanceData:
             "output size": output_size,
             "peak memory usage": max(start_memory, end_memory),
             "io read bytes": end_io_counters.read_bytes - start_io_counters.read_bytes,
-            "io write bytes": end_io_counters.write_bytes
-            - start_io_counters.write_bytes,
+            "io write bytes": end_io_counters.write_bytes - start_io_counters.write_bytes,
             "thread count": end_thread_count,
             "error count": error_count,
             "result": self.result,
@@ -153,7 +144,8 @@ class PerformanceData:
             InputSize=input_size,
             OutputSize=output_size,
             PeakMemoryUsage=max(
-                start_memory, end_memory
+                start_memory,
+                end_memory,
             ),  # Simplified peak measurement
             IOReadBytes=end_io_counters.read_bytes - start_io_counters.read_bytes,
             IOWriteBytes=end_io_counters.write_bytes - start_io_counters.write_bytes,
@@ -174,7 +166,7 @@ class PerformanceData:
         """
         return self.result
 
-    def serialize(self) -> Dict[str, Any]:
+    def serialize(self) -> dict[str, Any]:
         """
         Serialize the performance data to a dictionary.
         """
@@ -198,7 +190,9 @@ def main():
         "Version": "1.0",
     }
     perf_data = PerformanceData(
-        test_task, wait_time=3, source_identifier=source_identifier
+        test_task,
+        wait_time=3,
+        source_identifier=source_identifier,
     )
     ic(perf_data.serialize())
 

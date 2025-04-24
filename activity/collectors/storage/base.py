@@ -22,15 +22,15 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import json
+import logging
 import os
+import socket
 import sys
 import uuid
-import json
-import socket
-import logging
 from abc import abstractmethod
-from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Optional, Any
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -40,18 +40,17 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from activity.collectors.base import CollectorBase
 from activity.characteristics import ActivityDataCharacteristics
-from activity.collectors.storage.data_models.storage_activity_data_model \
-    import (
-        BaseStorageActivityData,
-        StorageActivityType,
-        StorageProviderType,
-        StorageActivityMetadata,
-        StorageActivityData
-    )
-from data_models.provenance_data import BaseProvenanceDataModel
+from activity.collectors.base import CollectorBase
+from activity.collectors.storage.data_models.storage_activity_data_model import (
+    BaseStorageActivityData,
+    StorageActivityData,
+    StorageActivityMetadata,
+    StorageActivityType,
+    StorageProviderType,
+)
 from data_models.timestamp import IndalekoTimestampDataModel
+
 # pylint: enable=wrong-import-position
 
 
@@ -81,16 +80,12 @@ class StorageActivityCollector(CollectorBase):
         # Basic configuration
         self._name = kwargs.get("name", "Storage Activity Collector")
         self._provider_id = kwargs.get(
-            "provider_id", uuid.UUID("59f3a2d8-8e31-4cb5-9e89-f516ea9d3c77")
+            "provider_id",
+            uuid.UUID("59f3a2d8-8e31-4cb5-9e89-f516ea9d3c77"),
         )
-        self._provider_type = kwargs.get(
-            "provider_type",
-            StorageProviderType.OTHER
-        )
+        self._provider_type = kwargs.get("provider_type", StorageProviderType.OTHER)
         self._version = kwargs.get("version", "1.0.0")
-        self._description = kwargs.get(
-            "description", "Collects storage activities"
-        )
+        self._description = kwargs.get("description", "Collects storage activities")
 
         # Configuration
         self._max_history_days = kwargs.get("max_history_days", 30)
@@ -110,7 +105,7 @@ class StorageActivityCollector(CollectorBase):
             provider_type=self._provider_type,
             provider_name=self._name,
             source_machine=self._machine_name,
-            storage_location=self._storage_location
+            storage_location=self._storage_location,
         )
 
         # Setup logging
@@ -144,7 +139,8 @@ class StorageActivityCollector(CollectorBase):
                 raise ValueError("platform must be a string")
             platform = kwargs["platform"].replace("-", "_")
         collector_name = kwargs.get("collector_name", "unknown_collector").replace(
-            "-", "_"
+            "-",
+            "_",
         )
         if not isinstance(collector_name, str):
             raise ValueError("collector_name must be a string")
@@ -153,7 +149,8 @@ class StorageActivityCollector(CollectorBase):
         if "storage_description" in kwargs:
             storage_description = str(uuid.UUID(kwargs["storage_description"]).hex)
         timestamp = kwargs.get(
-            "timestamp", datetime.datetime.now(datetime.timezone.utc).isoformat()
+            "timestamp",
+            datetime.datetime.now(datetime.timezone.utc).isoformat(),
         )
         assert isinstance(timestamp, str), "timestamp must be a string"
         target_dir = indaleko_default_data_dir
@@ -174,7 +171,6 @@ class StorageActivityCollector(CollectorBase):
         name = generate_file_name(**kwargs)
         return os.path.join(target_dir, name)
 
-
     def add_activity(self, activity: BaseStorageActivityData) -> None:
         """
         Add an activity to the collection.
@@ -186,9 +182,9 @@ class StorageActivityCollector(CollectorBase):
         self._metadata.activity_count += 1
 
     def get_activities(
-            self,
-            filters: Optional[Dict] = None
-    ) -> List[BaseStorageActivityData]:
+        self,
+        filters: dict | None = None,
+    ) -> list[BaseStorageActivityData]:
         """
         Get collected activities, optionally filtered.
 
@@ -219,9 +215,9 @@ class StorageActivityCollector(CollectorBase):
         self._metadata.activity_count = 0
 
     def get_activity_by_id(
-            self,
-            activity_id: uuid.UUID
-    ) -> Optional[BaseStorageActivityData]:
+        self,
+        activity_id: uuid.UUID,
+    ) -> BaseStorageActivityData | None:
         """
         Get an activity by its ID.
 
@@ -238,8 +234,8 @@ class StorageActivityCollector(CollectorBase):
 
     def get_activities_by_type(
         self,
-        activity_type: StorageActivityType
-    ) -> List[BaseStorageActivityData]:
+        activity_type: StorageActivityType,
+    ) -> list[BaseStorageActivityData]:
         """
         Get activities of a specific type.
 
@@ -249,16 +245,13 @@ class StorageActivityCollector(CollectorBase):
         Returns:
             List of activities of the specified type
         """
-        return [
-            a for a in self._activities
-            if a.activity_type == activity_type
-        ]
+        return [a for a in self._activities if a.activity_type == activity_type]
 
     def get_activities_by_time_range(
         self,
         start_time: datetime,
-        end_time: datetime
-    ) -> List[BaseStorageActivityData]:
+        end_time: datetime,
+    ) -> list[BaseStorageActivityData]:
         """
         Get activities within a time range.
 
@@ -269,20 +262,15 @@ class StorageActivityCollector(CollectorBase):
         Returns:
             List of activities within the time range
         """
-        return [
-            a for a in self._activities
-            if start_time <= a.timestamp <= end_time
-        ]
+        return [a for a in self._activities if start_time <= a.timestamp <= end_time]
 
     # Implement CollectorBase abstract methods
-    def get_collector_characteristics(self) -> List[
-        ActivityDataCharacteristics
-    ]:
+    def get_collector_characteristics(self) -> list[ActivityDataCharacteristics]:
         """Get the characteristics of this collector."""
         return [
-                ActivityDataCharacteristics.ACTIVITY_DATA_SYSTEM_ACTIVITY,
-                ActivityDataCharacteristics.ACTIVITY_DATA_FILE_ACTIVITY
-            ]
+            ActivityDataCharacteristics.ACTIVITY_DATA_SYSTEM_ACTIVITY,
+            ActivityDataCharacteristics.ACTIVITY_DATA_FILE_ACTIVITY,
+        ]
 
     def get_collector_name(self) -> str:
         """Get the name of the collector."""
@@ -296,7 +284,7 @@ class StorageActivityCollector(CollectorBase):
         """Get the type of storage provider."""
         return self._provider_type
 
-    def retrieve_data(self, data_id: uuid.UUID) -> Dict:
+    def retrieve_data(self, data_id: uuid.UUID) -> dict:
         """
         Retrieve data for a specific ID.
 
@@ -355,7 +343,7 @@ class StorageActivityCollector(CollectorBase):
     def collect_data(self) -> None:
         """Collect storage activity data."""
 
-    def process_data(self, data: Any) -> Dict[str, Any]:
+    def process_data(self, data: Any) -> dict[str, Any]:
         """
         Process the collected data.
 
@@ -369,11 +357,11 @@ class StorageActivityCollector(CollectorBase):
         activity_data = StorageActivityData(
             metadata=self._metadata,
             activities=self._activities,
-            Timestamp=IndalekoTimestampDataModel()
+            Timestamp=IndalekoTimestampDataModel(),
         )
         return activity_data.model_dump()
 
-    def store_data(self, data: Dict[str, Any]) -> None:
+    def store_data(self, data: dict[str, Any]) -> None:
         """
         Store the processed data.
 
@@ -383,7 +371,7 @@ class StorageActivityCollector(CollectorBase):
         # This is a collector, not a recorder.
         # Storage is handled by the recorder.
 
-    def save_activities_to_file(self) -> Optional[str]:
+    def save_activities_to_file(self) -> str | None:
         """
         Save collected activities to a file.
 
@@ -395,7 +383,9 @@ class StorageActivityCollector(CollectorBase):
             return None
 
         if not self._output_path:
-            self._logger.warning("No output path specified, activities not saved to file")
+            self._logger.warning(
+                "No output path specified, activities not saved to file",
+            )
             return None
 
         try:
@@ -403,24 +393,26 @@ class StorageActivityCollector(CollectorBase):
             os.makedirs(os.path.dirname(self._output_path), exist_ok=True)
 
             # Write to file using JSONL format (one JSON object per line)
-            with open(self._output_path, 'w', encoding='utf-8') as f:
+            with open(self._output_path, "w", encoding="utf-8") as f:
                 # First write the metadata as a single line
                 metadata = {
                     "record_type": "metadata",
-                    "collector_metadata": self._metadata.model_dump() if self._metadata else {},
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "collector_metadata": (self._metadata.model_dump() if self._metadata else {}),
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "collector_name": self._name,
-                    "total_activities": len(self._activities)
+                    "total_activities": len(self._activities),
                 }
-                f.write(json.dumps(metadata, default=str) + '\n')
+                f.write(json.dumps(metadata, default=str) + "\n")
 
                 # Then write each activity as a separate line
                 for activity in self._activities:
                     activity_data = activity.model_dump()
                     activity_data["record_type"] = "activity"  # Add record type for easier parsing
-                    f.write(json.dumps(activity_data, default=str) + '\n')
+                    f.write(json.dumps(activity_data, default=str) + "\n")
 
-            self._logger.info(f"Saved {len(self._activities)} activities to {self._output_path}")
+            self._logger.info(
+                f"Saved {len(self._activities)} activities to {self._output_path}",
+            )
             return self._output_path
         except Exception as e:
             self._logger.error(f"Error saving activities to file: {e}")
@@ -478,15 +470,22 @@ class WindowsStorageActivityCollector(StorageActivityCollector):
             drive_letter = volume.upper()
 
         # Use machine config to get GUID if available
-        if self._machine_config and hasattr(self._machine_config, "map_drive_letter_to_volume_guid"):
+        if self._machine_config and hasattr(
+            self._machine_config,
+            "map_drive_letter_to_volume_guid",
+        ):
             try:
                 guid = self.map_drive_letter_to_volume_guid(drive_letter)
                 if guid:
                     guid_path = f"\\\\?\\Volume{{{guid}}}\\"
-                    self._logger.info(f"Mapped drive {drive_letter}: to volume GUID path: {guid_path}")
+                    self._logger.info(
+                        f"Mapped drive {drive_letter}: to volume GUID path: {guid_path}",
+                    )
                     return guid_path
                 else:
-                    self._logger.warning(f"Could not map drive {drive_letter}: to a volume GUID")
+                    self._logger.warning(
+                        f"Could not map drive {drive_letter}: to a volume GUID",
+                    )
             except Exception as e:
                 self._logger.error(f"Error mapping drive to GUID: {e}")
 
@@ -495,7 +494,7 @@ class WindowsStorageActivityCollector(StorageActivityCollector):
         self._logger.info(f"Using standard path for volume {volume}: {std_path}")
         return std_path
 
-    def map_drive_letter_to_volume_guid(self, drive_letter: str) -> Optional[str]:
+    def map_drive_letter_to_volume_guid(self, drive_letter: str) -> str | None:
         """
         Map a drive letter to a volume GUID.
 
@@ -513,7 +512,9 @@ class WindowsStorageActivityCollector(StorageActivityCollector):
         if len(drive_letter) > 1:
             drive_letter = drive_letter[0]
 
-        self._logger.debug(f"Attempting to map drive letter {drive_letter} to volume GUID")
+        self._logger.debug(
+            f"Attempting to map drive letter {drive_letter} to volume GUID",
+        )
 
         # Use the machine config to map the drive letter
         try:
@@ -521,19 +522,29 @@ class WindowsStorageActivityCollector(StorageActivityCollector):
                 # Get the volume info from machine config
                 if hasattr(self._machine_config, "get_volume_info") and self._debug:
                     volume_info = self._machine_config.get_volume_info()
-                    self._logger.debug(f"Volume info from machine config: {volume_info}")
+                    self._logger.debug(
+                        f"Volume info from machine config: {volume_info}",
+                    )
 
                 # Map drive letter to GUID
-                guid = self._machine_config.map_drive_letter_to_volume_guid(drive_letter)
+                guid = self._machine_config.map_drive_letter_to_volume_guid(
+                    drive_letter,
+                )
 
                 if guid:
-                    self._logger.debug(f"Successfully mapped drive {drive_letter} to GUID {guid}")
+                    self._logger.debug(
+                        f"Successfully mapped drive {drive_letter} to GUID {guid}",
+                    )
                 else:
-                    self._logger.warning(f"Drive letter {drive_letter} not found in machine configuration")
+                    self._logger.warning(
+                        f"Drive letter {drive_letter} not found in machine configuration",
+                    )
 
                 return guid
             else:
-                self._logger.error("Machine config does not have map_drive_letter_to_volume_guid method")
+                self._logger.error(
+                    "Machine config does not have map_drive_letter_to_volume_guid method",
+                )
         except Exception as e:
             self._logger.error(f"Error mapping drive letter to GUID: {e}")
 

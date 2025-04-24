@@ -39,7 +39,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger("CalendarCLI")
 
@@ -90,10 +91,14 @@ def setup_google_calendar(args):
 
     # Set up configuration paths
     config_path = args.config or os.path.join(
-        os.environ.get("INDALEKO_ROOT"), "config", "gcalendar_config.json",
+        os.environ.get("INDALEKO_ROOT"),
+        "config",
+        "gcalendar_config.json",
     )
     token_path = args.token or os.path.join(
-        os.environ.get("INDALEKO_ROOT"), "config", "gcalendar_token.json",
+        os.environ.get("INDALEKO_ROOT"),
+        "config",
+        "gcalendar_token.json",
     )
 
     # Check if config file exists
@@ -107,7 +112,9 @@ def setup_google_calendar(args):
 
     # Create collector
     collector = GoogleCalendarCollector(
-        config_path=config_path, token_path=token_path, event_limit=args.limit,
+        config_path=config_path,
+        token_path=token_path,
+        event_limit=args.limit,
     )
 
     return collector, config_path
@@ -132,10 +139,14 @@ def setup_outlook_calendar(args):
 
     # Set up configuration paths
     config_path = args.config or os.path.join(
-        os.environ.get("INDALEKO_ROOT"), "config", "outlook_calendar_config.json",
+        os.environ.get("INDALEKO_ROOT"),
+        "config",
+        "outlook_calendar_config.json",
     )
     token_path = args.token or os.path.join(
-        os.environ.get("INDALEKO_ROOT"), "config", "outlook_calendar_token.json",
+        os.environ.get("INDALEKO_ROOT"),
+        "config",
+        "outlook_calendar_token.json",
     )
 
     # Load or create config
@@ -286,7 +297,10 @@ def main():
     parser.add_argument("--config", help="Path to the configuration file")
     parser.add_argument("--token", help="Path to the token file")
     parser.add_argument(
-        "--limit", type=int, default=100, help="Maximum number of events to retrieve",
+        "--limit",
+        type=int,
+        default=100,
+        help="Maximum number of events to retrieve",
     )
     parser.add_argument(
         "--start-days",
@@ -307,7 +321,9 @@ def main():
 
     # Storage options
     parser.add_argument(
-        "--store", action="store_true", help="Store events in the database",
+        "--store",
+        action="store_true",
+        help="Store events in the database",
     )
     parser.add_argument(
         "--collection",

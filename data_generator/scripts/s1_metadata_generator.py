@@ -1,10 +1,10 @@
-import os, sys
-from icecream import ic
-from datetime import datetime
-import random
-import json
 import copy
+import json
+import os
+import random
 import re
+import sys
+from datetime import datetime
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -13,17 +13,18 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
-from typing import Dict, Any, Tuple, Union
-from data_generator.scripts.metadata.posix_metadata import PosixMetadata
-from data_generator.scripts.metadata.metadata import Metadata
+from collections import namedtuple
+from typing import Any
+
+from data_generator.scripts.metadata.geo_activity_metadata import GeoActivityData
 from data_generator.scripts.metadata.machine_config_metadata import (
     MachineConfigMetadata,
 )
+from data_generator.scripts.metadata.metadata import Metadata
 from data_generator.scripts.metadata.music_activity_metadata import MusicActivityData
-from data_generator.scripts.metadata.temp_activity_metadata import TempActivityData
-from data_generator.scripts.metadata.geo_activity_metadata import GeoActivityData
+from data_generator.scripts.metadata.posix_metadata import PosixMetadata
 from data_generator.scripts.metadata.semantic_metadata import SemanticMetadata
-from collections import namedtuple
+from data_generator.scripts.metadata.temp_activity_metadata import TempActivityData
 
 # Define the named tuple outside the function
 DataGeneratorResults = namedtuple(
@@ -90,8 +91,10 @@ class Dataset_Generator:
             json.dump(dataset, json_file, indent=4)
 
     def preprocess_dictionary_timestamps(
-        self, selected_md_attributes: Dict[str, Any], to_timestamp: bool
-    ) -> Dict[str, Any]:
+        self,
+        selected_md_attributes: dict[str, Any],
+        to_timestamp: bool,
+    ) -> dict[str, Any]:
         """
         Convert time to posix timstamps given a dictionary to run data generator:
         Args:
@@ -105,7 +108,8 @@ class Dataset_Generator:
             if "timestamps" in posix:
                 for timestamp_key, timestamp_data in posix["timestamps"].items():
                     starttime, endtime = self._convert_time_timestamp(
-                        timestamp_data, to_timestamp
+                        timestamp_data,
+                        to_timestamp,
                     )
                     posix["timestamps"][timestamp_key]["starttime"] = starttime
                     posix["timestamps"][timestamp_key]["endtime"] = endtime
@@ -116,12 +120,13 @@ class Dataset_Generator:
 
     # Helper function for convert_dictionary_times()
     def _convert_time_timestamp(
-        self, timestamps: dict, to_timestamp: bool
-    ) -> Tuple[Union[Any, datetime], Union[Any, datetime]]:
+        self,
+        timestamps: dict,
+        to_timestamp: bool,
+    ) -> tuple[Any | datetime, Any | datetime]:
         """
         Converts the time from string to timestamps
         """
-
         starttime = timestamps["starttime"]
         endtime = timestamps["endtime"]
         if to_timestamp:
@@ -164,7 +169,6 @@ class Dataset_Generator:
 
     def generate_metadata_dataset(self, selected_md_attributes):
         """Main function to generate metadata datasets"""
-
         # set dictionaries for each metadata:
         self.selected_POSIX_md = selected_md_attributes.get("Posix", {})
         self.selected_AC_md = selected_md_attributes.get("Activity", {})
@@ -209,33 +213,33 @@ class Dataset_Generator:
         filler_num = remaining_files - self.truth_like_num
 
         truth = self._generate_metadata(
-            0, self.n_matching_queries + 1, "Truth File", True, False
+            0,
+            self.n_matching_queries + 1,
+            "Truth File",
+            True,
+            False,
         )
         filler = self._generate_metadata(
-            self.truth_like_num, filler_num + 1, "Filler File", False, False
+            self.truth_like_num,
+            filler_num + 1,
+            "Filler File",
+            False,
+            False,
         )
         truth_like_filler = self._generate_metadata(
-            0, self.truth_like_num + 1, "Filler Truth-Like File", False, True
+            0,
+            self.truth_like_num + 1,
+            "Filler Truth-Like File",
+            False,
+            True,
         )
 
         all_record = truth.record + truth_like_filler.record + filler.record
         all_semantics = truth.semantics + truth_like_filler.semantics + filler.semantics
-        all_geo_activity = (
-            truth.geo_activity + truth_like_filler.geo_activity + filler.geo_activity
-        )
-        all_temp_activity = (
-            truth.temp_activity + truth_like_filler.temp_activity + filler.temp_activity
-        )
-        all_music_activity = (
-            truth.music_activity
-            + truth_like_filler.music_activity
-            + filler.music_activity
-        )
-        all_machine_config = (
-            truth.machine_config
-            + truth_like_filler.machine_config
-            + filler.machine_config
-        )
+        all_geo_activity = truth.geo_activity + truth_like_filler.geo_activity + filler.geo_activity
+        all_temp_activity = truth.temp_activity + truth_like_filler.temp_activity + filler.temp_activity
+        all_music_activity = truth.music_activity + truth_like_filler.music_activity + filler.music_activity
+        all_machine_config = truth.machine_config + truth_like_filler.machine_config + filler.machine_config
 
         metadata_stats = {
             "truth": self.n_matching_queries,
@@ -253,8 +257,8 @@ class Dataset_Generator:
             metadata_stats,
         )
 
-    def _return_key_attributes(self, dictionary: Dict[str, Any]):
-        """checks and return the keys of the dictionary as a list"""
+    def _return_key_attributes(self, dictionary: dict[str, Any]):
+        """Checks and return the keys of the dictionary as a list"""
         if dictionary == None:
             return []
         else:
@@ -282,27 +286,33 @@ class Dataset_Generator:
             truthlike_attributes = self._get_truthlike_attributes(truth_like)
 
             key_name = self._generate_key_name(
-                key, file_num, truth_like, truthlike_attributes
+                key,
+                file_num,
+                truth_like,
+                truthlike_attributes,
             )
             has_semantic_filler = self._has_semantic_attr(truthlike_attributes)
 
-            file_size, file_name, path, URI, IO_UUID = (
-                self.posix_generator.generate_file_info(
-                    current_filenum,
-                    file_num,
-                    is_truth_file,
-                    truth_like,
-                    truthlike_attributes,
-                    self.has_semantic_truth,
-                    has_semantic_filler,
-                )
+            file_size, file_name, path, URI, IO_UUID = self.posix_generator.generate_file_info(
+                current_filenum,
+                file_num,
+                is_truth_file,
+                truth_like,
+                truthlike_attributes,
+                self.has_semantic_truth,
+                has_semantic_filler,
             )
 
             timestamps = self.posix_generator.generate_timestamps_md(
-                is_truth_file, truth_like, truthlike_attributes
+                is_truth_file,
+                truth_like,
+                truthlike_attributes,
             )
             attribute = self.posix_generator.generate_file_attributes(
-                file_name, path, timestamps, file_size
+                file_name,
+                path,
+                timestamps,
+                file_size,
             )
             record_data = self.posix_generator.generate_record_data(IO_UUID, attribute)
 
@@ -326,19 +336,33 @@ class Dataset_Generator:
                 current_filenum + file_num,
             )
             semantic = self.semantic_generator.generate_metadata(
-                record_data, IO_UUID, semantic_attributes
+                record_data,
+                IO_UUID,
+                semantic_attributes,
             )
             geo_activity = self.geo_activity_generator.generate_metadata(
-                record_data, timestamps, is_truth_file, truth_like, truthlike_attributes
+                record_data,
+                timestamps,
+                is_truth_file,
+                truth_like,
+                truthlike_attributes,
             )
             temp_activity = self.temp_activity_generator.generate_metadata(
-                record_data, timestamps, is_truth_file, truth_like, truthlike_attributes
+                record_data,
+                timestamps,
+                is_truth_file,
+                truth_like,
+                truthlike_attributes,
             )
             music_activity = self.music_activity_generator.generate_metadata(
-                record_data, timestamps, is_truth_file, truth_like, truthlike_attributes
+                record_data,
+                timestamps,
+                is_truth_file,
+                truth_like,
+                truthlike_attributes,
             )
             machine_config = self.machine_config_generator.generate_metadata(
-                record_data
+                record_data,
             )
 
             # appending the objects to their lists
@@ -359,16 +383,20 @@ class Dataset_Generator:
         )
 
     def _generate_key_name(
-        self, key: str, n: int, truth_like: bool, truthlike_attributes: list[str]
+        self,
+        key: str,
+        n: int,
+        truth_like: bool,
+        truthlike_attributes: list[str],
     ) -> str:
-        """generates the key name for the metadata"""
+        """Generates the key name for the metadata"""
         key_name = f"{key} #{n}"
         if truth_like:
             key_name += f", truth-like attributes: {truthlike_attributes}"
         return key_name
 
     def _has_semantic_attr(self, truthlike_attributes) -> bool:
-        """checks whether there are any semantic attributes populated"""
+        """Checks whether there are any semantic attributes populated"""
         return any(attr.startswith("Content_") for attr in truthlike_attributes)
 
     def _get_truthlike_attributes(self, truth_like: bool) -> list[str]:
@@ -376,18 +404,22 @@ class Dataset_Generator:
         if truth_like:
             num_truthlike_attributes = random.randint(1, len(self.truth_attributes) - 1)
             selected_truth_like_attr = random.sample(
-                self.truth_attributes, k=num_truthlike_attributes
+                self.truth_attributes,
+                k=num_truthlike_attributes,
             )
             # this is done so that there are no semantic attributes in filler files that aren't text based when the text files are all specified in truth attributes
             return self._check_special_case(
-                selected_truth_like_attr, num_truthlike_attributes
+                selected_truth_like_attr,
+                num_truthlike_attributes,
             )
         return []
 
     def _check_special_case(
-        self, selected_truth_like_attr: list[str], num_truthlike_attributes: int
+        self,
+        selected_truth_like_attr: list[str],
+        num_truthlike_attributes: int,
     ):
-        """checks the special case instance when there is semantic data queried but not text file extension"""
+        """Checks the special case instance when there is semantic data queried but not text file extension"""
         is_all_text = self._check_truth_all_text()
         # If a semantic is not available i.e. file name is not chosen but Content is but file name specifis all text
         if not self._check_semantic_available(selected_truth_like_attr, is_all_text):
@@ -399,20 +431,14 @@ class Dataset_Generator:
             ):
                 return ["file.name"]
             # Case 2: Other posix and semantic are availabe
-            elif (
-                len(self.selected_POSIX_md) >= 1 and len(self.selected_semantic_md) >= 1
-            ):
+            elif len(self.selected_POSIX_md) >= 1 and len(self.selected_semantic_md) >= 1:
                 if num_truthlike_attributes == len(self.truth_attributes) - 1:
-                    selected_truth_like_attr = [
-                        item
-                        for item in selected_truth_like_attr
-                        if "Content_" not in item
-                    ]
+                    selected_truth_like_attr = [item for item in selected_truth_like_attr if "Content_" not in item]
                 selected_truth_like_attr.append("file.name")
         return selected_truth_like_attr
 
     def _check_truth_all_text(self):
-        """checks whether all metadata queried are all text files"""
+        """Checks whether all metadata queried are all text files"""
         if "file.name" in self.selected_POSIX_md:
             if "extension" in self.selected_POSIX_md["file.name"]:
                 true_extension = self.selected_POSIX_md["file.name"]["extension"]
@@ -421,9 +447,11 @@ class Dataset_Generator:
         return False
 
     def _check_semantic_available(
-        self, selected_truth_attributes: list[str], is_all_text: bool
+        self,
+        selected_truth_attributes: list[str],
+        is_all_text: bool,
     ) -> bool:
-        """check if semantic avaiable in the truth like filler metadata"""
+        """Check if semantic avaiable in the truth like filler metadata"""
         if (
             is_all_text
             and ("file.name" not in selected_truth_attributes)
@@ -453,14 +481,15 @@ def main():
                 "Content_1": {"PageNumber": 8, "Text": "city", "Type": "Title"},
                 "Content_2": {"Text": "vancouver", "Type": "Subtitle"},
             },
-        }
+        },
     }
     config_path = "data_generator/config/dg_config.json"
-    with open(config_path, "r") as file:
+    with open(config_path) as file:
         config = json.load(file)
     data_generator = Dataset_Generator(config)
     selected_md_attributes = data_generator.preprocess_dictionary_timestamps(
-        selected_md_attributes, False
+        selected_md_attributes,
+        False,
     )
     results = data_generator.generate_metadata_dataset(selected_md_attributes)
 

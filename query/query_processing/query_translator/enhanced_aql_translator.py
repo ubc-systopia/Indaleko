@@ -88,9 +88,7 @@ class EnhancedAQLTranslator(AQLTranslator):
         # Create a comprehensive context for the LLM
         input_context = {
             "enhanced_query": enhanced_understanding.model_dump(),
-            "db_collections": {
-                name: meta.model_dump() for name, meta in self.collection_data.items()
-            },
+            "db_collections": {name: meta.model_dump() for name, meta in self.collection_data.items()},
         }
 
         # Add collection indices for optimization
@@ -114,13 +112,12 @@ class EnhancedAQLTranslator(AQLTranslator):
         self.performance_hints = self._generate_performance_hints(
             enhanced_understanding,
         )
-        input_context["performance_hints"] = [
-            hint.model_dump() for hint in self.performance_hints
-        ]
+        input_context["performance_hints"] = [hint.model_dump() for hint in self.performance_hints]
 
         # Create the prompt for the LLM
         system_prompt = self._create_enhanced_translation_prompt(
-            enhanced_understanding, input_context,
+            enhanced_understanding,
+            input_context,
         )
 
         user_prompt = f"Generate an optimized AQL query for: '{enhanced_understanding.original_query}'"
@@ -388,7 +385,8 @@ class EnhancedAQLTranslator(AQLTranslator):
         return system_prompt
 
     def _generate_performance_hints(
-        self, enhanced_understanding: EnhancedQueryUnderstanding,
+        self,
+        enhanced_understanding: EnhancedQueryUnderstanding,
     ) -> list[QueryPerformanceHint]:
         """
         Generate performance hints based on the query understanding.
@@ -489,10 +487,7 @@ class EnhancedAQLTranslator(AQLTranslator):
             # Check for indexed fields (for non-text search operations)
             found_index = False
             for collection in collections:
-                if (
-                    collection in indexed_fields
-                    and constraint.field in indexed_fields[collection]
-                ):
+                if collection in indexed_fields and constraint.field in indexed_fields[collection]:
                     found_index = True
                     hints.append(
                         QueryPerformanceHint(
@@ -525,10 +520,7 @@ class EnhancedAQLTranslator(AQLTranslator):
                     view_name = collection_view_mapping[collection]
                     if view_name in available_views:
                         # Only add if we haven't already added a specific hint for this view
-                        if not any(
-                            h.hint_type == "view_usage" and view_name in h.description
-                            for h in hints
-                        ):
+                        if not any(h.hint_type == "view_usage" and view_name in h.description for h in hints):
                             hints.append(
                                 QueryPerformanceHint(
                                     hint_type="view_usage",
@@ -587,7 +579,9 @@ class EnhancedAQLTranslator(AQLTranslator):
         return hints
 
     def _map_constraint_to_aql(
-        self, constraint: QueryConstraint, collection: str,
+        self,
+        constraint: QueryConstraint,
+        collection: str,
     ) -> tuple[str, dict[str, Any]]:
         """
         Map a query constraint to AQL filter syntax with bind variables.

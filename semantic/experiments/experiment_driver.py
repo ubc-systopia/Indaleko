@@ -244,7 +244,10 @@ class SemanticExtractorExperiment:
         return file_paths
 
     def run_throughput_experiment(
-        self, extractor_type: str, sample_size: int = 100, use_database: bool = False,
+        self,
+        extractor_type: str,
+        sample_size: int = 100,
+        use_database: bool = False,
     ) -> dict[str, Any]:
         """
         Run a throughput experiment for a specific extractor.
@@ -305,7 +308,9 @@ class SemanticExtractorExperiment:
 
                 # Start monitoring
                 context = self.monitor.start_monitoring(
-                    extractor_type, file_path=file_path, file_size=file_size,
+                    extractor_type,
+                    file_path=file_path,
+                    file_size=file_size,
                 )
 
                 # Process file
@@ -313,7 +318,9 @@ class SemanticExtractorExperiment:
 
                 # Stop monitoring
                 self.monitor.stop_monitoring(
-                    context, success=True, additional_data=result,
+                    context,
+                    success=True,
+                    additional_data=result,
                 )
 
                 processed_files += 1
@@ -339,12 +346,8 @@ class SemanticExtractorExperiment:
             "processed_bytes": processed_bytes,
             "errors": errors,
             "total_time": elapsed_time,
-            "files_per_second": (
-                processed_files / elapsed_time if elapsed_time > 0 else 0
-            ),
-            "bytes_per_second": (
-                processed_bytes / elapsed_time if elapsed_time > 0 else 0
-            ),
+            "files_per_second": (processed_files / elapsed_time if elapsed_time > 0 else 0),
+            "bytes_per_second": (processed_bytes / elapsed_time if elapsed_time > 0 else 0),
             "detailed_stats": self.monitor.get_stats(),
         }
 
@@ -412,7 +415,8 @@ class SemanticExtractorExperiment:
 
             # Generate test files for this type
             file_paths = self.generate_test_files(
-                count=count_per_type, types=[file_type],
+                count=count_per_type,
+                types=[file_type],
             )
 
             # Process files
@@ -443,7 +447,9 @@ class SemanticExtractorExperiment:
 
                     # Stop monitoring
                     self.monitor.stop_monitoring(
-                        context, success=True, additional_data=result,
+                        context,
+                        success=True,
+                        additional_data=result,
                     )
 
                     type_stats["processed_files"] += 1
@@ -461,13 +467,9 @@ class SemanticExtractorExperiment:
 
             # Calculate type-specific metrics
             if type_stats["processed_files"] > 0:
-                type_stats["avg_time_per_file"] = (
-                    type_stats["total_time"] / type_stats["processed_files"]
-                )
+                type_stats["avg_time_per_file"] = type_stats["total_time"] / type_stats["processed_files"]
                 type_stats["avg_bytes_per_second"] = (
-                    type_stats["processed_bytes"] / type_stats["total_time"]
-                    if type_stats["total_time"] > 0
-                    else 0
+                    type_stats["processed_bytes"] / type_stats["total_time"] if type_stats["total_time"] > 0 else 0
                 )
 
             type_results[file_type] = type_stats
@@ -487,7 +489,8 @@ class SemanticExtractorExperiment:
 
         # Save detailed comparison stats
         with open(
-            os.path.join(self.output_dir, f"{extractor_type}_type_comparison.json"), "w",
+            os.path.join(self.output_dir, f"{extractor_type}_type_comparison.json"),
+            "w",
         ) as f:
             json.dump(comparison_results, f, indent=2)
 
@@ -498,7 +501,10 @@ class SemanticExtractorExperiment:
         return comparison_results
 
     def run_size_scaling_experiment(
-        self, extractor_type: str, file_sizes: list[int] = None, files_per_size: int = 5,
+        self,
+        extractor_type: str,
+        file_sizes: list[int] = None,
+        files_per_size: int = 5,
     ) -> dict[str, Any]:
         """
         Run an experiment analyzing how performance scales with file size.
@@ -583,7 +589,9 @@ class SemanticExtractorExperiment:
 
                     # Stop monitoring
                     self.monitor.stop_monitoring(
-                        context, success=True, additional_data=result,
+                        context,
+                        success=True,
+                        additional_data=result,
                     )
 
                     size_stats["processed_files"] += 1
@@ -600,19 +608,14 @@ class SemanticExtractorExperiment:
 
             # Calculate size-specific metrics
             if size_stats["processed_files"] > 0:
-                size_stats["avg_time_per_file"] = (
-                    size_stats["total_time"] / size_stats["processed_files"]
-                )
+                size_stats["avg_time_per_file"] = size_stats["total_time"] / size_stats["processed_files"]
                 size_stats["bytes_per_second"] = (
                     (size * size_stats["processed_files"]) / size_stats["total_time"]
                     if size_stats["total_time"] > 0
                     else 0
                 )
                 size_stats["time_per_mb"] = (
-                    size_stats["total_time"]
-                    / (size * size_stats["processed_files"] / (1024 * 1024))
-                    if size > 0
-                    else 0
+                    size_stats["total_time"] / (size * size_stats["processed_files"] / (1024 * 1024)) if size > 0 else 0
                 )
 
             size_results[str(size)] = size_stats
@@ -632,7 +635,8 @@ class SemanticExtractorExperiment:
 
         # Save detailed scaling stats
         with open(
-            os.path.join(self.output_dir, f"{extractor_type}_size_scaling.json"), "w",
+            os.path.join(self.output_dir, f"{extractor_type}_size_scaling.json"),
+            "w",
         ) as f:
             json.dump(scaling_results, f, indent=2)
 
@@ -643,7 +647,10 @@ class SemanticExtractorExperiment:
         return scaling_results
 
     def run_coverage_experiment(
-        self, days: int = 30, sample_interval: int = 1, extractors: list[str] = None,
+        self,
+        days: int = 30,
+        sample_interval: int = 1,
+        extractors: list[str] = None,
     ) -> dict[str, Any]:
         """
         Run an experiment to project metadata coverage growth over time.
@@ -702,8 +709,7 @@ class SemanticExtractorExperiment:
                     extracted_files = daily_extraction * day
                     coverage = min(
                         1.0,
-                        current_coverage.get(extractor, 0)
-                        + (extracted_files / total_objects),
+                        current_coverage.get(extractor, 0) + (extracted_files / total_objects),
                     )
                     coverage_data[extractor].append(coverage)
 
@@ -723,7 +729,8 @@ class SemanticExtractorExperiment:
 
             # Save results
             with open(
-                os.path.join(self.output_dir, "coverage_projection.json"), "w",
+                os.path.join(self.output_dir, "coverage_projection.json"),
+                "w",
             ) as f:
                 json.dump(coverage_results, f, indent=2)
 
@@ -761,13 +768,15 @@ class SemanticExtractorExperiment:
         # Run file type comparisons
         for extractor in extractors:
             self.run_file_type_comparison(
-                extractor, count_per_type=max(5, sample_size // 10),
+                extractor,
+                count_per_type=max(5, sample_size // 10),
             )
 
         # Run size scaling experiments
         for extractor in extractors:
             self.run_size_scaling_experiment(
-                extractor, files_per_size=max(3, sample_size // 20),
+                extractor,
+                files_per_size=max(3, sample_size // 20),
             )
 
         # Run coverage experiment
@@ -812,10 +821,7 @@ class SemanticExtractorExperiment:
 
         # Extract data for plotting
         avg_times = [type_results[ft]["avg_time_per_file"] for ft in file_types]
-        bandwidths = [
-            type_results[ft]["avg_bytes_per_second"] / (1024 * 1024)
-            for ft in file_types
-        ]
+        bandwidths = [type_results[ft]["avg_bytes_per_second"] / (1024 * 1024) for ft in file_types]
 
         # Create figure
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
@@ -853,13 +859,8 @@ class SemanticExtractorExperiment:
                 size_labels.append(f"{size/(1024*1024):.1f}MB")
 
         # Extract data for plotting
-        avg_times = [
-            size_results[str(size)]["avg_time_per_file"] for size in file_sizes
-        ]
-        bandwidths = [
-            size_results[str(size)]["bytes_per_second"] / (1024 * 1024)
-            for size in file_sizes
-        ]
+        avg_times = [size_results[str(size)]["avg_time_per_file"] for size in file_sizes]
+        bandwidths = [size_results[str(size)]["bytes_per_second"] / (1024 * 1024) for size in file_sizes]
 
         # Create figure
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
@@ -948,9 +949,7 @@ class SemanticExtractorExperiment:
 
             # Add throughput experiments
             throughput_experiments = [
-                exp
-                for exp in self.results["experiments"]
-                if exp["experiment_type"] == "throughput"
+                exp for exp in self.results["experiments"] if exp["experiment_type"] == "throughput"
             ]
             if throughput_experiments:
                 f.write(
@@ -1008,9 +1007,7 @@ class SemanticExtractorExperiment:
 
             # Add file type comparison experiments
             comparison_experiments = [
-                exp
-                for exp in self.results["experiments"]
-                if exp["experiment_type"] == "file_type_comparison"
+                exp for exp in self.results["experiments"] if exp["experiment_type"] == "file_type_comparison"
             ]
             if comparison_experiments:
                 f.write(
@@ -1067,9 +1064,7 @@ class SemanticExtractorExperiment:
 
             # Add size scaling experiments
             scaling_experiments = [
-                exp
-                for exp in self.results["experiments"]
-                if exp["experiment_type"] == "size_scaling"
+                exp for exp in self.results["experiments"] if exp["experiment_type"] == "size_scaling"
             ]
             if scaling_experiments:
                 f.write(
@@ -1165,12 +1160,8 @@ class SemanticExtractorExperiment:
                     initial = exp["initial_coverage"].get(extractor, 0)
                     daily_rate = exp["extraction_rates"].get(extractor, 1000)
                     if daily_rate > 0:
-                        days_to_50 = (
-                            (0.5 - initial) * exp["total_objects"]
-                        ) / daily_rate
-                        days_to_90 = (
-                            (0.9 - initial) * exp["total_objects"]
-                        ) / daily_rate
+                        days_to_50 = ((0.5 - initial) * exp["total_objects"]) / daily_rate
+                        days_to_90 = ((0.9 - initial) * exp["total_objects"]) / daily_rate
                     else:
                         days_to_50 = float("inf")
                         days_to_90 = float("inf")
@@ -1218,7 +1209,9 @@ class SemanticExtractorExperiment:
         self.logger.info(f"Summary report generated at {report_path}")
 
     def analyze_performance_data_by_machine(
-        self, perf_file: str = None, machine_id: str = None,
+        self,
+        perf_file: str = None,
+        machine_id: str = None,
     ) -> dict[str, Any]:
         """
         Analyze performance data across multiple machines or for a specific machine.
@@ -1263,21 +1256,11 @@ class SemanticExtractorExperiment:
                     "elapsed_time": entry.get("ElapsedTime", 0),
                     "user_cpu_time": entry.get("UserCPUTime", 0),
                     "system_cpu_time": entry.get("SystemCPUTime", 0),
-                    "extractor_name": entry.get("Record", {})
-                    .get("Attributes", {})
-                    .get("ExtractorName", "unknown"),
-                    "file_path": entry.get("Record", {})
-                    .get("Attributes", {})
-                    .get("FilePath", ""),
-                    "file_size": entry.get("Record", {})
-                    .get("Attributes", {})
-                    .get("FileSize", 0),
-                    "mime_type": entry.get("Record", {})
-                    .get("Attributes", {})
-                    .get("MimeType", ""),
-                    "success": entry.get("Record", {})
-                    .get("Attributes", {})
-                    .get("Success", True),
+                    "extractor_name": entry.get("Record", {}).get("Attributes", {}).get("ExtractorName", "unknown"),
+                    "file_path": entry.get("Record", {}).get("Attributes", {}).get("FilePath", ""),
+                    "file_size": entry.get("Record", {}).get("Attributes", {}).get("FileSize", 0),
+                    "mime_type": entry.get("Record", {}).get("Attributes", {}).get("MimeType", ""),
+                    "success": entry.get("Record", {}).get("Attributes", {}).get("Success", True),
                 }
 
                 # Extract IO stats if available
@@ -1285,16 +1268,20 @@ class SemanticExtractorExperiment:
                     record.update(
                         {
                             "io_read_count": entry["ActivityStats"]["IO"].get(
-                                "read_count", 0,
+                                "read_count",
+                                0,
                             ),
                             "io_write_count": entry["ActivityStats"]["IO"].get(
-                                "write_count", 0,
+                                "write_count",
+                                0,
                             ),
                             "io_read_bytes": entry["ActivityStats"]["IO"].get(
-                                "read_bytes", 0,
+                                "read_bytes",
+                                0,
                             ),
                             "io_write_bytes": entry["ActivityStats"]["IO"].get(
-                                "write_bytes", 0,
+                                "write_bytes",
+                                0,
                             ),
                         },
                     )
@@ -1304,16 +1291,20 @@ class SemanticExtractorExperiment:
                     record.update(
                         {
                             "memory_rss_delta": entry["ActivityStats"]["Memory"].get(
-                                "rss_delta", 0,
+                                "rss_delta",
+                                0,
                             ),
                             "memory_vms_delta": entry["ActivityStats"]["Memory"].get(
-                                "vms_delta", 0,
+                                "vms_delta",
+                                0,
                             ),
                             "memory_peak_rss": entry["ActivityStats"]["Memory"].get(
-                                "peak_rss", 0,
+                                "peak_rss",
+                                0,
                             ),
                             "memory_peak_vms": entry["ActivityStats"]["Memory"].get(
-                                "peak_vms", 0,
+                                "peak_vms",
+                                0,
                             ),
                         },
                     )
@@ -1330,9 +1321,7 @@ class SemanticExtractorExperiment:
                 return {"error": "No data found for the specified machine ID"}
 
             # Add derived metrics
-            df["mb_per_second"] = (
-                df["file_size"] / (1024 * 1024) / df["elapsed_time"].clip(lower=0.001)
-            )
+            df["mb_per_second"] = df["file_size"] / (1024 * 1024) / df["elapsed_time"].clip(lower=0.001)
 
             # Group by machine ID and extractor
             by_machine_extractor = df.groupby(["machine_id", "extractor_name"]).agg(
@@ -1372,9 +1361,7 @@ class SemanticExtractorExperiment:
                         else 0
                     ),
                     "mb_per_second": (
-                        machine_df["file_size"].sum()
-                        / (1024 * 1024)
-                        / machine_df["elapsed_time"].sum()
+                        machine_df["file_size"].sum() / (1024 * 1024) / machine_df["elapsed_time"].sum()
                         if machine_df["elapsed_time"].sum() > 0
                         else 0
                     ),
@@ -1392,9 +1379,7 @@ class SemanticExtractorExperiment:
                         "total_time": extractor_df["elapsed_time"].sum(),
                         "avg_time_per_file": extractor_df["elapsed_time"].mean(),
                         "mb_per_second": (
-                            extractor_df["file_size"].sum()
-                            / (1024 * 1024)
-                            / extractor_df["elapsed_time"].sum()
+                            extractor_df["file_size"].sum() / (1024 * 1024) / extractor_df["elapsed_time"].sum()
                             if extractor_df["elapsed_time"].sum() > 0
                             else 0
                         ),
@@ -1408,7 +1393,8 @@ class SemanticExtractorExperiment:
             # Generate comparison visualizations if multiple machines
             if len(overall_stats["machines"]) > 1 and PLOTTING_AVAILABLE:
                 self._generate_machine_comparison_visualization(
-                    df, os.path.join(self.output_dir, "machine_comparison.png"),
+                    df,
+                    os.path.join(self.output_dir, "machine_comparison.png"),
                 )
 
             return overall_stats
@@ -1418,7 +1404,9 @@ class SemanticExtractorExperiment:
             return {"error": f"Error analyzing performance data: {e}"}
 
     def _generate_machine_comparison_visualization(
-        self, df: pd.DataFrame, output_path: str,
+        self,
+        df: pd.DataFrame,
+        output_path: str,
     ) -> None:
         """Generate visualization comparing performance across machines."""
         # Create a grouped bar chart for MB/s by machine and extractor
@@ -1455,44 +1443,65 @@ def main():
     # Experiment selection
     parser.add_argument("--all", action="store_true", help="Run all experiments")
     parser.add_argument(
-        "--throughput", action="store_true", help="Run throughput experiment",
+        "--throughput",
+        action="store_true",
+        help="Run throughput experiment",
     )
     parser.add_argument(
-        "--file-types", action="store_true", help="Run file type comparison",
+        "--file-types",
+        action="store_true",
+        help="Run file type comparison",
     )
     parser.add_argument(
-        "--size-scaling", action="store_true", help="Run size scaling experiment",
+        "--size-scaling",
+        action="store_true",
+        help="Run size scaling experiment",
     )
     parser.add_argument(
-        "--coverage", action="store_true", help="Run coverage experiment",
+        "--coverage",
+        action="store_true",
+        help="Run coverage experiment",
     )
 
     # Extractor selection
     parser.add_argument("--mime", action="store_true", help="Test MIME type detector")
     parser.add_argument(
-        "--checksum", action="store_true", help="Test checksum calculator",
+        "--checksum",
+        action="store_true",
+        help="Test checksum calculator",
     )
     parser.add_argument("--exif", action="store_true", help="Test EXIF extractor")
     parser.add_argument(
-        "--all-extractors", action="store_true", help="Test all extractors",
+        "--all-extractors",
+        action="store_true",
+        help="Test all extractors",
     )
 
     # Analysis options
     parser.add_argument(
-        "--analyze", action="store_true", help="Analyze existing performance data",
+        "--analyze",
+        action="store_true",
+        help="Analyze existing performance data",
     )
     parser.add_argument(
-        "--perf-file", type=str, help="Performance data file to analyze",
+        "--perf-file",
+        type=str,
+        help="Performance data file to analyze",
     )
     parser.add_argument("--machine-id", type=str, help="Filter analysis by machine ID")
 
     # Experiment parameters
     parser.add_argument(
-        "--sample-size", type=int, default=100, help="Sample size for experiments",
+        "--sample-size",
+        type=int,
+        default=100,
+        help="Sample size for experiments",
     )
     parser.add_argument("--output-dir", type=str, help="Output directory for results")
     parser.add_argument(
-        "--db", action="store_true", help="Use database files (when available)",
+        "--db",
+        action="store_true",
+        help="Use database files (when available)",
     )
     parser.add_argument(
         "--no-db-record",
@@ -1507,7 +1516,8 @@ def main():
     # Set up logging
     log_level = logging.INFO if args.verbose else logging.WARNING
     logging.basicConfig(
-        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
     # Determine experiment ID and output directory
@@ -1566,17 +1576,21 @@ def main():
         for extractor in extractors:
             if args.throughput:
                 experiment.run_throughput_experiment(
-                    extractor, sample_size=args.sample_size, use_database=args.db,
+                    extractor,
+                    sample_size=args.sample_size,
+                    use_database=args.db,
                 )
 
             if args.file_types:
                 experiment.run_file_type_comparison(
-                    extractor, count_per_type=max(5, args.sample_size // 10),
+                    extractor,
+                    count_per_type=max(5, args.sample_size // 10),
                 )
 
             if args.size_scaling:
                 experiment.run_size_scaling_experiment(
-                    extractor, files_per_size=max(3, args.sample_size // 20),
+                    extractor,
+                    files_per_size=max(3, args.sample_size // 20),
                 )
 
         if args.coverage:

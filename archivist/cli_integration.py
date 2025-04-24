@@ -725,11 +725,7 @@ class DatabaseOptimizerCliIntegration:
         table_data = []
         for i, opt in enumerate(query_opts, 1):
             status = "Verified" if opt.verified else "Pending"
-            query_summary = (
-                opt.original_query[:50] + "..."
-                if len(opt.original_query) > 50
-                else opt.original_query
-            )
+            query_summary = opt.original_query[:50] + "..." if len(opt.original_query) > 50 else opt.original_query
 
             table_data.append(
                 [
@@ -783,17 +779,13 @@ class DatabaseOptimizerCliIntegration:
 
         print("\nOriginal Query:")
         print(
-            opt.original_query[:200] + "..."
-            if len(opt.original_query) > 200
-            else opt.original_query,
+            (opt.original_query[:200] + "..." if len(opt.original_query) > 200 else opt.original_query),
         )
 
         if opt.optimized_query != opt.original_query:
             print("\nOptimized Query:")
             print(
-                opt.optimized_query[:200] + "..."
-                if len(opt.optimized_query) > 200
-                else opt.optimized_query,
+                (opt.optimized_query[:200] + "..." if len(opt.optimized_query) > 200 else opt.optimized_query),
             )
 
     def show_impact(self, args):
@@ -828,11 +820,7 @@ class DatabaseOptimizerCliIntegration:
 
             # Count slow queries
             slow_threshold = 500  # ms
-            slow_count = sum(
-                1
-                for q in recent_queries
-                if getattr(q, "ExecutionTimeMs", 0) > slow_threshold
-            )
+            slow_count = sum(1 for q in recent_queries if getattr(q, "ExecutionTimeMs", 0) > slow_threshold)
 
             print(f"Recent queries (24h): {len(recent_queries)}")
             print(f"Average execution time: {avg_time:.2f} ms")
@@ -859,11 +847,7 @@ class DatabaseOptimizerCliIntegration:
                             else (
                                 "Minimal improvement"
                                 if opt["impact"] > 1.0
-                                else (
-                                    "No improvement"
-                                    if opt["impact"] >= 0.9
-                                    else "Performance regression"
-                                )
+                                else ("No improvement" if opt["impact"] >= 0.9 else "Performance regression")
                             )
                         )
                     )

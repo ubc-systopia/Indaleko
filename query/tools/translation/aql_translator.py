@@ -100,7 +100,11 @@ class AQLTranslatorTool(BaseTool):
                             "original_query": "Show me documents with report in the title",
                             "intent": "search",
                             "entities": [
-                                {"name": "report", "type": "keyword", "value": "report"},
+                                {
+                                    "name": "report",
+                                    "type": "keyword",
+                                    "value": "report",
+                                },
                             ],
                         },
                     },
@@ -238,7 +242,9 @@ class AQLTranslatorTool(BaseTool):
 
         # Report initial progress
         self.report_progress(
-            stage="initialization", message="Initializing AQL translator", progress=0.1,
+            stage="initialization",
+            message="Initializing AQL translator",
+            progress=0.1,
         )
 
         # Initialize translator if needed
@@ -269,7 +275,9 @@ class AQLTranslatorTool(BaseTool):
 
             # Report entity processing progress
             self.report_progress(
-                stage="processing", message="Processing entity data", progress=0.4,
+                stage="processing",
+                message="Processing entity data",
+                progress=0.4,
             )
 
             # Process entities to ensure they are in the correct format
@@ -339,14 +347,13 @@ class AQLTranslatorTool(BaseTool):
                 intent=intent,
                 entities=processed_entities,
                 db_info=db_info if db_info else [],  # Ensure db_info is a list
-                db_indices=(
-                    db_indices if db_indices else {}
-                ),  # Ensure db_indices is a dict
+                db_indices=(db_indices if db_indices else {}),  # Ensure db_indices is a dict
             )
 
             # Create translator input
             translator_input = TranslatorInput(
-                Query=structured_query, Connector=self._llm_connector,
+                Query=structured_query,
+                Connector=self._llm_connector,
             )
 
             ic(f"Translating query: {original_query}")
@@ -372,11 +379,7 @@ class AQLTranslatorTool(BaseTool):
                         if len(translated_output.aql_query) > 100
                         else translated_output.aql_query
                     ),
-                    "bind_vars_count": (
-                        len(translated_output.bind_vars)
-                        if translated_output.bind_vars
-                        else 0
-                    ),
+                    "bind_vars_count": (len(translated_output.bind_vars) if translated_output.bind_vars else 0),
                 },
             )
 

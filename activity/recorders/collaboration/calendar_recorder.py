@@ -93,7 +93,8 @@ class CalendarRecorder(RecorderBase):
         # Initialize base attributes
         self._name = kwargs.get("name", "Calendar Event Recorder")
         self._recorder_id = kwargs.get(
-            "recorder_id", uuid.UUID("f7d8e9c0-a1b2-c3d4-e5f6-a7b8c9d0e1f2"),
+            "recorder_id",
+            uuid.UUID("f7d8e9c0-a1b2-c3d4-e5f6-a7b8c9d0e1f2"),
         )
         self._collection_name = kwargs.get("collection_name", "CalendarEvents")
 
@@ -155,12 +156,10 @@ class CalendarRecorder(RecorderBase):
                     self.logger.info(
                         f"Creating collection for {self._collection_name} via registration service",
                     )
-                    provider_collection = (
-                        registration_service.create_provider_collection(
-                            identifier=provider_id,
-                            schema=None,  # No schema validation for now
-                            edge=False,
-                        )
+                    provider_collection = registration_service.create_provider_collection(
+                        identifier=provider_id,
+                        schema=None,  # No schema validation for now
+                        edge=False,
                     )
 
                 self._collection = provider_collection.collection
@@ -227,7 +226,8 @@ class CalendarRecorder(RecorderBase):
                 self.logger.error(f"Error parsing cursor: {e}")
 
     def _create_semantic_attributes(
-        self, event: CalendarEvent,
+        self,
+        event: CalendarEvent,
     ) -> list[IndalekoSemanticAttributeDataModel]:
         """Create semantic attributes for a calendar event.
 
@@ -243,7 +243,8 @@ class CalendarRecorder(RecorderBase):
         attributes.append(
             IndalekoSemanticAttributeDataModel(
                 Identifier=IndalekoUUIDDataModel(
-                    Identifier=CALENDAR_EVENT_ID, Label="Calendar Event ID",
+                    Identifier=CALENDAR_EVENT_ID,
+                    Label="Calendar Event ID",
                 ),
                 Value=event.event_id,
             ),
@@ -253,7 +254,8 @@ class CalendarRecorder(RecorderBase):
         attributes.append(
             IndalekoSemanticAttributeDataModel(
                 Identifier=IndalekoUUIDDataModel(
-                    Identifier=CALENDAR_EVENT_SUBJECT, Label="Calendar Event Subject",
+                    Identifier=CALENDAR_EVENT_SUBJECT,
+                    Label="Calendar Event Subject",
                 ),
                 Value=event.subject,
             ),
@@ -274,7 +276,8 @@ class CalendarRecorder(RecorderBase):
         attributes.append(
             IndalekoSemanticAttributeDataModel(
                 Identifier=IndalekoUUIDDataModel(
-                    Identifier=CALENDAR_EVENT_END_TIME, Label="Calendar Event End Time",
+                    Identifier=CALENDAR_EVENT_END_TIME,
+                    Label="Calendar Event End Time",
                 ),
                 Value=event.end_time.isoformat(),
             ),
@@ -309,7 +312,8 @@ class CalendarRecorder(RecorderBase):
         attributes.append(
             IndalekoSemanticAttributeDataModel(
                 Identifier=IndalekoUUIDDataModel(
-                    Identifier=CALENDAR_EVENT_STATUS, Label="Calendar Event Status",
+                    Identifier=CALENDAR_EVENT_STATUS,
+                    Label="Calendar Event Status",
                 ),
                 Value=event.status.value,
             ),
@@ -332,7 +336,8 @@ class CalendarRecorder(RecorderBase):
             attributes.append(
                 IndalekoSemanticAttributeDataModel(
                     Identifier=IndalekoUUIDDataModel(
-                        Identifier=CALENDAR_MEETING_TYPE, Label="Calendar Meeting Type",
+                        Identifier=CALENDAR_MEETING_TYPE,
+                        Label="Calendar Meeting Type",
                     ),
                     Value=event.online_meeting_provider,
                 ),
@@ -343,7 +348,8 @@ class CalendarRecorder(RecorderBase):
             attributes.append(
                 IndalekoSemanticAttributeDataModel(
                     Identifier=IndalekoUUIDDataModel(
-                        Identifier=CALENDAR_MEETING_URL, Label="Calendar Meeting URL",
+                        Identifier=CALENDAR_MEETING_URL,
+                        Label="Calendar Meeting URL",
                     ),
                     Value=event.join_url,
                 ),
@@ -377,7 +383,8 @@ class CalendarRecorder(RecorderBase):
         attributes.append(
             IndalekoSemanticAttributeDataModel(
                 Identifier=IndalekoUUIDDataModel(
-                    Identifier=CALENDAR_EVENT_RESPONSE, Label="Calendar Event Response",
+                    Identifier=CALENDAR_EVENT_RESPONSE,
+                    Label="Calendar Event Response",
                 ),
                 Value=event.response_status.value,
             ),
@@ -429,8 +436,7 @@ class CalendarRecorder(RecorderBase):
 
                 # Add semantic attributes
                 event_doc["SemanticAttributes"] = [
-                    attr.model_dump()
-                    for attr in self._create_semantic_attributes(event)
+                    attr.model_dump() for attr in self._create_semantic_attributes(event)
                 ]
 
                 # Check if this event already exists in the database
@@ -445,7 +451,8 @@ class CalendarRecorder(RecorderBase):
                 if existing_event:
                     # Update existing event
                     self._collection.update_one(
-                        {"_key": existing_event["_key"]}, event_doc,
+                        {"_key": existing_event["_key"]},
+                        event_doc,
                     )
                 else:
                     # Insert new event
@@ -508,7 +515,9 @@ class CalendarRecorder(RecorderBase):
 
         # Collect data
         collector.collect_data(
-            start_time=start_time, end_time=end_time, updated_since=self.processing_time,
+            start_time=start_time,
+            end_time=end_time,
+            updated_since=self.processing_time,
         )
 
         # Process data
@@ -526,9 +535,7 @@ class CalendarRecorder(RecorderBase):
         Returns:
             List[CalendarEvent]: Processed calendar events
         """
-        if isinstance(data, list) and all(
-            isinstance(event, CalendarEvent) for event in data
-        ):
+        if isinstance(data, list) and all(isinstance(event, CalendarEvent) for event in data):
             return data
         else:
             self.logger.error(

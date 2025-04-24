@@ -136,19 +136,18 @@ class YouTubeVideoActivity(IndalekoMultiClassifiedActivityDataModel):
         # Create basic semantic attributes (would be expanded in real implementation)
         semantic_attrs = [
             IndalekoSemanticAttributeDataModel(
-                AttributeType="MediaType", Value="Video",
+                AttributeType="MediaType",
+                Value="Video",
             ),
             IndalekoSemanticAttributeDataModel(
-                AttributeType="Platform", Value="YouTube",
+                AttributeType="Platform",
+                Value="YouTube",
             ),
         ]
 
         # Determine watch duration if available
         duration_sec = None
-        if (
-            "contentDetails" in video_data
-            and "duration" in video_data["contentDetails"]
-        ):
+        if "contentDetails" in video_data and "duration" in video_data["contentDetails"]:
             duration_sec = parse_youtube_duration(
                 video_data["contentDetails"]["duration"],
             )
@@ -174,7 +173,8 @@ def calculate_watch_percentage(watch_data):
     elif "current_time" in watch_data and "duration" in watch_data:
         if watch_data["duration"] > 0:
             return min(
-                1.0, float(watch_data["current_time"]) / float(watch_data["duration"]),
+                1.0,
+                float(watch_data["current_time"]) / float(watch_data["duration"]),
             )
     return 0.0
 
@@ -434,9 +434,7 @@ def calculate_productivity_score(video_data, watch_data):
 
     # Work hours viewing suggests work relation
     watch_time = parse_watch_timestamp(watch_data)
-    if (
-        watch_time and (9 <= watch_time.hour <= 17) and watch_time.weekday() < 5
-    ):  # Weekday 9am-5pm
+    if watch_time and (9 <= watch_time.hour <= 17) and watch_time.weekday() < 5:  # Weekday 9am-5pm
         score += 0.2
 
     # Software tutorials or tool videos

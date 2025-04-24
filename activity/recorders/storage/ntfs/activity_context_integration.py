@@ -140,11 +140,7 @@ class NtfsActivityContextIntegration:
             data_dict = activity_data.model_dump_json()
 
         # Create a reference for this activity
-        activity_reference = (
-            activity_data.activity_id
-            if hasattr(activity_data, "activity_id")
-            else uuid.uuid4()
-        )
+        activity_reference = activity_data.activity_id if hasattr(activity_data, "activity_id") else uuid.uuid4()
 
         # Create an attributes dictionary with key information
         attributes = {
@@ -192,7 +188,8 @@ class NtfsActivityContextIntegration:
         return updated
 
     def batch_update_context(
-        self, activities: list[NtfsStorageActivityData | dict],
+        self,
+        activities: list[NtfsStorageActivityData | dict],
     ) -> int:
         """
         Update the activity context with multiple NTFS activities at once.
@@ -218,7 +215,8 @@ class NtfsActivityContextIntegration:
         return successful_updates
 
     def associate_with_activity_context(
-        self, activity_data: NtfsStorageActivityData | dict,
+        self,
+        activity_data: NtfsStorageActivityData | dict,
     ) -> dict:
         """
         Associate NTFS activity data with the current activity context.

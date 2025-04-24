@@ -74,10 +74,12 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
     def __init__(self, **kwargs):
         """Initialize the Windows GPS Location Recorder."""
         self.min_movement_change_required = kwargs.get(
-            "min_movement_change_required", self.default_min_movement_change_required,
+            "min_movement_change_required",
+            self.default_min_movement_change_required,
         )
         self.max_time_between_updates = kwargs.get(
-            "max_time_between_updates", self.default_max_time_between_updates,
+            "max_time_between_updates",
+            self.default_max_time_between_updates,
         )
         self.db_config = IndalekoDBConfig()
         assert self.db_config is not None, "Failed to get the database configuration"
@@ -99,9 +101,7 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
             ),
         }
         self.provider_registrar = IndalekoActivityDataRegistrationService()
-        assert (
-            self.provider_registrar is not None
-        ), "Failed to get the provider registrar"
+        assert self.provider_registrar is not None, "Failed to get the provider registrar"
         collector_data = self.provider_registrar.lookup_provider_by_identifier(
             str(self.identifier),
         )
@@ -138,7 +138,8 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
         current_data = WindowsGPSLocation().get_coords()
         ic(current_data)
         assert isinstance(
-            current_data, WindowsGPSLocationDataModel,
+            current_data,
+            WindowsGPSLocationDataModel,
         ), f"current_data is not a WindowsGPSLocationDataModel {type(current_data)}"
         latest_db_data = self.get_latest_db_update()
         if not self.has_data_changed(current_data, latest_db_data):
@@ -208,7 +209,8 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
         """Store the processed data"""
         ksa = KnownSemanticAttributes
         assert isinstance(
-            data, WindowsGPSLocationDataModel,
+            data,
+            WindowsGPSLocationDataModel,
         ), f"current_data is not a WindowsGPSLocationDataModel {type(data)}"
         ic(type(data))
         latest_db_data = self.get_latest_db_update()

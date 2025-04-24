@@ -38,7 +38,8 @@ from query.analytics.file_statistics import FileStatistics, display_report, form
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -79,9 +80,7 @@ def run_file_stats_test(args):
         if file_types:
             print(f"Found {len(file_types)} different file types")
             print("\nTop 5 file types:")
-            sorted_types = sorted(file_types.items(), key=lambda x: x[1], reverse=True)[
-                :5
-            ]
+            sorted_types = sorted(file_types.items(), key=lambda x: x[1], reverse=True)[:5]
             for ext, count in sorted_types:
                 print(f".{ext}: {count:,} files")
         else:
@@ -108,8 +107,7 @@ def run_file_stats_test(args):
             print(f"Found {len(age_distribution)} age ranges")
             for item in age_distribution:
                 print(
-                    f"{item['age_range']}: {item['count']:,} files, "
-                    f"{format_size(item['total_size'])}",
+                    f"{item['age_range']}: {item['count']:,} files, {format_size(item['total_size'])}",
                 )
         else:
             print("No age distribution found")
@@ -139,13 +137,21 @@ def main():
     parser.add_argument("--all", "-a", action="store_true", help="Run all tests")
     parser.add_argument("--counts", "-c", action="store_true", help="Test file counts")
     parser.add_argument(
-        "--types", "-t", action="store_true", help="Test file type distribution",
+        "--types",
+        "-t",
+        action="store_true",
+        help="Test file type distribution",
     )
     parser.add_argument(
-        "--sizes", "-s", action="store_true", help="Test file size statistics",
+        "--sizes",
+        "-s",
+        action="store_true",
+        help="Test file size statistics",
     )
     parser.add_argument(
-        "--ages", action="store_true", help="Test file age distribution",
+        "--ages",
+        action="store_true",
+        help="Test file age distribution",
     )
     parser.add_argument(
         "--report",
@@ -154,7 +160,10 @@ def main():
         help="Test comprehensive report generation",
     )
     parser.add_argument(
-        "--visualize", "-v", action="store_true", help="Generate visualizations",
+        "--visualize",
+        "-v",
+        action="store_true",
+        help="Generate visualizations",
     )
     parser.add_argument(
         "--output",
@@ -164,7 +173,9 @@ def main():
         help="Output directory for report and visualizations",
     )
     parser.add_argument(
-        "--db-config", type=str, help="Path to database configuration file",
+        "--db-config",
+        type=str,
+        help="Path to database configuration file",
     )
     parser.add_argument("--debug", "-d", action="store_true", help="Enable debug mode")
 

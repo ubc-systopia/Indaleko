@@ -51,17 +51,22 @@ class SuggestionHistory(BaseModel):
     """History of suggestions and user interactions."""
 
     suggestions: list[ProactiveSuggestion] = Field(
-        default_factory=list, description="All suggestions generated",
+        default_factory=list,
+        description="All suggestions generated",
     )
     positive_interactions: dict[SuggestionType, int] = Field(
-        default_factory=dict, description="Count of positive interactions by type",
+        default_factory=dict,
+        description="Count of positive interactions by type",
     )
     negative_interactions: dict[SuggestionType, int] = Field(
-        default_factory=dict, description="Count of negative interactions by type",
+        default_factory=dict,
+        description="Count of negative interactions by type",
     )
 
     def record_interaction(
-        self, suggestion: ProactiveSuggestion, feedback_value: float,
+        self,
+        suggestion: ProactiveSuggestion,
+        feedback_value: float,
     ) -> None:
         """
         Record user interaction with a suggestion.
@@ -85,7 +90,8 @@ class SuggestionHistory(BaseModel):
             self.negative_interactions[suggestion_type] += 1
 
     def get_acceptance_rate(
-        self, suggestion_type: SuggestionType | None = None,
+        self,
+        suggestion_type: SuggestionType | None = None,
     ) -> float:
         """
         Calculate the acceptance rate for a suggestion type or overall.
@@ -116,17 +122,21 @@ class TemporalPattern(BaseModel):
         description="Unique identifier for this pattern",
     )
     pattern_type: str = Field(
-        ..., description="Type of temporal pattern (e.g., 'daily', 'weekly', 'monthly')",
+        ...,
+        description="Type of temporal pattern (e.g., 'daily', 'weekly', 'monthly')",
     )
     description: str = Field(..., description="Description of the pattern")
     confidence: float = Field(
-        default=0.5, description="Confidence in this pattern (0.0-1.0)",
+        default=0.5,
+        description="Confidence in this pattern (0.0-1.0)",
     )
     timeframe: dict[str, Any] = Field(
-        ..., description="Timeframe specification for the pattern",
+        ...,
+        description="Timeframe specification for the pattern",
     )
     associated_actions: list[str] = Field(
-        default_factory=list, description="Actions associated with this pattern",
+        default_factory=list,
+        description="Actions associated with this pattern",
     )
 
     def matches_current_time(self) -> bool:
@@ -168,26 +178,32 @@ class ProactiveArchivistData(BaseModel):
         description="History of suggestions and interactions",
     )
     active_suggestions: list[ProactiveSuggestion] = Field(
-        default_factory=list, description="Currently active suggestions",
+        default_factory=list,
+        description="Currently active suggestions",
     )
     temporal_patterns: list[TemporalPattern] = Field(
-        default_factory=list, description="Detected temporal patterns",
+        default_factory=list,
+        description="Detected temporal patterns",
     )
     sequential_patterns: dict[str, list[str]] = Field(
-        default_factory=dict, description="Detected sequential patterns in queries",
+        default_factory=dict,
+        description="Detected sequential patterns in queries",
     )
     context_triggers: dict[str, list[str]] = Field(
-        default_factory=dict, description="Context triggers for proactive suggestions",
+        default_factory=dict,
+        description="Context triggers for proactive suggestions",
     )
     suggestion_thresholds: dict[SuggestionType, float] = Field(
         default_factory=dict,
         description="Confidence thresholds for different suggestion types",
     )
     cross_source_enabled: bool = Field(
-        default=True, description="Whether cross-source pattern detection is enabled",
+        default=True,
+        description="Whether cross-source pattern detection is enabled",
     )
     last_cross_source_analysis: datetime | None = Field(
-        default=None, description="When cross-source patterns were last analyzed",
+        default=None,
+        description="When cross-source patterns were last analyzed",
     )
 
     def __init__(self, **data):
@@ -215,9 +231,7 @@ class ProactiveArchivist:
 
     proactive_archivist_uuid_str = "f5a3e7b1-9c6d-4e8a-b7f2-c9d4e6f3a2b1"
     proactive_archivist_version = "2025.04.11.02"
-    proactive_archivist_description = (
-        "Proactive Archivist enhancement with cross-source pattern detection"
-    )
+    proactive_archivist_description = "Proactive Archivist enhancement with cross-source pattern detection"
 
     def __init__(self, archivist_memory: ArchivistMemory):
         """
@@ -245,7 +259,8 @@ class ProactiveArchivist:
         return self._cross_source_detector
 
     def generate_suggestions(
-        self, context: dict[str, Any] | None = None,
+        self,
+        context: dict[str, Any] | None = None,
     ) -> list[ProactiveSuggestion]:
         """
         Generate proactive suggestions based on memory and context.
@@ -270,9 +285,7 @@ class ProactiveArchivist:
         if self.data.cross_source_enabled and self.data.last_cross_source_analysis:
             # Check if we need to refresh cross-source suggestions
             now = datetime.now(UTC)
-            time_since_analysis = (
-                now - self.data.last_cross_source_analysis
-            ).total_seconds()
+            time_since_analysis = (now - self.data.last_cross_source_analysis).total_seconds()
 
             # If it's been more than 24 hours since the last analysis, run it again
             if time_since_analysis > 24 * 60 * 60:
@@ -283,18 +296,13 @@ class ProactiveArchivist:
 
             # Add existing cross-source suggestions from active suggestions
             cross_source_suggestions = [
-                s
-                for s in self.data.active_suggestions
-                if "correlation_id" in s.context or "pattern_id" in s.context
+                s for s in self.data.active_suggestions if "correlation_id" in s.context or "pattern_id" in s.context
             ]
             suggestions.extend(cross_source_suggestions)
 
         # Filter suggestions based on confidence thresholds
         filtered_suggestions = [
-            s
-            for s in suggestions
-            if s.confidence
-            >= self.data.suggestion_thresholds.get(s.suggestion_type, 0.7)
+            s for s in suggestions if s.confidence >= self.data.suggestion_thresholds.get(s.suggestion_type, 0.7)
         ]
 
         # Sort by priority and confidence
@@ -309,9 +317,7 @@ class ProactiveArchivist:
 
         # Add to active suggestions (avoiding duplicates)
         existing_ids = {s.suggestion_id for s in self.data.active_suggestions}
-        new_suggestions = [
-            s for s in sorted_suggestions if s.suggestion_id not in existing_ids
-        ]
+        new_suggestions = [s for s in sorted_suggestions if s.suggestion_id not in existing_ids]
         self.data.active_suggestions.extend(new_suggestions)
 
         return sorted_suggestions
@@ -319,13 +325,12 @@ class ProactiveArchivist:
     def _remove_expired_suggestions(self) -> None:
         """Remove expired suggestions from the active list."""
         self.data.active_suggestions = [
-            s
-            for s in self.data.active_suggestions
-            if not s.is_expired() and not s.dismissed
+            s for s in self.data.active_suggestions if not s.is_expired() and not s.dismissed
         ]
 
     def _generate_goal_based_suggestions(
-        self, context: dict[str, Any] | None = None,
+        self,
+        context: dict[str, Any] | None = None,
     ) -> list[ProactiveSuggestion]:
         """
         Generate suggestions related to long-term goals.
@@ -343,8 +348,7 @@ class ProactiveArchivist:
             # Check for stalled goals (no updates in over 2 weeks)
             if goal.last_updated < datetime.now(UTC) - timedelta(days=14):
                 confidence = min(
-                    0.5
-                    + (0.1 * (datetime.now(UTC) - goal.last_updated).days / 7),
+                    0.5 + (0.1 * (datetime.now(UTC) - goal.last_updated).days / 7),
                     0.9,
                 )
 
@@ -382,7 +386,8 @@ class ProactiveArchivist:
         return suggestions
 
     def _generate_topic_based_suggestions(
-        self, context: dict[str, Any] | None = None,
+        self,
+        context: dict[str, Any] | None = None,
     ) -> list[ProactiveSuggestion]:
         """
         Generate suggestions based on topics of interest.
@@ -480,7 +485,8 @@ class ProactiveArchivist:
         )
 
     def _generate_temporal_pattern_suggestions(
-        self, context: dict[str, Any] | None = None,
+        self,
+        context: dict[str, Any] | None = None,
     ) -> list[ProactiveSuggestion]:
         """
         Generate suggestions based on temporal patterns.
@@ -494,9 +500,7 @@ class ProactiveArchivist:
         suggestions = []
 
         # Check for matching temporal patterns
-        matching_patterns = [
-            p for p in self.data.temporal_patterns if p.matches_current_time()
-        ]
+        matching_patterns = [p for p in self.data.temporal_patterns if p.matches_current_time()]
 
         for pattern in matching_patterns:
             if pattern.associated_actions:
@@ -516,7 +520,8 @@ class ProactiveArchivist:
         return suggestions
 
     def _generate_strategy_suggestions(
-        self, context: dict[str, Any] | None = None,
+        self,
+        context: dict[str, Any] | None = None,
     ) -> list[ProactiveSuggestion]:
         """
         Generate suggestions for effective search strategies.
@@ -530,11 +535,7 @@ class ProactiveArchivist:
         suggestions = []
 
         # Only suggest strategies if we have high-confidence ones
-        effective_strategies = [
-            s
-            for s in self.archivist.memory.effective_strategies
-            if s.success_rate > 0.7
-        ]
+        effective_strategies = [s for s in self.archivist.memory.effective_strategies if s.success_rate > 0.7]
 
         if effective_strategies and context and "recent_queries" in context:
             # Try to suggest a strategy based on recent queries
@@ -586,9 +587,7 @@ class ProactiveArchivist:
         # Detect daily patterns (active hours)
         if hour_counts:
             active_hours = sorted(hour_counts.items(), key=lambda x: x[1], reverse=True)
-            if (
-                active_hours and active_hours[0][1] > len(queries) * 0.2
-            ):  # At least 20% in peak hour
+            if active_hours and active_hours[0][1] > len(queries) * 0.2:  # At least 20% in peak hour
                 peak_hour = active_hours[0][0]
                 # Define a 3-hour window around the peak
                 hour_start = max(0, peak_hour - 1)
@@ -605,9 +604,7 @@ class ProactiveArchivist:
         # Detect weekly patterns
         if day_counts:
             active_days = sorted(day_counts.items(), key=lambda x: x[1], reverse=True)
-            if (
-                active_days and active_days[0][1] > len(queries) * 0.3
-            ):  # At least 30% on peak day
+            if active_days and active_days[0][1] > len(queries) * 0.3:  # At least 30% on peak day
                 peak_day = active_days[0][0]
 
                 # Create or update temporal pattern
@@ -619,7 +616,11 @@ class ProactiveArchivist:
                 )
 
     def _add_or_update_temporal_pattern(
-        self, pattern_type, description, confidence, timeframe,
+        self,
+        pattern_type,
+        description,
+        confidence,
+        timeframe,
     ):
         """Add a new temporal pattern or update an existing one."""
         # Check if similar pattern already exists
@@ -694,9 +695,7 @@ class ProactiveArchivist:
         # Add insights from sequential patterns
         common_sequences = []
         for first_query, next_queries in self.data.sequential_patterns.items():
-            if (
-                len(next_queries) >= 3
-            ):  # If a query is frequently followed by specific others
+            if len(next_queries) >= 3:  # If a query is frequently followed by specific others
                 common_sequences.append((first_query, next_queries[:3]))
 
         if common_sequences:
@@ -720,7 +719,8 @@ class ProactiveArchivist:
 
                 # Update history
                 self.data.suggestion_history.record_interaction(
-                    suggestion, feedback_value,
+                    suggestion,
+                    feedback_value,
                 )
 
                 # If negative feedback, dismiss the suggestion
@@ -733,24 +733,28 @@ class ProactiveArchivist:
                 # Adjust threshold based on feedback
                 suggestion_type = suggestion.suggestion_type
                 current_threshold = self.data.suggestion_thresholds.get(
-                    suggestion_type, 0.7,
+                    suggestion_type,
+                    0.7,
                 )
 
                 if feedback_value > 0:
                     # Slightly lower threshold for types with positive feedback
                     self.data.suggestion_thresholds[suggestion_type] = max(
-                        0.5, current_threshold - 0.05,
+                        0.5,
+                        current_threshold - 0.05,
                     )
                 elif feedback_value < 0:
                     # Slightly raise threshold for types with negative feedback
                     self.data.suggestion_thresholds[suggestion_type] = min(
-                        0.9, current_threshold + 0.05,
+                        0.9,
+                        current_threshold + 0.05,
                     )
 
                 break
 
     def get_suggested_query(
-        self, context: dict[str, Any] | None = None,
+        self,
+        context: dict[str, Any] | None = None,
     ) -> str | None:
         """
         Get a query suggestion based on current context.
@@ -767,9 +771,7 @@ class ProactiveArchivist:
 
         # Look for query suggestions
         query_suggestions = [
-            s
-            for s in self.data.active_suggestions
-            if s.suggestion_type == SuggestionType.QUERY and not s.dismissed
+            s for s in self.data.active_suggestions if s.suggestion_type == SuggestionType.QUERY and not s.dismissed
         ]
 
         if query_suggestions:
@@ -800,8 +802,7 @@ class ProactiveArchivist:
             # Run analysis if never run before or not run in the last 24 hours
             if (
                 self.data.last_cross_source_analysis is None
-                or (now - self.data.last_cross_source_analysis).total_seconds()
-                > 24 * 60 * 60
+                or (now - self.data.last_cross_source_analysis).total_seconds() > 24 * 60 * 60
             ):
                 self.analyze_cross_source_patterns()
 
@@ -822,9 +823,7 @@ class ProactiveArchivist:
             ic("Running cross-source pattern analysis")
 
             # Run the cross-source pattern detector
-            event_count, patterns, correlations, suggestions = (
-                self.cross_source_detector.analyze_and_generate()
-            )
+            event_count, patterns, correlations, suggestions = self.cross_source_detector.analyze_and_generate()
 
             ic(
                 f"Cross-source analysis: Found {len(patterns)} patterns, {len(correlations)} correlations",
@@ -844,34 +843,32 @@ class ProactiveArchivist:
                 )
 
                 # Add to active suggestions if confidence meets threshold
-                if (
-                    proactive_suggestion.confidence
-                    >= self.data.suggestion_thresholds.get(
-                        proactive_suggestion.suggestion_type, 0.7,
-                    )
+                if proactive_suggestion.confidence >= self.data.suggestion_thresholds.get(
+                    proactive_suggestion.suggestion_type,
+                    0.7,
                 ):
                     self.data.active_suggestions.append(proactive_suggestion)
 
             # Add insights from patterns
             for pattern in patterns:
-                if (
-                    pattern.confidence >= 0.65
-                ):  # Only add high-confidence patterns as insights
+                if pattern.confidence >= 0.65:  # Only add high-confidence patterns as insights
                     insight_category = "cross_source_pattern"
                     insight_text = pattern.description
                     self.archivist.add_insight(
-                        insight_category, insight_text, pattern.confidence,
+                        insight_category,
+                        insight_text,
+                        pattern.confidence,
                     )
 
             # Add insights from correlations
             for correlation in correlations:
-                if (
-                    correlation.confidence >= 0.7
-                ):  # Only add high-confidence correlations as insights
+                if correlation.confidence >= 0.7:  # Only add high-confidence correlations as insights
                     insight_category = "cross_source_correlation"
                     insight_text = correlation.description
                     self.archivist.add_insight(
-                        insight_category, insight_text, correlation.confidence,
+                        insight_category,
+                        insight_text,
+                        correlation.confidence,
                     )
 
             # Update last analysis timestamp
@@ -888,15 +885,20 @@ def main():
 
     # Add some test data
     archivist.add_long_term_goal(
-        "File Organization", "Organize personal documents by project and year",
+        "File Organization",
+        "Organize personal documents by project and year",
     )
     archivist.update_goal_progress("File Organization", 0.35)
 
     archivist.add_insight(
-        "organization", "User struggles with finding documents older than 6 months", 0.8,
+        "organization",
+        "User struggles with finding documents older than 6 months",
+        0.8,
     )
     archivist.add_insight(
-        "retrieval", "Location data is highly valuable for narrowing searches", 0.7,
+        "retrieval",
+        "Location data is highly valuable for narrowing searches",
+        0.7,
     )
 
     # Initialize Proactive Archivist

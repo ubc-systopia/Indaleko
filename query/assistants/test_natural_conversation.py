@@ -89,13 +89,15 @@ def test_topic_segmentation():
     # Add messages
     conversation.add_message("user", "Hello, I need help with my files.")
     conversation.add_message(
-        "assistant", "I can help you with that. What kind of files?",
+        "assistant",
+        "I can help you with that. What kind of files?",
     )
 
     # Switch to file organization topic
     conversation.end_topic_segment("Initial greeting and request for help.")
     files_segment = conversation.start_topic_segment(
-        "file organization", entities=["files", "organization"],
+        "file organization",
+        entities=["files", "organization"],
     )
     print(f"Started file organization segment: {files_segment.segment_id}")
 
@@ -107,7 +109,8 @@ def test_topic_segmentation():
     # Switch to UPI topic
     conversation.end_topic_segment("Discussion about organizing PDF files by project.")
     upi_segment = conversation.start_topic_segment(
-        "UPI", entities=["UPI", "Unified Personal Index"],
+        "UPI",
+        entities=["UPI", "Unified Personal Index"],
     )
     print(f"Started UPI segment: {upi_segment.segment_id}")
 
@@ -135,10 +138,13 @@ def test_memory_integration():
 
     # Add some test data
     memory.add_long_term_goal(
-        "File Organization", "Organize PDF documents by project and year",
+        "File Organization",
+        "Organize PDF documents by project and year",
     )
     memory.add_insight(
-        "organization", "User frequently searches for PDF documents", 0.8,
+        "organization",
+        "User frequently searches for PDF documents",
+        0.8,
     )
     memory.add_insight("retrieval", "Project name is a key search criterion", 0.7)
 
@@ -209,17 +215,14 @@ class EnhancedConversationManager(ConversationManager):
             if thesis_topic and demo_vehicle:
                 # Explicitly check for continuation info in execution context
                 continuation_info = conversation.execution_context.get(
-                    "continuation_info", {},
+                    "continuation_info",
+                    {},
                 )
                 continuation_summary = continuation_info.get("summary", "")
                 takeaways = continuation_info.get("key_takeaways", [])
 
                 # Create a response that shows we know about previous conversation
-                if (
-                    "remind" in message.lower()
-                    or "previous" in message.lower()
-                    or "before" in message.lower()
-                ):
+                if "remind" in message.lower() or "previous" in message.lower() or "before" in message.lower():
                     return (
                         f"Based on our previous conversation, I know you're working on a thesis "
                         f"about {thesis_topic} and using {demo_vehicle} as a demonstration vehicle. "
@@ -236,7 +239,9 @@ class EnhancedConversationManager(ConversationManager):
                     )
 
                 # Add continuation context to all responses
-                continuation_context = f"[Context from previous conversation about {thesis_topic} using {demo_vehicle}] "
+                continuation_context = (
+                    f"[Context from previous conversation about {thesis_topic} using {demo_vehicle}] "
+                )
 
         # Check referenced memories for relevant context
         if referenced_memories:
@@ -369,12 +374,16 @@ def main():
         description="Test Natural Conversation Capabilities",
     )
     parser.add_argument(
-        "--basics", action="store_true", help="Test basic conversation functionality",
+        "--basics",
+        action="store_true",
+        help="Test basic conversation functionality",
     )
     parser.add_argument("--topics", action="store_true", help="Test topic segmentation")
     parser.add_argument("--memory", action="store_true", help="Test memory integration")
     parser.add_argument(
-        "--continuity", action="store_true", help="Test conversation continuity",
+        "--continuity",
+        action="store_true",
+        help="Test conversation continuity",
     )
     parser.add_argument("--all", action="store_true", help="Run all tests")
 

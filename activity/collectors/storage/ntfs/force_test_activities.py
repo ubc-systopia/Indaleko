@@ -54,7 +54,9 @@ from activity.collectors.storage.ntfs.usn_journal import (
 
 
 def generate_test_files(
-    volume: str, num_files: int = 3, verbose: bool = False,
+    volume: str,
+    num_files: int = 3,
+    verbose: bool = False,
 ) -> list[str]:
     """Generate test files on the volume."""
     if verbose:
@@ -91,7 +93,8 @@ def map_usn_record_to_activity(usn_record: dict[str, Any]) -> NtfsStorageActivit
         timestamp=timestamp,
         file_reference_number=usn_record.get("file_reference_number", "0"),
         parent_file_reference_number=usn_record.get(
-            "parent_file_reference_number", "0",
+            "parent_file_reference_number",
+            "0",
         ),
         activity_type=activity_type,
         reason_flags=reason,
@@ -139,10 +142,7 @@ def determine_activity_type(reason_flags: int) -> StorageActivityType:
     if reason_flags & USN_REASON_FILE_DELETE:
         return StorageActivityType.DELETE
 
-    if (
-        reason_flags & USN_REASON_RENAME_OLD_NAME
-        or reason_flags & USN_REASON_RENAME_NEW_NAME
-    ):
+    if reason_flags & USN_REASON_RENAME_OLD_NAME or reason_flags & USN_REASON_RENAME_NEW_NAME:
         return StorageActivityType.RENAME
 
     # Second priority: content changes
@@ -183,7 +183,8 @@ def determine_activity_type(reason_flags: int) -> StorageActivityType:
 
 
 def generate_mock_activities(
-    num_activities: int = 5, verbose: bool = False,
+    num_activities: int = 5,
+    verbose: bool = False,
 ) -> list[NtfsStorageActivityData]:
     """Generate mock activities without using the USN journal."""
     if verbose:
@@ -251,7 +252,8 @@ def generate_mock_activities(
 
 
 def save_activities_to_file(
-    activities: list[NtfsStorageActivityData], output_path: str,
+    activities: list[NtfsStorageActivityData],
+    output_path: str,
 ) -> None:
     """Save activities to a JSONL file."""
     # Create directory if it doesn't exist
@@ -279,7 +281,10 @@ def main():
         description="Force test activities for NTFS Activity Collector",
     )
     parser.add_argument(
-        "--volume", type=str, default="C:", help="Volume to monitor (default: C:)",
+        "--volume",
+        type=str,
+        default="C:",
+        help="Volume to monitor (default: C:)",
     )
     parser.add_argument(
         "--num-files",
@@ -294,7 +299,9 @@ def main():
         help="Output file (default: ntfs_activities.jsonl)",
     )
     parser.add_argument(
-        "--mock", action="store_true", help="Use mock activities instead of USN journal",
+        "--mock",
+        action="store_true",
+        help="Use mock activities instead of USN journal",
     )
     parser.add_argument(
         "--num-activities",
@@ -319,7 +326,9 @@ def main():
         else:
             # Create test files
             generated_files = generate_test_files(
-                args.volume, args.num_files, args.verbose,
+                args.volume,
+                args.num_files,
+                args.verbose,
             )
 
             # Give the filesystem a moment to process the changes
@@ -332,7 +341,9 @@ def main():
                 print(f"Querying USN journal on volume {args.volume}...")
 
             journal_info, records = get_usn_journal_records(
-                args.volume, None, args.verbose,
+                args.volume,
+                None,
+                args.verbose,
             )
 
             if not journal_info or not records:

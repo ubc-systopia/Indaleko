@@ -104,20 +104,13 @@ def main():
     build_db_commands = [CommandBuilder("python").add_arg("dbsetup.py")]
 
     build_machine_config_commands = [
-        CommandBuilder("python")
-        .add_arg("MacHardwareInfoGenerator.py")
-        .add_arg("-d", "./config")
-        .add_arg("--skip"),
+        CommandBuilder("python").add_arg("MacHardwareInfoGenerator.py").add_arg("-d", "./config").add_arg("--skip"),
         CommandBuilder("sleep").add_arg("10"),
-        CommandBuilder("python")
-        .add_arg("IndalekoMacMachineConfig.py")
-        .add_arg("--add"),
+        CommandBuilder("python").add_arg("IndalekoMacMachineConfig.py").add_arg("--add"),
     ]
 
     index_commands = [
-        CommandBuilder("python")
-        .add_arg("IndalekoMacLocalIndexer.py")
-        .add_arg("--path", args.path),
+        CommandBuilder("python").add_arg("IndalekoMacLocalIndexer.py").add_arg("--path", args.path),
         CommandBuilder("sleep").add_arg("10"),
     ]
 

@@ -89,9 +89,7 @@ class NtfsActivityGenerator:
 
         # File output parameters
         self.output_dir = kwargs.get("output_dir", "data/ntfs_activity")
-        self.max_file_size = (
-            kwargs.get("max_file_size", 100) * 1024 * 1024
-        )  # Convert MB to bytes
+        self.max_file_size = kwargs.get("max_file_size", 100) * 1024 * 1024  # Convert MB to bytes
         self.output_file = None
         self.current_file_size = 0
 
@@ -114,7 +112,8 @@ class NtfsActivityGenerator:
 
         # Initialize collector
         self.collector = NtfsUsnJournalCollector(
-            volumes=self.volumes, verbose=self.verbose,
+            volumes=self.volumes,
+            verbose=self.verbose,
         )
 
         # Initialize recorder if requested

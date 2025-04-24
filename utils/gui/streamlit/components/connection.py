@@ -40,7 +40,8 @@ def render_connection_status():
             if hasattr(st.session_state, "db_info") and st.session_state.db_info:
                 db_info = st.session_state.db_info
                 if hasattr(db_info, "db_config") and hasattr(
-                    db_info.db_config, "database",
+                    db_info.db_config,
+                    "database",
                 ):
                     st.info(f"Database: {db_info.db_config.database}")
         else:
@@ -118,7 +119,9 @@ def connect_to_db(config_file):
                 raise
 
             config_path = os.path.join(
-                os.environ.get("INDALEKO_ROOT"), "config", config_file,
+                os.environ.get("INDALEKO_ROOT"),
+                "config",
+                config_file,
             )
             log_debug(f"Looking for config file at: {config_path}", "info")
 
@@ -164,7 +167,8 @@ def connect_to_db(config_file):
                             return db_service, db_info
                         else:
                             log_debug(
-                                "⚠️ Connected but no collections found", "warning",
+                                "⚠️ Connected but no collections found",
+                                "warning",
                             )
                             status_container.warning(
                                 "⚠️ Connected but no collections found",

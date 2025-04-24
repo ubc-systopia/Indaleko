@@ -1,6 +1,6 @@
-import os
-import datetime
 import argparse
+import datetime
+import os
 
 
 def count_files_and_directories(path: str, getstats: bool = False) -> tuple:
@@ -23,7 +23,7 @@ def count_files_and_directories(path: str, getstats: bool = False) -> tuple:
                 try:
                     stat_data = os.stat(file_path)
                     timestamp = datetime.datetime.fromtimestamp(
-                        stat_data.stat_info.st_ctime
+                        stat_data.stat_info.st_ctime,
                     )
                     if timestamp < oldest_file:
                         oldest_file = timestamp
@@ -38,7 +38,7 @@ def count_files_and_directories(path: str, getstats: bool = False) -> tuple:
                 try:
                     stat_data = os.stat(dir_path)
                     timestamp = datetime.datetime.fromtimestamp(
-                        stat_data.stat_info.st_ctime
+                        stat_data.stat_info.st_ctime,
                     )
                     if timestamp < oldest_dir:
                         oldest_dir = timestamp
@@ -55,7 +55,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("topdir")
     parser.add_argument(
-        "--label", type=str, help="Add a descriptive label to the output", default=""
+        "--label",
+        type=str,
+        help="Add a descriptive label to the output",
+        default="",
     )
     parser.add_argument(
         "--dostat",
@@ -75,9 +78,7 @@ def main():
     execution_time = end - start
     if count > 0:
         print(
-            "Enumerated {} in {} time ({} seconds per entry)".format(
-                count, execution_time, execution_time.total_seconds() / count
-            )
+            f"Enumerated {count} in {execution_time} time ({execution_time.total_seconds() / count} seconds per entry)",
         )
     # TODO: write this to a json file
 
@@ -88,7 +89,7 @@ if __name__ == "__main__":
 
 def scratch():
     # old code
-    root_path = "C:\\Users\TonyMason"
+    root_path = "C:\\Users\\TonyMason"
 
     start = datetime.datetime.utcnow()
 
@@ -103,7 +104,5 @@ def scratch():
     execution_time = end - start
     if count > 0:
         print(
-            "Enumerated {} in {} time ({} seconds per entry)".format(
-                count, execution_time, execution_time.total_seconds() / count
-            )
+            f"Enumerated {count} in {execution_time} time ({execution_time.total_seconds() / count} seconds per entry)",
         )

@@ -238,15 +238,12 @@ class IndalekoAssistantCLI:
             path = attributes.get("Path", "Unknown path")
             name = attributes.get(
                 "Label",
-                (
-                    path.split("/")[-1]
-                    if "/" in path
-                    else path.split("\\")[-1] if "\\" in path else path
-                ),
+                (path.split("/")[-1] if "/" in path else path.split("\\")[-1] if "\\" in path else path),
             )
             size = attributes.get("Size", "Unknown size")
             timestamp = attributes.get(
-                "Timestamp", attributes.get("CreateTime", "Unknown time"),
+                "Timestamp",
+                attributes.get("CreateTime", "Unknown time"),
             )
 
             result.append(f"{indent_str}Name: {name}")

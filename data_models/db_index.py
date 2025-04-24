@@ -21,8 +21,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
-from typing import Union
-
 # from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -34,7 +32,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 
 # pylint: disable=wrong-import-position
-from data_models.base import IndalekoBaseModel  # noqa: E402
+from data_models.base import IndalekoBaseModel
 
 # pylint: enable=wrong-import-position
 
@@ -48,9 +46,9 @@ class IndalekoCollectionIndexDataModel(IndalekoBaseModel):
     Name: str
     Type: str
     Fields: list[str]
-    Unique: Union[bool, None] = None
-    Sparse: Union[bool, None] = None
-    Deduplicate: Union[bool, None] = None
+    Unique: bool | None = None
+    Sparse: bool | None = None
+    Deduplicate: bool | None = None
 
     class Config:
         """
@@ -65,7 +63,7 @@ class IndalekoCollectionIndexDataModel(IndalekoBaseModel):
                 "Unique": True,
                 "Sparse": False,
                 "Deduplicate": True,
-            }
+            },
         }
 
 

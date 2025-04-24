@@ -48,10 +48,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from constants.values import IndalekoConstants
 
 # Create default DB config path using pathlib.Path
-DEFAULT_DB_CONFIG_PATH = (
-    Path(IndalekoConstants.default_config_dir)
-    / IndalekoConstants.default_db_config_file_name
-)
+DEFAULT_DB_CONFIG_PATH = Path(IndalekoConstants.default_config_dir) / IndalekoConstants.default_db_config_file_name
 
 # Import the recorder CLI module
 from activity.recorders.storage.ntfs.tiered.hot.ntfs_recorder_cli import main

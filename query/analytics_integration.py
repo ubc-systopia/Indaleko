@@ -29,7 +29,8 @@ from query.analytics.file_statistics import FileStatistics, display_report, form
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -82,7 +83,8 @@ class AnalyticsIntegration:
                 logger.info("Added analytics help text")
         except Exception as e:
             logger.error(
-                f"Error registering analytics commands: {e!s}", exc_info=self.debug,
+                f"Error registering analytics commands: {e!s}",
+                exc_info=self.debug,
             )
 
     def handle_analytics_command(self, args_str: str) -> str:
@@ -111,10 +113,16 @@ class AnalyticsIntegration:
             help="Output directory for reports and visualizations",
         )
         parser.add_argument(
-            "--visualize", "-v", action="store_true", help="Generate visualizations",
+            "--visualize",
+            "-v",
+            action="store_true",
+            help="Generate visualizations",
         )
         parser.add_argument(
-            "--full", "-f", action="store_true", help="Generate a full detailed report",
+            "--full",
+            "-f",
+            action="store_true",
+            help="Generate a full detailed report",
         )
 
         try:
@@ -184,19 +192,13 @@ Examples:
             # Format the results
             result = "\n=== Indaleko File Statistics Summary ===\n\n"
             result += f"Total Objects: {total_objects:,}\n"
-            result += (
-                f"Files: {file_count:,} ({file_count/max(1, total_objects)*100:.1f}%)\n"
-            )
+            result += f"Files: {file_count:,} ({file_count/max(1, total_objects)*100:.1f}%)\n"
             result += f"Directories: {directory_count:,} ({directory_count/max(1, total_objects)*100:.1f}%)\n"
 
             if size_stats:
                 result += f"\nTotal Storage: {format_size(size_stats['total_size'])}\n"
-                result += (
-                    f"Average File Size: {format_size(size_stats['average_size'])}\n"
-                )
-                result += (
-                    f"Median File Size: {format_size(size_stats['median_size'])}\n"
-                )
+                result += f"Average File Size: {format_size(size_stats['average_size'])}\n"
+                result += f"Median File Size: {format_size(size_stats['median_size'])}\n"
 
             return result
 
@@ -233,9 +235,15 @@ Examples:
                 # Use a separate AQL query to get size distribution
                 # (simplified estimation for CLI display)
                 result += "\nEstimated File Size Distribution:\n"
-                result += f"- Very Large Files (>100 MB): ~{size_stats['max_size'] > large_file_threshold and '✓' or '✗'}\n"
-                result += f"- Large Files (1-100 MB): ~{size_stats['max_size'] > medium_file_threshold and '✓' or '✗'}\n"
-                result += f"- Medium Files (100 KB-1 MB): ~{size_stats['max_size'] > small_file_threshold and '✓' or '✗'}\n"
+                result += (
+                    f"- Very Large Files (>100 MB): ~{size_stats['max_size'] > large_file_threshold and '✓' or '✗'}\n"
+                )
+                result += (
+                    f"- Large Files (1-100 MB): ~{size_stats['max_size'] > medium_file_threshold and '✓' or '✗'}\n"
+                )
+                result += (
+                    f"- Medium Files (100 KB-1 MB): ~{size_stats['max_size'] > small_file_threshold and '✓' or '✗'}\n"
+                )
                 result += f"- Small Files (<100 KB): ~{size_stats['min_size'] < small_file_threshold and '✓' or '✗'}\n"
 
                 # Add recommendation for visualization
@@ -277,9 +285,7 @@ Examples:
 
             # Calculate diversity metrics
             if len(file_types) > 0 and total_count > 0:
-                top_3_percentage = (
-                    sum(count for _, count in sorted_types[:3]) / total_count * 100
-                )
+                top_3_percentage = sum(count for _, count in sorted_types[:3]) / total_count * 100
                 result += f"Top 3 Types Percentage: {top_3_percentage:.1f}%\n"
 
                 # Indicate type diversity
@@ -316,17 +322,11 @@ Examples:
             # Show distribution with counts, sizes, and percentages
             result += "File Age Distribution:\n"
             for item in age_distribution:
-                file_percentage = (
-                    item["count"] / total_files * 100 if total_files > 0 else 0
-                )
-                size_percentage = (
-                    item["total_size"] / total_size * 100 if total_size > 0 else 0
-                )
+                file_percentage = item["count"] / total_files * 100 if total_files > 0 else 0
+                size_percentage = item["total_size"] / total_size * 100 if total_size > 0 else 0
 
                 result += f"- {item['age_range']}: {item['count']:,} files ({file_percentage:.1f}%), "
-                result += (
-                    f"{format_size(item['total_size'])} ({size_percentage:.1f}%)\n"
-                )
+                result += f"{format_size(item['total_size'])} ({size_percentage:.1f}%)\n"
 
             # Add age pattern analysis
             result += "\nFile Age Pattern Analysis:\n"
@@ -337,23 +337,15 @@ Examples:
                 None,
             )
             if recent_files and recent_files["count"] > 0:
-                result += (
-                    "- Recent Activity: Yes (files created/modified in the last week)\n"
-                )
+                result += "- Recent Activity: Yes (files created/modified in the last week)\n"
             else:
                 result += "- Recent Activity: No (no files created/modified in the last week)\n"
 
             # Check age pattern
             recent_count = sum(
-                item["count"]
-                for item in age_distribution
-                if item["age_range"] in ["Last week", "Last month"]
+                item["count"] for item in age_distribution if item["age_range"] in ["Last week", "Last month"]
             )
-            old_count = sum(
-                item["count"]
-                for item in age_distribution
-                if "years" in item["age_range"]
-            )
+            old_count = sum(item["count"] for item in age_distribution if "years" in item["age_range"])
 
             if total_files > 0:
                 recent_percentage = recent_count / total_files * 100
@@ -390,20 +382,14 @@ Examples:
             report = self.file_statistics.generate_report(output_dir, visualize)
 
             # Create a message about the report
-            result = (
-                f"\nFull analytics report generated at: {os.path.abspath(output_dir)}\n"
-            )
+            result = f"\nFull analytics report generated at: {os.path.abspath(output_dir)}\n"
             result += f"- Report file: {os.path.join(output_dir, 'file_statistics_report.json')}\n"
 
             if visualize:
                 result += "- Visualizations:\n"
-                result += (
-                    f"  - {os.path.join(output_dir, 'files_vs_directories.png')}\n"
-                )
+                result += f"  - {os.path.join(output_dir, 'files_vs_directories.png')}\n"
                 result += f"  - {os.path.join(output_dir, 'file_types.png')}\n"
-                result += (
-                    f"  - {os.path.join(output_dir, 'file_age_distribution.png')}\n"
-                )
+                result += f"  - {os.path.join(output_dir, 'file_age_distribution.png')}\n"
                 result += f"  - {os.path.join(output_dir, 'file_size_by_age.png')}\n"
 
             # Display the report in a formatted way
@@ -444,5 +430,7 @@ def add_analytics_arguments(parser):
         parser: The argument parser
     """
     parser.add_argument(
-        "--analytics", action="store_true", help="Enable analytics capabilities",
+        "--analytics",
+        action="store_true",
+        help="Enable analytics capabilities",
     )

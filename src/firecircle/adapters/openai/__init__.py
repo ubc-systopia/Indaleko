@@ -43,21 +43,22 @@ class OpenAIAdapter(ModelAdapter):
         """
         if not HAS_OPENAI:
             raise ImportError(
-                "The OpenAI package is not installed. "
-                "Please install it with `pip install openai>=1.0.0`.",
+                "The OpenAI package is not installed. Please install it with `pip install openai>=1.0.0`.",
             )
 
         self.model = model
         self.client = OpenAI(api_key=api_key, organization=organization)
 
     def _convert_to_openai_messages(
-        self, messages: list[FireCircleMessage],
+        self,
+        messages: list[FireCircleMessage],
     ) -> list[dict[str, Any]]:
         """Convert Fire Circle messages to OpenAI message format."""
         return [{"role": msg.role, "content": msg.content} for msg in messages]
 
     def _convert_to_openai_tools(
-        self, tools: list[dict[str, Any]],
+        self,
+        tools: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
         """Convert Fire Circle tools to OpenAI tool format."""
         return tools  # Currently assuming tools are already in OpenAI format
@@ -94,15 +95,14 @@ class OpenAIAdapter(ModelAdapter):
         # Convert the response to Fire Circle format
         message_content = response.choices[0].message.content or ""
         message = FireCircleMessage(
-            role="assistant", content=message_content, metadata={"model": self.model},
+            role="assistant",
+            content=message_content,
+            metadata={"model": self.model},
         )
 
         # Extract tool calls if present
         tool_calls = []
-        if (
-            hasattr(response.choices[0].message, "tool_calls")
-            and response.choices[0].message.tool_calls
-        ):
+        if hasattr(response.choices[0].message, "tool_calls") and response.choices[0].message.tool_calls:
             tool_calls = [
                 {
                     "id": tc.id,

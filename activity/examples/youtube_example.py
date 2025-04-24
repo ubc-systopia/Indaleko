@@ -40,7 +40,8 @@ from activity.recorders.ambient.youtube_recorder import YouTubeActivityRecorder
 
 # Set up logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,8 @@ def parse_args():
     parser.add_argument("--api-key", help="YouTube Data API key")
 
     parser.add_argument(
-        "--oauth-credentials", help="Path to OAuth credentials JSON file",
+        "--oauth-credentials",
+        help="Path to OAuth credentials JSON file",
     )
 
     parser.add_argument(
@@ -77,7 +79,9 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--demo-mode", action="store_true", help="Run in demo mode with simulated data",
+        "--demo-mode",
+        action="store_true",
+        help="Run in demo mode with simulated data",
     )
 
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
@@ -211,7 +215,8 @@ def main():
 
     # Create recorder
     recorder = YouTubeActivityRecorder(
-        collector=collector, collection_name=args.collection_name,
+        collector=collector,
+        collection_name=args.collection_name,
     )
 
     # Collect and store data

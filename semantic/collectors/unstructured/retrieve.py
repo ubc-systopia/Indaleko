@@ -22,11 +22,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # standard library imports
 import configparser
-import logging
 import os
 import sys
-import re
-import json
+
 import docker
 
 #  Find Indaleko Root
@@ -39,7 +37,6 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # third-party imports
 from icecream import ic
-from arango import ArangoClient
 
 # Indaleko Imports
 from Indaleko import Indaleko
@@ -55,15 +52,16 @@ class UnstructuredRetrieval:
 
     def load_config(self):
         unstructured_config_file = os.path.join(
-            Indaleko.default_config_dir, self.unstructured_config_file_name
+            Indaleko.default_config_dir,
+            self.unstructured_config_file_name,
         )
         self.unstructured_config = configparser.ConfigParser()
         self.unstructured_config.read(unstructured_config_file, encoding="utf-8-sig")
 
     def create_bind_mounts(self):
         """Creates a dictionary with the necessary bind mounts to initialize the Docker container with.
-        Currently sets up 3 bind mounts listed in the unstructured config file"""
-
+        Currently sets up 3 bind mounts listed in the unstructured config file
+        """
         bind_mounts = {}
 
         # Create bind mount for disk
@@ -88,8 +86,8 @@ class UnstructuredRetrieval:
 
     def remove_existing_container(self, container_name):
         """Removes any existing containers with the provided name.
-        Does nothing if the container does not exist"""
-
+        Does nothing if the container does not exist
+        """
         containers = self.docker_client.containers.list(all=True)
         if container_name in containers:
             container = self.docker_client.containers.get(container_name)
@@ -113,30 +111,23 @@ class UnstructuredRetrieval:
         Future Additions:
         - Run multiple containers in parallel (DIFFICULT!)
         """
-
         ic(
-            (
-                f"Running the Docker container '{container_name}' with necessary volume mounts..."
-            )
+            f"Running the Docker container '{container_name}' with necessary volume mounts...",
         )
         bind_mounts = self.create_bind_mounts()
         self.remove_existing_container(container_name)
 
         # Retrieve necessary variables
-        unix_data_dir_mount = self.unstructured_config["VOLUMES"][
-            "UnstructuredDataDirMount"
-        ]
+        unix_data_dir_mount = self.unstructured_config["VOLUMES"]["UnstructuredDataDirMount"]
         unix_project_dir_mount = self.unstructured_config["VOLUMES"]["ProjectDirMount"]
         unstructured_image_name = self.unstructured_config["DOCKER"]["dockerimage"]
         unstructured_image_tag = self.unstructured_config["DOCKER"]["dockertag"]
 
         # Unix path of Python script, input file, output file
         unix_script_path = self.windows_to_unix_path(
-            self.unstructured_config["DATA"]["ScriptsDir"]
+            self.unstructured_config["DATA"]["ScriptsDir"],
         )
-        unix_input_path = (
-            f"{unix_data_dir_mount}/{self.unstructured_config['DATA']['InputFileName']}"
-        )
+        unix_input_path = f"{unix_data_dir_mount}/{self.unstructured_config['DATA']['InputFileName']}"
         unix_output_path = f"{unix_data_dir_mount}/{self.unstructured_config['DATA']['OutputFileName']}"
 
         # Run Docker Container

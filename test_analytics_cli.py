@@ -98,7 +98,10 @@ def main():
         description="Test Indaleko Analytics CLI Integration",
     )
     parser.add_argument(
-        "--quick", "-q", action="store_true", help="Run only quick tests",
+        "--quick",
+        "-q",
+        action="store_true",
+        help="Run only quick tests",
     )
 
     args = parser.parse_args()

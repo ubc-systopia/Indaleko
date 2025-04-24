@@ -44,9 +44,7 @@ class AQLQueryConverter(TranslatorBase):
         assert aql_statement.endswith(
             "```",
         ), "Code block not found at the end of the generated AQL query"
-        aql_statement = aql_statement[
-            : aql_statement.rindex("```") - 1
-        ]  # trim postamble
+        aql_statement = aql_statement[: aql_statement.rindex("```") - 1]  # trim postamble
         return self.optimize_query(aql_statement)
 
     def validate_query(self, query: str) -> bool:
@@ -184,7 +182,8 @@ class AQLQueryConverter(TranslatorBase):
 
         system_prompt = (
             system_prompt.replace(
-                "{GeoActivity}", dynamic_activity_providers["GeoActivity"],
+                "{GeoActivity}",
+                dynamic_activity_providers["GeoActivity"],
             )
             .replace("{TempActivity}", dynamic_activity_providers["TempActivity"])
             .replace("{MusicActivity}", dynamic_activity_providers["MusicActivity"])

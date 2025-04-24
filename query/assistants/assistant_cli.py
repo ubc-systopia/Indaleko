@@ -46,7 +46,10 @@ class IndalekoAssistantCLI:
     PROMPT = "Indaleko> "
 
     def __init__(
-        self, api_key: str | None = None, model: str = "gpt-4o", debug: bool = False,
+        self,
+        api_key: str | None = None,
+        model: str = "gpt-4o",
+        debug: bool = False,
     ):
         """
         Initialize the CLI.
@@ -115,7 +118,8 @@ class IndalekoAssistantCLI:
         try:
             # Send the message to the assistant
             response = self.assistant.process_message(
-                conversation_id=self.current_conversation_id, message_content=command,
+                conversation_id=self.current_conversation_id,
+                message_content=command,
             )
 
             # Display the response
@@ -226,7 +230,8 @@ class IndalekoAssistantCLI:
 
                 # Process the query
                 response = self.assistant.process_message(
-                    conversation_id=self.current_conversation_id, message_content=query,
+                    conversation_id=self.current_conversation_id,
+                    message_content=query,
                 )
 
                 # Display the response

@@ -51,7 +51,6 @@ except ImportError as e:
     class StorageActivityRecorder:
         """Dummy base class for testing."""
 
-
     class StorageProviderType:
         """Dummy enum for testing."""
 
@@ -203,7 +202,10 @@ class NtfsLongTermMemoryRecorder:
         return results
 
     def get_entities_eligible_for_archival(
-        self, min_importance: float = 0.8, min_age_days: int = 90, limit: int = 100,
+        self,
+        min_importance: float = 0.8,
+        min_age_days: int = 90,
+        limit: int = 100,
     ) -> list[dict]:
         """
         Get entities eligible for consolidation to archival memory.

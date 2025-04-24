@@ -1,11 +1,10 @@
 import argparse
+import datetime
 import json
-import os
 import logging
-import uuid
-import datetime
-import datetime
+import os
 import platform
+import uuid
 
 
 class ContainerRelationship:
@@ -40,13 +39,13 @@ class FileSystemObject:
         self.size = self.stat_info.st_size
         self.timestamps = {
             "created": datetime.datetime.fromtimestamp(
-                self.stat_info.st_ctime
+                self.stat_info.st_ctime,
             ).isoformat(),
             "modified": datetime.datetime.fromtimestamp(
-                self.stat_info.st_mtime
+                self.stat_info.st_mtime,
             ).isoformat(),
             "accessed": datetime.datetime.fromtimestamp(
-                self.stat_info.st_atime
+                self.stat_info.st_atime,
             ).isoformat(),
         }
         FileSystemObject += 1
@@ -58,9 +57,7 @@ class LocalFileSystemMetadata:
         pass
 
     def get_output_file_name(self):
-        assert (
-            False
-        ), "get_output_file_name not implemented in base class: please override"
+        assert False, "get_output_file_name not implemented in base class: please override"
 
     def get_uri_for_file(self, file_name: str) -> str:
         assert False, "get_uri_for_file not implemented in base class: please override"
@@ -135,10 +132,10 @@ class LocalIndex:
 
     def __setup_defaults__(self) -> "LocalIndex":
         self.set_output_dir(LocalIndex.DefaultOutputDir).set_output_file(
-            LocalIndex.DefaultOutputFile
+            LocalIndex.DefaultOutputFile,
         )
         self.set_config_dir(LocalIndex.DefaultConfigDir).set_config_file(
-            LocalIndex.DefaultConfigFile
+            LocalIndex.DefaultConfigFile,
         )
         return self
 
@@ -159,9 +156,9 @@ class LocalIndex:
     def set_output_dir(self, dir_name: str) -> "LocalIndex":
         self.output_dir = dir_name
         for action in self.parser._actions:
-            if "outdir" == action.dest:
+            if action.dest == "outdir":
                 self.logger.debug(
-                    f"Setting default for {action.dest} to {self.output_file}"
+                    f"Setting default for {action.dest} to {self.output_file}",
                 )
                 action.default = self.output_dir
                 break
@@ -170,9 +167,9 @@ class LocalIndex:
     def set_output_file(self, file_name: str) -> "LocalIndex":
         self.output_file = file_name
         for action in self.parser._actions:
-            if "output" == action.dest:
+            if action.dest == "output":
                 self.logger.debug(
-                    f"Setting default for {action.dest} to {self.output_file}"
+                    f"Setting default for {action.dest} to {self.output_file}",
                 )
                 action.default = self.output_file
                 break
@@ -181,9 +178,9 @@ class LocalIndex:
     def set_config_dir(self, dir_name: str) -> "LocalIndex":
         self.config_dir = dir_name
         for action in self.parser._actions:
-            if "confdir" == action.dest:
+            if action.dest == "confdir":
                 self.logger.debug(
-                    f"Setting default for {action.dest} to {self.output_file}"
+                    f"Setting default for {action.dest} to {self.output_file}",
                 )
                 action.default = self.config_dir
                 break
@@ -192,9 +189,9 @@ class LocalIndex:
     def set_config_file(self, file_name: str) -> "LocalIndex":
         self.config_file = file_name
         for action in self.parser._actions:
-            if "config" == action.dest:
+            if action.dest == "config":
                 self.logger.debug(
-                    f"Setting default for {action.dest} to {self.output_file}"
+                    f"Setting default for {action.dest} to {self.output_file}",
                 )
                 action.default = self.config_file
                 break
@@ -209,7 +206,7 @@ def main():
     print("This script is a general library used by platform specific ingesters.")
     print("You are running on " + platform.system())
     print(
-        f"The ingester script should be called something like {platform.system().lower()}_local_index.py"
+        f"The ingester script should be called something like {platform.system().lower()}_local_index.py",
     )
     print("Please run that script instead.")
 

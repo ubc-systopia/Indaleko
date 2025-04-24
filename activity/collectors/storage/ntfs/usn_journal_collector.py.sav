@@ -85,9 +85,7 @@ def determine_activity_type(reason_flags: list[str]) -> str:
         # For rename events, we'll use OTHER to avoid validation issues
         # but keep the original reason flags for the recorder to use
         elif "RENAME_OLD_NAME" in reason_flags or "RENAME_NEW_NAME" in reason_flags:
-            return (
-                StorageActivityType.OTHER
-            )  # Use OTHER to avoid validation error but preserve reason flags
+            return StorageActivityType.OTHER  # Use OTHER to avoid validation error but preserve reason flags
         elif "SECURITY_CHANGE" in reason_flags:
             return StorageActivityType.SECURITY_CHANGE
         elif (
@@ -99,11 +97,7 @@ def determine_activity_type(reason_flags: list[str]) -> str:
             return StorageActivityType.ATTRIBUTE_CHANGE
         elif "CLOSE" in reason_flags:
             return StorageActivityType.CLOSE
-        elif (
-            "DATA_OVERWRITE" in reason_flags
-            or "DATA_EXTEND" in reason_flags
-            or "DATA_TRUNCATION" in reason_flags
-        ):
+        elif "DATA_OVERWRITE" in reason_flags or "DATA_EXTEND" in reason_flags or "DATA_TRUNCATION" in reason_flags:
             return StorageActivityType.MODIFY
         else:
             return StorageActivityType.OTHER
@@ -113,7 +107,9 @@ def determine_activity_type(reason_flags: list[str]) -> str:
 
 
 def convert_record_to_model(
-    record: dict[str, Any], volume: str, provider_id: str,
+    record: dict[str, Any],
+    volume: str,
+    provider_id: str,
 ) -> NtfsStorageActivityData:
     """
     Convert a raw USN record dictionary to a NtfsStorageActivityData model.
@@ -172,9 +168,7 @@ def convert_record_to_model(
         volume_name=volume,
         is_directory=is_directory,
         provider_type=StorageProviderType.LOCAL_NTFS,
-        provider_id=(
-            uuid.UUID(provider_id) if isinstance(provider_id, str) else provider_id
-        ),
+        provider_id=(uuid.UUID(provider_id) if isinstance(provider_id, str) else provider_id),
         item_type=StorageItemType.DIRECTORY if is_directory else StorageItemType.FILE,
         attributes=attributes,  # Store additional information
     )
@@ -280,7 +274,8 @@ class NtfsUsnJournalCollector:
         # Use the UsnJournalReader to get records
         with UsnJournalReader(volume=volume, verbose=self.verbose) as reader:
             records, next_usn = reader.read_records(
-                start_usn=start_usn, max_records=self.max_records,
+                start_usn=start_usn,
+                max_records=self.max_records,
             )
 
             if self.verbose:
@@ -433,13 +428,13 @@ def test_collector():
 
     try:
         model = convert_record_to_model(
-            standard_record, "C:", NtfsUsnJournalCollector.DEFAULT_PROVIDER_ID,
+            standard_record,
+            "C:",
+            NtfsUsnJournalCollector.DEFAULT_PROVIDER_ID,
         )
         print(f"Standard model created - Activity type: {model.activity_type}")
         expected_type = StorageActivityType.MODIFY
-        assert (
-            model.activity_type == expected_type
-        ), f"Expected {expected_type}, got {model.activity_type}"
+        assert model.activity_type == expected_type, f"Expected {expected_type}, got {model.activity_type}"
         print("✓ Standard record test passed")
     except Exception as e:
         print(f"Error processing standard record: {e}")
@@ -459,18 +454,17 @@ def test_collector():
 
     try:
         model = convert_record_to_model(
-            rename_old_record, "C:", NtfsUsnJournalCollector.DEFAULT_PROVIDER_ID,
+            rename_old_record,
+            "C:",
+            NtfsUsnJournalCollector.DEFAULT_PROVIDER_ID,
         )
         print(f"RENAME_OLD_NAME model created - Activity type: {model.activity_type}")
         expected_type = StorageActivityType.OTHER
-        assert (
-            model.activity_type == expected_type
-        ), f"Expected {expected_type}, got {model.activity_type}"
-        assert (
-            model.attributes.get("rename_type") == "old_name"
-        ), "Missing rename_type attribute"
+        assert model.activity_type == expected_type, f"Expected {expected_type}, got {model.activity_type}"
+        assert model.attributes.get("rename_type") == "old_name", "Missing rename_type attribute"
         assert "RENAME_OLD_NAME" in model.attributes.get(
-            "usn_reason_flags", [],
+            "usn_reason_flags",
+            [],
         ), "Missing reason flag"
         print("✓ RENAME_OLD_NAME record test passed")
     except Exception as e:
@@ -491,18 +485,17 @@ def test_collector():
 
     try:
         model = convert_record_to_model(
-            rename_new_record, "C:", NtfsUsnJournalCollector.DEFAULT_PROVIDER_ID,
+            rename_new_record,
+            "C:",
+            NtfsUsnJournalCollector.DEFAULT_PROVIDER_ID,
         )
         print(f"RENAME_NEW_NAME model created - Activity type: {model.activity_type}")
         expected_type = StorageActivityType.OTHER
-        assert (
-            model.activity_type == expected_type
-        ), f"Expected {expected_type}, got {model.activity_type}"
-        assert (
-            model.attributes.get("rename_type") == "new_name"
-        ), "Missing rename_type attribute"
+        assert model.activity_type == expected_type, f"Expected {expected_type}, got {model.activity_type}"
+        assert model.attributes.get("rename_type") == "new_name", "Missing rename_type attribute"
         assert "RENAME_NEW_NAME" in model.attributes.get(
-            "usn_reason_flags", [],
+            "usn_reason_flags",
+            [],
         ), "Missing reason flag"
         print("✓ RENAME_NEW_NAME record test passed")
     except Exception as e:
@@ -554,7 +547,9 @@ def main():
         help="Output file for activities (default: ntfs_activities.jsonl)",
     )
     parser.add_argument(
-        "--state-file", type=str, help="State file for persisting USN positions",
+        "--state-file",
+        type=str,
+        help="State file for persisting USN positions",
     )
     parser.add_argument("--verbose", action="store_true", help="Show verbose output")
     parser.add_argument("--test", action="store_true", help="Run the test suite")

@@ -181,7 +181,9 @@ class TestWeightedFilenameSimilarity(unittest.TestCase):
         # Custom weights prioritizing extension
         custom_weights = {"name": 0.2, "extension": 0.7, "name_tokens": 0.1}
         custom_similarity = weighted_filename_similarity(
-            pair[0], pair[1], custom_weights,
+            pair[0],
+            pair[1],
+            custom_weights,
         )
 
         # With custom weights prioritizing extension, the similarity should be higher
@@ -271,7 +273,9 @@ class TestMultiAttributeIdentityResolution(unittest.TestCase):
 
         # With a lower threshold (0.6), they might be considered the same
         is_same_custom, score = multi_attribute_identity_resolution(
-            file1, file2, threshold=0.6,
+            file1,
+            file2,
+            threshold=0.6,
         )
 
         self.assertFalse(is_same_default)
@@ -295,7 +299,9 @@ class TestMultiAttributeIdentityResolution(unittest.TestCase):
 
         # Use a stricter threshold for default weights
         is_same_default, score_default = multi_attribute_identity_resolution(
-            file1, file2, threshold=0.9,  # Higher threshold
+            file1,
+            file2,
+            threshold=0.9,  # Higher threshold
         )
 
         # Custom weights prioritizing checksum should consider these the same
@@ -307,7 +313,10 @@ class TestMultiAttributeIdentityResolution(unittest.TestCase):
         }
 
         is_same_custom, score_custom = multi_attribute_identity_resolution(
-            file1, file2, weights=custom_weights, threshold=0.85,
+            file1,
+            file2,
+            weights=custom_weights,
+            threshold=0.85,
         )
 
         self.assertFalse(is_same_default)
@@ -320,7 +329,8 @@ class TestAccuracy(unittest.TestCase):
 
     @staticmethod
     def _generate_test_data(
-        num_files: int, num_variants: int,
+        num_files: int,
+        num_variants: int,
     ) -> tuple[list[dict], list[dict], list[tuple[int, int]]]:
         """
         Generate test data for accuracy testing.
@@ -393,7 +403,8 @@ class TestAccuracy(unittest.TestCase):
 
                     # Modified time a bit later
                     time_diff = random.randint(
-                        60, 86400 * 7,
+                        60,
+                        86400 * 7,
                     )  # Between 1 minute and 7 days
                     variant["modified"] = modified + time_diff
 
@@ -468,7 +479,8 @@ class TestAccuracy(unittest.TestCase):
 
         # Generate test data
         originals, variants, ground_truth = self._generate_test_data(
-            num_files, num_variants,
+            num_files,
+            num_variants,
         )
 
         # Run identity resolution
@@ -485,7 +497,9 @@ class TestAccuracy(unittest.TestCase):
         for orig_idx, orig_file in enumerate(originals):
             for var_idx, var_file in enumerate(variants):
                 is_same, _ = multi_attribute_identity_resolution(
-                    orig_file, var_file, threshold=threshold,
+                    orig_file,
+                    var_file,
+                    threshold=threshold,
                 )
 
                 # Check against ground truth
@@ -504,11 +518,7 @@ class TestAccuracy(unittest.TestCase):
         recall = true_positives / total_actual if total_actual > 0 else 0
 
         # Calculate F1 score
-        f1 = (
-            2 * (precision * recall) / (precision + recall)
-            if (precision + recall) > 0
-            else 0
-        )
+        f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
 
         # Calculate accuracy
         accuracy = true_positives / len(ground_truth) if ground_truth else 0

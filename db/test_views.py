@@ -275,14 +275,20 @@ def main():
     parser = argparse.ArgumentParser(description="Test ArangoSearch views for Indaleko")
     parser.add_argument("--list", action="store_true", help="List existing views")
     parser.add_argument(
-        "--list-analyzers", action="store_true", help="List all analyzers",
+        "--list-analyzers",
+        action="store_true",
+        help="List all analyzers",
     )
     parser.add_argument("--create-test", action="store_true", help="Create a test view")
     parser.add_argument(
-        "--delete-test", action="store_true", help="Delete the test view",
+        "--delete-test",
+        action="store_true",
+        help="Delete the test view",
     )
     parser.add_argument(
-        "--ensure", action="store_true", help="Create/update all defined views",
+        "--ensure",
+        action="store_true",
+        help="Create/update all defined views",
     )
     parser.add_argument(
         "--clear",
@@ -290,7 +296,9 @@ def main():
         help="Clear all existing views before creating new ones",
     )
     parser.add_argument(
-        "--query", type=str, help="Execute a test query using the views",
+        "--query",
+        type=str,
+        help="Execute a test query using the views",
     )
     parser.add_argument(
         "--analyzer",
@@ -303,10 +311,14 @@ def main():
         help="Test tokenized search functionality",
     )
     parser.add_argument(
-        "--test-camel-case", action="store_true", help="Test with CamelCase filenames",
+        "--test-camel-case",
+        action="store_true",
+        help="Test with CamelCase filenames",
     )
     parser.add_argument(
-        "--test-snake-case", action="store_true", help="Test with snake_case filenames",
+        "--test-snake-case",
+        action="store_true",
+        help="Test with snake_case filenames",
     )
     parser.add_argument(
         "--test-complex",

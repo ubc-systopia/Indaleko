@@ -21,12 +21,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import platform
 import sys
-from typing import Optional, Union
 from uuid import UUID, uuid4
 
-from pydantic import Field, BaseModel
 from icecream import ic
-
+from pydantic import BaseModel, Field
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -45,35 +43,34 @@ from constants import IndalekoConstants
 class IndalekoCollectorDataModel(BaseModel):
     """Defines the base data model for the storage collectors"""
 
-    PlatformName: Optional[Union[str, None]] = Field(
+    PlatformName: str | None = Field(
         None,
         title="PlatformName",
-        description="The name of the platform (e.g., Linux, Windows, etc.)"
-        "if any (default=None).",
+        description="The name of the platform (e.g., Linux, Windows, etc.)if any (default=None).",
     )
 
     ServiceRegistrationName: str = Field(
         ...,
         title="ServiceRegistrationName",
-        description="The service name used when registering"
-        "this collector in the database.",
+        description="The service name used when registeringthis collector in the database.",
     )
 
     ServiceFileName: str = Field(
         ...,
         title="ServiceFileName",
-        description="The service name of the collector"
-        "for file name generation.",
+        description="The service name of the collectorfor file name generation.",
     )
 
     ServiceUUID: UUID = Field(
-        ..., title="ServiceUUID", description="The UUID of the collector."
+        ...,
+        title="ServiceUUID",
+        description="The UUID of the collector.",
     )
 
     ServiceVersion: str = Field(
         ...,
         title="CollectorVersion",
-        description="The version of the collector."
+        description="The version of the collector.",
     )
 
     ServiceDescription: str = Field(
@@ -98,10 +95,9 @@ class IndalekoCollectorDataModel(BaseModel):
                 "ServiceFileName": "collector",
                 "ServiceUUID": uuid4(),
                 "ServiceVersion": "1.0",
-                "ServiceDescription": "This service collects local"
-                "filesystem metadata of a Linux machine.",
-                "ServiceType": IndalekoConstants.service_type_test
-            }
+                "ServiceDescription": "This service collects localfilesystem metadata of a Linux machine.",
+                "ServiceType": IndalekoConstants.service_type_test,
+            },
         }
 
 
@@ -109,7 +105,7 @@ def main():
     """Test code for the base CLI data model"""
     ic("Testing Collector Data Model")
     storage_collector_data = IndalekoCollectorDataModel(
-        **IndalekoCollectorDataModel.Config.json_schema_extra["example"]
+        **IndalekoCollectorDataModel.Config.json_schema_extra["example"],
     )
     ic(storage_collector_data)
     ic(platform.system())

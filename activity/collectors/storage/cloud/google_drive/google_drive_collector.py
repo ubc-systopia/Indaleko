@@ -124,14 +124,16 @@ class GoogleDriveActivityCollector(CollectorBase):
         # Set up configuration
         self.config_dir = kwargs.get("config_dir", indaleko_default_config_dir)
         self.config_path = kwargs.get(
-            "config_path", os.path.join(self.config_dir, "gdrive_collector_config.json"),
+            "config_path",
+            os.path.join(self.config_dir, "gdrive_collector_config.json"),
         )
         self.credentials_file = kwargs.get(
             "credentials_file",
             os.path.join(self.config_dir, "gdrive_client_secrets.json"),
         )
         self.token_file = kwargs.get(
-            "token_file", os.path.join(self.config_dir, "gdrive_token.json"),
+            "token_file",
+            os.path.join(self.config_dir, "gdrive_token.json"),
         )
 
         # Default paths for state and output files
@@ -140,10 +142,12 @@ class GoogleDriveActivityCollector(CollectorBase):
             os.makedirs(data_dir, exist_ok=True)
 
         self.state_file = kwargs.get(
-            "state_file", os.path.join(data_dir, "gdrive_collector_state.json"),
+            "state_file",
+            os.path.join(data_dir, "gdrive_collector_state.json"),
         )
         self.output_file = kwargs.get(
-            "output_file", os.path.join(data_dir, "gdrive_activities.jsonl"),
+            "output_file",
+            os.path.join(data_dir, "gdrive_activities.jsonl"),
         )
 
         # Database configuration
@@ -199,7 +203,9 @@ class GoogleDriveActivityCollector(CollectorBase):
             },
             "logging": {
                 "log_file": os.path.join(
-                    os.environ.get("INDALEKO_ROOT", "."), "logs", "gdrive_collector.log",
+                    os.environ.get("INDALEKO_ROOT", "."),
+                    "logs",
+                    "gdrive_collector.log",
                 ),
                 "log_level": "INFO",
             },
@@ -383,9 +389,7 @@ class GoogleDriveActivityCollector(CollectorBase):
                             )
 
                             # Extract email
-                            if (
-                                profile.get("emailAddresses")
-                            ):
+                            if profile.get("emailAddresses"):
                                 email = profile["emailAddresses"][0].get("value")
 
                             # Extract display name
@@ -399,11 +403,7 @@ class GoogleDriveActivityCollector(CollectorBase):
                         logger.debug(f"Error getting user details: {e}")
 
             # If we couldn't get email from People API, try to use impersonation email
-            if (
-                not email
-                and "knownUser" in user
-                and "isCurrentUser" in user["knownUser"]
-            ):
+            if not email and "knownUser" in user and "isCurrentUser" in user["knownUser"]:
                 try:
                     about = self.drive_service.about().get(fields="user").execute()
                     email = about["user"].get("emailAddress")
@@ -465,11 +465,7 @@ class GoogleDriveActivityCollector(CollectorBase):
             if file_details.get("parents"):
                 parent_folder_id = file_details["parents"][0]
                 try:
-                    parent = (
-                        self.drive_service.files()
-                        .get(fileId=parent_folder_id, fields="name")
-                        .execute()
-                    )
+                    parent = self.drive_service.files().get(fileId=parent_folder_id, fields="name").execute()
                     parent_folder_name = parent.get("name")
                 except Exception as e:
                     logger.debug(f"Error getting parent folder name: {e}")
@@ -532,7 +528,8 @@ class GoogleDriveActivityCollector(CollectorBase):
             )
 
     def _determine_activity_type(
-        self, action_detail: dict[str, Any],
+        self,
+        action_detail: dict[str, Any],
     ) -> GDriveActivityType:
         """Determine activity type from action details."""
         # Check each action type
@@ -565,7 +562,8 @@ class GoogleDriveActivityCollector(CollectorBase):
         return GDriveActivityType.UNKNOWN
 
     def _extract_activity_details(
-        self, activity: dict[str, Any],
+        self,
+        activity: dict[str, Any],
     ) -> GDriveActivityData | None:
         """Extract activity details from API response."""
         try:
@@ -664,10 +662,7 @@ class GoogleDriveActivityCollector(CollectorBase):
                         comment_id = comment_details["assignment"].get("subtype")
 
                 # Handle sharing
-                if (
-                    "permissionChange" in detail
-                    and activity_type == GDriveActivityType.SHARE
-                ):
+                if "permissionChange" in detail and activity_type == GDriveActivityType.SHARE:
                     perm_details = detail["permissionChange"]
                     if "addedPermissions" in perm_details:
                         added_perms = perm_details["addedPermissions"]
@@ -692,7 +687,8 @@ class GoogleDriveActivityCollector(CollectorBase):
 
             # Create activity classification
             activity_classification = self._classify_activity(
-                activity_type=activity_type, file_info=file_info,
+                activity_type=activity_type,
+                file_info=file_info,
             )
 
             # Create activity data
@@ -719,7 +715,9 @@ class GoogleDriveActivityCollector(CollectorBase):
             return None
 
     def _classify_activity(
-        self, activity_type: GDriveActivityType, file_info: GDriveFileInfo,
+        self,
+        activity_type: GDriveActivityType,
+        file_info: GDriveFileInfo,
     ) -> IndalekoActivityClassification:
         """Classify activity along multiple dimensions."""
         # Default classification values
@@ -750,10 +748,7 @@ class GoogleDriveActivityCollector(CollectorBase):
         # Adjust based on file type
         if file_info.file_type == GDriveFileType.DOCUMENT:
             research += 0.2
-            if (
-                "proposal" in file_info.name.lower()
-                or "report" in file_info.name.lower()
-            ):
+            if "proposal" in file_info.name.lower() or "report" in file_info.name.lower():
                 research += 0.3
         elif file_info.file_type == GDriveFileType.SPREADSHEET:
             productivity += 0.2
@@ -778,7 +773,9 @@ class GoogleDriveActivityCollector(CollectorBase):
         )
 
     def _get_activities(
-        self, start_time: str | None = None, page_token: str | None = None,
+        self,
+        start_time: str | None = None,
+        page_token: str | None = None,
     ) -> tuple[list[dict[str, Any]], str | None]:
         """Get activities from Drive Activity API."""
         # Prepare request body according to the API specification
@@ -829,9 +826,7 @@ class GoogleDriveActivityCollector(CollectorBase):
             logger.debug(f"Drive Activity API request: {json.dumps(request_body)}")
 
             # Execute API request
-            response = (
-                self.activity_service.activity().query(body=request_body).execute()
-            )
+            response = self.activity_service.activity().query(body=request_body).execute()
 
             # Return activities and next page token
             activities = response.get("activities", [])
@@ -887,9 +882,7 @@ class GoogleDriveActivityCollector(CollectorBase):
         # Update state
         self.state["last_run"] = datetime.now(UTC).isoformat()
         self.state["last_page_token"] = page_token
-        self.state["last_start_time"] = (
-            self.activities[0].timestamp.isoformat() if self.activities else start_time
-        )
+        self.state["last_start_time"] = self.activities[0].timestamp.isoformat() if self.activities else start_time
         self.state["activities_collected"] = activity_count
         self.state["total_activities_collected"] += activity_count
 
@@ -933,7 +926,9 @@ class GoogleDriveActivityCollector(CollectorBase):
 
                     # Create recorder
                     recorder = GoogleDriveActivityRecorder(
-                        collector=self, auto_connect=True, debug=self.debug,
+                        collector=self,
+                        auto_connect=True,
+                        debug=self.debug,
                     )
 
                     # Store activities
@@ -1064,7 +1059,9 @@ def main():
         help="Perform full collection instead of incremental",
     )
     parser.add_argument(
-        "--direct-to-db", action="store_true", help="Write directly to database",
+        "--direct-to-db",
+        action="store_true",
+        help="Write directly to database",
     )
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     args = parser.parse_args()

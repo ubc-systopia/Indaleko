@@ -108,9 +108,7 @@ class IndalekoRegistrationService(IndalekoSingleton):
         self.provider_collection = IndalekoCollections().get_collection(
             self.collection_name,
         )
-        assert (
-            self.provider_collection is not None
-        ), f"Provider collection {self.collection_name} must exist"
+        assert self.provider_collection is not None, f"Provider collection {self.collection_name} must exist"
 
         self._initialized = True
         self.logger.info(f"Initialized {self.__class__.__name__}")
@@ -132,7 +130,8 @@ class IndalekoRegistrationService(IndalekoSingleton):
         return json.dumps(self.serialize(), indent=4)
 
     def lookup_provider_by_identifier(
-        self, identifier: str,
+        self,
+        identifier: str,
     ) -> dict[str, Any] | None:
         """
         Return the provider with the given identifier.
@@ -204,7 +203,8 @@ class IndalekoRegistrationService(IndalekoSingleton):
             Collection name
         """
         assert isinstance(
-            identifier, str,
+            identifier,
+            str,
         ), f"Identifier {identifier} must be a string is {type(identifier)}"
         assert Indaleko.validate_uuid_string(
             identifier,
@@ -288,7 +288,9 @@ class IndalekoRegistrationService(IndalekoSingleton):
         return provider_collection
 
     def delete_provider_collection(
-        self, identifier: str, delete_data: bool = True,
+        self,
+        identifier: str,
+        delete_data: bool = True,
     ) -> bool:
         """
         Delete a provider's data collection.
@@ -378,7 +380,8 @@ class IndalekoRegistrationService(IndalekoSingleton):
         assert "Identifier" in kwargs, f"Identifier must be in kwargs: {kwargs}"
         provider_id = kwargs["Identifier"]
         assert isinstance(
-            provider_id, str,
+            provider_id,
+            str,
         ), f"Provider ID must be a string: {provider_id}"
         assert Indaleko.validate_uuid_string(
             provider_id,

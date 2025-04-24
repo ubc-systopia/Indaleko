@@ -47,7 +47,8 @@ from query.context.visualization import QueryPathVisualizer
 
 
 def create_test_queries(
-    provider: QueryActivityProvider, count: int = 5,
+    provider: QueryActivityProvider,
+    count: int = 5,
 ) -> list[uuid.UUID]:
     """Create a sequence of test queries for testing."""
     query_ids = []
@@ -402,7 +403,8 @@ def test_integration(args: argparse.Namespace) -> None:
 
         # Export the graph
         output_path = visualizer.export_graph(
-            file_path="query_context_test.png", show=args.show,
+            file_path="query_context_test.png",
+            show=args.show,
         )
 
         if output_path:
@@ -423,21 +425,32 @@ def main():
     """Test functionality of Query Context Integration."""
     parser = argparse.ArgumentParser(description="Test Query Context Integration")
     parser.add_argument(
-        "--provider", action="store_true", help="Test activity provider",
+        "--provider",
+        action="store_true",
+        help="Test activity provider",
     )
     parser.add_argument("--navigation", action="store_true", help="Test navigation")
     parser.add_argument(
-        "--relationship", action="store_true", help="Test relationship detection",
+        "--relationship",
+        action="store_true",
+        help="Test relationship detection",
     )
     parser.add_argument(
-        "--visualization", action="store_true", help="Test visualization",
+        "--visualization",
+        action="store_true",
+        help="Test visualization",
     )
     parser.add_argument(
-        "--integration", action="store_true", help="Test full integration",
+        "--integration",
+        action="store_true",
+        help="Test full integration",
     )
     parser.add_argument("--all", action="store_true", help="Run all tests")
     parser.add_argument(
-        "--count", type=int, default=5, help="Number of queries to create/use",
+        "--count",
+        type=int,
+        default=5,
+        help="Number of queries to create/use",
     )
     parser.add_argument("--show", action="store_true", help="Show visualizations")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
@@ -446,19 +459,15 @@ def main():
 
     # If no specific tests specified, run all
     if not (
-        args.provider
-        or args.navigation
-        or args.relationship
-        or args.visualization
-        or args.integration
-        or args.all
+        args.provider or args.navigation or args.relationship or args.visualization or args.integration or args.all
     ):
         args.all = True
 
     # Setup logging
     log_level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(
-        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
     # Print banner

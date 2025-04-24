@@ -251,8 +251,7 @@ class ActivityContextRecommender(RecommendationProvider):
                 type_suggestions = self._generate_suggestions_for_activity_type(
                     activity_type,
                     activities,
-                    max_per_type=max_suggestions // len(activity_types)
-                    + 1,  # Ensure even distribution
+                    max_per_type=max_suggestions // len(activity_types) + 1,  # Ensure even distribution
                 )
 
                 suggestions.extend(type_suggestions)
@@ -271,7 +270,8 @@ class ActivityContextRecommender(RecommendationProvider):
             return self._generate_default_suggestions(max_suggestions // 2)
 
     def _get_recent_activities(
-        self, activity_handle: uuid.UUID,
+        self,
+        activity_handle: uuid.UUID,
     ) -> list[dict[str, Any]]:
         """
         Retrieve recent activities from the context service and database.
@@ -324,13 +324,8 @@ class ActivityContextRecommender(RecommendationProvider):
                                 }
 
                                 # Add timestamp if not present
-                                if (
-                                    "timestamp" not in activity["attributes"]
-                                    and "Timestamp" in context_doc
-                                ):
-                                    activity["attributes"]["timestamp"] = context_doc[
-                                        "Timestamp"
-                                    ]
+                                if "timestamp" not in activity["attributes"] and "Timestamp" in context_doc:
+                                    activity["attributes"]["timestamp"] = context_doc["Timestamp"]
 
                                 activities.append(activity)
 
@@ -371,15 +366,14 @@ class ActivityContextRecommender(RecommendationProvider):
                         "file_name": doc.get("fileName", ""),
                         "file_path": doc.get("filePath", ""),
                         "timestamp": doc.get(
-                            "timestamp", datetime.now(UTC).isoformat(),
+                            "timestamp",
+                            datetime.now(UTC).isoformat(),
                         ),
                     }
 
                     # Add file type from extension if available
                     if "." in attributes["file_name"]:
-                        attributes["file_type"] = (
-                            attributes["file_name"].split(".")[-1].lower()
-                        )
+                        attributes["file_type"] = attributes["file_name"].split(".")[-1].lower()
 
                     # Add folder path
                     attributes["folder_path"] = os.path.dirname(attributes["file_path"])
@@ -462,9 +456,7 @@ class ActivityContextRecommender(RecommendationProvider):
                     "subject": "Project Update",
                     "recipient": "user@example.com",
                     "has_attachments": True,
-                    "timestamp": (
-                        datetime.now(UTC) - timedelta(minutes=30)
-                    ).isoformat(),
+                    "timestamp": (datetime.now(UTC) - timedelta(minutes=30)).isoformat(),
                 },
             },
             {
@@ -474,15 +466,14 @@ class ActivityContextRecommender(RecommendationProvider):
                     "file_path": "/documents/projects/project_plan.docx",
                     "file_type": "docx",
                     "folder_path": "/documents/projects",
-                    "timestamp": (
-                        datetime.now(UTC) - timedelta(minutes=45)
-                    ).isoformat(),
+                    "timestamp": (datetime.now(UTC) - timedelta(minutes=45)).isoformat(),
                 },
             },
         ]
 
     def _group_activities_by_type(
-        self, activities: list[dict[str, Any]],
+        self,
+        activities: list[dict[str, Any]],
     ) -> dict[str, list[dict[str, Any]]]:
         """
         Group activities by their type.
@@ -526,7 +517,8 @@ class ActivityContextRecommender(RecommendationProvider):
 
         # Get mapping for this activity type or use default
         mapping = self._activity_query_mappings.get(
-            activity_type, self._activity_query_mappings["default"],
+            activity_type,
+            self._activity_query_mappings["default"],
         )
 
         # Sort activities by recency (most recent first)
@@ -541,9 +533,7 @@ class ActivityContextRecommender(RecommendationProvider):
             attributes = activity.get("attributes", {})
 
             # Check if activity has required attributes
-            has_required = all(
-                attr in attributes for attr in mapping["required_attributes"]
-            )
+            has_required = all(attr in attributes for attr in mapping["required_attributes"])
 
             if not has_required:
                 continue
@@ -574,7 +564,10 @@ class ActivityContextRecommender(RecommendationProvider):
 
                     # Calculate confidence based on base confidence and attribute coverage
                     confidence = self._calculate_confidence(
-                        mapping["confidence"], activity_type, template, all_attrs,
+                        mapping["confidence"],
+                        activity_type,
+                        template,
+                        all_attrs,
                     )
 
                     # Create suggestion
@@ -593,12 +586,8 @@ class ActivityContextRecommender(RecommendationProvider):
                             ),
                             "attribute_coverage": (
                                 len(all_attrs)
-                                / (
-                                    len(mapping["required_attributes"])
-                                    + len(mapping["extracted_attributes"])
-                                )
-                                if mapping["required_attributes"]
-                                or mapping["extracted_attributes"]
+                                / (len(mapping["required_attributes"]) + len(mapping["extracted_attributes"]))
+                                if mapping["required_attributes"] or mapping["extracted_attributes"]
                                 else 0.5
                             ),
                             "template_success": self._get_template_success_ratio(
@@ -626,7 +615,9 @@ class ActivityContextRecommender(RecommendationProvider):
         return suggestions[:max_per_type]
 
     def _derive_attribute(
-        self, attribute: str, available_attributes: dict[str, Any],
+        self,
+        attribute: str,
+        available_attributes: dict[str, Any],
     ) -> str | None:
         """
         Attempt to derive an attribute that isn't directly available.
@@ -639,11 +630,10 @@ class ActivityContextRecommender(RecommendationProvider):
             Derived attribute value or None if not derivable
         """
         # Derive file_type from file_name or file_path
-        if attribute == "file_type" and (
-            "file_name" in available_attributes or "file_path" in available_attributes
-        ):
+        if attribute == "file_type" and ("file_name" in available_attributes or "file_path" in available_attributes):
             file_name = available_attributes.get(
-                "file_name", available_attributes.get("file_path", ""),
+                "file_name",
+                available_attributes.get("file_path", ""),
             )
             if "." in file_name:
                 return file_name.split(".")[-1].lower()
@@ -823,21 +813,15 @@ class ActivityContextRecommender(RecommendationProvider):
         # Update template success/failure tracking
         if self.is_positive_feedback(feedback):
             # Positive feedback - increment success count
-            self._successful_templates[template] = (
-                self._successful_templates.get(template, 0) + 1
-            )
+            self._successful_templates[template] = self._successful_templates.get(template, 0) + 1
 
             # Bonus for highly successful queries (many results)
             if result_count and result_count > 5:
-                self._successful_templates[template] = (
-                    self._successful_templates.get(template, 0) + 1
-                )
+                self._successful_templates[template] = self._successful_templates.get(template, 0) + 1
 
         elif self.is_negative_feedback(feedback):
             # Negative feedback - increment failure count
-            self._failed_templates[template] = (
-                self._failed_templates.get(template, 0) + 1
-            )
+            self._failed_templates[template] = self._failed_templates.get(template, 0) + 1
 
         # The neutral feedback doesn't affect our tracking
 
@@ -893,7 +877,9 @@ def main():
     if suggestions:
         print("Applying positive feedback to first suggestion...")
         recommender.update_from_feedback(
-            suggestion=suggestions[0], feedback=FeedbackType.ACCEPTED, result_count=7,
+            suggestion=suggestions[0],
+            feedback=FeedbackType.ACCEPTED,
+            result_count=7,
         )
 
         # Generate new suggestions to see the effect
@@ -909,9 +895,7 @@ def main():
             # Check if this is the same as a previous suggestion to show confidence changes
             for old_suggestion in suggestions:
                 if suggestion.query_text == old_suggestion.query_text:
-                    confidence_change = (
-                        suggestion.confidence - old_suggestion.confidence
-                    )
+                    confidence_change = suggestion.confidence - old_suggestion.confidence
                     if abs(confidence_change) > 0.01:
                         print(f"   Confidence change: {confidence_change:+.2f}")
             print()

@@ -71,15 +71,17 @@ def find_ntfs_jsonl_files(newest_first: bool = True) -> list[str]:
     # Check if data directory exists
     if os.path.exists(data_dir):
         for filename in os.listdir(data_dir):
-            if (
-                "ntfs" in filename.lower() or "collector" in filename.lower()
-            ) and filename.endswith(".jsonl"):
+            if ("ntfs" in filename.lower() or "collector" in filename.lower()) and filename.endswith(".jsonl"):
                 file_path = os.path.join(data_dir, filename)
                 ntfs_files.append(file_path)
 
     # Also check the activity collectors directory
     activity_dir = os.path.join(
-        os.environ["INDALEKO_ROOT"], "activity", "collectors", "storage", "ntfs",
+        os.environ["INDALEKO_ROOT"],
+        "activity",
+        "collectors",
+        "storage",
+        "ntfs",
     )
     if os.path.exists(activity_dir):
         for filename in os.listdir(activity_dir):
@@ -222,9 +224,7 @@ def analyze_jsonl_file(file_path: str) -> dict[str, Any]:
         "earliest_time": earliest_time.isoformat() if earliest_time else None,
         "latest_time": latest_time.isoformat() if latest_time else None,
         "time_span_hours": (
-            ((latest_time - earliest_time).total_seconds() / 3600)
-            if earliest_time and latest_time
-            else None
+            ((latest_time - earliest_time).total_seconds() / 3600) if earliest_time and latest_time else None
         ),
     }
 
@@ -259,7 +259,9 @@ def count_activities_in_jsonl(file_path: str) -> dict[str, int]:
 
 
 def setup_database(
-    db_config_path: str | None = None, simulate: bool = False, dry_run: bool = False,
+    db_config_path: str | None = None,
+    simulate: bool = False,
+    dry_run: bool = False,
 ) -> IndalekoDBConfig | None:
     """
     Set up database connection using the Indaleko framework.
@@ -327,12 +329,8 @@ def create_hot_tier_recorder(
     kwargs = {
         "ttl_days": ttl_days,
         "debug": debug,
-        "no_db": simulate
-        or dry_run
-        or (db_config is None),  # No DB if simulating or dry run
-        "register_service": not (
-            simulate or dry_run
-        ),  # Don't register in simulation modes
+        "no_db": simulate or dry_run or (db_config is None),  # No DB if simulating or dry run
+        "register_service": not (simulate or dry_run),  # Don't register in simulation modes
     }
 
     if collection_name:
@@ -351,14 +349,19 @@ def create_hot_tier_recorder(
             print("Using basic recorder for simulation...")
             # Create with absolute minimum options for dry run
             return NtfsHotTierRecorder(
-                no_db=True, register_service=False, ttl_days=ttl_days, debug=debug,
+                no_db=True,
+                register_service=False,
+                ttl_days=ttl_days,
+                debug=debug,
             )
         else:
             raise
 
 
 def load_activities_to_database(
-    recorder: NtfsHotTierRecorder, file_path: str, dry_run: bool = False,
+    recorder: NtfsHotTierRecorder,
+    file_path: str,
+    dry_run: bool = False,
 ) -> dict[str, Any]:
     """
     Load NTFS activities from a JSONL file into the database.
@@ -397,11 +400,7 @@ def load_activities_to_database(
         }
 
     # Handle simulation mode (no database connection) or if the recorder is set up for no_db
-    if (
-        getattr(recorder, "_no_db", False)
-        or not hasattr(recorder, "_db")
-        or recorder._db is None
-    ):
+    if getattr(recorder, "_no_db", False) or not hasattr(recorder, "_db") or recorder._db is None:
         print(
             f"Simulation mode: Would have processed {activity_counts['total_lines']} activities",
         )
@@ -473,7 +472,9 @@ def load_activities_to_database(
 
 
 def run_test_queries(
-    recorder: NtfsHotTierRecorder, query_types: list[str] = None, verbose: bool = False,
+    recorder: NtfsHotTierRecorder,
+    query_types: list[str] = None,
+    verbose: bool = False,
 ) -> dict[str, Any]:
     """
     Run test queries to verify data was loaded correctly.
@@ -536,21 +537,11 @@ def run_test_queries(
             results["recent_activities"] = [
                 {
                     "id": activity.get("_key"),
-                    "type": activity.get("Record", {})
-                    .get("Data", {})
-                    .get("activity_type"),
-                    "file_name": activity.get("Record", {})
-                    .get("Data", {})
-                    .get("file_name"),
-                    "timestamp": activity.get("Record", {})
-                    .get("Data", {})
-                    .get("timestamp"),
-                    "entity_id": activity.get("Record", {})
-                    .get("Data", {})
-                    .get("entity_id"),
-                    "importance": activity.get("Record", {})
-                    .get("Data", {})
-                    .get("importance_score"),
+                    "type": activity.get("Record", {}).get("Data", {}).get("activity_type"),
+                    "file_name": activity.get("Record", {}).get("Data", {}).get("file_name"),
+                    "timestamp": activity.get("Record", {}).get("Data", {}).get("timestamp"),
+                    "entity_id": activity.get("Record", {}).get("Data", {}).get("entity_id"),
+                    "importance": activity.get("Record", {}).get("Data", {}).get("importance_score"),
                 }
                 for activity in recent
             ]
@@ -582,15 +573,9 @@ def run_test_queries(
             results["create_activities"] = [
                 {
                     "id": activity.get("_key"),
-                    "file_name": activity.get("Record", {})
-                    .get("Data", {})
-                    .get("file_name"),
-                    "timestamp": activity.get("Record", {})
-                    .get("Data", {})
-                    .get("timestamp"),
-                    "entity_id": activity.get("Record", {})
-                    .get("Data", {})
-                    .get("entity_id"),
+                    "file_name": activity.get("Record", {}).get("Data", {}).get("file_name"),
+                    "timestamp": activity.get("Record", {}).get("Data", {}).get("timestamp"),
+                    "entity_id": activity.get("Record", {}).get("Data", {}).get("entity_id"),
                 }
                 for activity in creates
             ]
@@ -612,15 +597,9 @@ def run_test_queries(
             results["rename_activities"] = [
                 {
                     "id": activity.get("_key"),
-                    "file_name": activity.get("Record", {})
-                    .get("Data", {})
-                    .get("file_name"),
-                    "timestamp": activity.get("Record", {})
-                    .get("Data", {})
-                    .get("timestamp"),
-                    "entity_id": activity.get("Record", {})
-                    .get("Data", {})
-                    .get("entity_id"),
+                    "file_name": activity.get("Record", {}).get("Data", {}).get("file_name"),
+                    "timestamp": activity.get("Record", {}).get("Data", {}).get("timestamp"),
+                    "entity_id": activity.get("Record", {}).get("Data", {}).get("entity_id"),
                 }
                 for activity in renames
             ]
@@ -641,20 +620,15 @@ def run_test_queries(
             if entity_id:
                 print(f"\nAll activities for entity {entity_id} (top 3):")
                 entity_activities = recorder.get_activities_by_entity(
-                    uuid.UUID(entity_id), limit=3,
+                    uuid.UUID(entity_id),
+                    limit=3,
                 )
                 results["entity_activities"] = [
                     {
                         "id": activity.get("_key"),
-                        "type": activity.get("Record", {})
-                        .get("Data", {})
-                        .get("activity_type"),
-                        "file_name": activity.get("Record", {})
-                        .get("Data", {})
-                        .get("file_name"),
-                        "timestamp": activity.get("Record", {})
-                        .get("Data", {})
-                        .get("timestamp"),
+                        "type": activity.get("Record", {}).get("Data", {}).get("activity_type"),
+                        "file_name": activity.get("Record", {}).get("Data", {}).get("file_name"),
+                        "timestamp": activity.get("Record", {}).get("Data", {}).get("timestamp"),
                     }
                     for activity in entity_activities
                 ]
@@ -683,25 +657,18 @@ def run_test_queries(
                 """
 
                 cursor = recorder._db._arangodb.aql.execute(
-                    query, bind_vars={"@collection": recorder._collection_name},
+                    query,
+                    bind_vars={"@collection": recorder._collection_name},
                 )
 
                 high_importance = list(cursor)
                 results["high_importance_activities"] = [
                     {
                         "id": activity.get("_key"),
-                        "type": activity.get("Record", {})
-                        .get("Data", {})
-                        .get("activity_type"),
-                        "file_name": activity.get("Record", {})
-                        .get("Data", {})
-                        .get("file_name"),
-                        "timestamp": activity.get("Record", {})
-                        .get("Data", {})
-                        .get("timestamp"),
-                        "importance": activity.get("Record", {})
-                        .get("Data", {})
-                        .get("importance_score"),
+                        "type": activity.get("Record", {}).get("Data", {}).get("activity_type"),
+                        "file_name": activity.get("Record", {}).get("Data", {}).get("file_name"),
+                        "timestamp": activity.get("Record", {}).get("Data", {}).get("timestamp"),
+                        "importance": activity.get("Record", {}).get("Data", {}).get("importance_score"),
                     }
                     for activity in high_importance
                 ]
@@ -719,7 +686,8 @@ def run_test_queries(
 
 
 def generate_summary_report(
-    results: list[dict[str, Any]], queries: dict[str, Any] | None = None,
+    results: list[dict[str, Any]],
+    queries: dict[str, Any] | None = None,
 ) -> str:
     """
     Generate a summary report from processing results.
@@ -768,7 +736,9 @@ def generate_summary_report(
     report.append("")
     report.append("Activity Types:")
     for activity_type, count in sorted(
-        activity_counts.items(), key=lambda x: x[1], reverse=True,
+        activity_counts.items(),
+        key=lambda x: x[1],
+        reverse=True,
     ):
         report.append(
             f"- {activity_type}: {count:,} ({count/total_activities*100:.1f}%)",
@@ -789,7 +759,9 @@ def generate_summary_report(
         if "by_type" in stats:
             report.append("- Activities by type in database:")
             for activity_type, count in sorted(
-                stats["by_type"].items(), key=lambda x: x[1], reverse=True,
+                stats["by_type"].items(),
+                key=lambda x: x[1],
+                reverse=True,
             ):
                 report.append(f"  - {activity_type}: {count:,}")
 
@@ -829,7 +801,9 @@ def save_report_to_file(report: str, output_path: str | None = None) -> str:
     if output_path is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_path = os.path.join(
-            os.environ["INDALEKO_ROOT"], "data", f"ntfs_hot_tier_report_{timestamp}.txt",
+            os.environ["INDALEKO_ROOT"],
+            "data",
+            f"ntfs_hot_tier_report_{timestamp}.txt",
         )
 
     # Ensure directory exists
@@ -889,10 +863,14 @@ def parse_arguments():
     file_group = parser.add_argument_group("File Selection")
     file_group.add_argument("--file", type=str, help="Specific JSONL file to process")
     file_group.add_argument(
-        "--all", action="store_true", help="Process all NTFS JSONL files found",
+        "--all",
+        action="store_true",
+        help="Process all NTFS JSONL files found",
     )
     file_group.add_argument(
-        "--pattern", type=str, help="Only process files containing this pattern in name",
+        "--pattern",
+        type=str,
+        help="Only process files containing this pattern in name",
     )
     file_group.add_argument(
         "--list-files",
@@ -900,16 +878,23 @@ def parse_arguments():
         help="List available NTFS JSONL files and exit",
     )
     file_group.add_argument(
-        "--newest", type=int, default=1, help="Process only N newest files (0 for all)",
+        "--newest",
+        type=int,
+        default=1,
+        help="Process only N newest files (0 for all)",
     )
     file_group.add_argument(
-        "--max-age-days", type=int, help="Only process files modified within N days",
+        "--max-age-days",
+        type=int,
+        help="Only process files modified within N days",
     )
 
     # Database options
     db_group = parser.add_argument_group("Database Options")
     db_group.add_argument(
-        "--db-config", type=str, help="Path to database configuration file",
+        "--db-config",
+        type=str,
+        help="Path to database configuration file",
     )
     db_group.add_argument(
         "--ttl-days",
@@ -918,7 +903,9 @@ def parse_arguments():
         help="Number of days to keep data in hot tier",
     )
     db_group.add_argument(
-        "--collection", type=str, help="Custom collection name for hot tier",
+        "--collection",
+        type=str,
+        help="Custom collection name for hot tier",
     )
 
     # Operation modes
@@ -929,23 +916,33 @@ def parse_arguments():
         help="Analyze files but don't load to database",
     )
     mode_group.add_argument(
-        "--simulate", action="store_true", help="Simulate without database connection",
+        "--simulate",
+        action="store_true",
+        help="Simulate without database connection",
     )
     mode_group.add_argument(
-        "--no-queries", action="store_true", help="Skip running test queries",
+        "--no-queries",
+        action="store_true",
+        help="Skip running test queries",
     )
 
     # Output options
     output_group = parser.add_argument_group("Output Options")
     output_group.add_argument(
-        "--debug", action="store_true", help="Enable debug logging",
+        "--debug",
+        action="store_true",
+        help="Enable debug logging",
     )
     output_group.add_argument(
-        "--verbose", action="store_true", help="Show more detailed output",
+        "--verbose",
+        action="store_true",
+        help="Show more detailed output",
     )
     output_group.add_argument("--quiet", action="store_true", help="Minimal output")
     output_group.add_argument(
-        "--report", action="store_true", help="Generate summary report after processing",
+        "--report",
+        action="store_true",
+        help="Generate summary report after processing",
     )
     output_group.add_argument(
         "--report-file",
@@ -982,7 +979,8 @@ def main():
     if args.quiet:
         log_level = logging.WARNING
     logging.basicConfig(
-        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
     try:
@@ -1009,10 +1007,7 @@ def main():
                         metadata = analyze_jsonl_file(file_path)
                         print(f"   Activities: {metadata.get('line_count', 'Unknown')}")
                         if "activity_types" in metadata:
-                            types_str = ", ".join(
-                                f"{t}: {c}"
-                                for t, c in metadata["activity_types"].items()
-                            )
+                            types_str = ", ".join(f"{t}: {c}" for t, c in metadata["activity_types"].items())
                             print(f"   Types: {types_str}")
                         if metadata.get("earliest_time") and metadata.get(
                             "latest_time",
@@ -1041,7 +1036,9 @@ def main():
         else:
             # Filter files
             filtered_files = filter_jsonl_files(
-                all_files, pattern=args.pattern, max_age_days=args.max_age_days,
+                all_files,
+                pattern=args.pattern,
+                max_age_days=args.max_age_days,
             )
 
             # Apply newest limit if specified
@@ -1058,7 +1055,9 @@ def main():
 
         # Setup database connection
         db_config = setup_database(
-            args.db_config, simulate=args.simulate, dry_run=args.dry_run,
+            args.db_config,
+            simulate=args.simulate,
+            dry_run=args.dry_run,
         )
 
         # Create hot tier recorder
@@ -1075,7 +1074,9 @@ def main():
         results = []
         for file_path in files_to_process:
             result = load_activities_to_database(
-                recorder, file_path, dry_run=args.dry_run,
+                recorder,
+                file_path,
+                dry_run=args.dry_run,
             )
             results.append(result)
 

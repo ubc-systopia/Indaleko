@@ -102,13 +102,17 @@ class GoogleCalendarCollector(CalendarCollectorBase):
         self.config_path = kwargs.get(
             "config_path",
             os.path.join(
-                os.environ.get("INDALEKO_ROOT"), "config", "gcalendar_config.json",
+                os.environ.get("INDALEKO_ROOT"),
+                "config",
+                "gcalendar_config.json",
             ),
         )
         self.token_path = kwargs.get(
             "token_path",
             os.path.join(
-                os.environ.get("INDALEKO_ROOT"), "config", "gcalendar_token.json",
+                os.environ.get("INDALEKO_ROOT"),
+                "config",
+                "gcalendar_token.json",
             ),
         )
 
@@ -154,7 +158,8 @@ class GoogleCalendarCollector(CalendarCollectorBase):
                 with open(self.token_path) as token_file:
                     token_info = json.load(token_file)
                     creds = Credentials.from_authorized_user_info(
-                        token_info, self.SCOPES,
+                        token_info,
+                        self.SCOPES,
                     )
             except Exception as e:
                 self.logger.error(f"Error loading token file: {e}")
@@ -188,7 +193,8 @@ class GoogleCalendarCollector(CalendarCollectorBase):
                 try:
                     # Run the OAuth flow
                     flow = InstalledAppFlow.from_client_secrets_file(
-                        self.config_path, self.SCOPES,
+                        self.config_path,
+                        self.SCOPES,
                     )
                     creds = flow.run_local_server(port=0)
                 except Exception as e:
@@ -343,11 +349,7 @@ class GoogleCalendarCollector(CalendarCollectorBase):
 
         try:
             # Get the event
-            event = (
-                self.service.events()
-                .get(calendarId=calendar_id, eventId=event_id)
-                .execute()
-            )
+            event = self.service.events().get(calendarId=calendar_id, eventId=event_id).execute()
 
             return event
 
@@ -356,7 +358,9 @@ class GoogleCalendarCollector(CalendarCollectorBase):
             return {}
 
     def convert_to_calendar_event(
-        self, event_data: dict[str, Any], calendar_id: str,
+        self,
+        event_data: dict[str, Any],
+        calendar_id: str,
     ) -> CalendarEvent:
         """Convert Google Calendar event data to CalendarEvent model.
 
@@ -422,14 +426,13 @@ class GoogleCalendarCollector(CalendarCollectorBase):
                 "cancelled": EventStatus.CANCELLED,
             }
             status = status_map.get(
-                event_data.get("status", "confirmed"), EventStatus.UNKNOWN,
+                event_data.get("status", "confirmed"),
+                EventStatus.UNKNOWN,
             )
 
             # Get importance (Google doesn't have direct importance, infer from colorId)
             color_id = event_data.get("colorId")
-            importance = (
-                "high" if color_id in ["4", "11"] else "normal"
-            )  # Red or bold red
+            importance = "high" if color_id in ["4", "11"] else "normal"  # Red or bold red
 
             # Get sensitivity
             visibility = event_data.get("visibility", "default")
@@ -465,7 +468,8 @@ class GoogleCalendarCollector(CalendarCollectorBase):
                         }
 
                         recurrence_type = recurrence_type_map.get(
-                            freq, EventRecurrence.CUSTOM,
+                            freq,
+                            EventRecurrence.CUSTOM,
                         )
 
                         # Get day of week (for weekly recurrence)
@@ -490,11 +494,13 @@ class GoogleCalendarCollector(CalendarCollectorBase):
                             # Parse YYYYMMDDTHHMMSSZ format
                             if "T" in until_str:
                                 until_date = datetime.datetime.strptime(
-                                    until_str, "%Y%m%dT%H%M%SZ",
+                                    until_str,
+                                    "%Y%m%dT%H%M%SZ",
                                 ).replace(tzinfo=datetime.UTC)
                             else:
                                 until_date = datetime.datetime.strptime(
-                                    until_str, "%Y%m%d",
+                                    until_str,
+                                    "%Y%m%d",
                                 ).replace(tzinfo=datetime.UTC)
 
                         # Get occurrence count
@@ -546,7 +552,8 @@ class GoogleCalendarCollector(CalendarCollectorBase):
                     "needsAction": EventResponse.NOT_RESPONDED,
                 }
                 response = response_map.get(
-                    response_status, EventResponse.NOT_RESPONDED,
+                    response_status,
+                    EventResponse.NOT_RESPONDED,
                 )
 
                 # Get attendee type (required or optional)
@@ -626,16 +633,15 @@ class GoogleCalendarCollector(CalendarCollectorBase):
             is_organizer = self.user_email == organizer_email
 
             # Get the current user's response status
-            user_response = (
-                EventResponse.ORGANIZER if is_organizer else EventResponse.NOT_RESPONDED
-            )
+            user_response = EventResponse.ORGANIZER if is_organizer else EventResponse.NOT_RESPONDED
 
             # Check attendees for the current user's response
             if not is_organizer and self.user_email:
                 for attendee_data in event_data.get("attendees", []):
                     if attendee_data.get("email") == self.user_email:
                         response_status = attendee_data.get(
-                            "responseStatus", "needsAction",
+                            "responseStatus",
+                            "needsAction",
                         )
                         response_map = {
                             "accepted": EventResponse.ACCEPTED,
@@ -644,7 +650,8 @@ class GoogleCalendarCollector(CalendarCollectorBase):
                             "needsAction": EventResponse.NOT_RESPONDED,
                         }
                         user_response = response_map.get(
-                            response_status, EventResponse.NOT_RESPONDED,
+                            response_status,
+                            EventResponse.NOT_RESPONDED,
                         )
                         break
 

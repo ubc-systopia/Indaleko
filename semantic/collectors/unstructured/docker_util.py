@@ -22,10 +22,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # standard imports
 import argparse
 import datetime
-import docker
 import logging
 import os
 import sys
+
+import docker
 
 # third-party imports
 import docker.errors
@@ -43,8 +44,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # Indaleko imports
 # pylint: disable=wrong-import-position
 from Indaleko import Indaleko
-from utils.misc.i_docker import IndalekoDocker
 from utils.i_logging import IndalekoLogging
+from utils.misc.i_docker import IndalekoDocker
 
 # pylint: enable=wrong-import-position
 
@@ -63,13 +64,9 @@ class IndalekoUnstructuredDocker(IndalekoDocker):
         self.config_dir = kwargs.get("config_dir", Indaleko.default_config_dir)
         self.data_dir = kwargs.get("data_dir", Indaleko.default_data_dir)
         self.log_dir = kwargs.get("log_dir", Indaleko.default_log_dir)
-        if (
-            not os.path.exists(self.config_dir)
-            or not os.path.exists(self.data_dir)
-            or not os.path.exists(self.log_dir)
-        ):
+        if not os.path.exists(self.config_dir) or not os.path.exists(self.data_dir) or not os.path.exists(self.log_dir):
             Indaleko.create_secure_directories(
-                [self.config_dir, self.data_dir, self.log_dir]
+                [self.config_dir, self.data_dir, self.log_dir],
             )
         if root_dir is None:
             root_dir = os.environ.get("INDALEKO_ROOT")
@@ -77,9 +74,7 @@ class IndalekoUnstructuredDocker(IndalekoDocker):
         self.config_dir = os.path.join(self.root_dir, Indaleko.default_config_dir)
 
         super().__init__()
-        assert (
-            hasattr(self, "docker_client") and self.docker_client is not None
-        ), "Docker client is not initialized"
+        assert hasattr(self, "docker_client") and self.docker_client is not None, "Docker client is not initialized"
         self.docker_client.ping()
 
     def get_image(self, image_name: str) -> dict:
@@ -115,7 +110,7 @@ class IndalekoUnstructuredDocker(IndalekoDocker):
             ic(f"Unstructured Docker image found: {current_image.id}")
             return False
         new_image = docker_client.images.pull(
-            IndalekoUnstructuredDocker.default_image_name
+            IndalekoUnstructuredDocker.default_image_name,
         )
         if current_image is not None or current_image.id != new_image.id:
             ic(f"Unstructured Docker image is up to date: {new_image.id}")
@@ -141,14 +136,12 @@ class IndalekoUnstructuredDocker(IndalekoDocker):
         try:
             containers = docker_client.containers.list(all=True)
             unstructured_containers = [
-                container
-                for container in containers
-                if any("unstructured" in tag for tag in container.image.tags)
+                container for container in containers if any("unstructured" in tag for tag in container.image.tags)
             ]
             if unstructured_containers:
                 for container in unstructured_containers:
                     ic(
-                        f"Container Name: {container.name}, Tags: {container.image.tags}"
+                        f"Container Name: {container.name}, Tags: {container.image.tags}",
                     )
             else:
                 ic("No Unstructured Docker containers found")
@@ -159,17 +152,13 @@ class IndalekoUnstructuredDocker(IndalekoDocker):
     def start_command(args: argparse.Namespace) -> None:
         """Start the Unstructured Docker container"""
         docker_client = docker.from_env()
-        containers_list = [
-            container.name for container in docker_client.containers.list(all=True)
-        ]
-        running_containers = [
-            container.name for container in docker_client.containers.list()
-        ]
+        containers_list = [container.name for container in docker_client.containers.list(all=True)]
+        running_containers = [container.name for container in docker_client.containers.list()]
         if args.name not in containers_list:
             raise ValueError(f"Unstructured Container Name: {args.name} is Invalid")
         if args.name in running_containers:
             ic(f"Container: {args.name} Already Running")
-            return
+            return None
         ic("Starting container: " + args.name)
         return docker_client.containers.get(args.name).start()
 
@@ -177,12 +166,10 @@ class IndalekoUnstructuredDocker(IndalekoDocker):
     def stop_command(args: argparse.Namespace) -> None:
         """Stop the Unstructured Docker container"""
         docker_client = docker.from_env()
-        running_containers = [
-            container.name for container in docker_client.containers.list()
-        ]
+        running_containers = [container.name for container in docker_client.containers.list()]
         if args.name not in running_containers:
             ic(f"Container: {args.name} was not running")
-            return
+            return None
         ic(f"Stopping container: {args.name}")
         return docker_client.containers.get(args.name).stop()
 
@@ -194,11 +181,14 @@ class IndalekoUnstructuredDocker(IndalekoDocker):
 
 def main():
     """This is the entry point for testing the docker/unstructured integration in Indaleko."""
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     timestamp = now.isoformat()
     parser = argparse.ArgumentParser(description="Indaleko Unstructured Docker Support")
     parser.add_argument(
-        "--logdir", type=str, default=Indaleko.default_log_dir, help="Log directory"
+        "--logdir",
+        type=str,
+        default=Indaleko.default_log_dir,
+        help="Log directory",
     )
     parser.add_argument("--log", type=str, default=None, help="Log file name")
     parser.add_argument(
@@ -218,25 +208,33 @@ def main():
 
     ## Install Subparser
     parser_install = command_subparser.add_parser(
-        "install", help="Install the Unstructured Docker container"
+        "install",
+        help="Install the Unstructured Docker container",
     )
     parser_install.add_argument(
-        "--update", action="store_true", help="Update the Unstructured Docker image"
+        "--update",
+        action="store_true",
+        help="Update the Unstructured Docker image",
     )
     parser_install.set_defaults(func=IndalekoUnstructuredDocker.install_command)
 
     ## List Subparser
     parser_list = command_subparser.add_parser(
-        "list", help="List the Unstructured Docker container(s)"
+        "list",
+        help="List the Unstructured Docker container(s)",
     )
     parser_list.set_defaults(func=IndalekoUnstructuredDocker.list_command)
 
     ## Start Subparser
     parser_start = command_subparser.add_parser(
-        "start", help="Start the Unstructured Docker container"
+        "start",
+        help="Start the Unstructured Docker container",
     )
     parser_start.add_argument(
-        "-n", "--name", type=str, help="Name of Unstructured container"
+        "-n",
+        "--name",
+        type=str,
+        help="Name of Unstructured container",
     )
     parser_start.set_defaults(
         func=IndalekoUnstructuredDocker.start_command,
@@ -245,10 +243,14 @@ def main():
 
     ## Stop Subparser
     parser_stop = command_subparser.add_parser(
-        "stop", help="Stop the Unstructured Docker container"
+        "stop",
+        help="Stop the Unstructured Docker container",
     )
     parser_stop.add_argument(
-        "-n", "--name", type=str, help="Name of Unstructured container"
+        "-n",
+        "--name",
+        type=str,
+        help="Name of Unstructured container",
     )
     parser_stop.set_defaults(
         func=IndalekoUnstructuredDocker.stop_command,
@@ -257,7 +259,8 @@ def main():
 
     ## Uninstall Subparser
     parser_uninstall = command_subparser.add_parser(
-        "uninstall", help="Uninstall the Unstructured Docker container"
+        "uninstall",
+        help="Uninstall the Unstructured Docker container",
     )
     parser_uninstall.set_defaults(func=IndalekoUnstructuredDocker.uninstall_command)
 

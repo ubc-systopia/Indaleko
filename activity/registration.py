@@ -74,15 +74,18 @@ class IndalekoActivityDataRegistration:
         else:
             raise ValueError("Invalid registration data type")
         ic(self.registration_object.Identifier)
-        self.activity_collection_name = IndalekoActivityDataRegistration.generate_activity_data_provider_collection_name(
-            str(self.registration_object.Identifier),
+        self.activity_collection_name = (
+            IndalekoActivityDataRegistration.generate_activity_data_provider_collection_name(
+                str(self.registration_object.Identifier),
+            )
         )
 
     @staticmethod
     def generate_activity_data_provider_collection_name(identifier: str) -> str:
         """Return the name of the collection for the activity provider."""
         assert isinstance(
-            identifier, str,
+            identifier,
+            str,
         ), f"Identifier {identifier} must be a string is {type(identifier)}"
         assert Indaleko.validate_uuid_string(
             identifier,

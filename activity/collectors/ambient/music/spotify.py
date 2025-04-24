@@ -121,12 +121,8 @@ class SpotifyMusicCollector(AmbientCollector):
                 "device_type": playback["device"]["type"],
                 "shuffle_state": playback["shuffle_state"],
                 "repeat_state": playback["repeat_state"],
-                "context_type": (
-                    playback["context"]["type"] if playback["context"] else None
-                ),
-                "context_id": (
-                    playback["context"]["uri"] if playback["context"] else None
-                ),
+                "context_type": (playback["context"]["type"] if playback["context"] else None),
+                "context_id": (playback["context"]["uri"] if playback["context"] else None),
             }
             return self.process_data(raw_data)
         else:

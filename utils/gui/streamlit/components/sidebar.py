@@ -44,7 +44,9 @@ def render_sidebar():
         # Try to show logo, fall back to text if not found
         try:
             image_path = os.path.join(
-                os.environ.get("INDALEKO_ROOT"), "figures", "indaleko-arch.png",
+                os.environ.get("INDALEKO_ROOT"),
+                "figures",
+                "indaleko-arch.png",
             )
             if os.path.exists(image_path):
                 st.image(image_path, use_container_width=True)
@@ -75,7 +77,8 @@ def render_sidebar():
         with col2:
             # Add a debug toggle
             st.session_state.connect_debug = st.checkbox(
-                "Debug", value=st.session_state.connect_debug,
+                "Debug",
+                value=st.session_state.connect_debug,
             )
 
         # Connection button - full width

@@ -108,7 +108,8 @@ class TierTransitionManager:
             self._logger.info("Creating warm tier recorder")
             try:
                 self._warm_tier = NtfsWarmTierRecorder(
-                    debug=self._debug, transition_enabled=True,
+                    debug=self._debug,
+                    transition_enabled=True,
                 )
             except Exception as e:
                 self._logger.error(f"Error creating warm tier recorder: {e}")
@@ -222,9 +223,7 @@ class TierTransitionManager:
                 "total_activities": hot_stats.get("total_count", 0),
                 "transition_ready": transition_ready,
                 "already_transitioned": already_transitioned,
-                "remaining_hot": hot_stats.get("total_count", 0)
-                - transition_ready
-                - already_transitioned,
+                "remaining_hot": hot_stats.get("total_count", 0) - transition_ready - already_transitioned,
             }
 
             # Get warm tier statistics
@@ -234,10 +233,12 @@ class TierTransitionManager:
             stats["warm_tier"] = {
                 "total_activities": warm_stats.get("total_count", 0),
                 "aggregated_activities": warm_stats.get("by_aggregation", {}).get(
-                    "aggregated", 0,
+                    "aggregated",
+                    0,
                 ),
                 "individual_activities": warm_stats.get("by_aggregation", {}).get(
-                    "individual", 0,
+                    "individual",
+                    0,
                 ),
             }
 
@@ -274,17 +275,14 @@ class TierTransitionManager:
             return (0, 0)
 
         # Use provided parameters or defaults
-        age_threshold = (
-            age_threshold_hours
-            if age_threshold_hours is not None
-            else self._age_threshold_hours
-        )
+        age_threshold = age_threshold_hours if age_threshold_hours is not None else self._age_threshold_hours
         size = batch_size if batch_size is not None else self._batch_size
 
         try:
             # Find activities to transition
             hot_activities = self._hot_tier.find_hot_tier_activities_to_transition(
-                age_threshold_hours=age_threshold, batch_size=size,
+                age_threshold_hours=age_threshold,
+                batch_size=size,
             )
 
             if not hot_activities:
@@ -313,7 +311,9 @@ class TierTransitionManager:
             return (0, 0)
 
     def run_transition(
-        self, max_batches: int = 10, pause_seconds: int = 5,
+        self,
+        max_batches: int = 10,
+        pause_seconds: int = 5,
     ) -> dict[str, Any]:
         """
         Run a full transition operation with multiple batches.
@@ -385,8 +385,7 @@ class TierTransitionManager:
             # Add final stats
             results["end_time"] = datetime.now(UTC).isoformat()
             results["duration_seconds"] = (
-                datetime.fromisoformat(results["end_time"])
-                - datetime.fromisoformat(results["start_time"])
+                datetime.fromisoformat(results["end_time"]) - datetime.fromisoformat(results["start_time"])
             ).total_seconds()
 
             # Get final transition stats
@@ -418,14 +417,17 @@ def create_recorders(args):
     # Configure logging
     log_level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(
-        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
     logger = logging.getLogger("tier_transition")
 
     # Create hot tier recorder
     try:
         hot_tier = NtfsHotTierRecorder(
-            debug=args.debug, db_config_path=args.db_config, no_db=args.no_db,
+            debug=args.debug,
+            db_config_path=args.db_config,
+            no_db=args.no_db,
         )
     except Exception as e:
         logger.error(f"Error creating hot tier recorder: {e}")
@@ -455,10 +457,14 @@ def main():
 
     # Add general arguments
     parser.add_argument(
-        "--stats", action="store_true", help="Show transition statistics",
+        "--stats",
+        action="store_true",
+        help="Show transition statistics",
     )
     parser.add_argument(
-        "--run", action="store_true", help="Run transition from hot to warm tier",
+        "--run",
+        action="store_true",
+        help="Run transition from hot to warm tier",
     )
 
     # Add transition parameters
@@ -484,7 +490,9 @@ def main():
     # Add mode-related arguments
     mode_group = parser.add_mutually_exclusive_group()
     mode_group.add_argument(
-        "--no-db", action="store_true", help="Run without database connection",
+        "--no-db",
+        action="store_true",
+        help="Run without database connection",
     )
     mode_group.add_argument(
         "--db-config",
@@ -496,7 +504,9 @@ def main():
     # Add output options
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     parser.add_argument(
-        "--verbose", action="store_true", help="Show more detailed output",
+        "--verbose",
+        action="store_true",
+        help="Show more detailed output",
     )
 
     # Parse arguments
@@ -505,7 +515,8 @@ def main():
     # Configure logging
     log_level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(
-        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
     logger = logging.getLogger("tier_transition")
 

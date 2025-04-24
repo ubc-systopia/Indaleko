@@ -95,9 +95,10 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
         """Constructor for the IndalekoLinuxMachineConfig class."""
         self.offline = getattr(self, "offline", kwargs.get("offline", False))
         if not self.offline:
-            self.service_registration = \
+            self.service_registration = (
                 IndalekoMachineConfig.register_machine_configuration_service(
-                **IndalekoLinuxMachineConfig.linux_machine_config_service,
+                    **IndalekoLinuxMachineConfig.linux_machine_config_service,
+                )
             )
             self.db = kwargs.get("db", IndalekoDBConfig())
         else:
@@ -137,7 +138,9 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
         """Execute a command and return the output."""
         if not isinstance(command, list):
             raise TypeError(f"Command must be a list: {command}")
-        output = subprocess.check_output(command, stderr=subprocess.STDOUT)  # noqa: S603
+        output = subprocess.check_output(
+            command, stderr=subprocess.STDOUT,
+        )
         return output.decode().strip()
 
     @staticmethod
@@ -177,11 +180,11 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
                 _, interface_name, interface_data = line.split(":")
                 interface_info["name"] = interface_name.strip()
                 interface_data = [
-                    d.strip() for
-                    d in interface_data.split(" ")
-                    if len(d.strip()) > 0
+                    d.strip() for d in interface_data.split(" ") if len(d.strip()) > 0
                 ]
-                if not interface_data[0].startswith("<") or not interface_data[0].endswith(">"):
+                if not interface_data[0].startswith("<") or not interface_data[
+                    0
+                ].endswith(">"):
                     raise AttributeError(
                         f"Unexpected format for interface data: {interface_data}",
                     )
@@ -192,7 +195,9 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
                     value = interface_data.pop(0)
                     interface_info[key] = value
             elif "inet6" in line:
-                interface_data = [d.strip() for d in line.split(" ") if len(d.strip()) > 0]
+                interface_data = [
+                    d.strip() for d in line.split(" ") if len(d.strip()) > 0
+                ]
                 inet6_flags = []
                 inet6_addr = None
                 while len(interface_data) > 0:
@@ -203,8 +208,12 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
                         inet6_flags.append(key)
                 line = lines.pop(0)  # next line is continuation
                 if "valid_lft" not in line:
-                    raise AttributeError(f"Unexpected format for interface data: {line}")
-                interface_data = [d.strip() for d in line.split(" ") if len(d.strip()) > 0]
+                    raise AttributeError(
+                        f"Unexpected format for interface data: {line}",
+                    )
+                interface_data = [
+                    d.strip() for d in line.split(" ") if len(d.strip()) > 0
+                ]
                 inet6_data = {}
                 while len(interface_data) > 0:
                     key = interface_data.pop(0)
@@ -219,7 +228,9 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
                     },
                 )
             elif "inet" in line:
-                interface_data = [d.strip() for d in line.split(" ") if len(d.strip()) > 0]
+                interface_data = [
+                    d.strip() for d in line.split(" ") if len(d.strip()) > 0
+                ]
                 inet4_flags = []
                 while len(interface_data) > 0:
                     key = interface_data.pop(0)
@@ -229,8 +240,12 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
                         inet4_flags.append(key)
                 line = lines.pop(0)  # next line is continuation
                 if "valid_lft" not in line:
-                    raise AttributeError(f"Unexpected format for interface data: {line}")
-                interface_data = [d.strip() for d in line.split(" ") if len(d.strip()) > 0]
+                    raise AttributeError(
+                        f"Unexpected format for interface data: {line}",
+                    )
+                interface_data = [
+                    d.strip() for d in line.split(" ") if len(d.strip()) > 0
+                ]
                 inet4_data = {}
                 inet4_addr = None
                 while len(interface_data) > 0:
@@ -246,7 +261,9 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
                     },
                 )
             elif "brd" in line:
-                interface_data = [d.strip() for d in line.split(" ") if len(d.strip()) > 0]
+                interface_data = [
+                    d.strip() for d in line.split(" ") if len(d.strip()) > 0
+                ]
                 while len(interface_data) > 0:
                     key = interface_data.pop(0)
                     if len(interface_data) == 0:
@@ -261,11 +278,18 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
         """Extract the configuration data from the system."""
         cpu_data = {
             cpu_fact.split(":")[0].strip(): cpu_fact.split(":")[1].strip()
-            for cpu_fact in IndalekoLinuxMachineConfig.execute_command(["lscpu"]).split("\n")
+            for cpu_fact in IndalekoLinuxMachineConfig.execute_command(["lscpu"]).split(
+                "\n",
+            )
         }
-        ram_data = {l.split(":")[0].strip(): l.split(":")[1].strip() for l in open("/proc/meminfo", encoding="utf-8")}
+        ram_data = {
+            l.split(":")[0].strip(): l.split(":")[1].strip()
+            for l in open("/proc/meminfo", encoding="utf-8")
+        }
         disk_data = {}
-        for blk_dev in IndalekoLinuxMachineConfig.execute_command(["blkid"]).split("\n"):
+        for blk_dev in IndalekoLinuxMachineConfig.execute_command(["blkid"]).split(
+            "\n",
+        ):
             if len(blk_dev.strip()) == 0:
                 continue
             disk_data[blk_dev.split(":")[0].strip()] = blk_dev.split(":")[1].strip()
@@ -376,9 +400,15 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
         )
         record = IndalekoRecordDataModel(
             SourceIdentifier=IndalekoSourceIdentifierDataModel(
-                Identifier=IndalekoLinuxMachineConfig.linux_machine_config_service["service_identifier"],
-                Version=IndalekoLinuxMachineConfig.linux_machine_config_service["service_version"],
-                Description=IndalekoLinuxMachineConfig.linux_machine_config_service["service_description"],
+                Identifier=IndalekoLinuxMachineConfig.linux_machine_config_service[
+                    "service_identifier"
+                ],
+                Version=IndalekoLinuxMachineConfig.linux_machine_config_service[
+                    "service_version"
+                ],
+                Description=IndalekoLinuxMachineConfig.linux_machine_config_service[
+                    "service_description"
+                ],
             ),
             Timestamp=timestamp,
             Data=encode_binary_data(config_data),
@@ -411,12 +441,14 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
     def capture_machine_data(
         config_dir: str = indaleko_default_config_dir,
         timestamp: str = datetime.datetime.now(datetime.UTC).isoformat(),
-        platform: str | None = None,
+        platform_name: str | None = None,
     ) -> str:
         """Capture the machine data and write it to the specified file."""
-        if platform is None:
-            platform = IndalekoLinuxMachineConfig.linux_platform
-        cpu_data, ram_data, disk_data, net_data = IndalekoLinuxMachineConfig.extract_config_data()
+        if platform_name is None:
+            platform_name = IndalekoLinuxMachineConfig.linux_platform
+        cpu_data, ram_data, disk_data, net_data = (
+            IndalekoLinuxMachineConfig.extract_config_data()
+        )
         sys_data = IndalekoLinuxMachineConfig.gather_system_information()
         linux_config = {
             "MachineUUID": sys_data["UUID"],
@@ -431,7 +463,7 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
         config_file_name = IndalekoLinuxMachineConfig.generate_config_file_name(
             config_dir=config_dir,
             timestamp=timestamp,
-            platform=platform,
+            platform=platform_name,
             machine=machine_uuid.hex,
             service=IndalekoLinuxMachineConfig.linux_machine_config_service_file_name,
         )
@@ -442,7 +474,7 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
     def capture_command_handler(args) -> None:
         """Capture current machine configuration."""
         IndalekoLinuxMachineConfig.capture_machine_data(
-            platform=args.platform,
+            platform_name=args.platform,
             timestamp=args.timestamp,
             config_dir=args.configdir,
         )
@@ -456,7 +488,7 @@ class IndalekoLinuxMachineConfig(IndalekoMachineConfig):
             if not args.create:
                 return
             config_file = IndalekoLinuxMachineConfig.capture_machine_data(
-                platform=args.platform,
+                platform_name=args.platform,
                 timestamp=args.timestamp,
                 config_dir=args.configdir,
             )
@@ -516,7 +548,11 @@ def main() -> None:
     else:
         timestamp = pre_args.timestamp
         Indaleko.validate_timestamp(timestamp)
-    config_dir = indaleko_default_config_dir if pre_args.configdir is None else pre_args.configdir
+    config_dir = (
+        indaleko_default_config_dir
+        if pre_args.configdir is None
+        else pre_args.configdir
+    )
     if not os.path.isdir(config_dir):
         raise Exception(f"Configuration directory does not exist: {config_dir}")
     if platform.system() != "Linux":
@@ -601,16 +637,18 @@ def main() -> None:
     args = parser.parse_args()
     if log_file_name is not None:
         logging.basicConfig(filename=log_file_name, level=logging.DEBUG)
-        logging.info("Starting Indaleko Linux Machine Config")
-        logging.info(f"Logging to {log_file_name}")
-        logging.critical("Critical logging enabled")
-        logging.error("Error logging enabled")
-        logging.warning("Warning logging enabled")
-        logging.info("Info logging enabled")
-        logging.debug("Debug logging enabled")
+        logger = logging.getLogger("IndalekoLinuxMachineConfig")
+        logger.setLevel(logging.DEBUG)
+        logger.info("Starting %s", "Indaleko Linux Machine Config")
+        logger.critical("Critical logging enabled")
+        logger.critical("Critical logging enabled")
+        logger.error("Error logging enabled")
+        logger.warning("Warning logging enabled")
+        logger.info("Info logging enabled")
+        logger.debug("Debug logging enabled")
     args.func(args)
     if log_file_name is not None:
-        logging.info("Done with Indaleko Linux Machine Config")
+        logger.info("Done with Indaleko Linux Machine Config")
 
 
 if __name__ == "__main__":

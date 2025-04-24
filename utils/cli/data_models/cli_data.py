@@ -18,17 +18,16 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from datetime import datetime, timezone
 import logging
 import os
 import platform
 import sys
-from typing import Optional, List, Dict, Any, Union
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
-from pydantic import Field, AwareDatetime
 from icecream import ic
-
+from pydantic import AwareDatetime, Field
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -56,7 +55,7 @@ class IndalekoBaseCliDataModel(IndalekoBaseModel):
     """Defines the base data model for the CLI"""
 
     Timestamp: AwareDatetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         title="Timestamp",
         description="The timestamp for the data.",
     )
@@ -73,33 +72,33 @@ class IndalekoBaseCliDataModel(IndalekoBaseModel):
         description="The file service name of the running service.",
     )
 
-    Platform: Optional[Union[str, None]] = Field(
+    Platform: str | None = Field(
         default_factory=lambda: platform.system(),
         title="Platform",
         description="The platform for the machine.",
     )
 
-    MachineConfigChoices: List[str] = Field(
+    MachineConfigChoices: list[str] = Field(
         default_factory=list,
         title="MachineConfigChoices",
         description="Available machine configuration files.",
     )
 
-    MachineConfigFile: Optional[Union[str, None]] = Field(
+    MachineConfigFile: str | None = Field(
         None,
         title="MachineConfigFile",
         description="The selected machine configuration file.",
     )
 
-    MachineConfigFileKeys: Optional[Dict[str, Any]] = Field(
+    MachineConfigFileKeys: dict[str, Any] | None = Field(
         default_factory=dict,
         title="MachineConfigFileKeys",
         description="Keys for the machine configuration file.",
     )
 
-    StorageId: Optional[UUID] = None
+    StorageId: UUID | None = None
 
-    UserID: Optional[str] = None
+    UserID: str | None = None
 
     ConfigDirectory: str = indaleko_default_config_dir
 
@@ -107,45 +106,53 @@ class IndalekoBaseCliDataModel(IndalekoBaseModel):
 
     LogDirectory: str = indaleko_default_log_dir
 
-    InputFileKeys: Optional[Dict[str, Any]] = Field(
+    InputFileKeys: dict[str, Any] | None = Field(
         default_factory=dict,
         title="InputFileKeys",
         description="Keys for the input file.",
     )
 
-    InputFileChoices: Optional[List[str]] = Field(
+    InputFileChoices: list[str] | None = Field(
         default_factory=list,
         title="InputFileChoices",
         description="Available input files.",
     )
 
-    InputFile: Optional[str] = Field(
-        None, title="InputFile", description="The selected input file."
+    InputFile: str | None = Field(
+        None,
+        title="InputFile",
+        description="The selected input file.",
     )
 
-    InputFileKeys: Optional[dict[str, str]] = Field(
-        default_factory=dict, title="InputFileKeys", description="Keys for input files."
+    InputFileKeys: dict[str, str] | None = Field(
+        default_factory=dict,
+        title="InputFileKeys",
+        description="Keys for input files.",
     )
 
-    OutputFile: Optional[str] = Field(
-        None, title="OutputFile", description="The output file."
+    OutputFile: str | None = Field(
+        None,
+        title="OutputFile",
+        description="The output file.",
     )
 
-    OutputFileKeys: Optional[list[str]] = Field(
+    OutputFileKeys: list[str] | None = Field(
         default_factory=list,
         title="OutputFileKeys",
         description="Keys for output files.",
     )
 
-    LogFile: Optional[str] = Field(None, title="LogFile", description="The log file.")
+    LogFile: str | None = Field(None, title="LogFile", description="The log file.")
 
     LogLevel: int = Field(logging.DEBUG, title="LogLevel", description="Logging level.")
 
-    Offline: Optional[Union[bool, None]] = Field(
-        None, title="Offline", description="Run in offline mode."
+    Offline: bool | None = Field(
+        None,
+        title="Offline",
+        description="Run in offline mode.",
     )
 
-    DBConfigChoices: Optional[List[str]] = Field(
+    DBConfigChoices: list[str] | None = Field(
         default_factory=list,
         title="DBConfigChoices",
         description="Available database configuration files.",
@@ -164,34 +171,36 @@ class IndalekoBaseCliDataModel(IndalekoBaseModel):
     )
 
     FileSuffix: str = Field(
-        "", title="FileSuffix", description="Suffix for file names."
+        "",
+        title="FileSuffix",
+        description="Suffix for file names.",
     )
 
-    FileKeys: Dict[str, str] = Field(
+    FileKeys: dict[str, str] = Field(
         default_factory=dict,
         title="FileKeys",
         description="These are keys and their values for identifying relevant files.",
     )
 
-    PerformanceDataFile: Optional[Union[str, None]] = Field(
+    PerformanceDataFile: str | None = Field(
         None,
         title="PerformanceDataFile",
         description="The file to which performance data is written.",
     )
 
-    RecordPerformanceInDB: Optional[Union[bool, None]] = Field(
+    RecordPerformanceInDB: bool | None = Field(
         None,
         title="RecordPerformanceInDB",
         description="Record performance data in the database.",
     )
 
-    AdditionalPreOptions: Dict[str, Any] = Field(
+    AdditionalPreOptions: dict[str, Any] = Field(
         default_factory=dict,
         title="AdditionalOptions",
         description="Additional CLI options (added first)",
     )
 
-    AdditionalPostOptions: Dict[str, Any] = Field(
+    AdditionalPostOptions: dict[str, Any] = Field(
         default_factory=dict,
         title="AdditionalOptions",
         description="Additional CLI options (added last)",
@@ -219,7 +228,7 @@ class IndalekoBaseCliDataModel(IndalekoBaseModel):
                 "DBConfigFile": IndalekoDBConfig.default_db_config_file,
                 "FilePrefix": indaleko_file_name_prefix,
                 "FileSuffix": "",
-            }
+            },
         }
 
 

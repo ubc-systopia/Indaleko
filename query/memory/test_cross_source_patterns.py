@@ -84,19 +84,9 @@ def test_event_collection(detector, args):
     for source_type, stats in detector.data.source_statistics.items():
         event_count = stats["event_count"]
         if event_count > 0:
-            first_event = (
-                stats["first_event"].strftime("%Y-%m-%d %H:%M:%S")
-                if stats["first_event"]
-                else "N/A"
-            )
-            last_event = (
-                stats["last_event"].strftime("%Y-%m-%d %H:%M:%S")
-                if stats["last_event"]
-                else "N/A"
-            )
-            event_types = (
-                ", ".join(stats["event_types"]) if stats["event_types"] else "None"
-            )
+            first_event = stats["first_event"].strftime("%Y-%m-%d %H:%M:%S") if stats["first_event"] else "N/A"
+            last_event = stats["last_event"].strftime("%Y-%m-%d %H:%M:%S") if stats["last_event"] else "N/A"
+            event_types = ", ".join(stats["event_types"]) if stats["event_types"] else "None"
 
             print(f"- {source_type.value}: {event_count} events")
             print(f"  First event: {first_event}")
@@ -108,9 +98,7 @@ def test_event_collection(detector, args):
         print("\nSample events by source type:")
         for source_type in DataSourceType:
             source_events = [
-                event
-                for event_id, event in detector.data.events.items()
-                if event.source_type == source_type
+                event for event_id, event in detector.data.events.items() if event.source_type == source_type
             ]
 
             if source_events:
@@ -140,7 +128,8 @@ def test_pattern_detection(detector, args):
 
     # Detect patterns
     patterns = detector.detect_patterns(
-        window_size=args.window_size, min_occurrences=args.min_occurrences,
+        window_size=args.window_size,
+        min_occurrences=args.min_occurrences,
     )
 
     print(f"Detected {len(patterns)} new patterns")
@@ -178,7 +167,8 @@ def test_correlation_detection(detector, args):
 
     # Detect correlations
     correlations = detector.detect_correlations(
-        time_window_minutes=args.time_window, min_confidence=args.min_confidence,
+        time_window_minutes=args.time_window,
+        min_confidence=args.min_confidence,
     )
 
     print(f"Detected {len(correlations)} new correlations")
@@ -225,11 +215,7 @@ def test_suggestion_generation(detector, args):
             print(f"   Content: {suggestion.content}")
 
             if args.verbose:
-                expiry = (
-                    suggestion.expires_at.strftime("%Y-%m-%d %H:%M:%S")
-                    if suggestion.expires_at
-                    else "Never"
-                )
+                expiry = suggestion.expires_at.strftime("%Y-%m-%d %H:%M:%S") if suggestion.expires_at else "Never"
                 print(f"   Expires: {expiry}")
 
                 if suggestion.context:
@@ -275,18 +261,12 @@ def test_proactive_archivist_integration(args):
                 print(f"   Content: {suggestion.content}")
 
                 if args.verbose:
-                    expiry = (
-                        suggestion.expires_at.strftime("%Y-%m-%d %H:%M:%S")
-                        if suggestion.expires_at
-                        else "Never"
-                    )
+                    expiry = suggestion.expires_at.strftime("%Y-%m-%d %H:%M:%S") if suggestion.expires_at else "Never"
                     print(f"   Expires: {expiry}")
 
         # Check for insights added to the Archivist
         insights = [
-            i
-            for i in archivist.memory.insights
-            if i.category in ("cross_source_pattern", "cross_source_correlation")
+            i for i in archivist.memory.insights if i.category in ("cross_source_pattern", "cross_source_correlation")
         ]
 
         print(f"\nAdded {len(insights)} cross-source insights to Archivist memory")
@@ -329,13 +309,19 @@ def main():
     )
     parser.add_argument("--collect", action="store_true", help="Test event collection")
     parser.add_argument(
-        "--patterns", action="store_true", help="Test pattern detection",
+        "--patterns",
+        action="store_true",
+        help="Test pattern detection",
     )
     parser.add_argument(
-        "--correlations", action="store_true", help="Test correlation detection",
+        "--correlations",
+        action="store_true",
+        help="Test correlation detection",
     )
     parser.add_argument(
-        "--suggestions", action="store_true", help="Test suggestion generation",
+        "--suggestions",
+        action="store_true",
+        help="Test suggestion generation",
     )
     parser.add_argument(
         "--integration",
@@ -350,7 +336,10 @@ def main():
         help="Maximum events to collect per source",
     )
     parser.add_argument(
-        "--window-size", type=int, default=10, help="Window size for pattern detection",
+        "--window-size",
+        type=int,
+        default=10,
+        help="Window size for pattern detection",
     )
     parser.add_argument(
         "--min-occurrences",
@@ -371,7 +360,10 @@ def main():
         help="Minimum confidence for correlations",
     )
     parser.add_argument(
-        "--max-suggestions", type=int, default=5, help="Maximum suggestions to generate",
+        "--max-suggestions",
+        type=int,
+        default=5,
+        help="Maximum suggestions to generate",
     )
     parser.add_argument(
         "--reset-timestamps",
@@ -380,7 +372,10 @@ def main():
     )
     parser.add_argument("--save-state", type=str, help="Save detector state to file")
     parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Enable verbose output",
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable verbose output",
     )
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
 

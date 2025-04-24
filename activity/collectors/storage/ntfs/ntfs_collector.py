@@ -54,25 +54,25 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import os
-import sys
-import uuid
-import time
-import queue
-import threading
 import logging
+import os
+import queue
 import struct
-from datetime import datetime, timezone
-from typing import Dict, Optional, Any
+import sys
+import threading
+import time
+import uuid
+from datetime import UTC, datetime
+from typing import Any
 
 from icecream import ic
 
 # Define Windows constants directly in case they're missing from pywin32
 # These are the USN journal control codes
-FSCTL_QUERY_USN_JOURNAL = 0x000900f4
-FSCTL_CREATE_USN_JOURNAL = 0x000900e7
-FSCTL_READ_USN_JOURNAL = 0x000900bb
-FSCTL_ENUM_USN_DATA = 0x000900b3  # More reliable alternative to READ_USN_JOURNAL
+FSCTL_QUERY_USN_JOURNAL = 0x000900F4
+FSCTL_CREATE_USN_JOURNAL = 0x000900E7
+FSCTL_READ_USN_JOURNAL = 0x000900BB
+FSCTL_ENUM_USN_DATA = 0x000900B3  # More reliable alternative to READ_USN_JOURNAL
 
 # USN reason codes
 USN_REASON_DATA_OVERWRITE = 0x00000001
@@ -101,57 +101,67 @@ USN_REASON_CLOSE = 0x80000000
 FILE_ATTRIBUTE_DIRECTORY = 0x00000010
 
 try:
-    import win32file
     import pywintypes
+    import win32file
+
     WINDOWS_AVAILABLE = True
 
     # Add the missing constants to win32file if they don't exist
-    if not hasattr(win32file, 'FSCTL_QUERY_USN_JOURNAL'):
+    if not hasattr(win32file, "FSCTL_QUERY_USN_JOURNAL"):
         win32file.FSCTL_QUERY_USN_JOURNAL = FSCTL_QUERY_USN_JOURNAL
-    if not hasattr(win32file, 'FSCTL_CREATE_USN_JOURNAL'):
+    if not hasattr(win32file, "FSCTL_CREATE_USN_JOURNAL"):
         win32file.FSCTL_CREATE_USN_JOURNAL = FSCTL_CREATE_USN_JOURNAL
-    if not hasattr(win32file, 'FSCTL_READ_USN_JOURNAL'):
+    if not hasattr(win32file, "FSCTL_READ_USN_JOURNAL"):
         win32file.FSCTL_READ_USN_JOURNAL = FSCTL_READ_USN_JOURNAL
 
     # Add USN reason constants if they don't exist
-    if not hasattr(win32file, 'USN_REASON_FILE_CREATE'):
+    if not hasattr(win32file, "USN_REASON_FILE_CREATE"):
         win32file.USN_REASON_FILE_CREATE = USN_REASON_FILE_CREATE
-    if not hasattr(win32file, 'USN_REASON_FILE_DELETE'):
+    if not hasattr(win32file, "USN_REASON_FILE_DELETE"):
         win32file.USN_REASON_FILE_DELETE = USN_REASON_FILE_DELETE
-    if not hasattr(win32file, 'USN_REASON_SECURITY_CHANGE'):
+    if not hasattr(win32file, "USN_REASON_SECURITY_CHANGE"):
         win32file.USN_REASON_SECURITY_CHANGE = USN_REASON_SECURITY_CHANGE
-    if not hasattr(win32file, 'USN_REASON_RENAME_OLD_NAME'):
+    if not hasattr(win32file, "USN_REASON_RENAME_OLD_NAME"):
         win32file.USN_REASON_RENAME_OLD_NAME = USN_REASON_RENAME_OLD_NAME
-    if not hasattr(win32file, 'USN_REASON_RENAME_NEW_NAME'):
+    if not hasattr(win32file, "USN_REASON_RENAME_NEW_NAME"):
         win32file.USN_REASON_RENAME_NEW_NAME = USN_REASON_RENAME_NEW_NAME
-    if not hasattr(win32file, 'USN_REASON_DATA_OVERWRITE'):
+    if not hasattr(win32file, "USN_REASON_DATA_OVERWRITE"):
         win32file.USN_REASON_DATA_OVERWRITE = USN_REASON_DATA_OVERWRITE
-    if not hasattr(win32file, 'USN_REASON_DATA_EXTEND'):
+    if not hasattr(win32file, "USN_REASON_DATA_EXTEND"):
         win32file.USN_REASON_DATA_EXTEND = USN_REASON_DATA_EXTEND
-    if not hasattr(win32file, 'USN_REASON_DATA_TRUNCATION'):
+    if not hasattr(win32file, "USN_REASON_DATA_TRUNCATION"):
         win32file.USN_REASON_DATA_TRUNCATION = USN_REASON_DATA_TRUNCATION
-    if not hasattr(win32file, 'USN_REASON_BASIC_INFO_CHANGE'):
+    if not hasattr(win32file, "USN_REASON_BASIC_INFO_CHANGE"):
         win32file.USN_REASON_BASIC_INFO_CHANGE = USN_REASON_BASIC_INFO_CHANGE
-    if not hasattr(win32file, 'USN_REASON_CLOSE'):
+    if not hasattr(win32file, "USN_REASON_CLOSE"):
         win32file.USN_REASON_CLOSE = USN_REASON_CLOSE
 
     # Add file attribute constants if needed
-    if not hasattr(win32file, 'FILE_ATTRIBUTE_DIRECTORY'):
+    if not hasattr(win32file, "FILE_ATTRIBUTE_DIRECTORY"):
         win32file.FILE_ATTRIBUTE_DIRECTORY = FILE_ATTRIBUTE_DIRECTORY
 
     # Add a custom GetUsn function if it doesn't exist
-    if not hasattr(win32file, 'GetUsn'):
+    if not hasattr(win32file, "GetUsn"):
+
         def get_usn(journal_id, first_usn, reason_mask=0, return_only_on_close=0):
             """Create a properly formatted buffer for reading the USN journal."""
-            return struct.pack("<QQLL", journal_id, first_usn, reason_mask, return_only_on_close)
+            return struct.pack(
+                "<QQLL",
+                journal_id,
+                first_usn,
+                reason_mask,
+                return_only_on_close,
+            )
+
         win32file.GetUsn = get_usn
 
     # Add FSCTL_ENUM_USN_DATA to win32file if it doesn't exist
-    if not hasattr(win32file, 'FSCTL_ENUM_USN_DATA'):
+    if not hasattr(win32file, "FSCTL_ENUM_USN_DATA"):
         win32file.FSCTL_ENUM_USN_DATA = FSCTL_ENUM_USN_DATA
 
     # Add a custom ParseUsnData function if it doesn't exist
-    if not hasattr(win32file, 'ParseUsnData'):
+    if not hasattr(win32file, "ParseUsnData"):
+
         def parse_usn_data(data):
             """
             Parse USN journal data into records.
@@ -171,7 +181,7 @@ try:
                     if offset + 4 > len(data):
                         break
 
-                    record_length = struct.unpack("<L", data[offset:offset+4])[0]
+                    record_length = struct.unpack("<L", data[offset : offset + 4])[0]
                     if record_length == 0 or offset + record_length > len(data):
                         break
 
@@ -180,38 +190,50 @@ try:
 
                     # File reference number is typically at offset 8
                     if offset + 16 <= len(data):
-                        file_ref = struct.unpack("<Q", data[offset+8:offset+16])[0]
+                        file_ref = struct.unpack("<Q", data[offset + 8 : offset + 16])[0]
                     else:
                         file_ref = 0
 
                     # Parent file reference number is typically at offset 16
                     if offset + 24 <= len(data):
-                        parent_ref = struct.unpack("<Q", data[offset+16:offset+24])[0]
+                        parent_ref = struct.unpack(
+                            "<Q",
+                            data[offset + 16 : offset + 24],
+                        )[0]
                     else:
                         parent_ref = 0
 
                     # USN is typically at offset 24
                     if offset + 32 <= len(data):
-                        usn = struct.unpack("<Q", data[offset+24:offset+32])[0]
+                        usn = struct.unpack("<Q", data[offset + 24 : offset + 32])[0]
                     else:
                         usn = 0
 
                     # Reason flags are typically at offset 40
                     if offset + 44 <= len(data):
-                        reason = struct.unpack("<L", data[offset+40:offset+44])[0]
+                        reason = struct.unpack("<L", data[offset + 40 : offset + 44])[0]
                     else:
                         reason = 0
 
                     # File attributes are typically at offset 44
                     if offset + 48 <= len(data):
-                        file_attrs = struct.unpack("<L", data[offset+44:offset+48])[0]
+                        file_attrs = struct.unpack(
+                            "<L",
+                            data[offset + 44 : offset + 48],
+                        )[0]
                     else:
                         file_attrs = 0
 
                     # File name length and offset are at offsets 58 and 60
                     if offset + 62 <= len(data):
-                        file_name_length = struct.unpack("<H", data[offset+58:offset+60])[0]
-                        file_name_offset = struct.unpack("<H", data[offset+60:offset+62])[0]
+                        file_name_length = struct.unpack(
+                            "<H",
+                            data[offset + 58 : offset + 60],
+                        )[0]
+                        file_name_offset = struct.unpack(
+                            "<H",
+                            data[offset + 60 : offset + 62],
+                        )[0]
                     else:
                         file_name_length = 0
                         file_name_offset = 0
@@ -221,8 +243,10 @@ try:
                     if file_name_length > 0 and offset + file_name_offset + file_name_length <= len(data):
                         try:
                             # File names are stored as UTF-16 (2 bytes per character)
-                            file_name_bytes = data[offset+file_name_offset:offset+file_name_offset+file_name_length]
-                            file_name = file_name_bytes.decode('utf-16')
+                            file_name_bytes = data[
+                                offset + file_name_offset : offset + file_name_offset + file_name_length
+                            ]
+                            file_name = file_name_bytes.decode("utf-16")
                         except Exception:
                             file_name = "Error decoding filename"
 
@@ -233,7 +257,7 @@ try:
                         "Usn": usn,
                         "Reason": reason,
                         "FileAttributes": file_attrs,
-                        "FileName": file_name
+                        "FileName": file_name,
                     }
 
                     records.append(record)
@@ -259,14 +283,14 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from activity.collectors.storage.base import StorageActivityCollector
-from activity.collectors.storage.data_models.storage_activity_data_model \
-    import (
-        NtfsStorageActivityData,
-        BaseStorageActivityData,
-        StorageActivityType,
-        StorageProviderType,
-        StorageItemType
-    )
+from activity.collectors.storage.data_models.storage_activity_data_model import (
+    BaseStorageActivityData,
+    NtfsStorageActivityData,
+    StorageActivityType,
+    StorageItemType,
+    StorageProviderType,
+)
+
 # pylint: enable=wrong-import-position
 
 
@@ -300,17 +324,23 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
         self._debug = kwargs.get("debug", False)
         logging.basicConfig(
             level=logging.DEBUG if self._debug else logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         )
         self._logger = logging.getLogger("NtfsStorageActivityCollector")
 
         # Check if running on Windows
         self._use_mock = kwargs.get("mock", False)
         if not WINDOWS_AVAILABLE and not self._use_mock:
-            self._logger.error("NtfsStorageActivityCollector is only available on Windows")
-            raise RuntimeError("NtfsStorageActivityCollector is only available on Windows")
+            self._logger.error(
+                "NtfsStorageActivityCollector is only available on Windows",
+            )
+            raise RuntimeError(
+                "NtfsStorageActivityCollector is only available on Windows",
+            )
         elif not WINDOWS_AVAILABLE:
-            self._logger.warning("Running in mock mode because Windows is not available")
+            self._logger.warning(
+                "Running in mock mode because Windows is not available",
+            )
             self._use_mock = True
 
         if self._use_mock:
@@ -326,10 +356,14 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
             self._logger.info("Using provided machine config for volume GUID mapping")
             try:
                 if hasattr(self._machine_config, "map_drive_letter_to_volume_guid"):
-                    self._logger.debug("Machine config has map_drive_letter_to_volume_guid method")
+                    self._logger.debug(
+                        "Machine config has map_drive_letter_to_volume_guid method",
+                    )
                     # Will use this directly later
                 else:
-                    self._logger.warning("Machine config doesn't have volume GUID mapping capability")
+                    self._logger.warning(
+                        "Machine config doesn't have volume GUID mapping capability",
+                    )
             except Exception as e:
                 self._logger.error(f"Error accessing machine config: {e}")
                 self._use_volume_guids = False
@@ -338,10 +372,15 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
             try:
                 # Import here to avoid import errors on non-Windows platforms
                 if WINDOWS_AVAILABLE and not self._use_mock:
-                    from platforms.windows.machine_config import IndalekoWindowsMachineConfig
+                    from platforms.windows.machine_config import (
+                        IndalekoWindowsMachineConfig,
+                    )
+
                     self._logger.info("Loading machine config for volume GUID mapping")
                     try:
-                        self._machine_config = IndalekoWindowsMachineConfig.load_config_from_file(offline=True)
+                        self._machine_config = IndalekoWindowsMachineConfig.load_config_from_file(
+                            offline=True,
+                        )
                         self._logger.info("Successfully loaded machine config")
                     except Exception as e:
                         self._logger.warning(f"Failed to load machine config: {e}")
@@ -353,11 +392,13 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
         # Initialize with provider-specific values
         kwargs["name"] = kwargs.get("name", "NTFS Storage Activity Collector")
         kwargs["provider_id"] = kwargs.get(
-            "provider_id", uuid.UUID("7d8f5a92-35c7-41e6-b13d-6c4e89e7f2a5")
+            "provider_id",
+            uuid.UUID("7d8f5a92-35c7-41e6-b13d-6c4e89e7f2a5"),
         )
         kwargs["provider_type"] = StorageProviderType.LOCAL_NTFS
         kwargs["description"] = kwargs.get(
-            "description", "Collects storage activities from the NTFS USN Journal"
+            "description",
+            "Collects storage activities from the NTFS USN Journal",
         )
 
         # Call parent initializer
@@ -404,7 +445,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
         self._logger.debug("Starting event processing thread")
         self._processing_thread = threading.Thread(
             target=self._event_processing_thread,
-            daemon=True
+            daemon=True,
         )
         self._processing_thread.start()
 
@@ -432,7 +473,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                         mock_volume = self._volumes[0] if self._volumes else "C:"
                         mock_path = f"{mock_volume}\\Users\\TestUser\\Documents\\{mock_file}"
                         activity_data = NtfsStorageActivityData(
-                            timestamp=datetime.now(timezone.utc),
+                            timestamp=datetime.now(UTC),
                             file_reference_number="1234567",
                             parent_file_reference_number="7654321",
                             activity_type=StorageActivityType.MODIFY,
@@ -443,7 +484,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                             is_directory=False,
                             provider_type=StorageProviderType.LOCAL_NTFS,
                             provider_id=self._provider_id,
-                            item_type=StorageItemType.FILE
+                            item_type=StorageItemType.FILE,
                         )
                         self.add_activity(activity_data)
                         self._logger.debug(f"Added mock activity for {mock_path}")
@@ -451,7 +492,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
             # Start the mock data thread
             self._mock_thread = threading.Thread(
                 target=_generate_mock_data,
-                daemon=True
+                daemon=True,
             )
             self._mock_thread.start()
 
@@ -477,7 +518,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
             self._processing_thread.join(timeout=5.0)
 
         # Wait for mock thread to stop if it exists
-        if hasattr(self, '_mock_thread') and self._mock_thread:
+        if hasattr(self, "_mock_thread") and self._mock_thread:
             self._logger.debug("Waiting for mock data thread to stop")
             self._mock_thread.join(timeout=5.0)
             self._mock_thread = None
@@ -507,9 +548,9 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
         """
         # Open the volume
         # Make sure the volume has the correct format (e.g., "C:")
-        if volume.endswith('\\') or volume.endswith('/'):
+        if volume.endswith("\\") or volume.endswith("/"):
             volume = volume[:-1]
-        if ':' not in volume and not volume.startswith("\\\\?\\Volume{"):
+        if ":" not in volume and not volume.startswith("\\\\?\\Volume{"):
             volume = f"{volume}:"
 
         # Clean up the volume name first - make sure there are no double colons
@@ -522,15 +563,15 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
             volume_path = self.get_volume_guid_path(volume)
             # Use the proper volume variable, not potentially double-colon version
             cleaned_volume = volume.split(":")[0] + ":"
-            self._logger.info(f"Using volume GUID path for {cleaned_volume}: {volume_path}")
+            self._logger.info(
+                f"Using volume GUID path for {cleaned_volume}: {volume_path}",
+            )
+        elif volume.startswith("\\\\?\\Volume{"):
+            volume_path = volume
+            if not volume_path.endswith("\\"):
+                volume_path += "\\"
         else:
-            # Use standard path format
-            if volume.startswith("\\\\?\\Volume{"):
-                volume_path = volume
-                if not volume_path.endswith("\\"):
-                    volume_path += "\\"
-            else:
-                volume_path = f"\\\\?\\{volume}\\"
+            volume_path = f"\\\\?\\{volume}\\"
 
         self._logger.debug(f"Opening volume path: {volume_path}")
 
@@ -544,7 +585,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                 volume_path_variants.append(volume_path)
 
                 # Common variations
-                if volume.endswith(':'):
+                if volume.endswith(":"):
                     # Try standard Windows path format
                     volume_path_variants.append(f"{volume}\\")
 
@@ -557,17 +598,22 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
 
                     # Try direct physical device path
                     drive_letter = volume[0]
-                    volume_path_variants.append(f"\\\\.\\PhysicalDrive{ord(drive_letter.upper()) - ord('C')}")
+                    volume_path_variants.append(
+                        f"\\\\.\\PhysicalDrive{ord(drive_letter.upper()) - ord('C')}",
+                    )
 
                 # Try Win32 API calls to get actual volume path
                 try:
                     import win32file
+
                     drive_path = f"{volume[0]}:\\"
                     vol_name = win32file.GetVolumeNameForVolumeMountPoint(drive_path)
                     if vol_name:
                         volume_path_variants.append(vol_name)
                 except Exception as e:
-                    self._logger.warning(f"Failed to get volume name for mount point: {e}")
+                    self._logger.warning(
+                        f"Failed to get volume name for mount point: {e}",
+                    )
 
                 # Try each variation
                 for path_variant in volume_path_variants:
@@ -580,24 +626,30 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                             None,
                             win32file.OPEN_EXISTING,
                             win32file.FILE_ATTRIBUTE_NORMAL,
-                            None
+                            None,
                         )
                         if handle:
-                            self._logger.info(f"Successfully opened volume with path: {path_variant}")
+                            self._logger.info(
+                                f"Successfully opened volume with path: {path_variant}",
+                            )
                             break
                     except Exception as inner_e:
-                        self._logger.debug(f"Failed to open volume with path {path_variant}: {inner_e}")
+                        self._logger.debug(
+                            f"Failed to open volume with path {path_variant}: {inner_e}",
+                        )
 
                 # If all variants failed, we'll have None handle and the outer exception handler will catch it
             else:
                 # In mock mode, we don't actually open the volume
-                self._logger.info(f"Mock mode: Not actually opening volume {volume_path}")
+                self._logger.info(
+                    f"Mock mode: Not actually opening volume {volume_path}",
+                )
                 handle = None
                 raise RuntimeError("Running in mock mode")
         except Exception as e:
             self._logger.error(f"Failed to open volume {volume}: {e}")
             # Use a mock handle for testing
-            self._logger.warning(f"Using mock volume handle for testing")
+            self._logger.warning("Using mock volume handle for testing")
             handle = None
             # Raise the exception so the caller can handle it
             raise
@@ -614,7 +666,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                     "LowestValidUsn": 0,
                     "MaxUsn": 0,
                     "MaximumSize": 0,
-                    "AllocationDelta": 0
+                    "AllocationDelta": 0,
                 }
             else:
                 # Try various approaches to get USN Journal info
@@ -627,20 +679,25 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                         handle,
                         win32file.FSCTL_QUERY_USN_JOURNAL,
                         None,
-                        1024
+                        1024,
                     )
                 except Exception as query_err:
-                    self._logger.debug(f"Standard USN journal query failed: {query_err}")
+                    self._logger.debug(
+                        f"Standard USN journal query failed: {query_err}",
+                    )
 
                     # Approach 2: Try creating the journal first
                     try:
-                        self._logger.debug(f"Trying to create USN journal for volume {volume}")
+                        self._logger.debug(
+                            f"Trying to create USN journal for volume {volume}",
+                        )
                         # Create with allocation delta and max size
                         buffer = bytearray(16)  # 2 uint64s
                         import struct
+
                         # Use more moderate default values
                         max_size = 32 * 1024 * 1024  # 32 MB
-                        delta = 4 * 1024 * 1024      # 4 MB
+                        delta = 4 * 1024 * 1024  # 4 MB
                         struct.pack_into("QQ", buffer, 0, max_size, delta)
 
                         # Try to create with custom settings
@@ -648,7 +705,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                             handle,
                             win32file.FSCTL_CREATE_USN_JOURNAL,
                             buffer,
-                            0
+                            0,
                         )
 
                         # Now query again
@@ -656,19 +713,21 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                             handle,
                             win32file.FSCTL_QUERY_USN_JOURNAL,
                             None,
-                            1024
+                            1024,
                         )
                     except Exception as create_err:
                         self._logger.debug(f"USN journal creation failed: {create_err}")
 
                         # Approach 3: Try with default settings
                         try:
-                            self._logger.debug("Trying to create USN journal with default settings")
+                            self._logger.debug(
+                                "Trying to create USN journal with default settings",
+                            )
                             win32file.DeviceIoControl(
                                 handle,
                                 win32file.FSCTL_CREATE_USN_JOURNAL,
                                 None,
-                                0
+                                0,
                             )
 
                             # Query again
@@ -676,14 +735,18 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                                 handle,
                                 win32file.FSCTL_QUERY_USN_JOURNAL,
                                 None,
-                                1024
+                                1024,
                             )
                         except Exception as default_err:
-                            self._logger.warning(f"USN journal creation with default settings failed: {default_err}")
+                            self._logger.warning(
+                                f"USN journal creation with default settings failed: {default_err}",
+                            )
 
                 # If all approaches failed, use mock data
                 if usn_journal_info is None:
-                    self._logger.warning("All USN journal query approaches failed, using mock data")
+                    self._logger.warning(
+                        "All USN journal query approaches failed, using mock data",
+                    )
                     usn_journal_info = {
                         "UsnJournalID": 0,
                         "FirstUsn": 0,
@@ -691,7 +754,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                         "LowestValidUsn": 0,
                         "MaxUsn": 0,
                         "MaximumSize": 0,
-                        "AllocationDelta": 0
+                        "AllocationDelta": 0,
                     }
         except Exception as e:
             self._logger.error(f"Unhandled error in USN journal initialization: {e}")
@@ -704,7 +767,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                 "LowestValidUsn": 0,
                 "MaxUsn": 0,
                 "MaximumSize": 0,
-                "AllocationDelta": 0
+                "AllocationDelta": 0,
             }
 
         # Store volume handle and journal info
@@ -715,7 +778,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
         journal_thread = threading.Thread(
             target=self._monitor_usn_journal,
             args=(volume,),
-            daemon=True
+            daemon=True,
         )
         self._journal_threads.append(journal_thread)
         journal_thread.start()
@@ -774,13 +837,20 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                     try:
                         os.makedirs(test_dir, exist_ok=True)
                     except Exception as mkdir_err:
-                        self._logger.warning(f"Could not create test directory: {mkdir_err}")
+                        self._logger.warning(
+                            f"Could not create test directory: {mkdir_err}",
+                        )
 
                 if os.path.exists(test_dir):
-                    test_filename = os.path.join(test_dir, f"usn_test_{int(time.time())}.txt")
-                    with open(test_filename, 'w') as f:
+                    test_filename = os.path.join(
+                        test_dir,
+                        f"usn_test_{int(time.time())}.txt",
+                    )
+                    with open(test_filename, "w") as f:
                         f.write(f"USN Journal Test File - {datetime.now()}")
-                    self._logger.info(f"Created test file {test_filename} to trigger USN journal activity")
+                    self._logger.info(
+                        f"Created test file {test_filename} to trigger USN journal activity",
+                    )
 
                     # Give the filesystem a moment to process the change
                     time.sleep(0.5)
@@ -788,15 +858,22 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                     # Now try to read the journal to see if we detect our file
                     try:
                         # Try to read the first set of records to verify we can access the journal
-                        self._logger.debug(f"Reading journal with ID {journal_id}, USN {next_usn}")
+                        self._logger.debug(
+                            f"Reading journal with ID {journal_id}, USN {next_usn}",
+                        )
 
                         # Create a proper MFT_ENUM_DATA structure for more reliable USN data access
                         buffer_in = bytearray(28)  # 28 bytes for the structure
-                        struct.pack_into("<QQQHH", buffer_in, 0,
-                                        0,           # StartFileReferenceNumber
-                                        next_usn,    # LowUsn
-                                        0xFFFFFFFFFFFFFFFF,  # HighUsn
-                                        2, 2)        # MinMajorVersion, MaxMajorVersion
+                        struct.pack_into(
+                            "<QQQHH",
+                            buffer_in,
+                            0,
+                            0,  # StartFileReferenceNumber
+                            next_usn,  # LowUsn
+                            0xFFFFFFFFFFFFFFFF,  # HighUsn
+                            2,
+                            2,
+                        )  # MinMajorVersion, MaxMajorVersion
 
                         # Use ENUM_USN_DATA which is more reliable
                         try:
@@ -804,12 +881,14 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                                 handle,
                                 FSCTL_ENUM_USN_DATA,  # More reliable control code
                                 buffer_in,
-                                65536
+                                65536,
                             )
                         except pywintypes.error as win_err:
                             # Handle error 38 (Reached end of file) as a normal condition
                             if win_err.winerror == 38:  # ERROR_HANDLE_EOF
-                                self._logger.info("No USN records available yet - this is normal for a new or empty journal")
+                                self._logger.info(
+                                    "No USN records available yet - this is normal for a new or empty journal",
+                                )
                                 # Create an empty result with just next_usn
                                 read_data = bytearray(8)
                                 struct.pack_into("<Q", read_data, 0, next_usn)
@@ -827,18 +906,26 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                         for record in usn_records:
                             if "FileName" in record and os.path.basename(test_filename) in record["FileName"]:
                                 found_test_file = True
-                                self._logger.info(f"Successfully detected test file in USN journal: {record}")
+                                self._logger.info(
+                                    f"Successfully detected test file in USN journal: {record}",
+                                )
                                 break
 
                         # If we found our test file, real monitoring is working
                         if found_test_file:
                             is_real_usn_journal = True
-                            self._logger.info("USN journal monitoring confirmed working with test file")
+                            self._logger.info(
+                                "USN journal monitoring confirmed working with test file",
+                            )
                         else:
-                            self._logger.warning("Could not detect test file in USN journal records")
+                            self._logger.warning(
+                                "Could not detect test file in USN journal records",
+                            )
                             is_real_usn_journal = True  # Still try real monitoring even if we didn't find our test file
                     except Exception as e:
-                        self._logger.warning(f"Could not read from USN journal, using simulated data: {e}")
+                        self._logger.warning(
+                            f"Could not read from USN journal, using simulated data: {e}",
+                        )
             except Exception as e:
                 self._logger.warning(f"Error setting up USN test file: {e}")
 
@@ -851,20 +938,25 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                     handle,
                     win32file.FSCTL_READ_USN_JOURNAL,
                     win32file.GetUsn(journal_id, next_usn, 0, 0),
-                    65536
+                    65536,
                 )
 
                 # If we get here, we have successfully read from the journal
-                self._logger.info(f"Successfully read from USN journal on volume {volume}")
+                self._logger.info(
+                    f"Successfully read from USN journal on volume {volume}",
+                )
                 is_real_usn_journal = True
             except Exception as e:
-                self._logger.warning(f"Could not read from USN journal, using simulated data: {e}")
+                self._logger.warning(
+                    f"Could not read from USN journal, using simulated data: {e}",
+                )
 
         # Create a background file activity generator if we're using real monitoring
         # to ensure we have some activity to detect
         activity_generator_thread = None
         if is_real_usn_journal and not self._use_mock and WINDOWS_AVAILABLE:
             try:
+
                 def _generate_file_activity():
                     """Generate real file activity in the background to ensure USN journal has content"""
                     test_dir = os.path.join(volume, "Indaleko_Test")
@@ -880,19 +972,26 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                             # Create various file activities at different intervals
                             if interval_count % 10 == 0:  # Every 10 seconds
                                 # Create a new file
-                                filename = os.path.join(test_dir, f"test_create_{int(time.time())}.txt")
-                                with open(filename, 'w') as f:
+                                filename = os.path.join(
+                                    test_dir,
+                                    f"test_create_{int(time.time())}.txt",
+                                )
+                                with open(filename, "w") as f:
                                     f.write(f"Test file created at {datetime.now()}")
-                                self._logger.debug(f"Created file {filename} for USN journal monitoring")
+                                self._logger.debug(
+                                    f"Created file {filename} for USN journal monitoring",
+                                )
 
                             if interval_count % 15 == 0:  # Every 15 seconds
                                 # Modify an existing file if available
                                 files = [f for f in os.listdir(test_dir) if f.startswith("test_create_")]
                                 if files:
                                     target_file = os.path.join(test_dir, files[0])
-                                    with open(target_file, 'a') as f:
+                                    with open(target_file, "a") as f:
                                         f.write(f"\nModified at {datetime.now()}")
-                                    self._logger.debug(f"Modified file {target_file} for USN journal monitoring")
+                                    self._logger.debug(
+                                        f"Modified file {target_file} for USN journal monitoring",
+                                    )
 
                             if interval_count % 30 == 0:  # Every 30 seconds
                                 # Delete an old file if available
@@ -900,7 +999,9 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                                 if len(files) > 5:  # Keep the number of test files reasonable
                                     to_delete = os.path.join(test_dir, files[-1])
                                     os.remove(to_delete)
-                                    self._logger.debug(f"Deleted file {to_delete} for USN journal monitoring")
+                                    self._logger.debug(
+                                        f"Deleted file {to_delete} for USN journal monitoring",
+                                    )
 
                             time.sleep(1)
                             interval_count += 1
@@ -911,12 +1012,16 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                 # Start the activity generator thread
                 activity_generator_thread = threading.Thread(
                     target=_generate_file_activity,
-                    daemon=True
+                    daemon=True,
                 )
                 activity_generator_thread.start()
-                self._logger.info("Started background file activity generator for USN journal monitoring")
+                self._logger.info(
+                    "Started background file activity generator for USN journal monitoring",
+                )
             except Exception as e:
-                self._logger.warning(f"Could not start background file activity generator: {e}")
+                self._logger.warning(
+                    f"Could not start background file activity generator: {e}",
+                )
 
         # Main monitoring loop
         while not self._stop_event.is_set():
@@ -935,11 +1040,16 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
 
                         # Create proper buffer for MFT_ENUM_DATA structure
                         buffer_in = bytearray(28)  # 28 bytes total for this structure
-                        struct.pack_into("<QQQHH", buffer_in, 0,
-                                         0,           # StartFileReferenceNumber
-                                         next_usn,    # LowUsn
-                                         0xFFFFFFFFFFFFFFFF,  # HighUsn
-                                         2, 2)        # MinMajorVersion, MaxMajorVersion
+                        struct.pack_into(
+                            "<QQQHH",
+                            buffer_in,
+                            0,
+                            0,  # StartFileReferenceNumber
+                            next_usn,  # LowUsn
+                            0xFFFFFFFFFFFFFFFF,  # HighUsn
+                            2,
+                            2,
+                        )  # MinMajorVersion, MaxMajorVersion
 
                         # Call DeviceIoControl with ENUM_USN_DATA instead
                         try:
@@ -947,12 +1057,14 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                                 handle,
                                 FSCTL_ENUM_USN_DATA,  # More reliable control code
                                 buffer_in,
-                                65536
+                                65536,
                             )
                         except pywintypes.error as win_err:
                             # Handle error 38 (Reached end of file) as a normal condition
                             if win_err.winerror == 38:  # ERROR_HANDLE_EOF
-                                self._logger.debug("No new USN records available (reached end of file)")
+                                self._logger.debug(
+                                    "No new USN records available (reached end of file)",
+                                )
                                 # Create an empty result with just the next USN
                                 read_data = bytearray(8)  # 8 bytes for next USN
                                 # Use the same USN as the next USN (no advance)
@@ -966,7 +1078,9 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                         try:
                             usn_records = win32file.ParseUsnData(read_data)
                             if usn_records:
-                                self._logger.info(f"Found {len(usn_records)} USN records")
+                                self._logger.info(
+                                    f"Found {len(usn_records)} USN records",
+                                )
                             else:
                                 self._logger.debug("No new USN records found")
                         except Exception as parse_err:
@@ -991,8 +1105,9 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                                 activity_type = self._determine_activity_type(reason)
 
                                 # Skip if it's not a type we care about
-                                if activity_type == StorageActivityType.OTHER or \
-                                   (activity_type == StorageActivityType.CLOSE and not self._include_close_events):
+                                if activity_type == StorageActivityType.OTHER or (
+                                    activity_type == StorageActivityType.CLOSE and not self._include_close_events
+                                ):
                                     continue
 
                                 # Try to construct a more accurate path
@@ -1004,22 +1119,28 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                                     # Use volume GUID if available
                                     if self._use_volume_guids:
                                         drive_letter = volume[0] if volume else "C"
-                                        guid = self.map_drive_letter_to_volume_guid(drive_letter)
+                                        guid = self.map_drive_letter_to_volume_guid(
+                                            drive_letter,
+                                        )
                                         if guid:
                                             file_path = f"\\\\?\\Volume{{{guid}}}\\{file_name}"
                                 except Exception as path_err:
                                     # Fall back to simple path if we can't construct an accurate one
-                                    self._logger.debug(f"Error constructing path: {path_err}")
+                                    self._logger.debug(
+                                        f"Error constructing path: {path_err}",
+                                    )
                                     file_path = f"{volume}\\{file_name}"
 
                                 # Determine if the item is a directory based on attributes
                                 is_directory = False
                                 if "FileAttributes" in record:
-                                    is_directory = bool(record["FileAttributes"] & FILE_ATTRIBUTE_DIRECTORY)
+                                    is_directory = bool(
+                                        record["FileAttributes"] & FILE_ATTRIBUTE_DIRECTORY,
+                                    )
 
                                 # Create activity data
                                 activity_data = NtfsStorageActivityData(
-                                    timestamp=datetime.now(timezone.utc),
+                                    timestamp=datetime.now(UTC),
                                     file_reference_number=str(file_ref),
                                     parent_file_reference_number=str(parent_ref),
                                     activity_type=activity_type,
@@ -1030,113 +1151,143 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                                     is_directory=is_directory,
                                     provider_type=StorageProviderType.LOCAL_NTFS,
                                     provider_id=self._provider_id,
-                                    item_type=StorageItemType.DIRECTORY if is_directory else StorageItemType.FILE
+                                    item_type=(StorageItemType.DIRECTORY if is_directory else StorageItemType.FILE),
                                 )
 
                                 # Add the activity
                                 self.add_activity(activity_data)
-                                self._logger.info(f"Added activity for {file_name} of type {activity_type}")
+                                self._logger.info(
+                                    f"Added activity for {file_name} of type {activity_type}",
+                                )
                             except Exception as rec_err:
-                                self._logger.error(f"Error processing USN record: {rec_err}")
+                                self._logger.error(
+                                    f"Error processing USN record: {rec_err}",
+                                )
 
                         # Brief sleep to avoid hammering the system
                         time.sleep(0.1)
                     except Exception as usn_err:
-                        self._logger.error(f"Error reading USN journal on volume {volume}: {usn_err}")
+                        self._logger.error(
+                            f"Error reading USN journal on volume {volume}: {usn_err}",
+                        )
                         # Fall back to simulated data for a while
                         is_real_usn_journal = False
                         time.sleep(5)  # Wait before retrying
-                else:
-                    # This is a simplified implementation using simulated file activities
-                    if not self._stop_event.is_set():
-                        # Generate a mock file activity every few seconds
-                        time.sleep(self._monitor_interval)
+                elif not self._stop_event.is_set():
+                    # Generate a mock file activity every few seconds
+                    time.sleep(self._monitor_interval)
 
-                        # Create a mock file activity
-                        file_names = ["report.docx", "presentation.pptx", "data.xlsx", "image.jpg", "code.py"]
-                        mock_file = file_names[int(time.time()) % len(file_names)]
+                    # Create a mock file activity
+                    file_names = [
+                        "report.docx",
+                        "presentation.pptx",
+                        "data.xlsx",
+                        "image.jpg",
+                        "code.py",
+                    ]
+                    mock_file = file_names[int(time.time()) % len(file_names)]
 
-                        # Use volume GUID path if available
-                        if self._use_volume_guids:
-                            try:
-                                drive_letter = volume[0] if volume else "C"
-                                guid = self.map_drive_letter_to_volume_guid(drive_letter)
-                                if guid:
-                                    mock_path = f"\\\\?\\Volume{{{guid}}}\\Users\\Documents\\{mock_file}"
-                                else:
-                                    mock_path = f"{volume}\\Users\\Documents\\{mock_file}"
-                            except Exception as e:
-                                self._logger.warning(f"Error creating mock path with GUID: {e}")
+                    # Use volume GUID path if available
+                    if self._use_volume_guids:
+                        try:
+                            drive_letter = volume[0] if volume else "C"
+                            guid = self.map_drive_letter_to_volume_guid(
+                                drive_letter,
+                            )
+                            if guid:
+                                mock_path = f"\\\\?\\Volume{{{guid}}}\\Users\\Documents\\{mock_file}"
+                            else:
                                 mock_path = f"{volume}\\Users\\Documents\\{mock_file}"
-                        else:
+                        except Exception as e:
+                            self._logger.warning(
+                                f"Error creating mock path with GUID: {e}",
+                            )
                             mock_path = f"{volume}\\Users\\Documents\\{mock_file}"
+                    else:
+                        mock_path = f"{volume}\\Users\\Documents\\{mock_file}"
 
-                        # Create different activity types
-                        activity_types = [
-                            StorageActivityType.CREATE,
-                            StorageActivityType.MODIFY,
-                            StorageActivityType.READ,
-                            StorageActivityType.CLOSE
-                        ]
-                        activity_type = activity_types[int(time.time() / 5) % len(activity_types)]
+                    # Create different activity types
+                    activity_types = [
+                        StorageActivityType.CREATE,
+                        StorageActivityType.MODIFY,
+                        StorageActivityType.READ,
+                        StorageActivityType.CLOSE,
+                    ]
+                    activity_type = activity_types[int(time.time() / 5) % len(activity_types)]
 
-                        # Create the activity data
-                        activity_data = NtfsStorageActivityData(
-                            timestamp=datetime.now(timezone.utc),
-                            file_reference_number=str(int(time.time())),
-                            parent_file_reference_number="1000",
-                            activity_type=activity_type,
-                            reason_flags=1,  # Mock value
-                            file_name=mock_file,
-                            file_path=mock_path,
-                            volume_name=volume,
-                            is_directory=False,
-                            provider_type=StorageProviderType.LOCAL_NTFS,
-                            provider_id=self._provider_id,
-                            item_type=StorageItemType.FILE
-                        )
+                    # Create the activity data
+                    activity_data = NtfsStorageActivityData(
+                        timestamp=datetime.now(UTC),
+                        file_reference_number=str(int(time.time())),
+                        parent_file_reference_number="1000",
+                        activity_type=activity_type,
+                        reason_flags=1,  # Mock value
+                        file_name=mock_file,
+                        file_path=mock_path,
+                        volume_name=volume,
+                        is_directory=False,
+                        provider_type=StorageProviderType.LOCAL_NTFS,
+                        provider_id=self._provider_id,
+                        item_type=StorageItemType.FILE,
+                    )
 
-                        # Add the activity
-                        self.add_activity(activity_data)
-                        self._logger.debug(f"Added simulated activity for {mock_file} of type {activity_type}")
+                    # Add the activity
+                    self.add_activity(activity_data)
+                    self._logger.debug(
+                        f"Added simulated activity for {mock_file} of type {activity_type}",
+                    )
 
-                        # Increment the next usn to simulate progress in the journal
-                        next_usn += 1
+                    # Increment the next usn to simulate progress in the journal
+                    next_usn += 1
 
-                        # Periodically try to switch back to real monitoring
-                        if not self._use_mock and WINDOWS_AVAILABLE and int(time.time()) % 15 == 0:  # Try more frequently
-                            try:
-                                # Try to read from the journal again using ENUM_USN_DATA
-                                # Create a proper MFT_ENUM_DATA structure
-                                buffer_in = bytearray(28)  # 28 bytes for the structure
-                                struct.pack_into("<QQQHH", buffer_in, 0,
-                                               0,           # StartFileReferenceNumber
-                                               next_usn,    # LowUsn
-                                               0xFFFFFFFFFFFFFFFF,  # HighUsn
-                                               2, 2)        # MinMajorVersion, MaxMajorVersion
+                    # Periodically try to switch back to real monitoring
+                    if not self._use_mock and WINDOWS_AVAILABLE and int(time.time()) % 15 == 0:  # Try more frequently
+                        try:
+                            # Try to read from the journal again using ENUM_USN_DATA
+                            # Create a proper MFT_ENUM_DATA structure
+                            buffer_in = bytearray(28)  # 28 bytes for the structure
+                            struct.pack_into(
+                                "<QQQHH",
+                                buffer_in,
+                                0,
+                                0,  # StartFileReferenceNumber
+                                next_usn,  # LowUsn
+                                0xFFFFFFFFFFFFFFFF,  # HighUsn
+                                2,
+                                2,
+                            )  # MinMajorVersion, MaxMajorVersion
 
-                                # Call DeviceIoControl with ENUM_USN_DATA
-                                read_data = win32file.DeviceIoControl(
-                                    handle,
-                                    FSCTL_ENUM_USN_DATA,   # More reliable control code
-                                    buffer_in,
-                                    65536
+                            # Call DeviceIoControl with ENUM_USN_DATA
+                            read_data = win32file.DeviceIoControl(
+                                handle,
+                                FSCTL_ENUM_USN_DATA,  # More reliable control code
+                                buffer_in,
+                                65536,
+                            )
+                            # If successful, switch back to real journal monitoring
+                            self._logger.info(
+                                "Successfully reconnected to USN journal, switching back to real monitoring",
+                            )
+                            is_real_usn_journal = True
+
+                            # Create a new test file to ensure we can detect something
+                            test_dir = os.path.join(volume, "Indaleko_Test")
+                            if not os.path.exists(test_dir):
+                                os.makedirs(test_dir, exist_ok=True)
+                            test_file = os.path.join(
+                                test_dir,
+                                f"reconnect_test_{int(time.time())}.txt",
+                            )
+                            with open(test_file, "w") as f:
+                                f.write(
+                                    f"USN reconnect test file - {datetime.now()}",
                                 )
-                                # If successful, switch back to real journal monitoring
-                                self._logger.info("Successfully reconnected to USN journal, switching back to real monitoring")
-                                is_real_usn_journal = True
-
-                                # Create a new test file to ensure we can detect something
-                                test_dir = os.path.join(volume, "Indaleko_Test")
-                                if not os.path.exists(test_dir):
-                                    os.makedirs(test_dir, exist_ok=True)
-                                test_file = os.path.join(test_dir, f"reconnect_test_{int(time.time())}.txt")
-                                with open(test_file, 'w') as f:
-                                    f.write(f"USN reconnect test file - {datetime.now()}")
-                                self._logger.info(f"Created reconnect test file {test_file}")
-                            except Exception:
-                                # Continue with simulated data
-                                pass
+                            self._logger.info(
+                                f"Created reconnect test file {test_file}",
+                            )
+                        except Exception:
+                            # Continue with simulated data
+                            pass
             except Exception as e:
                 self._logger.error(f"Error in USN journal monitoring loop: {e}")
                 time.sleep(5)  # Wait a bit before retrying
@@ -1162,7 +1313,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
             except Exception as e:
                 self._logger.error(f"Error processing event: {e}")
 
-    def _process_event(self, event: Dict[str, Any]):
+    def _process_event(self, event: dict[str, Any]):
         """
         Process a USN journal event.
 
@@ -1198,22 +1349,24 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
             volume,
             record.get("FileReferenceNumber"),
             record.get("ParentFileReferenceNumber"),
-            file_name
+            file_name,
         )
 
         # Get timestamp with timezone awareness
         timestamp = record.get("DateTime")
         if timestamp:
             if not timestamp.tzinfo:
-                timestamp = timestamp.replace(tzinfo=timezone.utc)
+                timestamp = timestamp.replace(tzinfo=UTC)
         else:
-            timestamp = datetime.now(timezone.utc)
+            timestamp = datetime.now(UTC)
 
         # Create the activity data
         activity_data = NtfsStorageActivityData(
             timestamp=timestamp,
             file_reference_number=str(record.get("FileReferenceNumber", "")),
-            parent_file_reference_number=str(record.get("ParentFileReferenceNumber", "")),
+            parent_file_reference_number=str(
+                record.get("ParentFileReferenceNumber", ""),
+            ),
             activity_type=activity_type,
             reason_flags=reason_flags,
             file_name=file_name,
@@ -1224,7 +1377,7 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
             usn=record.get("Usn"),
             provider_type=StorageProviderType.LOCAL_NTFS,
             provider_id=self._provider_id,
-            item_type=StorageItemType.DIRECTORY if is_directory else StorageItemType.FILE
+            item_type=(StorageItemType.DIRECTORY if is_directory else StorageItemType.FILE),
         )
 
         # Add special handling for rename operations
@@ -1272,30 +1425,35 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                 return StorageActivityType.CREATE
             elif reason_flags & USN_REASON_FILE_DELETE:
                 return StorageActivityType.DELETE
-            elif (reason_flags & USN_REASON_RENAME_OLD_NAME or
-                  reason_flags & USN_REASON_RENAME_NEW_NAME):
+            elif reason_flags & USN_REASON_RENAME_OLD_NAME or reason_flags & USN_REASON_RENAME_NEW_NAME:
                 return StorageActivityType.RENAME
             elif reason_flags & USN_REASON_SECURITY_CHANGE:
                 return StorageActivityType.SECURITY_CHANGE
-            elif (reason_flags & USN_REASON_EA_CHANGE or
-                  reason_flags & USN_REASON_BASIC_INFO_CHANGE or
-                  reason_flags & USN_REASON_COMPRESSION_CHANGE or
-                  reason_flags & USN_REASON_ENCRYPTION_CHANGE):
+            elif (
+                reason_flags & USN_REASON_EA_CHANGE
+                or reason_flags & USN_REASON_BASIC_INFO_CHANGE
+                or reason_flags & USN_REASON_COMPRESSION_CHANGE
+                or reason_flags & USN_REASON_ENCRYPTION_CHANGE
+            ):
                 return StorageActivityType.ATTRIBUTE_CHANGE
             elif reason_flags & USN_REASON_CLOSE:
                 return StorageActivityType.CLOSE
-            elif (reason_flags & USN_REASON_DATA_OVERWRITE or
-                  reason_flags & USN_REASON_DATA_EXTEND or
-                  reason_flags & USN_REASON_DATA_TRUNCATION):
+            elif (
+                reason_flags & USN_REASON_DATA_OVERWRITE
+                or reason_flags & USN_REASON_DATA_EXTEND
+                or reason_flags & USN_REASON_DATA_TRUNCATION
+            ):
                 return StorageActivityType.MODIFY
             else:
                 return StorageActivityType.OTHER
         except Exception as e:
-            self._logger.warning(f"Error determining activity type: {e}, using mock logic")
+            self._logger.warning(
+                f"Error determining activity type: {e}, using mock logic",
+            )
             # Fall back to mock logic if something goes wrong
             return StorageActivityType.MODIFY
 
-    def map_drive_letter_to_volume_guid(self, drive_letter: str) -> Optional[str]:
+    def map_drive_letter_to_volume_guid(self, drive_letter: str) -> str | None:
         """
         Map a drive letter to a volume GUID using the machine configuration.
 
@@ -1315,15 +1473,22 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
         drive_letter = drive_letter.upper()
 
         # Use machine config if available
-        if self._machine_config and hasattr(self._machine_config, "map_drive_letter_to_volume_guid"):
+        if self._machine_config and hasattr(
+            self._machine_config,
+            "map_drive_letter_to_volume_guid",
+        ):
             try:
-                guid = self._machine_config.map_drive_letter_to_volume_guid(drive_letter)
+                guid = self._machine_config.map_drive_letter_to_volume_guid(
+                    drive_letter,
+                )
                 if guid:
                     self._volume_guid_mapping[drive_letter] = guid
                     self._logger.debug(f"Mapped drive {drive_letter} to GUID {guid}")
                     return guid
             except Exception as e:
-                self._logger.warning(f"Error mapping drive letter {drive_letter} to GUID: {e}")
+                self._logger.warning(
+                    f"Error mapping drive letter {drive_letter} to GUID: {e}",
+                )
 
         # If we're in Windows but don't have the mapping, try to get it directly using win32 APIs
         if WINDOWS_AVAILABLE and not self._use_mock:
@@ -1333,20 +1498,30 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
                 # Get the volume name for this drive letter
                 drive_path = f"{drive_letter}:\\"
                 try:
-                    volume_name_buffer = win32file.GetVolumeNameForVolumeMountPoint(drive_path)
+                    volume_name_buffer = win32file.GetVolumeNameForVolumeMountPoint(
+                        drive_path,
+                    )
                     if volume_name_buffer:
                         # Extract just the GUID part from "\\?\Volume{GUID}\"
                         guid = volume_name_buffer[11:-2]  # Remove "\\?\Volume{" and "}\"
                         self._volume_guid_mapping[drive_letter] = guid
-                        self._logger.debug(f"Got GUID {guid} for drive {drive_letter} using Win32 API")
+                        self._logger.debug(
+                            f"Got GUID {guid} for drive {drive_letter} using Win32 API",
+                        )
                         return guid
                 except Exception as e:
-                    self._logger.warning(f"Win32 API error getting volume GUID for {drive_letter}: {e}")
+                    self._logger.warning(
+                        f"Win32 API error getting volume GUID for {drive_letter}: {e}",
+                    )
             except ImportError:
-                self._logger.warning("Could not import win32file for direct volume GUID mapping")
+                self._logger.warning(
+                    "Could not import win32file for direct volume GUID mapping",
+                )
 
         # Fall back to drive letter if we could not get GUID
-        self._logger.warning(f"Could not map drive letter {drive_letter} to volume GUID")
+        self._logger.warning(
+            f"Could not map drive letter {drive_letter} to volume GUID",
+        )
         return None
 
     def get_volume_guid_path(self, volume: str) -> str:
@@ -1388,27 +1563,34 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
         # Enhanced logging for activity tracking
         try:
             # Log basic info
-            file_name = getattr(activity, 'file_name', 'Unknown')
-            activity_type = getattr(activity, 'activity_type', 'Unknown')
-            activity_id = getattr(activity, 'activity_id', 'Unknown')
+            file_name = getattr(activity, "file_name", "Unknown")
+            activity_type = getattr(activity, "activity_type", "Unknown")
+            activity_id = getattr(activity, "activity_id", "Unknown")
 
             self._logger.info(
-                f"Added activity: {activity_type} - {file_name} [ID: {activity_id}]"
+                f"Added activity: {activity_type} - {file_name} [ID: {activity_id}]",
             )
 
             # Log detailed info at debug level
             if self._debug:
                 # Get basic attributes without depending on model_dump_json
                 debug_info = {}
-                for attr in ['file_name', 'file_path', 'activity_type', 'reason_flags',
-                            'timestamp', 'is_directory', 'volume_name']:
+                for attr in [
+                    "file_name",
+                    "file_path",
+                    "activity_type",
+                    "reason_flags",
+                    "timestamp",
+                    "is_directory",
+                    "volume_name",
+                ]:
                     if hasattr(activity, attr):
                         debug_info[attr] = str(getattr(activity, attr))
 
                 self._logger.debug(f"Activity details: {debug_info}")
 
             # Track activity counts by type
-            if not hasattr(self, '_activity_counts'):
+            if not hasattr(self, "_activity_counts"):
                 self._activity_counts = {}
 
             activity_type_str = str(activity_type)
@@ -1426,7 +1608,13 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
             # Don't let logging errors affect functionality
             self._logger.warning(f"Error logging activity details: {e}")
 
-    def _get_file_path(self, volume: str, file_ref: int, parent_ref: int, file_name: str) -> Optional[str]:
+    def _get_file_path(
+        self,
+        volume: str,
+        file_ref: int,
+        parent_ref: int,
+        file_name: str,
+    ) -> str | None:
         """
         Get the full path for a file based on its reference numbers.
 
@@ -1478,4 +1666,3 @@ class NtfsStorageActivityCollector(StorageActivityCollector):
             self.start_monitoring()
 
         # Return current activities through the get_activities() method
-        return

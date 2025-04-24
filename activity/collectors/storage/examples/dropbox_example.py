@@ -52,7 +52,10 @@ def main():
     """Main function for the Dropbox storage activity example."""
     parser = argparse.ArgumentParser(description="Dropbox Storage Activity Example")
     parser.add_argument(
-        "--duration", type=int, default=300, help="Duration to monitor in seconds",
+        "--duration",
+        type=int,
+        default=300,
+        help="Duration to monitor in seconds",
     )
     parser.add_argument(
         "--poll-interval",
@@ -77,7 +80,8 @@ def main():
     # Configure logging
     log_level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(
-        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
     logger = logging.getLogger("DropboxExample")
 
@@ -94,7 +98,9 @@ def main():
     # Create collector
     logger.info("Creating Dropbox collector")
     collector = DropboxStorageActivityCollector(
-        monitor_interval=args.poll_interval, auto_start=False, debug=args.debug,
+        monitor_interval=args.poll_interval,
+        auto_start=False,
+        debug=args.debug,
     )
 
     # Create recorder
@@ -137,11 +143,7 @@ def main():
         # Filter by shared status if requested
         if args.shared_only:
             logger.info("Filtering to only show shared file activities")
-            activities = [
-                a
-                for a in activities
-                if getattr(a, "shared_folder_id", None) is not None
-            ]
+            activities = [a for a in activities if getattr(a, "shared_folder_id", None) is not None]
 
         # Display activity summary
         logger.info(f"Total activities collected: {len(activities)}")
@@ -156,7 +158,9 @@ def main():
 
         logger.info("Activities by type:")
         for activity_type, count in sorted(
-            by_type.items(), key=lambda x: x[1], reverse=True,
+            by_type.items(),
+            key=lambda x: x[1],
+            reverse=True,
         ):
             logger.info(f"  {activity_type}: {count}")
 
@@ -170,7 +174,9 @@ def main():
 
         logger.info("Activities by item type:")
         for item_type, count in sorted(
-            by_item_type.items(), key=lambda x: x[1], reverse=True,
+            by_item_type.items(),
+            key=lambda x: x[1],
+            reverse=True,
         ):
             logger.info(f"  {item_type}: {count}")
 

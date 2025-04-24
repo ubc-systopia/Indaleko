@@ -22,22 +22,21 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import argparse
+import inspect
 import os
+import struct
 import sys
+import threading
 import time
 import uuid
-import struct
-import argparse
-import threading
-import inspect
+from datetime import UTC, datetime
 from pathlib import Path
-from datetime import datetime, timezone
-from typing import Union
 
 from icecream import ic
 
 # Standard Python check for Windows platform
-IS_WINDOWS = sys.platform.startswith('win')
+IS_WINDOWS = sys.platform.startswith("win")
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -49,8 +48,9 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # Required Windows-specific modules
 if IS_WINDOWS:
     try:
-        import win32file
         import pywintypes
+        import win32file
+
         WINDOWS_AVAILABLE = True
     except ImportError:
         WINDOWS_AVAILABLE = False
@@ -61,25 +61,21 @@ else:
 # ruff: noqa: E402
 from activity.collectors.data_model import IndalekoActivityCollectorDataModel
 from activity.collectors.storage.base import WindowsStorageActivityCollector
-from activity.collectors.storage.data_models.storage_activity_data_model \
-    import (
-        NtfsStorageActivityData,
-        StorageActivityType,
-        StorageProviderType,
-        StorageItemType
-    )
+from activity.collectors.storage.data_models.storage_activity_data_model import (
+    NtfsStorageActivityData,
+    StorageActivityType,
+    StorageItemType,
+    StorageProviderType,
+)
+
+# pylint: enable=wrong-import-position
+# ruff: qa: E402
+# Import USN journal constants and functions
 from platforms.machine_config import IndalekoMachineConfig
 from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.runner import IndalekoCLIRunner
-# pylint: enable=wrong-import-position
-# ruff: qa: E402
-
-# Import USN journal constants and functions
-from activity.collectors.storage.ntfs.usn_journal import (
-    FILE_ATTRIBUTE_DIRECTORY
-)
 
 
 class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
@@ -104,7 +100,7 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
         """CLI handler mixin for the NTFS activity collector."""
 
         @staticmethod
-        def get_pre_parser() -> Union[argparse.ArgumentParser, None]:
+        def get_pre_parser() -> argparse.ArgumentParser | None:
             """Get the pre-parser for custom arguments."""
             parser = argparse.ArgumentParser(add_help=False)
             default_volume = "C:"
@@ -118,29 +114,31 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                 "--duration",
                 help="Duration in seconds to run test (0 for continuous)",
                 type=int,
-                default=30
+                default=30,
             )
             parser.add_argument(
                 "--mock",
                 help="Use mock data generation even on Windows",
-                action="store_true"
+                action="store_true",
             )
             parser.add_argument(
                 "--use-volume-guids",
                 help="Use volume GUIDs for stable path references",
                 action="store_true",
-                default=True
+                default=True,
             )
             parser.add_argument(
                 "--include-close-events",
                 help="Include file close events in activity tracking",
                 action="store_true",
-                default=False
+                default=False,
             )
             return parser
 
         @staticmethod
-        def load_machine_config(keys: dict[str, str]) -> Union[IndalekoMachineConfig, None]:
+        def load_machine_config(
+            keys: dict[str, str],
+        ) -> IndalekoMachineConfig | None:
             """Load the machine configuration."""
             if keys.get("debug"):
                 ic(f"load_machine_config: {keys}")
@@ -154,8 +152,7 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                     print("Warning: No machine_config_file specified")
                     return None
                 raise ValueError(
-                    f"{inspect.currentframe().f_code.co_name}: "
-                    "machine_config_file must be specified"
+                    f"{inspect.currentframe().f_code.co_name}: " "machine_config_file must be specified",
                 )
 
             offline = keys.get("offline", False)
@@ -164,7 +161,8 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
             try:
                 # Try to load the machine configuration
                 return platform_class.load_config_from_file(
-                    config_file=str(keys["machine_config_file"]), offline=offline
+                    config_file=str(keys["machine_config_file"]),
+                    offline=offline,
                 )
             except Exception as e:
                 # If we're in mock mode, we can continue without a machine config
@@ -213,7 +211,9 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
             self._logger.error("NtfsActivityCollector is only available on Windows")
             raise RuntimeError("NtfsActivityCollector is only available on Windows")
         elif not WINDOWS_AVAILABLE:
-            self._logger.warning("Running in mock mode because Windows is not available")
+            self._logger.warning(
+                "Running in mock mode because Windows is not available",
+            )
             ic("Running in mock mode")
             self._use_mock = True
 
@@ -299,24 +299,24 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
             volume: Volume to monitor (e.g., "C:")
         """
         # Standardize volume format
-        if volume.endswith('\\') or volume.endswith('/'):
+        if volume.endswith("\\") or volume.endswith("/"):
             volume = volume[:-1]
-        if ':' not in volume and not volume.startswith("\\\\?\\Volume{"):
+        if ":" not in volume and not volume.startswith("\\\\?\\Volume{"):
             volume = f"{volume}:"
 
         # Get volume GUID path if enabled
         if self._use_volume_guids and not volume.startswith("\\\\?\\Volume{"):
             volume_path = self.get_volume_guid_path(volume)
             cleaned_volume = volume.split(":")[0] + ":"
-            self._logger.info(f"Using volume GUID path for {cleaned_volume}: {volume_path}")
+            self._logger.info(
+                f"Using volume GUID path for {cleaned_volume}: {volume_path}",
+            )
+        elif volume.startswith("\\\\?\\Volume{"):
+            volume_path = volume
+            if not volume_path.endswith("\\"):
+                volume_path += "\\"
         else:
-            # Use standard path format
-            if volume.startswith("\\\\?\\Volume{"):
-                volume_path = volume
-                if not volume_path.endswith("\\"):
-                    volume_path += "\\"
-            else:
-                volume_path = f"\\\\?\\{volume}\\"
+            volume_path = f"\\\\?\\{volume}\\"
 
         if self._use_mock:
             self._logger.info(f"Mock mode: Not actually opening volume {volume}")
@@ -325,7 +325,7 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                 target=self._monitor_usn_journal,
                 args=(volume,),
                 name=f"USN-Monitor-{volume}",
-                daemon=True
+                daemon=True,
             )
             self._monitoring_threads.append(thread)
             thread.start()
@@ -333,15 +333,17 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
 
         # Import usn_journal functions
         from activity.collectors.storage.ntfs.usn_journal import (
+            create_journal,
             open_volume,
             query_journal_info,
-            create_journal
         )
 
         # Open volume
         handle = open_volume(volume, self._debug)
         if not handle:
-            self._logger.error(f"Could not open volume {volume}, falling back to mock mode")
+            self._logger.error(
+                f"Could not open volume {volume}, falling back to mock mode",
+            )
             self._use_mock = True
             self._start_volume_monitoring(volume)  # Retry in mock mode
             return
@@ -349,17 +351,24 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
         # Query journal
         journal_info = query_journal_info(handle, self._debug)
         if not journal_info:
-            self._logger.warning(f"Could not query USN journal on volume {volume}, trying to create it")
+            self._logger.warning(
+                f"Could not query USN journal on volume {volume}, trying to create it",
+            )
             # Try to create the journal
             if create_journal(handle, debug=self._debug):
-                self._logger.info(f"Successfully created USN journal on volume {volume}")
+                self._logger.info(
+                    f"Successfully created USN journal on volume {volume}",
+                )
                 journal_info = query_journal_info(handle, self._debug)
 
             if not journal_info:
-                self._logger.error(f"Could not create or query USN journal on volume {volume}")
+                self._logger.error(
+                    f"Could not create or query USN journal on volume {volume}",
+                )
                 # Close handle
                 try:
                     import win32file
+
                     win32file.CloseHandle(handle)
                 except Exception as e:
                     self._logger.error(f"Error closing handle: {e}")
@@ -375,6 +384,7 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
         # The usn_journal module will reopen it as needed
         try:
             import win32file
+
             win32file.CloseHandle(handle)
         except Exception as e:
             self._logger.error(f"Error closing handle: {e}")
@@ -384,7 +394,7 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
             target=self._monitor_usn_journal,
             args=(volume,),
             name=f"USN-Monitor-{volume}",
-            daemon=True
+            daemon=True,
         )
         self._monitoring_threads.append(thread)
         thread.start()
@@ -394,7 +404,7 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
         thread = threading.Thread(
             target=self._generate_mock_activity,
             name="Mock-Monitor",
-            daemon=True
+            daemon=True,
         )
         self._monitoring_threads.append(thread)
         thread.start()
@@ -406,7 +416,9 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
 
         This mock function generates activities periodically until stopped.
         """
-        from activity.collectors.storage.ntfs.force_test_activities import generate_mock_activities
+        from activity.collectors.storage.ntfs.force_test_activities import (
+            generate_mock_activities,
+        )
 
         # Generate some immediate activities for short test runs
         activities = generate_mock_activities(num_activities=5, verbose=self._debug)
@@ -438,7 +450,10 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
 
                 # Generate 1-3 new activities
                 count = 1 + (int(time.time()) % 3)
-                new_activities = generate_mock_activities(num_activities=count, verbose=False)
+                new_activities = generate_mock_activities(
+                    num_activities=count,
+                    verbose=False,
+                )
 
                 for activity in new_activities:
                     # Add the activity with our provider ID
@@ -472,10 +487,10 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
         """
         # Import usn_journal functions
         from activity.collectors.storage.ntfs.usn_journal import (
-            get_usn_journal_records,
             create_test_files,
             determine_activity_type,
-            get_reason_flags_text
+            get_reason_flags_text,
+            get_usn_journal_records,
         )
 
         self._logger.info(f"Starting USN journal monitoring for volume {volume}")
@@ -494,19 +509,29 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
             try:
                 # Query USN journal
                 if self._debug:
-                    self._logger.debug(f"Querying USN journal for volume {volume} (last_usn={last_usn})")
+                    self._logger.debug(
+                        f"Querying USN journal for volume {volume} (last_usn={last_usn})",
+                    )
 
-                journal_info, records = get_usn_journal_records(volume, last_usn, self._debug)
+                journal_info, records = get_usn_journal_records(
+                    volume,
+                    last_usn,
+                    self._debug,
+                )
 
                 if not journal_info:
-                    self._logger.error(f"Failed to get journal info for volume {volume}")
+                    self._logger.error(
+                        f"Failed to get journal info for volume {volume}",
+                    )
                     time.sleep(5)  # Wait before retrying
                     continue
 
                 if self._debug:
-                    self._logger.debug(f"Got journal info: journal_id={journal_info.get('journal_id')}, "
-                                      f"first_usn={journal_info.get('first_usn')}, "
-                                      f"next_usn={journal_info.get('next_usn')}")
+                    self._logger.debug(
+                        f"Got journal info: journal_id={journal_info.get('journal_id')}, "
+                        f"first_usn={journal_info.get('first_usn')}, "
+                        f"next_usn={journal_info.get('next_usn')}",
+                    )
 
                     self._logger.debug(f"Retrieved {len(records)} records")
 
@@ -527,25 +552,32 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                             parent_ref = record.get("parent_file_reference_number", "0")
 
                             if self._debug:
-                                self._logger.debug(f"Processing record: file={file_name}, "
-                                                  f"reason={get_reason_flags_text(reason)}")
+                                self._logger.debug(
+                                    f"Processing record: file={file_name}, reason={get_reason_flags_text(reason)}",
+                                )
 
                             # Get activity type
                             activity_type = determine_activity_type(reason)
 
                             if self._debug:
-                                self._logger.debug(f"Determined activity type: {activity_type}")
+                                self._logger.debug(
+                                    f"Determined activity type: {activity_type}",
+                                )
 
                             # Skip close events if not requested
                             if activity_type == StorageActivityType.CLOSE and not self._include_close_events:
                                 if self._debug:
-                                    self._logger.debug(f"Skipping CLOSE event for {file_name}")
+                                    self._logger.debug(
+                                        f"Skipping CLOSE event for {file_name}",
+                                    )
                                 continue
 
                             # Skip activities we don't care about
                             if activity_type == StorageActivityType.OTHER:
                                 if self._debug:
-                                    self._logger.debug(f"Skipping OTHER event for {file_name}")
+                                    self._logger.debug(
+                                        f"Skipping OTHER event for {file_name}",
+                                    )
                                 continue
 
                             # Construct file path
@@ -556,15 +588,22 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                                 # Use volume GUID if available
                                 if self._use_volume_guids:
                                     drive_letter = volume[0]
-                                    guid = self.map_drive_letter_to_volume_guid(drive_letter)
+                                    guid = self.map_drive_letter_to_volume_guid(
+                                        drive_letter,
+                                    )
                                     if guid:
                                         file_path = f"\\\\?\\Volume{{{guid}}}\\{file_name}"
                             except Exception as path_err:
-                                self._logger.debug(f"Error constructing path: {path_err}")
+                                self._logger.debug(
+                                    f"Error constructing path: {path_err}",
+                                )
                                 file_path = f"{volume}\\{file_name}"
 
                             # Get timestamp
-                            timestamp = record.get("timestamp_dt", datetime.now(timezone.utc))
+                            timestamp = record.get(
+                                "timestamp_dt",
+                                datetime.now(UTC),
+                            )
 
                             # Determine if item is a directory
                             is_directory = record.get("is_directory", False)
@@ -582,16 +621,20 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                                 is_directory=is_directory,
                                 provider_type=StorageProviderType.LOCAL_NTFS,
                                 provider_id=self._provider_id,
-                                item_type=StorageItemType.DIRECTORY if is_directory else StorageItemType.FILE,
+                                item_type=(StorageItemType.DIRECTORY if is_directory else StorageItemType.FILE),
                                 usn=record.get("usn", 0),
-                                security_id=record.get("security_id", 0)
+                                security_id=record.get("security_id", 0),
                             )
 
                             # Add the activity
                             self.add_activity(activity_data)
-                            self._logger.info(f"Added activity for {file_name} of type {activity_type}")
+                            self._logger.info(
+                                f"Added activity for {file_name} of type {activity_type}",
+                            )
                         except Exception as rec_err:
-                            self._logger.error(f"Error processing USN record: {rec_err}")
+                            self._logger.error(
+                                f"Error processing USN record: {rec_err}",
+                            )
 
                 # Brief sleep to avoid hammering the system
                 time.sleep(self._monitor_interval)
@@ -613,6 +656,7 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
         """
         # Use the standard function from our usn_journal module
         from activity.collectors.storage.ntfs.usn_journal import determine_activity_type
+
         return determine_activity_type(reason_flags)
 
     def collect_data(self) -> None:
@@ -625,10 +669,10 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
             self.start_monitoring()
 
     @staticmethod
-    def local_run(keys: dict[str, str]) -> Union[dict, None]:
+    def local_run(keys: dict[str, str]) -> dict | None:
         """Run the NTFS activity collector using the common CLI framework."""
         args = keys["args"]  # Must be present
-        cli = keys["cli"]    # Must be present
+        cli = keys["cli"]  # Must be present
         debug = getattr(args, "debug", False)
         config_data = cli.get_config_data()
 
@@ -645,37 +689,34 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
 
             # Add a few test activities for our test files
             volume = args.volume
-            if not volume.endswith(':'):
+            if not volume.endswith(":"):
                 volume = f"{volume}:"
 
             timestamp = int(time.time())
-            test_files = [
-                f"test_file_{timestamp}.txt",
-                f"test_file_2_{timestamp}.txt"
-            ]
+            test_files = [f"test_file_{timestamp}.txt", f"test_file_2_{timestamp}.txt"]
 
             for i, file_name in enumerate(test_files):
                 file_path = f"{volume}\\Indaleko_Test\\{file_name}"
                 activity_types = [
                     StorageActivityType.CREATE,
                     StorageActivityType.MODIFY,
-                    StorageActivityType.READ
+                    StorageActivityType.READ,
                 ]
 
                 for j, activity_type in enumerate(activity_types):
                     activity_data = NtfsStorageActivityData(
-                        timestamp=datetime.now(timezone.utc),
-                        file_reference_number=str(timestamp + i*100 + j),
-                        parent_file_reference_number=str(timestamp + i*100),
+                        timestamp=datetime.now(UTC),
+                        file_reference_number=str(timestamp + i * 100 + j),
+                        parent_file_reference_number=str(timestamp + i * 100),
                         activity_type=activity_type,
-                        reason_flags=1 << (i+j),  # Different reason flags
+                        reason_flags=1 << (i + j),  # Different reason flags
                         file_name=file_name,
                         file_path=file_path,
                         volume_name=volume,
                         is_directory=False,
                         provider_type=StorageProviderType.LOCAL_NTFS,
                         provider_id=collector.get_provider_id(),
-                        item_type=StorageItemType.FILE
+                        item_type=StorageItemType.FILE,
                     )
 
                     collector.add_activity(activity_data)
@@ -688,7 +729,10 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
 
         # Get output and data directories from config
         data_dir = config_data.get("DataDirectory", "data")
-        output_file = config_data.get("OutputFile", f"ntfs_activity_data_{int(time.time())}.jsonl")
+        output_file = config_data.get(
+            "OutputFile",
+            f"ntfs_activity_data_{int(time.time())}.jsonl",
+        )
 
         # Ensure output file path is in the data directory
         output_path = os.path.join(data_dir, output_file)
@@ -702,12 +746,12 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
             machine_config = cli.handler_mixin.load_machine_config(
                 {
                     "machine_config_file": str(
-                        Path(args.configdir) / args.machine_config
+                        Path(args.configdir) / args.machine_config,
                     ),
                     "offline": args.offline,
                     "class": machine_config_class,
-                    "debug": debug
-                }
+                    "debug": debug,
+                },
             )
             if debug:
                 ic(f"Loaded machine config: {type(machine_config)}")
@@ -732,7 +776,7 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
             # Use a more descriptive name for debugging
             name="NTFS Activity Collector V2",
             # Add output path for storing collected data
-            output_path=output_path
+            output_path=output_path,
         )
 
         if debug:
@@ -747,9 +791,9 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
             try:
                 # Make sure we use proper drive letter format
                 volume_root = args.volume
-                if not volume_root.endswith(':'):
+                if not volume_root.endswith(":"):
                     volume_root = f"{volume_root}:"
-                if not volume_root.endswith('\\'):
+                if not volume_root.endswith("\\"):
                     volume_root = f"{volume_root}\\"
 
                 test_dir = os.path.join(volume_root, "Indaleko_Test")
@@ -758,7 +802,7 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                 # Create the test file with fsync to ensure it hits disk
                 timestamp = int(time.time())
                 test_file = os.path.join(test_dir, f"test_file_{timestamp}.txt")
-                with open(test_file, 'w') as f:
+                with open(test_file, "w") as f:
                     f.write(f"Test file created at {datetime.now()}\n")
                     f.write("This file is used to test NTFS USN journal monitoring.\n")
                     # Important: flush and fsync to ensure changes are written to disk
@@ -766,11 +810,11 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                     os.fsync(f.fileno())
 
                 # Also try reading the file to generate additional USN activity
-                with open(test_file, 'r') as f:
+                with open(test_file) as f:
                     content = f.read()
 
                 # And modify it to generate more activity
-                with open(test_file, 'a') as f:
+                with open(test_file, "a") as f:
                     f.write(f"Additional content added at {datetime.now()}\n")
                     f.flush()
                     os.fsync(f.fileno())
@@ -794,9 +838,9 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
 
                     # Make sure we use proper drive letter format
                     volume_root = args.volume
-                    if not volume_root.endswith(':'):
+                    if not volume_root.endswith(":"):
                         volume_root = f"{volume_root}:"
-                    if not volume_root.endswith('\\'):
+                    if not volume_root.endswith("\\"):
                         volume_root = f"{volume_root}\\"
 
                     test_dir = os.path.join(volume_root, "Indaleko_Test")
@@ -804,24 +848,27 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                     test_file = os.path.join(test_dir, f"test_file_2_{timestamp}.txt")
 
                     # Create, read, and modify the file to generate multiple USN records
-                    with open(test_file, 'w') as f:
+                    with open(test_file, "w") as f:
                         f.write(f"Second test file created at {datetime.now()}\n")
                         f.write("This will generate USN journal activity\n")
                         f.flush()
                         os.fsync(f.fileno())
 
                     # Read the file
-                    with open(test_file, 'r') as f:
+                    with open(test_file) as f:
                         content = f.read()
 
                     # Modify it
-                    with open(test_file, 'a') as f:
+                    with open(test_file, "a") as f:
                         f.write(f"Additional content at {datetime.now()}\n")
                         f.flush()
                         os.fsync(f.fileno())
 
                     # Even rename it to generate rename activity
-                    rename_file = os.path.join(test_dir, f"test_file_2_renamed_{timestamp}.txt")
+                    rename_file = os.path.join(
+                        test_dir,
+                        f"test_file_2_renamed_{timestamp}.txt",
+                    )
                     os.rename(test_file, rename_file)
 
                     # And rename it back
@@ -848,9 +895,14 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                     if counter % 3 == 0 and IS_WINDOWS and not args.mock:
                         try:
                             test_dir = os.path.join(args.volume, "Indaleko_Test")
-                            test_file = os.path.join(test_dir, f"test_file_{int(time.time())}.txt")
-                            with open(test_file, 'w') as f:
-                                f.write(f"Periodic test file created at {datetime.now()}\n")
+                            test_file = os.path.join(
+                                test_dir,
+                                f"test_file_{int(time.time())}.txt",
+                            )
+                            with open(test_file, "w") as f:
+                                f.write(
+                                    f"Periodic test file created at {datetime.now()}\n",
+                                )
 
                             print(f"Created periodic test file: {test_file}")
                         except Exception as e:
@@ -891,7 +943,7 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
 
             # Show a few recent activities
             print("\nMost recent activities:")
-            recent = activities[-min(5, len(activities)):]
+            recent = activities[-min(5, len(activities)) :]
             for i, activity in enumerate(recent):
                 print(f"  {i+1}. {activity.activity_type} - {activity.file_name}")
                 print(f"     Path: {activity.file_path}")
@@ -912,7 +964,9 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
 
         # When running on Windows with no activities, try to diagnose the issue
         if IS_WINDOWS and not activities and not args.mock:
-            print("\nNo activities were detected on a Windows system. Let's check USN journal status:")
+            print(
+                "\nNo activities were detected on a Windows system. Let's check USN journal status:",
+            )
             try:
                 # Try to check USN journal status
                 if debug:
@@ -931,7 +985,7 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                         None,
                         win32file.OPEN_EXISTING,
                         0,
-                        None
+                        None,
                     )
 
                     # Try to query USN journal
@@ -940,7 +994,7 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                         handle,
                         FSCTL_QUERY_USN_JOURNAL,
                         None,
-                        10240
+                        10240,
                     )
 
                     # Try to parse the USN journal info with better diagnostics
@@ -965,21 +1019,28 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                     try:
                         # Create read journal data structure for ENUM_USN_DATA
                         buffer_in = bytearray(28)  # 28 bytes for MFT_ENUM_DATA
-                        struct.pack_into("<QQQHH", buffer_in, 0,
-                                       0,           # StartFileReferenceNumber
-                                       first_usn,   # LowUsn
-                                       0xFFFFFFFFFFFFFFFF,  # HighUsn
-                                       2, 2)        # MinMajorVersion, MaxMajorVersion
+                        struct.pack_into(
+                            "<QQQHH",
+                            buffer_in,
+                            0,
+                            0,  # StartFileReferenceNumber
+                            first_usn,  # LowUsn
+                            0xFFFFFFFFFFFFFFFF,  # HighUsn
+                            2,
+                            2,
+                        )  # MinMajorVersion, MaxMajorVersion
 
                         # Read directly with ENUM_USN_DATA
                         read_data = win32file.DeviceIoControl(
                             handle,
                             FSCTL_ENUM_USN_DATA,
                             buffer_in,
-                            65536
+                            65536,
                         )
 
-                        print(f"Successfully read {len(read_data)} bytes from USN journal")
+                        print(
+                            f"Successfully read {len(read_data)} bytes from USN journal",
+                        )
                         if len(read_data) > 8:
                             # Extract the next USN from the first 8 bytes
                             next_usn_read = struct.unpack("<Q", read_data[:8])[0]
@@ -991,9 +1052,14 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                                 offset = 8
                                 while offset + 4 <= len(read_data):
                                     try:
-                                        record_length = struct.unpack("<L", read_data[offset:offset+4])[0]
+                                        record_length = struct.unpack(
+                                            "<L",
+                                            read_data[offset : offset + 4],
+                                        )[0]
                                         if 0 < record_length < 1024 and offset + record_length <= len(read_data):
-                                            print(f"Found potential record at offset {offset} with length {record_length}")
+                                            print(
+                                                f"Found potential record at offset {offset} with length {record_length}",
+                                            )
                                             offset += record_length
                                         else:
                                             offset += 4
@@ -1005,11 +1071,17 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                         print(f"Direct USN read error: {direct_err}")
 
                     print("\nUSN journal is available but no activities were detected.")
-                    print("The issue may be with the record parsing or USN journal format.")
+                    print(
+                        "The issue may be with the record parsing or USN journal format.",
+                    )
                     print("Consider the following:")
                     print("1. Check for permission issues (run as Administrator)")
-                    print("2. Try enabling basic file operations: `fsutil usn enablerawnotify C:`")
-                    print("3. Make sure antivirus software isn't blocking file system monitoring")
+                    print(
+                        "2. Try enabling basic file operations: `fsutil usn enablerawnotify C:`",
+                    )
+                    print(
+                        "3. Make sure antivirus software isn't blocking file system monitoring",
+                    )
 
                     win32file.CloseHandle(handle)
                 except Exception as e:
@@ -1017,8 +1089,12 @@ class NtfsActivityCollectorV2(WindowsStorageActivityCollector):
                     print("The USN journal might not be enabled on this volume.")
                     print("Try the following steps:")
                     print("1. Run 'fsutil usn createjournal m=1000 a=100 C:'")
-                    print("2. Make sure you have sufficient privileges (run as Administrator)")
-                    print("3. Try running the test again with --mock flag to verify functionality")
+                    print(
+                        "2. Make sure you have sufficient privileges (run as Administrator)",
+                    )
+                    print(
+                        "3. Try running the test again with --mock flag to verify functionality",
+                    )
             except Exception as e:
                 print(f"Error during USN journal diagnosis: {e}")
                 print("Could not diagnose USN journal status.")
@@ -1031,15 +1107,15 @@ def main():
     IndalekoCLIRunner(
         cli_data=IndalekoBaseCliDataModel(
             RegistrationServiceName="NTFS Storage Activity Collector V2",
-            FileServiceName="ntfs_activity_collector"
+            FileServiceName="ntfs_activity_collector",
         ),
         handler_mixin=NtfsActivityCollectorV2.cli_handler_mixin,
         features=IndalekoBaseCLI.cli_features(input=False),
         Run=NtfsActivityCollectorV2.local_run,
         RunParameters={
             "CollectorClass": NtfsActivityCollectorV2,
-            "MachineConfigClass": IndalekoWindowsMachineConfig
-        }
+            "MachineConfigClass": IndalekoWindowsMachineConfig,
+        },
     ).run()
 
 

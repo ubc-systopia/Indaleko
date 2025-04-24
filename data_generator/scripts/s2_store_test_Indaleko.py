@@ -1,14 +1,16 @@
 import json
 import uuid
-from db.i_collections import IndalekoCollections
-from db.collection import IndalekoCollection
+from datetime import datetime
+
+from icecream import ic
+
 from activity.recorders.registration_service import (
     IndalekoActivityDataRegistrationService,
 )
-from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from data_models.record import IndalekoRecordDataModel
-from datetime import datetime
-from icecream import ic
+from data_models.source_identifier import IndalekoSourceIdentifierDataModel
+from db.collection import IndalekoCollection
+from db.i_collections import IndalekoCollections
 
 """
 MetadataStorer for moving the metadata dataset onto the Indaleko DB
@@ -27,7 +29,9 @@ class MetadataStorer:
         self.activity_data_registrar = IndalekoActivityDataRegistrationService()
 
     def delete_records_from_collection(
-        self, collections: IndalekoCollections, collection_name: str
+        self,
+        collections: IndalekoCollections,
+        collection_name: str,
     ) -> None:
         """
         Deletes the records from the specified collection in IndalekoCollections
@@ -58,7 +62,9 @@ class MetadataStorer:
             print(f"Inserted {record} into {collection_name}")
 
     def register_activity_provider(
-        self, collector_type: str, version: str = "1.0.0"
+        self,
+        collector_type: str,
+        version: str = "1.0.0",
     ) -> IndalekoCollection:
         """
         initializes a activity provider registerer for the specifitied collector
@@ -67,7 +73,9 @@ class MetadataStorer:
         """
         identifier = uuid.uuid4()
         source_identifier = IndalekoSourceIdentifierDataModel(
-            Identifier=identifier, Version=version, Description=collector_type
+            Identifier=identifier,
+            Version=version,
+            Description=collector_type,
         )
 
         record_kwargs = {
@@ -81,13 +89,13 @@ class MetadataStorer:
                 Data="",
             ),
         }
-        activity_registration_service, collection = (
-            self.activity_data_registrar.register_provider(**record_kwargs)
-        )
+        activity_registration_service, collection = self.activity_data_registrar.register_provider(**record_kwargs)
         return activity_registration_service, collection
 
     def add_records_with_activity_provider(
-        self, collection: IndalekoCollection, activity_contexts: dict
+        self,
+        collection: IndalekoCollection,
+        activity_contexts: dict,
     ) -> None:
         """
         initializes a activity provider registerer for the specifitied collector
@@ -104,7 +112,7 @@ def convert_json_file(json_file: str) -> dict:
     """
     Testing purposes: convert json to dictionary
     """
-    with open(json_file, "r") as file:
+    with open(json_file) as file:
         print("here")
         dataset = json.load(file)
     return dataset
@@ -119,7 +127,9 @@ def main():
     activities = "./data_generator/results/test_temp_records.json"
     activity_dataset = convert_json_file(activities)
     storer.add_records_to_collection(
-        collections, "TempActivityContext", activity_dataset
+        collections,
+        "TempActivityContext",
+        activity_dataset,
     )
 
 

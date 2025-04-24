@@ -1,5 +1,5 @@
-import logging
 import json
+import logging
 from datetime import datetime
 from logging import Logger
 
@@ -13,6 +13,7 @@ class ResultLogger:
     def __init__(self, result_path: str) -> None:
         """
         Initialize the logging service.
+
         Args:
             result_path (str): The path to the results
             level (int): loging level set to info as default
@@ -26,7 +27,9 @@ class ResultLogger:
             progress_formatting,
         )
         self.result_logger = self.create_logger(
-            result_path + "validator_result.log", "ResultLogger", result_formatting
+            result_path + "validator_result.log",
+            "ResultLogger",
+            result_formatting,
         )
 
     def create_logger(self, log_file, logger_name, formatting) -> Logger:
@@ -100,47 +103,47 @@ class ResultLogger:
         self.result_logger.info("SUMMARY OF RESULT:")
         self.result_logger.info(f" Total Metadata Queried: {results['n_metadata']}")
         self.result_logger.info(
-            f" Total Truth Metadata Queried: {results['n_total_truth']}"
+            f" Total Truth Metadata Queried: {results['n_total_truth']}",
         )
         self.result_logger.info(
-            "--------------------------------------------------------------------------------------------"
+            "--------------------------------------------------------------------------------------------",
         )
         self.result_logger.info("LLM Results:")
         self.result_logger.info(f" Original Query: {results['query']}")
         self.result_logger.info(
-            f" Truth File Attributes:\n{json.dumps(results['selected_md_attributes'], indent=4)}"
+            f" Truth File Attributes:\n{json.dumps(results['selected_md_attributes'], indent=4)}",
         )
         # self.result_logger.info(f" Converted Truth File Attributes:\n{json.dumps(results['converted_selected_md_attributes'], indent=4)}")
         self.result_logger.info(f" Geographical Coordinates: {results['geo_coord']}")
         self.result_logger.info(f" AQL Query:\n{results['aql_query']}")
         self.result_logger.info(
-            "--------------------------------------------------------------------------------------------"
+            "--------------------------------------------------------------------------------------------",
         )
         self.result_logger.info("Metadata Generation:")
         self.result_logger.info(
-            f" Truth Files Made: {results['metadata_stats']['truth']}"
+            f" Truth Files Made: {results['metadata_stats']['truth']}",
         )
         self.result_logger.info(
-            f" Filler Files Made: {results['metadata_stats']['filler']}"
+            f" Filler Files Made: {results['metadata_stats']['filler']}",
         )
         self.result_logger.info(
-            f" Of the Filler Files, Truth-like Filler Files: {results['metadata_stats']['truth-like']}"
+            f" Of the Filler Files, Truth-like Filler Files: {results['metadata_stats']['truth-like']}",
         )
         self.result_logger.info(
-            "--------------------------------------------------------------------------------------------"
+            "--------------------------------------------------------------------------------------------",
         )
         self.result_logger.info("Indaleko Results:")
         self.result_logger.info(
-            f" Actual Metadata Returned: {results['actual_n_metadata']}"
+            f" Actual Metadata Returned: {results['actual_n_metadata']}",
         )
         self.result_logger.info(
-            f" Actual Truth Metadata Returned: {results['actual_n_total_truth']}"
+            f" Actual Truth Metadata Returned: {results['actual_n_total_truth']}",
         )
         self.result_logger.info(
-            f" UUID of Indaleko Objects Returned: {results['uuid_returned']}"
+            f" UUID of Indaleko Objects Returned: {results['uuid_returned']}",
         )
         self.result_logger.info(
-            "--------------------------------------------------------------------------------------------"
+            "--------------------------------------------------------------------------------------------",
         )
         self.result_logger.info("Summary Stats:")
         self.result_logger.info(f" Total epoch: {total_epoch}")

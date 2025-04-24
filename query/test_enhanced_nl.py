@@ -138,7 +138,8 @@ def process_query(
     # Translate to AQL
     print_color("Translating to AQL with enhanced translator...", "blue")
     translated_query = aql_translator.translate_enhanced(
-        query_understanding, query_data,
+        query_understanding,
+        query_data,
     )
 
     # Prepare result data
@@ -213,15 +214,13 @@ def process_query(
     print_section("Explanation", translated_query.explanation)
 
     # Display performance hints
-    if (
-        hasattr(aql_translator, "performance_hints")
-        and aql_translator.performance_hints
-    ):
+    if hasattr(aql_translator, "performance_hints") and aql_translator.performance_hints:
         print_section("Performance Hints")
         for hint in aql_translator.performance_hints:
             if hint.severity == "warning":
                 print_color(
-                    f"- {hint.description} ({hint.affected_component})", "yellow",
+                    f"- {hint.description} ({hint.affected_component})",
+                    "yellow",
                 )
             elif hint.severity == "error" or hint.severity == "critical":
                 print_color(f"- {hint.description} ({hint.affected_component})", "red")
@@ -290,7 +289,9 @@ def main():
     )
     parser.add_argument("--verbose", action="store_true", help="Print detailed output")
     parser.add_argument(
-        "--execute", action="store_true", help="Execute the generated AQL query",
+        "--execute",
+        action="store_true",
+        help="Execute the generated AQL query",
     )
     parser.add_argument("--json", action="store_true", help="Output results as JSON")
     parser.add_argument("--output", type=str, help="Output file for JSON results")

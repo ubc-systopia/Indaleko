@@ -22,8 +22,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import datetime
 import json
 import os
-import uuid
 import sys
+import uuid
 
 from icecream import ic
 
@@ -37,17 +37,17 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from data_models import IndalekoRecordDataModel
 from db import IndalekoServiceManager
-from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 from platforms.posix import IndalekoPosix
+from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 from platforms.windows_attributes import IndalekoWindows
-from storage.i_object import IndalekoObject
 from storage.collectors.local.windows.collector import (
     IndalekoWindowsLocalStorageCollector,
 )
+from storage.i_object import IndalekoObject
 from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from storage.recorders.local.local_base import BaseLocalStorageRecorder
-from utils.misc.file_name_management import find_candidate_files
 from utils.misc.data_management import encode_binary_data
+from utils.misc.file_name_management import find_candidate_files
 
 # pylint: enable=wrong-import-position
 
@@ -61,8 +61,7 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
     windows_local_recorder_uuid = "429f1f3c-7a21-463f-b7aa-cd731bb202b1"
     windows_local_recorder_service = {
         "service_name": "Windows Local Recorder",
-        "service_description":
-        "This service records metadata collected from the local filesystems of a Windows machine.",
+        "service_description": "This service records metadata collected from the local filesystems of a Windows machine.",
         "service_version": "1.0",
         "service_type": IndalekoServiceManager.service_type_storage_recorder,
         "service_identifier": windows_local_recorder_uuid,
@@ -92,9 +91,7 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
         if "platform" not in kwargs:
             kwargs["platform"] = IndalekoWindowsLocalStorageRecorder.windows_platform
         if "recorder" not in kwargs:
-            kwargs["recorder"] = (
-                IndalekoWindowsLocalStorageRecorder.windows_local_recorder_name
-            )
+            kwargs["recorder"] = IndalekoWindowsLocalStorageRecorder.windows_local_recorder_name
         super().__init__(**kwargs)
         self.output_file = kwargs.get("output_file", self.generate_file_name())
         self.source = {
@@ -140,42 +137,48 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
                 {
                     "Label": IndalekoObject.CREATION_TIMESTAMP,
                     "Value": datetime.datetime.fromtimestamp(
-                        data["st_birthtime"], datetime.timezone.utc
+                        data["st_birthtime"],
+                        datetime.UTC,
                     ).isoformat(),
                     "Description": "Created",
-                }
+                },
             )
         if "st_mtime" in data:
             timestamps.append(
                 {
                     "Label": IndalekoObject.MODIFICATION_TIMESTAMP,
                     "Value": datetime.datetime.fromtimestamp(
-                        data["st_mtime"], datetime.timezone.utc
+                        data["st_mtime"],
+                        datetime.UTC,
                     ).isoformat(),
                     "Description": "Modified",
-                }
+                },
             )
         if "st_atime" in data:
             timestamps.append(
                 {
                     "Label": IndalekoObject.ACCESS_TIMESTAMP,
                     "Value": datetime.datetime.fromtimestamp(
-                        data["st_atime"], datetime.timezone.utc
+                        data["st_atime"],
+                        datetime.UTC,
                     ).isoformat(),
                     "Description": "Accessed",
-                }
+                },
             )
         if "st_ctime" in data:
             timestamps.append(
                 {
                     "Label": IndalekoObject.CHANGE_TIMESTAMP,
                     "Value": datetime.datetime.fromtimestamp(
-                        data["st_ctime"], datetime.timezone.utc
+                        data["st_ctime"],
+                        datetime.UTC,
                     ).isoformat(),
                     "Description": "Changed",
-                }
+                },
             )
-        semantic_attributes = self.map_posix_storage_attributes_to_semantic_attributes(data)
+        semantic_attributes = self.map_posix_storage_attributes_to_semantic_attributes(
+            data,
+        )
         kwargs = {
             "source": self.source,
             "raw_data": encode_binary_data(bytes(json.dumps(data).encode("utf-8"))),
@@ -192,11 +195,11 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
             kwargs["Volume"] = data["URI"][11:47]
         if "st_mode" in data:
             kwargs["PosixFileAttributes"] = IndalekoPosix.map_file_attributes(
-                data["st_mode"]
+                data["st_mode"],
             )
         if "st_file_attributes" in data:
             kwargs["WindowsFileAttributes"] = IndalekoWindows.map_file_attributes(
-                data["st_file_attributes"]
+                data["st_file_attributes"],
             )
         if "st_ino" in data:
             kwargs["LocalIdentifier"] = str(data["st_ino"])

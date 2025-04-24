@@ -36,7 +36,9 @@ from utils.misc.string_similarity import multi_attribute_identity_resolution
 
 
 def resolve_indaleko_objects(
-    obj1: dict[str, Any], obj2: dict[str, Any], threshold: float = 0.85,
+    obj1: dict[str, Any],
+    obj2: dict[str, Any],
+    threshold: float = 0.85,
 ) -> tuple[bool, float]:
     """
     Perform identity resolution on two Indaleko object dictionaries.
@@ -59,7 +61,9 @@ def resolve_indaleko_objects(
 
     # Apply multi-attribute identity resolution
     return multi_attribute_identity_resolution(
-        file1_attrs, file2_attrs, threshold=threshold,
+        file1_attrs,
+        file2_attrs,
+        threshold=threshold,
     )
 
 
@@ -146,7 +150,8 @@ def find_matching_objects(
 
 
 def find_all_matching_object_pairs(
-    objects: list[dict[str, Any]], threshold: float = 0.85,
+    objects: list[dict[str, Any]],
+    threshold: float = 0.85,
 ) -> list[tuple[dict[str, Any], dict[str, Any], float]]:
     """
     Find all pairs of matching objects within a list.

@@ -30,7 +30,8 @@ import uuid
 
 # Set up logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -86,11 +87,7 @@ def main():
                 logger.info(f"  - {char}")
 
             # Check collector status
-            collector = (
-                recorder._ntfs_collector
-                if hasattr(recorder, "_ntfs_collector")
-                else None
-            )
+            collector = recorder._ntfs_collector if hasattr(recorder, "_ntfs_collector") else None
             activities = []
 
             if collector:

@@ -28,10 +28,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # Import tier implementations
 try:
-    from activity.recorders.storage.ntfs.memory.sensory.recorder import NtfsSensoryMemoryRecorder
-    from activity.recorders.storage.ntfs.memory.short_term.recorder import NtfsShortTermMemoryRecorder
-    from activity.recorders.storage.ntfs.memory.long_term.recorder import NtfsLongTermMemoryRecorder
-    from activity.recorders.storage.ntfs.memory.archival.recorder import NtfsArchivalMemoryRecorder
+    from activity.recorders.storage.ntfs.memory.archival.recorder import (
+        NtfsArchivalMemoryRecorder,
+    )
+    from activity.recorders.storage.ntfs.memory.long_term.recorder import (
+        NtfsLongTermMemoryRecorder,
+    )
+    from activity.recorders.storage.ntfs.memory.sensory.recorder import (
+        NtfsSensoryMemoryRecorder,
+    )
+    from activity.recorders.storage.ntfs.memory.short_term.recorder import (
+        NtfsShortTermMemoryRecorder,
+    )
 except ImportError:
     # Some modules might not be available, which is ok
     pass

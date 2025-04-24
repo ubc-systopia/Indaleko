@@ -111,7 +111,10 @@ class EnhancedNLParser(NLParser):
 
         # Extract enhanced understanding with a more comprehensive prompt
         enhanced_understanding = self._extract_enhanced_understanding(
-            query, basic_results, facet_context, include_history,
+            query,
+            basic_results,
+            facet_context,
+            include_history,
         )
 
         # Add the query to history
@@ -155,7 +158,9 @@ class EnhancedNLParser(NLParser):
                     name: {
                         "name": name,
                         "description": getattr(
-                            metadata, "Description", "No description",
+                            metadata,
+                            "Description",
+                            "No description",
                         ),
                     }
                     for name, metadata in self.collection_data.items()
@@ -255,7 +260,9 @@ class EnhancedNLParser(NLParser):
         # Use our custom serializer when dumping context data to JSON
         try:
             context_json = json.dumps(
-                context_data, indent=2, default=_json_serializable,
+                context_data,
+                indent=2,
+                default=_json_serializable,
             )
         except Exception as e:
             logging.warning(f"Error serializing context data: {e}")
@@ -302,7 +309,9 @@ class EnhancedNLParser(NLParser):
 
         # Use the LLM connector to get enhanced understanding
         response = self.llm_connector.get_completion(
-            context=system_prompt, question=user_prompt, schema=schema,
+            context=system_prompt,
+            question=user_prompt,
+            schema=schema,
         )
 
         # Parse the response
@@ -312,7 +321,9 @@ class EnhancedNLParser(NLParser):
         return enhanced_understanding
 
     def _update_query_history(
-        self, query: str, understanding: EnhancedQueryUnderstanding,
+        self,
+        query: str,
+        understanding: EnhancedQueryUnderstanding,
     ) -> None:
         """
         Update the query history with the latest query and its understanding.
@@ -326,8 +337,7 @@ class EnhancedNLParser(NLParser):
             "query": query,
             "intent": understanding.intent.primary_intent,
             "constraints": [
-                {"field": c.field, "operation": c.operation, "value": c.value}
-                for c in understanding.constraints
+                {"field": c.field, "operation": c.operation, "value": c.value} for c in understanding.constraints
             ],
             "timestamp": "now",  # In a real implementation, use actual timestamp
         }

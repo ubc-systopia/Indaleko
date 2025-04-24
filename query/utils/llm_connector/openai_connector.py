@@ -174,7 +174,10 @@ class OpenAIConnector(IndalekoLLMBase):
         return response.choices[0].message.content.strip()
 
     def answer_question(
-        self, context: str, question: str, schema: dict[str, Any],
+        self,
+        context: str,
+        question: str,
+        schema: dict[str, Any],
     ) -> dict[str, Any]:
         """
         Answer a question based on the given context using OpenAI's model.
@@ -218,7 +221,10 @@ class OpenAIConnector(IndalekoLLMBase):
         return completion.choices[0].message.content
 
     def get_completion(
-        self, context: str, question: str, schema: dict[str, Any],
+        self,
+        context: str,
+        question: str,
+        schema: dict[str, Any],
     ) -> openai.types.chat.parsed_chat_completion.ParsedChatCompletion:
         """
         Answer a question based on the given context using OpenAI's model.
@@ -251,7 +257,10 @@ class OpenAIConnector(IndalekoLLMBase):
         return completion
 
     def generate_text(
-        self, prompt: str, max_tokens: int = 500, temperature: float = 0.7,
+        self,
+        prompt: str,
+        max_tokens: int = 500,
+        temperature: float = 0.7,
     ) -> str:
         """
         Generate text based on the provided prompt.
@@ -276,7 +285,9 @@ class OpenAIConnector(IndalekoLLMBase):
         return response.choices[0].message.content.strip()
 
     def extract_semantic_attributes(
-        self, text: str, attr_types: list[str] = None,
+        self,
+        text: str,
+        attr_types: list[str] = None,
     ) -> dict[str, Any]:
         """
         Extract semantic attributes from text.

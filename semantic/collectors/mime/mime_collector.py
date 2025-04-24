@@ -192,7 +192,9 @@ class IndalekoSemanticMimeType(SemanticCollector):
         return result
 
     def create_mime_record(
-        self, file_path: str, object_id: uuid.UUID,
+        self,
+        file_path: str,
+        object_id: uuid.UUID,
     ) -> SemanticMimeDataModel:
         """
         Create a MIME type record for a file.
@@ -312,7 +314,8 @@ class IndalekoSemanticMimeType(SemanticCollector):
         # Create record
         record = IndalekoRecordDataModel(
             SourceIdentifier=IndalekoSourceIdentifierDataModel(
-                Identifier=str(self._provider_id), Version="1.0",
+                Identifier=str(self._provider_id),
+                Version="1.0",
             ),
             Timestamp=datetime.now(UTC),
             Attributes={},
@@ -335,7 +338,9 @@ class IndalekoSemanticMimeType(SemanticCollector):
         )
 
     def get_mime_type_for_file(
-        self, file_path: str, object_id: str | uuid.UUID,
+        self,
+        file_path: str,
+        object_id: str | uuid.UUID,
     ) -> dict[str, Any]:
         """
         Get MIME type for a file and create a semantic data record.
@@ -474,23 +479,22 @@ class TestMimeTypeDetector(unittest.TestCase):
         # Test HTML file
         html_mime = detector.detect_mime_type("test_html.html")
         self.assertTrue(
-            html_mime["mime_type"].startswith("text/html")
-            or html_mime["mime_type"] == "text/plain",
+            html_mime["mime_type"].startswith("text/html") or html_mime["mime_type"] == "text/plain",
         )  # Some magic implementations detect HTML as plain text
         self.assertEqual(html_mime["mime_type_from_extension"], "text/html")
 
         # Test binary file
         binary_mime = detector.detect_mime_type("test_binary.bin")
         self.assertTrue(
-            binary_mime["mime_type"].startswith("application/")
-            or binary_mime["mime_type"] == "text/plain",
+            binary_mime["mime_type"].startswith("application/") or binary_mime["mime_type"] == "text/plain",
         )  # Small binary files might be detected as text
 
     def test_collector_initialization(self):
         """Test collector initialization"""
         detector = IndalekoSemanticMimeType()
         self.assertEqual(
-            detector.get_collector_name(), "Content-Based MIME Type Detector",
+            detector.get_collector_name(),
+            "Content-Based MIME Type Detector",
         )
         self.assertEqual(
             detector.get_collector_id(),

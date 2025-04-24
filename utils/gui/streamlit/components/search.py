@@ -56,7 +56,8 @@ def render_search():
     col1, col2 = st.columns([3, 1])
     with col1:
         query = st.text_input(
-            "Enter your query", placeholder="Find documents about Indaleko",
+            "Enter your query",
+            placeholder="Find documents about Indaleko",
         )
     with col2:
         explain = st.checkbox("Explain query")
@@ -99,13 +100,13 @@ def render_search():
                 try:
                     # First run query execution regardless of explain mode
                     search_results = execute_query(
-                        query, st.session_state.db_service, debug=debug_mode,
+                        query,
+                        st.session_state.db_service,
+                        debug=debug_mode,
                     )
 
                     # If we didn't get any results, or got an error, fall back to mock data
-                    if not search_results or (
-                        isinstance(search_results, dict) and "error" in search_results
-                    ):
+                    if not search_results or (isinstance(search_results, dict) and "error" in search_results):
                         if debug_mode:
                             st.warning(
                                 "No results found or error encountered. Using mock data.",
@@ -140,13 +141,8 @@ def render_search():
                                 st.json(explain_results)
 
                     # Check if search results are actually explain results (error case)
-                    if (
-                        isinstance(search_results, dict)
-                        and "_is_explain_result" in search_results
-                    ):
-                        if (
-                            not explain
-                        ):  # Only show this if we're not already in explain mode
+                    if isinstance(search_results, dict) and "_is_explain_result" in search_results:
+                        if not explain:  # Only show this if we're not already in explain mode
                             st.subheader("Query Explanation (Error)")
                             st.warning(
                                 "Your search returned an explanation instead of results. This may indicate a problem.",
@@ -162,21 +158,14 @@ def render_search():
                     st.session_state.search_running = False
 
                     # Display the results immediately
-                    result_count = (
-                        len(search_results)
-                        if isinstance(search_results, (list, tuple))
-                        else 1
-                    )
+                    result_count = len(search_results) if isinstance(search_results, (list, tuple)) else 1
                     st.success(f"Found {result_count} results")
 
                     # Debug info in debug mode
                     if debug_mode:
                         result_type = type(search_results).__name__
                         st.info(f"Result type: {result_type}")
-                        if (
-                            isinstance(search_results, (list, tuple))
-                            and len(search_results) > 0
-                        ):
+                        if isinstance(search_results, (list, tuple)) and len(search_results) > 0:
                             sample_item = search_results[0]
                             st.info(f"First result type: {type(sample_item).__name__}")
                             if isinstance(sample_item, dict):

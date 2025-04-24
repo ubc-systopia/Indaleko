@@ -49,7 +49,8 @@ def example_process_pdf(pdf_path, skip_db=True):
 
     # Create processor with performance monitoring
     processor = UnstructuredProcessor(
-        skip_db_connection=skip_db, enable_performance_monitoring=True,
+        skip_db_connection=skip_db,
+        enable_performance_monitoring=True,
     )
 
     # Process the PDF
@@ -234,10 +235,14 @@ def main():
     parser.add_argument("--pdf", help="Path to a PDF file to process")
     parser.add_argument("--dir", help="Path to a directory to process")
     parser.add_argument(
-        "--experiment", action="store_true", help="Run a performance experiment",
+        "--experiment",
+        action="store_true",
+        help="Run a performance experiment",
     )
     parser.add_argument(
-        "--use-db", action="store_true", help="Connect to the database for storage",
+        "--use-db",
+        action="store_true",
+        help="Connect to the database for storage",
     )
 
     args = parser.parse_args()

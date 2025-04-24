@@ -1,13 +1,15 @@
-from typing import Dict, Any, Tuple, Union, Callable
 import random
 import uuid
-from faker import Faker
 from datetime import datetime
+from typing import Any
+
+from faker import Faker
+
+from data_generator.scripts.metadata.metadata import Metadata
+from data_models.i_uuid import IndalekoUUIDDataModel
 from data_models.record import IndalekoRecordDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
-from data_models.i_uuid import IndalekoUUIDDataModel
 from semantic.data_models.base_data_model import BaseSemanticDataModel
-from data_generator.scripts.metadata.metadata import Metadata
 
 
 class SemanticMetadata(Metadata):
@@ -56,10 +58,12 @@ class SemanticMetadata(Metadata):
         self,
         record_data: IndalekoRecordDataModel,
         IO_UUID: str,
-        semantic_attributes_data: list[Dict[str, Any]],
+        semantic_attributes_data: list[dict[str, Any]],
     ) -> BaseSemanticDataModel:
         return self._generate_semantic_data(
-            record_data, IO_UUID, semantic_attributes_data
+            record_data,
+            IO_UUID,
+            semantic_attributes_data,
         )
 
     def create_semantic_attribute(
@@ -70,7 +74,7 @@ class SemanticMetadata(Metadata):
         truth_like: bool,
         truthlike_attributes: list[str],
         has_semantic: bool,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Creates the semantic attribute data based on semantic attribute datamodel"""
         # text based files supported by the metadata generator
         list_semantic_attribute = []
@@ -92,7 +96,8 @@ class SemanticMetadata(Metadata):
                 for label, context in content.items():
                     semantic_attribute = IndalekoSemanticAttributeDataModel(
                         Identifier=IndalekoUUIDDataModel(
-                            Identifier=semantic_UUID, Label=label
+                            Identifier=semantic_UUID,
+                            Label=label,
                         ),
                         Value=context,
                     )
@@ -100,7 +105,8 @@ class SemanticMetadata(Metadata):
             else:
                 semantic_attribute = IndalekoSemanticAttributeDataModel(
                     Identifier=IndalekoUUIDDataModel(
-                        Identifier=semantic_UUID, Label=content
+                        Identifier=semantic_UUID,
+                        Label=content,
                     ),
                     Value=content,
                 )
@@ -111,7 +117,7 @@ class SemanticMetadata(Metadata):
         self,
         record_data: IndalekoRecordDataModel,
         IO_UUID: str,
-        semantic_attributes_data: list[Dict[str, Any]],
+        semantic_attributes_data: list[dict[str, Any]],
     ) -> BaseSemanticDataModel:
         """Returns the semantic data created from the data model"""
         return BaseSemanticDataModel(
@@ -129,7 +135,7 @@ class SemanticMetadata(Metadata):
         truth_like: bool,
         truthlike_attributes: list[str],
         has_semantic: bool,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generates semantic metadata with given parameters"""
         data_list = []
         all_semantics_attributes = {
@@ -144,10 +150,14 @@ class SemanticMetadata(Metadata):
         if self.selected_md is not None and (has_semantic or is_truth_file):
             for content_type, content in self.selected_md.items():
                 if self._define_truth_attribute(
-                    content_type, is_truth_file, truth_like, truthlike_attributes
+                    content_type,
+                    is_truth_file,
+                    truth_like,
+                    truthlike_attributes,
                 ):
                     semantic_data = self._generate_semantic_content_data(
-                        extension, last_modified
+                        extension,
+                        last_modified,
                     )
                     # Create a copy of content to avoid mutating the original
                     content_copy = content.copy()
@@ -157,16 +167,19 @@ class SemanticMetadata(Metadata):
                     data_list.append(content_copy)
             data_list.append({"LastModified": last_modified, "FileType": extension})
         else:
-            for _ in range(0, random.randint(1, 3)):
+            for _ in range(random.randint(1, 3)):
                 semantic_data = self._generate_semantic_content_data(
-                    extension, last_modified
+                    extension,
+                    last_modified,
                 )
                 data_list.append(semantic_data)
         return data_list
 
     def _generate_semantic_content_data(
-        self, extension: str, last_modified: str
-    ) -> Dict[str, Any]:
+        self,
+        extension: str,
+        last_modified: str,
+    ) -> dict[str, Any]:
         """
         Generate random semnatic content
         """

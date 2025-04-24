@@ -232,7 +232,9 @@ def get_file_attributes_text(file_attributes: int) -> str:
 
 
 def parse_usn_record_v2(
-    data: bytes, offset: int, debug: bool = False,
+    data: bytes,
+    offset: int,
+    debug: bool = False,
 ) -> tuple[dict[str, Any], int]:
     """
     Parse a Version 2 USN record from binary data.
@@ -282,9 +284,7 @@ def parse_usn_record_v2(
         filename = ""
         if filename_start + file_name_length <= len(data):
             try:
-                filename = data[
-                    filename_start : filename_start + file_name_length
-                ].decode("utf-16-le")
+                filename = data[filename_start : filename_start + file_name_length].decode("utf-16-le")
             except Exception as e:
                 filename = f"<Decode Error: {data[filename_start:filename_start+file_name_length].hex()}>"
                 if debug:
@@ -426,7 +426,8 @@ def open_volume(volume: str, debug: bool = False) -> int | None:
 
 
 def query_journal_info_ctypes(
-    handle: int, debug: bool = False,
+    handle: int,
+    debug: bool = False,
 ) -> dict[str, Any] | None:
     """
     Query USN journal information using ctypes.
@@ -528,7 +529,10 @@ def query_journal_info(handle: int, debug: bool = False) -> dict[str, Any] | Non
     # Query USN journal info
     try:
         journal_data = win32file.DeviceIoControl(
-            handle, FSCTL_QUERY_USN_JOURNAL, None, 1024,
+            handle,
+            FSCTL_QUERY_USN_JOURNAL,
+            None,
+            1024,
         )
         if debug:
             logger.debug(
@@ -541,21 +545,9 @@ def query_journal_info(handle: int, debug: bool = False) -> dict[str, Any] | Non
         first_usn = struct.unpack("<Q", journal_data[8:16])[0]
         next_usn = struct.unpack("<Q", journal_data[16:24])[0]
         lowest_valid_usn = struct.unpack("<Q", journal_data[24:32])[0]
-        max_usn = (
-            struct.unpack("<Q", journal_data[32:40])[0]
-            if len(journal_data) >= 40
-            else 0
-        )
-        max_size = (
-            struct.unpack("<Q", journal_data[40:48])[0]
-            if len(journal_data) >= 48
-            else 0
-        )
-        alloc_delta = (
-            struct.unpack("<Q", journal_data[48:56])[0]
-            if len(journal_data) >= 56
-            else 0
-        )
+        max_usn = struct.unpack("<Q", journal_data[32:40])[0] if len(journal_data) >= 40 else 0
+        max_size = struct.unpack("<Q", journal_data[40:48])[0] if len(journal_data) >= 48 else 0
+        alloc_delta = struct.unpack("<Q", journal_data[48:56])[0] if len(journal_data) >= 56 else 0
 
         journal_info = {
             "journal_id": journal_id,
@@ -625,7 +617,10 @@ def create_journal(
 
 
 def read_journal_records_ctypes(
-    handle: int, journal_id: int, start_usn: int, debug: bool = False,
+    handle: int,
+    journal_id: int,
+    start_usn: int,
+    debug: bool = False,
 ) -> list[dict[str, Any]]:
     """
     Read records from the USN journal using ctypes approach.
@@ -800,7 +795,10 @@ def read_journal_records(
         # Read journal data
         try:
             read_data = win32file.DeviceIoControl(
-                handle, FSCTL_ENUM_USN_DATA, buffer_in, 65536,
+                handle,
+                FSCTL_ENUM_USN_DATA,
+                buffer_in,
+                65536,
             )
 
             if debug:
@@ -844,7 +842,10 @@ def read_journal_records(
 
                         # Try with adjusted start_usn
                         read_data = win32file.DeviceIoControl(
-                            handle, FSCTL_ENUM_USN_DATA, buffer_in, 65536,
+                            handle,
+                            FSCTL_ENUM_USN_DATA,
+                            buffer_in,
+                            65536,
                         )
 
                         if debug:
@@ -910,7 +911,11 @@ def read_journal_records(
 
             # Pack only the first two fields (JournalID and StartUSN)
             struct.pack_into(
-                "<QQ", buffer, 0, journal_id, start_usn,  # JournalID (8 bytes)
+                "<QQ",
+                buffer,
+                0,
+                journal_id,
+                start_usn,  # JournalID (8 bytes)
             )  # StartUSN (8 bytes)
 
             # The rest of the buffer is left as zeros
@@ -943,7 +948,8 @@ def read_journal_records(
                     else:
                         # Create the buffer with this format (for backward compatibility)
                         buffer_in = struct.pack(
-                            format_info["format"], *format_info["args"],
+                            format_info["format"],
+                            *format_info["args"],
                         )
 
                     if debug:
@@ -951,7 +957,10 @@ def read_journal_records(
 
                     # Read journal data
                     read_data = win32file.DeviceIoControl(
-                        handle, FSCTL_READ_USN_JOURNAL, buffer_in, 65536,
+                        handle,
+                        FSCTL_READ_USN_JOURNAL,
+                        buffer_in,
+                        65536,
                     )
 
                     if debug:
@@ -1042,7 +1051,9 @@ def get_open_volume_handle_ctypes(volume: str, debug: bool = False) -> int | Non
 
 
 def get_usn_journal_records(
-    volume: str, start_usn: int | None = None, debug: bool = False,
+    volume: str,
+    start_usn: int | None = None,
+    debug: bool = False,
 ) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
     """
     Get records from the USN journal for a specific volume.
@@ -1081,7 +1092,10 @@ def get_usn_journal_records(
 
                 journal_id = journal_info.get("journal_id", 0)
                 records = read_journal_records_ctypes(
-                    ctypes_handle, journal_id, start_usn, debug,
+                    ctypes_handle,
+                    journal_id,
+                    start_usn,
+                    debug,
                 )
 
                 # Close the handle
@@ -1169,10 +1183,7 @@ def determine_activity_type(reason_flags: int) -> str:
     if reason_flags & USN_REASON_FILE_DELETE:
         return StorageActivityType.DELETE
 
-    if (
-        reason_flags & USN_REASON_RENAME_OLD_NAME
-        or reason_flags & USN_REASON_RENAME_NEW_NAME
-    ):
+    if reason_flags & USN_REASON_RENAME_OLD_NAME or reason_flags & USN_REASON_RENAME_NEW_NAME:
         return StorageActivityType.RENAME
 
     # Second priority: content changes
@@ -1213,7 +1224,9 @@ def determine_activity_type(reason_flags: int) -> str:
 
 
 def create_test_files(
-    volume: str, num_files: int = 3, debug: bool = False,
+    volume: str,
+    num_files: int = 3,
+    debug: bool = False,
 ) -> list[str]:
     """
     Create test files on the specified volume to generate USN journal activity.

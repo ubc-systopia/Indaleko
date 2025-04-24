@@ -20,11 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+from datetime import UTC, datetime
 
-from typing import Optional
-from datetime import datetime, timezone
-
-from pydantic import Field, field_validator, AwareDatetime
+from pydantic import AwareDatetime, Field, field_validator
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -36,27 +34,32 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from activity.data_model.activity import IndalekoActivityDataModel
 from data_models.base import IndalekoBaseModel
+
 # pylint: enable=wrong-import-position
 
 
 class LocationDataModel(IndalekoBaseModel):
     latitude: float = Field(..., description="Latitude coordinate of the location")
     longitude: float = Field(..., description="Longitude coordinate of the location")
-    altitude: Optional[float] = Field(
-        None, description="Altitude of the location, if available"
+    altitude: float | None = Field(
+        None,
+        description="Altitude of the location, if available",
     )
-    accuracy: Optional[float] = Field(None, description="Accuracy of the location data")
-    heading: Optional[float] = Field(None, description="Heading/direction of movement")
-    speed: Optional[float] = Field(None, description="Speed of movement")
+    accuracy: float | None = Field(None, description="Accuracy of the location data")
+    heading: float | None = Field(None, description="Heading/direction of movement")
+    speed: float | None = Field(None, description="Speed of movement")
     timestamp: AwareDatetime = Field(
-        ..., description="Timestamp when the location was recorded"
+        ...,
+        description="Timestamp when the location was recorded",
     )
     source: str = Field(
-        ..., description="Source of the location data, e.g., 'GPS', 'IP', etc."
+        ...,
+        description="Source of the location data, e.g., 'GPS', 'IP', etc.",
     )
 
     class Config:
-        '''Sample configuration for the data model'''
+        """Sample configuration for the data model"""
+
         json_schema_extra = {
             "example": {
                 "latitude": 49.2827,
@@ -67,7 +70,7 @@ class LocationDataModel(IndalekoBaseModel):
                 "speed": 10.5,
                 "timestamp": "2023-09-21T10:30:00Z",
                 "source": "GPS",
-            }
+            },
         }
 
 
@@ -76,7 +79,7 @@ class BaseLocationDataModel(IndalekoActivityDataModel):
     Location: LocationDataModel = Field(
         ...,
         title="Location",
-        description="The location data."
+        description="The location data.",
     )
 
     @classmethod
@@ -86,7 +89,7 @@ class BaseLocationDataModel(IndalekoActivityDataModel):
         if isinstance(value, str):
             value = datetime.fromisoformat(value)
         if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
+            value = value.replace(tzinfo=UTC)
         return value
 
     class Config:

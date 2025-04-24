@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any
+from typing import Any
 
 
 class ExecutorBase(ABC):
@@ -8,7 +8,7 @@ class ExecutorBase(ABC):
     """
 
     @abstractmethod
-    def execute(self, query: str, data_connector: Any) -> List[Dict[str, Any]]:
+    def execute(self, query: str, data_connector: Any) -> list[dict[str, Any]]:
         """
         Execute the query using the provided data connector.
 
@@ -33,7 +33,7 @@ class ExecutorBase(ABC):
         """
 
     @abstractmethod
-    def format_results(self, raw_results: Any) -> List[Dict[str, Any]]:
+    def format_results(self, raw_results: Any) -> list[dict[str, Any]]:
         """
         Format the raw query results into a standardized format.
 

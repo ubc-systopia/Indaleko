@@ -46,20 +46,27 @@ def test_create_memory():
 
     # Add test data
     memory.add_long_term_goal(
-        "File Organization", "Organize personal documents by project and year",
+        "File Organization",
+        "Organize personal documents by project and year",
     )
     memory.update_goal_progress("File Organization", 0.35)
 
     memory.add_insight(
-        "organization", "User frequently searches for PDF documents", 0.8,
+        "organization",
+        "User frequently searches for PDF documents",
+        0.8,
     )
     memory.add_insight(
-        "retrieval", "Location-based search helps narrow down results", 0.7,
+        "retrieval",
+        "Location-based search helps narrow down results",
+        0.7,
     )
 
     # Update preferences
     memory._add_or_update_preference(
-        "search", "Prefers detailed results over summaries", 0.85,
+        "search",
+        "Prefers detailed results over summaries",
+        0.85,
     )
 
     # Add topic
@@ -108,11 +115,10 @@ def verify_collection():
     # Get most recent document
     if count > 0:
         # Use AQL to sort by timestamp in descending order
-        aql = (
-            "FOR doc IN @@collection SORT doc.Record.Timestamp DESC LIMIT 1 RETURN doc"
-        )
+        aql = "FOR doc IN @@collection SORT doc.Record.Timestamp DESC LIMIT 1 RETURN doc"
         cursor = db_config._arangodb.aql.execute(
-            aql, bind_vars={"@collection": collection_name},
+            aql,
+            bind_vars={"@collection": collection_name},
         )
         documents = [doc for doc in cursor]
 
@@ -182,7 +188,9 @@ def test_load_memory():
     if memory.memory.semantic_topics:
         print("\nTopics:")
         for topic, importance in sorted(
-            memory.memory.semantic_topics.items(), key=lambda x: x[1], reverse=True,
+            memory.memory.semantic_topics.items(),
+            key=lambda x: x[1],
+            reverse=True,
         ):
             print(f"- {topic}: {importance:.2f}")
 
@@ -214,16 +222,24 @@ def main():
     """Main function for the test script."""
     parser = argparse.ArgumentParser(description="Test the Archivist memory system")
     parser.add_argument(
-        "--create", action="store_true", help="Create and save test memory data",
+        "--create",
+        action="store_true",
+        help="Create and save test memory data",
     )
     parser.add_argument(
-        "--verify", action="store_true", help="Verify the Archivist memory collection",
+        "--verify",
+        action="store_true",
+        help="Verify the Archivist memory collection",
     )
     parser.add_argument(
-        "--load", action="store_true", help="Load memory from the database",
+        "--load",
+        action="store_true",
+        help="Load memory from the database",
     )
     parser.add_argument(
-        "--list", action="store_true", help="List all collections in the database",
+        "--list",
+        action="store_true",
+        help="List all collections in the database",
     )
     parser.add_argument("--all", action="store_true", help="Run all tests")
 

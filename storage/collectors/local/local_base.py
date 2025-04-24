@@ -22,11 +22,11 @@ import argparse
 import inspect
 import logging
 import os
-from pathlib import Path
 import sys
 import uuid
-
-from typing import Union, Callable, Any
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any
 
 from icecream import ic
 
@@ -42,10 +42,10 @@ from data_models import IndalekoSourceIdentifierDataModel
 from perf.perf_collector import IndalekoPerformanceDataCollector
 from perf.perf_recorder import IndalekoPerformanceDataRecorder
 from platforms.machine_config import IndalekoMachineConfig
+from storage.collectors import BaseStorageCollector
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.runner import IndalekoCLIRunner
-from storage.collectors import BaseStorageCollector
 
 # pylint: enable=wrong-import-position
 
@@ -58,7 +58,7 @@ class BaseLocalStorageCollector(BaseStorageCollector):
         if "args" in kwargs:
             self.args = kwargs["args"]
             self.output_type = getattr(self.args, "output_type", "file")
-            kwargs["storage_description"] = getattr(self.args, "storage")
+            kwargs["storage_description"] = self.args.storage
         else:
             self.args = None
             self.output_type = "file"
@@ -72,19 +72,20 @@ class BaseLocalStorageCollector(BaseStorageCollector):
             ic(f"load_machine_config: {keys}")
         if "machine_config_file" not in keys:
             raise ValueError(
-                f"{inspect.currentframe().f_code.co_name}: machine_config_file must be specified"
+                f"{inspect.currentframe().f_code.co_name}: machine_config_file must be specified",
             )
         offline = keys.get("offline", False)
         platform_class = keys["class"]  # must exist
         return platform_class.load_config_from_file(
-            config_file=str(keys["machine_config_file"]), offline=offline
+            config_file=str(keys["machine_config_file"]),
+            offline=offline,
         )
 
     @staticmethod
     def get_local_storage_collector() -> "BaseLocalStorageCollector":
         """This function should be overridden: it is used to create the appropriate local storage recorder."""
         raise NotImplementedError(
-            "This function must be overridden by the derived class"
+            "This function must be overridden by the derived class",
         )
 
     @staticmethod
@@ -97,7 +98,7 @@ class BaseLocalStorageCollector(BaseStorageCollector):
     class local_collector_mixin(IndalekoBaseCLI.default_handler_mixin):
 
         @staticmethod
-        def get_pre_parser() -> Union[argparse.ArgumentParser, None]:
+        def get_pre_parser() -> argparse.ArgumentParser | None:
             """This method is used to get the pre-parser"""
             parser = argparse.ArgumentParser(add_help=False)
             default_path = os.path.expanduser("~")
@@ -121,7 +122,7 @@ class BaseLocalStorageCollector(BaseStorageCollector):
             return pre_parser
 
     @staticmethod
-    def local_run(keys: dict[str, str]) -> Union[dict, None]:
+    def local_run(keys: dict[str, str]) -> dict | None:
         """Run the collector"""
         args = keys["args"]  # must be there.
         cli = keys["cli"]  # must be there.
@@ -138,11 +139,11 @@ class BaseLocalStorageCollector(BaseStorageCollector):
             "machine_config": cli.handler_mixin.load_machine_config(
                 {
                     "machine_config_file": str(
-                        Path(args.configdir) / args.machine_config
+                        Path(args.configdir) / args.machine_config,
                     ),
                     "offline": args.offline,
                     "class": machine_config_class,
-                }
+                },
             ),
             "timestamp": config_data["Timestamp"],
             "path": args.path,
@@ -165,7 +166,8 @@ class BaseLocalStorageCollector(BaseStorageCollector):
                 return {}
 
         def capture_performance(
-            task_func: Callable[..., Any], output_file_name: Union[Path, str] = None
+            task_func: Callable[..., Any],
+            output_file_name: Path | str = None,
         ):
             perf_data = IndalekoPerformanceDataCollector.measure_performance(
                 task_func,
@@ -184,7 +186,7 @@ class BaseLocalStorageCollector(BaseStorageCollector):
                 perf_recorder = IndalekoPerformanceDataRecorder()
                 if args.performance_file:
                     perf_file = str(
-                        Path(args.datadir) / config_data["PerformanceDataFile"]
+                        Path(args.datadir) / config_data["PerformanceDataFile"],
                     )
                     perf_recorder.add_data_to_file(perf_file, perf_data)
                     if debug:

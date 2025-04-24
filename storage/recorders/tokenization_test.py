@@ -18,9 +18,9 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import json
 import os
 import sys
-import json
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -36,30 +36,45 @@ def test_tokenize_filename():
     """Test the tokenize_filename function."""
     test_cases = [
         # CamelCase
-        ("IndalekoObject", {
-            "CamelCaseTokenizedName": "Indaleko Object",
-            "SnakeCaseTokenizedName": "IndalekoObject"
-        }),
+        (
+            "IndalekoObject",
+            {
+                "CamelCaseTokenizedName": "Indaleko Object",
+                "SnakeCaseTokenizedName": "IndalekoObject",
+            },
+        ),
         # snake_case
-        ("indaleko_object", {
-            "CamelCaseTokenizedName": "indaleko_object",
-            "SnakeCaseTokenizedName": "indaleko object"
-        }),
+        (
+            "indaleko_object",
+            {
+                "CamelCaseTokenizedName": "indaleko_object",
+                "SnakeCaseTokenizedName": "indaleko object",
+            },
+        ),
         # Mixed case with numbers and special chars
-        ("MyFile-v1.2_FINAL.txt", {
-            "CamelCaseTokenizedName": "My File-v1.2_FINAL.txt",
-            "SnakeCaseTokenizedName": "MyFile-v1.2 FINAL.txt"  # Note space instead of underscore
-        }),
+        (
+            "MyFile-v1.2_FINAL.txt",
+            {
+                "CamelCaseTokenizedName": "My File-v1.2_FINAL.txt",
+                "SnakeCaseTokenizedName": "MyFile-v1.2 FINAL.txt",  # Note space instead of underscore
+            },
+        ),
         # Windows path
-        ("C:\\Users\\TonyMason\\Documents\\Project Report.docx", {
-            "CamelCaseTokenizedName": "Project Report.docx",
-            "SnakeCaseTokenizedName": "Project Report.docx"
-        }),
+        (
+            "C:\\Users\\TonyMason\\Documents\\Project Report.docx",
+            {
+                "CamelCaseTokenizedName": "Project Report.docx",
+                "SnakeCaseTokenizedName": "Project Report.docx",
+            },
+        ),
         # Linux path
-        ("/home/tony/Documents/ProjectReport.md", {
-            "CamelCaseTokenizedName": "Project Report.md",
-            "SnakeCaseTokenizedName": "ProjectReport.md"
-        }),
+        (
+            "/home/tony/Documents/ProjectReport.md",
+            {
+                "CamelCaseTokenizedName": "Project Report.md",
+                "SnakeCaseTokenizedName": "ProjectReport.md",
+            },
+        ),
     ]
 
     for filename, expected_partial in test_cases:

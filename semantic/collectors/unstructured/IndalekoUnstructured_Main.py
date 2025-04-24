@@ -56,7 +56,8 @@ def get_local_image_version(image_name, image_tag):
     result = subprocess.run(
         ["docker", "images", "--format", "{{.Repository}}:{{.Tag}}"],
         capture_output=True,
-        text=True, check=False,
+        text=True,
+        check=False,
     )
     images = result.stdout.splitlines()
     image_full_name = f"{image_name}:{image_tag}"
@@ -96,7 +97,8 @@ def container_exists(container_name):
     result = subprocess.run(
         ["docker", "ps", "-aq", "-f", f"name=^{container_name}$"],
         capture_output=True,
-        text=True, check=False,
+        text=True,
+        check=False,
     )
     return bool(result.stdout.strip())
 

@@ -6,10 +6,10 @@ Project Indaleko
 
 import os
 import sys
+from typing import Any
 
-from typing import Any, Dict
-from icecream import ic
 import requests
+from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -19,11 +19,11 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from activity.collectors.ambient.smart_thermostat.smart_thermostat import (
-    SmartThermostatCollector,
-)
 from activity.collectors.ambient.smart_thermostat.nest_data_model import (
     NestAmbientDataModel,
+)
+from activity.collectors.ambient.smart_thermostat.smart_thermostat import (
+    SmartThermostatCollector,
 )
 
 # pylint: enable=wrong-import-position
@@ -80,7 +80,7 @@ class NestSmartThermostatCollector(SmartThermostatCollector):
                         "connected_sensors": len(
                             device["traits"]["sdm.devices.traits.Temperature"][
                                 "ambientTemperatureCelsius"
-                            ]
+                            ],
                         ),
                         "average_temperature": device["traits"][
                             "sdm.devices.traits.Temperature"
@@ -88,7 +88,7 @@ class NestSmartThermostatCollector(SmartThermostatCollector):
                     }
                     self.data = NestAmbientDataModel(**raw_data)
 
-    def process_data(self, data: Any) -> Dict[str, Any]:
+    def process_data(self, data: Any) -> dict[str, Any]:
         """
         Process the collected data.
         """
@@ -96,7 +96,7 @@ class NestSmartThermostatCollector(SmartThermostatCollector):
         # Example: Convert processed data to a dictionary
         return self.data.dict()
 
-    def store_data(self, data: Dict[str, Any]) -> None:
+    def store_data(self, data: dict[str, Any]) -> None:
         """
         Store the processed data.
         """
@@ -104,7 +104,7 @@ class NestSmartThermostatCollector(SmartThermostatCollector):
         # Example: Print data to simulate storing
         print("Storing data:", data)
 
-    def get_latest_db_update(self) -> Dict[str, Any]:
+    def get_latest_db_update(self) -> dict[str, Any]:
         """
         Get the latest data update from the database.
         """

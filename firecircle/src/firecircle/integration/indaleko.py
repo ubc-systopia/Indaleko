@@ -197,7 +197,9 @@ class IndalekoIntegration:
             return {"error": str(e)}
 
     def export_circle_insights(
-        self, insights: list[InsightMemory], store_in_archivist: bool = True,
+        self,
+        insights: list[InsightMemory],
+        store_in_archivist: bool = True,
     ) -> bool:
         """
         Export insights from the Fire Circle to Indaleko.
@@ -222,7 +224,9 @@ class IndalekoIntegration:
         return success
 
     def export_circle_conversation(
-        self, conversation: ConversationMemory, store_in_archivist: bool = True,
+        self,
+        conversation: ConversationMemory,
+        store_in_archivist: bool = True,
     ) -> str | None:
         """
         Export a conversation from the Fire Circle to Indaleko.
@@ -241,7 +245,9 @@ class IndalekoIntegration:
         return None
 
     def get_relevant_archivist_memories(
-        self, query: str, max_results: int = 5,
+        self,
+        query: str,
+        max_results: int = 5,
     ) -> list[dict[str, Any]]:
         """
         Get relevant memories from the Archivist.

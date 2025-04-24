@@ -18,15 +18,13 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from datetime import datetime, timezone
 import os
 import sys
+from datetime import UTC, datetime
 from uuid import UUID
 
-from pydantic import Field, AwareDatetime
-from typing import Union
-
 from icecream import ic
+from pydantic import AwareDatetime, Field
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -41,6 +39,7 @@ from data_models.provenance_operations import ProvenanceOperations
 from data_models.record import IndalekoRecordDataModel
 
 # pylint: enable=wrong-import-position
+
 
 class BaseProvenanceDataModel(IndalekoBaseModel):
     """This is the base data model for provenance information"""
@@ -69,7 +68,7 @@ class BaseProvenanceDataModel(IndalekoBaseModel):
         description="The operation that was performed on the data.",
     )
 
-    Timestamp: Union[AwareDatetime, None] = Field(
+    Timestamp: AwareDatetime | None = Field(
         None,
         title="Timestamp",
         description="The timestamp of the operation.",
@@ -82,12 +81,14 @@ class BaseProvenanceDataModel(IndalekoBaseModel):
         def generate_example():
             """Generate an example for the data model"""
             example = IndalekoRecordDataModel.Config.json_schema_extra["example"]
-            example.update({
-                "Source": str(UUID(int=0)),
-                "Target": str(UUID(int=0)),
-                "Operation": "copy",
-                "Timestamp": datetime.now(timezone.utc).isoformat(),
-            })
+            example.update(
+                {
+                    "Source": str(UUID(int=0)),
+                    "Target": str(UUID(int=0)),
+                    "Operation": "copy",
+                    "Timestamp": datetime.now(UTC).isoformat(),
+                },
+            )
             return example
 
         json_schema_extra = {

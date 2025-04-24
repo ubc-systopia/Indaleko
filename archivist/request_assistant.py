@@ -48,7 +48,8 @@ class Message(BaseModel):
     """A message in a conversation."""
 
     role: str = Field(
-        ..., description="The role of the message sender (user, assistant, system)",
+        ...,
+        description="The role of the message sender (user, assistant, system)",
     )
     content: str = Field(..., description="The content of the message")
     timestamp: datetime = Field(
@@ -76,7 +77,8 @@ class ConversationState(BaseModel):
     )
 
     messages: list[Message] = Field(
-        default_factory=list, description="The messages in this conversation",
+        default_factory=list,
+        description="The messages in this conversation",
     )
 
     execution_context: dict[str, Any] = Field(
@@ -196,7 +198,8 @@ class RequestAssistant:
         # Check if the assistant configuration is stored on disk
         config_dir = os.path.join(os.environ.get("INDALEKO_ROOT"), "config")
         assistant_config_file = os.path.join(
-            config_dir, "request-assistant-config.json",
+            config_dir,
+            "request-assistant-config.json",
         )
 
         if os.path.exists(assistant_config_file):
@@ -257,9 +260,7 @@ class RequestAssistant:
             collection_names = self.db_config._arangodb.collections()
 
             # Filter to exclude system collections
-            collection_names = [
-                name for name in collection_names if not name.startswith("_")
-            ]
+            collection_names = [name for name in collection_names if not name.startswith("_")]
 
             # Add information about available collections
             instructions += f"Available collections in the database: {', '.join(collection_names)}\n\n"
@@ -280,9 +281,7 @@ class RequestAssistant:
                     instructions += self._get_collection_schema_summary(name)
 
             # Check if we're close to token limit before adding others
-            if (
-                self._calculate_token_estimate(instructions) < 10000
-            ):  # Safe limit for instructions
+            if self._calculate_token_estimate(instructions) < 10000:  # Safe limit for instructions
                 # Add other collections
                 for name in collection_names:
                     if name not in primary_collections:
@@ -301,7 +300,9 @@ class RequestAssistant:
 
         except Exception as e:
             ic(f"Error getting schema information: {e}")
-            instructions += "Error retrieving schema information. Schema information will be provided during operation.\n"
+            instructions += (
+                "Error retrieving schema information. Schema information will be provided during operation.\n"
+            )
 
         return instructions
 
@@ -324,9 +325,7 @@ class RequestAssistant:
             # Get collection information and properties
             collection_info = collection.properties()
             summary += f"- Type: {'Edge' if collection_info.get('type') == 3 else 'Document'} collection\n"
-            summary += (
-                f"- System: {'Yes' if collection_info.get('isSystem') else 'No'}\n"
-            )
+            summary += f"- System: {'Yes' if collection_info.get('isSystem') else 'No'}\n"
 
             # Count documents
             count = collection.count()
@@ -437,7 +436,9 @@ class RequestAssistant:
                 return 1000  # Assume it's a large object
 
     def _summarize_schema(
-        self, schema: dict[str, Any], max_tokens: int = 1000,
+        self,
+        schema: dict[str, Any],
+        max_tokens: int = 1000,
     ) -> dict[str, Any]:
         """
         Summarize a schema to reduce token usage, focusing on essential information.
@@ -497,7 +498,8 @@ class RequestAssistant:
                     simplified_prop = {
                         "type": prop_value.get("type", "object"),
                         "description": prop_value.get(
-                            "description", f"Property {prop_name}",
+                            "description",
+                            f"Property {prop_name}",
                         ),
                     }
 
@@ -526,9 +528,7 @@ class RequestAssistant:
             summary["required"] = schema["required"]
 
         # Add a note about summarization
-        summary["note"] = (
-            "This schema has been summarized to reduce token usage. Some details may be omitted."
-        )
+        summary["note"] = "This schema has been summarized to reduce token usage. Some details may be omitted."
 
         return summary
 
@@ -570,7 +570,9 @@ class RequestAssistant:
         return self.conversations.get(conversation_id)
 
     def execute_tool(
-        self, tool_call: dict[str, Any], conversation_id: str,
+        self,
+        tool_call: dict[str, Any],
+        conversation_id: str,
     ) -> dict[str, Any]:
         """
         Execute a tool call from the assistant.
@@ -626,7 +628,8 @@ class RequestAssistant:
 
                     if self.progress_callback:
                         self.progress_callback(
-                            f"Retrieved from cache: {function_name}", 1.0,
+                            f"Retrieved from cache: {function_name}",
+                            1.0,
                         )
 
                     # Skip further processing and return this cached result
@@ -692,11 +695,7 @@ class RequestAssistant:
         if tool_name == "query_executor":
             # Handle large query results
             return self._process_query_results(result)
-        elif (
-            tool_name == "nl_parser"
-            and isinstance(result, dict)
-            and "collections" in result
-        ):
+        elif tool_name == "nl_parser" and isinstance(result, dict) and "collections" in result:
             # Handle large NL parser results
             return self._process_nl_parser_results(result)
         elif isinstance(result, list):
@@ -784,11 +783,7 @@ class RequestAssistant:
 
                         simplified_plan["node_summary"] = node_types
                         # Include a couple of sample nodes
-                        simplified_plan["sample_nodes"] = (
-                            plan["nodes"][:2]
-                            if len(plan["nodes"]) > 2
-                            else plan["nodes"]
-                        )
+                        simplified_plan["sample_nodes"] = plan["nodes"][:2] if len(plan["nodes"]) > 2 else plan["nodes"]
 
                 processed_result["execution_plan"] = simplified_plan
                 processed_result["plan_simplified"] = True
@@ -952,9 +947,7 @@ class RequestAssistant:
                 current_estimate += field_tokens
             else:
                 # Mark that we had to truncate
-                processed_result["..."] = (
-                    "Additional fields omitted to manage token usage"
-                )
+                processed_result["..."] = "Additional fields omitted to manage token usage"
                 break
 
         return processed_result
@@ -984,7 +977,9 @@ class RequestAssistant:
         }
 
     def process_message(
-        self, conversation_id: str, message_content: str,
+        self,
+        conversation_id: str,
+        message_content: str,
     ) -> dict[str, Any]:
         """
         Process a user message in the conversation.
@@ -1013,12 +1008,15 @@ class RequestAssistant:
 
         # Add the message to the thread
         self.client.beta.threads.messages.create(
-            thread_id=thread_id, role="user", content=message_content,
+            thread_id=thread_id,
+            role="user",
+            content=message_content,
         )
 
         # Create a run with the assistant
         run = self.client.beta.threads.runs.create(
-            thread_id=thread_id, assistant_id=self.assistant_id,
+            thread_id=thread_id,
+            assistant_id=self.assistant_id,
         )
 
         # Wait for the run to complete or require action
@@ -1038,9 +1036,7 @@ class RequestAssistant:
         """
         # Extract conversation for memory updating
         user_messages = [msg for msg in conversation.messages if msg.role == "user"]
-        assistant_messages = [
-            msg for msg in conversation.messages if msg.role == "assistant"
-        ]
+        assistant_messages = [msg for msg in conversation.messages if msg.role == "assistant"]
 
         if not user_messages:
             return
@@ -1058,24 +1054,19 @@ class RequestAssistant:
                 )
 
             # Look for time references
-            if any(
-                time_ref in content
-                for time_ref in ["yesterday", "last week", "recent", "old", "new"]
-            ):
+            if any(time_ref in content for time_ref in ["yesterday", "last week", "recent", "old", "new"]):
                 self.archivist_memory.add_insight(
-                    "temporal", "User often uses temporal constraints in searches", 0.7,
+                    "temporal",
+                    "User often uses temporal constraints in searches",
+                    0.7,
                 )
 
             # Look for format preferences
-            if "format" in content or any(
-                fmt in content
-                for fmt in ["pdf", "doc", "image", "photo", "spreadsheet"]
-            ):
+            if "format" in content or any(fmt in content for fmt in ["pdf", "doc", "image", "photo", "spreadsheet"]):
                 self.archivist_memory._update_content_preferences(
                     {
                         "get_recent_queries": lambda n: [
-                            type("obj", (object,), {"OriginalQuery": msg.content})
-                            for msg in user_messages[-n:]
+                            type("obj", (object,), {"OriginalQuery": msg.content}) for msg in user_messages[-n:]
                         ],
                     },
                 )
@@ -1148,7 +1139,8 @@ class RequestAssistant:
             entities_data = json.loads(content)
 
             if "entities" in entities_data and isinstance(
-                entities_data["entities"], list,
+                entities_data["entities"],
+                list,
             ):
                 entities = entities_data["entities"]
             else:
@@ -1310,7 +1302,8 @@ class RequestAssistant:
         while True:
             # Get the run status
             run = self.client.beta.threads.runs.retrieve(
-                thread_id=thread_id, run_id=run_id,
+                thread_id=thread_id,
+                run_id=run_id,
             )
 
             # Update progress if callback is provided
@@ -1331,9 +1324,7 @@ class RequestAssistant:
                 messages = self.client.beta.threads.messages.list(thread_id=thread_id)
 
                 # Get the latest assistant message
-                assistant_messages = [
-                    msg for msg in messages.data if msg.role == "assistant"
-                ]
+                assistant_messages = [msg for msg in messages.data if msg.role == "assistant"]
                 if not assistant_messages:
                     return {
                         "conversation_id": conversation_id,
@@ -1364,10 +1355,7 @@ class RequestAssistant:
 
             elif run.status == "requires_action":
                 # Handle required actions (tool calls)
-                if (
-                    run.required_action
-                    and run.required_action.type == "submit_tool_outputs"
-                ):
+                if run.required_action and run.required_action.type == "submit_tool_outputs":
                     tool_calls = run.required_action.submit_tool_outputs.tool_calls
                     tool_outputs = []
 
@@ -1392,7 +1380,9 @@ class RequestAssistant:
 
                     # Submit the tool outputs
                     self.client.beta.threads.runs.submit_tool_outputs(
-                        thread_id=thread_id, run_id=run_id, tool_outputs=tool_outputs,
+                        thread_id=thread_id,
+                        run_id=run_id,
+                        tool_outputs=tool_outputs,
                     )
 
                 # Continue waiting for completion
@@ -1401,9 +1391,7 @@ class RequestAssistant:
             elif run.status in ["failed", "cancelled", "expired"]:
                 # Get the error details
                 error_code = run.last_error.code if run.last_error else "unknown_error"
-                error_message = (
-                    run.last_error.message if run.last_error else "Unknown error"
-                )
+                error_message = run.last_error.message if run.last_error else "Unknown error"
 
                 # Check for token limit error
                 is_token_limit_error = (
@@ -1419,9 +1407,7 @@ class RequestAssistant:
                         conversation = self.get_conversation(conversation_id)
 
                         # Get the last message from the user (that caused the token limit error)
-                        user_messages = [
-                            msg for msg in conversation.messages if msg.role == "user"
-                        ]
+                        user_messages = [msg for msg in conversation.messages if msg.role == "user"]
                         if user_messages:
                             last_user_message = user_messages[-1]
 
@@ -1469,8 +1455,7 @@ class RequestAssistant:
             file_path (str): The file path.
         """
         data = {
-            conversation_id: conversation.model_dump()
-            for conversation_id, conversation in self.conversations.items()
+            conversation_id: conversation.model_dump() for conversation_id, conversation in self.conversations.items()
         }
 
         with open(file_path, "w") as f:
@@ -1554,9 +1539,7 @@ class RequestAssistant:
 
                 # Measure result size to check if it's too large
                 result_size = self._estimate_result_size(result.result)
-                result_count = (
-                    len(result.result) if isinstance(result.result, list) else 1
-                )
+                result_count = len(result.result) if isinstance(result.result, list) else 1
 
                 # For large results (>1MB), store metadata only and truncate the results
                 # This prevents creating huge query history records
@@ -1589,9 +1572,7 @@ class RequestAssistant:
                         }
 
                     # Also truncate execution plan if needed
-                    if (
-                        execution_plan and len(json.dumps(execution_plan)) > 100000
-                    ):  # ~100KB limit
+                    if execution_plan and len(json.dumps(execution_plan)) > 100000:  # ~100KB limit
                         if isinstance(execution_plan, dict):
                             # Keep only essential parts
                             simplified_plan = {
@@ -1671,9 +1652,7 @@ class RequestAssistant:
                     if len(result) == 0:
                         return 0
                     elif len(result) > 10:
-                        avg_size = (
-                            sum(sys.getsizeof(str(item)) for item in result[:10]) / 10
-                        )
+                        avg_size = sum(sys.getsizeof(str(item)) for item in result[:10]) / 10
                         return int(avg_size * len(result))
                     else:
                         return sum(sys.getsizeof(str(item)) for item in result)
@@ -1704,7 +1683,9 @@ class RequestAssistant:
         return hashlib.md5(combined.encode()).hexdigest()
 
     def _check_query_cache(
-        self, query: str, bind_vars: dict[str, Any],
+        self,
+        query: str,
+        bind_vars: dict[str, Any],
     ) -> Any | None:
         """
         Check if we have a cached result for this query.
@@ -1794,12 +1775,15 @@ class RequestAssistant:
 
         # Add the summary as a system message
         self.client.beta.threads.messages.create(
-            thread_id=new_thread_id, role="user", content=summary,
+            thread_id=new_thread_id,
+            role="user",
+            content=summary,
         )
 
         # Create a run with the assistant to acknowledge the summary
         run = self.client.beta.threads.runs.create(
-            thread_id=new_thread_id, assistant_id=self.assistant_id,
+            thread_id=new_thread_id,
+            assistant_id=self.assistant_id,
         )
 
         # Wait for the run to complete
@@ -1830,9 +1814,7 @@ class RequestAssistant:
 
         # Get user and assistant messages
         user_msgs = [msg for msg in conversation.messages if msg.role == "user"]
-        assistant_msgs = [
-            msg for msg in conversation.messages if msg.role == "assistant"
-        ]
+        assistant_msgs = [msg for msg in conversation.messages if msg.role == "assistant"]
 
         # Add key topics section
         summary += "KEY TOPICS AND INFORMATION\n"
@@ -1942,9 +1924,7 @@ class RequestAssistant:
             # Add the exchange
             exchange = {
                 "user": user_msg.content,
-                "assistant": (
-                    assistant_response.content if assistant_response else "No response"
-                ),
+                "assistant": (assistant_response.content if assistant_response else "No response"),
             }
 
             recent_exchanges.insert(0, exchange)
@@ -1979,7 +1959,8 @@ def main():
 
     # Test a query
     response = assistant.process_message(
-        conversation_id=conversation_id, message_content="Find documents about Indaleko",
+        conversation_id=conversation_id,
+        message_content="Find documents about Indaleko",
     )
 
     print(f"Response: {response['response']}")

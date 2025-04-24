@@ -55,7 +55,8 @@ class ContextVariable(BaseModel):
     value: Any = Field(..., description="The value of this variable")
 
     access_level: AccessLevel = Field(
-        default=AccessLevel.PUBLIC, description="Who can access this variable",
+        default=AccessLevel.PUBLIC,
+        description="Who can access this variable",
     )
 
     created_by: str = Field(..., description="Entity ID that created this variable")
@@ -76,7 +77,8 @@ class ContextVariable(BaseModel):
     )
 
     metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata about this variable",
+        default_factory=dict,
+        description="Additional metadata about this variable",
     )
 
     @validator("updated_at")
@@ -162,7 +164,10 @@ class CircleContext:
         return variable
 
     def get_variable(
-        self, key: str, entity_id: str, default: T | None = None,
+        self,
+        key: str,
+        entity_id: str,
+        default: T | None = None,
     ) -> Any | T | None:
         """
         Get a context variable.
@@ -188,10 +193,7 @@ class CircleContext:
 
         elif variable.access_level == AccessLevel.PROTECTED:
             # Protected variables accessible to creator and allowed entities
-            if (
-                entity_id == variable.created_by
-                or entity_id in variable.allowed_entities
-            ):
+            if entity_id == variable.created_by or entity_id in variable.allowed_entities:
                 return variable.value
             else:
                 self.logger.warning(
@@ -260,10 +262,7 @@ class CircleContext:
 
             # Protected variables
             elif variable.access_level == AccessLevel.PROTECTED:
-                if (
-                    entity_id == variable.created_by
-                    or entity_id in variable.allowed_entities
-                ):
+                if entity_id == variable.created_by or entity_id in variable.allowed_entities:
                     result[key] = variable.value
 
             # Private variables
@@ -274,7 +273,9 @@ class CircleContext:
         return result
 
     def get_variable_metadata(
-        self, key: str, entity_id: str,
+        self,
+        key: str,
+        entity_id: str,
     ) -> dict[str, Any] | None:
         """
         Get metadata for a variable.
@@ -297,10 +298,7 @@ class CircleContext:
             return variable.metadata
 
         elif variable.access_level == AccessLevel.PROTECTED:
-            if (
-                entity_id == variable.created_by
-                or entity_id in variable.allowed_entities
-            ):
+            if entity_id == variable.created_by or entity_id in variable.allowed_entities:
                 return variable.metadata
 
         elif variable.access_level == AccessLevel.PRIVATE:
@@ -310,7 +308,10 @@ class CircleContext:
         return None
 
     def update_variable_metadata(
-        self, key: str, entity_id: str, metadata: dict[str, Any],
+        self,
+        key: str,
+        entity_id: str,
+        metadata: dict[str, Any],
     ) -> bool:
         """
         Update metadata for a variable.

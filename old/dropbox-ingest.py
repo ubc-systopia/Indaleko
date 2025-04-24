@@ -1,16 +1,15 @@
-import os
-import json
 import argparse
+import json
+import os
+
 import dropbox
-import requests
-from urllib.parse import urlencode, parse_qs, urlparse
 
 
 def get_dropbox_credentials(file: str = "data/dropbox-token.json"):
     # Note: this should be converted to use the OAuth2 work flow that Dropbox
     # prefers, but for testing this works with a hard coded token
-    assert os.path.exists(file), "File {} does not exist, aborting".format(file)
-    data = json.load(open(file, "rt"))
+    assert os.path.exists(file), f"File {file} does not exist, aborting"
+    data = json.load(open(file))
     return data["token"]
 
 
@@ -37,20 +36,14 @@ def get_dropbox_metadata():
         cursor = None
         while True:
             result = dbx.files_list_folder("", recursive=True)
-            result = (
-                dbx.files_list_folder_continue(cursor)
-                if cursor
-                else dbx.files_list_folder("", recursive=True)
-            )
+            result = dbx.files_list_folder_continue(cursor) if cursor else dbx.files_list_folder("", recursive=True)
             for entry in result.entries:
                 captured_entry = {}
                 for key in dir(entry):
                     if key.startswith("_"):
                         continue
                     value = convert_to_serializable(getattr(entry, key))
-                    if value is not None and (
-                        isinstance(value, (bool, int, float)) or len(value) != 0
-                    ):
+                    if value is not None and (isinstance(value, (bool, int, float)) or len(value) != 0):
                         captured_entry[key] = value
                 metadata_list.append(captured_entry)
             if not result.has_more:
@@ -70,14 +63,20 @@ def main():
         help="Name and location of where to save the fetched metadata",
     )
     parser.add_argument(
-        "--host", type=str, help="URL to use for ArangoDB (overrides config file)"
+        "--host",
+        type=str,
+        help="URL to use for ArangoDB (overrides config file)",
     )
     parser.add_argument(
-        "--port", type=int, help="Port number to use (overrides config file)"
+        "--port",
+        type=int,
+        help="Port number to use (overrides config file)",
     )
     parser.add_argument("--user", type=str, help="user name (overrides config file)")
     parser.add_argument(
-        "--password", type=str, help="user password (overrides config file)"
+        "--password",
+        type=str,
+        help="user password (overrides config file)",
     )
     parser.add_argument(
         "--database",
@@ -92,7 +91,7 @@ def main():
     )
     args = parser.parse_args()
     dropbox_contents = get_dropbox_metadata()
-    with open(args.output, "wt") as output_file:
+    with open(args.output, "w") as output_file:
         json.dump(dropbox_contents, output_file, indent=4)
 
 

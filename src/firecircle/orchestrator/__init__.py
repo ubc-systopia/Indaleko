@@ -73,7 +73,10 @@ class CircleSession:
         return self.history
 
     def add_message(
-        self, role: str, content: str, metadata: dict[str, Any] | None = None,
+        self,
+        role: str,
+        content: str,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """
         Add a message to the conversation history.
@@ -160,7 +163,10 @@ class FireCircleOrchestrator:
         return self.sessions.get(session_id)
 
     def process_message(
-        self, session_id: str, message: str, gather_all_perspectives: bool = True,
+        self,
+        session_id: str,
+        message: str,
+        gather_all_perspectives: bool = True,
     ) -> dict[str, Any]:
         """
         Process a message in a Fire Circle session.
@@ -217,9 +223,7 @@ class FireCircleOrchestrator:
                 )
             except Exception as e:
                 # Log error
-                error_message = (
-                    f"Error processing message with {entity.role.value}: {e!s}"
-                )
+                error_message = f"Error processing message with {entity.role.value}: {e!s}"
                 print(error_message)
                 session.add_message(
                     "system",
@@ -229,7 +233,8 @@ class FireCircleOrchestrator:
 
         # If we have a synthesizer and multiple perspectives, generate synthesis
         synthesizer = next(
-            (e for e in session.entities if e.role == EntityRole.SYNTHESIZER), None,
+            (e for e in session.entities if e.role == EntityRole.SYNTHESIZER),
+            None,
         )
         perspectives = session.perspectives
 
@@ -272,10 +277,7 @@ class FireCircleOrchestrator:
         # Return results
         return {
             "session_id": session.session_id,
-            "perspectives": {
-                role.value: perspective
-                for role, perspective in session.perspectives.items()
-            },
+            "perspectives": {role.value: perspective for role, perspective in session.perspectives.items()},
             "synthesis": session.synthesis,
             "history": session.get_history(),
         }

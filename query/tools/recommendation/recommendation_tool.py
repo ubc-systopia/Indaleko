@@ -139,11 +139,16 @@ class RecommendationTool(BaseTool):
         # Process the action
         if action == "get_recommendations":
             return self._get_recommendations(
-                current_query, context_data, max_results, tool_input.conversation_id,
+                current_query,
+                context_data,
+                max_results,
+                tool_input.conversation_id,
             )
         elif action == "provide_feedback":
             return self._provide_feedback(
-                suggestion_id, feedback_type, tool_input.conversation_id,
+                suggestion_id,
+                feedback_type,
+                tool_input.conversation_id,
             )
         elif action == "get_stats":
             return self._get_stats()
@@ -268,17 +273,14 @@ class RecommendationTool(BaseTool):
 
             # Record feedback in the recommendation engine
             self.recommendation_engine.record_feedback(
-                suggestion_id=uuid_suggestion_id, feedback=feedback,
+                suggestion_id=uuid_suggestion_id,
+                feedback=feedback,
             )
 
             # If Archivist integration is available, also record there
             if HAS_ARCHIVIST_INTEGRATION and self.archivist_integration:
                 # Map feedback types to positive/negative values
-                feedback_value = (
-                    1.0
-                    if feedback in [FeedbackType.ACCEPTED, FeedbackType.HELPFUL]
-                    else -1.0
-                )
+                feedback_value = 1.0 if feedback in [FeedbackType.ACCEPTED, FeedbackType.HELPFUL] else -1.0
 
                 # Convert to suggestion format expected by Archivist integration
                 source_to_type = {
@@ -292,20 +294,14 @@ class RecommendationTool(BaseTool):
                 for rec in self.recommendation_engine.recent_suggestions.values():
                     if rec.suggestion_id == uuid_suggestion_id:
                         # Try to get the suggestion from Archivist to provide feedback
-                        if (
-                            hasattr(self.archivist_integration, "proactive")
-                            and self.archivist_integration.proactive
-                        ):
-                            for (
-                                sugg
-                            ) in (
-                                self.archivist_integration.proactive.data.active_suggestions
-                            ):
+                        if hasattr(self.archivist_integration, "proactive") and self.archivist_integration.proactive:
+                            for sugg in self.archivist_integration.proactive.data.active_suggestions:
                                 if sugg.context.get("recommendation_id") == str(
                                     rec.suggestion_id,
                                 ):
                                     self.archivist_integration.proactive.record_user_feedback(
-                                        sugg.suggestion_id, feedback_value,
+                                        sugg.suggestion_id,
+                                        feedback_value,
                                     )
                                     break
                         break
@@ -339,7 +335,10 @@ class RecommendationTool(BaseTool):
             stats = self.recommendation_engine.get_feedback_stats()
 
             return ToolOutput(
-                success=True, result=stats, error=None, tool_name=self.definition.name,
+                success=True,
+                result=stats,
+                error=None,
+                tool_name=self.definition.name,
             )
         except Exception as e:
             return ToolOutput(
@@ -360,7 +359,10 @@ class RecommendationAssistantIntegration:
     """
 
     def __init__(
-        self, assistant, recommendation_engine=None, archivist_integration=None,
+        self,
+        assistant,
+        recommendation_engine=None,
+        archivist_integration=None,
     ):
         """
         Initialize the integration.
@@ -384,7 +386,9 @@ class RecommendationAssistantIntegration:
         self.assistant.tool_registry.register_tool(self.recommendation_tool)
 
     def update_conversation_context(
-        self, conversation_id: str, current_query: str | None = None,
+        self,
+        conversation_id: str,
+        current_query: str | None = None,
     ) -> None:
         """
         Update the conversation context with recommendations.
@@ -432,7 +436,9 @@ class RecommendationAssistantIntegration:
 
         # Get recommendations
         recommendations = self.recommendation_engine.get_recommendations(
-            current_query=current_query, context_data=context_data, max_results=3,
+            current_query=current_query,
+            context_data=context_data,
+            max_results=3,
         )
 
         # Store recommendations in conversation context
@@ -451,7 +457,8 @@ class RecommendationAssistantIntegration:
         # Store in context variables
         conversation.set_context_variable("recommendations", formatted_recommendations)
         conversation.set_context_variable(
-            "last_recommendation_time", conversation.updated_at,
+            "last_recommendation_time",
+            conversation.updated_at,
         )
 
     def _is_likely_query(self, message: str) -> bool:
@@ -488,17 +495,14 @@ class RecommendationAssistantIntegration:
 
         # Check for query indicators
         message_lower = message.lower()
-        has_query_indicator = any(
-            indicator in message_lower for indicator in query_indicators
-        )
+        has_query_indicator = any(indicator in message_lower for indicator in query_indicators)
 
         # Check length (queries tend to be shorter)
         is_short = len(message.split()) < 15
 
         # Check for command-like syntax (not conversational)
         starts_with_verb = any(
-            message_lower.startswith(verb)
-            for verb in ["show", "find", "search", "get", "list", "display", "retrieve"]
+            message_lower.startswith(verb) for verb in ["show", "find", "search", "get", "list", "display", "retrieve"]
         )
 
         # Calculate a score based on these factors

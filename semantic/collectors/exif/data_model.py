@@ -43,10 +43,12 @@ class ExifGpsData(BaseSemanticDataModel):
     """EXIF GPS data model."""
 
     latitude: float | None = Field(
-        None, description="GPS latitude in decimal degrees",
+        None,
+        description="GPS latitude in decimal degrees",
     )
     longitude: float | None = Field(
-        None, description="GPS longitude in decimal degrees",
+        None,
+        description="GPS longitude in decimal degrees",
     )
     altitude: float | None = Field(None, description="GPS altitude in meters")
     timestamp: datetime | None = Field(None, description="GPS timestamp")
@@ -68,16 +70,19 @@ class ExifCaptureSettings(BaseSemanticDataModel):
     """Capture settings from EXIF data."""
 
     datetime_original: datetime | None = Field(
-        None, description="Date and time when the original image was generated",
+        None,
+        description="Date and time when the original image was generated",
     )
     datetime_digitized: datetime | None = Field(
-        None, description="Date and time when the image was stored as digital data",
+        None,
+        description="Date and time when the image was stored as digital data",
     )
     exposure_time: float | None = Field(None, description="Exposure time in seconds")
     f_number: float | None = Field(None, description="F-number (relative aperture)")
     iso: int | None = Field(None, description="ISO speed rating")
     focal_length: float | None = Field(
-        None, description="Focal length in millimeters",
+        None,
+        description="Focal length in millimeters",
     )
     exposure_bias: float | None = Field(None, description="Exposure bias in EV")
     metering_mode: str | None = Field(None, description="Metering mode")
@@ -90,18 +95,22 @@ class ExifImageInfo(BaseSemanticDataModel):
     width: int | None = Field(None, description="Image width in pixels")
     height: int | None = Field(None, description="Image height in pixels")
     bits_per_sample: int | None = Field(
-        None, description="Number of bits per component",
+        None,
+        description="Number of bits per component",
     )
     compression: str | None = Field(None, description="Compression scheme")
     photometric_interpretation: str | None = Field(
-        None, description="Pixel composition",
+        None,
+        description="Pixel composition",
     )
     orientation: str | None = Field(None, description="Orientation of image")
     samples_per_pixel: int | None = Field(
-        None, description="Number of components per pixel",
+        None,
+        description="Number of components per pixel",
     )
     planar_configuration: str | None = Field(
-        None, description="Image data arrangement",
+        None,
+        description="Image data arrangement",
     )
     software: str | None = Field(None, description="Software used")
     artist: str | None = Field(None, description="Person who created the image")
@@ -122,13 +131,15 @@ class ExifDataModel(BaseSemanticDataModel):
 
     # Raw EXIF data dictionary for advanced use cases
     raw_exif: dict[str, Any] = Field(
-        default_factory=dict, description="Raw EXIF data in key-value format",
+        default_factory=dict,
+        description="Raw EXIF data in key-value format",
     )
 
     # Structured EXIF data
     camera: ExifCameraData | None = Field(None, description="Camera information")
     capture_settings: ExifCaptureSettings | None = Field(
-        None, description="Capture settings",
+        None,
+        description="Capture settings",
     )
     gps: ExifGpsData | None = Field(None, description="GPS data")
     image_info: ExifImageInfo | None = Field(None, description="Image information")

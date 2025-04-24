@@ -50,7 +50,8 @@ class ActiveRefinement(IndalekoBaseModel):
     value: str = Field(..., description="Selected facet value")
     query_fragment: str = Field(..., description="Query fragment for this refinement")
     applied_at: datetime = Field(
-        default_factory=datetime.now, description="When this refinement was applied",
+        default_factory=datetime.now,
+        description="When this refinement was applied",
     )
 
     class Config:
@@ -70,10 +71,12 @@ class QueryRefinementState(IndalekoBaseModel):
 
     original_query: str = Field(..., description="Original unrefined query")
     active_refinements: list[ActiveRefinement] = Field(
-        default_factory=list, description="Currently active refinements",
+        default_factory=list,
+        description="Currently active refinements",
     )
     refinement_history: list[ActiveRefinement] = Field(
-        default_factory=list, description="History of all refinements that were applied",
+        default_factory=list,
+        description="History of all refinements that were applied",
     )
 
     class Config:
@@ -136,7 +139,10 @@ class QueryRefiner:
         return self.current_state
 
     def apply_refinement(
-        self, facet: Facet, value: FacetValue, add_to_history: bool = True,
+        self,
+        facet: Facet,
+        value: FacetValue,
+        add_to_history: bool = True,
     ) -> tuple[str, QueryRefinementState]:
         """
         Apply a facet refinement to the current query.
@@ -171,7 +177,9 @@ class QueryRefiner:
         return refined_query, self.current_state
 
     def remove_refinement(
-        self, facet_name: str, value: str,
+        self,
+        facet_name: str,
+        value: str,
     ) -> tuple[str, QueryRefinementState]:
         """
         Remove an active refinement.
@@ -188,9 +196,7 @@ class QueryRefiner:
 
         # Remove from active refinements
         self.current_state.active_refinements = [
-            r
-            for r in self.current_state.active_refinements
-            if not (r.facet_name == facet_name and r.value == value)
+            r for r in self.current_state.active_refinements if not (r.facet_name == facet_name and r.value == value)
         ]
 
         # Generate the refined query
@@ -328,7 +334,8 @@ class QueryRefiner:
             return f'tag:({" OR ".join(values)})'
 
     def _apply_content_type_refinement(
-        self, refinements: list[ActiveRefinement],
+        self,
+        refinements: list[ActiveRefinement],
     ) -> str:
         """Apply content type refinements."""
         if len(refinements) == 1:
@@ -342,7 +349,8 @@ class QueryRefiner:
         return " AND ".join(r.query_fragment for r in refinements)
 
     def get_facet_options(
-        self, facets: DynamicFacets,
+        self,
+        facets: DynamicFacets,
     ) -> dict[str, list[dict[str, Any]]]:
         """
         Generate facet selection options for display.

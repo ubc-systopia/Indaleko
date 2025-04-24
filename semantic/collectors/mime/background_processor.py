@@ -49,13 +49,15 @@ from utils.db.db_file_picker import IndalekoFilePicker
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger("MimeBackgroundProcessor")
 
 
 def process_file_mime(
-    file_obj: IndalekoObject, local_path: str,
+    file_obj: IndalekoObject,
+    local_path: str,
 ) -> dict[str, Any] | None:
     """
     Process a file with the MIME type collector.
@@ -93,7 +95,8 @@ def process_file_mime(
 
 
 def process_file_and_store(
-    file_obj: IndalekoObject, local_path: str,
+    file_obj: IndalekoObject,
+    local_path: str,
 ) -> dict[str, Any] | None:
     """
     Process a file with the MIME type collector and store results in the database.
@@ -170,9 +173,7 @@ def schedule_mime_processing(
         total_processed = 0
 
         # Get the semantic attribute ID for MIME type from content
-        mime_type_attr_id = (
-            StorageSemanticAttributes.STORAGE_ATTRIBUTES_MIMETYPE_FROM_CONTENT
-        )
+        mime_type_attr_id = StorageSemanticAttributes.STORAGE_ATTRIBUTES_MIMETYPE_FROM_CONTENT
 
         # Process once or in a loop
         start_time = time.time()
@@ -201,9 +202,7 @@ def schedule_mime_processing(
             # Process files
             if background:
                 # Queue for background processing
-                process_func = (
-                    process_file_mime if not background else process_file_and_store
-                )
+                process_func = process_file_mime if not background else process_file_and_store
                 queued = file_picker.queue_for_background_processing(
                     files=files,
                     process_func=process_func,
@@ -263,7 +262,10 @@ def main():
     """Main function for the MIME type background processor"""
     parser = argparse.ArgumentParser(description="Background MIME type processor")
     parser.add_argument(
-        "--count", type=int, default=10, help="Number of files to process in each batch",
+        "--count",
+        type=int,
+        default=10,
+        help="Number of files to process in each batch",
     )
     parser.add_argument(
         "--foreground",
@@ -271,7 +273,10 @@ def main():
         help="Process files in foreground instead of background",
     )
     parser.add_argument(
-        "--batch-size", type=int, default=100, help="Size of the batch for processing",
+        "--batch-size",
+        type=int,
+        default=100,
+        help="Size of the batch for processing",
     )
     parser.add_argument(
         "--max-age-days",

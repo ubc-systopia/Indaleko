@@ -33,6 +33,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from activity.data_model.activity import IndalekoActivityDataModel
 from data_models.location_data_model import LocationDataModel
+
 # pylint: enable=wrong-import-position
 
 
@@ -41,7 +42,7 @@ class BaseLocationDataModel(IndalekoActivityDataModel):
     Location: LocationDataModel = Field(
         ...,
         title="Location",
-        description="The location data."
+        description="The location data.",
     )
 
     class Config:

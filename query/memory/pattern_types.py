@@ -74,30 +74,36 @@ class ProactiveSuggestion(BaseModel):
         description="When this suggestion was created",
     )
     expires_at: datetime | None = Field(
-        None, description="When this suggestion expires (if applicable)",
+        None,
+        description="When this suggestion expires (if applicable)",
     )
     priority: SuggestionPriority = Field(
         default=SuggestionPriority.MEDIUM,
         description="Priority level of the suggestion",
     )
     confidence: float = Field(
-        default=0.5, description="Confidence in this suggestion (0.0-1.0)",
+        default=0.5,
+        description="Confidence in this suggestion (0.0-1.0)",
     )
     context: dict[str, Any] = Field(
         default_factory=dict,
         description="Contextual information related to this suggestion",
     )
     related_queries: list[str] = Field(
-        default_factory=list, description="Queries related to this suggestion",
+        default_factory=list,
+        description="Queries related to this suggestion",
     )
     dismissed: bool = Field(
-        default=False, description="Whether this suggestion has been dismissed",
+        default=False,
+        description="Whether this suggestion has been dismissed",
     )
     acted_upon: bool = Field(
-        default=False, description="Whether the user has acted upon this suggestion",
+        default=False,
+        description="Whether the user has acted upon this suggestion",
     )
     feedback: float | None = Field(
-        None, description="User feedback on this suggestion (-1.0 to 1.0)",
+        None,
+        description="User feedback on this suggestion (-1.0 to 1.0)",
     )
 
     def is_expired(self) -> bool:

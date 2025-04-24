@@ -112,7 +112,14 @@ def main():
             # - MaxMajorVersion (2 bytes) - 2
             buffer_in = bytearray(28)
             struct.pack_into(
-                "<QQQHH", buffer_in, 0, 0, first_usn, 0xFFFFFFFFFFFFFFFF, 2, 2,
+                "<QQQHH",
+                buffer_in,
+                0,
+                0,
+                first_usn,
+                0xFFFFFFFFFFFFFFFF,
+                2,
+                2,
             )
 
             # Output buffer to receive data
@@ -120,7 +127,10 @@ def main():
 
             try:
                 result = win32file.DeviceIoControl(
-                    handle, FSCTL_ENUM_USN_DATA, buffer_in, buffer_out,
+                    handle,
+                    FSCTL_ENUM_USN_DATA,
+                    buffer_in,
+                    buffer_out,
                 )
                 print("Successfully read data from USN journal")
             except pywintypes.error as win_err:
@@ -151,7 +161,8 @@ def main():
                     # Extract record length
                     if offset + 4 <= len(result):
                         record_length = struct.unpack(
-                            "<L", result[offset : offset + 4],
+                            "<L",
+                            result[offset : offset + 4],
                         )[0]
                         if record_length == 0:
                             break
@@ -164,10 +175,12 @@ def main():
                         if offset + 58 <= len(result):
                             # Extract filename length and offset
                             file_name_length = struct.unpack(
-                                "<H", result[offset + 58 : offset + 60],
+                                "<H",
+                                result[offset + 58 : offset + 60],
                             )[0]
                             file_name_offset = struct.unpack(
-                                "<H", result[offset + 60 : offset + 62],
+                                "<H",
+                                result[offset + 60 : offset + 62],
                             )[0]
 
                             # Extract filename if possible
@@ -176,10 +189,7 @@ def main():
                             ):
                                 try:
                                     file_name_bytes = result[
-                                        offset
-                                        + file_name_offset : offset
-                                        + file_name_offset
-                                        + file_name_length
+                                        offset + file_name_offset : offset + file_name_offset + file_name_length
                                     ]
                                     file_name = file_name_bytes.decode("utf-16-le")
                                     print(f"  Filename: {file_name}")

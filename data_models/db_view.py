@@ -49,10 +49,12 @@ class IndalekoViewDefinition(IndalekoBaseModel):
 
     name: str = Field(..., description="Name of the view")
     type: str = Field(
-        "arangosearch", description="Type of view (arangosearch is the primary type)",
+        "arangosearch",
+        description="Type of view (arangosearch is the primary type)",
     )
     collections: list[str] = Field(
-        ..., description="Collections to include in the view",
+        ...,
+        description="Collections to include in the view",
     )
     fields: dict[str, list[str]] | dict[str, dict[str, list[str]]] = Field(
         ...,
@@ -63,13 +65,16 @@ class IndalekoViewDefinition(IndalekoBaseModel):
         description="Default text analyzers to use (when not specified per field)",
     )
     include_all_fields: bool = Field(
-        default=False, description="Whether to include all fields in the view",
+        default=False,
+        description="Whether to include all fields in the view",
     )
     primary_sort: list[dict[str, str]] | None = Field(
-        default=None, description="Primary sort fields",
+        default=None,
+        description="Primary sort fields",
     )
     stored_values: list[str] | None = Field(
-        default=None, description="Fields to store in the view for retrieval",
+        default=None,
+        description="Fields to store in the view for retrieval",
     )
     view_id: str | None = Field(default=None, description="ID of the created view")
 

@@ -117,9 +117,7 @@ def generate_aql_for_relationship(relationship_query: RelationshipQuery) -> str:
     # Build the AQL based on relationship type
     if relationship_type == RelationshipType.CREATED:
         # User created file relationship
-        if source_entity.entity_type == "user" and (
-            target_entity is None or target_entity.entity_type == "file"
-        ):
+        if source_entity.entity_type == "user" and (target_entity is None or target_entity.entity_type == "file"):
             # Start with the Activities collection to find creation events
             aql = """
             FOR activity IN ActivityContext
@@ -158,9 +156,7 @@ def generate_aql_for_relationship(relationship_query: RelationshipQuery) -> str:
 
     elif relationship_type == RelationshipType.MODIFIED:
         # User modified file relationship
-        if source_entity.entity_type == "user" and (
-            target_entity is None or target_entity.entity_type == "file"
-        ):
+        if source_entity.entity_type == "user" and (target_entity is None or target_entity.entity_type == "file"):
             # Start with the Activities collection to find modification events
             aql = """
             FOR activity IN ActivityContext
@@ -199,11 +195,7 @@ def generate_aql_for_relationship(relationship_query: RelationshipQuery) -> str:
 
     elif relationship_type == RelationshipType.SHARED_WITH:
         # User shared file with another user
-        if (
-            source_entity.entity_type == "user"
-            and target_entity
-            and target_entity.entity_type == "user"
-        ):
+        if source_entity.entity_type == "user" and target_entity and target_entity.entity_type == "user":
             # Start with the SharingActivity collection
             aql = """
             FOR sharing IN SharingActivity
@@ -363,9 +355,7 @@ def process_relationship_query(
         try:
             cursor = db_config._arangodb.aql.execute(aql_query)
             query_results = [doc for doc in cursor]
-            result["execution_results"] = query_results[
-                :10
-            ]  # Limit to first 10 results
+            result["execution_results"] = query_results[:10]  # Limit to first 10 results
             result["result_count"] = len(query_results)
         except Exception as e:
             print_color(f"Error executing query: {e}", "red")
@@ -455,14 +445,18 @@ def main():
     )
     parser.add_argument("--verbose", action="store_true", help="Print detailed output")
     parser.add_argument(
-        "--execute", action="store_true", help="Execute the generated AQL query",
+        "--execute",
+        action="store_true",
+        help="Execute the generated AQL query",
     )
     parser.add_argument("--json", action="store_true", help="Output results as JSON")
     parser.add_argument("--debug", action="store_true", help="Show debug output")
 
     # Add examples to help users understand the capabilities
     parser.add_argument(
-        "--examples", action="store_true", help="Show example relationship queries",
+        "--examples",
+        action="store_true",
+        help="Show example relationship queries",
     )
 
     # Parse arguments

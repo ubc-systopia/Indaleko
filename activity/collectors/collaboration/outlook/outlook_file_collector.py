@@ -911,7 +911,8 @@ class OutlookFileShareCollector(CollaborationCollector):
             Sender=file_share.get("sender", ""),
             Recipients=file_share.get("recipients", []),
             Timestamp=file_share.get(
-                "timestamp", datetime.now(UTC).isoformat(),
+                "timestamp",
+                datetime.now(UTC).isoformat(),
             ),
             Files=[shared_file],
             FileShareType=file_share.get("attachment_type", "attachment"),

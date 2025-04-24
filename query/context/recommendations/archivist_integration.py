@@ -122,7 +122,8 @@ class RecommendationArchivistIntegration:
         """Register all recommendation commands with the CLI."""
         for cmd, handler in self.commands.items():
             self.cli.register_command(
-                cmd, lambda args, cmd=cmd: self.handle_command(cmd, args),
+                cmd,
+                lambda args, cmd=cmd: self.handle_command(cmd, args),
             )
 
         # Add help text
@@ -240,34 +241,22 @@ class RecommendationArchivistIntegration:
         context_data = {
             "archivist_insights": [i.model_dump() for i in insights],
             "archivist_topics": topics,
-            "recent_queries": [
-                q["query"] for q in self.context["session_queries"][-10:]
-            ],
+            "recent_queries": [q["query"] for q in self.context["session_queries"][-10:]],
             "entity_counts": self.context["entity_counts"],
             "current_topics": self.context["current_topics"],
         }
 
         # Add effective strategies if available
         if hasattr(self.memory, "effective_strategies"):
-            context_data["effective_strategies"] = [
-                s.model_dump() for s in self.memory.effective_strategies
-            ]
+            context_data["effective_strategies"] = [s.model_dump() for s in self.memory.effective_strategies]
 
         # Add long-term goals if available
         if hasattr(self.memory, "long_term_goals"):
-            context_data["long_term_goals"] = [
-                g.model_dump() for g in self.memory.long_term_goals
-            ]
+            context_data["long_term_goals"] = [g.model_dump() for g in self.memory.long_term_goals]
 
         # If proactive is available, add active suggestions
-        if (
-            self.proactive
-            and hasattr(self.proactive, "data")
-            and hasattr(self.proactive.data, "active_suggestions")
-        ):
-            context_data["proactive_suggestions"] = [
-                s.model_dump() for s in self.proactive.data.active_suggestions
-            ]
+        if self.proactive and hasattr(self.proactive, "data") and hasattr(self.proactive.data, "active_suggestions"):
+            context_data["proactive_suggestions"] = [s.model_dump() for s in self.proactive.data.active_suggestions]
 
         # Handle integration with cross-source patterns if available
         if (
@@ -278,14 +267,12 @@ class RecommendationArchivistIntegration:
 
             # Add cross-source patterns
             context_data["cross_source_patterns"] = [
-                p.model_dump()
-                for p in self.proactive.cross_source_detector.data.patterns
+                p.model_dump() for p in self.proactive.cross_source_detector.data.patterns
             ]
 
             # Add cross-source correlations
             context_data["cross_source_correlations"] = [
-                c.model_dump()
-                for c in self.proactive.cross_source_detector.data.correlations
+                c.model_dump() for c in self.proactive.cross_source_detector.data.correlations
             ]
 
         return context_data
@@ -343,7 +330,8 @@ class RecommendationArchivistIntegration:
         # Convert each recommendation to a proactive suggestion
         for recommendation in recommendations:
             suggestion_type = source_to_type.get(
-                recommendation.source, SuggestionType.QUERY,
+                recommendation.source,
+                SuggestionType.QUERY,
             )
 
             # Create ProactiveSuggestion
@@ -363,11 +351,7 @@ class RecommendationArchivistIntegration:
             )
 
             # Add to proactive suggestions if not a duplicate
-            existing_queries = [
-                q
-                for s in self.proactive.data.active_suggestions
-                for q in (s.related_queries or [])
-            ]
+            existing_queries = [q for s in self.proactive.data.active_suggestions for q in (s.related_queries or [])]
 
             if recommendation.query not in existing_queries:
                 self.proactive.data.active_suggestions.append(suggestion)
@@ -440,9 +424,7 @@ class RecommendationArchivistIntegration:
 
             # Update engine settings if needed
             if setting == "min_confidence":
-                self.recommendation_engine.settings.min_confidence = self.settings[
-                    "min_confidence"
-                ]
+                self.recommendation_engine.settings.min_confidence = self.settings["min_confidence"]
 
             return
 
@@ -516,13 +498,10 @@ class RecommendationArchivistIntegration:
             suggestion = suggestions[num]
 
             # Record feedback
-            feedback = (
-                FeedbackType.ACCEPTED
-                if feedback_type == "accept"
-                else FeedbackType.REJECTED
-            )
+            feedback = FeedbackType.ACCEPTED if feedback_type == "accept" else FeedbackType.REJECTED
             self.recommendation_engine.record_feedback(
-                suggestion.suggestion_id, feedback,
+                suggestion.suggestion_id,
+                feedback,
             )
 
             # Confirm to user
@@ -542,9 +521,7 @@ class RecommendationArchivistIntegration:
 
                 # Add as insight if enabled
                 if self.settings["feedback_to_insights"]:
-                    insight_text = (
-                        f"User found '{suggestion.query}' to be a valuable query"
-                    )
+                    insight_text = f"User found '{suggestion.query}' to be a valuable query"
                     self.memory.add_insight("recommendation", insight_text, 0.8)
 
                 # Execute the query if it's an accept
@@ -559,9 +536,7 @@ class RecommendationArchivistIntegration:
 
                 # Add as insight if enabled
                 if self.settings["feedback_to_insights"]:
-                    insight_text = (
-                        f"User did not find '{suggestion.query}' to be a relevant query"
-                    )
+                    insight_text = f"User did not find '{suggestion.query}' to be a relevant query"
                     self.memory.add_insight("recommendation", insight_text, 0.6)
 
         except ValueError:
@@ -628,7 +603,9 @@ class RecommendationArchivistIntegration:
 
             try:
                 recommendations = provider.generate_suggestions(
-                    current_query="", context_data=context, max_suggestions=3,
+                    current_query="",
+                    context_data=context,
+                    max_suggestions=3,
                 )
 
                 if recommendations:
@@ -647,7 +624,9 @@ class RecommendationArchivistIntegration:
         if all_recommendations:
             print("\nCombined Recommendations:")
             ranked = sorted(
-                all_recommendations, key=lambda x: x.confidence, reverse=True,
+                all_recommendations,
+                key=lambda x: x.confidence,
+                reverse=True,
             )
             self._display_recommendations(ranked[:5])
         else:
@@ -673,9 +652,7 @@ class RecommendationArchivistIntegration:
         # Update entity counts (simple extraction)
         entities = self._extract_entities_from_query(query_text)
         for entity in entities:
-            self.context["entity_counts"][entity] = (
-                self.context["entity_counts"].get(entity, 0) + 1
-            )
+            self.context["entity_counts"][entity] = self.context["entity_counts"].get(entity, 0) + 1
 
         # Extract potential topics
         topics = self._extract_topics_from_query(query_text)
@@ -757,8 +734,7 @@ class RecommendationArchivistIntegration:
         now = datetime.now(UTC)
         if (
             self.last_recommendations_time
-            and (now - self.last_recommendations_time).total_seconds()
-            < self.recommendation_cooldown_minutes * 60
+            and (now - self.last_recommendations_time).total_seconds() < self.recommendation_cooldown_minutes * 60
         ):
             return False
 
@@ -835,7 +811,8 @@ class RecommendationArchivistIntegration:
         for source_type, count in self.recommendation_engine.suggestion_counts.items():
             if count >= 10:  # Only add insights if we have sufficient data
                 acceptance = self.recommendation_engine.acceptance_counts.get(
-                    source_type, 0,
+                    source_type,
+                    0,
                 )
                 acceptance_rate = acceptance / count
 

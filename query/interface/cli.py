@@ -18,9 +18,9 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from icecream import ic
+from typing import Any
 
-from typing import List, Dict, Any
+from icecream import ic
 
 
 class CLI:
@@ -45,7 +45,7 @@ class CLI:
         """
         return input(self.prompt).strip()
 
-    def display_results(self, results: List[Dict[str, Any]], facets: List[str]) -> None:
+    def display_results(self, results: list[dict[str, Any]], facets: list[str]) -> None:
         """
         Displays the search results and suggested facets to the user.
 
@@ -76,9 +76,7 @@ class CLI:
         Returns:
             bool: True if the user wants to continue, False otherwise
         """
-        response = (
-            input("Do you want to perform another search? (y/n): ").strip().lower()
-        )
+        response = input("Do you want to perform another search? (y/n): ").strip().lower()
         return response == "y"
 
     def display_error(self, error_message: str) -> None:
@@ -103,7 +101,7 @@ class CLI:
         while True:
             try:
                 selection = input(
-                    "Enter the number of a result to see more details (or press Enter to skip): "
+                    "Enter the number of a result to see more details (or press Enter to skip): ",
                 )
                 if not selection:
                     return -1
@@ -115,7 +113,7 @@ class CLI:
             except ValueError:
                 print("Please enter a valid number")
 
-    def display_result_details(self, result: Dict[str, Any]) -> None:
+    def display_result_details(self, result: dict[str, Any]) -> None:
         """
         Displays detailed information about a specific result.
 
@@ -126,7 +124,7 @@ class CLI:
         for key, value in result.items():
             print(f"{key.capitalize()}: {value}")
 
-    def get_facet_selection(self, facets: List[str]) -> str:
+    def get_facet_selection(self, facets: list[str]) -> str:
         """
         Prompts the user to select a facet for query refinement.
 
@@ -146,7 +144,7 @@ class CLI:
         while True:
             try:
                 selection = input(
-                    "Enter the number of a facet to refine your search (or press Enter to skip): "
+                    "Enter the number of a facet to refine your search (or press Enter to skip): ",
                 )
                 if not selection:
                     return ""

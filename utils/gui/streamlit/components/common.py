@@ -82,9 +82,7 @@ def display_search_results(search_results):
     if isinstance(search_results, (list, tuple)):
         if len(search_results) > 0:
             # Display up to 20 items
-            items_to_show = (
-                search_results[:20] if len(search_results) > 20 else search_results
-            )
+            items_to_show = search_results[:20] if len(search_results) > 20 else search_results
 
             # Use a simple table for display first
             table_data = []
@@ -197,7 +195,8 @@ def display_query_plan(explain_results):
             and "estimatedCost" in explain_results["plan"]
         ):
             st.metric(
-                "Estimated Cost", f"{explain_results['plan']['estimatedCost']:,.0f}",
+                "Estimated Cost",
+                f"{explain_results['plan']['estimatedCost']:,.0f}",
             )
 
     # Handle estimated number of items
@@ -208,10 +207,7 @@ def display_query_plan(explain_results):
                     "Estimated Results",
                     f"{explain_results.get('estimatedNrItems', 0):,}",
                 )
-            elif (
-                "plan" in explain_results
-                and "estimatedNrItems" in explain_results["plan"]
-            ):
+            elif "plan" in explain_results and "estimatedNrItems" in explain_results["plan"]:
                 st.metric(
                     "Estimated Results",
                     f"{explain_results['plan'].get('estimatedNrItems', 0):,}",
@@ -221,10 +217,7 @@ def display_query_plan(explain_results):
     with metrics_col3:
         exec_time = None
         if isinstance(explain_results, dict):
-            if (
-                "stats" in explain_results
-                and "executionTime" in explain_results["stats"]
-            ):
+            if "stats" in explain_results and "executionTime" in explain_results["stats"]:
                 exec_time = explain_results["stats"]["executionTime"]
             elif (
                 "plan" in explain_results

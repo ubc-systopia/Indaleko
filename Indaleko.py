@@ -75,21 +75,20 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # from IndalekoMachineConfigSchema import IndalekoMachineConfigSchema
 # from IndalekoUserSchema import IndalekoUserSchema
 # from IndalekoUserRelationshipSchema import IndalekoUserRelationshipSchema
+# from utils.misc.file_name_management import indaleko_file_name_prefix
+import utils.data_validation
+import utils.misc.data_management
+import utils.misc.directory_management
+import utils.misc.file_name_management
+import utils.misc.timestamp_management
+from db.db_collections import IndalekoDBCollections
+from db.db_config import IndalekoDBConfig
+from utils.i_logging import IndalekoLogging
 from utils.misc.directory_management import (
     indaleko_default_config_dir,
     indaleko_default_data_dir,
     indaleko_default_log_dir,
 )
-
-# from utils.misc.file_name_management import indaleko_file_name_prefix
-import utils.data_validation
-from utils.i_logging import IndalekoLogging
-import utils.misc.file_name_management
-import utils.misc.directory_management
-import utils.misc.timestamp_management
-import utils.misc.data_management
-from db.db_config import IndalekoDBConfig
-from db.db_collections import IndalekoDBCollections
 
 # pylint: enable=wrong-import-position
 
@@ -138,7 +137,7 @@ class Indaleko:
     def create_secure_directories(directories: list = None) -> None:
         """Create secure directories for Indaleko."""
         return utils.misc.directory_management.indaleko_create_secure_directories(
-            directories
+            directories,
         )
 
     # @deprecated(reason='Use utils.validate_data.validate_uuid_string instead')
@@ -167,7 +166,7 @@ class Indaleko:
         """Given a file timestamp, convert it to an ISO timestamp."""
         return (
             utils.misc.timestamp_management.extract_iso_timestamp_from_file_timestamp(
-                file_timestamp
+                file_timestamp,
             )
         )
 
@@ -221,12 +220,13 @@ class Indaleko:
 
     @staticmethod
     def find_candidate_files(
-        input_strings: list[str], directory: str
+        input_strings: list[str], directory: str,
     ) -> list[tuple[str, str]]:
         """Given a directory location, find a list of candidate files that match
-        the input strings."""
+        the input strings.
+        """
         return utils.misc.file_name_management.find_candidate_files(
-            input_strings, directory
+            input_strings, directory,
         )
 
     @staticmethod

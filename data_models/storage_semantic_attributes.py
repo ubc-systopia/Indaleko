@@ -17,10 +17,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 """
 
-from enum import Enum
 import os
 import sys
-
+from enum import Enum
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -42,13 +41,11 @@ class StorageSemanticAttributes(str, Enum):
     STORAGE_ATTRIBUTES_GID = "64ec8b5a-78ba-4787-ba8d-cb033ec24116"  # st_gid
     STORAGE_ATTRIBUTES_MODE = "1bb62d33-0392-4ffe-af1d-5ebfc32afbb9"  # st_mode
     STORAGE_ATTRIBUTES_NLINK = "06677615-2957-4966-aab9-dde29660c334"  # st_nlink
-    STORAGE_ATTRIBUTES_REPARSE_TAG = (
-        "7ebf1a92-94f9-40b0-8887-349c24f0e354"  # windows specific - move?
-    )
+    STORAGE_ATTRIBUTES_REPARSE_TAG = "7ebf1a92-94f9-40b0-8887-349c24f0e354"  # windows specific - move?
     STORAGE_ATTRIBUTES_UID = "1bd30cfc-9320-427d-bdde-60d9e8aa4400"  # st_uid
     STORAGE_ATTRIBUTES_INODE = "882d75c6-a424-4d8b-a938-c264a281204c"  # st_ino
 
-    STORAGE_ATTRIBUTES_LOWERCASE_FILE_NAME = 'c6724410-a717-44a7-b9d3-6b276e250c1d'
+    STORAGE_ATTRIBUTES_LOWERCASE_FILE_NAME = "c6724410-a717-44a7-b9d3-6b276e250c1d"
     STORAGE_ATTRIBUTES_SUFFIX = "f980b0c8-3d24-4a77-b985-5e945803991f"
 
     STORAGE_ATTRIBUTES_MIMETYPE_FROM_SUFFIX = "8aeb9b5a-3d08-4d1f-9921-0795343d9eb3"

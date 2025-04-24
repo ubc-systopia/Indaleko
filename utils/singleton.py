@@ -1,7 +1,6 @@
 '''
 IndalecoSingleton.py - This module is used to create singletones in Indaleko.
 
-
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason
 
@@ -33,7 +32,9 @@ class IndalekoSingleton:
         if cls._instance is None:
             try:
                 cls._instance = super(IndalekoSingleton, cls).__new__(
-                    cls, *args, **kwargs
+                    cls,
+                    *args,
+                    **kwargs,
                 )
             except TypeError:  # in case base class doesn't take any arguments
                 cls._instance = super(IndalekoSingleton, cls).__new__(cls)

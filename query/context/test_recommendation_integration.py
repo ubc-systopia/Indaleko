@@ -89,17 +89,25 @@ def test_recommendation_integration(args):
         progress=0.35,
     )
     memory.add_long_term_goal(
-        "Knowledge Capture", "Capture knowledge from my research papers", progress=0.2,
+        "Knowledge Capture",
+        "Capture knowledge from my research papers",
+        progress=0.2,
     )
 
     memory.add_insight(
-        "organization", "User struggles with finding documents older than 6 months", 0.8,
+        "organization",
+        "User struggles with finding documents older than 6 months",
+        0.8,
     )
     memory.add_insight(
-        "temporal", "User typically searches for work documents on Monday mornings", 0.7,
+        "temporal",
+        "User typically searches for work documents on Monday mornings",
+        0.7,
     )
     memory.add_insight(
-        "content", "PDFs are the most frequently searched document type", 0.9,
+        "content",
+        "PDFs are the most frequently searched document type",
+        0.9,
     )
 
     # Create Proactive Archivist

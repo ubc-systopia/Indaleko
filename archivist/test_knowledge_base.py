@@ -108,7 +108,8 @@ def test_create_and_retrieve_patterns(kb_manager, event_id):
 
     # Get patterns of type query_pattern
     query_patterns = kb_manager.get_patterns_by_type(
-        KnowledgePatternType.query_pattern, min_confidence=0.7,
+        KnowledgePatternType.query_pattern,
+        min_confidence=0.7,
     )
 
     print(f"Found {len(query_patterns)} query patterns")
@@ -155,7 +156,8 @@ def test_create_and_retrieve_patterns(kb_manager, event_id):
 
     # Get patterns of type entity_relationship
     entity_patterns = kb_manager.get_patterns_by_type(
-        KnowledgePatternType.entity_relationship, min_confidence=0.7,
+        KnowledgePatternType.entity_relationship,
+        min_confidence=0.7,
     )
 
     print(f"Found {len(entity_patterns)} entity relationship patterns")
@@ -221,7 +223,8 @@ def test_query_enhancement(kb_manager):
 
     # Test query that should match existing patterns
     enhanced_query1 = kb_manager.apply_knowledge_to_query(
-        "Find documents about knowledge bases", intent="document_search",
+        "Find documents about knowledge bases",
+        intent="document_search",
     )
 
     print(f"Enhanced query 1 result: {json.dumps(enhanced_query1, default=str)}")
@@ -229,7 +232,8 @@ def test_query_enhancement(kb_manager):
 
     # Test query that shouldn't match existing patterns
     enhanced_query2 = kb_manager.apply_knowledge_to_query(
-        "What is the capital of France?", intent="factoid_question",
+        "What is the capital of France?",
+        intent="factoid_question",
     )
 
     print(f"Enhanced query 2 result: {json.dumps(enhanced_query2, default=str)}")
@@ -249,7 +253,8 @@ def test_entity_relationships(kb_manager):
 
     # Get related entities for "Knowledge Base"
     related_entities = kb_manager.get_related_entities(
-        "Knowledge Base", entity_type="concept",
+        "Knowledge Base",
+        entity_type="concept",
     )
 
     print(f"Found {len(related_entities)} related entities for 'Knowledge Base'")
@@ -299,7 +304,8 @@ def run_all_tests():
     event, pattern_event = test_create_and_retrieve_events(kb_manager)
 
     query_patterns, entity_patterns = test_create_and_retrieve_patterns(
-        kb_manager, event.event_id,
+        kb_manager,
+        event.event_id,
     )
 
     # Use the first pattern ID for feedback tests if available
@@ -308,7 +314,8 @@ def run_all_tests():
         pattern_id = str(query_patterns[0].pattern_id)
 
     positive_feedback, negative_feedback = test_feedback_integration(
-        kb_manager, pattern_id,
+        kb_manager,
+        pattern_id,
     )
 
     enhanced_query1, enhanced_query2 = test_query_enhancement(kb_manager)
@@ -327,20 +334,30 @@ def main():
     parser.add_argument("--all", action="store_true", help="Run all tests")
     parser.add_argument("--events", action="store_true", help="Test learning events")
     parser.add_argument(
-        "--patterns", action="store_true", help="Test knowledge patterns",
+        "--patterns",
+        action="store_true",
+        help="Test knowledge patterns",
     )
     parser.add_argument(
-        "--feedback", action="store_true", help="Test feedback integration",
+        "--feedback",
+        action="store_true",
+        help="Test feedback integration",
     )
     parser.add_argument("--queries", action="store_true", help="Test query enhancement")
     parser.add_argument(
-        "--entities", action="store_true", help="Test entity relationships",
+        "--entities",
+        action="store_true",
+        help="Test entity relationships",
     )
     parser.add_argument(
-        "--stats", action="store_true", help="Test knowledge base stats",
+        "--stats",
+        action="store_true",
+        help="Test knowledge base stats",
     )
     parser.add_argument(
-        "--clear", action="store_true", help="Clear test data (not implemented)",
+        "--clear",
+        action="store_true",
+        help="Clear test data (not implemented)",
     )
     parser.add_argument(
         "--setup-check",
@@ -367,10 +384,12 @@ def main():
             collections_defined = (
                 hasattr(IndalekoDBCollections, "Indaleko_Learning_Event_Collection")
                 and hasattr(
-                    IndalekoDBCollections, "Indaleko_Knowledge_Pattern_Collection",
+                    IndalekoDBCollections,
+                    "Indaleko_Knowledge_Pattern_Collection",
                 )
                 and hasattr(
-                    IndalekoDBCollections, "Indaleko_Feedback_Record_Collection",
+                    IndalekoDBCollections,
+                    "Indaleko_Feedback_Record_Collection",
                 )
             )
 

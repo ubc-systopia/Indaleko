@@ -141,7 +141,9 @@ class CalendarCollectorBase(CollaborationCollector):
 
     @abstractmethod
     def convert_to_calendar_event(
-        self, event_data: dict[str, Any], calendar_id: str,
+        self,
+        event_data: dict[str, Any],
+        calendar_id: str,
     ) -> CalendarEvent:
         """Convert provider-specific event data to CalendarEvent model.
 

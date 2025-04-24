@@ -18,12 +18,11 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from datetime import datetime, timezone
 import os
 import sys
+from datetime import UTC, datetime
 
 from icecream import ic
-from typing import Union
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -34,12 +33,12 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from constants import IndalekoConstants
-from db import IndalekoDBConfig
 from data_models.db_config import (
     IndalekoDBConfigDataModel,
-    IndalekoDBConfigUserDataModel,
     IndalekoDBConfigDockerConfigurationDataModel,
+    IndalekoDBConfigUserDataModel,
 )
+from db import IndalekoDBConfig
 
 # from utils import IndalekoDocker, IndalekoLogging, IndalekoSingleton
 # from utils.data_validation import validate_ip_address, validate_hostname
@@ -54,7 +53,8 @@ class IndalekoDBDocker:
     """
 
     def __init__(
-        self, config_data: Union[None, IndalekoDBConfigDataModel] = None
+        self,
+        config_data: None | IndalekoDBConfigDataModel = None,
     ) -> None:
         """
         Set up the docker configuration for the database.
@@ -77,7 +77,7 @@ class IndalekoDBDocker:
         hostname: str = "localhost",
         port: int = 8529,
         ssl: bool = False,
-        timestamp: datetime = datetime.now(timezone.utc),
+        timestamp: datetime = datetime.now(UTC),
     ) -> IndalekoDBConfigDataModel:
         """Generate a new docker configuration."""
         new_config_data = {
@@ -86,17 +86,16 @@ class IndalekoDBDocker:
             "Local": False,
             "Name": IndalekoConstants.project_name,
             "AdminUser": IndalekoDBConfigUserDataModel(
-                Name="root", Password=IndalekoDBConfig.generate_random_password()
+                Name="root",
+                Password=IndalekoDBConfig.generate_random_password(),
             ),
             "DBUser": IndalekoDBConfigUserDataModel(
                 Name=IndalekoDBConfig.generate_random_username(),
                 Password=IndalekoDBConfig.generate_random_password(),
             ),
             "DockerConfiguration": IndalekoDBConfigDockerConfigurationDataModel(
-                ContainerName=f"arango-{IndalekoConstants.default_prefix}-"
-                f"{timestamp.strftime('%Y%m%d%H%M%S')}",
-                VolumeName=f"{IndalekoConstants.default_prefix}-db-1-"
-                f"{timestamp.strftime('%Y%m%d%H%M%S')}",
+                ContainerName=f"arango-{IndalekoConstants.default_prefix}-{timestamp.strftime('%Y%m%d%H%M%S')}",
+                VolumeName=f"{IndalekoConstants.default_prefix}-db-1-{timestamp.strftime('%Y%m%d%H%M%S')}",
             ),
             "Hostname": hostname,
             "Port": port,

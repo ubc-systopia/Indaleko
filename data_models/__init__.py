@@ -20,7 +20,7 @@ from data_models.activity_data_registration import (  # noqa: E402
 )
 from data_models.collection_metadata_data_model import (  # noqa: E402
     IndalekoCollectionMetadataDataModel,
-)  # noqa: E402
+)
 from data_models.i_object import IndalekoObjectDataModel  # noqa: E402
 from data_models.i_perf import IndalekoPerformanceDataModel  # noqa: E402
 from data_models.i_uuid import IndalekoUUIDDataModel  # noqa: E402

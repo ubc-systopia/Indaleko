@@ -21,13 +21,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # standard imports
 import os
 import sys
-
-from uuid import UUID
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 # third-party imports
-from typing import Optional
-from pydantic import Field, field_validator, AwareDatetime
+from uuid import UUID
+
+from pydantic import AwareDatetime, Field, field_validator
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -49,18 +48,20 @@ class UnstructuredInputDataModel(IndalekoBaseModel):
     """
 
     ObjectIdentifier: UUID = Field(
-        ..., description="Identifier of this file in Indaleko."
+        ...,
+        description="Identifier of this file in Indaleko.",
     )
 
     LocalPath: str = Field(..., description="The local path to the file.")
 
     ModificationTimestamp: AwareDatetime = Field(
-        ..., description="The last modified time for the file."
+        ...,
+        description="The last modified time for the file.",
     )
 
     Length: int = Field(..., description="The length of the file in bytes.")
 
-    Checksum: Optional[str] = Field(..., description="The checksum of the file.")
+    Checksum: str | None = Field(..., description="The checksum of the file.")
 
     class Config:
         """Sample configuration data for the data model."""
@@ -72,7 +73,7 @@ class UnstructuredInputDataModel(IndalekoBaseModel):
                 "ModificationTimestamp": "2024-01-01T00:00:00Z",
                 "Length": 1024,
                 "Checksum": "000000000000000000000000000",
-            }
+            },
         }
 
     @classmethod
@@ -82,7 +83,7 @@ class UnstructuredInputDataModel(IndalekoBaseModel):
         if isinstance(value, str):
             value = datetime.fromisoformat(value)
         if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
+            value = value.replace(tzinfo=UTC)
         return value
 
 

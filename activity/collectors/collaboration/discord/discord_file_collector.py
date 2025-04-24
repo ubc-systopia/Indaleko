@@ -56,7 +56,10 @@ class DiscordFileShareCollector(CollaborationCollector):
     """
 
     def __init__(
-        self, token_file: str | None = None, token: str | None = None, **kwargs,
+        self,
+        token_file: str | None = None,
+        token: str | None = None,
+        **kwargs,
     ):
         """
         Initialize the Discord file sharing collector.
@@ -217,7 +220,9 @@ class DiscordFileShareCollector(CollaborationCollector):
             return []
 
     def extract_file_attachments(
-        self, messages: list[dict], channel_data: dict,
+        self,
+        messages: list[dict],
+        channel_data: dict,
     ) -> list[dict]:
         """
         Extract file attachments from messages.
@@ -266,14 +271,10 @@ class DiscordFileShareCollector(CollaborationCollector):
                 if guild_id:
                     file_data["guild_id"] = guild_id
                     # Create a message link
-                    file_data["message_link"] = (
-                        f"https://discord.com/channels/{guild_id}/{channel_id}/{message_id}"
-                    )
+                    file_data["message_link"] = f"https://discord.com/channels/{guild_id}/{channel_id}/{message_id}"
                 else:
                     # DM channel
-                    file_data["message_link"] = (
-                        f"https://discord.com/channels/@me/{channel_id}/{message_id}"
-                    )
+                    file_data["message_link"] = f"https://discord.com/channels/@me/{channel_id}/{message_id}"
 
                 attachments.append(file_data)
 
@@ -460,10 +461,7 @@ class DiscordFileShareCollector(CollaborationCollector):
         Returns:
             List of processed Discord data models
         """
-        return [
-            self.convert_attachment_to_model(attachment).model_dump()
-            for attachment in self.file_attachments
-        ]
+        return [self.convert_attachment_to_model(attachment).model_dump() for attachment in self.file_attachments]
 
     def get_collector_characteristics(self) -> list[ActivityDataCharacteristics]:
         """Get the characteristics of the collector"""

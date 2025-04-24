@@ -92,10 +92,12 @@ class RelationshipEntity(BaseModel):
     entity_type: EntityType = Field(..., description="Type of entity")
     identifier: str | None = Field(None, description="Identifier for the entity")
     resolution: EntityResolution | None = Field(
-        None, description="Resolution information for the entity",
+        None,
+        description="Resolution information for the entity",
     )
     attributes: dict[str, Any] = Field(
-        default_factory=dict, description="Additional attributes for the entity",
+        default_factory=dict,
+        description="Additional attributes for the entity",
     )
 
     class Config:
@@ -118,37 +120,47 @@ class RelationshipQuery(IndalekoBaseModel):
     """Model for a relationship-based query."""
 
     relationship_type: RelationshipType = Field(
-        ..., description="Type of relationship being queried",
+        ...,
+        description="Type of relationship being queried",
     )
     direction: RelationshipDirection = Field(
-        default=RelationshipDirection.ANY, description="Direction of relationship",
+        default=RelationshipDirection.ANY,
+        description="Direction of relationship",
     )
     source_entity: RelationshipEntity = Field(
-        ..., description="Source entity in the relationship",
+        ...,
+        description="Source entity in the relationship",
     )
     target_entity: RelationshipEntity | None = Field(
-        None, description="Target entity in the relationship",
+        None,
+        description="Target entity in the relationship",
     )
 
     time_constraint: dict[str, Any] | None = Field(
-        None, description="Time constraints on the relationship",
+        None,
+        description="Time constraints on the relationship",
     )
     additional_filters: dict[str, Any] = Field(
-        default_factory=dict, description="Additional filters for the query",
+        default_factory=dict,
+        description="Additional filters for the query",
     )
 
     max_depth: int = Field(
-        default=1, description="Maximum depth for traversing relationships",
+        default=1,
+        description="Maximum depth for traversing relationships",
     )
     limit: int | None = Field(
-        None, description="Maximum number of results to return",
+        None,
+        description="Maximum number of results to return",
     )
 
     natural_language_query: str | None = Field(
-        None, description="Original natural language query",
+        None,
+        description="Original natural language query",
     )
     confidence: float = Field(
-        default=1.0, description="Confidence in the relationship query interpretation",
+        default=1.0,
+        description="Confidence in the relationship query interpretation",
     )
 
     class Config:
@@ -196,7 +208,8 @@ class RelationshipQueryResult(IndalekoBaseModel):
         description="Time the query was executed",
     )
     path_visualizations: dict[str, Any] | None = Field(
-        None, description="Visualizations of relationship paths",
+        None,
+        description="Visualizations of relationship paths",
     )
 
     class Config:

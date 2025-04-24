@@ -1,7 +1,8 @@
 import unittest
-from abstract import IReader
+
 import operators
 import pipeline
+from abstract import IReader
 
 
 class MockInputGenerator(IReader):
@@ -80,7 +81,7 @@ class PipeLineTest(unittest.TestCase):
                 p = pipeline.Pipeline(mi)
 
                 p.add(operators.ToList(remove_empty_fields=remove_empty)).add(
-                    operators.FilterFields(pos, q)
+                    operators.FilterFields(pos, q),
                 ).add(operators.Show(self.mock_show))
 
                 # p.run returns a generator; use list to realize it

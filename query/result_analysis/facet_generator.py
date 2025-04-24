@@ -71,7 +71,8 @@ class FacetGenerator:
         self.conversational = conversational
 
     def generate(
-        self, analyzed_results: list[dict[str, Any]],
+        self,
+        analyzed_results: list[dict[str, Any]],
     ) -> list[str] | DynamicFacets:
         """
         Generate facets based on the analyzed search results.
@@ -101,13 +102,15 @@ class FacetGenerator:
 
         # Generate facets from extracted metadata
         file_type_facet = self._generate_file_type_facet(
-            file_types, len(analyzed_results),
+            file_types,
+            len(analyzed_results),
         )
         date_facet = self._generate_date_facet(dates, len(analyzed_results))
         location_facet = self._generate_location_facet(locations, len(analyzed_results))
         size_facet = self._generate_size_facet(sizes, len(analyzed_results))
         semantic_facets = self._generate_semantic_facets(
-            semantic_attrs, len(analyzed_results),
+            semantic_attrs,
+            len(analyzed_results),
         )
 
         # Combine all facets and rank them by utility
@@ -131,12 +134,17 @@ class FacetGenerator:
         conversational_hints = []
         if self.conversational:
             conversational_hints = self._generate_conversational_hints(
-                selected_facets, len(analyzed_results),
+                selected_facets,
+                len(analyzed_results),
             )
 
         # Generate statistics
         facet_statistics = self._generate_facet_statistics(
-            selected_facets, file_types, dates, sizes, len(analyzed_results),
+            selected_facets,
+            file_types,
+            dates,
+            sizes,
+            len(analyzed_results),
         )
 
         # Build the DynamicFacets object
@@ -290,7 +298,8 @@ class FacetGenerator:
         return sizes
 
     def _extract_semantic_attributes(
-        self, results: list[dict[str, Any]],
+        self,
+        results: list[dict[str, Any]],
     ) -> dict[str, dict[str, int]]:
         """
         Extract semantic attributes from results.
@@ -315,7 +324,9 @@ class FacetGenerator:
         return {k: dict(v) for k, v in semantic_attrs.items()}
 
     def _generate_file_type_facet(
-        self, file_types: dict[str, int], total_results: int,
+        self,
+        file_types: dict[str, int],
+        total_results: int,
     ) -> Facet | None:
         """
         Generate a facet for file types.
@@ -338,19 +349,21 @@ class FacetGenerator:
             return None
 
         # Filter values by minimum count
-        filtered_types = {
-            k: v for k, v in file_types.items() if v >= self.min_value_count
-        }
+        filtered_types = {k: v for k, v in file_types.items() if v >= self.min_value_count}
         if not filtered_types:
             return None
 
         # Create facet values
         values = []
         for file_type, count in sorted(
-            filtered_types.items(), key=lambda x: x[1], reverse=True,
+            filtered_types.items(),
+            key=lambda x: x[1],
+            reverse=True,
         ):
             value = FacetValue(
-                value=file_type, count=count, query_refinement=f"file_type:{file_type}",
+                value=file_type,
+                count=count,
+                query_refinement=f"file_type:{file_type}",
             )
             values.append(value)
 
@@ -368,7 +381,9 @@ class FacetGenerator:
         )
 
     def _generate_date_facet(
-        self, dates: list[datetime], total_results: int,
+        self,
+        dates: list[datetime],
+        total_results: int,
     ) -> Facet | None:
         """
         Generate a facet for date ranges.
@@ -426,16 +441,16 @@ class FacetGenerator:
             bin_type = "year"
 
         # Filter bins by minimum count
-        filtered_bins = {
-            k: v for k, v in date_bins.items() if v >= self.min_value_count
-        }
+        filtered_bins = {k: v for k, v in date_bins.items() if v >= self.min_value_count}
         if not filtered_bins:
             return None
 
         # Create facet values
         values = []
         for bin_key, count in sorted(
-            filtered_bins.items(), key=lambda x: x[0], reverse=True,
+            filtered_bins.items(),
+            key=lambda x: x[0],
+            reverse=True,
         ):
             # Create a human-readable label based on bin type
             if bin_type == "day":
@@ -448,7 +463,9 @@ class FacetGenerator:
                 label = bin_key
 
             value = FacetValue(
-                value=label, count=count, query_refinement=f"date:{bin_key}",
+                value=label,
+                count=count,
+                query_refinement=f"date:{bin_key}",
             )
             values.append(value)
 
@@ -466,7 +483,9 @@ class FacetGenerator:
         )
 
     def _generate_location_facet(
-        self, locations: dict[str, int], total_results: int,
+        self,
+        locations: dict[str, int],
+        total_results: int,
     ) -> Facet | None:
         """
         Generate a facet for file locations.
@@ -489,25 +508,28 @@ class FacetGenerator:
             return None
 
         # Filter values by minimum count
-        filtered_locations = {
-            k: v for k, v in locations.items() if v >= self.min_value_count
-        }
+        filtered_locations = {k: v for k, v in locations.items() if v >= self.min_value_count}
         if not filtered_locations:
             return None
 
         # Create facet values
         values = []
         for location, count in sorted(
-            filtered_locations.items(), key=lambda x: x[1], reverse=True,
+            filtered_locations.items(),
+            key=lambda x: x[1],
+            reverse=True,
         ):
             value = FacetValue(
-                value=location, count=count, query_refinement=f"location:{location}",
+                value=location,
+                count=count,
+                query_refinement=f"location:{location}",
             )
             values.append(value)
 
         # Calculate entropy
         entropy = self._calculate_entropy(
-            list(filtered_locations.values()), total_results,
+            list(filtered_locations.values()),
+            total_results,
         )
 
         # Create the facet
@@ -521,7 +543,9 @@ class FacetGenerator:
         )
 
     def _generate_size_facet(
-        self, sizes: list[int], total_results: int,
+        self,
+        sizes: list[int],
+        total_results: int,
     ) -> Facet | None:
         """
         Generate a facet for file sizes.
@@ -562,9 +586,7 @@ class FacetGenerator:
                 size_bins["Very Large (>10MB)"] += 1
 
         # Filter bins by minimum count
-        filtered_bins = {
-            k: v for k, v in size_bins.items() if v >= self.min_value_count
-        }
+        filtered_bins = {k: v for k, v in size_bins.items() if v >= self.min_value_count}
         if not filtered_bins:
             return None
 
@@ -598,7 +620,9 @@ class FacetGenerator:
         )
 
     def _generate_semantic_facets(
-        self, semantic_attrs: dict[str, dict[str, int]], total_results: int,
+        self,
+        semantic_attrs: dict[str, dict[str, int]],
+        total_results: int,
     ) -> list[Facet]:
         """
         Generate facets from semantic attributes.
@@ -621,16 +645,16 @@ class FacetGenerator:
                 continue
 
             # Filter values by minimum count
-            filtered_values = {
-                k: v for k, v in values.items() if v >= self.min_value_count
-            }
+            filtered_values = {k: v for k, v in values.items() if v >= self.min_value_count}
             if not filtered_values:
                 continue
 
             # Create facet values
             facet_values = []
             for value_name, count in sorted(
-                filtered_values.items(), key=lambda x: x[1], reverse=True,
+                filtered_values.items(),
+                key=lambda x: x[1],
+                reverse=True,
             ):
                 facet_value = FacetValue(
                     value=str(value_name),
@@ -641,7 +665,8 @@ class FacetGenerator:
 
             # Calculate entropy
             entropy = self._calculate_entropy(
-                list(filtered_values.values()), total_results,
+                list(filtered_values.values()),
+                total_results,
             )
 
             # Create the facet
@@ -707,7 +732,9 @@ class FacetGenerator:
         return entropy / max_entropy
 
     def _generate_suggestions(
-        self, facets: list[Facet], total_results: int,
+        self,
+        facets: list[Facet],
+        total_results: int,
     ) -> list[str]:
         """
         Generate natural language suggestions based on facets.
@@ -781,7 +808,9 @@ class FacetGenerator:
         return suggestions[:5]  # Limit to top 5 suggestions
 
     def _generate_conversational_hints(
-        self, facets: list[Facet], total_results: int,
+        self,
+        facets: list[Facet],
+        total_results: int,
     ) -> list[str]:
         """
         Generate conversational hints for facets.
@@ -833,8 +862,7 @@ class FacetGenerator:
                     newest = facet.values[0].value
                     oldest = facet.values[-1].value
                     hints.append(
-                        f"These results span from {oldest} to {newest}. "
-                        f"Would you prefer more recent documents?",
+                        f"These results span from {oldest} to {newest}. Would you prefer more recent documents?",
                     )
 
             elif facet.type == FacetType.LOCATION:

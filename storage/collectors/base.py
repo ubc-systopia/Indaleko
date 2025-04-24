@@ -19,20 +19,19 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import os
-import stat
 import datetime
-import logging
-import jsonlines
 import json
-from pathlib import Path
+import logging
+import os
 import shutil
+import stat
 import sys
 import tempfile
 import uuid
+from pathlib import Path
 
+import jsonlines
 from icecream import ic
-from typing import Union
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -46,14 +45,14 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from db import IndalekoServiceManager
 from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from utils.misc.directory_management import (
-    indaleko_default_log_dir,
-    indaleko_default_data_dir,
     indaleko_default_config_dir,
+    indaleko_default_data_dir,
+    indaleko_default_log_dir,
 )
 from utils.misc.file_name_management import (
-    indaleko_file_name_prefix,
-    generate_file_name,
     extract_keys_from_file_name,
+    generate_file_name,
+    indaleko_file_name_prefix,
 )
 
 # pylint: enable=wrong-import-position
@@ -116,29 +115,33 @@ class BaseStorageCollector:
         if "collector_data" in kwargs:
             self.collector_data = kwargs["collector_data"]
         assert hasattr(
-            self, "collector_data"
+            self,
+            "collector_data",
         ), "collector_data must either be passed in or created in derived class"
         self.platform = kwargs.get("platform", self.collector_data.PlatformName)
         self.file_prefix = kwargs.get(
-            "file_prefix", BaseStorageCollector.default_file_prefix
+            "file_prefix",
+            BaseStorageCollector.default_file_prefix,
         ).replace("-", "_")
         self.file_suffix = kwargs.get(
-            "file_suffix", BaseStorageCollector.default_file_suffix
+            "file_suffix",
+            BaseStorageCollector.default_file_suffix,
         ).replace("-", "_")
         self.data_dir = kwargs.get("data_dir", indaleko_default_data_dir)
         assert os.path.isdir(
-            self.data_dir
+            self.data_dir,
         ), f"{self.data_dir} must be an existing directory"
         self.config_dir = kwargs.get("config_dir", indaleko_default_config_dir)
         assert os.path.isdir(
-            self.data_dir
+            self.data_dir,
         ), f"{self.data_dir} must be an existing directory"
         self.log_dir = kwargs.get("log_dir", indaleko_default_log_dir)
         assert os.path.isdir(
-            self.data_dir
+            self.data_dir,
         ), f"{self.data_dir} must be an existing directory"
         self.timestamp = kwargs.get(
-            "timestamp", datetime.datetime.now(datetime.timezone.utc).isoformat()
+            "timestamp",
+            datetime.datetime.now(datetime.UTC).isoformat(),
         )
         assert isinstance(self.timestamp, str), "timestamp must be a string"
         assert hasattr(self, "collector_data"), "Must be created by derived class"
@@ -154,7 +157,8 @@ class BaseStorageCollector:
             assert hasattr(self, "machine_id")
             if "storage_description" in kwargs:
                 assert isinstance(
-                    kwargs["storage_description"], str
+                    kwargs["storage_description"],
+                    str,
                 ), f'storage_description must be a string, not {type(kwargs["storage_description"])}'
                 self.storage_description = kwargs["storage_description"]
         if "path" in kwargs:
@@ -163,10 +167,8 @@ class BaseStorageCollector:
             self.path = os.path.expanduser("~")
         self.collector_service = None
         if not self.offline:
-            self.collector_service = (
-                IndalekoServiceManager().lookup_service_by_identifier(
-                    str(self.get_collector_service_identifier())
-                )
+            self.collector_service = IndalekoServiceManager().lookup_service_by_identifier(
+                str(self.get_collector_service_identifier()),
             )
             if self.collector_service is None:
                 self.collector_service = IndalekoServiceManager().register_service(
@@ -188,7 +190,7 @@ class BaseStorageCollector:
         return cls.collector_data
 
     @classmethod
-    def get_collector_platform_name(cls) -> Union[str, None]:
+    def get_collector_platform_name(cls) -> str | None:
         """This function returns the collector platform, or None if not applicable."""
         return cls.collector_data.PlatformName
 
@@ -242,11 +244,7 @@ class BaseStorageCollector:
         assert os.path.isdir(search_dir), "search_dir must be a valid directory"
         assert prefix is not None, "prefix must be a valid string"
         assert suffix is not None, "suffix must be a valid string"
-        return [
-            x
-            for x in os.listdir(search_dir)
-            if x.startswith(prefix) and x.endswith(suffix) and "collector-" in x
-        ]
+        return [x for x in os.listdir(search_dir) if x.startswith(prefix) and x.endswith(suffix) and "collector-" in x]
 
     def get_counts(self):
         """
@@ -279,7 +277,8 @@ class BaseStorageCollector:
                 raise ValueError("platform must be a string")
             platform = kwargs["platform"].replace("-", "_")
         collector_name = kwargs.get("collector_name", "unknown_collector").replace(
-            "-", "_"
+            "-",
+            "_",
         )
         if not isinstance(collector_name, str):
             raise ValueError("collector_name must be a string")
@@ -288,7 +287,8 @@ class BaseStorageCollector:
         if "storage_description" in kwargs:
             storage_description = str(uuid.UUID(kwargs["storage_description"]).hex)
         timestamp = kwargs.get(
-            "timestamp", datetime.datetime.now(datetime.timezone.utc).isoformat()
+            "timestamp",
+            datetime.datetime.now(datetime.UTC).isoformat(),
         )
         assert isinstance(timestamp, str), "timestamp must be a string"
         target_dir = indaleko_default_data_dir
@@ -330,7 +330,9 @@ class BaseStorageCollector:
         if not os.path.exists(file_path):
             if name not in os.listdir(root):
                 logging.warning(
-                    "File %s does not exist in directory %s", file_path, root
+                    "File %s does not exist in directory %s",
+                    file_path,
+                    root,
                 )
                 self.not_found_count += 1
             elif os.path.lexists(file_path):
@@ -338,7 +340,9 @@ class BaseStorageCollector:
                 self.bad_symlink_count += 1
             else:
                 logging.warning(
-                    "File %s exists in directory %s but not accessible", file_path, root
+                    "File %s exists in directory %s but not accessible",
+                    file_path,
+                    root,
                 )
                 self.access_error_count += 1
             return None
@@ -369,11 +373,7 @@ class BaseStorageCollector:
             self.special_count += 1
             return None  # don't process special files
 
-        stat_dict = {
-            key: getattr(stat_data, key)
-            for key in dir(stat_data)
-            if key.startswith("st_")
-        }
+        stat_dict = {key: getattr(stat_data, key) for key in dir(stat_data) if key.startswith("st_")}
         stat_dict["Name"] = name
         stat_dict["Path"] = root
         stat_dict["URI"] = os.path.join(root, name)
@@ -388,10 +388,7 @@ class BaseStorageCollector:
         elif isinstance(data, list):
             return [BaseStorageCollector.convert_to_serializable(item) for item in data]
         elif isinstance(data, dict):
-            return {
-                key: BaseStorageCollector.convert_to_serializable(value)
-                for key, value in data.items()
-            }
+            return {key: BaseStorageCollector.convert_to_serializable(value) for key, value in data.items()}
         else:
             if hasattr(data, "__dict__"):
                 return BaseStorageCollector.convert_to_serializable(data.__dict__)
@@ -409,7 +406,9 @@ class BaseStorageCollector:
                 root.encode("utf-8")
             except UnicodeEncodeError as e:
                 logging.warning(
-                    "Unable to encode directory %s : %s * skipping", root, e
+                    "Unable to encode directory %s : %s * skipping",
+                    root,
+                    e,
                 )
                 ic(f"Unable to encode directory {root} : {e} * skipping")
                 self.encoding_count += 1
@@ -440,7 +439,8 @@ class BaseStorageCollector:
 
     @staticmethod
     def write_data_to_file(
-        collector: "BaseStorageCollector", output_file_name: str = None
+        collector: "BaseStorageCollector",
+        output_file_name: str = None,
     ) -> None:
         """Write the data to a file"""
         if output_file_name is None:
@@ -451,7 +451,9 @@ class BaseStorageCollector:
                 ic("Warning: implicit output file name being used")
                 assert False
         data_file_name, count = collector.record_data_in_file(
-            collector.data, collector.data_dir, output_file_name
+            collector.data,
+            collector.data_dir,
+            output_file_name,
         )
         logging.info("Wrote %d entries to %s", count, data_file_name)
         if hasattr(collector, "output_count"):
@@ -459,7 +461,9 @@ class BaseStorageCollector:
 
     @staticmethod
     def __write_data_to_file(
-        data: list, file_name: str = None, jsonlines_output: bool = True
+        data: list,
+        file_name: str = None,
+        jsonlines_output: bool = True,
     ) -> int:
         """
         This will write the given data to the specified file.
@@ -484,18 +488,18 @@ class BaseStorageCollector:
                         writer.write(entry)
                         output_count += 1
                     except TypeError as err:
-                        logging.error("Error writing entry to JSONLines file: %s", err)
-                        logging.error("Entry: %s", entry)
-                        logging.error("Output count: %d", output_count)
-                        logging.error("Data size %d", len(data))
+                        logging.exception("Error writing entry to JSONLines file: %s", err)
+                        logging.exception("Entry: %s", entry)
+                        logging.exception("Output count: %d", output_count)
+                        logging.exception("Data size %d", len(data))
                         raise err
                     except UnicodeEncodeError as err:
-                        logging.error("Error writing entry to JSONLines file: %s", err)
-                        logging.error("Entry: %s", entry)
-                        logging.error("Output count: %d", output_count)
-                        logging.error("Data size %d", len(data))
+                        logging.exception("Error writing entry to JSONLines file: %s", err)
+                        logging.exception("Entry: %s", entry)
+                        logging.exception("Output count: %d", output_count)
+                        logging.exception("Data size %d", len(data))
                         ic(
-                            f"Error writing entry to JSONLines file: \n\t{entry}\n\t{err}"
+                            f"Error writing entry to JSONLines file: \n\t{entry}\n\t{err}",
                         )
                         continue  # ignoring
             logging.info("Wrote JSONLines data to %s", file_name)
@@ -509,8 +513,8 @@ class BaseStorageCollector:
     @staticmethod
     def record_data_in_file(
         data: list,
-        dir_name: Union[Path, str],
-        preferred_file_name: Union[Path, str, None] = None,
+        dir_name: Path | str,
+        preferred_file_name: Path | str | None = None,
     ) -> tuple[str, int]:
         """
         Record the specified data in a file.
@@ -540,14 +544,14 @@ class BaseStorageCollector:
             shutil.move(temp_file_name, preferred_file_name)
             print(f"Renamed {temp_file_name} to {preferred_file_name}")
         except (FileNotFoundError, PermissionError, FileExistsError, OSError) as e:
-            logging.error(
+            logging.exception(
                 "Unable to rename temp file %s to %s : %s",
                 temp_file_name,
                 preferred_file_name,
                 e,
             )
             ic(
-                f"Unable to rename temp file {temp_file_name} to output file {preferred_file_name}"
+                f"Unable to rename temp file {temp_file_name} to output file {preferred_file_name}",
             )
             ic(f"Error: {e}")
             preferred_file_name = temp_file_name
@@ -561,7 +565,7 @@ def main():
         collector_name="test_collector",
     )
     ic(output_file)
-    with open(output_file, "wt", encoding="utf-8-sig") as output:
+    with open(output_file, "w", encoding="utf-8-sig") as output:
         output.write("Hello, world!\n")
         print(f"Wrote {output_file}")
     metadata = collector.extract_metadata_from_collector_file_name(output_file)

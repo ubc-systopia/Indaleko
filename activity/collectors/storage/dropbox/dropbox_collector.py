@@ -87,11 +87,13 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
         # Initialize with provider-specific values
         kwargs["name"] = kwargs.get("name", "Dropbox Storage Activity Collector")
         kwargs["provider_id"] = kwargs.get(
-            "provider_id", uuid.UUID("8a4f6b23-9c57-4e31-b78d-f5e9c7a1b2d3"),
+            "provider_id",
+            uuid.UUID("8a4f6b23-9c57-4e31-b78d-f5e9c7a1b2d3"),
         )
         kwargs["provider_type"] = StorageProviderType.DROPBOX
         kwargs["description"] = kwargs.get(
-            "description", "Collects storage activities from Dropbox",
+            "description",
+            "Collects storage activities from Dropbox",
         )
 
         # Call parent initializer
@@ -159,10 +161,7 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
         # Start the polling thread if not using webhooks
         if not self._webhook_enabled:
             # Only start polling thread if not already running
-            if (
-                self._processing_thread is None
-                or not self._processing_thread.is_alive()
-            ):
+            if self._processing_thread is None or not self._processing_thread.is_alive():
                 self._processing_thread = self._create_thread(self._poll_for_changes)
                 self._processing_thread.start()
                 self._logger.info("Started Dropbox polling thread")
@@ -253,7 +252,8 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
             # Determine if this is a directory
             is_directory = False
             if hasattr(entry, "FolderMetadata") or isinstance(
-                entry, dropbox.files.FolderMetadata,
+                entry,
+                dropbox.files.FolderMetadata,
             ):
                 is_directory = True
                 item_type = StorageItemType.DIRECTORY
@@ -285,11 +285,7 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
                 dropbox_file_id=dropbox_file_id,
                 revision=revision,
                 shared_folder_id=shared_folder_id,
-                mime_type=(
-                    getattr(entry, "content_type", None)
-                    if hasattr(entry, "content_type")
-                    else None
-                ),
+                mime_type=(getattr(entry, "content_type", None) if hasattr(entry, "content_type") else None),
                 size=getattr(entry, "size", None) if hasattr(entry, "size") else None,
                 web_url=getattr(entry, "url", None) if hasattr(entry, "url") else None,
                 created_time=(
@@ -322,7 +318,8 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
         """
         # Check for deleted entries
         if hasattr(entry, "DeletedMetadata") or isinstance(
-            entry, dropbox.files.DeletedMetadata,
+            entry,
+            dropbox.files.DeletedMetadata,
         ):
             return StorageActivityType.DELETE
 
@@ -376,10 +373,7 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
                 self._dropbox_config = json.load(f)
 
             # Validate config
-            if (
-                "app_key" not in self._dropbox_config
-                or "app_secret" not in self._dropbox_config
-            ):
+            if "app_key" not in self._dropbox_config or "app_secret" not in self._dropbox_config:
                 self._logger.warning(
                     "Invalid Dropbox config file: missing app_key or app_secret",
                 )
@@ -471,10 +465,7 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
                 self._logger.error("No expires_in in response")
                 return
 
-            if (
-                "access_token" not in response_data
-                and "refresh_token" not in response_data
-            ):
+            if "access_token" not in response_data and "refresh_token" not in response_data:
                 self._logger.error(f"Invalid response from Dropbox: {response_data}")
                 return
 
@@ -487,9 +478,7 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
                 self._dropbox_credentials["token"] = response_data["access_token"]
 
             if "refresh_token" in response_data:
-                self._dropbox_credentials["refresh_token"] = response_data[
-                    "refresh_token"
-                ]
+                self._dropbox_credentials["refresh_token"] = response_data["refresh_token"]
 
             # Save the credentials
             self._store_dropbox_credentials()
@@ -552,9 +541,7 @@ class DropboxStorageActivityCollector(StorageActivityCollector):
             # Update the credentials
             if "access_token" in response_data and "expires_in" in response_data:
                 self._dropbox_credentials["token"] = response_data["access_token"]
-                self._dropbox_credentials["expires_at"] = (
-                    time.time() + response_data["expires_in"]
-                )
+                self._dropbox_credentials["expires_at"] = time.time() + response_data["expires_in"]
 
                 # Save the updated credentials
                 self._store_dropbox_credentials()

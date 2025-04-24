@@ -100,7 +100,8 @@ class TestContinuousLearning(unittest.TestCase):
 
         # Setup ContinuousLearningSystem with mocked dependencies
         self.learning_system = ContinuousLearningSystem(
-            kb_manager=self.mock_kb_manager, db_config=MagicMock(),
+            kb_manager=self.mock_kb_manager,
+            db_config=MagicMock(),
         )
 
         # Add mocked methods to avoid database operations
@@ -141,7 +142,10 @@ class TestContinuousLearning(unittest.TestCase):
     @patch("archivist.knowledge_base.continuous_learning.pkgutil")
     @patch("archivist.knowledge_base.continuous_learning.inspect")
     def test_discover_collectors_and_recorders(
-        self, mock_inspect, mock_pkgutil, mock_importlib,
+        self,
+        mock_inspect,
+        mock_pkgutil,
+        mock_importlib,
     ):
         """Test the discovery of collectors and recorders."""
         # Setup mock for importlib and pkgutil
@@ -184,7 +188,8 @@ class TestContinuousLearning(unittest.TestCase):
         # Verify the event type is correct
         call_args = self.mock_kb_manager.record_learning_event.call_args
         self.assertEqual(
-            call_args[1]["event_type"], LearningEventType.pattern_discovery,
+            call_args[1]["event_type"],
+            LearningEventType.pattern_discovery,
         )
         self.assertEqual(call_args[1]["source"], "collector_discovery")
 
@@ -227,36 +232,32 @@ class TestContinuousLearning(unittest.TestCase):
                 "count": {"type": "number", "required": False},
                 "created": {"type": "string", "required": False},
             }
-            self.learning_system._analyze_field_usage = (
-                lambda collection_name, fields: {
-                    "name": {
-                        "count": 100,
-                        "percentage": 100,
-                        "field_type": "string",
-                        "required": True,
-                    },
-                    "count": {
-                        "count": 80,
-                        "percentage": 80,
-                        "field_type": "number",
-                        "required": False,
-                    },
-                }
-            )
-            self.learning_system._calculate_type_distributions = (
-                lambda collection_name, fields: {
-                    "name": {
-                        "counts": {"string": 100},
-                        "percentages": {"string": 100},
-                        "expected_type": "string",
-                    },
-                    "count": {
-                        "counts": {"number": 80},
-                        "percentages": {"number": 80},
-                        "expected_type": "number",
-                    },
-                }
-            )
+            self.learning_system._analyze_field_usage = lambda collection_name, fields: {
+                "name": {
+                    "count": 100,
+                    "percentage": 100,
+                    "field_type": "string",
+                    "required": True,
+                },
+                "count": {
+                    "count": 80,
+                    "percentage": 80,
+                    "field_type": "number",
+                    "required": False,
+                },
+            }
+            self.learning_system._calculate_type_distributions = lambda collection_name, fields: {
+                "name": {
+                    "counts": {"string": 100},
+                    "percentages": {"string": 100},
+                    "expected_type": "string",
+                },
+                "count": {
+                    "counts": {"number": 80},
+                    "percentages": {"number": 80},
+                    "expected_type": "number",
+                },
+            }
 
             # Perform the analysis
             schema_analysis = self.learning_system.analyze_collection_schemas(
@@ -273,7 +274,8 @@ class TestContinuousLearning(unittest.TestCase):
             # Verify the event type is correct
             call_args = self.mock_kb_manager.record_learning_event.call_args
             self.assertEqual(
-                call_args[1]["event_type"], LearningEventType.pattern_discovery,
+                call_args[1]["event_type"],
+                LearningEventType.pattern_discovery,
             )
             self.assertEqual(call_args[1]["source"], "schema_analysis")
 
@@ -295,9 +297,7 @@ class TestContinuousLearning(unittest.TestCase):
         self.mock_kb_manager.record_learning_event.assert_called()
 
         # Get the first call arguments
-        first_call_args = self.mock_kb_manager.record_learning_event.call_args_list[0][
-            1
-        ]
+        first_call_args = self.mock_kb_manager.record_learning_event.call_args_list[0][1]
 
         # Verify the event type is correct
         self.assertEqual(first_call_args["event_type"], LearningEventType.query_success)
@@ -445,7 +445,8 @@ def run_tests(args):
     # Configure logging based on verbose flag
     log_level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(
-        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
     print("\n===== ContinuousLearningSystem Unit Tests =====\n")
@@ -468,7 +469,8 @@ def run_demo(args):
     # Configure logging based on verbose flag
     log_level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(
-        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
     print("\n===== ContinuousLearningSystem Demonstration =====\n")
@@ -571,7 +573,11 @@ def run_demo(args):
             }
 
         def learn_from_query_results(
-            self, query_text, query_results, execution_time, user_id=None,
+            self,
+            query_text,
+            query_results,
+            execution_time,
+            user_id=None,
         ):
             # Call KB manager to record event
             event = self.kb_manager.record_learning_event(
@@ -837,7 +843,10 @@ def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Test the Continuous Learning System")
     parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Enable verbose logging",
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable verbose logging",
     )
     parser.add_argument(
         "--demo",

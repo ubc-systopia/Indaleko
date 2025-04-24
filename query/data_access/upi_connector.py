@@ -1,4 +1,5 @@
-from typing import List, Dict, Any
+from typing import Any
+
 from arango import ArangoClient
 
 
@@ -8,7 +9,12 @@ class UPIConnector:
     """
 
     def __init__(
-        self, host: str, port: int, username: str, password: str, database: str
+        self,
+        host: str,
+        port: int,
+        username: str,
+        password: str,
+        database: str,
     ):
         """
         Initialize the UPI connector.
@@ -24,8 +30,10 @@ class UPIConnector:
         self.db = self.client.db(database, username=username, password=password)
 
     def execute_aql(
-        self, query: str, bind_vars: Dict[str, Any] = None
-    ) -> List[Dict[str, Any]]:
+        self,
+        query: str,
+        bind_vars: dict[str, Any] = None,
+    ) -> list[dict[str, Any]]:
         """
         Execute an AQL query on the UPI data store.
 
@@ -39,7 +47,7 @@ class UPIConnector:
         cursor = self.db.aql.execute(query, bind_vars=bind_vars)
         return [doc for doc in cursor]
 
-    def search_by_filename(self, filename: str) -> List[Dict[str, Any]]:
+    def search_by_filename(self, filename: str) -> list[dict[str, Any]]:
         """
         Search for files by filename in the UPI.
 
@@ -61,7 +69,7 @@ class UPIConnector:
         """
         return self.execute_aql(query, bind_vars={"filename": f"%{filename}%"})
 
-    def insert_file(self, file_info: Dict[str, Any]) -> Dict[str, Any]:
+    def insert_file(self, file_info: dict[str, Any]) -> dict[str, Any]:
         """
         Insert a new file record into the UPI.
 
@@ -74,7 +82,7 @@ class UPIConnector:
         collection = self.db.collection("files")
         return collection.insert(file_info)
 
-    def update_file(self, file_id: str, file_info: Dict[str, Any]) -> Dict[str, Any]:
+    def update_file(self, file_id: str, file_info: dict[str, Any]) -> dict[str, Any]:
         """
         Update an existing file record in the UPI.
 

@@ -55,7 +55,8 @@ class FacetValue(IndalekoBaseModel):
     value: str = Field(..., description="The facet value")
     count: int = Field(..., description="Number of results with this value")
     query_refinement: str = Field(
-        ..., description="Query string to refine by this value",
+        ...,
+        description="Query string to refine by this value",
     )
 
     class Config:
@@ -75,10 +76,12 @@ class Facet(IndalekoBaseModel):
     field: str = Field(..., description="Field or property this facet represents")
     type: FacetType = Field(..., description="Type of facet")
     values: list[FacetValue] = Field(
-        default_factory=list, description="Available values for this facet",
+        default_factory=list,
+        description="Available values for this facet",
     )
     coverage: float = Field(
-        default=0.0, description="Percentage of results this facet covers (0.0-1.0)",
+        default=0.0,
+        description="Percentage of results this facet covers (0.0-1.0)",
     )
     distribution_entropy: float = Field(
         default=0.0,
@@ -106,11 +109,13 @@ class DynamicFacets(IndalekoBaseModel):
 
     facets: list[Facet] = Field(default_factory=list, description="Available facets")
     suggestions: list[str] = Field(
-        default_factory=list, description="Suggested refinements",
+        default_factory=list,
+        description="Suggested refinements",
     )
     original_count: int = Field(default=0, description="Original number of results")
     facet_statistics: dict[str, Any] = Field(
-        default_factory=dict, description="Statistics about facets",
+        default_factory=dict,
+        description="Statistics about facets",
     )
     conversational_hints: list[str] = Field(
         default_factory=list,

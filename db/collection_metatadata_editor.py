@@ -61,10 +61,7 @@ class CollectionMetadataEditor:
 
     def export_metadata(self) -> dict:
         """Fetch and return all collection metadata as a dictionary."""
-        return {
-            name: meta.serialize()
-            for name, meta in self.db_metadata.collections_metadata.items()
-        }
+        return {name: meta.serialize() for name, meta in self.db_metadata.collections_metadata.items()}
 
     def edit_metadata(self, collection_name: str):
         """
@@ -82,7 +79,9 @@ class CollectionMetadataEditor:
 
         # Write to a temp file
         with tempfile.NamedTemporaryFile(
-            mode="w+", suffix=".json", delete=False,
+            mode="w+",
+            suffix=".json",
+            delete=False,
         ) as tmp_file:
             json.dump(metadata, tmp_file, indent=4)
             tmp_file.flush()  # Ensure all data is written
@@ -186,7 +185,8 @@ class IndalekoCollectorMetadataCLI(IndalekoBaseCLI):
         super().__init__(cli_data, handler_mixin, features)
         config_data = self.get_config_data()
         config_file_path = os.path.join(
-            config_data["ConfigDirectory"], config_data["DBConfigFile"],
+            config_data["ConfigDirectory"],
+            config_data["DBConfigFile"],
         )
         self.db_config = IndalekoDBConfig(config_file=config_file_path, start=True)
 
@@ -205,7 +205,8 @@ class IndalekoCollectorMetadataCLI(IndalekoBaseCLI):
         """Backup the metadata for the specified collection."""
         ic("backup called")
         backup_file = os.path.join(
-            self.config_data["DataDirectory"], self.args.outputfile,
+            self.config_data["DataDirectory"],
+            self.args.outputfile,
         )
         ic(f"Backing up Collector Metadata to: {backup_file}")
         all_metadata = CollectionMetadataEditor().export_metadata()
@@ -213,7 +214,9 @@ class IndalekoCollectorMetadataCLI(IndalekoBaseCLI):
         # Write to a temp file
         tmp_file_path = None
         with tempfile.NamedTemporaryFile(
-            mode="w+", suffix=".json", delete=False,
+            mode="w+",
+            suffix=".json",
+            delete=False,
         ) as tmp_file:
             json.dump(all_metadata, tmp_file, indent=4)
             tmp_file.flush()  # Ensure all data is written
@@ -227,7 +230,8 @@ class IndalekoCollectorMetadataCLI(IndalekoBaseCLI):
         """Restore the metadata for the specified collection."""
         ic("restore called")
         restore_file = os.path.join(
-            self.config_data["ConfigDirectory"], self.args.inputfile,
+            self.config_data["ConfigDirectory"],
+            self.args.inputfile,
         )
         ic(f"Need to finish implementing restore for file: {restore_file}")
 
@@ -245,10 +249,12 @@ class IndalekoCollectorMetadataCLI(IndalekoBaseCLI):
             ic("Getting the pre-parser")
             pre_parser = IndalekoBaseCLI.default_handler_mixin.get_pre_parser()
             command_subparser = pre_parser.add_subparsers(
-                dest="command", help="Command to execute",
+                dest="command",
+                help="Command to execute",
             )
             edit_subparser = command_subparser.add_parser(
-                "edit", help="Edit the metadata for a collection",
+                "edit",
+                help="Edit the metadata for a collection",
             )
             edit_subparser.add_argument(
                 "collection_name",
@@ -258,15 +264,19 @@ class IndalekoCollectorMetadataCLI(IndalekoBaseCLI):
             )
             edit_subparser.set_defaults(func="edit")
             backup_subparser = command_subparser.add_parser(
-                "backup", help="Backup the metadata for a collection",
+                "backup",
+                help="Backup the metadata for a collection",
             )
             backup_subparser.set_defaults(func="backup")
             restore_subparser = command_subparser.add_parser(
-                "restore", help="Restore the metadata for a collection",
+                "restore",
+                help="Restore the metadata for a collection",
             )
             restore_subparser.set_defaults(func="restore")
             pre_parser.set_defaults(
-                command="edit", collection_name="Objects", func="edit",
+                command="edit",
+                collection_name="Objects",
+                func="edit",
             )
             return pre_parser
 

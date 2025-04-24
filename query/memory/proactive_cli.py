@@ -144,8 +144,7 @@ class ProactiveCliIntegration:
         now = datetime.now(UTC)
         if (
             self.last_suggestions_time
-            and (now - self.last_suggestions_time).total_seconds()
-            < self.suggestion_cooldown_minutes * 60
+            and (now - self.last_suggestions_time).total_seconds() < self.suggestion_cooldown_minutes * 60
         ):
             return
 
@@ -235,7 +234,8 @@ class ProactiveCliIntegration:
             # Apply feedback
             feedback_value = 1.0 if feedback_type == "positive" else -1.0
             self.proactive.record_user_feedback(
-                suggestion.suggestion_id, feedback_value,
+                suggestion.suggestion_id,
+                feedback_value,
             )
 
             # Confirm to user
@@ -245,10 +245,7 @@ class ProactiveCliIntegration:
                 )
 
                 # If it's a query suggestion, offer to run it
-                if (
-                    suggestion.suggestion_type == SuggestionType.QUERY
-                    and suggestion.related_queries
-                ):
+                if suggestion.suggestion_type == SuggestionType.QUERY and suggestion.related_queries:
                     query = suggestion.related_queries[0]
                     print(f"\nWould you like to run the suggested query? Type: {query}")
             else:
@@ -271,7 +268,8 @@ class ProactiveCliIntegration:
         print("--------------------------")
 
         for i, pattern in enumerate(
-            sorted(patterns, key=lambda p: p.confidence, reverse=True), 1,
+            sorted(patterns, key=lambda p: p.confidence, reverse=True),
+            1,
         ):
             print(f"{i}. {pattern.description}")
             print(
@@ -308,7 +306,8 @@ class ProactiveCliIntegration:
         """View insights derived from proactive analysis."""
         # Get insights from archivist memory
         insights = self.memory.get_most_relevant_insights(
-            "", 10,
+            "",
+            10,
         )  # Get up to 10 insights
 
         if not insights:
@@ -316,9 +315,7 @@ class ProactiveCliIntegration:
             return
 
         # Filter for insights from proactive analysis
-        proactive_insights = [
-            i for i in insights if i.category in ["temporal", "sequential", "pattern"]
-        ]
+        proactive_insights = [i for i in insights if i.category in ["temporal", "sequential", "pattern"]]
 
         if not proactive_insights:
             print("No proactive insights available yet.")
@@ -356,9 +353,7 @@ class ProactiveCliIntegration:
                 try:
                     threshold = float(threshold_str)
                     if 0.0 <= threshold <= 1.0:
-                        self.proactive.data.suggestion_thresholds[suggestion_type] = (
-                            threshold
-                        )
+                        self.proactive.data.suggestion_thresholds[suggestion_type] = threshold
                         print(
                             f"Updated threshold for {suggestion_type} to {threshold:.2f}",
                         )
@@ -490,7 +485,8 @@ class ProactiveCliIntegration:
         """
         # Update recent queries list
         self.context["last_queries"] = [query_text] + self.context.get(
-            "last_queries", [],
+            "last_queries",
+            [],
         )[:4]
 
         # Extract topics from query
@@ -500,9 +496,7 @@ class ProactiveCliIntegration:
 
         # Update context with results info if provided
         if results:
-            self.context["last_results_count"] = (
-                len(results) if hasattr(results, "__len__") else 0
-            )
+            self.context["last_results_count"] = len(results) if hasattr(results, "__len__") else 0
 
         # Check if we should show suggestions after this query
         # Don't show after every query to avoid being annoying
@@ -561,8 +555,7 @@ class ProactiveCliIntegration:
         important_suggestions = [
             s
             for s in suggestions
-            if s.priority in ["high", "critical"]
-            or s.suggestion_type == SuggestionType.GOAL_PROGRESS
+            if s.priority in ["high", "critical"] or s.suggestion_type == SuggestionType.GOAL_PROGRESS
         ]
 
         # Only show a limited number to avoid overwhelming the user
@@ -590,10 +583,13 @@ def main():
 
     # Add some test data
     memory.add_long_term_goal(
-        "Document Organization", "Organize and tag work documents",
+        "Document Organization",
+        "Organize and tag work documents",
     )
     memory.add_insight(
-        "temporal", "User typically searches for work documents on Monday mornings", 0.8,
+        "temporal",
+        "User typically searches for work documents on Monday mornings",
+        0.8,
     )
 
     # Test commands

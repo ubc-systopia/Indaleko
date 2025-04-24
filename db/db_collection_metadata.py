@@ -86,12 +86,8 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
                 or not IndalekoDBCollections.Collections[collection["name"]]["internal"]
             ):
                 # Only gather metadata for external collections
-                self.collections_metadata[collection["name"]] = (
-                    self.get_collection_metadata(collection["name"])
-                )
-            if (
-                collection["name"] not in self._collection_handlers
-            ):  # handlers can add more information
+                self.collections_metadata[collection["name"]] = self.get_collection_metadata(collection["name"])
+            if collection["name"] not in self._collection_handlers:  # handlers can add more information
                 continue  # Done with this collection
             ic(f'Processing additional data for collection {collection["name"]}')
             assert (
@@ -100,7 +96,8 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
             self._collection_handlers[collection["name"]](self)
 
     def generate_new_collection_metadata(
-        self, name: str,
+        self,
+        name: str,
     ) -> IndalekoCollectionMetadataDataModel:
         """Generate a new collection metadata object."""
         if self.default_collection_metadata.get(name):
@@ -108,10 +105,14 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
         db_collection = self.db_config._arangodb.collection(name)
         assert db_collection is not None, f"Failed to get collection {name}"
         description = db_collection.properties().get(
-            "description", "No description available",
+            "description",
+            "No description available",
         )
         query_guidelines = [
-            db_collection.properties().get("query_guidelines", "No guidelines provided"),
+            db_collection.properties().get(
+                "query_guidelines",
+                "No guidelines provided",
+            ),
         ]
         schema = db_collection.properties().get("schema", {})
         if not schema:
@@ -126,7 +127,8 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
         )
 
     def get_collection_metadata(
-        self, collection_name: str,
+        self,
+        collection_name: str,
     ) -> IndalekoCollectionMetadataDataModel | None:
         """Get the metadata for the specified collection."""
         db_collection = self.db_config._arangodb.collection(
@@ -217,7 +219,8 @@ class IndalekoCollectorMetadataCLI(IndalekoBaseCLI):
         super().__init__(cli_data, handler_mixin, features)
         config_data = self.get_config_data()
         config_file_path = os.path.join(
-            config_data["ConfigDirectory"], config_data["DBConfigFile"],
+            config_data["ConfigDirectory"],
+            config_data["DBConfigFile"],
         )
         self.db_config = IndalekoDBConfig(config_file=config_file_path, start=True)
         self.collections_metadata = IndalekoDBCollectionsMetadata()

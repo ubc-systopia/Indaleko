@@ -60,7 +60,7 @@ class IndalekoWindows:
         return a string representation of the attributes.
         """
         file_attributes = []
-        if 0 == attributes:
+        if attributes == 0:
             file_attributes = ["FILE_ATTRIBUTE_NORMAL"]
         for attr, value in IndalekoWindows.FILE_ATTRIBUTES.items():
             if attributes & value == value:
@@ -72,7 +72,11 @@ def main():
     """This is the test code for the IndalekoWindows class."""
     parser = argparse.ArgumentParser(description="Indaleko Windows test logic")
     parser.add_argument(
-        "--attr", "-a", default=0xFFFFFFFF, type=int, help="file attribute bits to test"
+        "--attr",
+        "-a",
+        default=0xFFFFFFFF,
+        type=int,
+        help="file attribute bits to test",
     )
     args = parser.parse_args()
     if args.attr == 0xFFFFFFFF:

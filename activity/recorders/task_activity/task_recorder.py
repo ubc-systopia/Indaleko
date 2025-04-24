@@ -133,9 +133,7 @@ class TaskActivityRecorder(RecorderBase):
 
         # Register with the provider registrar
         self.provider_registrar = IndalekoActivityDataRegistrationService()
-        assert (
-            self.provider_registrar is not None
-        ), "Failed to get the provider registrar"
+        assert self.provider_registrar is not None, "Failed to get the provider registrar"
 
         collector_data = self.provider_registrar.lookup_provider_by_identifier(
             str(self.source_data["Identifier"]),
@@ -205,7 +203,8 @@ class TaskActivityRecorder(RecorderBase):
         return data
 
     def create_semantic_attributes(
-        self, task_data: TaskData,
+        self,
+        task_data: TaskData,
     ) -> list[IndalekoSemanticAttributeDataModel]:
         """
         Create semantic attributes from task data.
@@ -238,7 +237,9 @@ class TaskActivityRecorder(RecorderBase):
                 semantic_attributes.append(
                     IndalekoSemanticAttributeDataModel(
                         Identifier=IndalekoUUIDDataModel(
-                            Identifier=uuid_value, Version="1", Description=field_name,
+                            Identifier=uuid_value,
+                            Version="1",
+                            Description=field_name,
                         ),
                         Data=str(value),
                     ),
@@ -298,7 +299,10 @@ class TaskActivityRecorder(RecorderBase):
         )
 
     def store_task_activity(
-        self, task_data: TaskData, action: str, previous_state: dict | None = None,
+        self,
+        task_data: TaskData,
+        action: str,
+        previous_state: dict | None = None,
     ) -> dict:
         """
         Store a task activity in the database.
@@ -338,7 +342,8 @@ class TaskActivityRecorder(RecorderBase):
             The latest update
         """
         assert isinstance(
-            self.collection, IndalekoCollection,
+            self.collection,
+            IndalekoCollection,
         ), f"collection is not an IndalekoCollection {type(self.collection)}"
 
         if task_id:
@@ -382,7 +387,8 @@ class TaskActivityRecorder(RecorderBase):
             List of historical entries for the task
         """
         assert isinstance(
-            self.collection, IndalekoCollection,
+            self.collection,
+            IndalekoCollection,
         ), f"collection is not an IndalekoCollection {type(self.collection)}"
 
         query = """
@@ -489,16 +495,16 @@ def main():
             task_to_update.task_id,
             {
                 "status": (
-                    TaskStatus.COMPLETED
-                    if task_to_update.status != TaskStatus.COMPLETED
-                    else TaskStatus.IN_PROGRESS
+                    TaskStatus.COMPLETED if task_to_update.status != TaskStatus.COMPLETED else TaskStatus.IN_PROGRESS
                 ),
             },
         )
         if updated_task:
             ic(f"Updated task {updated_task.task_id} status to {updated_task.status}")
             doc = recorder.store_task_activity(
-                updated_task, "updated", {"status": task_to_update.status},
+                updated_task,
+                "updated",
+                {"status": task_to_update.status},
             )
             ic("Stored updated task in database")
 

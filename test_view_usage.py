@@ -70,22 +70,30 @@ def main():
             if "test" in query_text.lower():
                 entities = [
                     IndalekoNamedEntityDataModel(
-                        name="test", category="keyword", description="test",
+                        name="test",
+                        category="keyword",
+                        description="test",
                     ),
                 ]
             elif "indaleko" in query_text.lower():
                 entities = [
                     IndalekoNamedEntityDataModel(
-                        name="indaleko", category="keyword", description="indaleko",
+                        name="indaleko",
+                        category="keyword",
+                        description="indaleko",
                     ),
                 ]
             else:
                 entities = [
                     IndalekoNamedEntityDataModel(
-                        name="pdf", category="file_extension", description="pdf",
+                        name="pdf",
+                        category="file_extension",
+                        description="pdf",
                     ),
                     IndalekoNamedEntityDataModel(
-                        name="report", category="keyword", description="report",
+                        name="report",
+                        category="keyword",
+                        description="report",
                     ),
                 ]
 
@@ -93,12 +101,15 @@ def main():
 
             # Create structured query
             structured_query = StructuredQuery(
-                original_query=query_text, intent="search", entities=entity_collection,
+                original_query=query_text,
+                intent="search",
+                entities=entity_collection,
             )
 
             # Create translator input
             translator_input = TranslatorInput(
-                Query=structured_query, Connector=llm_connector,
+                Query=structured_query,
+                Connector=llm_connector,
             )
 
             # Translate query
@@ -110,10 +121,7 @@ def main():
             print(f"Confidence: {result.confidence}")
 
             # Check if the query is using a view
-            is_using_view = (
-                "ObjectsTextView" in result.aql_query
-                and "SEARCH ANALYZER" in result.aql_query
-            )
+            is_using_view = "ObjectsTextView" in result.aql_query and "SEARCH ANALYZER" in result.aql_query
 
             view_status = "✅ Using view" if is_using_view else "❌ Not using view"
             print(f"View Usage: {view_status}")

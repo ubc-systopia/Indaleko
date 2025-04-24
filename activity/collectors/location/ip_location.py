@@ -3,14 +3,12 @@
 import datetime
 import ipaddress
 import os
-import requests
 import sys
 import uuid
+from typing import Any
 
-from typing import List, Dict, Any
-
+import requests
 from icecream import ic
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -21,12 +19,14 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 # now we can import modules from the project root
-from activity.collectors.location import LocationCollector
 from activity.characteristics import ActivityDataCharacteristics
+from activity.collectors.location import LocationCollector
+from activity.collectors.location.data_models.base_location_data_model import (
+    BaseLocationDataModel,
+)
 from activity.collectors.location.data_models.ip_location_data_model import (
     IPLocationDataModel,
 )
-from activity.collectors.location.data_models.base_location_data_model import BaseLocationDataModel
 
 # pylint: enable=wrong-import-position
 
@@ -42,7 +42,7 @@ class IPLocation(LocationCollector):
         self.ip_address = self.capture_public_ip_address()
         self.ip_location_data = self.get_ip_location_data()
         self.location_data = self.map_ip_location_data_to_data_model(
-            self.ip_location_data
+            self.ip_location_data,
         )
 
     @staticmethod
@@ -53,7 +53,8 @@ class IPLocation(LocationCollector):
         return data.get("ip")
 
     def map_ip_location_data_to_data_model(
-        self, location_data: dict
+        self,
+        location_data: dict,
     ) -> IPLocationDataModel:
         """Map the IP location data to the data model"""
         # start with the required fields
@@ -65,11 +66,11 @@ class IPLocation(LocationCollector):
             except ipaddress.AddressValueError:
                 ip_address = ipaddress.IPv6Address(location_data.get("query"))
         # Build nested Location data
-        location_dict: Dict[str, Any] = {
+        location_dict: dict[str, Any] = {
             "latitude": location_data.get("lat"),
             "longitude": location_data.get("lon"),
             # Use UTC timezone for timestamp
-            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
             "source": "IP",
         }
         # Add optional location attributes
@@ -87,8 +88,16 @@ class IPLocation(LocationCollector):
         example["ip_address"] = ip_address
         # Add optional IP-related fields
         for field in [
-            "city", "country", "country_code", "region", "region_name",
-            "postal_code", "isp", "org", "as_name", "timezone"
+            "city",
+            "country",
+            "country_code",
+            "region",
+            "region_name",
+            "postal_code",
+            "isp",
+            "org",
+            "as_name",
+            "timezone",
         ]:
             if field in location_data:
                 example[field] = location_data.get(field)
@@ -106,7 +115,7 @@ class IPLocation(LocationCollector):
         else:
             return None
 
-    def get_collector_characteristics(self) -> List[ActivityDataCharacteristics]:
+    def get_collector_characteristics(self) -> list[ActivityDataCharacteristics]:
         """Get the provider characteristics"""
         return [
             ActivityDataCharacteristics.ACTIVITY_DATA_SPATIAL,
@@ -117,6 +126,7 @@ class IPLocation(LocationCollector):
     def get_collector_name(self) -> str:
         """Get the provider name"""
         return self._name
+
     # alias for backwards compatibility
     get_collectorr_name = get_collector_name
 
@@ -124,7 +134,7 @@ class IPLocation(LocationCollector):
         """Get the provider ID"""
         return self._provider_id
 
-    def retrieve_data(self, data_id: uuid.UUID) -> Dict[str, Any]:
+    def retrieve_data(self, data_id: uuid.UUID) -> dict[str, Any]:
         """Retrieve the data associated with the given data_id"""
         # Return the latest stored data for this provider
         if data_id == self.get_provider_id() and hasattr(self, "data") and self.data:
@@ -137,7 +147,7 @@ class IPLocation(LocationCollector):
         prior_time_window: datetime.timedelta,
         subsequent_time_window: datetime.timedelta,
         max_entries: int = 0,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Retrieve temporal data from the provider"""
         # Determine time window
         start = reference_time - prior_time_window
@@ -189,11 +199,13 @@ class IPLocation(LocationCollector):
         self.ip_location_data = self.get_ip_location_data()
         self.location_data = None
         if self.ip_location_data:
-            self.location_data = self.map_ip_location_data_to_data_model(self.ip_location_data)
+            self.location_data = self.map_ip_location_data_to_data_model(
+                self.ip_location_data,
+            )
             processed = self.process_data(self.location_data)
             self.store_data(processed)
 
-    def process_data(self, data: Any) -> Dict[str, Any]:
+    def process_data(self, data: Any) -> dict[str, Any]:
         """Process collected data into a serializable dict"""
         if isinstance(data, IPLocationDataModel):
             return data.dict()
@@ -202,7 +214,7 @@ class IPLocation(LocationCollector):
             return model.dict()
         raise TypeError(f"Unsupported data type: {type(data)}")
 
-    def store_data(self, data: Dict[str, Any]) -> None:
+    def store_data(self, data: dict[str, Any]) -> None:
         """Store processed data in memory"""
         if not hasattr(self, "data"):
             self.data = []
@@ -215,19 +227,24 @@ class IPLocation(LocationCollector):
             location = ""
         return location
 
-    def get_coordinates(self) -> Dict[str, float]:
+    def get_coordinates(self) -> dict[str, float]:
         """Get the coordinates for the location"""
         # Return the most recent stored coordinates
         if hasattr(self, "data") and self.data:
             loc = self.data[-1].get("Location", {}) or {}
-            return {"latitude": loc.get("latitude", 0.0), "longitude": loc.get("longitude", 0.0)}
+            return {
+                "latitude": loc.get("latitude", 0.0),
+                "longitude": loc.get("longitude", 0.0),
+            }
         return {"latitude": 0.0, "longitude": 0.0}
 
     def get_location_history(
-        self, start_time: datetime.datetime, end_time: datetime.datetime
-    ) -> List[Dict[str, Any]]:
+        self,
+        start_time: datetime.datetime,
+        end_time: datetime.datetime,
+    ) -> list[dict[str, Any]]:
         """Get the location history for the location"""
-        events: List[Dict[str, Any]] = []
+        events: list[dict[str, Any]] = []
         for record in getattr(self, "data", []):
             # extract timestamp from nested Location
             loc = record.get("Location", {}) or {}
@@ -245,7 +262,9 @@ class IPLocation(LocationCollector):
         return events
 
     def get_distance(
-        self, location1: Dict[str, float], location2: Dict[str, float]
+        self,
+        location1: dict[str, float],
+        location2: dict[str, float],
     ) -> float:
         """Get the distance between two locations"""
         raise NotImplementedError("This method is not implemented yet.")

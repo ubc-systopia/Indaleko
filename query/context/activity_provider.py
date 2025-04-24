@@ -122,7 +122,8 @@ class QueryActivityProvider:
             # Determine relationship with previous query if not specified
             if relationship_type is None and self._last_query_id is not None:
                 relationship_type = self._detect_relationship(
-                    self._last_query_text, query_text,
+                    self._last_query_text,
+                    query_text,
                 )
                 previous_query_id = self._last_query_id
 
@@ -216,7 +217,9 @@ class QueryActivityProvider:
         return attributes
 
     def _create_query_summary(
-        self, query_text: str, results: list[Any] | None,
+        self,
+        query_text: str,
+        results: list[Any] | None,
     ) -> str:
         """
         Create a summary of the query for the context.
@@ -305,20 +308,10 @@ class QueryActivityProvider:
                     "query_text": activity.query_text,
                     "execution_time": activity.execution_time,
                     "result_count": activity.result_count,
-                    "context_handle": (
-                        str(activity.context_handle)
-                        if activity.context_handle
-                        else None
-                    ),
+                    "context_handle": (str(activity.context_handle) if activity.context_handle else None),
                     "relationship_type": activity.relationship_type,
-                    "previous_query_id": (
-                        str(activity.previous_query_id)
-                        if activity.previous_query_id
-                        else None
-                    ),
-                    "timestamp": (
-                        activity.timestamp.isoformat() if activity.timestamp else None
-                    ),
+                    "previous_query_id": (str(activity.previous_query_id) if activity.previous_query_id else None),
+                    "timestamp": (activity.timestamp.isoformat() if activity.timestamp else None),
                 }
 
             return None
@@ -352,22 +345,10 @@ class QueryActivityProvider:
                         "query_text": activity.query_text,
                         "execution_time": activity.execution_time,
                         "result_count": activity.result_count,
-                        "context_handle": (
-                            str(activity.context_handle)
-                            if activity.context_handle
-                            else None
-                        ),
+                        "context_handle": (str(activity.context_handle) if activity.context_handle else None),
                         "relationship_type": activity.relationship_type,
-                        "previous_query_id": (
-                            str(activity.previous_query_id)
-                            if activity.previous_query_id
-                            else None
-                        ),
-                        "timestamp": (
-                            activity.timestamp.isoformat()
-                            if activity.timestamp
-                            else None
-                        ),
+                        "previous_query_id": (str(activity.previous_query_id) if activity.previous_query_id else None),
+                        "timestamp": (activity.timestamp.isoformat() if activity.timestamp else None),
                     },
                 )
 
@@ -422,7 +403,8 @@ class QueryActivityProvider:
             try:
                 # Execute the query
                 results = self._context_service.db_config._arangodb.aql.execute(
-                    query, bind_vars=bind_vars,
+                    query,
+                    bind_vars=bind_vars,
                 )
 
                 # Convert results to query activity objects
@@ -434,25 +416,18 @@ class QueryActivityProvider:
                             query_id=uuid.UUID(str(result["query_id"])),
                             query_text=attributes.get("query_text", ""),
                             execution_time=(
-                                float(attributes.get("execution_time", "0"))
-                                if "execution_time" in attributes
-                                else None
+                                float(attributes.get("execution_time", "0")) if "execution_time" in attributes else None
                             ),
                             result_count=(
-                                int(attributes.get("result_count", "0"))
-                                if "result_count" in attributes
-                                else None
+                                int(attributes.get("result_count", "0")) if "result_count" in attributes else None
                             ),
                             context_handle=(
-                                uuid.UUID(str(result["context_handle"]))
-                                if result["context_handle"]
-                                else None
+                                uuid.UUID(str(result["context_handle"])) if result["context_handle"] else None
                             ),
                             relationship_type=attributes.get("relationship_type"),
                             previous_query_id=(
                                 uuid.UUID(attributes.get("previous_query_id"))
-                                if "previous_query_id" in attributes
-                                and attributes.get("previous_query_id")
+                                if "previous_query_id" in attributes and attributes.get("previous_query_id")
                                 else None
                             ),
                             timestamp=(
@@ -519,7 +494,8 @@ class QueryActivityProvider:
             try:
                 # Execute the query
                 results = self._context_service.db_config._arangodb.aql.execute(
-                    query, bind_vars=bind_vars,
+                    query,
+                    bind_vars=bind_vars,
                 )
 
                 # Get the first result (should be only one or none)
@@ -539,25 +515,16 @@ class QueryActivityProvider:
                         query_id=uuid.UUID(str(result["query_id"])),
                         query_text=attributes.get("query_text", ""),
                         execution_time=(
-                            float(attributes.get("execution_time", "0"))
-                            if "execution_time" in attributes
-                            else None
+                            float(attributes.get("execution_time", "0")) if "execution_time" in attributes else None
                         ),
                         result_count=(
-                            int(attributes.get("result_count", "0"))
-                            if "result_count" in attributes
-                            else None
+                            int(attributes.get("result_count", "0")) if "result_count" in attributes else None
                         ),
-                        context_handle=(
-                            uuid.UUID(str(result["context_handle"]))
-                            if result["context_handle"]
-                            else None
-                        ),
+                        context_handle=(uuid.UUID(str(result["context_handle"])) if result["context_handle"] else None),
                         relationship_type=attributes.get("relationship_type"),
                         previous_query_id=(
                             uuid.UUID(attributes.get("previous_query_id"))
-                            if "previous_query_id" in attributes
-                            and attributes.get("previous_query_id")
+                            if "previous_query_id" in attributes and attributes.get("previous_query_id")
                             else None
                         ),
                         timestamp=(

@@ -111,6 +111,28 @@ Indaleko implements a biomimetic cognitive memory architecture with multiple tie
    - Heavily compressed representation
    - Searchable via stable entity identifiers
 
+### Sleep-Time Compute Architecture
+
+Indaleko implements a "sleep-time compute" pattern for background processing during system idle periods:
+
+1. **Core Principles**:
+   - Perform anticipatory processing during idle time
+   - Reduce latency during active user interactions
+   - Conduct deeper analysis that would be too costly during active use
+   - Pre-compute likely needed information
+
+2. **Key Implementations**:
+   - **Archivist Knowledge Base**: Deep pattern analysis and query prediction
+   - **FireCircle Memory**: Multi-perspective analysis and context prefetching
+   - See detailed implementation in:
+     - `archivist/knowledge_base/sleep_compute.py`
+     - `firecircle/src/firecircle/memory/sleep_compute.py`
+     - `archivist/sleep_compute_integration.py`
+
+3. **Documentation**:
+   - Full details in Archivist README: `archivist/README.md#sleep-time-compute-architecture`
+   - FireCircle implementation: `firecircle/README.md#sleep-time-compute`
+
 ## Development Environment
 
 ### Package Management
@@ -241,6 +263,31 @@ except (ValueError, KeyError) as e:
     logger.error(f"Failed to process data: {e}")
     raise IndalekoProcessingError(f"Data processing failed: {str(e)}") from e
 ```
+
+### Entity Lookups
+When working with file system entities, always lookup by the file's natural identifiers (FRN, Volume GUID) first, not by UUID:
+
+```python
+# CORRECT: Lookup by platform-specific identifiers first
+cursor = db.aql.execute(
+    """
+    FOR doc IN Objects
+    FILTER doc.LocalIdentifier == @frn AND doc.Volume == @volume
+    LIMIT 1
+    RETURN doc
+    """,
+    bind_vars={"frn": file_reference_number, "volume": volume_guid}
+)
+
+# Use the result's _key for updates
+entity = next(cursor, None)
+if entity:
+    entity_id = entity["_key"]
+    # Now use entity_id for updates
+```
+
+This avoids the anti-pattern of generating random UUIDs and then trying to find them later.
+See detailed notes in `activity/recorders/storage/ntfs/tiered/hot/ENTITY_MAPPING.md`
 
 ### Logging
 ```python

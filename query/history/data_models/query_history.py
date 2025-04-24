@@ -49,11 +49,15 @@ class QueryHistoryData(BaseModel):
     """This class defines the baseline data that is stored in the query history."""
 
     OriginalQuery: str = Field(
-        ..., title="OriginalQuery", description="The original query from the user.",
+        ...,
+        title="OriginalQuery",
+        description="The original query from the user.",
     )
 
     ParsedResults: ParserResults = Field(
-        ..., title="ParsingResults", description="The results of parsing the query.",
+        ...,
+        title="ParsingResults",
+        description="The results of parsing the query.",
     )
 
     LLMName: str = Field(
@@ -69,15 +73,21 @@ class QueryHistoryData(BaseModel):
     )
 
     TranslatedOutput: TranslatorOutput = Field(
-        ..., title="TranslatedOutput", description="The translated output from the LLM.",
+        ...,
+        title="TranslatedOutput",
+        description="The translated output from the LLM.",
     )
 
     ExecutionPlan: dict[str, Any] | None = Field(
-        None, title="ExecutionPlan", description="The execution plan for the query.",
+        None,
+        title="ExecutionPlan",
+        description="The execution plan for the query.",
     )
 
     RawResults: list[dict[str, Any]] = Field(
-        ..., title="Results", description="The results of the database query.",
+        ...,
+        title="Results",
+        description="The results of the database query.",
     )
 
     AnalyzedResults: list[dict[str, Any]] | None = Field(
@@ -111,7 +121,9 @@ class QueryHistoryData(BaseModel):
     )
 
     ElapsedTime: float | None = Field(
-        None, title="ElapsedTime", description="The elapsed time in seconds.",
+        None,
+        title="ElapsedTime",
+        description="The elapsed time in seconds.",
     )
 
     ResourceUtilization: dict[str, Any] | None = Field(

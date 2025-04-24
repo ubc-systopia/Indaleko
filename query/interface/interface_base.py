@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any
+from typing import Any
 
 
 class InterfaceBase(ABC):
@@ -16,10 +16,9 @@ class InterfaceBase(ABC):
         Returns:
             str: The user's query
         """
-        pass
 
     @abstractmethod
-    def display_results(self, results: List[Dict[str, Any]], facets: List[str]) -> None:
+    def display_results(self, results: list[dict[str, Any]], facets: list[str]) -> None:
         """
         Display search results and suggested facets to the user.
 
@@ -27,7 +26,6 @@ class InterfaceBase(ABC):
             results (List[Dict[str, Any]]): The ranked search results
             facets (List[str]): Suggested facets for query refinement
         """
-        pass
 
     @abstractmethod
     def continue_session(self) -> bool:
@@ -37,7 +35,6 @@ class InterfaceBase(ABC):
         Returns:
             bool: True if the user wants to continue, False otherwise
         """
-        pass
 
     @abstractmethod
     def display_error(self, error_message: str) -> None:
@@ -47,7 +44,6 @@ class InterfaceBase(ABC):
         Args:
             error_message (str): The error message to display
         """
-        pass
 
     @abstractmethod
     def get_result_selection(self, max_results: int) -> int:
@@ -60,20 +56,18 @@ class InterfaceBase(ABC):
         Returns:
             int: The index of the selected result, or -1 if no selection
         """
-        pass
 
     @abstractmethod
-    def display_result_details(self, result: Dict[str, Any]) -> None:
+    def display_result_details(self, result: dict[str, Any]) -> None:
         """
         Display detailed information about a specific result.
 
         Args:
             result (Dict[str, Any]): The result to display in detail
         """
-        pass
 
     @abstractmethod
-    def get_facet_selection(self, facets: List[str]) -> str:
+    def get_facet_selection(self, facets: list[str]) -> str:
         """
         Prompt the user to select a facet for query refinement.
 
@@ -83,18 +77,15 @@ class InterfaceBase(ABC):
         Returns:
             str: The selected facet, or an empty string if no selection
         """
-        pass
 
     @abstractmethod
     def initialize(self) -> None:
         """
         Perform any necessary initialization for the interface.
         """
-        pass
 
     @abstractmethod
     def cleanup(self) -> None:
         """
         Perform any necessary cleanup when closing the interface.
         """
-        pass

@@ -1,7 +1,7 @@
 """initializtion logic for the platform components"""
 
-import os
 import importlib
+import os
 import sys
 
 init_path = os.path.dirname(os.path.abspath(__file__))

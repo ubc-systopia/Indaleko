@@ -149,7 +149,8 @@ class BackgroundProcessorManager:
 
         # Start processor threads
         for processor_type in self.config.get(
-            "processors", ProcessorType.get_enabled(),
+            "processors",
+            ProcessorType.get_enabled(),
         ):
             if processor_type not in ProcessorType.get_enabled():
                 logger.warning(
@@ -207,7 +208,8 @@ class BackgroundProcessorManager:
                 # Check if it's time to run this processor
                 current_time = time.time()
                 min_interval = processor_config.get(
-                    "interval", 300,
+                    "interval",
+                    300,
                 )  # Default: 5 minutes
 
                 if current_time - self.stats[processor_type]["last_run"] < min_interval:
@@ -381,11 +383,7 @@ def load_config(config_file: str | None = None) -> dict[str, Any]:
 
         # Merge with defaults
         for key, value in user_config.items():
-            if (
-                key in default_config
-                and isinstance(default_config[key], dict)
-                and isinstance(value, dict)
-            ):
+            if key in default_config and isinstance(default_config[key], dict) and isinstance(value, dict):
                 # Merge dictionaries
                 default_config[key].update(value)
             else:
@@ -405,7 +403,10 @@ def main():
         description="Indaleko Semantic Background Processor",
     )
     parser.add_argument(
-        "--config", type=str, default=None, help="Path to configuration file",
+        "--config",
+        type=str,
+        default=None,
+        help="Path to configuration file",
     )
     parser.add_argument(
         "--processors",

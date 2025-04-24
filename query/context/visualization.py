@@ -155,17 +155,15 @@ class QueryPathVisualizer:
                             to_id = uuid.UUID(query["query_id"])
 
                             # Only add edge if both nodes exist
-                            if (
-                                from_id in self.graph.nodes
-                                and to_id in self.graph.nodes
-                            ):
+                            if from_id in self.graph.nodes and to_id in self.graph.nodes:
                                 relationship = query.get("relationship_type", "unknown")
                                 self.graph.add_edge(
                                     from_id,
                                     to_id,
                                     relationship=relationship,
                                     color=self.RELATIONSHIP_COLORS.get(
-                                        relationship, "gray",
+                                        relationship,
+                                        "gray",
                                     ),
                                 )
                         except ValueError:
@@ -231,7 +229,9 @@ class QueryPathVisualizer:
         """
         # Get exploration branches
         branches = self._navigator.get_exploration_branches(
-            query_id, max_branches=5, max_queries_per_branch=max_depth,
+            query_id,
+            max_branches=5,
+            max_queries_per_branch=max_depth,
         )
 
         for branch_id, branch_path in branches.items():
@@ -258,7 +258,8 @@ class QueryPathVisualizer:
                 relationship = branch_path[i + 1].get("relationship_type")
                 if not relationship:
                     rel_type, _ = self._detector.detect_relationship(
-                        branch_path[i], branch_path[i + 1],
+                        branch_path[i],
+                        branch_path[i + 1],
                     )
                     relationship = rel_type.value
 
@@ -312,7 +313,10 @@ class QueryPathVisualizer:
         return text[:max_length] + "..."
 
     def export_graph(
-        self, file_path: str | None = None, format: str = "png", show: bool = False,
+        self,
+        file_path: str | None = None,
+        format: str = "png",
+        show: bool = False,
     ) -> str | None:
         """
         Export the graph visualization to a file.
@@ -462,9 +466,7 @@ class QueryPathVisualizer:
                 elif last_rel == RelationshipType.PIVOT:
                     summary += "Your most recent search explored a different aspect."
                 elif last_rel == RelationshipType.BACKTRACK:
-                    summary += (
-                        "Your most recent search returned to a previous approach."
-                    )
+                    summary += "Your most recent search returned to a previous approach."
 
             # Generate visualization
             viz_path = self.export_graph()

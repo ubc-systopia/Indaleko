@@ -77,7 +77,8 @@ def verify_context_retention():
     # Add messages to segment
     state.add_message("user", "I'm developing a methodology for my UPI thesis")
     state.add_message(
-        "assistant", "That sounds interesting. What approach are you taking?",
+        "assistant",
+        "That sounds interesting. What approach are you taking?",
     )
 
     # Get segment messages
@@ -93,9 +94,7 @@ def verify_context_retention():
     # Verify segments
     print("\nTopic segments:")
     for segment in state.topic_segments:
-        status = (
-            "active" if state.active_topic_segment == segment.segment_id else "ended"
-        )
+        status = "active" if state.active_topic_segment == segment.segment_id else "ended"
         print(f"- {segment.topic} ({status})")
 
     return state
@@ -111,10 +110,14 @@ def verify_memory_integration(state):
 
     # Add insights to memory
     memory.add_insight(
-        "research", "UPI research focuses on data integration across sources", 0.9,
+        "research",
+        "UPI research focuses on data integration across sources",
+        0.9,
     )
     memory.add_insight(
-        "implementation", "Archivist serves as a prototype for UPI concepts", 0.8,
+        "implementation",
+        "Archivist serves as a prototype for UPI concepts",
+        0.8,
     )
 
     # Add a long-term goal
@@ -248,8 +251,7 @@ def verify_conversation_manager(memory, continuation_id):
 
     # Verify the response incorporates previous context
     contains_context = any(
-        term in response.get("response", "").lower()
-        for term in ["thesis", "upi", "implementation", "continue"]
+        term in response.get("response", "").lower() for term in ["thesis", "upi", "implementation", "continue"]
     )
 
     print(f"\nResponse contains context from previous conversation: {contains_context}")

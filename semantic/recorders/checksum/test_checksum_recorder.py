@@ -48,7 +48,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
 # Indaleko imports

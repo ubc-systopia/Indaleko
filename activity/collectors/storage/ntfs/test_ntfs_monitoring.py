@@ -90,11 +90,7 @@ def generate_file_activity(volume, stop_event, interval=5):
                 logger.info(f"Created file: {filename}")
 
             elif operation == 1:  # Modify file
-                files = [
-                    f
-                    for f in os.listdir(test_dir)
-                    if f.startswith("test_file_") and f.endswith(".txt")
-                ]
+                files = [f for f in os.listdir(test_dir) if f.startswith("test_file_") and f.endswith(".txt")]
                 if files:
                     random_file = random.choice(files)
                     filepath = os.path.join(test_dir, random_file)
@@ -104,11 +100,7 @@ def generate_file_activity(volume, stop_event, interval=5):
                     logger.info(f"Modified file: {filepath}")
 
             elif operation == 2:  # Rename or delete
-                files = [
-                    f
-                    for f in os.listdir(test_dir)
-                    if f.startswith("test_file_") and f.endswith(".txt")
-                ]
+                files = [f for f in os.listdir(test_dir) if f.startswith("test_file_") and f.endswith(".txt")]
                 if len(files) > 5:  # Keep file count reasonable
                     action = random.choice(["rename", "delete"])
                     random_file = random.choice(files)
@@ -138,7 +130,10 @@ def main():
 
     # Add general arguments
     parser.add_argument(
-        "--volume", type=str, default="C:", help="Volume to monitor (e.g., 'C:', 'D:')",
+        "--volume",
+        type=str,
+        default="C:",
+        help="Volume to monitor (e.g., 'C:', 'D:')",
     )
     parser.add_argument(
         "--duration",
@@ -155,13 +150,20 @@ def main():
 
     # Add monitoring options
     parser.add_argument(
-        "--interval", type=float, default=1.0, help="Monitoring interval in seconds",
+        "--interval",
+        type=float,
+        default=1.0,
+        help="Monitoring interval in seconds",
     )
     parser.add_argument(
-        "--include-close", action="store_true", help="Include file close events",
+        "--include-close",
+        action="store_true",
+        help="Include file close events",
     )
     parser.add_argument(
-        "--mock", action="store_true", help="Use mock data even on Windows",
+        "--mock",
+        action="store_true",
+        help="Use mock data even on Windows",
     )
     parser.add_argument(
         "--no-volume-guids",
@@ -293,7 +295,8 @@ def main():
                 print("=" * 80)
 
                 activity_interval = max(
-                    1, int(args.interval * 2),
+                    1,
+                    int(args.interval * 2),
                 )  # Display update interval
                 last_count = 0
 
@@ -337,15 +340,9 @@ def main():
                                         if hasattr(activity, "timestamp")
                                         else "Unknown"
                                     )
-                                    filename = (
-                                        activity.file_name
-                                        if hasattr(activity, "file_name")
-                                        else "Unknown"
-                                    )
+                                    filename = activity.file_name if hasattr(activity, "file_name") else "Unknown"
                                     activity_type = (
-                                        activity.activity_type
-                                        if hasattr(activity, "activity_type")
-                                        else "Unknown"
+                                        activity.activity_type if hasattr(activity, "activity_type") else "Unknown"
                                     )
 
                                     print(

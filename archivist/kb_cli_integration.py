@@ -153,19 +153,23 @@ class KnowledgeBaseCliIntegration:
             from knowledge_base import KnowledgePatternType
 
             query_patterns = self.kb_integration.kb_manager.get_patterns_by_type(
-                KnowledgePatternType.query_pattern, min_confidence=0.0,
+                KnowledgePatternType.query_pattern,
+                min_confidence=0.0,
             )
 
             entity_patterns = self.kb_integration.kb_manager.get_patterns_by_type(
-                KnowledgePatternType.entity_relationship, min_confidence=0.0,
+                KnowledgePatternType.entity_relationship,
+                min_confidence=0.0,
             )
 
             schema_patterns = self.kb_integration.kb_manager.get_patterns_by_type(
-                KnowledgePatternType.schema_update, min_confidence=0.0,
+                KnowledgePatternType.schema_update,
+                min_confidence=0.0,
             )
 
             preference_patterns = self.kb_integration.kb_manager.get_patterns_by_type(
-                KnowledgePatternType.user_preference, min_confidence=0.0,
+                KnowledgePatternType.user_preference,
+                min_confidence=0.0,
             )
 
             output = f"Knowledge Patterns ({len(query_patterns) + len(entity_patterns) + len(schema_patterns) + len(preference_patterns)} total):\n\n"
@@ -173,7 +177,9 @@ class KnowledgeBaseCliIntegration:
             if query_patterns:
                 output += f"Query Patterns ({len(query_patterns)}):\n"
                 for pattern in sorted(
-                    query_patterns, key=lambda p: p.confidence, reverse=True,
+                    query_patterns,
+                    key=lambda p: p.confidence,
+                    reverse=True,
                 ):
                     intent = pattern.pattern_data.get("intent", "unknown")
                     query = (
@@ -187,7 +193,9 @@ class KnowledgeBaseCliIntegration:
             if entity_patterns:
                 output += f"Entity Relationship Patterns ({len(entity_patterns)}):\n"
                 for pattern in sorted(
-                    entity_patterns, key=lambda p: p.confidence, reverse=True,
+                    entity_patterns,
+                    key=lambda p: p.confidence,
+                    reverse=True,
                 ):
                     entity_name = pattern.pattern_data.get("entity_name", "unknown")
                     entity_type = pattern.pattern_data.get("entity_type", "unknown")
@@ -198,7 +206,9 @@ class KnowledgeBaseCliIntegration:
             if schema_patterns:
                 output += f"Schema Update Patterns ({len(schema_patterns)}):\n"
                 for pattern in sorted(
-                    schema_patterns, key=lambda p: p.confidence, reverse=True,
+                    schema_patterns,
+                    key=lambda p: p.confidence,
+                    reverse=True,
                 ):
                     collection = pattern.pattern_data.get("collection", "unknown")
                     changes = len(pattern.pattern_data.get("changes", {}))
@@ -208,7 +218,9 @@ class KnowledgeBaseCliIntegration:
             if preference_patterns:
                 output += f"User Preference Patterns ({len(preference_patterns)}):\n"
                 for pattern in sorted(
-                    preference_patterns, key=lambda p: p.confidence, reverse=True,
+                    preference_patterns,
+                    key=lambda p: p.confidence,
+                    reverse=True,
                 ):
                     preference = pattern.pattern_data.get("preference_type", "unknown")
                     output += f"- {pattern.pattern_id} | Conf: {pattern.confidence:.2f} | {preference}\n"
@@ -239,9 +251,7 @@ class KnowledgeBaseCliIntegration:
                         output += f"- {key}: {json.dumps(value, indent=2)}\n"
                     elif isinstance(value, list):
                         if len(value) > 5:
-                            output += (
-                                f"- {key}: {value[:5]} (and {len(value) - 5} more)\n"
-                            )
+                            output += f"- {key}: {value[:5]} (and {len(value) - 5} more)\n"
                         else:
                             output += f"- {key}: {value}\n"
                     else:
@@ -295,9 +305,7 @@ class KnowledgeBaseCliIntegration:
             )
 
             # Filter by name
-            matching_nodes = [
-                node for node in all_nodes if search_term.lower() in node.name.lower()
-            ]
+            matching_nodes = [node for node in all_nodes if search_term.lower() in node.name.lower()]
 
             if not matching_nodes:
                 return f"No entities found matching '{search_term}'."
@@ -306,10 +314,8 @@ class KnowledgeBaseCliIntegration:
 
             for node in matching_nodes:
                 # Get canonical reference
-                canonical = (
-                    self.kb_integration.entity_equivalence.get_canonical_reference(
-                        node.entity_id,
-                    )
+                canonical = self.kb_integration.entity_equivalence.get_canonical_reference(
+                    node.entity_id,
                 )
 
                 output += f"Entity: {node.name} ({node.entity_type})\n"
@@ -371,9 +377,7 @@ class KnowledgeBaseCliIntegration:
 
                 # Remove quotes if present
                 value = value.strip()
-                if (value.startswith("'") and value.endswith("'")) or (
-                    value.startswith('"') and value.endswith('"')
-                ):
+                if (value.startswith("'") and value.endswith("'")) or (value.startswith('"') and value.endswith('"')):
                     value = value[1:-1]
 
                 # Special handling for strength
@@ -430,9 +434,7 @@ class KnowledgeBaseCliIntegration:
         # System health
         health = insights.get("system_health", {})
         output += "System Health:\n"
-        output += (
-            f"- Knowledge Confidence: {health.get('knowledge_confidence', 0.0):.2f}\n"
-        )
+        output += f"- Knowledge Confidence: {health.get('knowledge_confidence', 0.0):.2f}\n"
         output += f"- Pattern Count: {health.get('pattern_count', 0)}\n"
         output += f"- Entity Group Count: {health.get('entity_group_count', 0)}\n"
         output += f"- Memory Count: {health.get('memory_count', 0)}\n"
@@ -449,7 +451,9 @@ class KnowledgeBaseCliIntegration:
         top_entities = insights.get("top_entities", [])
         output += f"Top Entities ({len(top_entities)}):\n"
         for entity in top_entities:
-            output += f"- {entity.get('canonical_name')} ({entity.get('type')}) | Members: {entity.get('member_count', 0)}\n"
+            output += (
+                f"- {entity.get('canonical_name')} ({entity.get('type')}) | Members: {entity.get('member_count', 0)}\n"
+            )
         output += "\n"
 
         # Stats
@@ -486,7 +490,8 @@ class KnowledgeBaseCliIntegration:
         from knowledge_base import KnowledgePatternType
 
         schema_patterns = self.kb_integration.kb_manager.get_patterns_by_type(
-            KnowledgePatternType.schema_update, min_confidence=0.0,
+            KnowledgePatternType.schema_update,
+            min_confidence=0.0,
         )
 
         matching_pattern = None
@@ -616,9 +621,7 @@ class KnowledgeBaseCliIntegration:
             # Find top patterns by success rate
             top_patterns = []
             for pattern_id, pattern_stats in effectiveness.items():
-                if (
-                    pattern_stats.get("usage_count", 0) >= 5
-                ):  # Only consider patterns with enough usage
+                if pattern_stats.get("usage_count", 0) >= 5:  # Only consider patterns with enough usage
                     top_patterns.append((pattern_id, pattern_stats))
 
             top_patterns.sort(key=lambda x: x[1].get("success_rate", 0), reverse=True)
@@ -630,7 +633,9 @@ class KnowledgeBaseCliIntegration:
                     usage_count = pattern_stats.get("usage_count", 0)
                     pattern_type = pattern_stats.get("pattern_type", "unknown")
 
-                    output += f"- {pattern_id[:8]}: {success_rate:.2f} success rate ({usage_count} uses, {pattern_type})\n"
+                    output += (
+                        f"- {pattern_id[:8]}: {success_rate:.2f} success rate ({usage_count} uses, {pattern_type})\n"
+                    )
                 output += "\n"
 
         return output

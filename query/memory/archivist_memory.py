@@ -62,10 +62,12 @@ class UserPreference(BaseModel):
     )
     preference: str = Field(..., description="The specific preference")
     confidence: float = Field(
-        default=0.5, description="Confidence level in this observation (0.0-1.0)",
+        default=0.5,
+        description="Confidence level in this observation (0.0-1.0)",
     )
     observation_count: int = Field(
-        default=1, description="Number of times this preference was observed",
+        default=1,
+        description="Number of times this preference was observed",
     )
     last_observed: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
@@ -82,10 +84,12 @@ class SearchPattern(BaseModel):
     )
     description: str = Field(..., description="Description of the pattern")
     examples: list[str] = Field(
-        default_factory=list, description="Example queries demonstrating this pattern",
+        default_factory=list,
+        description="Example queries demonstrating this pattern",
     )
     frequency: float = Field(
-        default=0.0, description="Relative frequency of this pattern (0.0-1.0)",
+        default=0.0,
+        description="Relative frequency of this pattern (0.0-1.0)",
     )
 
 
@@ -95,7 +99,8 @@ class LongTermGoal(BaseModel):
     name: str = Field(..., description="Name of the goal")
     description: str = Field(..., description="Detailed description of the goal")
     progress: float = Field(
-        default=0.0, description="Estimated progress toward completion (0.0-1.0)",
+        default=0.0,
+        description="Estimated progress toward completion (0.0-1.0)",
     )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
@@ -106,10 +111,12 @@ class LongTermGoal(BaseModel):
         description="When this goal was last updated",
     )
     related_queries: list[str] = Field(
-        default_factory=list, description="Queries related to this goal",
+        default_factory=list,
+        description="Queries related to this goal",
     )
     milestones: dict[str, bool] = Field(
-        default_factory=dict, description="Key milestones and completion status",
+        default_factory=dict,
+        description="Key milestones and completion status",
     )
 
 
@@ -121,13 +128,16 @@ class SearchInsight(BaseModel):
         description="Category of insight (e.g., 'organization', 'retrieval', 'content')",
     )
     insight: str = Field(
-        ..., description="The insight about user behavior or document patterns",
+        ...,
+        description="The insight about user behavior or document patterns",
     )
     confidence: float = Field(
-        default=0.5, description="Confidence level in this insight (0.0-1.0)",
+        default=0.5,
+        description="Confidence level in this insight (0.0-1.0)",
     )
     supporting_evidence: list[str] = Field(
-        default_factory=list, description="Evidence supporting this insight",
+        default_factory=list,
+        description="Evidence supporting this insight",
     )
     impact: str = Field(
         default="medium",
@@ -141,13 +151,16 @@ class EffectiveStrategy(BaseModel):
     strategy_name: str = Field(..., description="Name of the strategy")
     description: str = Field(..., description="Detailed description of the strategy")
     applicable_contexts: list[str] = Field(
-        default_factory=list, description="When this strategy is applicable",
+        default_factory=list,
+        description="When this strategy is applicable",
     )
     success_rate: float = Field(
-        default=0.5, description="Estimated success rate (0.0-1.0)",
+        default=0.5,
+        description="Estimated success rate (0.0-1.0)",
     )
     example_queries: list[str] = Field(
-        default_factory=list, description="Example queries where this strategy worked",
+        default_factory=list,
+        description="Example queries where this strategy worked",
     )
 
 
@@ -175,27 +188,33 @@ class ArchivistMemoryData(BaseModel):
     )
 
     user_preferences: list[UserPreference] = Field(
-        default_factory=list, description="Observed user preferences",
+        default_factory=list,
+        description="Observed user preferences",
     )
 
     search_patterns: list[SearchPattern] = Field(
-        default_factory=list, description="Identified search patterns",
+        default_factory=list,
+        description="Identified search patterns",
     )
 
     long_term_goals: list[LongTermGoal] = Field(
-        default_factory=list, description="Ongoing long-term goals",
+        default_factory=list,
+        description="Ongoing long-term goals",
     )
 
     insights: list[SearchInsight] = Field(
-        default_factory=list, description="Insights about search and organization",
+        default_factory=list,
+        description="Insights about search and organization",
     )
 
     effective_strategies: list[EffectiveStrategy] = Field(
-        default_factory=list, description="Strategies that work well for this user",
+        default_factory=list,
+        description="Strategies that work well for this user",
     )
 
     document_relationships: dict[str, list[str]] = Field(
-        default_factory=dict, description="Observed relationships between documents",
+        default_factory=dict,
+        description="Observed relationships between documents",
     )
 
     content_preferences: dict[str, float] = Field(
@@ -231,7 +250,9 @@ class IndalekoArchivistMemoryModel(IndalekoBaseModel):
     )
 
     ArchivistMemory: ArchivistMemoryData = Field(
-        ..., title="ArchivistMemory", description="The Archivist memory data.",
+        ...,
+        title="ArchivistMemory",
+        description="The Archivist memory data.",
     )
 
 
@@ -249,26 +270,32 @@ class ConversationStateMemory(BaseModel):
     )
     summary: str = Field(..., description="Summary of the conversation")
     key_takeaways: list[str] = Field(
-        default_factory=list, description="Key takeaways from the conversation",
+        default_factory=list,
+        description="Key takeaways from the conversation",
     )
     topics: list[str] = Field(
-        default_factory=list, description="Topics covered in the conversation",
+        default_factory=list,
+        description="Topics covered in the conversation",
     )
     entities: list[str] = Field(
-        default_factory=list, description="Entities identified in the conversation",
+        default_factory=list,
+        description="Entities identified in the conversation",
     )
     importance_score: float = Field(
-        default=0.5, description="Overall importance of the conversation",
+        default=0.5,
+        description="Overall importance of the conversation",
     )
     message_count: int = Field(
-        default=0, description="Number of messages in the conversation",
+        default=0,
+        description="Number of messages in the conversation",
     )
     context_variables: dict[str, Any] = Field(
         default_factory=dict,
         description="Context variables maintained across the conversation",
     )
     continuation_id: str | None = Field(
-        default=None, description="ID for continuing this conversation",
+        default=None,
+        description="ID for continuing this conversation",
     )
 
 
@@ -279,9 +306,7 @@ class ArchivistMemory:
     """
 
     archivist_memory_uuid_str = "e7b6f4a2-8c5d-4e9c-b3a7-f29d8a6d7e5c"
-    archivist_memory_version = (
-        "2025.04.20.01"  # Updated version for conversation support
-    )
+    archivist_memory_version = "2025.04.20.01"  # Updated version for conversation support
     archivist_memory_description = "Archivist persistent memory across sessions"
 
     def __init__(self, db_config: IndalekoDBConfig = IndalekoDBConfig()):
@@ -351,7 +376,10 @@ class ArchivistMemory:
             # Create the collection
             ic(f"Creating collection {collection_name} via registration service")
             provider_collection = reg_service.create_provider_collection(
-                identifier=provider_id, schema=schema, edge=edge, indices=indices,
+                identifier=provider_id,
+                schema=schema,
+                edge=edge,
+                indices=indices,
             )
             ic(f"Successfully created collection {collection_name}")
         else:
@@ -367,7 +395,8 @@ class ArchivistMemory:
             # Use AQL to sort by timestamp in descending order
             aql = "FOR doc IN @@collection SORT doc.Record.Timestamp DESC LIMIT 1 RETURN doc"
             cursor = self.db_config._arangodb.aql.execute(
-                aql, bind_vars={"@collection": collection_name},
+                aql,
+                bind_vars={"@collection": collection_name},
             )
             documents = [doc for doc in cursor]
 
@@ -400,7 +429,8 @@ class ArchivistMemory:
                 Data=encode_binary_data(
                     bytes(
                         self.memory.model_dump_json(
-                            exclude_none=True, exclude_unset=True,
+                            exclude_none=True,
+                            exclude_unset=True,
                         ),
                         "utf-8",
                     ),
@@ -470,22 +500,13 @@ class ArchivistMemory:
             original_query = query.OriginalQuery.lower()
 
             # Simple pattern matching
-            if any(
-                term in original_query
-                for term in ["yesterday", "today", "last week", "month", "year", "date"]
-            ):
+            if any(term in original_query for term in ["yesterday", "today", "last week", "month", "year", "date"]):
                 time_queries += 1
 
-            if any(
-                term in original_query
-                for term in ["pdf", "doc", "docx", "jpg", "png", "txt", "file type"]
-            ):
+            if any(term in original_query for term in ["pdf", "doc", "docx", "jpg", "png", "txt", "file type"]):
                 file_type_queries += 1
 
-            if any(
-                term in original_query
-                for term in ["location", "folder", "directory", "path"]
-            ):
+            if any(term in original_query for term in ["location", "folder", "directory", "path"]):
                 location_queries += 1
 
         # If pattern frequency exceeds threshold, add or update the pattern
@@ -541,10 +562,7 @@ class ArchivistMemory:
                 [
                     q.OriginalQuery
                     for q in recent_queries
-                    if any(
-                        term in q.OriginalQuery.lower()
-                        for term in ["location", "folder", "directory", "path"]
-                    )
+                    if any(term in q.OriginalQuery.lower() for term in ["location", "folder", "directory", "path"])
                 ],
                 location_queries / len(recent_queries),
             )
@@ -555,12 +573,8 @@ class ArchivistMemory:
         for pattern in self.memory.search_patterns:
             if pattern.pattern_type == pattern_type:
                 # Update existing pattern
-                pattern.frequency = (
-                    pattern.frequency + frequency
-                ) / 2  # Moving average
-                pattern.examples = list(set(pattern.examples + examples))[
-                    :5
-                ]  # Keep up to 5 unique examples
+                pattern.frequency = (pattern.frequency + frequency) / 2  # Moving average
+                pattern.examples = list(set(pattern.examples + examples))[:5]  # Keep up to 5 unique examples
                 return
 
         # Add new pattern
@@ -620,8 +634,7 @@ class ArchivistMemory:
                 alpha = 0.3  # Smoothing factor
                 if content_type in self.memory.content_preferences:
                     self.memory.content_preferences[content_type] = (
-                        alpha * preference
-                        + (1 - alpha) * self.memory.content_preferences[content_type]
+                        alpha * preference + (1 - alpha) * self.memory.content_preferences[content_type]
                     )
                 else:
                     self.memory.content_preferences[content_type] = preference
@@ -655,10 +668,7 @@ class ArchivistMemory:
             # Check if query is specific (contains detailed constraints)
             if (
                 len(original_query.split()) > 4
-                or any(
-                    term in original_query
-                    for term in ["specific", "exact", "exactly", "named", "titled"]
-                )
+                or any(term in original_query for term in ["specific", "exact", "exactly", "named", "titled"])
                 or any(
                     term in original_query
                     for term in [
@@ -677,9 +687,7 @@ class ArchivistMemory:
                 broad_total += 1
 
             # Check if query was successful (had results)
-            has_results = (
-                query.RankedResults is not None and len(query.RankedResults) > 0
-            )
+            has_results = query.RankedResults is not None and len(query.RankedResults) > 0
 
             if is_specific and has_results:
                 specific_successful += 1
@@ -687,9 +695,7 @@ class ArchivistMemory:
                 broad_successful += 1
 
         # Calculate success rates
-        specific_success_rate = (
-            specific_successful / specific_total if specific_total > 0 else 0
-        )
+        specific_success_rate = specific_successful / specific_total if specific_total > 0 else 0
         broad_success_rate = broad_successful / broad_total if broad_total > 0 else 0
 
         # Add or update strategies based on success rates
@@ -719,9 +725,7 @@ class ArchivistMemory:
         for strategy in self.memory.effective_strategies:
             if strategy.strategy_name == name:
                 # Update existing strategy
-                strategy.success_rate = (
-                    strategy.success_rate + success_rate
-                ) / 2  # Moving average
+                strategy.success_rate = (strategy.success_rate + success_rate) / 2  # Moving average
                 strategy.applicable_contexts = list(
                     set(strategy.applicable_contexts + contexts),
                 )
@@ -835,8 +839,7 @@ class ArchivistMemory:
                 # Update with exponential smoothing
                 if topic in self.memory.semantic_topics:
                     self.memory.semantic_topics[topic] = (
-                        alpha * importance
-                        + (1 - alpha) * self.memory.semantic_topics[topic]
+                        alpha * importance + (1 - alpha) * self.memory.semantic_topics[topic]
                     )
                 else:
                     self.memory.semantic_topics[topic] = importance
@@ -865,16 +868,16 @@ class ArchivistMemory:
                 key=lambda x: x[1],
                 reverse=True,
             )
-            content_types = [
-                f"{ctype} ({pref:.2f})" for ctype, pref in content_prefs[:3]
-            ]
+            content_types = [f"{ctype} ({pref:.2f})" for ctype, pref in content_prefs[:3]]
             if content_types:
                 prompt += f"- Preferred content types: {', '.join(content_types)}\n"
 
         # Add search patterns
         if self.memory.search_patterns:
             patterns = sorted(
-                self.memory.search_patterns, key=lambda x: x.frequency, reverse=True,
+                self.memory.search_patterns,
+                key=lambda x: x.frequency,
+                reverse=True,
             )
             if patterns:
                 prompt += f"- Search pattern: {patterns[0].description}\n"
@@ -887,7 +890,9 @@ class ArchivistMemory:
         # Add effective strategies
         prompt += "EFFECTIVE STRATEGIES:\n"
         for strategy in sorted(
-            self.memory.effective_strategies, key=lambda x: x.success_rate, reverse=True,
+            self.memory.effective_strategies,
+            key=lambda x: x.success_rate,
+            reverse=True,
         )[:3]:
             prompt += f"- {strategy.strategy_name}: {strategy.description} (success: {strategy.success_rate:.2f})\n"
         prompt += "\n"
@@ -903,7 +908,9 @@ class ArchivistMemory:
         if self.memory.insights:
             prompt += "KEY INSIGHTS:\n"
             for insight in sorted(
-                self.memory.insights, key=lambda x: x.confidence, reverse=True,
+                self.memory.insights,
+                key=lambda x: x.confidence,
+                reverse=True,
             )[:5]:
                 prompt += f"- {insight.insight} ({insight.impact} impact)\n"
             prompt += "\n"
@@ -918,7 +925,9 @@ class ArchivistMemory:
         if self.memory.semantic_topics:
             prompt += "TOPICS OF INTEREST:\n"
             topics = sorted(
-                self.memory.semantic_topics.items(), key=lambda x: x[1], reverse=True,
+                self.memory.semantic_topics.items(),
+                key=lambda x: x[1],
+                reverse=True,
             )[:5]
             for topic, importance in topics:
                 prompt += f"- {topic} (importance: {importance:.2f})\n"
@@ -1027,7 +1036,9 @@ class ArchivistMemory:
         # Add new preference
         self.memory.user_preferences.append(
             UserPreference(
-                category=category, preference=preference, confidence=confidence,
+                category=category,
+                preference=preference,
+                confidence=confidence,
             ),
         )
 
@@ -1048,9 +1059,7 @@ class ArchivistMemory:
                     # Extract success rate if available
                     if len(desc_parts) > 1 and "success:" in desc_parts[1]:
                         try:
-                            success_str = (
-                                desc_parts[1].split(":")[1].replace(")", "").strip()
-                            )
+                            success_str = desc_parts[1].split(":")[1].replace(")", "").strip()
                             success_rate = float(success_str)
                         except ValueError:
                             pass
@@ -1074,9 +1083,7 @@ class ArchivistMemory:
                         # Extract progress percentage
                         progress = 0.0
                         if "(" in progress_part and "%" in progress_part:
-                            progress_str = (
-                                progress_part.split("(")[1].split("%")[0].strip()
-                            )
+                            progress_str = progress_part.split("(")[1].split("%")[0].strip()
                             try:
                                 progress = float(progress_str) / 100.0
                             except ValueError:
@@ -1142,9 +1149,7 @@ class ArchivistMemory:
         # Add information about the most recent goal activity
         if self.memory.long_term_goals:
             latest_goal = max(self.memory.long_term_goals, key=lambda g: g.last_updated)
-            context += (
-                f"{latest_goal.name} ({latest_goal.progress*100:.0f}% complete). "
-            )
+            context += f"{latest_goal.name} ({latest_goal.progress*100:.0f}% complete). "
 
         # Add recent topical focus
         if self.memory.semantic_topics:
@@ -1154,7 +1159,8 @@ class ArchivistMemory:
         # Add effective strategy suggestion
         if self.memory.effective_strategies:
             top_strategy = max(
-                self.memory.effective_strategies, key=lambda s: s.success_rate,
+                self.memory.effective_strategies,
+                key=lambda s: s.success_rate,
             )
             context += f"The '{top_strategy.strategy_name}' search approach has been effective. "
 
@@ -1217,7 +1223,9 @@ class ArchivistMemory:
         )
 
     def get_most_relevant_insights(
-        self, context: str, limit: int = 3,
+        self,
+        context: str,
+        limit: int = 3,
     ) -> list[SearchInsight]:
         """
         Get the most relevant insights for the current context.
@@ -1232,12 +1240,16 @@ class ArchivistMemory:
         # This would use semantic matching to find relevant insights
         # For now, just return the highest confidence insights
         sorted_insights = sorted(
-            self.memory.insights, key=lambda x: x.confidence, reverse=True,
+            self.memory.insights,
+            key=lambda x: x.confidence,
+            reverse=True,
         )
         return sorted_insights[:limit]
 
     def store_conversation_state(
-        self, conversation_id: str, state_data: dict[str, Any],
+        self,
+        conversation_id: str,
+        state_data: dict[str, Any],
     ) -> str:
         """
         Store conversation state information for cross-session continuity.
@@ -1258,7 +1270,8 @@ class ArchivistMemory:
             "created_at": datetime.now(UTC).isoformat(),
             "updated_at": datetime.now(UTC).isoformat(),
             "summary": state_data.get(
-                "summary", "Conversation with Indaleko Assistant",
+                "summary",
+                "Conversation with Indaleko Assistant",
             ),
             "key_takeaways": state_data.get("key_takeaways", []),
             "topics": state_data.get("topics", []),
@@ -1360,9 +1373,7 @@ class ArchivistMemory:
         # Search insights
         for insight in self.memory.insights:
             # Simple keyword matching
-            if any(
-                keyword in insight.insight.lower() for keyword in query.lower().split()
-            ):
+            if any(keyword in insight.insight.lower() for keyword in query.lower().split()):
                 results.append(
                     {
                         "memory_id": str(uuid.uuid4()),  # Generate a unique ID
@@ -1378,8 +1389,7 @@ class ArchivistMemory:
         for goal in self.memory.long_term_goals:
             # Simple keyword matching
             if any(
-                keyword in goal.name.lower() or keyword in goal.description.lower()
-                for keyword in query.lower().split()
+                keyword in goal.name.lower() or keyword in goal.description.lower() for keyword in query.lower().split()
             ):
                 results.append(
                     {
@@ -1395,10 +1405,7 @@ class ArchivistMemory:
         # Search patterns
         for pattern in self.memory.search_patterns:
             # Simple keyword matching
-            if any(
-                keyword in pattern.description.lower()
-                for keyword in query.lower().split()
-            ):
+            if any(keyword in pattern.description.lower() for keyword in query.lower().split()):
                 results.append(
                     {
                         "memory_id": str(uuid.uuid4()),  # Generate a unique ID
@@ -1413,25 +1420,22 @@ class ArchivistMemory:
         # Search conversation history if available
         if hasattr(self.memory, "continuation_context"):
             conversation_states = self.memory.continuation_context.get(
-                "conversations", [],
+                "conversations",
+                [],
             )
             for state in conversation_states:
                 # Check summary and takeaways
                 summary = state.get("summary", "")
                 takeaways = state.get("key_takeaways", [])
 
-                if any(
-                    keyword in summary.lower() for keyword in query.lower().split()
-                ) or any(
-                    any(
-                        keyword in takeaway.lower() for keyword in query.lower().split()
-                    )
-                    for takeaway in takeaways
+                if any(keyword in summary.lower() for keyword in query.lower().split()) or any(
+                    any(keyword in takeaway.lower() for keyword in query.lower().split()) for takeaway in takeaways
                 ):
                     results.append(
                         {
                             "memory_id": state.get(
-                                "conversation_id", str(uuid.uuid4()),
+                                "conversation_id",
+                                str(uuid.uuid4()),
                             ),
                             "memory_type": "conversation",
                             "relevance": 0.9,
@@ -1447,9 +1451,7 @@ class ArchivistMemory:
             # Check query text
             activity_query = activity.get("query_text", "")
 
-            if any(
-                keyword in activity_query.lower() for keyword in query.lower().split()
-            ):
+            if any(keyword in activity_query.lower() for keyword in query.lower().split()):
                 results.append(
                     {
                         "memory_id": activity.get("query_id", str(uuid.uuid4())),
@@ -1517,11 +1519,7 @@ class ArchivistMemory:
                     "execution_time": activity.execution_time,
                     "result_count": activity.result_count,
                     "relationship_type": activity.relationship_type,
-                    "previous_query_id": (
-                        str(activity.previous_query_id)
-                        if activity.previous_query_id
-                        else None
-                    ),
+                    "previous_query_id": (str(activity.previous_query_id) if activity.previous_query_id else None),
                     "timestamp": (
                         activity.timestamp.isoformat()
                         if hasattr(activity.timestamp, "isoformat")
@@ -1572,9 +1570,7 @@ class ArchivistMemory:
 
         # Generate insights based on dominant patterns
         for rel_type, count in relationship_counts.items():
-            if (
-                count / total_activities > 0.25
-            ):  # If more than 25% of activities have this relationship
+            if count / total_activities > 0.25:  # If more than 25% of activities have this relationship
                 # Create appropriate insight based on relationship type
                 if rel_type == "refinement":
                     self.add_insight(
@@ -1608,15 +1604,20 @@ def main():
 
     # Add some test data
     memory.add_long_term_goal(
-        "File Organization", "Organize personal documents by project and year",
+        "File Organization",
+        "Organize personal documents by project and year",
     )
     memory.update_goal_progress("File Organization", 0.35)
 
     memory.add_insight(
-        "organization", "User struggles with finding documents older than 6 months", 0.8,
+        "organization",
+        "User struggles with finding documents older than 6 months",
+        0.8,
     )
     memory.add_insight(
-        "retrieval", "Location data is highly valuable for narrowing searches", 0.7,
+        "retrieval",
+        "Location data is highly valuable for narrowing searches",
+        0.7,
     )
 
     # Generate and print a forward prompt

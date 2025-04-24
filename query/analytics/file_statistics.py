@@ -44,7 +44,8 @@ from db.db_config import IndalekoDBConfig
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -72,10 +73,7 @@ class FileStatistics:
         """
         try:
             # First check if the Objects collection exists
-            if (
-                not hasattr(self, "has_objects_collection")
-                or not self.has_objects_collection
-            ):
+            if not hasattr(self, "has_objects_collection") or not self.has_objects_collection:
                 logger.warning("Objects collection not found in database")
                 return 0
 
@@ -109,10 +107,7 @@ class FileStatistics:
         """
         try:
             # First check if the Objects collection exists
-            if (
-                not hasattr(self, "has_objects_collection")
-                or not self.has_objects_collection
-            ):
+            if not hasattr(self, "has_objects_collection") or not self.has_objects_collection:
                 logger.warning("Objects collection not found in database")
                 return 0
 
@@ -379,7 +374,9 @@ class FileStatistics:
             return []
 
     def generate_report(
-        self, output_dir: str = ".", visualize: bool = True,
+        self,
+        output_dir: str = ".",
+        visualize: bool = True,
     ) -> dict[str, Any]:
         """
         Generate a comprehensive report of file statistics.
@@ -458,9 +455,7 @@ class FileStatistics:
         if report["file_types"]:
             # Sort by count and get top 10
             file_types = dict(
-                sorted(report["file_types"].items(), key=lambda x: x[1], reverse=True)[
-                    :10
-                ],
+                sorted(report["file_types"].items(), key=lambda x: x[1], reverse=True)[:10],
             )
 
             plt.figure(figsize=(12, 6))
@@ -490,9 +485,7 @@ class FileStatistics:
             plt.close()
 
             # 4. File size by age
-            age_sizes = [
-                item["avg_size"] / (1024 * 1024) for item in report["age_distribution"]
-            ]  # Convert to MB
+            age_sizes = [item["avg_size"] / (1024 * 1024) for item in report["age_distribution"]]  # Convert to MB
 
             plt.figure(figsize=(12, 6))
             plt.bar(age_labels, age_sizes)
@@ -578,8 +571,7 @@ def display_report(report: dict[str, Any], display_buffer: list[str] = None) -> 
     output("\n=== File Age Distribution ===")
     for age_range in report["age_distribution"]:
         output(
-            f"{age_range['age_range']}: {age_range['count']:,} files, "
-            f"{format_size(age_range['total_size'])}",
+            f"{age_range['age_range']}: {age_range['count']:,} files, {format_size(age_range['total_size'])}",
         )
 
 
@@ -587,10 +579,16 @@ def main():
     """Main entry point for the file statistics tool."""
     parser = argparse.ArgumentParser(description="Indaleko File Statistics Tool")
     parser.add_argument(
-        "--report", "-r", action="store_true", help="Generate comprehensive report",
+        "--report",
+        "-r",
+        action="store_true",
+        help="Generate comprehensive report",
     )
     parser.add_argument(
-        "--visualize", "-v", action="store_true", help="Generate visualizations",
+        "--visualize",
+        "-v",
+        action="store_true",
+        help="Generate visualizations",
     )
     parser.add_argument(
         "--output",
@@ -600,7 +598,9 @@ def main():
         help="Output directory for report and visualizations",
     )
     parser.add_argument(
-        "--db-config", type=str, help="Path to database configuration file",
+        "--db-config",
+        type=str,
+        help="Path to database configuration file",
     )
 
     args = parser.parse_args()

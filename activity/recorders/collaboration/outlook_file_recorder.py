@@ -129,9 +129,7 @@ class OutlookFileShareRecorder(RecorderBase):
 
         # Register with the provider registrar
         self.provider_registrar = IndalekoActivityDataRegistrationService()
-        assert (
-            self.provider_registrar is not None
-        ), "Failed to get the provider registrar"
+        assert self.provider_registrar is not None, "Failed to get the provider registrar"
 
         collector_data = self.provider_registrar.lookup_provider_by_identifier(
             str(self.source_data["Identifier"]),
@@ -203,7 +201,8 @@ class OutlookFileShareRecorder(RecorderBase):
         return self.source_data["Description"]
 
     def create_semantic_attributes(
-        self, file_share: dict,
+        self,
+        file_share: dict,
     ) -> list[IndalekoSemanticAttributeDataModel]:
         """
         Create semantic attributes from file share data.
@@ -245,7 +244,9 @@ class OutlookFileShareRecorder(RecorderBase):
                 semantic_attributes.append(
                     IndalekoSemanticAttributeDataModel(
                         Identifier=IndalekoUUIDDataModel(
-                            Identifier=uuid_value, Version="1", Description=field,
+                            Identifier=uuid_value,
+                            Version="1",
+                            Description=field,
                         ),
                         Data=str(value),
                     ),
@@ -322,7 +323,8 @@ class OutlookFileShareRecorder(RecorderBase):
 
             # Build document
             doc = self.build_email_file_share_document(
-                file_share=file_share, semantic_attributes=semantic_attributes,
+                file_share=file_share,
+                semantic_attributes=semantic_attributes,
             )
 
             # Insert into collection
@@ -360,7 +362,8 @@ class OutlookFileShareRecorder(RecorderBase):
             sender = email_data.get("senderEmailAddress")
             recipients = email_data.get("recipientEmailAddresses", [])
             timestamp = email_data.get(
-                "timestamp", datetime.now(UTC).isoformat(),
+                "timestamp",
+                datetime.now(UTC).isoformat(),
             )
             attachments = email_data.get("attachments", [])
 
@@ -422,7 +425,8 @@ class OutlookFileShareRecorder(RecorderBase):
             The file data if found, None otherwise
         """
         assert isinstance(
-            self.collection, IndalekoCollection,
+            self.collection,
+            IndalekoCollection,
         ), f"collection is not an IndalekoCollection {type(self.collection)}"
 
         # Query with URL filter
@@ -457,7 +461,8 @@ class OutlookFileShareRecorder(RecorderBase):
             List of matching file data
         """
         assert isinstance(
-            self.collection, IndalekoCollection,
+            self.collection,
+            IndalekoCollection,
         ), f"collection is not an IndalekoCollection {type(self.collection)}"
 
         # Query with filename filter
@@ -494,7 +499,8 @@ class OutlookFileShareRecorder(RecorderBase):
             List of matching file data
         """
         assert isinstance(
-            self.collection, IndalekoCollection,
+            self.collection,
+            IndalekoCollection,
         ), f"collection is not an IndalekoCollection {type(self.collection)}"
 
         # Query with sender filter
@@ -531,7 +537,8 @@ class OutlookFileShareRecorder(RecorderBase):
             List of file share data
         """
         assert isinstance(
-            self.collection, IndalekoCollection,
+            self.collection,
+            IndalekoCollection,
         ), f"collection is not an IndalekoCollection {type(self.collection)}"
 
         query = """

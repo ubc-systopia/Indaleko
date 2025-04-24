@@ -120,19 +120,22 @@ class GDriveFileInfo(IndalekoBaseModel):
     description: str | None = Field(None, description="File description")
     size: int | None = Field(None, description="File size in bytes")
     md5_checksum: str | None = Field(
-        None, description="MD5 checksum of file content",
+        None,
+        description="MD5 checksum of file content",
     )
     version: str | None = Field(None, description="File version")
     starred: bool | None = Field(None, description="Whether the file is starred")
     trashed: bool | None = Field(None, description="Whether the file is trashed")
     created_time: datetime | None = Field(None, description="File creation time")
     modified_time: datetime | None = Field(
-        None, description="File last modification time",
+        None,
+        description="File last modification time",
     )
     viewed_time: datetime | None = Field(None, description="File last viewed time")
     shared: bool | None = Field(None, description="Whether the file is shared")
     web_view_link: str | None = Field(
-        None, description="Link to view the file in browser",
+        None,
+        description="Link to view the file in browser",
     )
     parent_folder_id: str | None = Field(None, description="ID of parent folder")
     parent_folder_name: str | None = Field(None, description="Name of parent folder")
@@ -204,33 +207,41 @@ class GDriveActivityData(IndalekoBaseModel):
 
     # Additional metadata
     destination_folder_id: str | None = Field(
-        None, description="For move/copy: destination folder ID",
+        None,
+        description="For move/copy: destination folder ID",
     )
     destination_folder_name: str | None = Field(
-        None, description="For move/copy: destination folder name",
+        None,
+        description="For move/copy: destination folder name",
     )
     previous_file_name: str | None = Field(
-        None, description="For rename: previous file name",
+        None,
+        description="For rename: previous file name",
     )
     comment_id: str | None = Field(None, description="For comment: comment ID")
     comment_content: str | None = Field(
-        None, description="For comment: comment content",
+        None,
+        description="For comment: comment content",
     )
     shared_with: list[GDriveUserInfo] | None = Field(
-        None, description="For share: users the file was shared with",
+        None,
+        description="For share: users the file was shared with",
     )
     permission_changes: dict[str, str] | None = Field(
-        None, description="For share: permission changes",
+        None,
+        description="For share: permission changes",
     )
 
     # Original API response for reference
     raw_data: dict[str, Any] | None = Field(
-        None, description="Original API response",
+        None,
+        description="Original API response",
     )
 
     # Classification for activity context system
     activity_classification: IndalekoActivityClassification | None = Field(
-        None, description="Multi-dimensional classification of this activity",
+        None,
+        description="Multi-dimensional classification of this activity",
     )
 
     @field_validator("timestamp", mode="before")
@@ -326,9 +337,7 @@ class GDriveActivityData(IndalekoBaseModel):
             created_time=self.file.created_time,
             modified_time=self.file.modified_time,
             # GoogleDriveStorageActivityData fields
-            parents=(
-                [self.file.parent_folder_id] if self.file.parent_folder_id else None
-            ),
+            parents=([self.file.parent_folder_id] if self.file.parent_folder_id else None),
             version=self.file.version,
         )
 

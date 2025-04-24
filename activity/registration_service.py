@@ -90,7 +90,8 @@ class IndalekoActivityRegistrationService(IndalekoRegistrationService):
         assert "Version" in kwargs, "Version must be provided"
         assert "Record" in kwargs, "Record must be provided"
         assert isinstance(
-            kwargs["Record"], IndalekoRecordDataModel,
+            kwargs["Record"],
+            IndalekoRecordDataModel,
         ), "Record must be an IndalekoRecordDataModel"
 
         # Optional activity-specific fields with defaults
@@ -142,15 +143,11 @@ class IndalekoActivityRegistrationService(IndalekoRegistrationService):
 
         matching_providers = []
         for provider in providers:
-            if (
-                "DataProviderSubType" in provider
-                and provider["DataProviderSubType"] == provider_type
-            ):
+            if "DataProviderSubType" in provider and provider["DataProviderSubType"] == provider_type:
                 matching_providers = [
                     provider
                     for provider in providers
-                    if "DataProviderSubType" in provider
-                    and provider["DataProviderSubType"] == provider_type
+                    if "DataProviderSubType" in provider and provider["DataProviderSubType"] == provider_type
                 ]
 
         return matching_providers

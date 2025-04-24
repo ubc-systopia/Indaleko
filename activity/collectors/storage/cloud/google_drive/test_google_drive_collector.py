@@ -140,7 +140,8 @@ class TestGoogleDriveCollector(unittest.TestCase):
     def test_get_collector_name(self):
         """Test get_collector_name method."""
         self.assertEqual(
-            self.collector.get_collector_name(), "Google Drive Activity Collector",
+            self.collector.get_collector_name(),
+            "Google Drive Activity Collector",
         )
 
     def test_get_provider_id(self):
@@ -216,7 +217,8 @@ class TestGoogleDriveCollector(unittest.TestCase):
 
 # Test the recorder if it's available
 @unittest.skipIf(
-    "GoogleDriveActivityRecorder" not in globals(), "Recorder class not available",
+    "GoogleDriveActivityRecorder" not in globals(),
+    "Recorder class not available",
 )
 class TestGoogleDriveRecorder(unittest.TestCase):
     """Test class for GoogleDriveActivityRecorder."""
@@ -377,7 +379,8 @@ class TestGoogleDriveRecorder(unittest.TestCase):
 
 # Test the recorder if it's available
 @unittest.skipIf(
-    "GoogleDriveActivityRecorder" not in globals(), "Recorder class not available",
+    "GoogleDriveActivityRecorder" not in globals(),
+    "Recorder class not available",
 )
 class TestGoogleDriveRecorder(unittest.TestCase):
     """Test class for GoogleDriveActivityRecorder."""

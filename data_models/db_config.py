@@ -18,13 +18,12 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from datetime import datetime, timezone
 import os
 import sys
+from datetime import UTC, datetime
 
 from icecream import ic
-from pydantic import BaseModel, Field, AwareDatetime
-from typing import Optional
+from pydantic import AwareDatetime, BaseModel, Field
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -42,7 +41,9 @@ class IndalekoDBConfigUserDataModel(BaseModel):
     Name: str = Field(..., title="Name", description="The name of the database user.")
 
     Password: str = Field(
-        ..., title="Password", description="The password of the database user."
+        ...,
+        title="Password",
+        description="The password of the database user.",
     )
 
 
@@ -52,11 +53,15 @@ class IndalekoDBConfigDockerConfigurationDataModel(BaseModel):
     """
 
     ContainerName: str = Field(
-        ..., title="Container Name", description="The name of the docker container."
+        ...,
+        title="Container Name",
+        description="The name of the docker container.",
     )
 
     VolumeName: str = Field(
-        ..., title="Volume Name", description="The name of the docker volume."
+        ...,
+        title="Volume Name",
+        description="The name of the docker volume.",
     )
 
 
@@ -66,7 +71,9 @@ class IndalekoDBConfigDataModel(BaseModel):
     """
 
     Type: str = Field(
-        "arangodb", title="DatabaseType", description="The type of database being used."
+        "arangodb",
+        title="DatabaseType",
+        description="The type of database being used.",
     )
 
     Docker: bool = Field(
@@ -76,7 +83,9 @@ class IndalekoDBConfigDataModel(BaseModel):
     )
 
     Local: bool = Field(
-        False, title="Local", description="Whether the database is running locally."
+        False,
+        title="Local",
+        description="Whether the database is running locally.",
     )
 
     Name: str = Field(
@@ -86,7 +95,7 @@ class IndalekoDBConfigDataModel(BaseModel):
     )
 
     Timestamp: AwareDatetime = Field(
-        datetime.now(timezone.utc),
+        datetime.now(UTC),
         title="Timestamp",
         description="The timestamp of when this configuration was constructed.",
     )
@@ -94,7 +103,7 @@ class IndalekoDBConfigDataModel(BaseModel):
     AdminUser: IndalekoDBConfigUserDataModel
     DBUser: IndalekoDBConfigUserDataModel
 
-    DockerConfiguration: Optional[IndalekoDBConfigDockerConfigurationDataModel] = Field(
+    DockerConfiguration: IndalekoDBConfigDockerConfigurationDataModel | None = Field(
         None,
         title="Docker Configuration",
         description="The docker configuration for the database.",
@@ -107,11 +116,15 @@ class IndalekoDBConfigDataModel(BaseModel):
     )
 
     Port: int = Field(
-        8529, title="Port", description="The port number for the database."
+        8529,
+        title="Port",
+        description="The port number for the database.",
     )
 
     SSL: bool = Field(
-        False, title="SSL", description="Whether the database is using SSL."
+        False,
+        title="SSL",
+        description="Whether the database is using SSL.",
     )
 
     class Config:
@@ -123,7 +136,7 @@ class IndalekoDBConfigDataModel(BaseModel):
                 "Docker": False,
                 "Local": True,
                 "Name": "Indaleko",
-                "Timestamp": datetime.now(timezone.utc).isoformat(),
+                "Timestamp": datetime.now(UTC).isoformat(),
                 "AdminUser": {"Name": "root", "Password": "password"},
                 "DBUser": {"Name": "indaleko", "Password": "password"},
                 "DockerConfiguration": {
@@ -132,7 +145,7 @@ class IndalekoDBConfigDataModel(BaseModel):
                 },
                 "Hostname": "localhost",
                 "Port": 8529,
-            }
+            },
         }
 
 
@@ -140,11 +153,11 @@ def main():
     """This allows testing the data model."""
     ic("Testing the DBConfigDataModel")
     db_config_data = IndalekoDBConfigDataModel(
-        **IndalekoDBConfigDataModel.Config.json_schema_extra["example"]
+        **IndalekoDBConfigDataModel.Config.json_schema_extra["example"],
     )
     ic(db_config_data.model_dump_json(indent=2, exclude_unset=True, exclude_none=True))
     print(
-        db_config_data.model_dump_json(indent=2, exclude_unset=True, exclude_none=True)
+        db_config_data.model_dump_json(indent=2, exclude_unset=True, exclude_none=True),
     )
 
 

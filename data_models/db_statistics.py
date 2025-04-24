@@ -22,11 +22,9 @@ import os
 import sys
 
 # import uuid
-
 # from datetime import datetime, timezone
 # from typing import Dict, Any, Type, TypeVar, Union, Optional
 # from typing import Union, List
-
 from pydantic import BaseModel, Field  # , AwareDatetime, field_validator
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -39,8 +37,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # T = TypeVar('T', bound='IndalekoPerformanceDataModel')
 
 # pylint: disable=wrong-import-position
-from data_models.base import IndalekoBaseModel  # noqa: E402
-from data_models.record import IndalekoRecordDataModel  # noqa: E402
+from data_models.base import IndalekoBaseModel
+from data_models.record import IndalekoRecordDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 
 # pylint: enable=wrong-import-position
@@ -163,7 +161,7 @@ class IndalekoDBStatisticsDataModel(IndalekoBaseModel):
                         },
                     ],
                 },
-            }
+            },
         }
 
 

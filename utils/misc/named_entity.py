@@ -66,7 +66,8 @@ class IndalekoNamedEntity:
             bool: True if the named entity was added successfully, False otherwise
         """
         assert isinstance(
-            named_entity, IndalekoNamedEntityDataModel,
+            named_entity,
+            IndalekoNamedEntityDataModel,
         ), f"named_entity must be a NamedEntity, not {type(named_entity)}"
 
         self.named_entities[named_entity.name] = named_entity
@@ -94,7 +95,8 @@ class IndalekoNamedEntity:
         return self.named_entities.get(name, None)
 
     def get_named_entities(
-        self, allow_cached: bool = False,
+        self,
+        allow_cached: bool = False,
     ) -> dict[str, IndalekoNamedEntityDataModel]:
         """
         Get all named entities from the handler.

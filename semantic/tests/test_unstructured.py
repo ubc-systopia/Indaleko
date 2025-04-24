@@ -60,7 +60,8 @@ class TestUnstructuredCollector(unittest.TestCase):
 
         # Configure the collector to skip Docker
         self.collector = UnstructuredCollector(
-            skip_docker_pull=True, enable_performance_monitoring=False,
+            skip_docker_pull=True,
+            enable_performance_monitoring=False,
         )
 
     def tearDown(self):
@@ -108,7 +109,8 @@ class TestUnstructuredCollector(unittest.TestCase):
                 ObjectIdentifier=uuid.uuid4(),
                 LocalPath=self.text_file,
                 ModificationTimestamp=datetime.fromtimestamp(
-                    os.path.getmtime(self.text_file), UTC,
+                    os.path.getmtime(self.text_file),
+                    UTC,
                 ),
                 Length=os.path.getsize(self.text_file),
                 Checksum=None,
@@ -117,7 +119,8 @@ class TestUnstructuredCollector(unittest.TestCase):
                 ObjectIdentifier=uuid.uuid4(),
                 LocalPath=self.pdf_file,
                 ModificationTimestamp=datetime.fromtimestamp(
-                    os.path.getmtime(self.pdf_file), UTC,
+                    os.path.getmtime(self.pdf_file),
+                    UTC,
                 ),
                 Length=os.path.getsize(self.pdf_file),
                 Checksum=None,
@@ -135,19 +138,17 @@ class TestUnstructuredCollector(unittest.TestCase):
                 ObjectIdentifier=uuid.uuid4(),
                 LocalPath=self.text_file,
                 ModificationTimestamp=datetime.fromtimestamp(
-                    os.path.getmtime(self.text_file), UTC,
+                    os.path.getmtime(self.text_file),
+                    UTC,
                 ),
-                Length=self.collector._max_file_size_mb * 1024 * 1024
-                + 1,  # Exceed the limit
+                Length=self.collector._max_file_size_mb * 1024 * 1024 + 1,  # Exceed the limit
                 Checksum=None,
             ),
         ]
 
         # Mock _get_file_mime_type to return valid types
         with patch.object(self.collector, "_get_file_mime_type") as mock_mime:
-            mock_mime.side_effect = lambda path: (
-                "text/plain" if path.endswith(".txt") else "application/pdf"
-            )
+            mock_mime.side_effect = lambda path: ("text/plain" if path.endswith(".txt") else "application/pdf")
 
             # Call the method
             filtered_files = self.collector._filter_files(input_models)
@@ -165,7 +166,8 @@ class TestUnstructuredRecorder(unittest.TestCase):
         """Set up test environment."""
         # Configure the recorder to skip database connection
         self.recorder = UnstructuredRecorder(
-            skip_db_connection=True, enable_performance_monitoring=False,
+            skip_db_connection=True,
+            enable_performance_monitoring=False,
         )
 
     def test_get_recorder_characteristics(self):
@@ -194,12 +196,14 @@ class TestUnstructuredRecorder(unittest.TestCase):
 
         # Verify the results
         self.assertEqual(
-            title_attr.Identifier.Identifier, self.recorder.attribute_map["Title"],
+            title_attr.Identifier.Identifier,
+            self.recorder.attribute_map["Title"],
         )
         self.assertEqual(title_attr.Value, "Test Title")
 
         self.assertEqual(
-            filename_attr.Identifier.Identifier, self.recorder.attribute_map["filename"],
+            filename_attr.Identifier.Identifier,
+            self.recorder.attribute_map["filename"],
         )
         self.assertEqual(filename_attr.Value, "test.pdf")
 
@@ -207,7 +211,8 @@ class TestUnstructuredRecorder(unittest.TestCase):
         self.assertEqual(
             unknown_attr.Identifier.Identifier,
             self.recorder.attribute_map.get(
-                "unknown", "5cc55605-64f2-4491-9ff1-ddfe23e964b8",
+                "unknown",
+                "5cc55605-64f2-4491-9ff1-ddfe23e964b8",
             ),
         )
         self.assertEqual(unknown_attr.Value, "test value")
@@ -233,12 +238,14 @@ class TestUnstructuredProcessor(unittest.TestCase):
 
         # Mock the collector's collect_data method
         self.mock_collector_collect = patch.object(
-            self.processor._collector, "collect_data",
+            self.processor._collector,
+            "collect_data",
         ).start()
 
         # Mock the recorder's store_data method
         self.mock_recorder_store = patch.object(
-            self.processor._recorder, "store_data",
+            self.processor._recorder,
+            "store_data",
         ).start()
 
     def tearDown(self):

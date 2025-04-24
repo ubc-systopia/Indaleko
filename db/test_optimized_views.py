@@ -29,7 +29,8 @@ from db.i_collections import IndalekoCollections
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger("view_optimizer")
 
@@ -57,11 +58,7 @@ class OptimizedViewManager:
         current_time = time.time()
 
         # Check if cache is valid
-        if (
-            not force_refresh
-            and cls._view_cache
-            and (current_time - cls._last_cache_update) < cls._cache_ttl
-        ):
+        if not force_refresh and cls._view_cache and (current_time - cls._last_cache_update) < cls._cache_ttl:
             logger.debug("Using cached views")
             return cls._view_cache.copy()
 
@@ -147,7 +144,8 @@ def test_machine_config_performance():
 
     collections = IndalekoCollections(skip_views=True)
     collection = collections.get_collection(
-        IndalekoDBCollections.Indaleko_MachineConfig_Collection, skip_views=True,
+        IndalekoDBCollections.Indaleko_MachineConfig_Collection,
+        skip_views=True,
     )
 
     # Perform query

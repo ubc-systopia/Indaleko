@@ -174,7 +174,10 @@ class QueryPatternCLIIntegration:
         try:
             parser = argparse.ArgumentParser(prog="/patterns analyze")
             parser.add_argument(
-                "--days", type=int, default=30, help="Number of days to analyze",
+                "--days",
+                type=int,
+                default=30,
+                help="Number of days to analyze",
             )
             parser.add_argument(
                 "--max-queries",
@@ -196,12 +199,14 @@ class QueryPatternCLIIntegration:
             # Initialize analyzer
             if not self._initialize_analyzer():
                 return CommandResult(
-                    success=False, message="Failed to initialize database connection.",
+                    success=False,
+                    message="Failed to initialize database connection.",
                 )
 
             # Run the analysis
             self.cli.print_message(
-                "Running query pattern analysis...", message_type="info",
+                "Running query pattern analysis...",
+                message_type="info",
             )
 
             summary, suggestions = self.analyzer.analyze_and_generate()
@@ -209,7 +214,8 @@ class QueryPatternCLIIntegration:
             # Format result message
             if summary.get("status") == "no_data":
                 return CommandResult(
-                    success=False, message="No query history data found.",
+                    success=False,
+                    message="No query history data found.",
                 )
 
             message = f"""Query Pattern Analysis Summary:
@@ -244,7 +250,8 @@ class QueryPatternCLIIntegration:
             self.logger.error(f"Error in analyze command: {e}")
             self.logger.error(traceback.format_exc())
             return CommandResult(
-                success=False, message=f"Error analyzing query patterns: {e!s}",
+                success=False,
+                message=f"Error analyzing query patterns: {e!s}",
             )
 
     def _handle_metrics(self, args: list[str]) -> CommandResult:
@@ -252,17 +259,16 @@ class QueryPatternCLIIntegration:
         try:
             if not self._initialize_analyzer():
                 return CommandResult(
-                    success=False, message="Failed to initialize database connection.",
+                    success=False,
+                    message="Failed to initialize database connection.",
                 )
 
             # Check if we have metrics
-            if (
-                not hasattr(self.analyzer.data, "user_metrics")
-                or not self.analyzer.data.user_metrics
-            ):
+            if not hasattr(self.analyzer.data, "user_metrics") or not self.analyzer.data.user_metrics:
                 # Calculate metrics
                 self.cli.print_message(
-                    "Calculating query metrics...", message_type="info",
+                    "Calculating query metrics...",
+                    message_type="info",
                 )
                 metrics = self.analyzer.calculate_metrics()
             else:
@@ -292,11 +298,7 @@ Timing:
             # Add hour distribution if available
             if metrics.queries_by_hour:
                 message += "\nQuery Distribution by Hour:\n"
-                max_count = (
-                    max(metrics.queries_by_hour.values())
-                    if metrics.queries_by_hour
-                    else 0
-                )
+                max_count = max(metrics.queries_by_hour.values()) if metrics.queries_by_hour else 0
 
                 for hour in range(24):
                     count = metrics.queries_by_hour.get(hour, 0)
@@ -315,7 +317,8 @@ Timing:
             self.logger.error(f"Error in metrics command: {e}")
             self.logger.error(traceback.format_exc())
             return CommandResult(
-                success=False, message=f"Error retrieving metrics: {e!s}",
+                success=False,
+                message=f"Error retrieving metrics: {e!s}",
             )
 
     def _handle_chains(self, args: list[str]) -> CommandResult:
@@ -323,14 +326,12 @@ Timing:
         try:
             if not self._initialize_analyzer():
                 return CommandResult(
-                    success=False, message="Failed to initialize database connection.",
+                    success=False,
+                    message="Failed to initialize database connection.",
                 )
 
             # Check if we have chains
-            if (
-                not hasattr(self.analyzer.data, "query_chains")
-                or not self.analyzer.data.query_chains
-            ):
+            if not hasattr(self.analyzer.data, "query_chains") or not self.analyzer.data.query_chains:
                 # Analyze chains
                 self.cli.print_message("Analyzing query chains...", message_type="info")
                 chains = self.analyzer.analyze_query_chains()
@@ -391,7 +392,8 @@ Timing:
             self.logger.error(f"Error in chains command: {e}")
             self.logger.error(traceback.format_exc())
             return CommandResult(
-                success=False, message=f"Error retrieving query chains: {e!s}",
+                success=False,
+                message=f"Error retrieving query chains: {e!s}",
             )
 
     def _handle_entities(self, args: list[str]) -> CommandResult:
@@ -403,17 +405,16 @@ Timing:
 
             if not self._initialize_analyzer():
                 return CommandResult(
-                    success=False, message="Failed to initialize database connection.",
+                    success=False,
+                    message="Failed to initialize database connection.",
                 )
 
             # Check if we have entity usage data
-            if (
-                not hasattr(self.analyzer.data, "entity_usage")
-                or not self.analyzer.data.entity_usage
-            ):
+            if not hasattr(self.analyzer.data, "entity_usage") or not self.analyzer.data.entity_usage:
                 # We need to run an analysis first
                 self.cli.print_message(
-                    "Loading query history to analyze entities...", message_type="info",
+                    "Loading query history to analyze entities...",
+                    message_type="info",
                 )
                 self.analyzer.load_query_history()
 
@@ -445,7 +446,9 @@ Timing:
                 if entity_usage.intents:
                     message += "\nIntents:\n"
                     for intent, count in sorted(
-                        entity_usage.intents.items(), key=lambda x: x[1], reverse=True,
+                        entity_usage.intents.items(),
+                        key=lambda x: x[1],
+                        reverse=True,
                     ):
                         message += f"- {intent}: {count}\n"
 
@@ -478,30 +481,28 @@ Timing:
                 # Top entities by mention count
                 message += "Top Entities by Mention Count:\n"
                 top_entities = sorted(
-                    entities.values(), key=lambda e: e.mention_count, reverse=True,
+                    entities.values(),
+                    key=lambda e: e.mention_count,
+                    reverse=True,
                 )[:10]
 
                 for i, entity in enumerate(top_entities, 1):
-                    message += (
-                        f"{i}. {entity.entity_name}: {entity.mention_count} mentions"
-                    )
+                    message += f"{i}. {entity.entity_name}: {entity.mention_count} mentions"
                     message += f" (success rate: {entity.success_rate:.1%})\n"
 
                 # Entities with highest success rate (with minimum mentions)
                 min_mentions = 3
-                success_entities = [
-                    e for e in entities.values() if e.mention_count >= min_mentions
-                ]
+                success_entities = [e for e in entities.values() if e.mention_count >= min_mentions]
                 success_entities = sorted(
-                    success_entities, key=lambda e: e.success_rate, reverse=True,
+                    success_entities,
+                    key=lambda e: e.success_rate,
+                    reverse=True,
                 )[:5]
 
                 if success_entities:
                     message += f"\nEntities with Highest Success Rate (min {min_mentions} mentions):\n"
                     for i, entity in enumerate(success_entities, 1):
-                        message += (
-                            f"{i}. {entity.entity_name}: {entity.success_rate:.1%}"
-                        )
+                        message += f"{i}. {entity.entity_name}: {entity.success_rate:.1%}"
                         message += f" ({entity.mention_count} mentions)\n"
 
                 # Entity co-occurrence
@@ -524,11 +525,10 @@ Timing:
                 strong_cooccurrences.sort(key=lambda x: x[3], reverse=True)
 
                 for i, (entity1, entity2, count, strength) in enumerate(
-                    strong_cooccurrences[:5], 1,
+                    strong_cooccurrences[:5],
+                    1,
                 ):
-                    message += (
-                        f"{i}. {entity1} + {entity2}: {strength:.1%} ({count} times)\n"
-                    )
+                    message += f"{i}. {entity1} + {entity2}: {strength:.1%} ({count} times)\n"
 
                 message += "\nUse /patterns entities ENTITY_NAME for detailed information about a specific entity."
 
@@ -538,7 +538,8 @@ Timing:
             self.logger.error(f"Error in entities command: {e}")
             self.logger.error(traceback.format_exc())
             return CommandResult(
-                success=False, message=f"Error retrieving entity information: {e!s}",
+                success=False,
+                message=f"Error retrieving entity information: {e!s}",
             )
 
     def _handle_suggestions(self, args: list[str]) -> CommandResult:
@@ -561,14 +562,12 @@ Timing:
             # Initialize analyzer
             if not self._initialize_analyzer():
                 return CommandResult(
-                    success=False, message="Failed to initialize database connection.",
+                    success=False,
+                    message="Failed to initialize database connection.",
                 )
 
             # Check if we have pattern data
-            if (
-                not hasattr(self.analyzer.data, "query_patterns")
-                or not self.analyzer.data.query_patterns
-            ):
+            if not hasattr(self.analyzer.data, "query_patterns") or not self.analyzer.data.query_patterns:
                 # We need to run an analysis first
                 return CommandResult(
                     success=False,
@@ -600,9 +599,7 @@ Timing:
             message = f"Generated {len(suggestions)} suggestions:\n\n"
 
             for i, suggestion in enumerate(suggestions, 1):
-                message += (
-                    f"{i}. {suggestion.title} ({suggestion.suggestion_type.value})\n"
-                )
+                message += f"{i}. {suggestion.title} ({suggestion.suggestion_type.value})\n"
                 message += f"   {suggestion.content}\n"
                 message += f"   Confidence: {suggestion.confidence:.2f}, Priority: {suggestion.priority.value}\n"
                 message += f"   Expires: {suggestion.expires_at.strftime('%Y-%m-%d %H:%M') if suggestion.expires_at else 'Never'}\n\n"
@@ -613,7 +610,8 @@ Timing:
             self.logger.error(f"Error in suggestions command: {e}")
             self.logger.error(traceback.format_exc())
             return CommandResult(
-                success=False, message=f"Error generating suggestions: {e!s}",
+                success=False,
+                message=f"Error generating suggestions: {e!s}",
             )
 
     def _handle_test(self, args: list[str]) -> CommandResult:
@@ -643,7 +641,9 @@ Timing:
 Detected Patterns:
 """
             for i, pattern in enumerate(self.analyzer.data.query_patterns, 1):
-                message += f"{i}. {pattern.pattern_name} ({pattern.pattern_type}, confidence: {pattern.confidence:.2f})\n"
+                message += (
+                    f"{i}. {pattern.pattern_name} ({pattern.pattern_type}, confidence: {pattern.confidence:.2f})\n"
+                )
                 message += f"   {pattern.description}\n"
 
             if suggestions:
@@ -677,7 +677,8 @@ Detected Patterns:
                 # argparse calls sys.exit() when --help is used or parsing fails
                 # Capture that and return a CommandResult instead
                 return CommandResult(
-                    success=True, message="Usage: /patterns save [--file=filename.json]",
+                    success=True,
+                    message="Usage: /patterns save [--file=filename.json]",
                 )
 
             if not self.analyzer or not hasattr(self.analyzer, "data"):
@@ -689,11 +690,7 @@ Detected Patterns:
             # Prepare results for serialization
             results = {
                 "timestamp": datetime.now(UTC).isoformat(),
-                "query_count": (
-                    len(self.analyzer.data.queries)
-                    if hasattr(self.analyzer.data, "queries")
-                    else 0
-                ),
+                "query_count": (len(self.analyzer.data.queries) if hasattr(self.analyzer.data, "queries") else 0),
                 "patterns": (
                     [p.model_dump() for p in self.analyzer.data.query_patterns]
                     if hasattr(self.analyzer.data, "query_patterns")
@@ -705,17 +702,13 @@ Detected Patterns:
                     else []
                 ),
                 "entity_usage": (
-                    {
-                        k: v.model_dump()
-                        for k, v in self.analyzer.data.entity_usage.items()
-                    }
+                    {k: v.model_dump() for k, v in self.analyzer.data.entity_usage.items()}
                     if hasattr(self.analyzer.data, "entity_usage")
                     else {}
                 ),
                 "metrics": (
                     next(iter(self.analyzer.data.user_metrics.values())).model_dump()
-                    if hasattr(self.analyzer.data, "user_metrics")
-                    and self.analyzer.data.user_metrics
+                    if hasattr(self.analyzer.data, "user_metrics") and self.analyzer.data.user_metrics
                     else None
                 ),
             }
@@ -725,19 +718,22 @@ Detected Patterns:
                 json.dump(results, f, indent=2, default=str)
 
             return CommandResult(
-                success=True, message=f"Analysis results saved to {parsed_args.file}",
+                success=True,
+                message=f"Analysis results saved to {parsed_args.file}",
             )
 
         except Exception as e:
             self.logger.error(f"Error in save command: {e}")
             self.logger.error(traceback.format_exc())
             return CommandResult(
-                success=False, message=f"Error saving results: {e!s}",
+                success=False,
+                message=f"Error saving results: {e!s}",
             )
 
 
 def register_query_pattern_commands(
-    cli_instance: IndalekoBaseCLI, db_config: IndalekoDBConfig | None = None,
+    cli_instance: IndalekoBaseCLI,
+    db_config: IndalekoDBConfig | None = None,
 ) -> QueryPatternCLIIntegration:
     """
     Register query pattern analysis commands with a CLI instance.

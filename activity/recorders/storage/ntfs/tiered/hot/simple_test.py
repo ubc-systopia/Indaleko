@@ -113,22 +113,13 @@ def calculate_importance(activity: dict[str, Any]) -> float:
 
     # Factor 2: File type importance (basic version)
     file_path = activity.get("file_path", "")
-    if any(
-        file_path.lower().endswith(ext)
-        for ext in [".docx", ".xlsx", ".pdf", ".py", ".md"]
-    ):
+    if any(file_path.lower().endswith(ext) for ext in [".docx", ".xlsx", ".pdf", ".py", ".md"]):
         base_score += 0.1  # Document types matter more
 
     # Factor 3: Path significance
-    if any(
-        segment in file_path
-        for segment in ["\\Documents\\", "\\Projects\\", "\\src\\", "\\source\\"]
-    ):
+    if any(segment in file_path for segment in ["\\Documents\\", "\\Projects\\", "\\src\\", "\\source\\"]):
         base_score += 0.1  # User document areas matter more
-    elif any(
-        segment in file_path
-        for segment in ["\\Temp\\", "\\tmp\\", "\\Cache\\", "\\Downloaded\\"]
-    ):
+    elif any(segment in file_path for segment in ["\\Temp\\", "\\tmp\\", "\\Cache\\", "\\Downloaded\\"]):
         base_score -= 0.1  # Temporary areas matter less
 
     # Factor 4: Is directory
@@ -193,7 +184,8 @@ def test_entity_mapping(activities: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def test_ttl_processing(
-    activities: list[dict[str, Any]], ttl_days: int = 4,
+    activities: list[dict[str, Any]],
+    ttl_days: int = 4,
 ) -> dict[str, Any]:
     """Test TTL processing by simulating expiration dates."""
     for activity in activities:
@@ -205,9 +197,7 @@ def test_ttl_processing(
 
     # Calculate expiration statistics
     now = datetime.now(UTC)
-    expired = sum(
-        1 for a in activities if datetime.fromisoformat(a["ttl_timestamp"]) < now
-    )
+    expired = sum(1 for a in activities if datetime.fromisoformat(a["ttl_timestamp"]) < now)
     active = len(activities) - expired
 
     return {

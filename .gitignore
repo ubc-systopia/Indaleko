@@ -32,3 +32,4 @@ upload-notes.md
 .uv*
 .venv*
 uv.lock
+ntfs-journal-output.txt

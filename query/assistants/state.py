@@ -43,7 +43,8 @@ class Message(BaseModel):
     )
     content: str = Field(..., description="The content of the message")
     timestamp: datetime = Field(
-        default_factory=datetime.utcnow, description="When the message was created",
+        default_factory=datetime.utcnow,
+        description="When the message was created",
     )
     id: str = Field(
         default_factory=lambda: str(uuid.uuid4()),
@@ -58,13 +59,16 @@ class EntityInfo(BaseModel):
     type: str = Field(..., description="The type of the entity")
     value: Any = Field(..., description="The value of the entity")
     source: str = Field(
-        ..., description="Where the entity value came from (e.g., 'user', 'database')",
+        ...,
+        description="Where the entity value came from (e.g., 'user', 'database')",
     )
     confidence: float = Field(
-        default=1.0, description="Confidence in the entity value (0.0-1.0)",
+        default=1.0,
+        description="Confidence in the entity value (0.0-1.0)",
     )
     alternative_values: list[dict[str, Any]] | None = Field(
-        default=None, description="Alternative values for the entity",
+        default=None,
+        description="Alternative values for the entity",
     )
 
 
@@ -77,23 +81,28 @@ class TopicSegment(BaseModel):
     )
     topic: str = Field(default="general", description="The topic of this segment")
     start_index: int = Field(
-        ..., description="Index of the first message in this segment",
+        ...,
+        description="Index of the first message in this segment",
     )
     end_index: int | None = Field(
         default=None,
         description="Index of the last message in this segment (None if ongoing)",
     )
     entities: list[str] = Field(
-        default_factory=list, description="Key entities relevant to this topic",
+        default_factory=list,
+        description="Key entities relevant to this topic",
     )
     summary: str | None = Field(
-        default=None, description="A summary of this conversation segment",
+        default=None,
+        description="A summary of this conversation segment",
     )
     importance: float = Field(
-        default=0.5, description="Importance score for this segment (0.0-1.0)",
+        default=0.5,
+        description="Importance score for this segment (0.0-1.0)",
     )
     created_at: datetime = Field(
-        default_factory=datetime.utcnow, description="When this segment was created",
+        default_factory=datetime.utcnow,
+        description="When this segment was created",
     )
 
 
@@ -102,20 +111,24 @@ class ReferencedMemory(BaseModel):
 
     memory_id: str = Field(..., description="ID of the referenced memory")
     memory_type: str = Field(
-        ..., description="Type of memory (e.g., 'archival', 'pattern', 'insight')",
+        ...,
+        description="Type of memory (e.g., 'archival', 'pattern', 'insight')",
     )
     relevance_score: float = Field(
         default=0.7,
         description="How relevant this memory is to the current context (0.0-1.0)",
     )
     referenced_at: datetime = Field(
-        default_factory=datetime.utcnow, description="When this memory was referenced",
+        default_factory=datetime.utcnow,
+        description="When this memory was referenced",
     )
     message_id: str | None = Field(
-        default=None, description="Message ID where this memory was referenced",
+        default=None,
+        description="Message ID where this memory was referenced",
     )
     summary: str | None = Field(
-        default=None, description="Brief summary of the memory content",
+        default=None,
+        description="Brief summary of the memory content",
     )
 
 
@@ -127,50 +140,62 @@ class ConversationState(BaseModel):
         description="Unique identifier for the conversation",
     )
     messages: list[Message] = Field(
-        default_factory=list, description="The messages in the conversation",
+        default_factory=list,
+        description="The messages in the conversation",
     )
     current_query: str | None = Field(
-        default=None, description="The current query being processed",
+        default=None,
+        description="The current query being processed",
     )
     entities: dict[str, EntityInfo] = Field(
-        default_factory=dict, description="Entities identified in the conversation",
+        default_factory=dict,
+        description="Entities identified in the conversation",
     )
     pending_clarifications: list[dict[str, Any]] = Field(
-        default_factory=list, description="Pending clarification questions",
+        default_factory=list,
+        description="Pending clarification questions",
     )
     query_history: list[str] = Field(
         default_factory=list,
         description="History of queries processed in this conversation",
     )
     execution_context: dict[str, Any] = Field(
-        default_factory=dict, description="Context for query execution",
+        default_factory=dict,
+        description="Context for query execution",
     )
     user_preferences: dict[str, Any] = Field(
-        default_factory=dict, description="User preferences for query processing",
+        default_factory=dict,
+        description="User preferences for query processing",
     )
 
     # Enhanced conversation context features
     topic_segments: list[TopicSegment] = Field(
-        default_factory=list, description="Topic segments within this conversation",
+        default_factory=list,
+        description="Topic segments within this conversation",
     )
     active_topic_segment: str | None = Field(
-        default=None, description="ID of the currently active topic segment",
+        default=None,
+        description="ID of the currently active topic segment",
     )
     conversation_summary: str | None = Field(
-        default=None, description="Dynamic summary of the entire conversation",
+        default=None,
+        description="Dynamic summary of the entire conversation",
     )
     key_takeaways: list[str] = Field(
-        default_factory=list, description="Key takeaways from the conversation",
+        default_factory=list,
+        description="Key takeaways from the conversation",
     )
     referenced_memories: list[ReferencedMemory] = Field(
-        default_factory=list, description="Memories referenced during the conversation",
+        default_factory=list,
+        description="Memories referenced during the conversation",
     )
     context_variables: dict[str, Any] = Field(
         default_factory=dict,
         description="Context variables maintained across the conversation",
     )
     importance_score: float = Field(
-        default=0.5, description="Overall importance of this conversation (0.0-1.0)",
+        default=0.5,
+        description="Overall importance of this conversation (0.0-1.0)",
     )
     continuation_pointer: str | None = Field(
         default=None,
@@ -178,7 +203,8 @@ class ConversationState(BaseModel):
     )
 
     created_at: datetime = Field(
-        default_factory=datetime.utcnow, description="When the conversation was created",
+        default_factory=datetime.utcnow,
+        description="When the conversation was created",
     )
     updated_at: datetime = Field(
         default_factory=datetime.utcnow,
@@ -302,7 +328,9 @@ class ConversationState(BaseModel):
         return self.entities.get(name)
 
     def start_topic_segment(
-        self, topic: str, entities: list[str] = None,
+        self,
+        topic: str,
+        entities: list[str] = None,
     ) -> TopicSegment:
         """
         Start a new topic segment in the conversation.
@@ -320,7 +348,9 @@ class ConversationState(BaseModel):
 
         # Create a new segment
         segment = TopicSegment(
-            topic=topic, start_index=len(self.messages), entities=entities or [],
+            topic=topic,
+            start_index=len(self.messages),
+            entities=entities or [],
         )
 
         # Add to segments and set as active
@@ -470,11 +500,7 @@ class ConversationState(BaseModel):
         # Find the segment
         for segment in self.topic_segments:
             if segment.segment_id == segment_id:
-                end_index = (
-                    segment.end_index
-                    if segment.end_index is not None
-                    else len(self.messages)
-                )
+                end_index = segment.end_index if segment.end_index is not None else len(self.messages)
                 return self.messages[segment.start_index : end_index + 1]
 
         return []
@@ -489,9 +515,5 @@ class ConversationState(BaseModel):
         Returns:
             List[Dict[str, str]]: The formatted recent messages.
         """
-        recent_messages = (
-            self.messages[-message_count:]
-            if len(self.messages) > message_count
-            else self.messages
-        )
+        recent_messages = self.messages[-message_count:] if len(self.messages) > message_count else self.messages
         return [{"role": msg.role, "content": msg.content} for msg in recent_messages]

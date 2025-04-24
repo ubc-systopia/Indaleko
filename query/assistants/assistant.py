@@ -320,7 +320,9 @@ class IndalekoAssistant:
         return self.conversations.get(conversation_id)
 
     def execute_tool(
-        self, tool_call: dict[str, Any], conversation_id: str,
+        self,
+        tool_call: dict[str, Any],
+        conversation_id: str,
     ) -> dict[str, Any]:
         """
         Execute a tool call from the assistant.
@@ -365,7 +367,9 @@ class IndalekoAssistant:
         return output
 
     def process_message(
-        self, conversation_id: str, message_content: str,
+        self,
+        conversation_id: str,
+        message_content: str,
     ) -> dict[str, Any]:
         """
         Process a user message in the conversation.
@@ -399,9 +403,7 @@ class IndalekoAssistant:
 
                 # Check if this conversation has previous messages
                 previous_messages = [
-                    msg
-                    for msg in conversation.messages
-                    if msg.role == "user" and msg != conversation.messages[-1]
+                    msg for msg in conversation.messages if msg.role == "user" and msg != conversation.messages[-1]
                 ]
 
                 if previous_messages and self.query_relationship_detector:
@@ -410,7 +412,8 @@ class IndalekoAssistant:
 
                     # Detect relationship between current and previous query
                     relationship = self.query_relationship_detector.detect_relationship(
-                        previous_query, current_query,
+                        previous_query,
+                        current_query,
                     )
 
                     if relationship:
@@ -433,7 +436,8 @@ class IndalekoAssistant:
                 # Store the query activity ID in context variables
                 if query_activity:
                     conversation.set_context_variable(
-                        "last_query_activity_id", str(query_activity.query_id),
+                        "last_query_activity_id",
+                        str(query_activity.query_id),
                     )
                     conversation.set_context_variable("is_query", True)
 
@@ -445,14 +449,11 @@ class IndalekoAssistant:
                     )
 
         # Update recommendations if this is a query and recommendation integration is enabled
-        if (
-            is_query
-            and hasattr(self, "recommendation_integration")
-            and self.recommendation_integration
-        ):
+        if is_query and hasattr(self, "recommendation_integration") and self.recommendation_integration:
             # Update conversation context with recommendations
             self.recommendation_integration.update_conversation_context(
-                conversation_id=conversation_id, current_query=message_content,
+                conversation_id=conversation_id,
+                current_query=message_content,
             )
 
         # Get the thread ID
@@ -462,12 +463,15 @@ class IndalekoAssistant:
 
         # Add the message to the thread
         self.client.beta.threads.messages.create(
-            thread_id=thread_id, role="user", content=message_content,
+            thread_id=thread_id,
+            role="user",
+            content=message_content,
         )
 
         # Create a run with the assistant
         run = self.client.beta.threads.runs.create(
-            thread_id=thread_id, assistant_id=self.assistant_id,
+            thread_id=thread_id,
+            assistant_id=self.assistant_id,
         )
 
         # Wait for the run to complete or require action
@@ -476,7 +480,10 @@ class IndalekoAssistant:
         return response
 
     def _wait_for_run(
-        self, thread_id: str, run_id: str, conversation_id: str,
+        self,
+        thread_id: str,
+        run_id: str,
+        conversation_id: str,
     ) -> dict[str, Any]:
         """
         Wait for an assistant run to complete or require action.
@@ -493,7 +500,8 @@ class IndalekoAssistant:
         while True:
             # Get the run status
             run = self.client.beta.threads.runs.retrieve(
-                thread_id=thread_id, run_id=run_id,
+                thread_id=thread_id,
+                run_id=run_id,
             )
 
             # Check the status
@@ -502,9 +510,7 @@ class IndalekoAssistant:
                 messages = self.client.beta.threads.messages.list(thread_id=thread_id)
 
                 # Get the latest assistant message
-                assistant_messages = [
-                    msg for msg in messages.data if msg.role == "assistant"
-                ]
+                assistant_messages = [msg for msg in messages.data if msg.role == "assistant"]
                 if not assistant_messages:
                     return {
                         "conversation_id": conversation_id,
@@ -535,10 +541,7 @@ class IndalekoAssistant:
 
             elif run.status == "requires_action":
                 # Handle required actions (tool calls)
-                if (
-                    run.required_action
-                    and run.required_action.type == "submit_tool_outputs"
-                ):
+                if run.required_action and run.required_action.type == "submit_tool_outputs":
                     tool_calls = run.required_action.submit_tool_outputs.tool_calls
                     tool_outputs = []
 
@@ -555,7 +558,8 @@ class IndalekoAssistant:
 
                             conversation = self.get_conversation(conversation_id)
                             if conversation and conversation.get_context_variable(
-                                "is_query", False,
+                                "is_query",
+                                False,
                             ):
                                 # Get the query activity ID from context variables
                                 query_activity_id = conversation.get_context_variable(
@@ -573,10 +577,7 @@ class IndalekoAssistant:
                                         # Try to determine result count based on response format
                                         if isinstance(result_data, list):
                                             result_count = len(result_data)
-                                        elif (
-                                            isinstance(result_data, dict)
-                                            and "result" in result_data
-                                        ):
+                                        elif isinstance(result_data, dict) and "result" in result_data:
                                             if isinstance(result_data["result"], list):
                                                 result_count = len(
                                                     result_data["result"],
@@ -587,7 +588,8 @@ class IndalekoAssistant:
                                             query_id=uuid.UUID(query_activity_id),
                                             results={"count": result_count},
                                             execution_time=result_data.get(
-                                                "execution_time", None,
+                                                "execution_time",
+                                                None,
                                             ),
                                         )
                                     except Exception as e:
@@ -609,7 +611,9 @@ class IndalekoAssistant:
 
                     # Submit the tool outputs
                     self.client.beta.threads.runs.submit_tool_outputs(
-                        thread_id=thread_id, run_id=run_id, tool_outputs=tool_outputs,
+                        thread_id=thread_id,
+                        run_id=run_id,
+                        tool_outputs=tool_outputs,
                     )
 
                 # Continue waiting for completion
@@ -617,7 +621,9 @@ class IndalekoAssistant:
 
             elif run.status in ["failed", "cancelled", "expired"]:
                 # Handle failure
-                error_message = f"Run {run_id} {run.status}: {run.last_error.message if run.last_error else 'Unknown error'}"
+                error_message = (
+                    f"Run {run_id} {run.status}: {run.last_error.message if run.last_error else 'Unknown error'}"
+                )
 
                 # Add the error to our conversation state
                 conversation = self.get_conversation(conversation_id)
@@ -641,8 +647,7 @@ class IndalekoAssistant:
             file_path (str): The file path.
         """
         data = {
-            conversation_id: conversation.model_dump()
-            for conversation_id, conversation in self.conversations.items()
+            conversation_id: conversation.model_dump() for conversation_id, conversation in self.conversations.items()
         }
 
         with open(file_path, "w") as f:
@@ -716,17 +721,14 @@ class IndalekoAssistant:
 
         # Check for query indicators
         message_lower = message.lower()
-        has_query_indicator = any(
-            indicator in message_lower for indicator in query_indicators
-        )
+        has_query_indicator = any(indicator in message_lower for indicator in query_indicators)
 
         # Check length (queries tend to be shorter)
         is_short = len(message.split()) < 15
 
         # Check for command-like syntax (not conversational)
         starts_with_verb = any(
-            message_lower.startswith(verb)
-            for verb in ["show", "find", "search", "get", "list", "display", "retrieve"]
+            message_lower.startswith(verb) for verb in ["show", "find", "search", "get", "list", "display", "retrieve"]
         )
 
         # Calculate a score based on these factors

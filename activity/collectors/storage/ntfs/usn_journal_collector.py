@@ -86,9 +86,7 @@ def determine_activity_type(reason_flags: list[str]) -> str:
     elif "FILE_DELETE" in reason_flags:
         activity_type = StorageActivityType.DELETE
     elif "RENAME_OLD_NAME" in reason_flags or "RENAME_NEW_NAME" in reason_flags:
-        activity_type = (
-            StorageActivityType.OTHER
-        )  # Preserve reason flags for rename events
+        activity_type = StorageActivityType.OTHER  # Preserve reason flags for rename events
     elif "SECURITY_CHANGE" in reason_flags:
         activity_type = StorageActivityType.SECURITY_CHANGE
     elif (
@@ -100,11 +98,7 @@ def determine_activity_type(reason_flags: list[str]) -> str:
         activity_type = StorageActivityType.ATTRIBUTE_CHANGE
     elif "CLOSE" in reason_flags:
         activity_type = StorageActivityType.CLOSE
-    elif (
-        "DATA_OVERWRITE" in reason_flags
-        or "DATA_EXTEND" in reason_flags
-        or "DATA_TRUNCATION" in reason_flags
-    ):
+    elif "DATA_OVERWRITE" in reason_flags or "DATA_EXTEND" in reason_flags or "DATA_TRUNCATION" in reason_flags:
         activity_type = StorageActivityType.MODIFY
 
     return activity_type
@@ -172,9 +166,7 @@ def convert_record_to_model(
         volume_name=volume,
         is_directory=is_directory,
         provider_type=StorageProviderType.LOCAL_NTFS,
-        provider_id=(
-            uuid.UUID(provider_id) if isinstance(provider_id, str) else provider_id
-        ),
+        provider_id=(uuid.UUID(provider_id) if isinstance(provider_id, str) else provider_id),
         item_type=StorageItemType.DIRECTORY if is_directory else StorageItemType.FILE,
         attributes=attributes,  # Store additional information
     )
@@ -211,6 +203,7 @@ class NtfsUsnJournalCollector:
         max_records: int = 1000,
         state_file: str | None = None,
         *,
+        use_state_file: bool = False,
         verbose: bool = False,
     ) -> None:
         """
@@ -221,6 +214,7 @@ class NtfsUsnJournalCollector:
             provider_id: Provider ID for activity data
             max_records: Maximum number of records to collect per batch
             state_file: Path to the state file for persisting USN positions
+            use_state_file: Whether to use the state file for persistence (default: False)
             verbose: Whether to print verbose output
         """
         if not WINDOWS_AVAILABLE:
@@ -234,19 +228,24 @@ class NtfsUsnJournalCollector:
         self.provider_id = provider_id
         self.max_records = max_records
         self.state_file = state_file
+        self.use_state_file = use_state_file
         self.verbose = verbose
 
         # State tracking
         self.last_usn_positions = {}
         self.activities = []
 
-        # Load state if available
-        self._load_state()
+        # Load state if available and enabled
+        if self.use_state_file:
+            self._load_state()
+        else:
+            if self.verbose:
+                ic("State file persistence disabled, starting with fresh state")
 
         if self.verbose:
             ic(f"NtfsUsnJournalCollector initialized with volumes: {self.volumes}")
             ic(f"Provider ID: {self.provider_id}")
-            ic(f"State file: {self.state_file}")
+            ic(f"State file: {self.state_file} (Enabled: {self.use_state_file})")
             ic(f"Last USN positions: {self.last_usn_positions}")
 
     def collect_activities(self) -> list[NtfsStorageActivityData]:
@@ -308,7 +307,9 @@ class NtfsUsnJournalCollector:
                     # Convert records to activity data models
                     for record in records:
                         activity = convert_record_to_model(
-                            record, volume, self.provider_id,
+                            record,
+                            volume,
+                            self.provider_id,
                         )
                         activities.append(activity)
 
@@ -321,14 +322,12 @@ class NtfsUsnJournalCollector:
 
             except OSError as e:
                 # Handle journal rotation errors
-                if (
-                    str(e).find("journal entry has been deleted") != -1
-                    or getattr(e, "winerror", 0) == 0x570
-                ):
+                if str(e).find("journal entry has been deleted") != -1 or getattr(e, "winerror", 0) == 0x570:
                     if retry < max_retries:
                         # Reset our position and try again
                         with UsnJournalReader(
-                            volume=volume, verbose=self.verbose,
+                            volume=volume,
+                            verbose=self.verbose,
                         ) as reader:
                             # Get journal metadata to find the lowest valid USN
                             reader.open()
@@ -419,9 +418,9 @@ class NtfsUsnJournalCollector:
 
     def _save_state(self) -> None:
         """Save the collector state to a file."""
-        if not self.state_file:
+        if not self.state_file or not self.use_state_file:
             if self.verbose:
-                ic("No state file specified, skipping state save")
+                ic("State file persistence disabled, skipping state save")
             return
 
         # Create state dictionary
@@ -463,19 +462,23 @@ class NtfsUsnJournalCollector:
         self.last_usn_positions = {}
         self.activities = []
 
-        # Remove state file if it exists
-        if self.state_file and Path(self.state_file).exists():
-            try:
-                Path(self.state_file).unlink()
-                if self.verbose:
-                    ic(f"Deleted state file: {self.state_file}")
-            except Exception as e:
-                if self.verbose:
-                    ic(f"Error deleting state file: {e}")
-                # Even if we couldn't delete the file, we'll overwrite it on save
+        # Handle state file only if state persistence is enabled
+        if self.use_state_file:
+            # Remove state file if it exists
+            if self.state_file and Path(self.state_file).exists():
+                try:
+                    Path(self.state_file).unlink()
+                    if self.verbose:
+                        ic(f"Deleted state file: {self.state_file}")
+                except Exception as e:
+                    if self.verbose:
+                        ic(f"Error deleting state file: {e}")
+                    # Even if we couldn't delete the file, we'll overwrite it on save
 
-        # Save empty state to ensure the file is created fresh
-        self._save_state()
+            # Save empty state to ensure the file is created fresh
+            self._save_state()
+        elif self.verbose:
+            ic("State file persistence disabled, skipping state file operations")
 
         if self.verbose:
             ic("State reset successful")
@@ -514,7 +517,9 @@ def test_collector() -> bool:
     }
 
     model = convert_record_to_model(
-        standard_record, "C:", NtfsUsnJournalCollector.DEFAULT_PROVIDER_ID,
+        standard_record,
+        "C:",
+        NtfsUsnJournalCollector.DEFAULT_PROVIDER_ID,
     )
     ic(f"Standard model created - Activity type: {model.activity_type}")
     expected_type = StorageActivityType.MODIFY
@@ -609,7 +614,14 @@ def main() -> None:
         help="Output file for activities (default: ntfs_activities.jsonl)",
     )
     parser.add_argument(
-        "--state-file", type=str, help="State file for persisting USN positions",
+        "--state-file",
+        type=str,
+        help="State file for persisting USN positions",
+    )
+    parser.add_argument(
+        "--use-state-file",
+        action="store_true",
+        help="Enable state file persistence (disabled by default)",
     )
     parser.add_argument("--verbose", action="store_true", help="Show verbose output")
     parser.add_argument("--test", action="store_true", help="Run the test suite")
@@ -647,6 +659,7 @@ def main() -> None:
         volumes=volumes,
         max_records=args.max_records,
         state_file=args.state_file,
+        use_state_file=args.use_state_file,
         verbose=args.verbose,
     )
 

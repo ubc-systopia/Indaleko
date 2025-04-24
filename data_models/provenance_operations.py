@@ -17,10 +17,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 """
 
-from enum import Enum
 import os
 import sys
-
+from enum import Enum
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -37,6 +36,7 @@ class ProvenanceOperations(str, Enum):
     """
     This class defines the data model for the Indaleko provenance operations.
     """
-    PROVENANCE_ATTRIBUTES_SAVED_TO = ''
-    PROVENANCE_ATTRIBUTES_ATTACHED_TO_EMAIL = ''
-    PROVENANCE_ATTRIBUTES_SHARED_ON_DISCORD = ''
+
+    PROVENANCE_ATTRIBUTES_SAVED_TO = ""
+    PROVENANCE_ATTRIBUTES_ATTACHED_TO_EMAIL = ""
+    PROVENANCE_ATTRIBUTES_SHARED_ON_DISCORD = ""

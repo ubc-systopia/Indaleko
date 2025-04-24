@@ -1,18 +1,18 @@
-import os
-import json
-import uuid
-from arango import ArangoClient
 import argparse
-import datetime
-from windows_local_index import IndalekoWindowsMachineConfig
-from IndalekoCollections import *
-from dbsetup import IndalekoDBConfig
-from indaleko import *
-import msgpack
 import base64
-from IndalekoServices import IndalekoServices
-import jsonlines
+import datetime
+import json
 import logging
+import os
+import uuid
+
+import jsonlines
+import msgpack
+from IndalekoCollections import *
+from IndalekoServices import IndalekoServices
+from windows_local_index import IndalekoWindowsMachineConfig
+
+from indaleko import *
 
 
 class WindowsLocalIngest:
@@ -24,7 +24,7 @@ class WindowsLocalIngest:
         "description": "This service provides the configuration information for a Windows machine.",
         "version": "1.0",
         "identifier": WindowsMachineConfig_UUID,
-        "created": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "created": datetime.datetime.now(datetime.UTC).isoformat(),
         "type": "Indexer",
     }
 
@@ -35,7 +35,7 @@ class WindowsLocalIngest:
         "description": "This service indexes the local filesystems of a Windows machine.",
         "version": "1.0",
         "identifier": WindowsLocalIndexer_UUID,
-        "created": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "created": datetime.datetime.now(datetime.UTC).isoformat(),
         "type": "Indexer",
     }
 
@@ -46,7 +46,7 @@ class WindowsLocalIngest:
         "description": "This service ingests captured index info from the local filesystems of a Windows machine.",
         "version": "1.0",
         "identifier": WindowsLocalIngester_UUID,
-        "created": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "created": datetime.datetime.now(datetime.UTC).isoformat(),
         "type": "Ingester",
     }
 
@@ -91,12 +91,14 @@ class WindowsLocalIngest:
         assert source_name in self.sources, f"Source name {source_name} is not valid."
         source = self.lookup_service(source_name)[0]
         return IndalekoSource(
-            uuid.UUID(source["identifier"]), source["version"], source["description"]
+            uuid.UUID(source["identifier"]),
+            source["version"],
+            source["description"],
         )
 
     def add_record_to_collection(self, collection_name: str, record: dict) -> None:
         entries = self.collections.get_collection(collection_name).find_entries(
-            _key=record["_key"]
+            _key=record["_key"],
         )
         if len(entries) < 1:
             self.collections.get_collection(collection_name).insert(record)
@@ -104,45 +106,31 @@ class WindowsLocalIngest:
 
     def __find_data_files__(self: "WindowsLocalIngest") -> None:
         self.data_files = [
-            x
-            for x in os.listdir(self.data_dir)
-            if x.startswith("windows-local-fs-data") and x.endswith(".json")
+            x for x in os.listdir(self.data_dir) if x.startswith("windows-local-fs-data") and x.endswith(".json")
         ]
-        return
 
     def set_data_dir(self: "WindowsLocalIngest", data_dir: str) -> None:
         self.data_dir = data_dir
         self.__find_data_files__()
-        return
 
     def set_data_file(self: "WindowsLocalIngest", data_file: str) -> None:
         self.data_file = os.path.join(self.data_dir, data_file)
         self.data = {}
-        with open(self.data_file, "rt", encoding="utf-8-sig") as fd:
+        with open(self.data_file, encoding="utf-8-sig") as fd:
             self.data = json.load(fd)
-        return
 
     def load_data(self) -> None:
         self.__find_data_files__()
         for file in self.data_files:
             self.load_data_file(file)
-        return
 
 
 def find_data_files(dir: str = "./data"):
-    return [
-        x
-        for x in os.listdir(dir)
-        if x.startswith("windows-local-fs-data") and x.endswith(".json")
-    ]
+    return [x for x in os.listdir(dir) if x.startswith("windows-local-fs-data") and x.endswith(".json")]
 
 
 def find_config_files(dir: str = "./config"):
-    return [
-        x
-        for x in os.listdir(dir)
-        if x.startswith("windows-hardware-info") and x.endswith(".json")
-    ]
+    return [x for x in os.listdir(dir) if x.startswith("windows-hardware-info") and x.endswith(".json")]
 
 
 class WindowsFileAttributes:
@@ -179,13 +167,10 @@ class WindowsFileAttributes:
     @staticmethod
     def map_file_attributes(attributes: int):
         fattrs = []
-        if 0 == attributes:
+        if attributes == 0:
             fattrs = ["FILE_ATTRIBUTE_NORMAL"]
         for attr in WindowsFileAttributes.FILE_ATTRIBUTES:
-            if (
-                attributes & WindowsFileAttributes.FILE_ATTRIBUTES[attr]
-                == WindowsFileAttributes.FILE_ATTRIBUTES[attr]
-            ):
+            if attributes & WindowsFileAttributes.FILE_ATTRIBUTES[attr] == WindowsFileAttributes.FILE_ATTRIBUTES[attr]:
                 fattrs.append(attr)
         return " | ".join(fattrs)
 
@@ -210,7 +195,8 @@ def normalize_index_data(data: dict, cfg: IndalekoWindowsMachineConfig) -> dict:
             {
                 "Label": IndalekoObject.CREATION_TIMESTAMP,
                 "Value": datetime.datetime.fromtimestamp(
-                    data["st_birthtime"], datetime.timezone.utc
+                    data["st_birthtime"],
+                    datetime.UTC,
                 ).isoformat(),
                 "Description": "Created",
             },
@@ -230,11 +216,11 @@ def normalize_index_data(data: dict, cfg: IndalekoWindowsMachineConfig) -> dict:
     }
     if "st_mode" in data:
         object["UnixFileAttributes"] = UnixFileAttributes.map_file_attributes(
-            data["st_mode"]
+            data["st_mode"],
         )
     if "st_file_attributes" in data:
         object["WindowsFileAttributes"] = WindowsFileAttributes.map_file_attributes(
-            data["st_file_attributes"]
+            data["st_file_attributes"],
         )
     if data["URI"].startswith("\\\\?\\Volume{"):
         object["Volume"] = data["URI"][11:47]
@@ -246,10 +232,16 @@ def main():
     assert len(data_files) > 0, "At least one data file should exist"
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument(
-        "--datadir", "-d", help="Path to the data directory", default="./data"
+        "--datadir",
+        "-d",
+        help="Path to the data directory",
+        default="./data",
     )
     pre_parser.add_argument(
-        "--configdir", "-c", help="Path to the config directory", default="./config"
+        "--configdir",
+        "-c",
+        help="Path to the config directory",
+        default="./config",
     )
     pre_args, _ = pre_parser.parse_known_args()
     if pre_args.datadir != "./data":
@@ -264,7 +256,9 @@ def main():
     )
     parser.add_argument("--version", action="version", version="%(prog)s 1.0")
     parser.add_argument(
-        "--reset", action="store_true", help="Reset the service collection."
+        "--reset",
+        action="store_true",
+        help="Reset the service collection.",
     )
     args = parser.parse_args()
     ingester = WindowsLocalIngest(data_dir=args.datadir, reset=args.reset)
@@ -289,7 +283,7 @@ def main():
         "version": WindowsLocalIngest.WindowsMachineConfigService["version"],
         "captured": {
             "Label": "Timestamp",
-            "Value": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "Value": datetime.datetime.now(datetime.UTC).isoformat(),
         },
         "Attributes": cfg,
         "Data": config_data.decode("ascii"),
@@ -307,7 +301,7 @@ def main():
             "version": IndalekoWindowsMachineConfig.WindowsDriveInfo.WindowsDriveInfo_Version,
             "captured": {
                 "Label": "Timestamp",
-                "Value": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                "Value": datetime.datetime.now(datetime.UTC).isoformat(),
             },
             "Attributes": volinfo[vol].get_attributes(),
             "Data": volinfo[vol].get_raw_data(),
@@ -325,10 +319,7 @@ def main():
     file_data = []
     for item in ingester.data:
         item = normalize_index_data(item, machine_config)
-        if (
-            "S_IFDIR" in item["UnixFileAttributes"]
-            or "FILE_ATTRIBUTE_DIRECTORY" in item["WindowsFileAttributes"]
-        ):
+        if "S_IFDIR" in item["UnixFileAttributes"] or "FILE_ATTRIBUTE_DIRECTORY" in item["WindowsFileAttributes"]:
             if "Path" not in item:
                 print(item)
             dir_data_by_path[os.path.join(item["Path"], item["Label"])] = item
@@ -340,18 +331,12 @@ def main():
         if item["Path"] in dir_data_by_path:
             item["Container"] = [dir_data_by_path[item["Path"]]["ObjectIdentifier"]]
     for item in file_data:
-        assert (
-            not "S_IFDIR" in item["UnixFileAttributes"]
-        ), "directories should not be in file_data"
-        assert (
-            not "FILE_ATTRIBUTE_DIRECTORY" in item["WindowsFileAttributes"]
-        ), "directories should not be in file_data"
+        assert "S_IFDIR" not in item["UnixFileAttributes"], "directories should not be in file_data"
+        assert "FILE_ATTRIBUTE_DIRECTORY" not in item["WindowsFileAttributes"], "directories should not be in file_data"
         if item["Path"] in dir_data_by_path:
             if "Container" not in item:
                 item["Container"] = []
-            assert (
-                type(item["Container"]) is list
-            ), f"{item['Container']} must be a list"
+            assert type(item["Container"]) is list, f"{item['Container']} must be a list"
             item["Container"].append(dir_data_by_path[item["Path"]]["ObjectIdentifier"])
     # Next I need to capture some relationships that will go into edge
     # collection(s).
@@ -368,7 +353,7 @@ def main():
     for item in dir_data + file_data:
         if "Container" not in item:
             print(
-                f"Skipping item {item['ObjectIdentifier']} because it has no container"
+                f"Skipping item {item['ObjectIdentifier']} because it has no container",
             )
             continue
         for c in item["Container"]:
@@ -405,8 +390,7 @@ def main():
             }
             volume_edges.append(edge)
             edge = {
-                "_from": "Services/"
-                + WindowsLocalIngest.WindowsLocalIngesterService["identifier"],
+                "_from": "Services/" + WindowsLocalIngest.WindowsLocalIngesterService["identifier"],
                 "_to": "Objects/" + item["ObjectIdentifier"],
                 "object1": WindowsLocalIngest.WindowsLocalIngesterService["identifier"],
                 "object2": item["ObjectIdentifier"],
@@ -449,19 +433,19 @@ def main():
         for item in source_edges:
             fd.write(item)
 
-    with open("./data/dir_data.json", "wt", encoding="utf-8") as fd:
+    with open("./data/dir_data.json", "w", encoding="utf-8") as fd:
         json.dump(dir_data, fd, indent=4)
-    with open("./data/file_data.json", "wt", encoding="utf-8") as fd:
+    with open("./data/file_data.json", "w", encoding="utf-8") as fd:
         json.dump(file_data, fd, indent=4)
-    with open("./data/contained_by_edges.json", "wt", encoding="utf-8") as fd:
+    with open("./data/contained_by_edges.json", "w", encoding="utf-8") as fd:
         json.dump(contained_by_edges, fd, indent=4)
-    with open("./data/containing_edges.json", "wt", encoding="utf-8") as fd:
+    with open("./data/containing_edges.json", "w", encoding="utf-8") as fd:
         json.dump(containing_edges, fd, indent=4)
-    with open("./data/machine_edges.json", "wt", encoding="utf-8") as fd:
+    with open("./data/machine_edges.json", "w", encoding="utf-8") as fd:
         json.dump(machine_edges, fd, indent=4)
-    with open("./data/volume_edges.json", "wt", encoding="utf-8") as fd:
+    with open("./data/volume_edges.json", "w", encoding="utf-8") as fd:
         json.dump(volume_edges, fd, indent=4)
-    with open("./data/source_edges.json", "wt", encoding="utf-8") as fd:
+    with open("./data/source_edges.json", "w", encoding="utf-8") as fd:
         json.dump(source_edges, fd, indent=4)
 
 

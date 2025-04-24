@@ -48,6 +48,7 @@ win32more==0.5.10
 [dev]
 black
 flake8
+pre-commit
 
 [gui]
 streamlit>=1.38.0

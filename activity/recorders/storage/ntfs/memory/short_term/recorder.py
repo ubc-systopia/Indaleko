@@ -51,7 +51,6 @@ except ImportError as e:
     class StorageActivityRecorder:
         """Dummy base class for testing."""
 
-
     class StorageProviderType:
         """Dummy enum for testing."""
 
@@ -140,7 +139,10 @@ class NtfsShortTermMemoryRecorder:
         ]
 
     def search_short_term_memory(
-        self, query: str, importance_min: float = 0.0, limit: int = 10,
+        self,
+        query: str,
+        importance_min: float = 0.0,
+        limit: int = 10,
     ) -> list[dict]:
         """
         Search for activities in short-term memory.

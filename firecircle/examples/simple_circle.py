@@ -28,7 +28,8 @@ import uuid
 
 # Set up logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger("firecircle-example")
 
@@ -176,7 +177,9 @@ class SimpleEntity(Entity):
 
         return [
             self.create_message(
-                response_content, MessageType.STATEMENT, references=[message.id],
+                response_content,
+                MessageType.STATEMENT,
+                references=[message.id],
             ),
         ]
 
@@ -202,7 +205,9 @@ class SimpleEntity(Entity):
 
         return [
             self.create_message(
-                response_content, MessageType.STATEMENT, references=[message.id],
+                response_content,
+                MessageType.STATEMENT,
+                references=[message.id],
             ),
         ]
 
@@ -239,7 +244,11 @@ class SimpleEntity(Entity):
         )
 
         return [
-            self.create_message(response_content, message_type, references=[message.id]),
+            self.create_message(
+                response_content,
+                message_type,
+                references=[message.id],
+            ),
         ]
 
     def _respond_to_challenge(self, message: Message) -> list[Message]:
@@ -275,7 +284,11 @@ class SimpleEntity(Entity):
         )
 
         return [
-            self.create_message(response_content, message_type, references=[message.id]),
+            self.create_message(
+                response_content,
+                message_type,
+                references=[message.id],
+            ),
         ]
 
     def reflect_on_process(self) -> Message | None:
@@ -601,7 +614,8 @@ def run_simple_circle():
 
     # Export to Indaleko
     continuation_id = integration.export_circle_conversation(
-        conversation_memory, store_in_archivist=True,
+        conversation_memory,
+        store_in_archivist=True,
     )
 
     integration.export_circle_insights([insight_memory], store_in_archivist=True)

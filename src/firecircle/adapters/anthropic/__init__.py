@@ -28,7 +28,9 @@ class AnthropicAdapter(ModelAdapter):
     """Adapter for Anthropic's models."""
 
     def __init__(
-        self, model: str = "claude-3-opus-20240229", api_key: str | None = None,
+        self,
+        model: str = "claude-3-opus-20240229",
+        api_key: str | None = None,
     ):
         """
         Initialize a new Anthropic adapter.
@@ -39,15 +41,15 @@ class AnthropicAdapter(ModelAdapter):
         """
         if not HAS_ANTHROPIC:
             raise ImportError(
-                "The Anthropic package is not installed. "
-                "Please install it with `pip install anthropic>=0.5.0`.",
+                "The Anthropic package is not installed. Please install it with `pip install anthropic>=0.5.0`.",
             )
 
         self.model = model
         self.client = Anthropic(api_key=api_key)
 
     def _convert_to_anthropic_messages(
-        self, messages: list[FireCircleMessage],
+        self,
+        messages: list[FireCircleMessage],
     ) -> list[dict[str, Any]]:
         """Convert Fire Circle messages to Anthropic message format."""
         # Map Fire Circle roles to Anthropic roles
@@ -56,7 +58,8 @@ class AnthropicAdapter(ModelAdapter):
         return [
             {
                 "role": role_mapping.get(
-                    msg.role, "user",
+                    msg.role,
+                    "user",
                 ),  # Default to user for unknown roles
                 "content": msg.content,
             }
@@ -64,7 +67,8 @@ class AnthropicAdapter(ModelAdapter):
         ]
 
     def _convert_to_anthropic_tools(
-        self, tools: list[dict[str, Any]],
+        self,
+        tools: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
         """Convert Fire Circle tools to Anthropic tool format."""
         # Anthropic uses a slightly different tool format than OpenAI
@@ -110,7 +114,9 @@ class AnthropicAdapter(ModelAdapter):
         # Convert the response to Fire Circle format
         message_content = response.content[0].text
         message = FireCircleMessage(
-            role="assistant", content=message_content, metadata={"model": self.model},
+            role="assistant",
+            content=message_content,
+            metadata={"model": self.model},
         )
 
         # Extract tool calls if present
@@ -133,8 +139,7 @@ class AnthropicAdapter(ModelAdapter):
             usage = {
                 "prompt_tokens": response.usage.input_tokens,
                 "completion_tokens": response.usage.output_tokens,
-                "total_tokens": response.usage.input_tokens
-                + response.usage.output_tokens,
+                "total_tokens": response.usage.input_tokens + response.usage.output_tokens,
             }
 
         return FireCircleResponse(message=message, usage=usage, tool_calls=tool_calls)
@@ -165,6 +170,7 @@ class AnthropicAdapter(ModelAdapter):
             "provider": "anthropic",
             "model": self.model,
             "features": capabilities.get(
-                model_family, {"token_window": 100000, "vision": True, "tools": False},
+                model_family,
+                {"token_window": 100000, "vision": True, "tools": False},
             ),
         }

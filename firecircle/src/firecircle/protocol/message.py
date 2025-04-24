@@ -71,13 +71,15 @@ class Message(BaseModel):
     )
 
     type: MessageType = Field(
-        ..., description="The type of message (question, statement, etc.)",
+        ...,
+        description="The type of message (question, statement, etc.)",
     )
 
     content: str = Field(..., description="The content of the message")
 
     entity_id: str = Field(
-        ..., description="Identifier of the entity that created this message",
+        ...,
+        description="Identifier of the entity that created this message",
     )
 
     timestamp: datetime = Field(
@@ -86,11 +88,13 @@ class Message(BaseModel):
     )
 
     references: list[str] = Field(
-        default_factory=list, description="List of message IDs this message references",
+        default_factory=list,
+        description="List of message IDs this message references",
     )
 
     attributes: dict[str, Any] = Field(
-        default_factory=dict, description="Additional attributes for the message",
+        default_factory=dict,
+        description="Additional attributes for the message",
     )
 
     # Add validators to ensure proper formatting
@@ -128,7 +132,8 @@ class CircleRequest(BaseModel):
     )
 
     messages: list[Message] = Field(
-        ..., description="The messages included in this request",
+        ...,
+        description="The messages included in this request",
     )
 
     context: dict[str, Any] = Field(
@@ -137,7 +142,8 @@ class CircleRequest(BaseModel):
     )
 
     metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata about the request",
+        default_factory=dict,
+        description="Additional metadata about the request",
     )
 
 
@@ -156,15 +162,18 @@ class CircleResponse(BaseModel):
     )
 
     request_id: str = Field(
-        ..., description="The ID of the request this is responding to",
+        ...,
+        description="The ID of the request this is responding to",
     )
 
     messages: list[Message] = Field(
-        default_factory=list, description="The messages produced in response",
+        default_factory=list,
+        description="The messages produced in response",
     )
 
     consensus: Message | None = Field(
-        default=None, description="Any consensus message developed by the circle",
+        default=None,
+        description="Any consensus message developed by the circle",
     )
 
     dissent: list[Message] = Field(
@@ -173,5 +182,6 @@ class CircleResponse(BaseModel):
     )
 
     metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata about the response",
+        default_factory=dict,
+        description="Additional metadata about the response",
     )

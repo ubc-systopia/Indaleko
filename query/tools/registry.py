@@ -115,7 +115,10 @@ class ToolRegistry:
             tool.set_progress_callback(callback_func)
 
     def execute_tool(
-        self, name: str, parameters: dict, progress_callback: callable = None,
+        self,
+        name: str,
+        parameters: dict,
+        progress_callback: callable = None,
     ) -> ToolOutput:
         """
         Execute a tool with the given parameters.
@@ -138,7 +141,9 @@ class ToolRegistry:
         return self.execute_tool_input(input_data, progress_callback)
 
     def execute_tool_input(
-        self, input_data: ToolInput, progress_callback: callable = None,
+        self,
+        input_data: ToolInput,
+        progress_callback: callable = None,
     ) -> ToolOutput:
         """
         Execute a tool with the given input.
@@ -197,11 +202,7 @@ class ToolRegistry:
                     # Find all classes that inherit from BaseTool
                     for attr_name in dir(module):
                         attr = getattr(module, attr_name)
-                        if (
-                            isinstance(attr, type)
-                            and issubclass(attr, BaseTool)
-                            and attr is not BaseTool
-                        ):
+                        if isinstance(attr, type) and issubclass(attr, BaseTool) and attr is not BaseTool:
                             self.register_tool(attr)
                 except Exception as e:
                     ic(f"Error loading tool module {full_name}: {e}")

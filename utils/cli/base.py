@@ -74,7 +74,8 @@ class IndalekoBaseCLI:
             for key, value in kwargs.items():
                 if hasattr(self, key):
                     assert isinstance(
-                        value, bool,
+                        value,
+                        bool,
                     ), f"Value must be a boolean: {key, value}"
                     setattr(self, key, value)
                 else:
@@ -207,13 +208,12 @@ class IndalekoBaseCLI:
         if hasattr(pre_args, "db_config"):  # only process it once
             return None
         if not hasattr(pre_args, "db_config"):
-            self.config_data["DBConfigChoices"] = (
-                self.handler_mixin.find_db_config_files(
-                    self.config_data["ConfigDirectory"],
-                )
+            self.config_data["DBConfigChoices"] = self.handler_mixin.find_db_config_files(
+                self.config_data["ConfigDirectory"],
             )
             default_db_config = self.handler_mixin.get_default_file(
-                self.config_data["ConfigDirectory"], self.config_data["DBConfigChoices"],
+                self.config_data["ConfigDirectory"],
+                self.config_data["DBConfigChoices"],
             )
             self.pre_parser.add_argument(
                 "--db_config",
@@ -249,10 +249,9 @@ class IndalekoBaseCLI:
         if not hasattr(pre_args, "platform"):
             self.setup_platform_parser()  # ordering dependency.
             pre_args, _ = self.pre_parser.parse_known_args()
-        self.config_data["MachineConfigChoices"] = (
-            self.handler_mixin.find_machine_config_files(
-                self.config_data["ConfigDirectory"], pre_args.platform,
-            )
+        self.config_data["MachineConfigChoices"] = self.handler_mixin.find_machine_config_files(
+            self.config_data["ConfigDirectory"],
+            pre_args.platform,
         )
         default_machine_config_file = self.handler_mixin.get_default_file(
             self.config_data["ConfigDirectory"],
@@ -267,8 +266,8 @@ class IndalekoBaseCLI:
         pre_args, _ = self.pre_parser.parse_known_args()
         if pre_args.machine_config:
             self.config_data["MachineConfigFile"] = pre_args.machine_config
-            self.config_data["MachineConfigFileKeys"] = (
-                self.handler_mixin.extract_filename_metadata(pre_args.machine_config)
+            self.config_data["MachineConfigFileKeys"] = self.handler_mixin.extract_filename_metadata(
+                pre_args.machine_config,
             )
         else:
             ic("Warning: no machine configuration file found")
@@ -295,7 +294,8 @@ class IndalekoBaseCLI:
     def setup_output_parser(self) -> "IndalekoBaseCLI":
         """This method is used to set up the output parser"""
         if self.features.machine_config and not hasattr(
-            self.pre_parser, "machine_config",
+            self.pre_parser,
+            "machine_config",
         ):
             self.setup_machine_config_parser()
         if not self.config_data.get("FileServiceName"):
@@ -325,9 +325,7 @@ class IndalekoBaseCLI:
         )
         pre_args, _ = self.pre_parser.parse_known_args()
         self.config_data["OutputFile"] = pre_args.outputfile
-        self.config_data["OutputFileKeys"] = (
-            self.handler_mixin.extract_filename_metadata(output_file)
-        )
+        self.config_data["OutputFileKeys"] = self.handler_mixin.extract_filename_metadata(output_file)
         return self
 
     def setup_performance_parser(self) -> "IndalekoBaseCLI":
@@ -348,9 +346,7 @@ class IndalekoBaseCLI:
         )
         pre_args, _ = self.pre_parser.parse_known_args()
         if pre_args.performance_file:
-            self.config_data["PerformanceDataFile"] = (
-                self.handler_mixin.generate_perf_file_name(self.config_data)
-            )
+            self.config_data["PerformanceDataFile"] = self.handler_mixin.generate_perf_file_name(self.config_data)
         if pre_args.performance_db:
             self.config_data["PerformanceDB"] = True
         return self
@@ -362,15 +358,14 @@ class IndalekoBaseCLI:
         pre_args, _ = self.pre_parser.parse_known_args()
         if hasattr(pre_args, "inputfile"):  # only process it once
             return
-        assert (
-            "InputFileKeys" in self.config_data
-        ), "InputFileKeys not found in configuration data"
+        assert "InputFileKeys" in self.config_data, "InputFileKeys not found in configuration data"
         prefix = self.config_data["InputFileKeys"].get(
             "prefix",
             self.config_data.get("FilePrefix", IndalekoConstants.default_prefix),
         )
         suffix = self.config_data["InputFileKeys"].get(
-            "suffix", self.config_data.get("FileSuffix", ".jsonl"),
+            "suffix",
+            self.config_data.get("FileSuffix", ".jsonl"),
         )
         self.config_data["InputFilePrefix"] = prefix
         self.config_data["InputFileSuffix"] = suffix
@@ -378,15 +373,17 @@ class IndalekoBaseCLI:
         if "plt" not in input_file_keys and "Platform" in self.config_data:
             input_file_keys["plt"] = self.config_data["Platform"]
         # this needs to be  provided
-        assert (
-            "svc" in input_file_keys
-        ), f"Service not found in input file keys: {input_file_keys}"
+        assert "svc" in input_file_keys, f"Service not found in input file keys: {input_file_keys}"
         self.config_data["InputFileChoices"] = self.handler_mixin.find_data_files(
-            self.config_data["DataDirectory"], input_file_keys, prefix, suffix,
+            self.config_data["DataDirectory"],
+            input_file_keys,
+            prefix,
+            suffix,
         )
         if self.config_data["InputFileChoices"]:
             self.config_data["InputFile"] = self.handler_mixin.get_default_file(
-                self.config_data["DataDirectory"], self.config_data["InputFileChoices"],
+                self.config_data["DataDirectory"],
+                self.config_data["InputFileChoices"],
             )
             self.pre_parser.add_argument(
                 "--inputfile",
@@ -395,12 +392,12 @@ class IndalekoBaseCLI:
                 help=f'Input file to use (default={self.config_data["InputFile"]})',
             )
             pre_args, _ = self.pre_parser.parse_known_args()
-            self.config_data["InputFileKeys"] = (
-                self.handler_mixin.extract_filename_metadata(pre_args.inputfile)
-            )
+            self.config_data["InputFileKeys"] = self.handler_mixin.extract_filename_metadata(pre_args.inputfile)
         else:
             self.pre_parser.add_argument(
-                "--inputfile", default=None, help="Input file to use",
+                "--inputfile",
+                default=None,
+                help="Input file to use",
             )
         # default timestamp is: 1) from the file, 2) from the config, 3) current time
         pre_args, _ = self.pre_parser.parse_known_args()
@@ -494,7 +491,8 @@ class IndalekoBaseCLI:
 
         @staticmethod
         def get_default_file(
-            data_directory: str | Path, candidates: list[str | Path],
+            data_directory: str | Path,
+            candidates: list[str | Path],
         ) -> str | None:
             """
             This method is used to get the most recently modified file.  Default implementation is to
@@ -506,11 +504,7 @@ class IndalekoBaseCLI:
                 raise FileNotFoundError(
                     f"Data directory does not exist: {data_directory}",
                 )
-            valid_files = [
-                data_directory / fname
-                for fname in candidates
-                if (data_directory / fname).is_file()
-            ]
+            valid_files = [data_directory / fname for fname in candidates if (data_directory / fname).is_file()]
             if not valid_files:
                 return None
             return str(max(valid_files, key=lambda f: f.stat().st_mtime).name)
@@ -524,13 +518,14 @@ class IndalekoBaseCLI:
             return [
                 fname
                 for fname, _ in find_candidate_files(["db"], str(config_dir))
-                if fname.startswith(IndalekoConstants.default_prefix)
-                and fname.endswith(".ini")
+                if fname.startswith(IndalekoConstants.default_prefix) and fname.endswith(".ini")
             ]
 
         @staticmethod
         def find_machine_config_files(
-            config_dir: str | Path, platform: str = None, machine_id: str = None,
+            config_dir: str | Path,
+            platform: str = None,
+            machine_id: str = None,
         ) -> list[str] | None:
             """
             This method is used to find machine configuration files
@@ -556,15 +551,14 @@ class IndalekoBaseCLI:
                 filters.append(machine_id)
             if platform:
                 filters.append(platform)
-            return [
-                fname
-                for fname, _ in find_candidate_files(filters, str(config_dir))
-                if fname.endswith(".json")
-            ]
+            return [fname for fname, _ in find_candidate_files(filters, str(config_dir)) if fname.endswith(".json")]
 
         @staticmethod
         def find_data_files(
-            data_dir: str | Path, keys: dict[str, str], prefix: str, suffix: str,
+            data_dir: str | Path,
+            keys: dict[str, str],
+            prefix: str,
+            suffix: str,
         ) -> list[str] | None:
             """This method is used to find data files"""
             if not Path(data_dir).exists():
@@ -574,9 +568,7 @@ class IndalekoBaseCLI:
             return [
                 fname
                 for fname, _ in find_candidate_files(selection_keys, str(data_dir))
-                if fname.startswith(prefix)
-                and fname.endswith(suffix)
-                and all([key in fname for key in selection_keys])
+                if fname.startswith(prefix) and fname.endswith(suffix) and all([key in fname for key in selection_keys])
             ]
 
         @staticmethod
@@ -590,10 +582,7 @@ class IndalekoBaseCLI:
                 "service": keys["FileServiceName"],
                 "timestamp": keys["Timestamp"],
             }
-            if (
-                "MachineConfigFileKeys" in keys
-                and "machine" in keys["MachineConfigFileKeys"]
-            ):
+            if "MachineConfigFileKeys" in keys and "machine" in keys["MachineConfigFileKeys"]:
                 kwargs["machine"] = keys["MachineConfigFileKeys"]["machine"]
             if keys.get("StorageId"):
                 kwargs["storage"] = keys["StorageId"]
@@ -633,10 +622,7 @@ class IndalekoBaseCLI:
             }
             if "Platform" in keys:
                 kwargs["platform"] = keys["Platform"]
-            if (
-                "MachineConfigFileKeys" in keys
-                and "machine" in keys["MachineConfigFileKeys"]
-            ):
+            if "MachineConfigFileKeys" in keys and "machine" in keys["MachineConfigFileKeys"]:
                 kwargs["machine"] = keys["MachineConfigFileKeys"]["machine"]
             return generate_file_name(**kwargs)
 
@@ -644,8 +630,7 @@ class IndalekoBaseCLI:
         def load_machine_config(keys: dict[str, str]) -> IndalekoMachineConfig:
             """This method is used to load a machine configuration"""
             raise NotImplementedError(
-                f"The method {inspect.currentframe().f_code.co_name}"
-                f" must be implemented by the subclass",
+                f"The method {inspect.currentframe().f_code.co_name} must be implemented by the subclass",
             )
 
         @staticmethod
@@ -660,10 +645,7 @@ class IndalekoBaseCLI:
             """Default is no storage identifier"""
             if config_data.get("StorageId"):
                 storage_id = config_data["StorageId"]
-            elif (
-                "InputFileKeys" in config_data
-                and "storage" in config_data["InputFileKeys"]
-            ):
+            elif "InputFileKeys" in config_data and "storage" in config_data["InputFileKeys"]:
                 storage_id = config_data["InputFileKeys"]["storage"]
             else:
                 storage_id = None
@@ -687,10 +669,7 @@ class IndalekoBaseCLI:
             """Default is no user identifier"""
             if config_data.get("UserId"):
                 user_id = config_data["UserId"]
-            elif (
-                "InputFileKeys" in config_data
-                and "userid" in config_data["InputFileKeys"]
-            ):
+            elif "InputFileKeys" in config_data and "userid" in config_data["InputFileKeys"]:
                 user_id = config_data["InputFileKeys"]["userid"]
             else:
                 user_id = None

@@ -155,7 +155,9 @@ class TestMimeTypeRecorder(unittest.TestCase):
 
         # Process with extension filter
         results = self.mime_recorder.process_directory(
-            self.test_dir, recursive=True, file_extensions=[".txt"],
+            self.test_dir,
+            recursive=True,
+            file_extensions=[".txt"],
         )
         self.assertEqual(len(results), 2)  # 2 .txt files in total
 

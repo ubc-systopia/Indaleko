@@ -54,7 +54,8 @@ class IndalekoCollection:
         if "ExistingCollection" in kwargs:
             self._arangodb_collection = kwargs["ExistingCollection"]
             assert isinstance(
-                self._arangodb_collection, arango.collection.StandardCollection,
+                self._arangodb_collection,
+                arango.collection.StandardCollection,
             ), f"self.collection is unexpected type {type(self._arangodb_collection)}"
             self.name = self._arangodb_collection.name
             self.definition = self._arangodb_collection.properties()
@@ -75,19 +76,24 @@ class IndalekoCollection:
         if self.definition is None:
             raise ValueError("Dynamic collection does not exist")
         assert isinstance(
-            self.definition, dict,
+            self.definition,
+            dict,
         ), "Collection definition must be a dictionary"
         assert "schema" in self.definition, "Collection must have a schema"
         assert "edge" in self.definition, "Collection must have an edge flag"
         assert "indices" in self.definition, "Collection must have indices"
         assert isinstance(
-            self.db_config, IndalekoDBConfig,
+            self.db_config,
+            IndalekoDBConfig,
         ), "db must be None or an IndalekoDBConfig object"
         self.create_collection(self.collection_name, self.definition, reset=self.reset)
 
     @type_check
     def create_collection(
-        self, name: str, config: dict, reset: bool = False,
+        self,
+        name: str,
+        config: dict,
+        reset: bool = False,
     ) -> "IndalekoCollection":
         """
         Create a collection in the database. If the collection already exists,
@@ -101,14 +107,13 @@ class IndalekoCollection:
                 raise NotImplementedError("delete existing collection not implemented")
         else:
             self._arangodb_collection = self.db_config.db.create_collection(
-                name, edge=config["edge"],
+                name,
+                edge=config["edge"],
             )
             if "schema" in config:
                 try:
                     self._arangodb_collection.configure(schema=config["schema"])
-                except (
-                    arango.exceptions.CollectionConfigureError
-                ) as error:  # pylint: disable=no-member
+                except arango.exceptions.CollectionConfigureError as error:  # pylint: disable=no-member
                     print(f"Failed to configure collection {name}")
                     print(error)
                     print("Schema:")
@@ -118,7 +123,8 @@ class IndalekoCollection:
                 for index in config["indices"]:
                     self.create_index(index, **config["indices"][index])
         assert isinstance(
-            self._arangodb_collection, arango.collection.StandardCollection,
+            self._arangodb_collection,
+            arango.collection.StandardCollection,
         ), f"self.collection is unexpected type {type(self._arangodb_collection)}"
         return IndalekoCollection(ExistingCollection=self._arangodb_collection)
 
@@ -132,7 +138,9 @@ class IndalekoCollection:
             type = index_data.get("type")
             del index_data["type"]
             index = IndalekoCollectionIndex(
-                collection=collection, type=type, **index_data,
+                collection=collection,
+                type=type,
+                **index_data,
             )
             indices.append(index)
         exit(0)
@@ -151,7 +159,8 @@ class IndalekoCollection:
     def create_index(self, name, **kwargs: dict[str, Any]) -> "IndalekoCollection":
         """Create an index for the given collection."""
         self.indices[name] = IndalekoCollectionIndex(
-            collection=self._arangodb_collection, **kwargs,
+            collection=self._arangodb_collection,
+            **kwargs,
         )
         return self
 
@@ -186,7 +195,8 @@ class IndalekoCollection:
 
     @type_check
     def bulk_insert(
-        self, documents: Sequence[dict[str, Any]],
+        self,
+        documents: Sequence[dict[str, Any]],
     ) -> None | list[dict[str, Any]]:
         """Insert a list of documents into the collection in batches."""
         errors = []

@@ -66,6 +66,7 @@ from activity.collectors.storage.semantic_attributes import (
     StorageActivityAttributes,
     get_semantic_attributes_for_activity,
 )
+from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 
 # pylint: disable=wrong-import-position
 from activity.recorders.storage.base import StorageActivityRecorder
@@ -276,8 +277,10 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
                 self._logger.info(f"Getting entity collection: {self._entity_collection_name}")
                 entity_collection = IndalekoCollections.get_collection(self._entity_collection_name)
                 self._logger.info(f"Retrieved entity collection: {entity_collection.name}")
-            else:
-                self._logger.info(f"Entity collection already exists: {self._entity_collection_name}")
+            except Exception as entity_error:
+                self._logger.info(f"Error getting entity collection: {entity_error}")
+            finally:
+                self._logger.info(f"Continuing with entity collection: {self._entity_collection_name}")
 
         except Exception as e:
             self._logger.error(f"Error setting up collections: {e}")

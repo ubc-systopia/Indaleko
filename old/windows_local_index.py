@@ -1,11 +1,10 @@
-import local_index
 import datetime
-import os
 import json
 import logging
+import os
 import platform
-from IndalekoRecord import IndalekoRecord
-from IndalekoSource import IndalekoSource
+
+import local_index
 from IndalekoWindowsMachineConfig import IndalekoWindowsMachineConfig
 
 
@@ -79,9 +78,9 @@ def construct_windows_output_file_name(path: str, configdir="./config"):
             break
         else:
             drive_guid = drive  # ugly, but what else can I do at this point?
-    timestamp = timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    timestamp = timestamp = datetime.datetime.now(datetime.UTC).isoformat()
     return posix_to_windows(
-        f"{IndalekoWindowsLocalIndexer.WindowsLocalIndexFilePrefix}-machine={machine_guid}-drive={drive_guid}-date={timestamp}.json"
+        f"{IndalekoWindowsLocalIndexer.WindowsLocalIndexFilePrefix}-machine={machine_guid}-drive={drive_guid}-date={timestamp}.json",
     )
 
 
@@ -90,7 +89,8 @@ def get_default_index_path():
 
 
 def convert_windows_path_to_guid_uri(
-    path: str, config: IndalekoWindowsMachineConfig
+    path: str,
+    config: IndalekoWindowsMachineConfig,
 ) -> str:
     drive = os.path.splitdrive(path)[0][0].upper()
     uri = "\\\\?\\" + drive + ":"  # default format for lettered drives without GUIDs
@@ -118,9 +118,7 @@ def build_stat_dict(
         # at least for now, we just skip errors
         logging.warning(f"Unable to stat {file_path}")
         return None
-    stat_dict = {
-        key: getattr(stat_data, key) for key in dir(stat_data) if key.startswith("st_")
-    }
+    stat_dict = {key: getattr(stat_data, key) for key in dir(stat_data) if key.startswith("st_")}
     stat_dict["file"] = name
     stat_dict["path"] = root
     if platform.system() == "Windows":
@@ -129,7 +127,7 @@ def build_stat_dict(
             last_drive = os.path.splitdrive(root)[0][0].upper()
         last_uri = convert_windows_path_to_guid_uri(root, config)
     assert last_uri.startswith(
-        "\\\\?\\Volume{"
+        "\\\\?\\Volume{",
     ), f"last_uri {last_uri} does not start with \\\\?\\Volume{{"
     stat_dict["URI"] = os.path.join(last_uri, os.path.splitdrive(root)[1], name)
     return (stat_dict, last_uri, last_drive)
@@ -153,7 +151,10 @@ def main():
     # Now parse the arguments
     li = local_index.LocalIndex()
     li.add_arguments(
-        "--path", type=str, default=get_default_index_path(), help="Path to index"
+        "--path",
+        type=str,
+        default=get_default_index_path(),
+        help="Path to index",
     )
     args = li.parse_args()
     machine_config = IndalekoWindowsMachineConfig(config_dir=args.confdir)
@@ -163,7 +164,7 @@ def main():
     data = walk_files_and_directories(args.path, machine_config)
     # now I just need to save the data
     output_file = os.path.join(args.outdir, args.output).replace(":", "_")
-    with open(output_file, "wt") as fd:
+    with open(output_file, "w") as fd:
         json.dump(data, fd, indent=4)
 
 

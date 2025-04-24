@@ -1,20 +1,22 @@
-from typing import Dict, Any
 import random
 import uuid
 from datetime import datetime
+from typing import Any
+
 from geopy.distance import geodesic
 from geopy.geocoders import Nominatim
-from data_models.record import IndalekoRecordDataModel
-from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
-from data_models.i_uuid import IndalekoUUIDDataModel
-from activity.data_model.activity import IndalekoActivityDataModel
+
 from activity.collectors.location.data_models.windows_gps_location_data_model import (
     WindowsGPSLocationDataModel,
 )
 from activity.collectors.location.data_models.windows_gps_satellite_data import (
     WindowsGPSLocationSatelliteDataModel,
 )
+from activity.data_model.activity import IndalekoActivityDataModel
 from data_generator.scripts.metadata.activity_metadata import ActivityMetadata
+from data_models.i_uuid import IndalekoUUIDDataModel
+from data_models.record import IndalekoRecordDataModel
+from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 
 
 class GeoActivityData(ActivityMetadata):
@@ -32,31 +34,37 @@ class GeoActivityData(ActivityMetadata):
     def generate_metadata(
         self,
         record_kwargs: IndalekoRecordDataModel,
-        timestamps: Dict[str, datetime],
+        timestamps: dict[str, datetime],
         is_truth_file: bool,
         truth_like: bool,
         truthlike_attributes: list[str],
     ) -> Any:
         is_truth_file = self._define_truth_attribute(
-            "geo_location", is_truth_file, truth_like, truthlike_attributes
+            "geo_location",
+            is_truth_file,
+            truth_like,
+            truthlike_attributes,
         )
         return self._generate_geo_metadata(record_kwargs, timestamps, is_truth_file)
 
     def _generate_geo_metadata(
         self,
         record_kwargs: IndalekoRecordDataModel,
-        timestamps: Dict[str, datetime],
+        timestamps: dict[str, datetime],
         is_truth_file: bool,
     ) -> IndalekoActivityDataModel:
         """
         Creates the geographical semantic data
         """
         geo_timestamp = self._generate_ac_timestamp(
-            is_truth_file, timestamps, "geo_location"
+            is_truth_file,
+            timestamps,
+            "geo_location",
         )
         activity_geo_loc = self._generate_geo_context(is_truth_file)
         activity_geo_md = self._generate_WindowsGPSLocation(
-            activity_geo_loc, geo_timestamp
+            activity_geo_loc,
+            geo_timestamp,
         )
 
         UUID_longitude = uuid.uuid4()
@@ -69,13 +77,16 @@ class GeoActivityData(ActivityMetadata):
 
         semantic_attributes = [
             IndalekoSemanticAttributeDataModel(
-                Identifier=longitude, Value=activity_geo_md.longitude
+                Identifier=longitude,
+                Value=activity_geo_md.longitude,
             ),
             IndalekoSemanticAttributeDataModel(
-                Identifier=latitude, Value=activity_geo_md.latitude
+                Identifier=latitude,
+                Value=activity_geo_md.latitude,
             ),
             IndalekoSemanticAttributeDataModel(
-                Identifier=accuracy, Value=activity_geo_md.accuracy
+                Identifier=accuracy,
+                Value=activity_geo_md.accuracy,
             ),
         ]
 
@@ -92,7 +103,7 @@ class GeoActivityData(ActivityMetadata):
         # geo_activity_service = IndalekoActivityContextDataModel(Handle=uuid.uuid4(), Timestamp=geo_timestamp, Cursors=[longitude_data_provider, latitude_data_provider,accuracy_data_provider])
         return geo_activity_context
 
-    def _generate_geo_context(self, is_truth_file: bool = True) -> Dict[str, Any]:
+    def _generate_geo_context(self, is_truth_file: bool = True) -> dict[str, Any]:
         """
         Generates a geographical activity context based on the location given:
         self.selected_md["geo_location"] = {'location': str, 'command': str}
@@ -119,22 +130,28 @@ class GeoActivityData(ActivityMetadata):
                     truth_altitude = self.saved_geo_loc["altitude"]
 
                     max_lat = min(
-                        GeoActivityData.DEFAULT_MAX_LAT, truth_latitude + delta
+                        GeoActivityData.DEFAULT_MAX_LAT,
+                        truth_latitude + delta,
                     )
                     min_lat = max(
-                        GeoActivityData.DEFAULT_MIN_LAT, truth_latitude - delta
+                        GeoActivityData.DEFAULT_MIN_LAT,
+                        truth_latitude - delta,
                     )
                     max_long = min(
-                        GeoActivityData.DEFAULT_MAX_LONG, truth_longitude + delta
+                        GeoActivityData.DEFAULT_MAX_LONG,
+                        truth_longitude + delta,
                     )
                     min_long = max(
-                        GeoActivityData.DEFAULT_MIN_LONG, truth_longitude - delta
+                        GeoActivityData.DEFAULT_MIN_LONG,
+                        truth_longitude - delta,
                     )
                     min_alt = max(
-                        GeoActivityData.DEFAULT_MIN_ALT, truth_altitude - delta
+                        GeoActivityData.DEFAULT_MIN_ALT,
+                        truth_altitude - delta,
                     )
                     max_alt = min(
-                        GeoActivityData.DEFAULT_MAX_ALT, truth_altitude + delta
+                        GeoActivityData.DEFAULT_MAX_ALT,
+                        truth_altitude + delta,
                     )
 
                     latitude = self._check_return_value_within_range(
@@ -206,13 +223,16 @@ class GeoActivityData(ActivityMetadata):
 
         else:
             latitude = random.uniform(
-                GeoActivityData.DEFAULT_MIN_LAT, GeoActivityData.DEFAULT_MAX_LAT
+                GeoActivityData.DEFAULT_MIN_LAT,
+                GeoActivityData.DEFAULT_MAX_LAT,
             )
             longitude = random.uniform(
-                GeoActivityData.DEFAULT_MIN_LONG, GeoActivityData.DEFAULT_MAX_LONG
+                GeoActivityData.DEFAULT_MIN_LONG,
+                GeoActivityData.DEFAULT_MAX_LONG,
             )
             altitude = random.uniform(
-                GeoActivityData.DEFAULT_MIN_ALT, GeoActivityData.DEFAULT_MAX_ALT
+                GeoActivityData.DEFAULT_MIN_ALT,
+                GeoActivityData.DEFAULT_MAX_ALT,
             )
 
         location_dict["latitude"] = latitude
@@ -221,7 +241,7 @@ class GeoActivityData(ActivityMetadata):
         return location_dict
 
     # helper for _generate_geo_context()
-    def _save_location(self, geo_location: str, geo_command: str) -> Dict[str, float]:
+    def _save_location(self, geo_location: str, geo_command: str) -> dict[str, float]:
         """
         Saves the geographical location specified in the selected_md_attributes; run once
         """
@@ -235,34 +255,20 @@ class GeoActivityData(ActivityMetadata):
         # save a list of longitude and latitude values if command is within
         if geo_command == "within":
             kilometer_range = self.selected_md["geo_location"]["km"]
-            north_bound = (
-                geodesic(kilometers=kilometer_range)
-                .destination((latitude, longitude), bearing=0)
-                .latitude
-            )
-            south_bound = (
-                geodesic(kilometers=kilometer_range)
-                .destination((latitude, longitude), bearing=180)
-                .latitude
-            )
-            east_bound = (
-                geodesic(kilometers=kilometer_range)
-                .destination((latitude, longitude), bearing=90)
-                .longitude
-            )
-            west_bound = (
-                geodesic(kilometers=kilometer_range)
-                .destination((latitude, longitude), bearing=270)
-                .longitude
-            )
+            north_bound = geodesic(kilometers=kilometer_range).destination((latitude, longitude), bearing=0).latitude
+            south_bound = geodesic(kilometers=kilometer_range).destination((latitude, longitude), bearing=180).latitude
+            east_bound = geodesic(kilometers=kilometer_range).destination((latitude, longitude), bearing=90).longitude
+            west_bound = geodesic(kilometers=kilometer_range).destination((latitude, longitude), bearing=270).longitude
             latitude = [south_bound, north_bound]
             longitude = [west_bound, east_bound]
 
         return {"latitude": latitude, "longitude": longitude, "altitude": altitude}
 
     def _generate_WindowsGPSLocation(
-        self, geo_activity_context: Dict[str, float], timestamp: datetime
-    ) -> Dict[str, Any]:
+        self,
+        geo_activity_context: dict[str, float],
+        timestamp: datetime,
+    ) -> dict[str, Any]:
         """
         Generate the Windows GPS location in the form of a dictionary
         """
@@ -301,7 +307,7 @@ class GeoActivityData(ActivityMetadata):
             position_source="GPS",
             position_source_timestamp=timestamp,
             satellite_data=random.choice(
-                [windowsGPS_satellite_location, no_windowsGPS_satellite_location]
+                [windowsGPS_satellite_location, no_windowsGPS_satellite_location],
             ),
             civic_address=None,
             venue_data=None,

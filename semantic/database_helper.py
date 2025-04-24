@@ -81,7 +81,10 @@ class SemanticDatabaseHelper:
         logger.debug("Disconnected from database")
 
     def get_files_for_processing(
-        self, extractor_type: str, batch_size: int, state: dict[str, Any],
+        self,
+        extractor_type: str,
+        batch_size: int,
+        state: dict[str, Any],
     ) -> list[dict[str, Any]]:
         """
         Get a batch of files from the database that need semantic processing.
@@ -111,9 +114,7 @@ class SemanticDatabaseHelper:
                     "8a7b9678-f2c5-4e3a-9a8b-cc8c2e626374",
                 )  # Mime type attribute
             elif extractor_type == "checksum":
-                semantic_collection_name = (
-                    IndalekoDBCollections.Indaleko_Semantic_Checksum
-                )
+                semantic_collection_name = IndalekoDBCollections.Indaleko_Semantic_Checksum
                 semantic_attribute_id = uuid.UUID(
                     "c4e2d558-6a13-4734-9e19-5fe3c8a2c355",
                 )  # Checksum attribute (MD5)
@@ -129,7 +130,8 @@ class SemanticDatabaseHelper:
 
             # Get file extensions to include from config
             file_extensions = self.config["extractors"][extractor_type].get(
-                "file_extensions", ["*"],
+                "file_extensions",
+                ["*"],
             )
 
             # If extensions include "*", we process all files
@@ -250,7 +252,9 @@ class SemanticDatabaseHelper:
             return False
 
     def store_checksum_data(
-        self, object_id: str, checksum_data: dict[str, Any],
+        self,
+        object_id: str,
+        checksum_data: dict[str, Any],
     ) -> bool:
         """
         Store checksum data in the database.

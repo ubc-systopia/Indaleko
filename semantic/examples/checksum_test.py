@@ -93,10 +93,7 @@ def process_directory(directory_path, recursive=False, extensions=None, verbose=
 
     # Filter by extensions if provided
     if extensions:
-        extensions = [
-            ext.lower() if ext.startswith(".") else f".{ext.lower()}"
-            for ext in extensions
-        ]
+        extensions = [ext.lower() if ext.startswith(".") else f".{ext.lower()}" for ext in extensions]
         print(f"Filtering by extensions: {', '.join(extensions)}")
 
     # Define the glob pattern based on recursion
@@ -162,12 +159,16 @@ def main():
     file_parser = subparsers.add_parser("file", help="Process a single file")
     file_parser.add_argument("file_path", help="Path to the file to process")
     file_parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Show all checksum types",
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Show all checksum types",
     )
 
     # Directory command
     dir_parser = subparsers.add_parser(
-        "directory", help="Process all files in a directory",
+        "directory",
+        help="Process all files in a directory",
     )
     dir_parser.add_argument("directory_path", help="Path to the directory to process")
     dir_parser.add_argument(
@@ -183,7 +184,10 @@ def main():
         help="Filter by file extensions (e.g., .jpg .png)",
     )
     dir_parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Show detailed information",
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Show detailed information",
     )
 
     # Debug mode
@@ -205,7 +209,10 @@ def main():
         process_file(args.file_path, args.verbose)
     elif args.command == "directory":
         process_directory(
-            args.directory_path, args.recursive, args.extensions, args.verbose,
+            args.directory_path,
+            args.recursive,
+            args.extensions,
+            args.verbose,
         )
 
 

@@ -21,8 +21,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
-from typing import Tuple, List
-
 from icecream import ic
 from pydantic import Field
 
@@ -35,11 +33,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
-from data_models.timestamp import IndalekoTimestampDataModel
-from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 from data_models.record import IndalekoRecordDataModel
-from platforms.data_models.software import Software as software
-from platforms.data_models.hardware import Hardware as hardware
+from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 
 # pylint: enable=wrong-import-position
 
@@ -48,15 +43,21 @@ class IndalekoRelationshipDataModel(IndalekoBaseModel):
     """This is the definition of the relationship data model."""
 
     Record: IndalekoRecordDataModel = Field(
-        None, title="Record", description="The record associated with the object."
+        None,
+        title="Record",
+        description="The record associated with the object.",
     )
 
-    Objects: Tuple[str, str] = Field(
-        None, title="Objects", description="The objects in the relationship."
+    Objects: tuple[str, str] = Field(
+        None,
+        title="Objects",
+        description="The objects in the relationship.",
     )
 
-    Relationships: List[IndalekoSemanticAttributeDataModel] = Field(
-        None, title="Relationship", description="The relationships between the objects."
+    Relationships: list[IndalekoSemanticAttributeDataModel] = Field(
+        None,
+        title="Relationship",
+        description="The relationships between the objects.",
     )
 
     class Config:
@@ -70,14 +71,10 @@ class IndalekoRelationshipDataModel(IndalekoBaseModel):
                     "12345678-1234-5678-1234-567812345678",
                 ),
                 "Relationships": [
-                    IndalekoSemanticAttributeDataModel.Config.json_schema_extra[
-                        "example"
-                    ],
-                    IndalekoSemanticAttributeDataModel.Config.json_schema_extra[
-                        "example"
-                    ],
+                    IndalekoSemanticAttributeDataModel.Config.json_schema_extra["example"],
+                    IndalekoSemanticAttributeDataModel.Config.json_schema_extra["example"],
                 ],
-            }
+            },
         }
 
 

@@ -113,7 +113,8 @@ class SimpleActivityRecorder(TemplateRecorder):
         # Set defaults specific to this recorder
         kwargs.setdefault("name", "Simple Activity Recorder")
         kwargs.setdefault(
-            "recorder_id", uuid.UUID("91c5d7e9-f0a1-b2c3-d4e5-f6a7b8c9d0e1"),
+            "recorder_id",
+            uuid.UUID("91c5d7e9-f0a1-b2c3-d4e5-f6a7b8c9d0e1"),
         )
         kwargs.setdefault("version", "1.0.0")
         kwargs.setdefault("activity_type", "user activity")
@@ -166,7 +167,8 @@ class SimpleActivityRecorder(TemplateRecorder):
         }
 
     def get_semantic_attributes(
-        self, activity_data: SimpleActivity,
+        self,
+        activity_data: SimpleActivity,
     ) -> list[IndalekoSemanticAttributeDataModel]:
         """
         Get semantic attributes for the activity data.
@@ -183,7 +185,8 @@ class SimpleActivityRecorder(TemplateRecorder):
         attributes.append(
             IndalekoSemanticAttributeDataModel(
                 Identifier=IndalekoUUIDDataModel(
-                    Identifier=self.ACTIVITY_NAME_UUID, Label="Activity Name",
+                    Identifier=self.ACTIVITY_NAME_UUID,
+                    Label="Activity Name",
                 ),
                 Value=activity_data.name,
             ),
@@ -193,7 +196,8 @@ class SimpleActivityRecorder(TemplateRecorder):
         attributes.append(
             IndalekoSemanticAttributeDataModel(
                 Identifier=IndalekoUUIDDataModel(
-                    Identifier=self.ACTIVITY_TYPE_UUID, Label="Activity Type",
+                    Identifier=self.ACTIVITY_TYPE_UUID,
+                    Label="Activity Type",
                 ),
                 Value=activity_data.activity_type,
             ),

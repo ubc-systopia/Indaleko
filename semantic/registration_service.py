@@ -85,7 +85,8 @@ class IndalekoSemanticRegistrationService(IndalekoRegistrationService):
         assert "Version" in kwargs, "Version must be provided"
         assert "Record" in kwargs, "Record must be provided"
         assert isinstance(
-            kwargs["Record"], IndalekoRecordDataModel,
+            kwargs["Record"],
+            IndalekoRecordDataModel,
         ), "Record must be an IndalekoRecordDataModel"
 
         # Optional semantic-specific fields with defaults
@@ -100,9 +101,7 @@ class IndalekoSemanticRegistrationService(IndalekoRegistrationService):
             "medium",
             "high",
         ], "ResourceIntensity must be low, medium, or high"
-        assert (
-            0 <= kwargs["ProcessingPriority"] <= 100
-        ), "ProcessingPriority must be between 0 and 100"
+        assert 0 <= kwargs["ProcessingPriority"] <= 100, "ProcessingPriority must be between 0 and 100"
 
         return kwargs
 
@@ -153,15 +152,13 @@ class IndalekoSemanticRegistrationService(IndalekoRegistrationService):
         matching_extractors = []
         for provider in providers:
             if "SupportedMimeTypes" in provider:
-                if (
-                    mime_type in provider["SupportedMimeTypes"]
-                    or "*/*" in provider["SupportedMimeTypes"]
-                ):
+                if mime_type in provider["SupportedMimeTypes"] or "*/*" in provider["SupportedMimeTypes"]:
                     matching_extractors.append(provider)
 
         # Sort by processing priority (highest first)
         matching_extractors.sort(
-            key=lambda x: x.get("ProcessingPriority", 50), reverse=True,
+            key=lambda x: x.get("ProcessingPriority", 50),
+            reverse=True,
         )
 
         return matching_extractors

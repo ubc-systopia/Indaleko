@@ -115,9 +115,7 @@ class DiscordFileShareRecorder(RecorderBase):
 
         # Register with the provider registrar
         self.provider_registrar = IndalekoActivityDataRegistrationService()
-        assert (
-            self.provider_registrar is not None
-        ), "Failed to get the provider registrar"
+        assert self.provider_registrar is not None, "Failed to get the provider registrar"
 
         collector_data = self.provider_registrar.lookup_provider_by_identifier(
             str(self.source_data["Identifier"]),
@@ -179,7 +177,8 @@ class DiscordFileShareRecorder(RecorderBase):
         return self.source_data["Description"]
 
     def create_semantic_attributes(
-        self, attachment: dict,
+        self,
+        attachment: dict,
     ) -> list[IndalekoSemanticAttributeDataModel]:
         """
         Create semantic attributes from file attachment data.
@@ -207,7 +206,9 @@ class DiscordFileShareRecorder(RecorderBase):
                 semantic_attributes.append(
                     IndalekoSemanticAttributeDataModel(
                         Identifier=IndalekoUUIDDataModel(
-                            Identifier=uuid_value, Version="1", Description=field,
+                            Identifier=uuid_value,
+                            Version="1",
+                            Description=field,
                         ),
                         Data=str(value),
                     ),
@@ -272,7 +273,8 @@ class DiscordFileShareRecorder(RecorderBase):
 
         # Build document
         doc = self.build_discord_file_activity_document(
-            attachment=attachment, semantic_attributes=semantic_attributes,
+            attachment=attachment,
+            semantic_attributes=semantic_attributes,
         )
 
         # Insert into collection
@@ -306,7 +308,8 @@ class DiscordFileShareRecorder(RecorderBase):
             The attachment data if found, None otherwise
         """
         assert isinstance(
-            self.collection, IndalekoCollection,
+            self.collection,
+            IndalekoCollection,
         ), f"collection is not an IndalekoCollection {type(self.collection)}"
 
         # Query with URL filter
@@ -341,7 +344,8 @@ class DiscordFileShareRecorder(RecorderBase):
             List of attachment data
         """
         assert isinstance(
-            self.collection, IndalekoCollection,
+            self.collection,
+            IndalekoCollection,
         ), f"collection is not an IndalekoCollection {type(self.collection)}"
 
         query = """
@@ -412,7 +416,8 @@ class DiscordFileShareRecorder(RecorderBase):
             List of matching attachments
         """
         assert isinstance(
-            self.collection, IndalekoCollection,
+            self.collection,
+            IndalekoCollection,
         ), f"collection is not an IndalekoCollection {type(self.collection)}"
 
         # Query with filename filter

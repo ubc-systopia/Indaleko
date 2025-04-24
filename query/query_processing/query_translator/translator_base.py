@@ -21,7 +21,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-
 from abc import ABC, abstractmethod
 
 if os.environ.get("INDALEKO_ROOT") is None:

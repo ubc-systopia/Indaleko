@@ -61,11 +61,12 @@ import datetime
 import glob
 import json
 import os
-import psutil
 import re
 import socket
-import uuid
 import sys
+import uuid
+
+import psutil
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -76,8 +77,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from utils.misc.directory_management import (
-    indaleko_default_config_dir,
     indaleko_create_secure_directories,
+    indaleko_default_config_dir,
 )
 
 # pylint: enable=wrong-import-position
@@ -164,7 +165,8 @@ def find_all_config_files(dir_path):
     sorted_files = sorted(
         (f for f in files if re.match(pattern, f)),
         key=lambda f: datetime.datetime.strptime(
-            re.search(pattern, f).group(2), "%Y-%m-%dT%H-%M-%S.%fZ"
+            re.search(pattern, f).group(2),
+            "%Y-%m-%dT%H-%M-%S.%fZ",
         ),
     )
 
@@ -229,7 +231,8 @@ def main():
     #                   latest_config_file}. Saving a new config ...")
 
     file_path = os.path.join(
-        args.save_to_dir, f"macos-hardware-info-{guid}-{timestamp}.json"
+        args.save_to_dir,
+        f"macos-hardware-info-{guid}-{timestamp}.json",
     )
     save_config_to_file(config_data, file_path)
 

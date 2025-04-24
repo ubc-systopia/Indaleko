@@ -84,7 +84,8 @@ def run_session_2():
     # Create response using the context
     thesis_topic = conversation.get_context_variable("thesis_topic", "your research")
     demo_vehicle = conversation.get_context_variable(
-        "demo_vehicle", "your implementation",
+        "demo_vehicle",
+        "your implementation",
     )
 
     response = (

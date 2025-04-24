@@ -18,15 +18,12 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import argparse
 import logging
 import os
 import subprocess
 import sys
 import tempfile
-from typing import Dict, List, Any, Optional, Union
-
-from icecream import ic
+from typing import Any
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -37,6 +34,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from db.db_config import IndalekoDBConfig
+
 # We'll import the CLI base class later in a separate module
 
 # pylint: enable=wrong-import-position
@@ -55,7 +53,7 @@ class IndalekoAnalyzerManager:
     SNAKE_CASE_ANALYZER = "Indaleko::indaleko_snake_case"
     FILENAME_ANALYZER = "Indaleko::indaleko_filename"
 
-    def __init__(self, db_config: Optional[IndalekoDBConfig] = None):
+    def __init__(self, db_config: IndalekoDBConfig | None = None):
         """
         Initialize the analyzer manager.
 
@@ -66,9 +64,11 @@ class IndalekoAnalyzerManager:
         self.db_config.start()
 
     @staticmethod
-    def build_arangosh_command_string(db_config: IndalekoDBConfig,
-                                      script_file: str = "",
-                                      use_root: bool = False) -> str:
+    def build_arangosh_command_string(
+        db_config: IndalekoDBConfig,
+        script_file: str = "",
+        use_root: bool = False,
+    ) -> str:
         """
         Build the arangosh command for executing JavaScript files.
 
@@ -122,7 +122,7 @@ class IndalekoAnalyzerManager:
         return self.build_arangosh_command_string(
             self.db_config,
             script_file,
-            use_root=True  # Use root account since analyzer creation requires admin privileges
+            use_root=True,  # Use root account since analyzer creation requires admin privileges
         )
 
     def execute_arangosh_script(self, script_content: str) -> tuple[bool, str]:
@@ -136,7 +136,11 @@ class IndalekoAnalyzerManager:
             Tuple of (success, output)
         """
         # Create a temporary file for the script
-        with tempfile.NamedTemporaryFile(suffix='.js', delete=False, mode='w') as temp_file:
+        with tempfile.NamedTemporaryFile(
+            suffix=".js",
+            delete=False,
+            mode="w",
+        ) as temp_file:
             temp_file_path = temp_file.name
             temp_file.write(script_content)
 
@@ -148,7 +152,8 @@ class IndalekoAnalyzerManager:
                 shell=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True
+                text=True,
+                check=False,
             )
 
             # Check the result
@@ -179,7 +184,7 @@ class IndalekoAnalyzerManager:
         script = f"try {{ {command} }} catch (err) {{ print('Error: ' + err); }}"
         return self.execute_arangosh_script(script)
 
-    def list_analyzers(self) -> List[Dict[str, Any]]:
+    def list_analyzers(self) -> list[dict[str, Any]]:
         """
         List all analyzers in the database.
 
@@ -210,9 +215,10 @@ class IndalekoAnalyzerManager:
         analyzers = []
         for line in output.splitlines():
             line = line.strip()
-            if line.startswith('{') and line.endswith('}'):
+            if line.startswith("{") and line.endswith("}"):
                 try:
                     import json
+
                     analyzer = json.loads(line)
                     analyzers.append(analyzer)
                 except json.JSONDecodeError:
@@ -407,7 +413,7 @@ class IndalekoAnalyzerManager:
             logging.error("Failed to create filename analyzer: %s", output)
             return False
 
-    def create_all_analyzers(self) -> Dict[str, bool]:
+    def create_all_analyzers(self) -> dict[str, bool]:
         """
         Create all custom analyzers.
 
@@ -453,7 +459,11 @@ class IndalekoAnalyzerManager:
             logging.error("Failed to delete analyzer %s: %s", analyzer_name, output)
             return False
 
-    def test_analyzer(self, analyzer_name: str, test_string: str) -> tuple[bool, List[str]]:
+    def test_analyzer(
+        self,
+        analyzer_name: str,
+        test_string: str,
+    ) -> tuple[bool, list[str]]:
         """
         Test an analyzer on a string.
 
@@ -489,6 +499,7 @@ class IndalekoAnalyzerManager:
                 if line.startswith("Tokens: "):
                     try:
                         import json
+
                         tokens = json.loads(line[8:])
                         break
                     except json.JSONDecodeError:
@@ -508,6 +519,7 @@ def main():
     try:
         # Import CLI from the separate module to avoid circular dependency
         from db.analyzer_manager_cli import main as cli_main
+
         cli_main()
     except ImportError as e:
         print(f"Error importing analyzer_manager_cli: {e}")
@@ -521,7 +533,9 @@ def main():
             print("Or use --direct to create analyzers directly")
 
 
-def create_custom_analyzers(db_config: Optional[IndalekoDBConfig] = None) -> Dict[str, bool]:
+def create_custom_analyzers(
+    db_config: IndalekoDBConfig | None = None,
+) -> dict[str, bool]:
     """
     Utility function to create all custom analyzers.
     This can be called directly without creating an instance of IndalekoAnalyzerManager.
@@ -536,7 +550,7 @@ def create_custom_analyzers(db_config: Optional[IndalekoDBConfig] = None) -> Dic
     return analyzer_manager.create_all_analyzers()
 
 
-def execute_analyzer_creation(db_config: Optional[IndalekoDBConfig] = None) -> bool:
+def execute_analyzer_creation(db_config: IndalekoDBConfig | None = None) -> bool:
     """
     Run the custom analyzer creation directly using arangosh.
     This is a simple wrapper function that executes the arangosh command to create analyzers.
@@ -558,7 +572,8 @@ def execute_analyzer_creation(db_config: Optional[IndalekoDBConfig] = None) -> b
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True
+            text=True,
+            check=False,
         )
 
         # Check result
@@ -574,7 +589,7 @@ def execute_analyzer_creation(db_config: Optional[IndalekoDBConfig] = None) -> b
             return False
 
     except Exception as e:
-        logging.error(f"Error executing analyzer creation: {e}")
+        logging.exception(f"Error executing analyzer creation: {e}")
         return False
 
 
@@ -587,20 +602,23 @@ def create_custom_analyzers_script() -> str:
         A string containing the arangosh script to create analyzers
     """
     # Load the create_analyzers.js file
-    script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "create_analyzers.js")
+    script_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "create_analyzers.js",
+    )
 
     if not os.path.exists(script_path):
         logging.error(f"Analyzer script file not found: {script_path}")
         return ""
 
-    with open(script_path, "r", encoding="utf-8") as f:
+    with open(script_path, encoding="utf-8") as f:
         script_content = f.read()
 
     # Return the script content for execution
     return script_content
 
 
-def get_arangosh_command(db_config: Optional[IndalekoDBConfig] = None) -> str:
+def get_arangosh_command(db_config: IndalekoDBConfig | None = None) -> str:
     """
     Get the arangosh command to execute the analyzer creation script.
 
@@ -614,13 +632,16 @@ def get_arangosh_command(db_config: Optional[IndalekoDBConfig] = None) -> str:
         db_config = IndalekoDBConfig()
 
     # Get the script file path
-    script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "create_analyzers.js")
+    script_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "create_analyzers.js",
+    )
 
     # Build the command
     return IndalekoAnalyzerManager.build_arangosh_command_string(
         db_config,
         script_file=script_path,
-        use_root=True  # Use root account since analyzer creation requires admin privileges
+        use_root=True,  # Use root account since analyzer creation requires admin privileges
     )
 
 

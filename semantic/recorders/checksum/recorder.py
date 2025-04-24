@@ -83,7 +83,9 @@ class ChecksumRecorder:
         """
         self.collector = IndalekoSemanticChecksums()
         self.output_file = output_path or os.path.join(
-            Indaleko.default_data_dir, "semantic", "checksum_data.jsonl",
+            Indaleko.default_data_dir,
+            "semantic",
+            "checksum_data.jsonl",
         )
         self.recording_date = datetime.datetime.now(datetime.UTC).isoformat()
 
@@ -114,7 +116,8 @@ class ChecksumRecorder:
         """
         return IndalekoRecordDataModel(
             SourceIdentifier=IndalekoSourceIdentifierDataModel(
-                Identifier=str(self.recorder_uuid), Version="1.0",
+                Identifier=str(self.recorder_uuid),
+                Version="1.0",
             ),
             Timestamp=datetime.datetime.now(datetime.UTC),
             Attributes={},
@@ -122,7 +125,8 @@ class ChecksumRecorder:
         )
 
     def create_semantic_attributes(
-        self, checksums: dict[str, str],
+        self,
+        checksums: dict[str, str],
     ) -> list[IndalekoSemanticAttributeDataModel]:
         """
         Convert checksums into semantic attributes.
@@ -141,7 +145,8 @@ class ChecksumRecorder:
                 attributes.append(
                     IndalekoSemanticAttributeDataModel(
                         Identifier=IndalekoUUIDDataModel(
-                            Identifier=uuid_value, Label=f"{algo} Checksum",
+                            Identifier=uuid_value,
+                            Label=f"{algo} Checksum",
                         ),
                         Value=value,
                     ),
@@ -150,7 +155,9 @@ class ChecksumRecorder:
         return attributes
 
     def process_file(
-        self, file_path: str, object_id: str | uuid.UUID,
+        self,
+        file_path: str,
+        object_id: str | uuid.UUID,
     ) -> dict[str, Any]:
         """
         Process a file to compute and format checksum data.
@@ -229,7 +236,8 @@ class ChecksumRecorder:
                     continue
 
                 checksum_data = self.process_file(
-                    file_info["path"], file_info["object_id"],
+                    file_info["path"],
+                    file_info["object_id"],
                 )
                 if checksum_data:
                     jsonl_output.write(
@@ -305,27 +313,33 @@ def main():
     parser_file = subparsers.add_parser("file", help="Process a single file")
     parser_file.add_argument("path", help="Path to the file")
     parser_file.add_argument(
-        "--id", help="Object ID (if not provided, will generate a new UUID)",
+        "--id",
+        help="Object ID (if not provided, will generate a new UUID)",
     )
 
     # Subparser for processing a directory
     parser_dir = subparsers.add_parser(
-        "directory", help="Process all files in a directory",
+        "directory",
+        help="Process all files in a directory",
     )
     parser_dir.add_argument("path", help="Path to the directory")
     parser_dir.add_argument(
-        "--recursive", action="store_true", help="Process subdirectories",
+        "--recursive",
+        action="store_true",
+        help="Process subdirectories",
     )
 
     # Subparser for batch processing
     parser_batch = subparsers.add_parser(
-        "batch", help="Process a batch of files from a JSON file",
+        "batch",
+        help="Process a batch of files from a JSON file",
     )
     parser_batch.add_argument("file", help="Path to JSON file with file information")
 
     # Subparser for uploading to database
     parser_upload = subparsers.add_parser(
-        "upload", help="Upload processed data to the database",
+        "upload",
+        help="Upload processed data to the database",
     )
     parser_upload.add_argument("--config", help="Path to database configuration file")
 

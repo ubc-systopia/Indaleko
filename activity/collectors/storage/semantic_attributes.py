@@ -154,9 +154,7 @@ ITEM_TYPE_TO_SEMANTIC_ATTRIBUTE = {
 }
 
 
-def get_storage_activity_semantic_attributes() -> (
-    list[IndalekoSemanticAttributeDataModel]
-):
+def get_storage_activity_semantic_attributes() -> list[IndalekoSemanticAttributeDataModel]:
     """
     Get all defined semantic attributes for storage activities.
 
@@ -240,7 +238,9 @@ def get_semantic_attributes_for_activity(
     if item_type and item_type in ITEM_TYPE_TO_SEMANTIC_ATTRIBUTE:
         attributes.append(
             IndalekoSemanticAttributeDataModel(
-                Identifier=uuid_to_str(ITEM_TYPE_TO_SEMANTIC_ATTRIBUTE[item_type].value),
+                Identifier=uuid_to_str(
+                    ITEM_TYPE_TO_SEMANTIC_ATTRIBUTE[item_type].value,
+                ),
             ),
         )
 
@@ -281,11 +281,7 @@ def get_semantic_attributes_for_activity(
         )
 
     # Add file extension attribute if present
-    if (
-        "file_name" in activity_data
-        and activity_data["file_name"]
-        and "." in activity_data["file_name"]
-    ):
+    if "file_name" in activity_data and activity_data["file_name"] and "." in activity_data["file_name"]:
         extension = activity_data["file_name"].split(".")[-1].lower()
         attributes.append(
             IndalekoSemanticAttributeDataModel(

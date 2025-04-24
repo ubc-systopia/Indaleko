@@ -44,7 +44,8 @@ except ImportError as e:
     class IndalekoBaseCliDataModel:
         def __init__(self, **kwargs):
             self.RegistrationServiceName = kwargs.get(
-                "RegistrationServiceName", "TestCLI",
+                "RegistrationServiceName",
+                "TestCLI",
             )
             self.FileServiceName = kwargs.get("FileServiceName", "TestCLI")
             self.ConfigDirectory = kwargs.get("ConfigDirectory", "./config")
@@ -206,10 +207,14 @@ def test_cli_integration(args: list[str] | None = None) -> None:
     )
     parser.add_argument("--command", help="Execute a single command and exit")
     parser.add_argument(
-        "--mock", action="store_true", help="Force mock mode even if imports succeeded",
+        "--mock",
+        action="store_true",
+        help="Force mock mode even if imports succeeded",
     )
     parser.add_argument(
-        "--debug", action="store_true", help="Show detailed error information",
+        "--debug",
+        action="store_true",
+        help="Show detailed error information",
     )
     parsed_args = parser.parse_args(args)
 

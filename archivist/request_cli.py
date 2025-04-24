@@ -44,7 +44,10 @@ class RequestArchivistCLI(IndalekoBaseCLI):
     """Command-line interface for the Request-based Archivist assistant."""
 
     def __init__(
-        self, model: str = "gpt-4o", debug: bool = False, batch_mode: bool = False,
+        self,
+        model: str = "gpt-4o",
+        debug: bool = False,
+        batch_mode: bool = False,
     ):
         """
         Initialize the CLI for the Request-based Archivist.
@@ -183,11 +186,7 @@ To use the CLI, simply type your query and press Enter.
 
         try:
             with open(input_file) as f:
-                queries = [
-                    line.strip()
-                    for line in f
-                    if line.strip() and not line.strip().startswith("#")
-                ]
+                queries = [line.strip() for line in f if line.strip() and not line.strip().startswith("#")]
 
             print(
                 f"{Fore.GREEN}Processing {len(queries)} queries from {input_file}{Style.RESET_ALL}",
@@ -221,7 +220,8 @@ To use the CLI, simply type your query and press Enter.
 
             start_time = time.time()
             response = self.assistant.process_message(
-                conversation_id=self.conversation_id, message_content=message,
+                conversation_id=self.conversation_id,
+                message_content=message,
             )
             end_time = time.time()
 
@@ -351,9 +351,7 @@ To use the CLI, simply type your query and press Enter.
             print(f"\n{Fore.CYAN}Messages:{Style.RESET_ALL}")
             for i, msg in enumerate(conversation.messages):
                 role_color = (
-                    Fore.BLUE
-                    if msg.role == "user"
-                    else (Fore.GREEN if msg.role == "assistant" else Fore.YELLOW)
+                    Fore.BLUE if msg.role == "user" else (Fore.GREEN if msg.role == "assistant" else Fore.YELLOW)
                 )
                 print(
                     f"\n{role_color}{msg.role.capitalize()} ({msg.timestamp}):{Style.RESET_ALL}",
@@ -439,9 +437,7 @@ Named Entity Commands:
 
             entity_type = parts[0].strip().lower()
             entity_name = parts[1].strip()
-            entity_description = (
-                parts[2].strip() if len(parts) > 2 else f"User-added {entity_type}"
-            )
+            entity_description = parts[2].strip() if len(parts) > 2 else f"User-added {entity_type}"
 
             # Validate entity type
             valid_types = [
@@ -522,7 +518,8 @@ Named Entity Commands:
 
             # Execute the query
             cursor = self.assistant.db_config._arangodb.aql.execute(
-                aql_query, bind_vars=bind_vars,
+                aql_query,
+                bind_vars=bind_vars,
             )
             entities = [doc for doc in cursor]
 
@@ -612,7 +609,8 @@ Named Entity Commands:
             """
 
             cursor = self.assistant.db_config._arangodb.aql.execute(
-                aql_query, bind_vars={"name": name, "type": entity_type},
+                aql_query,
+                bind_vars={"name": name, "type": entity_type},
             )
 
             existing = [doc for doc in cursor]
@@ -688,7 +686,8 @@ Named Entity Commands:
 
             # Execute the query
             cursor = self.assistant.db_config._arangodb.aql.execute(
-                aql_query, bind_vars={"term": search_term},
+                aql_query,
+                bind_vars={"term": search_term},
             )
 
             entities = [doc for doc in cursor]
@@ -772,7 +771,8 @@ Archivist Memory Commands:
 
                 name, description = subargs.split(":", 1)
                 self.assistant.archivist_memory.add_long_term_goal(
-                    name.strip(), description.strip(),
+                    name.strip(),
+                    description.strip(),
                 )
                 self.assistant.archivist_memory.save_memory()
                 print(f"{Fore.GREEN}Goal added: {name.strip()}{Style.RESET_ALL}")
@@ -807,7 +807,9 @@ Archivist Memory Commands:
                 else:
                     print(f"{Fore.CYAN}Topics of Interest:{Style.RESET_ALL}")
                     for topic, importance in sorted(
-                        topics.items(), key=lambda x: x[1], reverse=True,
+                        topics.items(),
+                        key=lambda x: x[1],
+                        reverse=True,
                     ):
                         print(f"  - {topic} (importance: {importance:.2f})")
 
@@ -823,14 +825,17 @@ def main():
     parser.add_argument("--model", default="gpt-4o", help="The OpenAI model to use")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
     parser.add_argument(
-        "--batch", help="Run in batch mode with the specified input file",
+        "--batch",
+        help="Run in batch mode with the specified input file",
     )
 
     args = parser.parse_args()
 
     # Create and run the CLI
     cli = RequestArchivistCLI(
-        model=args.model, debug=args.debug, batch_mode=bool(args.batch),
+        model=args.model,
+        debug=args.debug,
+        batch_mode=bool(args.batch),
     )
 
     if args.batch:

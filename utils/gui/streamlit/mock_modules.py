@@ -21,7 +21,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-
 # Mock IndalekoConstants
 from datetime import UTC
 
@@ -279,11 +278,7 @@ class EnhancedAQLTranslator:
         )
 
     def translate_enhanced(self, parsed_query, **kwargs):
-        query_text = (
-            parsed_query.get("query", "")
-            if isinstance(parsed_query, dict)
-            else str(parsed_query)
-        )
+        query_text = parsed_query.get("query", "") if isinstance(parsed_query, dict) else str(parsed_query)
 
         # Create a more realistic looking query based on the input text
         if "file" in query_text.lower() or "document" in query_text.lower():
@@ -400,9 +395,7 @@ class FacetGenerator:
     def generate(self, results):
         """Generate dynamic facets from search results."""
         # For mock results, examine the structure and generate appropriate facets
-        if not results or (
-            not isinstance(results, list) and not isinstance(results, dict)
-        ):
+        if not results or (not isinstance(results, list) and not isinstance(results, dict)):
             return {}
 
         facets = {}

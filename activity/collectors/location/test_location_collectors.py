@@ -88,7 +88,9 @@ class TestIPLocation(unittest.TestCase):
         self.assertEqual(data, latest)
         now = datetime.datetime.now(datetime.UTC)
         history = loc.retrieve_temporal_data(
-            now, datetime.timedelta(minutes=1), datetime.timedelta(minutes=1),
+            now,
+            datetime.timedelta(minutes=1),
+            datetime.timedelta(minutes=1),
         )
         self.assertIsInstance(history, list)
         self.assertIn(latest, history)
@@ -157,7 +159,9 @@ class TestWiFiLocation(unittest.TestCase):
         self.assertEqual(data, latest)
         now = datetime.datetime.now(datetime.UTC)
         history = loc.retrieve_temporal_data(
-            now, datetime.timedelta(minutes=1), datetime.timedelta(minutes=1),
+            now,
+            datetime.timedelta(minutes=1),
+            datetime.timedelta(minutes=1),
         )
         self.assertIsInstance(history, list)
         self.assertIn(latest, history)

@@ -134,7 +134,10 @@ class IndalekoAnalyzerManagerCLI(IndalekoBaseCLI):
         # List analyzers command
         list_parser = subparsers.add_parser("list", help="List all analyzers")
         list_parser.add_argument(
-            "-v", "--verbose", action="store_true", help="Show analyzer properties",
+            "-v",
+            "--verbose",
+            action="store_true",
+            help="Show analyzer properties",
         )
         list_parser.set_defaults(func=IndalekoAnalyzerManagerCLI.list_analyzers_command)
 
@@ -169,7 +172,8 @@ class IndalekoAnalyzerManagerCLI(IndalekoBaseCLI):
 
         # Command command to show the arangosh command
         command_parser = subparsers.add_parser(
-            "command", help="Show arangosh command for analyzer creation",
+            "command",
+            help="Show arangosh command for analyzer creation",
         )
         command_parser.set_defaults(func=IndalekoAnalyzerManagerCLI.command_command)
 
@@ -186,7 +190,10 @@ def main():
 
     # Add debug flag
     parser.add_argument(
-        "-d", "--debug", action="store_true", help="Enable debug logging",
+        "-d",
+        "--debug",
+        action="store_true",
+        help="Enable debug logging",
     )
 
     # Add direct execution flag
@@ -208,7 +215,8 @@ def main():
     # Configure logging
     log_level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(
-        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
     # Handle direct execution request

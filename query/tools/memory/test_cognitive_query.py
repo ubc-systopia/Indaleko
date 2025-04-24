@@ -80,7 +80,8 @@ def run_test(
     # Configure logging
     log_level = logging.DEBUG if debug else logging.INFO
     logging.basicConfig(
-        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
     logger = logging.getLogger("cognitive_memory_test")
 
@@ -110,7 +111,8 @@ def run_test(
 
         # Create tool input
         input_data = ToolInput(
-            tool_name="cognitive_memory_query", parameters=parameters,
+            tool_name="cognitive_memory_query",
+            parameters=parameters,
         )
 
         # Define progress callback
@@ -173,7 +175,10 @@ def main():
 
     # Add arguments
     parser.add_argument(
-        "--query", type=str, required=True, help="The search query to execute",
+        "--query",
+        type=str,
+        required=True,
+        help="The search query to execute",
     )
     parser.add_argument(
         "--memory-tiers",
@@ -205,7 +210,10 @@ def main():
         help="Include entity relationships in results",
     )
     parser.add_argument(
-        "--limit", type=int, default=10, help="Maximum number of results per tier",
+        "--limit",
+        type=int,
+        default=10,
+        help="Maximum number of results per tier",
     )
     parser.add_argument(
         "--db-config",
@@ -214,7 +222,10 @@ def main():
         help="Path to the database configuration file",
     )
     parser.add_argument(
-        "--output", type=str, default=None, help="Path to save the results as JSON",
+        "--output",
+        type=str,
+        default=None,
+        help="Path to save the results as JSON",
     )
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
 
@@ -313,14 +324,8 @@ def main():
             print("\nTop results:")
             for i, result in enumerate(result_list[:5]):  # Show top 5
                 memory_tier = result.get("memory_tier", "unknown")
-                file_path = (
-                    result.get("Record", {}).get("Data", {}).get("file_path", "unknown")
-                )
-                importance = (
-                    result.get("Record", {})
-                    .get("Data", {})
-                    .get("importance_score", 0.0)
-                )
+                file_path = result.get("Record", {}).get("Data", {}).get("file_path", "unknown")
+                importance = result.get("Record", {}).get("Data", {}).get("importance_score", 0.0)
                 print(
                     f"  {i+1}. [{memory_tier}] {file_path} (importance: {importance:.2f})",
                 )

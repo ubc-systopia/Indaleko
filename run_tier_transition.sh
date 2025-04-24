@@ -48,11 +48,13 @@ AGE_HOURS=12
 BATCH_SIZE=1000
 MAX_BATCHES=10
 DB_CONFIG=""
+SCHEDULED=0
+INTERVAL=60
 
 # Process command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --stats-only)
+        --stats)
             STATS_ONLY=1
             shift
             ;;
@@ -84,19 +86,29 @@ while [[ $# -gt 0 ]]; do
             DB_CONFIG="$2"
             shift 2
             ;;
+        --schedule)
+            SCHEDULED=1
+            shift
+            ;;
+        --interval)
+            INTERVAL="$2"
+            shift 2
+            ;;
         --help)
             echo "Indaleko NTFS Tier Transition Utility"
             echo ""
             echo "Usage: $0 [options]"
             echo ""
             echo "Options:"
-            echo "  --stats-only         Show tier transition statistics without running transition"
+            echo "  --stats              Show tier transition statistics"
             echo "  --run                Run the tier transition"
             echo "  --verbose            Show more detailed output"
             echo "  --debug              Enable debug logging"
             echo "  --age-hours N        Age threshold in hours for transition (default: 12)"
             echo "  --batch-size N       Number of activities to process in each batch (default: 1000)"
             echo "  --max-batches N      Maximum number of batches to process (default: 10)"
+            echo "  --schedule           Run scheduled transitions at regular intervals"
+            echo "  --interval N         Minutes between scheduled runs (default: 60)"
             echo "  --db-config PATH     Path to database configuration file"
             echo "  --help               Show this help message"
             echo ""
@@ -110,9 +122,11 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# If neither stats-only nor run is specified, default to stats-only
-if [ $STATS_ONLY -eq 0 ] && [ $RUN_TRANSITION -eq 0 ]; then
-    STATS_ONLY=1
+# If neither stats nor run is specified, show help
+if [ $STATS_ONLY -eq 0 ] && [ $RUN_TRANSITION -eq 0 ] && [ $SCHEDULED -eq 0 ]; then
+    echo "Error: Must specify one of --stats, --run, or --schedule"
+    echo "Use --help for usage information"
+    exit 1
 fi
 
 # Build command arguments
@@ -124,6 +138,10 @@ fi
 
 if [ $RUN_TRANSITION -eq 1 ]; then
     COMMAND_ARGS="$COMMAND_ARGS --run"
+fi
+
+if [ $SCHEDULED -eq 1 ]; then
+    COMMAND_ARGS="$COMMAND_ARGS --schedule --interval $INTERVAL"
 fi
 
 if [ $VERBOSE -eq 1 ]; then
@@ -140,11 +158,19 @@ if [ ! -z "$DB_CONFIG" ]; then
     COMMAND_ARGS="$COMMAND_ARGS --db-config '$DB_CONFIG'"
 fi
 
+# Make sure logs directory exists
+mkdir -p "$SCRIPT_DIR/logs"
+
 # Run the tier transition utility
 echo "Running NTFS Tier Transition Utility..."
 echo ""
 
-python -m activity.recorders.storage.ntfs.tiered.tier_transition $COMMAND_ARGS
+python "$SCRIPT_DIR/run_tier_transition.py" $COMMAND_ARGS
+
+# Get exit code
+EXIT_CODE=$?
 
 # Deactivate the virtual environment
 deactivate
+
+exit $EXIT_CODE

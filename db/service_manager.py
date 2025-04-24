@@ -86,23 +86,13 @@ class IndalekoServiceManager(IndalekoSingleton):
     ), f"{indaleko_services} must be in Indaleko_Collections"
 
     service_type_test = IndalekoConstants.service_type_test
-    service_type_machine_configuration = (
-        IndalekoConstants.service_type_machine_configuration
-    )
+    service_type_machine_configuration = IndalekoConstants.service_type_machine_configuration
     service_type_storage_collector = IndalekoConstants.service_type_storage_collector
     service_type_storage_recorder = IndalekoConstants.service_type_storage_recorder
-    service_type_semantic_transducer = (
-        IndalekoConstants.service_type_semantic_transducer
-    )
-    service_type_activity_context_generator = (
-        IndalekoConstants.service_type_activity_context_generator
-    )
-    service_type_activity_data_collector = (
-        IndalekoConstants.service_type_activity_data_collector
-    )
-    service_type_activity_data_registrar = (
-        IndalekoConstants.service_type_activity_data_registrar
-    )
+    service_type_semantic_transducer = IndalekoConstants.service_type_semantic_transducer
+    service_type_activity_context_generator = IndalekoConstants.service_type_activity_context_generator
+    service_type_activity_data_collector = IndalekoConstants.service_type_activity_data_collector
+    service_type_activity_data_registrar = IndalekoConstants.service_type_activity_data_registrar
 
     service_types = (
         service_type_test,
@@ -149,7 +139,10 @@ class IndalekoServiceManager(IndalekoSingleton):
         )
         self.service_collection.add_schema(IndalekoServiceManager.Schema)
         self.service_collection.create_index(
-            name="service name", fields=["Name"], type="persistent", unique=True,
+            name="service name",
+            fields=["Name"],
+            type="persistent",
+            unique=True,
         )
         return self.service_collection
 
@@ -158,9 +151,7 @@ class IndalekoServiceManager(IndalekoSingleton):
         This method is used to lookup a service by name.
         """
         entries = self.service_collection.find_entries(Name=name)
-        assert (
-            len(entries) < 2
-        ), f"Multiple entries found for service {name}, not handled."
+        assert len(entries) < 2, f"Multiple entries found for service {name}, not handled."
         if len(entries) == 0:
             return None
         else:
@@ -173,9 +164,7 @@ class IndalekoServiceManager(IndalekoSingleton):
         if not validate_uuid_string(service_identifier):
             raise ValueError(f"{service_identifier} is not a valid UUID.")
         entries = self.service_collection.find_entries(Identifier=service_identifier)
-        assert (
-            len(entries) < 2
-        ), f"Multiple entries found for service {service_identifier}, not handled."
+        assert len(entries) < 2, f"Multiple entries found for service {service_identifier}, not handled."
         if len(entries) == 0:
             return None
         else:
@@ -194,9 +183,7 @@ class IndalekoServiceManager(IndalekoSingleton):
         This method registers a service with the given name, description, and
         version in the database.
         """
-        assert (
-            service_type in IndalekoServiceManager.service_types
-        ), f"Invalid service type {service_type} specified."
+        assert service_type in IndalekoServiceManager.service_types, f"Invalid service type {service_type} specified."
         existing_service = None
         if service_id is not None:
             existing_service = self.lookup_service_by_identifier(str(service_id))
@@ -334,7 +321,10 @@ def main():
     timestamp = now.isoformat()
     parser = argparse.ArgumentParser(description="Indaleko Service Manager")
     parser.add_argument(
-        "--logdir", type=str, default=indaleko_default_log_dir, help="Log directory",
+        "--logdir",
+        type=str,
+        default=indaleko_default_log_dir,
+        help="Log directory",
     )
     parser.add_argument("--log", type=str, default=None, help="Log file name")
     parser.add_argument(
@@ -349,31 +339,40 @@ def main():
     # Set up the test logic
     test_subparser = parser_test.add_subparsers(dest="test_command")
     parser_test_create = test_subparser.add_parser(
-        "create", help="Create the test service manager",
+        "create",
+        help="Create the test service manager",
     )
     parser_test_create.set_defaults(func=IndalekoServiceManagerTest.test_create_service)
     parser_test_lookup = test_subparser.add_parser(
-        "lookup", help="Lookup the test service",
+        "lookup",
+        help="Lookup the test service",
     )
     parser_test_lookup.set_defaults(func=IndalekoServiceManagerTest.test_lookup_service)
     parser_test_delete = test_subparser.add_parser(
-        "delete", help="Delete the test service",
+        "delete",
+        help="Delete the test service",
     )
     parser_test_delete.set_defaults(func=IndalekoServiceManagerTest.test_delete_service)
     # List the registered services
     parser_list = command_subparser.add_parser(
-        "list", help="List the registered services",
+        "list",
+        help="List the registered services",
     )
     parser_list.set_defaults(func=list_services)
     # Delete a registered service
     parser_delete = command_subparser.add_parser(
-        "delete", help="Delete a registered services",
+        "delete",
+        help="Delete a registered services",
     )
     parser_delete.add_argument(
-        "--name", type=str, help="The name of the service to delete",
+        "--name",
+        type=str,
+        help="The name of the service to delete",
     )
     parser_delete.add_argument(
-        "--identifier", type=str, help="The identifier of the service to delete",
+        "--identifier",
+        type=str,
+        help="The identifier of the service to delete",
     )
     parser_delete.set_defaults(func=delete_service)
     parser.set_defaults(func=list_services)
@@ -381,7 +380,9 @@ def main():
     ic(args)
     if args.log is None:
         args.log = generate_file_name(
-            suffix="log", service="IndalekoServiceManager", timestamp=timestamp,
+            suffix="log",
+            service="IndalekoServiceManager",
+            timestamp=timestamp,
         )
     indaleko_logging = IndalekoLogging(
         service_name="IndalekoServiceManager",

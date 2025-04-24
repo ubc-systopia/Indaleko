@@ -1,8 +1,8 @@
-import uuid
-from arango import ArangoClient
-import time
 import json
+import uuid
+
 import jsonschema
+from arango import ArangoClient
 
 json_relationship_schema = {
     "$schema": "https://json-schema.org/draft/2020-12/schema#",

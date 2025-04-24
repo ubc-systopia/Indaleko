@@ -20,9 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import datetime
+import json
 import logging
 import os
-import json
 import sys
 import uuid
 
@@ -41,8 +41,8 @@ from data_models import IndalekoRecordDataModel
 from db import IndalekoServiceManager
 from platforms.linux.machine_config import IndalekoLinuxMachineConfig
 from platforms.posix import IndalekoPosix
-from storage.i_object import IndalekoObject
 from storage.collectors.local.linux.collector import IndalekoLinuxLocalStorageCollector
+from storage.i_object import IndalekoObject
 from storage.recorders.base import BaseStorageRecorder
 from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from storage.recorders.local.local_base import BaseLocalStorageRecorder
@@ -93,11 +93,11 @@ class IndalekoLinuxLocalStorageRecorder(BaseLocalStorageRecorder):
                 logging.warning(
                     "Warning: machine ID of collector file "
                     + f'({kwargs["machine"]}) does not match machine ID of recorder '
-                    + f"({self.machine_config.machine_id}.)"
+                    + f"({self.machine_config.machine_id}.)",
                 )
         if "timestamp" not in kwargs:
             kwargs["timestamp"] = datetime.datetime.now(
-                datetime.timezone.utc
+                datetime.UTC,
             ).isoformat()
         if "platform" not in kwargs:
             kwargs["platform"] = IndalekoLinuxLocalStorageRecorder.linux_platform
@@ -123,7 +123,7 @@ class IndalekoLinuxLocalStorageRecorder(BaseLocalStorageRecorder):
         return [
             x
             for x in IndalekoLinuxLocalStorageCollector.find_collector_files(
-                self.data_dir
+                self.data_dir,
             )
             if IndalekoLinuxLocalStorageCollector.linux_platform in x
             and IndalekoLinuxLocalStorageCollector.linux_local_collector_name in x
@@ -148,42 +148,48 @@ class IndalekoLinuxLocalStorageRecorder(BaseLocalStorageRecorder):
                 {
                     "Label": IndalekoObject.CREATION_TIMESTAMP,
                     "Value": datetime.datetime.fromtimestamp(
-                        data["st_birthtime"], datetime.timezone.utc
+                        data["st_birthtime"],
+                        datetime.UTC,
                     ).isoformat(),
                     "Description": "Created",
-                }
+                },
             )
         if "st_mtime" in data:
             timestamps.append(
                 {
                     "Label": IndalekoObject.MODIFICATION_TIMESTAMP,
                     "Value": datetime.datetime.fromtimestamp(
-                        data["st_mtime"], datetime.timezone.utc
+                        data["st_mtime"],
+                        datetime.UTC,
                     ).isoformat(),
                     "Description": "Modified",
-                }
+                },
             )
         if "st_atime" in data:
             timestamps.append(
                 {
                     "Label": IndalekoObject.ACCESS_TIMESTAMP,
                     "Value": datetime.datetime.fromtimestamp(
-                        data["st_atime"], datetime.timezone.utc
+                        data["st_atime"],
+                        datetime.UTC,
                     ).isoformat(),
                     "Description": "Accessed",
-                }
+                },
             )
         if "st_ctime" in data:
             timestamps.append(
                 {
                     "Label": IndalekoObject.CHANGE_TIMESTAMP,
                     "Value": datetime.datetime.fromtimestamp(
-                        data["st_ctime"], datetime.timezone.utc
+                        data["st_ctime"],
+                        datetime.UTC,
                     ).isoformat(),
                     "Description": "Changed",
-                }
+                },
             )
-        semantic_attributes = self.map_posix_storage_attributes_to_semantic_attributes(data)
+        semantic_attributes = self.map_posix_storage_attributes_to_semantic_attributes(
+            data,
+        )
         kwargs = {
             "URI": data["URI"],
             "ObjectIdentifier": oid,
@@ -194,7 +200,7 @@ class IndalekoLinuxLocalStorageRecorder(BaseLocalStorageRecorder):
         }
         if "st_mode" in data:
             kwargs["PosixFileAttributes"] = IndalekoPosix.map_file_attributes(
-                data["st_mode"]
+                data["st_mode"],
             )
         if "st_ino" in data:
             kwargs["LocalIdentifier"] = str(data["st_ino"])

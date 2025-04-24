@@ -81,10 +81,7 @@ def process_directory(directory_path, recursive=False, extensions=None):
 
     # Filter by extensions if provided
     if extensions:
-        extensions = [
-            ext.lower() if ext.startswith(".") else f".{ext.lower()}"
-            for ext in extensions
-        ]
+        extensions = [ext.lower() if ext.startswith(".") else f".{ext.lower()}" for ext in extensions]
         print(f"Filtering by extensions: {', '.join(extensions)}")
 
     # Define the glob pattern based on recursion
@@ -120,7 +117,9 @@ def process_directory(directory_path, recursive=False, extensions=None):
     print(f"\nProcessed {total_files} files in {directory_path}")
     print("\nMIME Type Distribution:")
     for mime_type, count in sorted(
-        mime_types.items(), key=lambda x: x[1], reverse=True,
+        mime_types.items(),
+        key=lambda x: x[1],
+        reverse=True,
     ):
         percentage = (count / total_files) * 100 if total_files > 0 else 0
         print(f"  {mime_type}: {count} files ({percentage:.1f}%)")
@@ -139,7 +138,8 @@ def main():
 
     # Directory command
     dir_parser = subparsers.add_parser(
-        "directory", help="Process all files in a directory",
+        "directory",
+        help="Process all files in a directory",
     )
     dir_parser.add_argument("directory_path", help="Path to the directory to process")
     dir_parser.add_argument(

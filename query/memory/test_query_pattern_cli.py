@@ -112,18 +112,12 @@ def run_demo():
     # Prepare results for serialization
     results = {
         "timestamp": datetime.now(UTC).isoformat(),
-        "query_count": (
-            len(analyzer.data.queries) if hasattr(analyzer.data, "queries") else 0
-        ),
+        "query_count": (len(analyzer.data.queries) if hasattr(analyzer.data, "queries") else 0),
         "patterns": (
-            [p.model_dump() for p in analyzer.data.query_patterns]
-            if hasattr(analyzer.data, "query_patterns")
-            else []
+            [p.model_dump() for p in analyzer.data.query_patterns] if hasattr(analyzer.data, "query_patterns") else []
         ),
         "chains": (
-            [c.model_dump() for c in analyzer.data.query_chains]
-            if hasattr(analyzer.data, "query_chains")
-            else []
+            [c.model_dump() for c in analyzer.data.query_chains] if hasattr(analyzer.data, "query_chains") else []
         ),
         "entity_usage": (
             {k: v.model_dump() for k, v in analyzer.data.entity_usage.items()}
@@ -150,7 +144,8 @@ def main():
     # Configure logging
     log_level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(
-        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
     run_demo()

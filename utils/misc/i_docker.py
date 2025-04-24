@@ -3,12 +3,13 @@ This module provides an interface to managing the Docker components within
 Indaleko.
 """
 
+import argparse
+import json
+import logging
 import os
 import sys
-import logging
-import argparse
+
 import docker
-import json
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -19,9 +20,9 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 # from Indaleko import Indaleko
-from utils.i_logging import IndalekoLogging
 import utils.misc.directory_management
 import utils.misc.file_name_management
+from utils.i_logging import IndalekoLogging
 
 # pylint: enable=wrong-import-position
 
@@ -40,10 +41,10 @@ class IndalekoDocker:
         try:
             self.docker_client = docker.from_env()
         except docker.errors.DockerException as error:
-            logging.error("Failed to connect to Docker: %s", error)
+            logging.exception("Failed to connect to Docker: %s", error)
             print(f"Failed to connect to Docker: {error}")
             print(
-                "Please make sure Docker is running and you have the correct permissions."
+                "Please make sure Docker is running and you have the correct permissions.",
             )
             exit(1)
         self.docker_client.ping()
@@ -74,8 +75,7 @@ class IndalekoDocker:
         return [
             container.name
             for container in containers
-            if utils.misc.file_name_management.indaleko_file_name_prefix
-            in container.name
+            if utils.misc.file_name_management.indaleko_file_name_prefix in container.name
         ]
 
     def list_volumes(self) -> list:
@@ -88,7 +88,10 @@ class IndalekoDocker:
         ]
 
     def create_container(
-        self, container_name: str = None, volume_name: str = None, password: str = None
+        self,
+        container_name: str = None,
+        volume_name: str = None,
+        password: str = None,
     ) -> None:
         """Add a new Indaleko related Docker container."""
         if container_name is not None:
@@ -144,7 +147,8 @@ class IndalekoDocker:
             raise ValueError("container_name must be provided")
         if container_name not in self.list_containers(all=True):
             logging.warning(
-                "Container %s does not exist, cannot delete", container_name
+                "Container %s does not exist, cannot delete",
+                container_name,
             )
             print(f"Container {container_name} does not exist, cannot delete")
             return
@@ -157,7 +161,7 @@ class IndalekoDocker:
                 container_name,
             )
             print(
-                f"Container {container_name} is running, cannot stop, so cannot delete."
+                f"Container {container_name} is running, cannot stop, so cannot delete.",
             )
             return
         self.docker_client.containers.get(container_name).remove()
@@ -185,15 +189,16 @@ class IndalekoDocker:
             return
         container = self.docker_client.containers.get(container_name)
         logging.debug(
-            "Container %s: %s", container_name, json.dumps(container.attrs, indent=2)
+            "Container %s: %s",
+            container_name,
+            json.dumps(container.attrs, indent=2),
         )
         mounts = container.attrs["HostConfig"]["Mounts"]
         db_mount = None
         for mount in mounts:
             if (
                 mount["Type"] == "volume"
-                and utils.misc.file_name_management.indaleko_file_name_prefix
-                in mount["Source"]
+                and utils.misc.file_name_management.indaleko_file_name_prefix in mount["Source"]
             ):
                 assert db_mount is None, "Found more than one Indaleko volume mount"
                 db_mount = mount["Source"]
@@ -203,7 +208,7 @@ class IndalekoDocker:
         logging.info("Found mount %s for container %s", db_mount, container_name)
         logging.warning(
             "Note: if this update is interrupted, "
-            "you may need to manually rebuild the container and re-attach the volume."
+            "you may need to manually rebuild the container and re-attach the volume.",
         )
         logging.info("docker rm %s", container_name)
         logging.info("docker pull arangodb/arangodb:latest")
@@ -217,7 +222,9 @@ class IndalekoDocker:
         self.update_arango_image()
         # create a new container (using updated image)
         self.create_container(
-            container_name=container_name, volume_name=db_mount, password=db_password
+            container_name=container_name,
+            volume_name=db_mount,
+            password=db_password,
         )
         print(f"Updated container {container_name} to latest image.")
 
@@ -240,23 +247,28 @@ class IndalekoDocker:
             raise ValueError("container_name must be provided")
         if container_name not in self.list_containers(all=True):
             logging.warning(
-                "Container %s does not exist, cannot reset volume", container_name
+                "Container %s does not exist, cannot reset volume",
+                container_name,
             )
             print(f"Container {container_name} does not exist, cannot reset volume")
             return
         container = self.docker_client.containers.get(container_name)
         logging.debug(
-            "Container %s: %s", container_name, json.dumps(container.attrs, indent=2)
+            "Container %s: %s",
+            container_name,
+            json.dumps(container.attrs, indent=2),
         )
         if "HostConfig" not in container.attrs:
             logging.warning(
-                "Container %s has no HostConfig, cannot reset volume", container_name
+                "Container %s has no HostConfig, cannot reset volume",
+                container_name,
             )
             print(f"Container {container_name} has no HostConfig, cannot reset volume")
             return
         if "Mounts" not in container.attrs["HostConfig"]:
             logging.warning(
-                "Container %s has no mounts, cannot reset volume", container_name
+                "Container %s has no mounts, cannot reset volume",
+                container_name,
             )
             print(f"Container {container_name} has no mounts, cannot reset volume")
             return
@@ -265,8 +277,7 @@ class IndalekoDocker:
         for mount in mounts:
             if (
                 mount["Type"] == "volume"
-                and utils.misc.file_name_management.indaleko_file_name_prefix
-                in mount["Source"]
+                and utils.misc.file_name_management.indaleko_file_name_prefix in mount["Source"]
             ):
                 assert db_mount is None, "Found more than one Indaleko volume mount"
                 db_mount = mount["Source"]
@@ -275,7 +286,8 @@ class IndalekoDocker:
         restart = False
         if container_name in self.list_containers():
             logging.info(
-                "Stopping container %s (before resetting volume)", container_name
+                "Stopping container %s (before resetting volume)",
+                container_name,
             )
             self.stop_container(container_name)
             restart = True
@@ -287,7 +299,9 @@ class IndalekoDocker:
         self.create_volume(volume_name=db_mount)
         logging.info("Creating container %s (reset volume)", container_name)
         self.create_container(
-            container_name=container_name, volume_name=db_mount, password=db_password
+            container_name=container_name,
+            volume_name=db_mount,
+            password=db_password,
         )
         if restart:
             logging.info("Starting container %s (reset volume)", container_name)
@@ -300,7 +314,7 @@ def list_volumes(args: argparse.Namespace) -> None:
     volumes = args.indaleko_docker.list_volumes()
     print("Indaleko volumes:")
     for volume in volumes:
-        print("  {}".format(volume))
+        print(f"  {volume}")
 
 
 def list_containers(args: argparse.Namespace) -> None:
@@ -317,9 +331,9 @@ def list_containers(args: argparse.Namespace) -> None:
     print("Indaleko containers:")
     for container in containers:
         if container in running_containers:
-            print("  {} (running)".format(container))
+            print(f"  {container} (running)")
         else:
-            print("  {} (stopped)".format(container))
+            print(f"  {container} (stopped)")
 
 
 def stop_command(args: argparse.Namespace) -> None:
@@ -327,7 +341,7 @@ def stop_command(args: argparse.Namespace) -> None:
     assert hasattr(args, "indaleko_docker"), "args does not have indaleko_docker"
     containers = args.indaleko_docker.list_containers()
     for container in containers:
-        print("Stopping container {}".format(container))
+        print(f"Stopping container {container}")
         args.indaleko_docker.stop_container(container)
 
 
@@ -340,13 +354,11 @@ def start_command(args: argparse.Namespace) -> None:
         logging.warning("Indaleko containers already running: %s", running_containers)
         print("Indaleko containers already running:")
         for container in running_containers:
-            print("  {}".format(container))
+            print(f"  {container}")
         return
     container = all_containers[-1]  # newest one
     print(
-        "Starting container {} returns {}".format(
-            container, args.indaleko_docker.start_container(container)
-        )
+        f"Starting container {container} returns {args.indaleko_docker.start_container(container)}",
     )
 
 
@@ -357,7 +369,7 @@ def update_command(args: argparse.Namespace) -> None:
     containers = args.indaleko_docker.list_containers(all=args.all)
     for container in containers:
         logging.info("Updating container %s", container)
-        print("Updating container {}".format(container))
+        print(f"Updating container {container}")
         args.indaleko_docker.update_container(container)
 
 
@@ -370,7 +382,7 @@ def reset_command(args: argparse.Namespace) -> None:
     containers = args.indaleko_docker.list_containers(all=args.all)
     for container in containers:
         logging.info("Resetting container %s", container)
-        print("Resetting container {}".format(container))
+        print(f"Resetting container {container}")
         args.indaleko_docker.reset_container_volume(container)
 
 
@@ -379,7 +391,9 @@ def main():
     print("Welcome to Indaleko Docker Management")
     parser = argparse.ArgumentParser(description="Indaleko docker management")
     parser.add_argument(
-        "--log-level", default=logging.INFO, help="Set the logging level."
+        "--log-level",
+        default=logging.INFO,
+        help="Set the logging level.",
     )
     parser.add_argument(
         "--log-file",
@@ -392,14 +406,19 @@ def main():
         help="Set the logging directory.",
     )
     subparser = parser.add_subparsers(
-        dest="command", title="command", help="command to execute"
+        dest="command",
+        title="command",
+        help="command to execute",
     )
     list_parser = subparser.add_parser(
         "list",
         help=f"List all {utils.misc.file_name_management.indaleko_file_name_prefix} containers.",
     )
     list_parser.add_argument(
-        "--all", default=False, action="store_true", help="List all containers."
+        "--all",
+        default=False,
+        action="store_true",
+        help="List all containers.",
     )
     parser.set_defaults(func=list_containers)
     listvol_parser = subparser.add_parser(
@@ -422,7 +441,10 @@ def main():
         help=f"Update the {utils.misc.file_name_management.indaleko_file_name_prefix} containers.",
     )
     update_parser.add_argument(
-        "--all", default=False, action="store_true", help="Update all containers."
+        "--all",
+        default=False,
+        action="store_true",
+        help="Update all containers.",
     )
     update_parser.set_defaults(func=update_command)
     reset_parser = subparser.add_parser(
@@ -430,7 +452,10 @@ def main():
         help=f"Reset the {utils.misc.file_name_management.indaleko_file_name_prefix} container volumes.",
     )
     reset_parser.add_argument(
-        "--all", default=False, action="store_true", help="Reset all containers."
+        "--all",
+        default=False,
+        action="store_true",
+        help="Reset all containers.",
     )
     reset_parser.set_defaults(func=reset_command)
     args = parser.parse_args()

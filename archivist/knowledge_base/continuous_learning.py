@@ -148,7 +148,9 @@ class ContinuousLearningSystem:
             self.logger.error(f"Error loading collection schemas: {e!s}")
 
     def _discover_classes(
-        self, module_paths: list[str], base_class_names: list[str],
+        self,
+        module_paths: list[str],
+        base_class_names: list[str],
     ) -> list[dict[str, Any]]:
         """
         Discover classes of specific types in the given module paths.
@@ -177,7 +179,8 @@ class ContinuousLearningSystem:
 
                 # Walk through the module and its submodules
                 for _, name, is_pkg in pkgutil.walk_packages(
-                    module.__path__, module.__name__ + ".",
+                    module.__path__,
+                    module.__name__ + ".",
                 ):
                     try:
                         # Skip __pycache__ directories
@@ -193,10 +196,7 @@ class ContinuousLearningSystem:
                                 attr = getattr(submodule, attr_name)
 
                                 # Check if it's a class and not imported from elsewhere
-                                if (
-                                    inspect.isclass(attr)
-                                    and attr.__module__ == submodule.__name__
-                                ):
+                                if inspect.isclass(attr) and attr.__module__ == submodule.__name__:
 
                                     # Check if it's a class of interest
                                     if is_subclass_of_interest(attr):
@@ -238,16 +238,13 @@ class ContinuousLearningSystem:
         if (
             not force
             and self._last_collector_discovery
-            and (now - self._last_collector_discovery).total_seconds()
-            < self.cache_duration
+            and (now - self._last_collector_discovery).total_seconds() < self.cache_duration
         ):
             return {
                 "collectors": self._collector_cache,
                 "recorders": self._recorder_cache,
                 "total_collectors": (
-                    sum(
-                        len(collectors) for collectors in self._collector_cache.values()
-                    )
+                    sum(len(collectors) for collectors in self._collector_cache.values())
                     if isinstance(self._collector_cache, dict)
                     else len(self._collector_cache)
                 ),
@@ -398,20 +395,20 @@ class ContinuousLearningSystem:
                     if fields:
                         # Detect schema changes
                         changes = self._detect_schema_changes(
-                            collection_name, fields, sample_doc,
+                            collection_name,
+                            fields,
+                            sample_doc,
                         )
 
                         if changes.get("change_detected", False):
                             schema_changes[collection_name] = changes
 
                         # Extract field usage patterns
-                        field_usage_patterns[collection_name] = (
-                            self._analyze_field_usage(collection_name, fields)
-                        )
+                        field_usage_patterns[collection_name] = self._analyze_field_usage(collection_name, fields)
 
                         # Calculate type distributions
-                        type_distributions[collection_name] = (
-                            self._calculate_type_distributions(collection_name, fields)
+                        type_distributions[collection_name] = self._calculate_type_distributions(
+                            collection_name, fields,
                         )
 
                         # Update aggregate field types
@@ -513,7 +510,10 @@ class ContinuousLearningSystem:
         return fields
 
     def _detect_schema_changes(
-        self, collection_name: str, fields: dict[str, Any], sample_doc: dict[str, Any],
+        self,
+        collection_name: str,
+        fields: dict[str, Any],
+        sample_doc: dict[str, Any],
     ) -> dict[str, Any]:
         """
         Detect changes in a collection schema.
@@ -623,7 +623,9 @@ class ContinuousLearningSystem:
         return changes
 
     def _analyze_field_usage(
-        self, collection_name: str, fields: dict[str, Any],
+        self,
+        collection_name: str,
+        fields: dict[str, Any],
     ) -> dict[str, Any]:
         """
         Analyze field usage in a collection.
@@ -669,9 +671,7 @@ class ContinuousLearningSystem:
 
                 # Flag unused required fields
                 if fields[field_name].get("required", False) and percentage < 100:
-                    usage_stats[field_name][
-                        "warning"
-                    ] = "Required field not present in all documents"
+                    usage_stats[field_name]["warning"] = "Required field not present in all documents"
 
                 # Flag rarely used fields
                 if percentage < 10 and not fields[field_name].get("required", False):
@@ -684,7 +684,9 @@ class ContinuousLearningSystem:
         return usage_stats
 
     def _calculate_type_distributions(
-        self, collection_name: str, fields: dict[str, Any],
+        self,
+        collection_name: str,
+        fields: dict[str, Any],
     ) -> dict[str, Any]:
         """
         Calculate value type distributions for fields.
@@ -750,9 +752,7 @@ class ContinuousLearningSystem:
                             type_counts["other"] += 1
 
                 # Calculate percentages
-                type_percentages = {
-                    t: (count / total) * 100 for t, count in type_counts.items()
-                }
+                type_percentages = {t: (count / total) * 100 for t, count in type_counts.items()}
 
                 # Store stats
                 type_stats[field_name] = {
@@ -775,9 +775,7 @@ class ContinuousLearningSystem:
                         consistency_issues.append(
                             "Field is declared as number but contains other types",
                         )
-                    elif (
-                        declared_type == "boolean" and type_percentages["boolean"] < 90
-                    ):
+                    elif declared_type == "boolean" and type_percentages["boolean"] < 90:
                         consistency_issues.append(
                             "Field is declared as boolean but contains other types",
                         )
@@ -791,9 +789,7 @@ class ContinuousLearningSystem:
                         )
 
                     if consistency_issues:
-                        type_stats[field_name][
-                            "consistency_issues"
-                        ] = consistency_issues
+                        type_stats[field_name]["consistency_issues"] = consistency_issues
         except Exception as e:
             self.logger.warning(
                 f"Error calculating type distributions for {collection_name}: {e!s}",
@@ -955,11 +951,7 @@ class ContinuousLearningSystem:
         if isinstance(query_results, list) and query_results:
             return query_results[0]
         elif isinstance(query_results, dict):
-            if (
-                "result" in query_results
-                and isinstance(query_results["result"], list)
-                and query_results["result"]
-            ):
+            if "result" in query_results and isinstance(query_results["result"], list) and query_results["result"]:
                 return query_results["result"][0]
             elif "_id" in query_results:
                 return query_results
@@ -994,7 +986,9 @@ class ContinuousLearningSystem:
             return "general"
 
     def _generate_patterns_from_query(
-        self, query_text: str, content: dict[str, Any],
+        self,
+        query_text: str,
+        content: dict[str, Any],
     ) -> list[dict[str, Any]]:
         """
         Generate knowledge patterns from a query and its results.
@@ -1207,7 +1201,9 @@ class ContinuousLearningSystem:
         }
 
     def _extract_insights_from_comment(
-        self, comment: str, feedback_type: FeedbackType,
+        self,
+        comment: str,
+        feedback_type: FeedbackType,
     ) -> list[dict[str, Any]]:
         """
         Extract additional insights from a feedback comment.
@@ -1229,10 +1225,7 @@ class ContinuousLearningSystem:
             FeedbackType.explicit_negative,
             FeedbackType.implicit_negative,
         ]:
-            if any(
-                term in comment_lower
-                for term in ["slow", "performance", "fast", "time"]
-            ):
+            if any(term in comment_lower for term in ["slow", "performance", "fast", "time"]):
                 insights.append(
                     {
                         "type": "performance_issue",
@@ -1241,10 +1234,7 @@ class ContinuousLearningSystem:
                     },
                 )
 
-            if any(
-                term in comment_lower
-                for term in ["wrong", "incorrect", "not right", "unrelated"]
-            ):
+            if any(term in comment_lower for term in ["wrong", "incorrect", "not right", "unrelated"]):
                 insights.append(
                     {
                         "type": "relevance_issue",
@@ -1253,10 +1243,7 @@ class ContinuousLearningSystem:
                     },
                 )
 
-            if any(
-                term in comment_lower
-                for term in ["missing", "incomplete", "not all", "partial"]
-            ):
+            if any(term in comment_lower for term in ["missing", "incomplete", "not all", "partial"]):
                 insights.append(
                     {
                         "type": "completeness_issue",
@@ -1270,10 +1257,7 @@ class ContinuousLearningSystem:
             FeedbackType.explicit_positive,
             FeedbackType.implicit_positive,
         ]:
-            if any(
-                term in comment_lower
-                for term in ["fast", "quick", "speedy", "performance"]
-            ):
+            if any(term in comment_lower for term in ["fast", "quick", "speedy", "performance"]):
                 insights.append(
                     {
                         "type": "performance_praise",
@@ -1282,10 +1266,7 @@ class ContinuousLearningSystem:
                     },
                 )
 
-            if any(
-                term in comment_lower
-                for term in ["accurate", "correct", "exactly", "right", "relevant"]
-            ):
+            if any(term in comment_lower for term in ["accurate", "correct", "exactly", "right", "relevant"]):
                 insights.append(
                     {
                         "type": "relevance_praise",
@@ -1294,10 +1275,7 @@ class ContinuousLearningSystem:
                     },
                 )
 
-            if any(
-                term in comment_lower
-                for term in ["complete", "comprehensive", "thorough", "all"]
-            ):
+            if any(term in comment_lower for term in ["complete", "comprehensive", "thorough", "all"]):
                 insights.append(
                     {
                         "type": "completeness_praise",
@@ -1306,9 +1284,7 @@ class ContinuousLearningSystem:
                     },
                 )
 
-            if any(
-                term in comment_lower for term in ["helpful", "useful", "informative"]
-            ):
+            if any(term in comment_lower for term in ["helpful", "useful", "informative"]):
                 insights.append(
                     {
                         "type": "helpfulness_praise",
@@ -1331,7 +1307,8 @@ class ContinuousLearningSystem:
 
         # Get patterns reflecting known collectors and recorders
         patterns = self.kb_manager.get_patterns_by_type(
-            KnowledgePatternType.collector_recorder, min_confidence=0.7,
+            KnowledgePatternType.collector_recorder,
+            min_confidence=0.7,
         )
 
         # Sort patterns by timestamp to get the most recent one
@@ -1359,9 +1336,7 @@ class ContinuousLearningSystem:
             removed_recorder_types = previous_recorder_types - current_recorder_types
 
             # Check if counts changed
-            collector_count_changed = (
-                previous_collector_count != current_collector_count
-            )
+            collector_count_changed = previous_collector_count != current_collector_count
             recorder_count_changed = previous_recorder_count != current_recorder_count
 
             # Determine if any changes were detected

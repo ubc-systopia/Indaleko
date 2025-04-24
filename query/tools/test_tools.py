@@ -64,7 +64,9 @@ def test_nl_parser(query: str, debug: bool = False) -> ToolOutput:
 
     # Create the tool input
     tool_input = ToolInput(
-        tool_name="nl_parser", parameters={"query": query}, invocation_id="test-1",
+        tool_name="nl_parser",
+        parameters={"query": query},
+        invocation_id="test-1",
     )
 
     # Execute the tool
@@ -82,7 +84,8 @@ def test_nl_parser(query: str, debug: bool = False) -> ToolOutput:
 
 
 def test_aql_translator(
-    structured_query: dict[str, Any], debug: bool = False,
+    structured_query: dict[str, Any],
+    debug: bool = False,
 ) -> ToolOutput:
     """
     Test the AQL translator tool.
@@ -120,7 +123,9 @@ def test_aql_translator(
 
 
 def test_query_executor(
-    query: str, bind_vars: dict[str, Any] = None, debug: bool = False,
+    query: str,
+    bind_vars: dict[str, Any] = None,
+    debug: bool = False,
 ) -> ToolOutput:
     """
     Test the query executor tool.
@@ -153,7 +158,9 @@ def test_query_executor(
 
     # Create the tool input
     tool_input = ToolInput(
-        tool_name="query_executor", parameters=parameters, invocation_id="test-3",
+        tool_name="query_executor",
+        parameters=parameters,
+        invocation_id="test-3",
     )
 
     # Execute the tool
@@ -249,9 +256,7 @@ def test_full_pipeline(query: str, debug: bool = False) -> dict[str, Any]:
         "nl_parser_time": nl_result.elapsed_time,
         "aql_translator_time": aql_result.elapsed_time,
         "query_executor_time": executor_result.elapsed_time,
-        "total_time": nl_result.elapsed_time
-        + aql_result.elapsed_time
-        + executor_result.elapsed_time,
+        "total_time": nl_result.elapsed_time + aql_result.elapsed_time + executor_result.elapsed_time,
     }
 
 

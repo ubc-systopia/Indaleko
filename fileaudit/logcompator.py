@@ -1,8 +1,7 @@
 import collections
-import typing
 from datetime import datetime
 
-from abstract import IWriter, IOperator
+from abstract import IOperator, IWriter
 
 
 class CompactRecord:
@@ -23,7 +22,7 @@ class CompactRecord:
         Add process name to CompactRecord.
         """
         assert isinstance(
-            procname, str
+            procname, str,
         ), f"procname is not string; got {
             type(procname)}"
         if self.proc_name == "":
@@ -61,25 +60,25 @@ class CompactRecord:
         Add an event to CompactRecord. Optionally update process name, PID, or file path.
         """
         assert isinstance(
-            event_name, str
+            event_name, str,
         ), f"event_name is not a string; got {
             type(event_name)}"
         assert isinstance(
-            event_ts, str
+            event_ts, str,
         ), f"event_ts is not a string; got {
             type(event_ts)}"
         assert isinstance(
-            event_date, str
+            event_date, str,
         ), f"event_date is not a string; got {
             type(event_date)}"
         assert procname is None or isinstance(
-            procname, str
+            procname, str,
         ), f"procname has to be None or of type str; got {type(procname)}"
         assert pid is None or isinstance(
-            pid, str
+            pid, str,
         ), f"pid has to be None or of type str; got {type(pid)}"
         assert path is None or isinstance(
-            path, str
+            path, str,
         ), f"path has to be None or of type str; got {type(path)}"
 
         if procname is not None:
@@ -95,12 +94,12 @@ class CompactRecord:
         # Combine event name, date, and timestamp with appropriate separators and add to events list
         self.events.append(
             CompactRecord.event_name_datets_sep.join(
-                [event_name, CompactRecord.date_ts_sep.join([event_date, event_ts])]
-            )
+                [event_name, CompactRecord.date_ts_sep.join([event_date, event_ts])],
+            ),
         )
         return self
 
-    def to_list(self) -> typing.List:
+    def to_list(self) -> list:
         """
         Convert CompactRecord attributes to a list.
         """
@@ -117,7 +116,7 @@ class LogCompactor(IOperator):
         # ['open|today_13:38:34.127535', 'close|today_13:38:34.127529']]]
 
         # key: (procname-pid, fd) -> compact record
-        self.state: typing.Dict[typing.Tuple[str, str], CompactRecord] = (
+        self.state: dict[tuple[str, str], CompactRecord] = (
             collections.defaultdict(lambda: CompactRecord())
         )
 
@@ -135,7 +134,7 @@ class LogCompactor(IOperator):
         """
         return ("-".join(record[-2:]), record[2])
 
-    def execute(self, input_tuple: tuple[int, typing.List]) -> None:
+    def execute(self, input_tuple: tuple[int, list]) -> None:
         """
         Execute the LogCompactor operation based on the input record.
 
@@ -153,7 +152,7 @@ class LogCompactor(IOperator):
                 cr = CompactRecord()
 
                 cr.add_event(
-                    event_date=self.datefunc(), event_name="open", event_ts=record[0]
+                    event_date=self.datefunc(), event_name="open", event_ts=record[0],
                 )
                 cr.add_pid(record[-1])
                 cr.add_procname(record[-2])

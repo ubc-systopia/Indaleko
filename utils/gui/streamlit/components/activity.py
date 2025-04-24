@@ -77,7 +77,9 @@ def render_activity():
         "Ambient Conditions",
     ]
     selected_activity_types = st.multiselect(
-        "Activity Types", activity_types, default=["All Activities"],
+        "Activity Types",
+        activity_types,
+        default=["All Activities"],
     )
 
     # Activity context visualization (mock data)
@@ -150,9 +152,7 @@ def render_activity():
 
     try:
         # Normalize activities for display
-        normalized_activities = [
-            normalize_for_display(activity) for activity in activities
-        ]
+        normalized_activities = [normalize_for_display(activity) for activity in activities]
         st.dataframe(normalized_activities, use_container_width=True)
     except Exception as e:
         st.warning(f"Could not display activities as table: {e}")

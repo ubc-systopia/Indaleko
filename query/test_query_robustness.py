@@ -36,7 +36,8 @@ except ImportError as e:
 
 # Set up logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -75,7 +76,9 @@ def load_api_key() -> str:
     import configparser
 
     config_file = os.path.join(
-        os.environ.get("INDALEKO_ROOT"), "config", "openai-key.ini",
+        os.environ.get("INDALEKO_ROOT"),
+        "config",
+        "openai-key.ini",
     )
     if not os.path.exists(config_file):
         raise ValueError(f"API key file not found: {config_file}")
@@ -114,7 +117,8 @@ def process_query(
         from query.query_processing.data_models.translator_input import TranslatorInput
 
         translator_input = TranslatorInput(
-            Query=parsed_query, Connector=nl_parser.llm_connector,
+            Query=parsed_query,
+            Connector=nl_parser.llm_connector,
         )
 
         # Translate to AQL
@@ -125,15 +129,9 @@ def process_query(
         elapsed_time = end_time - start_time
 
         # Check if view is used for text searches
-        is_text_search = (
-            "test" in query.lower()
-            or "find" in query.lower()
-            or "search" in query.lower()
-        )
+        is_text_search = "test" in query.lower() or "find" in query.lower() or "search" in query.lower()
         uses_view = "ObjectsTextView" in result.aql_query if is_text_search else True
-        uses_search_analyzer = (
-            "SEARCH ANALYZER" in result.aql_query if is_text_search else True
-        )
+        uses_search_analyzer = "SEARCH ANALYZER" in result.aql_query if is_text_search else True
 
         # Record the query in history
         from query.query_processing.data_models.query_input import StructuredQuery
@@ -193,7 +191,9 @@ def run_all_tests() -> dict[str, list[dict[str, Any]]]:
         # Initialize DB config
         db_config = IndalekoDBConfig(
             config_file=os.path.join(
-                os.environ.get("INDALEKO_ROOT"), "config", "indaleko-db-config.ini",
+                os.environ.get("INDALEKO_ROOT"),
+                "config",
+                "indaleko-db-config.ini",
             ),
         )
         logger.info("DB config initialized")
@@ -235,7 +235,8 @@ def run_all_tests() -> dict[str, list[dict[str, Any]]]:
                         f"Query recorded in history: {result.get('recorded_in_history', False)}",
                     )
                     if result.get("is_text_search", False) and not result.get(
-                        "uses_view", True,
+                        "uses_view",
+                        True,
                     ):
                         logger.warning(
                             f"Query '{query}' is a text search but does not use a view",

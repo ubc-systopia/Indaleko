@@ -52,26 +52,33 @@ class IndexRecommendation(BaseModel):
     collection: str = Field(..., description="Collection to create index on")
     fields: list[str] = Field(..., description="Fields to include in the index")
     index_type: str = Field(
-        ..., description="Type of index (hash, skiplist, persistent, fulltext)",
+        ...,
+        description="Type of index (hash, skiplist, persistent, fulltext)",
     )
     stored_values: list[str] = Field(
-        default_factory=list, description="Fields to store in the index",
+        default_factory=list,
+        description="Fields to store in the index",
     )
     estimated_impact: float = Field(
-        default=0.0, description="Estimated impact score (higher is better)",
+        default=0.0,
+        description="Estimated impact score (higher is better)",
     )
     estimated_cost: float = Field(default=0.0, description="Estimated maintenance cost")
     affected_queries: list[str] = Field(
-        default_factory=list, description="Queries that would benefit",
+        default_factory=list,
+        description="Queries that would benefit",
     )
     explanation: str = Field(
-        default="", description="Explanation of why this index is recommended",
+        default="",
+        description="Explanation of why this index is recommended",
     )
     created: bool = Field(
-        default=False, description="Whether this index has been created",
+        default=False,
+        description="Whether this index has been created",
     )
     creation_time: datetime | None = Field(
-        default=None, description="When the index was created",
+        default=None,
+        description="When the index was created",
     )
     index_id: str | None = Field(default=None, description="ID of the created index")
 
@@ -91,11 +98,7 @@ class IndexRecommendation(BaseModel):
     def short_description(self) -> str:
         """Get a short description of this index recommendation."""
         field_str = ", ".join(self.fields)
-        stored_str = (
-            f" with stored values: {', '.join(self.stored_values)}"
-            if self.stored_values
-            else ""
-        )
+        stored_str = f" with stored values: {', '.join(self.stored_values)}" if self.stored_values else ""
         return f"{self.index_type} index on {self.collection}({field_str}){stored_str}"
 
 
@@ -104,28 +107,36 @@ class ViewRecommendation(BaseModel):
 
     name: str = Field(..., description="Name for the view")
     collections: list[str] = Field(
-        ..., description="Collections to include in the view",
+        ...,
+        description="Collections to include in the view",
     )
     fields: dict[str, list[str]] = Field(
-        ..., description="Fields to include in the view by collection",
+        ...,
+        description="Fields to include in the view by collection",
     )
     primary_sort: list[dict[str, str]] | None = Field(
-        default=None, description="Primary sort fields",
+        default=None,
+        description="Primary sort fields",
     )
     estimated_impact: float = Field(
-        default=0.0, description="Estimated impact score (higher is better)",
+        default=0.0,
+        description="Estimated impact score (higher is better)",
     )
     affected_queries: list[str] = Field(
-        default_factory=list, description="Queries that would benefit",
+        default_factory=list,
+        description="Queries that would benefit",
     )
     explanation: str = Field(
-        default="", description="Explanation of why this view is recommended",
+        default="",
+        description="Explanation of why this view is recommended",
     )
     created: bool = Field(
-        default=False, description="Whether this view has been created",
+        default=False,
+        description="Whether this view has been created",
     )
     creation_time: datetime | None = Field(
-        default=None, description="When the view was created",
+        default=None,
+        description="When the view was created",
     )
     view_id: str | None = Field(default=None, description="ID of the created view")
 
@@ -168,14 +179,17 @@ class QueryOptimization(BaseModel):
     optimized_query: str = Field(..., description="Optimized AQL query")
     optimization_type: str = Field(..., description="Type of optimization")
     estimated_speedup: float = Field(
-        default=0.0, description="Estimated speedup factor",
+        default=0.0,
+        description="Estimated speedup factor",
     )
     explanation: str = Field(default="", description="Explanation of the optimization")
     verified: bool = Field(
-        default=False, description="Whether this optimization has been verified",
+        default=False,
+        description="Whether this optimization has been verified",
     )
     verification_speedup: float | None = Field(
-        default=None, description="Measured speedup factor",
+        default=None,
+        description="Measured speedup factor",
     )
 
     def short_description(self) -> str:
@@ -191,7 +205,8 @@ class OptimizationLog(BaseModel):
         description="Unique ID for this optimization",
     )
     optimization_type: str = Field(
-        ..., description="Type of optimization (index, view, query)",
+        ...,
+        description="Type of optimization (index, view, query)",
     )
     description: str = Field(..., description="Description of the optimization")
     applied_at: datetime = Field(
@@ -199,16 +214,20 @@ class OptimizationLog(BaseModel):
         description="When it was applied",
     )
     performance_before: float = Field(
-        ..., description="Performance metric before optimization",
+        ...,
+        description="Performance metric before optimization",
     )
     performance_after: float | None = Field(
-        default=None, description="Performance metric after optimization",
+        default=None,
+        description="Performance metric after optimization",
     )
     impact: float | None = Field(
-        default=None, description="Measured impact (e.g., speedup factor)",
+        default=None,
+        description="Measured impact (e.g., speedup factor)",
     )
     details: dict[str, Any] = Field(
-        default_factory=dict, description="Detailed information about the optimization",
+        default_factory=dict,
+        description="Detailed information about the optimization",
     )
 
 
@@ -343,11 +362,14 @@ class DatabaseOptimizer:
 
         # Generate recommendations
         index_recommendations = self._generate_index_recommendations(
-            attribute_access, filter_patterns, slow_queries,
+            attribute_access,
+            filter_patterns,
+            slow_queries,
         )
 
         view_recommendations = self._generate_view_recommendations(
-            search_patterns, slow_queries,
+            search_patterns,
+            slow_queries,
         )
 
         query_optimizations = self._generate_query_optimizations(slow_queries)
@@ -385,7 +407,9 @@ class DatabaseOptimizer:
             # Extract collection-field pairs using regex
             # This is a simplified approach; a proper AQL parser would be better
             collection_references = re.findall(
-                r"FOR\s+\w+\s+IN\s+(\w+)", aql, re.IGNORECASE,
+                r"FOR\s+\w+\s+IN\s+(\w+)",
+                aql,
+                re.IGNORECASE,
             )
 
             for collection in collection_references:
@@ -396,13 +420,17 @@ class DatabaseOptimizer:
                 # Find FILTER statements that reference this collection
                 # This is a simplified approach that won't catch all cases
                 filter_matches = re.findall(
-                    r"FILTER\s+(\w+)\.([a-zA-Z0-9_.]+)\s", aql, re.IGNORECASE,
+                    r"FILTER\s+(\w+)\.([a-zA-Z0-9_.]+)\s",
+                    aql,
+                    re.IGNORECASE,
                 )
 
                 for var, attr in filter_matches:
                     # Try to match the variable to its collection
                     collection_var_match = re.search(
-                        rf"FOR\s+({var})\s+IN\s+{collection}", aql, re.IGNORECASE,
+                        rf"FOR\s+({var})\s+IN\s+{collection}",
+                        aql,
+                        re.IGNORECASE,
                     )
 
                     if collection_var_match:
@@ -430,13 +458,17 @@ class DatabaseOptimizer:
 
                 # Find SORT statements
                 sort_matches = re.findall(
-                    r"SORT\s+(\w+)\.([a-zA-Z0-9_.]+)\s", aql, re.IGNORECASE,
+                    r"SORT\s+(\w+)\.([a-zA-Z0-9_.]+)\s",
+                    aql,
+                    re.IGNORECASE,
                 )
 
                 for var, attr in sort_matches:
                     # Try to match the variable to its collection
                     collection_var_match = re.search(
-                        rf"FOR\s+({var})\s+IN\s+{collection}", aql, re.IGNORECASE,
+                        rf"FOR\s+({var})\s+IN\s+{collection}",
+                        aql,
+                        re.IGNORECASE,
                     )
 
                     if collection_var_match:
@@ -486,11 +518,7 @@ class DatabaseOptimizer:
 
         for query in queries:
             # Skip if no execution time or AQL
-            if (
-                not hasattr(query, "Query")
-                or not query.Query
-                or not hasattr(query, "ExecutionTimeMs")
-            ):
+            if not hasattr(query, "Query") or not query.Query or not hasattr(query, "ExecutionTimeMs"):
                 continue
 
             # Check if execution time exceeds threshold
@@ -500,7 +528,9 @@ class DatabaseOptimizer:
 
         # Sort by execution time (slowest first)
         return sorted(
-            slow_queries, key=lambda q: getattr(q, "ExecutionTimeMs", 0), reverse=True,
+            slow_queries,
+            key=lambda q: getattr(q, "ExecutionTimeMs", 0),
+            reverse=True,
         )
 
     def _extract_filter_patterns(self, queries):
@@ -626,20 +656,16 @@ class DatabaseOptimizer:
 
                     # Extract collections and fields being searched
                     collections_fields = self._extract_search_collections_fields(
-                        aql, search_stmt,
+                        aql,
+                        search_stmt,
                     )
                     if collections_fields:
                         if "collections_fields" not in search_patterns[normalized]:
                             search_patterns[normalized]["collections_fields"] = []
 
                         for cf in collections_fields:
-                            if (
-                                cf
-                                not in search_patterns[normalized]["collections_fields"]
-                            ):
-                                search_patterns[normalized][
-                                    "collections_fields"
-                                ].append(cf)
+                            if cf not in search_patterns[normalized]["collections_fields"]:
+                                search_patterns[normalized]["collections_fields"].append(cf)
 
         # Sort by frequency
         return dict(
@@ -682,7 +708,9 @@ class DatabaseOptimizer:
         for var, field in var_refs:
             # Find collection for this variable
             collection_match = re.search(
-                rf"FOR\s+{var}\s+IN\s+(\w+)", aql, re.IGNORECASE,
+                rf"FOR\s+{var}\s+IN\s+(\w+)",
+                aql,
+                re.IGNORECASE,
             )
 
             if collection_match:
@@ -692,7 +720,10 @@ class DatabaseOptimizer:
         return collections_fields
 
     def _generate_index_recommendations(
-        self, attribute_access, filter_patterns, slow_queries,
+        self,
+        attribute_access,
+        filter_patterns,
+        slow_queries,
     ):
         """
         Generate index recommendations based on query patterns.
@@ -709,16 +740,12 @@ class DatabaseOptimizer:
 
         # Identify attributes frequently used in filters
         frequent_filters = {
-            key: info
-            for key, info in attribute_access.items()
-            if info["filter_count"] >= 3  # Minimum filter threshold
+            key: info for key, info in attribute_access.items() if info["filter_count"] >= 3  # Minimum filter threshold
         }
 
         # Identify attributes frequently used in sorts
         frequent_sorts = {
-            key: info
-            for key, info in attribute_access.items()
-            if info["sort_count"] >= 3  # Minimum sort threshold
+            key: info for key, info in attribute_access.items() if info["sort_count"] >= 3  # Minimum sort threshold
         }
 
         # Process filter attributes for hash/skiplist indexes
@@ -752,7 +779,10 @@ class DatabaseOptimizer:
 
             # Calculate estimated impact
             estimated_impact = self._calculate_index_impact(
-                collection, [attribute], index_type, queries,
+                collection,
+                [attribute],
+                index_type,
+                queries,
             )
 
             # Create recommendation
@@ -788,7 +818,10 @@ class DatabaseOptimizer:
 
             # Calculate estimated impact
             estimated_impact = self._calculate_index_impact(
-                collection, [attribute], index_type, queries,
+                collection,
+                [attribute],
+                index_type,
+                queries,
             )
 
             # Create recommendation
@@ -833,7 +866,10 @@ class DatabaseOptimizer:
 
             # Calculate estimated impact
             estimated_impact = self._calculate_index_impact(
-                collection, attribute_list, index_type, queries,
+                collection,
+                attribute_list,
+                index_type,
+                queries,
             )
 
             # Create recommendation
@@ -855,7 +891,9 @@ class DatabaseOptimizer:
             # Extract collection references
             aql = getattr(query, "Query", "")
             collection_matches = re.findall(
-                r"FOR\s+(\w+)\s+IN\s+(\w+)", aql, re.IGNORECASE,
+                r"FOR\s+(\w+)\s+IN\s+(\w+)",
+                aql,
+                re.IGNORECASE,
             )
 
             for var, collection in collection_matches:
@@ -865,7 +903,9 @@ class DatabaseOptimizer:
 
                 # Extract filter attributes for this collection
                 filter_attrs = re.findall(
-                    rf"FILTER\s+{var}\.([a-zA-Z0-9_.]+)\s", aql, re.IGNORECASE,
+                    rf"FILTER\s+{var}\.([a-zA-Z0-9_.]+)\s",
+                    aql,
+                    re.IGNORECASE,
                 )
 
                 if filter_attrs:
@@ -879,9 +919,7 @@ class DatabaseOptimizer:
                         continue
 
                     # Calculate estimated impact
-                    estimated_impact = (
-                        float(getattr(query, "ExecutionTimeMs", 0)) / 1000
-                    )
+                    estimated_impact = float(getattr(query, "ExecutionTimeMs", 0)) / 1000
 
                     # Create recommendation
                     recommendation = IndexRecommendation(
@@ -900,10 +938,7 @@ class DatabaseOptimizer:
         unique_recommendations = {}
         for rec in recommendations:
             key = f"{rec.collection}_{','.join(rec.fields)}_{rec.index_type}"
-            if (
-                key not in unique_recommendations
-                or rec.estimated_impact > unique_recommendations[key].estimated_impact
-            ):
+            if key not in unique_recommendations or rec.estimated_impact > unique_recommendations[key].estimated_impact:
                 unique_recommendations[key] = rec
 
         # Return sorted list
@@ -960,11 +995,7 @@ class DatabaseOptimizer:
 
         current = schema
         for part in parts:
-            if (
-                current.get("type") == "object"
-                and "properties" in current
-                and part in current["properties"]
-            ):
+            if current.get("type") == "object" and "properties" in current and part in current["properties"]:
                 current = current["properties"][part]
             else:
                 return "skiplist"  # Default if we can't resolve
@@ -1021,7 +1052,9 @@ class DatabaseOptimizer:
 
                 # Find variables bound to this collection
                 var_matches = re.findall(
-                    rf"FOR\s+(\w+)\s+IN\s+{collection}", aql, re.IGNORECASE,
+                    rf"FOR\s+(\w+)\s+IN\s+{collection}",
+                    aql,
+                    re.IGNORECASE,
                 )
 
                 for var in var_matches:
@@ -1030,7 +1063,9 @@ class DatabaseOptimizer:
                 # Extract fields referenced in the return statement
                 for var in collection_vars:
                     field_matches = re.findall(
-                        rf"{var}\.([a-zA-Z0-9_.]+)", return_stmt, re.IGNORECASE,
+                        rf"{var}\.([a-zA-Z0-9_.]+)",
+                        return_stmt,
+                        re.IGNORECASE,
                     )
 
                     for field in field_matches:
@@ -1042,7 +1077,9 @@ class DatabaseOptimizer:
         return [
             field
             for field, count in sorted(
-                field_counts.items(), key=lambda x: x[1], reverse=True,
+                field_counts.items(),
+                key=lambda x: x[1],
+                reverse=True,
             )[:max_fields]
         ]
 
@@ -1124,9 +1161,7 @@ class DatabaseOptimizer:
                 continue
 
             # Use execution time as a factor
-            exec_time = (
-                getattr(query, "ExecutionTimeMs", 0) / 1000
-            )  # Convert to seconds
+            exec_time = getattr(query, "ExecutionTimeMs", 0) / 1000  # Convert to seconds
 
             # More weight for longer queries
             impact += exec_time
@@ -1207,7 +1242,9 @@ class DatabaseOptimizer:
             # Calculate estimated impact
             queries = list(set(info["queries"]))
             estimated_impact = self._calculate_view_impact(
-                collection, list(info["fields"]), queries,
+                collection,
+                list(info["fields"]),
+                queries,
             )
 
             # Create recommendation
@@ -1228,10 +1265,7 @@ class DatabaseOptimizer:
             collection_pairs = {}
 
             for pattern, info in search_patterns.items():
-                if (
-                    "collections_fields" not in info
-                    or len(set(cf[0] for cf in info["collections_fields"])) <= 1
-                ):
+                if "collections_fields" not in info or len(set(cf[0] for cf in info["collections_fields"])) <= 1:
                     continue
 
                 # Get unique collections in this pattern
@@ -1270,16 +1304,16 @@ class DatabaseOptimizer:
                 view_name = "_".join(info["collections"]) + "_view"
 
                 # Prepare fields
-                fields_dict = {
-                    col: list(fields) for col, fields in info["fields"].items()
-                }
+                fields_dict = {col: list(fields) for col, fields in info["fields"].items()}
 
                 # Calculate estimated impact
                 queries = list(set(info["queries"]))
                 collections = info["collections"]
                 all_fields = [f for fields in info["fields"].values() for f in fields]
                 estimated_impact = self._calculate_view_impact(
-                    collections, all_fields, queries,
+                    collections,
+                    all_fields,
+                    queries,
                 )
 
                 # Create recommendation
@@ -1343,9 +1377,7 @@ class DatabaseOptimizer:
                 continue
 
             # Use execution time as a factor
-            exec_time = (
-                getattr(query, "ExecutionTimeMs", 0) / 1000
-            )  # Convert to seconds
+            exec_time = getattr(query, "ExecutionTimeMs", 0) / 1000  # Convert to seconds
 
             # Full-text search is typically much slower than index lookups,
             # so the potential speedup is higher
@@ -1424,9 +1456,7 @@ class DatabaseOptimizer:
                 # Since that requires detailed query analysis, we'll just flag it for now
 
                 # Calculate estimated speedup
-                exec_time = (
-                    getattr(query, "ExecutionTimeMs", 0) / 1000
-                )  # Convert to seconds
+                exec_time = getattr(query, "ExecutionTimeMs", 0) / 1000  # Convert to seconds
                 estimated_speedup = 2.0  # Assume 2x speedup as a baseline
 
                 recommendation = QueryOptimization(
@@ -1514,7 +1544,9 @@ class DatabaseOptimizer:
             # Create the view
             cmd = recommendation.get_creation_command()
             result = self.db.create_view(
-                cmd["name"], cmd["type"], cmd.get("properties", {}),
+                cmd["name"],
+                cmd["type"],
+                cmd.get("properties", {}),
             )
 
             # Update recommendation object
@@ -1532,9 +1564,7 @@ class DatabaseOptimizer:
             )
 
             # Refresh existing views
-            self._existing_views = {
-                view: self.db.view(view) for view in self.db.views()
-            }
+            self._existing_views = {view: self.db.view(view) for view in self.db.views()}
 
             return {
                 "status": "success",
@@ -1602,9 +1632,7 @@ class DatabaseOptimizer:
             after_performance = sum(after_performances) / len(after_performances)
 
             # Calculate impact (speedup factor)
-            impact = (
-                before_performance / after_performance if after_performance > 0 else 0
-            )
+            impact = before_performance / after_performance if after_performance > 0 else 0
 
             # Update optimization log
             optimization_log.performance_after = after_performance
@@ -1624,11 +1652,7 @@ class DatabaseOptimizer:
                         else (
                             "Minimal improvement"
                             if impact > 1.0
-                            else (
-                                "No improvement"
-                                if impact >= 0.9
-                                else "Performance regression"
-                            )
+                            else ("No improvement" if impact >= 0.9 else "Performance regression")
                         )
                     )
                 ),
@@ -1637,7 +1661,12 @@ class DatabaseOptimizer:
         return {"status": "error", "message": "No queries were successfully executed"}
 
     def _log_optimization(
-        self, opt_type, description, perf_before, perf_after, details,
+        self,
+        opt_type,
+        description,
+        perf_before,
+        perf_after,
+        details,
     ):
         """
         Log an applied optimization.
@@ -1683,32 +1712,16 @@ class DatabaseOptimizer:
         return {
             "total_optimizations": len(self.optimization_logs),
             "index_optimizations": len(
-                [
-                    log
-                    for log in self.optimization_logs
-                    if log.optimization_type == "index"
-                ],
+                [log for log in self.optimization_logs if log.optimization_type == "index"],
             ),
             "view_optimizations": len(
-                [
-                    log
-                    for log in self.optimization_logs
-                    if log.optimization_type == "view"
-                ],
+                [log for log in self.optimization_logs if log.optimization_type == "view"],
             ),
             "query_optimizations": len(
-                [
-                    log
-                    for log in self.optimization_logs
-                    if log.optimization_type == "query"
-                ],
+                [log for log in self.optimization_logs if log.optimization_type == "query"],
             ),
             "successful_optimizations": len(
-                [
-                    log
-                    for log in self.optimization_logs
-                    if log.impact and log.impact > 1.1
-                ],
+                [log for log in self.optimization_logs if log.impact and log.impact > 1.1],
             ),
             "recent_optimizations": [
                 {
@@ -1718,7 +1731,9 @@ class DatabaseOptimizer:
                     "impact": log.impact,
                 }
                 for log in sorted(
-                    self.optimization_logs, key=lambda x: x.applied_at, reverse=True,
+                    self.optimization_logs,
+                    key=lambda x: x.applied_at,
+                    reverse=True,
                 )[:5]
             ],
         }

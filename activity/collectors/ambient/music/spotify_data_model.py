@@ -21,7 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-from typing import Optional
+
 from pydantic import Field
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -45,7 +45,7 @@ class SpotifyAmbientData(AmbientMusicData):
 
     # Spotify-specific identifiers
     track_id: str = Field(
-        ..., description="Spotify track URI", pattern="^spotify:track:[a-zA-Z0-9]{22}$"
+        ..., description="Spotify track URI", pattern="^spotify:track:[a-zA-Z0-9]{22}$",
     )
 
     artist_id: str = Field(
@@ -54,8 +54,8 @@ class SpotifyAmbientData(AmbientMusicData):
         pattern="^spotify:artist:[a-zA-Z0-9]{22}$",
     )
 
-    album_id: Optional[str] = Field(
-        None, description="Spotify album URI", pattern="^spotify:album:[a-zA-Z0-9]{22}$"
+    album_id: str | None = Field(
+        None, description="Spotify album URI", pattern="^spotify:album:[a-zA-Z0-9]{22}$",
     )
 
     # Spotify-specific playback information
@@ -70,39 +70,39 @@ class SpotifyAmbientData(AmbientMusicData):
     shuffle_state: bool = Field(False, description="Whether shuffle mode is enabled")
 
     repeat_state: str = Field(
-        "off", description="Current repeat mode", pattern="^(track|context|off)$"
+        "off", description="Current repeat mode", pattern="^(track|context|off)$",
     )
 
     # Spotify-specific audio features
-    danceability: Optional[float] = Field(
-        None, description="Spotify danceability score", ge=0.0, le=1.0
+    danceability: float | None = Field(
+        None, description="Spotify danceability score", ge=0.0, le=1.0,
     )
 
-    energy: Optional[float] = Field(
-        None, description="Spotify energy score", ge=0.0, le=1.0
+    energy: float | None = Field(
+        None, description="Spotify energy score", ge=0.0, le=1.0,
     )
 
-    valence: Optional[float] = Field(
-        None, description="Spotify valence (positiveness) score", ge=0.0, le=1.0
+    valence: float | None = Field(
+        None, description="Spotify valence (positiveness) score", ge=0.0, le=1.0,
     )
 
-    instrumentalness: Optional[float] = Field(
-        None, description="Spotify instrumentalness score", ge=0.0, le=1.0
+    instrumentalness: float | None = Field(
+        None, description="Spotify instrumentalness score", ge=0.0, le=1.0,
     )
 
-    acousticness: Optional[float] = Field(
-        None, description="Spotify acousticness score", ge=0.0, le=1.0
+    acousticness: float | None = Field(
+        None, description="Spotify acousticness score", ge=0.0, le=1.0,
     )
 
     # Context information
-    context_type: Optional[str] = Field(
+    context_type: str | None = Field(
         None,
         description="Type of playback context",
         pattern="^(album|artist|playlist|collection)$",
     )
 
-    context_id: Optional[str] = Field(
-        None, description="Spotify URI of the playback context"
+    context_id: str | None = Field(
+        None, description="Spotify URI of the playback context",
     )
 
     class Config:
@@ -126,7 +126,7 @@ class SpotifyAmbientData(AmbientMusicData):
                 "context_type": "playlist",
                 "context_id": "spotify:playlist:37i9dQZF1DX5",
                 "source": "spotify",
-            }
+            },
         }
 
 

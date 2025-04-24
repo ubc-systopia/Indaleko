@@ -22,10 +22,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # import math
 import os
 import sys
-from typing import Any, Dict
+from typing import Any
 
 # from datetime import datetime
-
 from icecream import ic
 from pyecobee import EcobeeService
 
@@ -37,11 +36,11 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from activity.collectors.ambient.smart_thermostat.smart_thermostat import (
-    SmartThermostatCollector,
-)
 from activity.collectors.ambient.smart_thermostat.ecobee_data_model import (
     EcobeeAmbientDataModel,
+)
+from activity.collectors.ambient.smart_thermostat.smart_thermostat import (
+    SmartThermostatCollector,
 )
 
 # pylint: enable=wrong-import-position
@@ -92,7 +91,7 @@ class EcobeeSmartThermostatCollector(SmartThermostatCollector):
             }
             self.data.process_ecobee_data(raw_data)
 
-    def process_data(self, data: Any) -> Dict[str, Any]:
+    def process_data(self, data: Any) -> dict[str, Any]:
         """
         Process the collected data.
         """
@@ -100,7 +99,7 @@ class EcobeeSmartThermostatCollector(SmartThermostatCollector):
         # Example: Convert processed data to a dictionary
         return self.data.dict()
 
-    def store_data(self, data: Dict[str, Any]) -> None:
+    def store_data(self, data: dict[str, Any]) -> None:
         """
         Store the processed data.
         """
@@ -108,7 +107,7 @@ class EcobeeSmartThermostatCollector(SmartThermostatCollector):
         # Example: Print data to simulate storing
         print("Storing data:", data)
 
-    def get_latest_db_update(self) -> Dict[str, Any]:
+    def get_latest_db_update(self) -> dict[str, Any]:
         """
         Get the latest data update from the database.
         """

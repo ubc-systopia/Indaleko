@@ -23,7 +23,6 @@ import os
 import sys
 
 from pydantic import BaseModel
-from typing import Union
 
 # from icecream import ic
 
@@ -37,10 +36,10 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from query.llm_base import IndalekoLLMBase
 
-# from data_models.collection_metadata_data_model import IndalekoCollectionMetadataDataModel  # noqa: E402
-# from data_models.db_index import IndalekoCollectionIndexDataModel  # noqa: E402
-# from data_models.named_entity import NamedEntityCollection  # noqa: E402
-from query.query_processing.data_models.query_input import StructuredQuery  # noqa: E402
+# from data_models.collection_metadata_data_model import IndalekoCollectionMetadataDataModel
+# from data_models.db_index import IndalekoCollectionIndexDataModel
+# from data_models.named_entity import NamedEntityCollection
+from query.query_processing.data_models.query_input import StructuredQuery
 
 # pylint: enable=wrong-import-position
 
@@ -54,8 +53,8 @@ class TranslatorInput(BaseModel):
     # last few fields for.   I retain them, but
     # we might want to remove them if they are
     # not needed.
-    SelectedMetadataAttributes: Union[dict[str, str], None] = None
-    AdditionalNotes: Union[str, None] = None
+    SelectedMetadataAttributes: dict[str, str] | None = None
+    AdditionalNotes: str | None = None
     NTruth: int = 1
 
     class Config:

@@ -100,13 +100,16 @@ class IndalekoDBInfo:
         """
         self.__init_semantic_labels()
         db_config_file = kwargs.get(
-            "db_config_file", IndalekoDBConfig.default_db_config_file,
+            "db_config_file",
+            IndalekoDBConfig.default_db_config_file,
         )
         no_new_config = kwargs.get("no_new_config", True)
         start = kwargs.get("start", True)
         ic(db_config_file, no_new_config, start)
         self.db_config = IndalekoDBConfig(
-            config_file=db_config_file, no_new_config=no_new_config, start=start,
+            config_file=db_config_file,
+            no_new_config=no_new_config,
+            start=start,
         )
 
     def get_collections(self) -> list[str]:
@@ -114,11 +117,7 @@ class IndalekoDBInfo:
         Get the collections from the database
         """
         collections = self.db_config._arangodb.collections()
-        return [
-            collection["name"]
-            for collection in collections
-            if not collection["name"].startswith("_")
-        ]
+        return [collection["name"] for collection in collections if not collection["name"].startswith("_")]
 
     def get_collection_info(self, collection: str) -> list[dict[str, Any]]:
         """Retrieve and return the statistics for the collection."""

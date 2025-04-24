@@ -38,11 +38,9 @@ import os
 import signal
 import sys
 import time
-
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
-
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -57,9 +55,11 @@ from activity.collectors.storage.ntfs.usn_journal_collector import (
 from activity.recorders.storage.ntfs.tiered.hot.recorder import NtfsHotTierRecorder
 from constants.values import IndalekoConstants
 
-
 # Create default DB config path using pathlib.Path
-DEFAULT_DB_CONFIG_PATH = Path(IndalekoConstants.default_config_dir) / IndalekoConstants.default_db_config_file_name
+DEFAULT_DB_CONFIG_PATH = (
+    Path(IndalekoConstants.default_config_dir)
+    / IndalekoConstants.default_db_config_file_name
+)
 
 
 class IntegratedNtfsActivityRunner:
@@ -88,7 +88,6 @@ class IntegratedNtfsActivityRunner:
         log_level = logging.DEBUG if self.verbose else logging.INFO
         # Configure root logger
         import socket
-
         from logging import Formatter
         from logging.handlers import RotatingFileHandler
 
@@ -142,7 +141,9 @@ class IntegratedNtfsActivityRunner:
         self.current_file_size = 0
         if self.backup_to_files:
             self.output_dir = kwargs.get("output_dir", "data/ntfs_activity")
-            self.max_file_size = kwargs.get("max_file_size", 100) * 1024 * 1024  # MB to bytes
+            self.max_file_size = (
+                kwargs.get("max_file_size", 100) * 1024 * 1024
+            )  # MB to bytes
 
             # Create output directory if needed
             os.makedirs(self.output_dir, exist_ok=True)
@@ -339,7 +340,11 @@ class IntegratedNtfsActivityRunner:
                         self.consecutive_empty_results += 1
 
                         # Check if we should reset state due to persistent empty results
-                        if self.auto_reset_enabled and self.consecutive_empty_results >= self.empty_results_threshold:
+                        if (
+                            self.auto_reset_enabled
+                            and self.consecutive_empty_results
+                            >= self.empty_results_threshold
+                        ):
                             self.logger.warning(
                                 f"No activities for {self.consecutive_empty_results} consecutive cycles - resetting collector state",
                             )
@@ -384,7 +389,10 @@ class IntegratedNtfsActivityRunner:
                     self.consecutive_errors += 1
 
                     # Check if we should reset state due to persistent errors
-                    if self.auto_reset_enabled and self.consecutive_errors >= self.error_threshold:
+                    if (
+                        self.auto_reset_enabled
+                        and self.consecutive_errors >= self.error_threshold
+                    ):
                         self.logger.warning(
                             f"{self.consecutive_errors} consecutive collection errors - resetting collector state",
                         )
@@ -555,7 +563,7 @@ def main():
         default=3,
         help="Number of consecutive empty results before automatic state reset (default: 3)",
     )
-    
+
     # State file parameters
     parser.add_argument(
         "--use-state-file",
@@ -582,7 +590,9 @@ def main():
         "auto_reset": not args.no_auto_reset,
         "error_threshold": args.error_threshold,
         "empty_results_threshold": args.empty_threshold,
-        "use_state_file": args.use_state_file if hasattr(args, "use_state_file") else False,
+        "use_state_file": (
+            args.use_state_file if hasattr(args, "use_state_file") else False
+        ),
     }
 
     # Display configuration
@@ -603,7 +613,9 @@ def main():
     if not args.no_auto_reset:
         print(f"  Error Threshold:   {args.error_threshold} consecutive errors")
         print(f"  Empty Threshold:   {args.empty_threshold} consecutive empty results")
-    print(f"State File:        {'Enabled' if getattr(args, 'use_state_file', False) else 'Disabled'}")
+    print(
+        f"State File:        {'Enabled' if getattr(args, 'use_state_file', False) else 'Disabled'}",
+    )
     print("\nPress Ctrl+C to stop at any time...")
 
     try:

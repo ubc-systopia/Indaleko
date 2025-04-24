@@ -93,11 +93,7 @@ def test_ontology_enhancement():
         )
 
     # Verify ontology structure
-    if (
-        "concepts" in ontology
-        and "relationships" in ontology
-        and "categories" in ontology
-    ):
+    if "concepts" in ontology and "relationships" in ontology and "categories" in ontology:
         print("\n✅ Ontology enhancement test passed")
     else:
         print("\n❌ Ontology enhancement test failed")
@@ -124,12 +120,15 @@ def test_consolidation(db_config_path=None):
 
         # Create long-term memory recorder
         long_term_recorder = NtfsLongTermMemoryRecorder(
-            db_config_path=db_config_path, debug=True,
+            db_config_path=db_config_path,
+            debug=True,
         )
 
         # Get eligible entities
         eligible_entities = long_term_recorder.get_entities_eligible_for_archival(
-            min_importance=0.8, min_age_days=90, limit=5,
+            min_importance=0.8,
+            min_age_days=90,
+            limit=5,
         )
 
         print(f"Found {len(eligible_entities)} entities eligible for archival memory")
@@ -148,18 +147,16 @@ def test_consolidation(db_config_path=None):
 
             # Prepare entity data
             entity_data = {
-                "file_path": entity.get("Record", {})
-                .get("Data", {})
-                .get("file_path", "test_file.txt"),
-                "volume": entity.get("Record", {})
-                .get("Data", {})
-                .get("volume_name", "C:"),
+                "file_path": entity.get("Record", {}).get("Data", {}).get("file_path", "test_file.txt"),
+                "volume": entity.get("Record", {}).get("Data", {}).get("volume_name", "C:"),
                 "is_directory": False,
             }
 
             # Build archival memory document
             document = recorder._build_archival_memory_document(
-                uuid.UUID(entity_id), entity_data, entity,
+                uuid.UUID(entity_id),
+                entity_data,
+                entity,
             )
 
             # Verify document structure
@@ -205,7 +202,8 @@ def test_knowledge_graph(db_config_path=None):
         """
 
         cursor = recorder._db._arangodb.aql.execute(
-            query, bind_vars={"@collection": recorder._collection_name},
+            query,
+            bind_vars={"@collection": recorder._collection_name},
         )
 
         entities = list(cursor)
@@ -221,7 +219,8 @@ def test_knowledge_graph(db_config_path=None):
 
         # Build knowledge graph relationships
         relationships = recorder._build_knowledge_graph_relationships(
-            uuid.UUID(entity_id), entity,
+            uuid.UUID(entity_id),
+            entity,
         )
 
         print(f"Created {len(relationships)} knowledge graph relationships")
@@ -268,7 +267,9 @@ def test_search(db_config_path=None):
 
         # Use a general search term that should find something
         results = recorder.search_archival_memory(
-            query="test", importance_min=0.0, limit=5,
+            query="test",
+            importance_min=0.0,
+            limit=5,
         )
 
         print(f"Found {len(results)} results")
@@ -280,7 +281,10 @@ def test_search(db_config_path=None):
         w5h_filter = {"what": ["document", "file"], "how": ["frequently_accessed"]}
 
         w5h_results = recorder.search_archival_memory(
-            query="", w5h_filter=w5h_filter, importance_min=0.0, limit=5,
+            query="",
+            w5h_filter=w5h_filter,
+            importance_min=0.0,
+            limit=5,
         )
 
         print(f"Found {len(w5h_results)} results with W5H filter")
@@ -289,7 +293,10 @@ def test_search(db_config_path=None):
         print("\nTesting search with knowledge graph inclusion:")
 
         kg_results = recorder.search_archival_memory(
-            query="test", importance_min=0.0, include_knowledge_graph=True, limit=5,
+            query="test",
+            importance_min=0.0,
+            include_knowledge_graph=True,
+            limit=5,
         )
 
         has_kg = all("knowledge_graph_relationships" in result for result in kg_results)
@@ -329,7 +336,9 @@ def main():
     # Add test mode arguments
     test_group = parser.add_mutually_exclusive_group(required=True)
     test_group.add_argument(
-        "--test-ontology", action="store_true", help="Test ontology enhancement",
+        "--test-ontology",
+        action="store_true",
+        help="Test ontology enhancement",
     )
     test_group.add_argument(
         "--test-consolidation",
@@ -342,7 +351,9 @@ def main():
         help="Test knowledge graph construction",
     )
     test_group.add_argument(
-        "--test-search", action="store_true", help="Test search capabilities",
+        "--test-search",
+        action="store_true",
+        help="Test search capabilities",
     )
     test_group.add_argument("--test-all", action="store_true", help="Run all tests")
 
@@ -352,7 +363,8 @@ def main():
     # Configure logging
     log_level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(
-        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
     # Run tests

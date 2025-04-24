@@ -457,7 +457,8 @@ class UnstructuredRecorder(SemanticRecorderBase):
         extractor_name="UnstructuredRecorder._create_semantic_model",
     )
     def _create_semantic_model(
-        self, item: dict[str, Any],
+        self,
+        item: dict[str, Any],
     ) -> IndalekoBaseModel | None:
         """
         Create a semantic database model from unstructured data.
@@ -503,12 +504,14 @@ class UnstructuredRecorder(SemanticRecorderBase):
 
         except Exception as e:
             self._logger.error(
-                f"Error creating semantic model: {e!s}", exc_info=True,
+                f"Error creating semantic model: {e!s}",
+                exc_info=True,
             )
             return None
 
     def _extract_semantic_attributes(
-        self, item: dict[str, Any],
+        self,
+        item: dict[str, Any],
     ) -> list[IndalekoSemanticAttributeDataModel]:
         """
         Extract semantic attributes from unstructured data.
@@ -569,7 +572,9 @@ class UnstructuredRecorder(SemanticRecorderBase):
         return attributes
 
     def _create_attribute(
-        self, attr_type: str, value: Any,
+        self,
+        attr_type: str,
+        value: Any,
     ) -> IndalekoSemanticAttributeDataModel:
         """
         Create a semantic attribute with the given type and value.
@@ -599,13 +604,18 @@ def main():
         description="Indaleko Unstructured Semantic Recorder",
     )
     parser.add_argument(
-        "--input", help="Input JSON file with data from UnstructuredCollector",
+        "--input",
+        help="Input JSON file with data from UnstructuredCollector",
     )
     parser.add_argument(
-        "--skip-db", action="store_true", help="Skip database connection",
+        "--skip-db",
+        action="store_true",
+        help="Skip database connection",
     )
     parser.add_argument(
-        "--collection", default="SemanticContent", help="Collection name for storage",
+        "--collection",
+        default="SemanticContent",
+        help="Collection name for storage",
     )
 
     args = parser.parse_args()

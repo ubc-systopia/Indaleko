@@ -115,7 +115,9 @@ def enhance_query_with_kb(
     try:
         # Enhance query using KB
         enhanced = cli_instance.kb_integration.enhance_query(
-            query_text=query_text, intent=intent, extracted_entities=entities or [],
+            query_text=query_text,
+            intent=intent,
+            extracted_entities=entities or [],
         )
 
         return enhanced

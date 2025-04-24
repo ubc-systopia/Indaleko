@@ -48,13 +48,15 @@ from utils.db.db_file_picker import IndalekoFilePicker
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger("ChecksumBackgroundProcessor")
 
 
 def process_file_checksums(
-    file_obj: IndalekoObject, local_path: str,
+    file_obj: IndalekoObject,
+    local_path: str,
 ) -> dict[str, str] | None:
     """
     Process a file with the checksum collector.
@@ -98,7 +100,8 @@ def process_file_checksums(
 
 
 def process_file_and_store(
-    file_obj: IndalekoObject, local_path: str,
+    file_obj: IndalekoObject,
+    local_path: str,
 ) -> dict[str, str] | None:
     """
     Process a file with the checksum collector and store results in the database.
@@ -225,9 +228,7 @@ def schedule_checksum_processing(
                 for file in files:
                     doc = file.serialize()
                     label = doc.get("Label", "")
-                    if any(
-                        label.lower().endswith(ext.lower()) for ext in file_extensions
-                    ):
+                    if any(label.lower().endswith(ext.lower()) for ext in file_extensions):
                         filtered_files.append(file)
                 files = filtered_files
 
@@ -246,9 +247,7 @@ def schedule_checksum_processing(
             # Process files
             if background:
                 # Queue for background processing
-                process_func = (
-                    process_file_checksums if not background else process_file_and_store
-                )
+                process_func = process_file_checksums if not background else process_file_and_store
                 queued = file_picker.queue_for_background_processing(
                     files=files,
                     process_func=process_func,
@@ -306,7 +305,10 @@ def main():
     """Main function for the checksum background processor"""
     parser = argparse.ArgumentParser(description="Background checksum processor")
     parser.add_argument(
-        "--count", type=int, default=10, help="Number of files to process in each batch",
+        "--count",
+        type=int,
+        default=10,
+        help="Number of files to process in each batch",
     )
     parser.add_argument(
         "--foreground",
@@ -314,7 +316,10 @@ def main():
         help="Process files in foreground instead of background",
     )
     parser.add_argument(
-        "--batch-size", type=int, default=50, help="Size of the batch for processing",
+        "--batch-size",
+        type=int,
+        default=50,
+        help="Size of the batch for processing",
     )
     parser.add_argument(
         "--max-age-days",

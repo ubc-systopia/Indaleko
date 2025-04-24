@@ -110,7 +110,9 @@ class TestPerformanceMonitor(unittest.TestCase):
 
         # Start monitoring
         context = self.monitor.start_monitoring(
-            "test_manual", file_path=file_path, file_size=file_size,
+            "test_manual",
+            file_path=file_path,
+            file_size=file_size,
         )
 
         # Do some work
@@ -152,7 +154,8 @@ class TestPerformanceMonitor(unittest.TestCase):
 
         # Start monitoring
         context = self.monitor.start_monitoring(
-            "mime_detector", file_path=self.test_files[0],
+            "mime_detector",
+            file_path=self.test_files[0],
         )
 
         # Detect MIME type
@@ -160,7 +163,9 @@ class TestPerformanceMonitor(unittest.TestCase):
 
         # Stop monitoring
         metrics = self.monitor.stop_monitoring(
-            context, success=True, additional_data=mime_data,
+            context,
+            success=True,
+            additional_data=mime_data,
         )
 
         # Check metrics
@@ -188,7 +193,9 @@ class TestPerformanceMonitor(unittest.TestCase):
             mime_data = mime_detector.detect_mime_type(file_path)
 
             self.monitor.stop_monitoring(
-                context, success=True, additional_data=mime_data,
+                context,
+                success=True,
+                additional_data=mime_data,
             )
 
         # Check stats
@@ -205,7 +212,8 @@ class TestPerformanceMonitor(unittest.TestCase):
         """Test handling of failures."""
         # Start monitoring
         context = self.monitor.start_monitoring(
-            "test_failure", file_path="nonexistent_file.txt",
+            "test_failure",
+            file_path="nonexistent_file.txt",
         )
 
         # Stop monitoring with failure

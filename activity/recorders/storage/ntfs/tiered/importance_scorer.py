@@ -204,7 +204,9 @@ class ImportanceScorer:
         type_score = self._calculate_type_score(activity_data)
         content_score = self._calculate_content_score(activity_data)
         frequency_score = self._calculate_frequency_score(
-            activity_data, entity_metadata, search_hits,
+            activity_data,
+            entity_metadata,
+            search_hits,
         )
         novelty_score = self._calculate_novelty_score(activity_data, entity_metadata)
 
@@ -501,9 +503,7 @@ if __name__ == "__main__":
 
     # Test with older activity
     older_activity = test_activity.copy()
-    older_activity["timestamp"] = (
-        datetime.now(UTC) - timedelta(days=10)
-    ).isoformat()
+    older_activity["timestamp"] = (datetime.now(UTC) - timedelta(days=10)).isoformat()
     score = scorer.calculate_importance(older_activity, test_entity)
     print(f"Older activity score: {score:.2f}")
 

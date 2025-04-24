@@ -133,7 +133,8 @@ class MemoryConsolidationManager:
                 )
 
                 self._sensory_memory_recorder = NtfsSensoryMemoryRecorder(
-                    db_config_path=self._db_config_path, consolidation_enabled=True,
+                    db_config_path=self._db_config_path,
+                    consolidation_enabled=True,
                 )
                 self._logger.info("Created sensory memory recorder")
             except Exception as e:
@@ -147,7 +148,8 @@ class MemoryConsolidationManager:
                 )
 
                 self._short_term_memory_recorder = NtfsShortTermMemoryRecorder(
-                    db_config_path=self._db_config_path, consolidation_enabled=True,
+                    db_config_path=self._db_config_path,
+                    consolidation_enabled=True,
                 )
                 self._logger.info("Created short-term memory recorder")
             except Exception as e:
@@ -161,7 +163,8 @@ class MemoryConsolidationManager:
                 )
 
                 self._long_term_memory_recorder = NtfsLongTermMemoryRecorder(
-                    db_config_path=self._db_config_path, consolidation_enabled=True,
+                    db_config_path=self._db_config_path,
+                    consolidation_enabled=True,
                 )
                 self._logger.info("Created long-term memory recorder")
             except Exception as e:
@@ -397,9 +400,7 @@ class MemoryConsolidationManager:
         )
 
         total_errors = (
-            sensory_results.get("errors", 0)
-            + short_term_results.get("errors", 0)
-            + long_term_results.get("errors", 0)
+            sensory_results.get("errors", 0) + short_term_results.get("errors", 0) + long_term_results.get("errors", 0)
         )
 
         results["total_entities_processed"] = total_entities_processed
@@ -435,9 +436,7 @@ class MemoryConsolidationManager:
         # Get sensory memory statistics
         if self._sensory_memory_recorder is not None:
             try:
-                sensory_stats = (
-                    self._sensory_memory_recorder.get_sensory_memory_statistics()
-                )
+                sensory_stats = self._sensory_memory_recorder.get_sensory_memory_statistics()
                 stats["memory_tiers"]["sensory"] = sensory_stats
             except Exception as e:
                 self._logger.error(f"Error getting sensory memory statistics: {e}")
@@ -448,9 +447,7 @@ class MemoryConsolidationManager:
         # Get short-term memory statistics
         if self._short_term_memory_recorder is not None:
             try:
-                short_term_stats = (
-                    self._short_term_memory_recorder.get_short_term_memory_statistics()
-                )
+                short_term_stats = self._short_term_memory_recorder.get_short_term_memory_statistics()
                 stats["memory_tiers"]["short_term"] = short_term_stats
             except Exception as e:
                 self._logger.error(f"Error getting short-term memory statistics: {e}")
@@ -461,9 +458,7 @@ class MemoryConsolidationManager:
         # Get long-term memory statistics
         if self._long_term_memory_recorder is not None:
             try:
-                long_term_stats = (
-                    self._long_term_memory_recorder.get_long_term_memory_statistics()
-                )
+                long_term_stats = self._long_term_memory_recorder.get_long_term_memory_statistics()
                 stats["memory_tiers"]["long_term"] = long_term_stats
             except Exception as e:
                 self._logger.error(f"Error getting long-term memory statistics: {e}")
@@ -474,9 +469,7 @@ class MemoryConsolidationManager:
         # Get archival memory statistics
         if self._archival_memory_recorder is not None:
             try:
-                archival_stats = (
-                    self._archival_memory_recorder.get_archival_memory_statistics()
-                )
+                archival_stats = self._archival_memory_recorder.get_archival_memory_statistics()
                 stats["memory_tiers"]["archival"] = archival_stats
             except Exception as e:
                 self._logger.error(f"Error getting archival memory statistics: {e}")
@@ -559,16 +552,22 @@ def main():
         help="Consolidate from long-term to archival memory",
     )
     mode_group.add_argument(
-        "--consolidate-all", action="store_true", help="Run all consolidation processes",
+        "--consolidate-all",
+        action="store_true",
+        help="Run all consolidation processes",
     )
     mode_group.add_argument(
-        "--stats", action="store_true", help="Get memory system statistics",
+        "--stats",
+        action="store_true",
+        help="Get memory system statistics",
     )
 
     # Output options
     parser.add_argument("--json", action="store_true", help="Output results as JSON")
     parser.add_argument(
-        "--output-file", type=str, help="Write results to a file instead of stdout",
+        "--output-file",
+        type=str,
+        help="Write results to a file instead of stdout",
     )
 
     # Parse arguments
@@ -577,7 +576,8 @@ def main():
     # Configure logging
     log_level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(
-        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
     logger = get_logger("memory_consolidation")
 
@@ -667,9 +667,7 @@ def main():
                     output += f"Entities Processed: {results.get('entities_processed', 0)}\n"
                     output += f"Entities Consolidated: {results.get('entities_consolidated', 0)}\n"
                     output += f"Already in Short-Term: {results.get('already_in_short_term', 0)}\n"
-                    output += (
-                        f"Below Threshold: {results.get('below_threshold', 0)}\n"
-                    )
+                    output += f"Below Threshold: {results.get('below_threshold', 0)}\n"
                     output += f"Errors: {results.get('errors', 0)}\n"
 
                 elif consolidation_type == "short_term_to_long_term" or consolidation_type == "long_term_to_archival":
@@ -683,9 +681,7 @@ def main():
                     output += f"Total Errors: {results.get('total_errors', 0)}\n"
 
             if "execution_time" in results:
-                output += (
-                    f"Execution Time: {results['execution_time']:.2f} seconds\n"
-                )
+                output += f"Execution Time: {results['execution_time']:.2f} seconds\n"
 
             if "timestamp" in results:
                 output += f"Timestamp: {results['timestamp']}\n"
@@ -708,17 +704,12 @@ def main():
                     if "total_count" in tier_stats:
                         output += f"Total Count: {tier_stats['total_count']}\n"
 
-                    if (
-                        tier == "short_term"
-                        and "eligible_for_long_term" in tier_stats
-                    ):
+                    if tier == "short_term" and "eligible_for_long_term" in tier_stats:
                         output += f"Eligible for Long-Term: {tier_stats['eligible_for_long_term']}\n"
 
                     if "by_importance" in tier_stats:
                         output += "Importance Distribution:\n"
-                        for importance, count in tier_stats[
-                            "by_importance"
-                        ].items():
+                        for importance, count in tier_stats["by_importance"].items():
                             output += f"  {importance}: {count}\n"
 
                     output += "\n"

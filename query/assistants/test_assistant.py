@@ -61,12 +61,8 @@ def test_conversation_creation(assistant: IndalekoAssistant):
     """Test conversation creation."""
     print("\nTesting conversation creation...")
     conversation = assistant.create_conversation()
-    assert (
-        conversation.conversation_id is not None
-    ), "Conversation ID should not be None"
-    assert (
-        "thread_id" in conversation.execution_context
-    ), "Thread ID should be in execution context"
+    assert conversation.conversation_id is not None, "Conversation ID should not be None"
+    assert "thread_id" in conversation.execution_context, "Thread ID should be in execution context"
     print(f"Conversation created with ID: {conversation.conversation_id}")
     print(f"Thread ID: {conversation.execution_context['thread_id']}")
     return conversation.conversation_id
@@ -89,7 +85,8 @@ def test_tool_use(assistant: IndalekoAssistant, conversation_id: str, query: str
     """Test sending a message that requires tool use."""
     print(f"\nTesting tool use with query: {query}")
     response = assistant.process_message(
-        conversation_id=conversation_id, message_content=query,
+        conversation_id=conversation_id,
+        message_content=query,
     )
     assert response["action"] == "text", "Response action should be 'text'"
     assert "response" in response, "Response should contain a response field"
@@ -111,7 +108,9 @@ def main():
     parser.add_argument("--model", default="gpt-4o", help="The model to use")
     parser.add_argument("--debug", action="store_true", help="Enable debug output")
     parser.add_argument(
-        "--output", default="test_results.json", help="Output file for results",
+        "--output",
+        default="test_results.json",
+        help="Output file for results",
     )
 
     args = parser.parse_args()

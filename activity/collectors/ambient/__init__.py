@@ -29,13 +29,13 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from activity.collectors.base import CollectorBase
 from activity.collectors.ambient.smart_thermostat.ecobee import (
     EcobeeSmartThermostatCollector,
 )
 from activity.collectors.ambient.smart_thermostat.nest import (
     NestSmartThermostatCollector,
 )
+from activity.collectors.base import CollectorBase
 
 # pylint: enable=wrong-import-position
 

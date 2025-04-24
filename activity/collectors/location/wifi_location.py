@@ -144,7 +144,9 @@ class WiFiLocation(LocationCollector):
         return {"latitude": 0.0, "longitude": 0.0}
 
     def get_location_history(
-        self, start_time: datetime.datetime, end_time: datetime.datetime,
+        self,
+        start_time: datetime.datetime,
+        end_time: datetime.datetime,
     ) -> list[dict[str, Any]]:
         """Get the location history for the location"""
         events: list[dict[str, Any]] = []
@@ -228,7 +230,9 @@ class WiFiLocation(LocationCollector):
         self.data.append(data)
 
     def get_distance(
-        self, location1: dict[str, float], location2: dict[str, float],
+        self,
+        location1: dict[str, float],
+        location2: dict[str, float],
     ) -> float:
         """Get the distance between two locations in meters using Haversine formula"""
         # Earth radius in meters

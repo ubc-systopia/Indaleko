@@ -36,7 +36,8 @@ def run_session_1():
     print("Starting conversation...")
     print("User: I'm working on my thesis about UPI (Unified Personal Index).")
     manager.add_user_message(
-        conversation_id, "I'm working on my thesis about UPI (Unified Personal Index).",
+        conversation_id,
+        "I'm working on my thesis about UPI (Unified Personal Index).",
     )
 
     print(
@@ -74,7 +75,8 @@ def run_session_1():
     # Extract information and update context
     conversation.set_context_variable("thesis_topic", "UPI")
     conversation.set_context_variable(
-        "thesis_focus", "unifying data across disparate sources",
+        "thesis_focus",
+        "unifying data across disparate sources",
     )
     conversation.set_context_variable("demo_vehicle", "Archivist")
     conversation.set_context_variable("domain", "personal knowledge management")

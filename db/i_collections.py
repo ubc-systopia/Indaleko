@@ -80,9 +80,7 @@ class IndalekoCollections(IndalekoSingleton):
                     db=self.db_config,
                     reset=self.reset,
                 )
-            except (
-                arango.exceptions.CollectionConfigureError
-            ) as error:  # pylint: disable=no-member
+            except arango.exceptions.CollectionConfigureError as error:  # pylint: disable=no-member
                 logging.exception("Failed to configure collection %s", name)
                 print(f"Failed to configure collection {name}")
                 print(error)
@@ -90,7 +88,8 @@ class IndalekoCollections(IndalekoSingleton):
                     print("Schema:")
                     print(
                         json.dumps(
-                            IndalekoDBCollections.Collections[name]["schema"], indent=2,
+                            IndalekoDBCollections.Collections[name]["schema"],
+                            indent=2,
                         ),
                     )
                 raise error
@@ -127,9 +126,7 @@ class IndalekoCollections(IndalekoSingleton):
         ]
 
         # Get list of existing analyzers for verification
-        available_analyzers = [
-            a.get("name", "") for a in analyzer_manager.list_analyzers()
-        ]
+        available_analyzers = [a.get("name", "") for a in analyzer_manager.list_analyzers()]
 
         # Log any missing analyzers
         for analyzer in required_analyzers:
@@ -253,8 +250,7 @@ def extract_params() -> tuple:
         common_params = common_params.intersection(params)
         common_params.intersection_update(params)
     unique_params_by_index = {
-        index: list(set(params) - common_params)
-        for index, params in IndalekoCollectionIndex.index_args.items()
+        index: list(set(params) - common_params) for index, params in IndalekoCollectionIndex.index_args.items()
     }
     return common_params, unique_params_by_index
 
@@ -291,7 +287,8 @@ def main():
         )
     pre_args, _ = pre_parser.parse_known_args()
     parser = argparse.ArgumentParser(
-        description="Create an index for an IndalekoCollection", parents=[pre_parser],
+        description="Create an index for an IndalekoCollection",
+        parents=[pre_parser],
     )
     for index_args in unique_params_by_index[pre_args.type]:
         arg_type = IndalekoCollectionIndex.index_args[pre_args.type][index_args]

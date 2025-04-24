@@ -69,7 +69,8 @@ class QueryEntityUsage(BaseModel):
 
     entity_name: str = Field(..., description="Name of the entity")
     mention_count: int = Field(
-        default=0, description="Number of times this entity appears in queries",
+        default=0,
+        description="Number of times this entity appears in queries",
     )
     first_seen: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
@@ -80,19 +81,24 @@ class QueryEntityUsage(BaseModel):
         description="When this entity was last seen",
     )
     co_occurring_entities: dict[str, int] = Field(
-        default_factory=dict, description="Entities that co-occur with this one",
+        default_factory=dict,
+        description="Entities that co-occur with this one",
     )
     intents: dict[str, int] = Field(
-        default_factory=dict, description="Intents associated with this entity",
+        default_factory=dict,
+        description="Intents associated with this entity",
     )
     success_rate: float = Field(
-        default=0.0, description="Percentage of successful queries with this entity",
+        default=0.0,
+        description="Percentage of successful queries with this entity",
     )
     query_examples: list[str] = Field(
-        default_factory=list, description="Example queries containing this entity",
+        default_factory=list,
+        description="Example queries containing this entity",
     )
     attributes: dict[str, Any] = Field(
-        default_factory=dict, description="Additional attributes",
+        default_factory=dict,
+        description="Additional attributes",
     )
 
 
@@ -104,34 +110,44 @@ class QuerySequence(BaseModel):
         description="Unique identifier for this sequence",
     )
     sequence_signature: str = Field(
-        ..., description="Signature identifying this query sequence",
+        ...,
+        description="Signature identifying this query sequence",
     )
     queries: list[str] = Field(
-        default_factory=list, description="IDs of queries in this sequence",
+        default_factory=list,
+        description="IDs of queries in this sequence",
     )
     timestamps: list[datetime] = Field(
-        default_factory=list, description="Timestamps of queries in sequence",
+        default_factory=list,
+        description="Timestamps of queries in sequence",
     )
     frequency: int = Field(
-        default=1, description="Number of times this sequence has been observed",
+        default=1,
+        description="Number of times this sequence has been observed",
     )
     avg_time_between: float | None = Field(
-        None, description="Average time between queries in seconds",
+        None,
+        description="Average time between queries in seconds",
     )
     success_rate: float = Field(
-        default=0.0, description="Percentage of successful queries in this sequence",
+        default=0.0,
+        description="Percentage of successful queries in this sequence",
     )
     common_entities: list[str] = Field(
-        default_factory=list, description="Entities common across queries",
+        default_factory=list,
+        description="Entities common across queries",
     )
     refinement_pattern: str | None = Field(
-        None, description="Pattern of query refinement if present",
+        None,
+        description="Pattern of query refinement if present",
     )
     is_refinement: bool = Field(
-        default=False, description="Whether this is a refinement sequence",
+        default=False,
+        description="Whether this is a refinement sequence",
     )
     attributes: dict[str, Any] = Field(
-        default_factory=dict, description="Additional attributes",
+        default_factory=dict,
+        description="Additional attributes",
     )
 
 
@@ -145,13 +161,16 @@ class QueryPattern(BaseModel):
     pattern_name: str = Field(..., description="Name of the pattern")
     description: str = Field(..., description="Description of the pattern")
     pattern_type: str = Field(
-        ..., description="Type of pattern (time-based, entity-based, etc.)",
+        ...,
+        description="Type of pattern (time-based, entity-based, etc.)",
     )
     confidence: float = Field(
-        default=0.5, description="Confidence in this pattern (0.0-1.0)",
+        default=0.5,
+        description="Confidence in this pattern (0.0-1.0)",
     )
     observation_count: int = Field(
-        default=1, description="Number of times this pattern was observed",
+        default=1,
+        description="Number of times this pattern was observed",
     )
     first_observed: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
@@ -162,19 +181,24 @@ class QueryPattern(BaseModel):
         description="When this pattern was last observed",
     )
     supporting_evidence: list[str] = Field(
-        default_factory=list, description="Query IDs supporting this pattern",
+        default_factory=list,
+        description="Query IDs supporting this pattern",
     )
     entities_involved: list[str] = Field(
-        default_factory=list, description="Entities involved in this pattern",
+        default_factory=list,
+        description="Entities involved in this pattern",
     )
     intents_involved: list[str] = Field(
-        default_factory=list, description="Intents involved in this pattern",
+        default_factory=list,
+        description="Intents involved in this pattern",
     )
     temporal_factors: dict[str, Any] = Field(
-        default_factory=dict, description="Temporal factors in this pattern",
+        default_factory=dict,
+        description="Temporal factors in this pattern",
     )
     attributes: dict[str, Any] = Field(
-        default_factory=dict, description="Additional attributes",
+        default_factory=dict,
+        description="Additional attributes",
     )
 
 
@@ -200,10 +224,12 @@ class QueryChain(BaseModel):
     )
     chain_type: QueryChainType = Field(..., description="Type of query chain")
     queries: list[str] = Field(
-        default_factory=list, description="IDs of queries in this chain",
+        default_factory=list,
+        description="IDs of queries in this chain",
     )
     query_texts: list[str] = Field(
-        default_factory=list, description="Texts of queries in this chain",
+        default_factory=list,
+        description="Texts of queries in this chain",
     )
     start_time: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
@@ -215,17 +241,21 @@ class QueryChain(BaseModel):
     )
     duration: float = Field(default=0.0, description="Duration of the chain in seconds")
     shared_entities: list[str] = Field(
-        default_factory=list, description="Entities shared across the chain",
+        default_factory=list,
+        description="Entities shared across the chain",
     )
     transition_patterns: list[dict[str, Any]] = Field(
-        default_factory=list, description="Patterns in transitions between queries",
+        default_factory=list,
+        description="Patterns in transitions between queries",
     )
     outcome: str | None = Field(None, description="Final outcome of the chain")
     success_rate: float = Field(
-        default=0.0, description="Success rate of queries in the chain",
+        default=0.0,
+        description="Success rate of queries in the chain",
     )
     attributes: dict[str, Any] = Field(
-        default_factory=dict, description="Additional attributes",
+        default_factory=dict,
+        description="Additional attributes",
     )
 
 
@@ -257,22 +287,28 @@ class QueryRefinement(BaseModel):
     refinement_type: QueryRefinementType = Field(..., description="Type of refinement")
     time_between: float = Field(..., description="Time between queries in seconds")
     similarity: float = Field(
-        default=0.0, description="Similarity measure between the queries",
+        default=0.0,
+        description="Similarity measure between the queries",
     )
     added_terms: list[str] = Field(
-        default_factory=list, description="Terms added in the refinement",
+        default_factory=list,
+        description="Terms added in the refinement",
     )
     removed_terms: list[str] = Field(
-        default_factory=list, description="Terms removed in the refinement",
+        default_factory=list,
+        description="Terms removed in the refinement",
     )
     added_entities: list[str] = Field(
-        default_factory=list, description="Entities added in the refinement",
+        default_factory=list,
+        description="Entities added in the refinement",
     )
     removed_entities: list[str] = Field(
-        default_factory=list, description="Entities removed in the refinement",
+        default_factory=list,
+        description="Entities removed in the refinement",
     )
     attributes: dict[str, Any] = Field(
-        default_factory=dict, description="Additional attributes",
+        default_factory=dict,
+        description="Additional attributes",
     )
 
 
@@ -281,7 +317,8 @@ class UserQueryHistoryMetrics(BaseModel):
 
     user_id: str = Field(..., description="Identifier for the user")
     time_period: str = Field(
-        default="all_time", description="Time period for these metrics",
+        default="all_time",
+        description="Time period for these metrics",
     )
     start_date: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
@@ -295,51 +332,63 @@ class UserQueryHistoryMetrics(BaseModel):
 
     # Query success metrics
     successful_queries: int = Field(
-        default=0, description="Number of queries with results",
+        default=0,
+        description="Number of queries with results",
     )
     empty_result_queries: int = Field(
-        default=0, description="Number of queries with no results",
+        default=0,
+        description="Number of queries with no results",
     )
     success_rate: float = Field(
-        default=0.0, description="Percentage of successful queries",
+        default=0.0,
+        description="Percentage of successful queries",
     )
 
     # Query complexity metrics
     avg_query_length: float = Field(
-        default=0.0, description="Average length of queries in characters",
+        default=0.0,
+        description="Average length of queries in characters",
     )
     avg_entity_count: float = Field(
-        default=0.0, description="Average number of entities per query",
+        default=0.0,
+        description="Average number of entities per query",
     )
 
     # Temporal metrics
     queries_by_hour: dict[int, int] = Field(
-        default_factory=dict, description="Distribution of queries by hour",
+        default_factory=dict,
+        description="Distribution of queries by hour",
     )
     queries_by_day: dict[int, int] = Field(
-        default_factory=dict, description="Distribution of queries by day of week",
+        default_factory=dict,
+        description="Distribution of queries by day of week",
     )
 
     # Content metrics
     top_entities: dict[str, int] = Field(
-        default_factory=dict, description="Most frequently queried entities",
+        default_factory=dict,
+        description="Most frequently queried entities",
     )
     top_intents: dict[str, int] = Field(
-        default_factory=dict, description="Most frequent query intents",
+        default_factory=dict,
+        description="Most frequent query intents",
     )
 
     # Chain metrics
     avg_chain_length: float = Field(
-        default=0.0, description="Average number of queries in a chain",
+        default=0.0,
+        description="Average number of queries in a chain",
     )
     refinement_rate: float = Field(default=0.0, description="Rate of query refinement")
 
     # Performance metrics
     avg_query_time: float = Field(
-        default=0.0, description="Average query execution time in seconds",
+        default=0.0,
+        description="Average query execution time in seconds",
     )
     max_query_time: float = Field(
-        default=0.0, description="Maximum query execution time in seconds",
+        default=0.0,
+        description="Maximum query execution time in seconds",
     )
 
 
@@ -364,10 +413,12 @@ class QueryAssociationRule(BaseModel):
     conviction: float | None = Field(None, description="Conviction of this rule")
     rule_type: str = Field(..., description="Type of rule (entity, intent, etc.)")
     observed_count: int = Field(
-        default=0, description="Number of times this rule has been observed",
+        default=0,
+        description="Number of times this rule has been observed",
     )
     examples: list[dict[str, Any]] = Field(
-        default_factory=list, description="Example occurrences of this rule",
+        default_factory=list,
+        description="Example occurrences of this rule",
     )
 
 
@@ -376,46 +427,56 @@ class QueryPatternAnalysisData(IndalekoBaseModel):
 
     # Basic query tracking
     queries: dict[str, dict[str, Any]] = Field(
-        default_factory=dict, description="Query history records",
+        default_factory=dict,
+        description="Query history records",
     )
     query_timeline: list[tuple[str, datetime]] = Field(
-        default_factory=list, description="Chronological timeline of queries",
+        default_factory=list,
+        description="Chronological timeline of queries",
     )
 
     # Entity analysis
     entity_usage: dict[str, QueryEntityUsage] = Field(
-        default_factory=dict, description="Analysis of entity usage",
+        default_factory=dict,
+        description="Analysis of entity usage",
     )
 
     # Pattern detection
     query_patterns: list[QueryPattern] = Field(
-        default_factory=list, description="Detected query patterns",
+        default_factory=list,
+        description="Detected query patterns",
     )
     query_sequences: list[QuerySequence] = Field(
-        default_factory=list, description="Detected query sequences",
+        default_factory=list,
+        description="Detected query sequences",
     )
 
     # Query chains and refinements
     query_chains: list[QueryChain] = Field(
-        default_factory=list, description="Detected query chains",
+        default_factory=list,
+        description="Detected query chains",
     )
     query_refinements: list[QueryRefinement] = Field(
-        default_factory=list, description="Detected query refinements",
+        default_factory=list,
+        description="Detected query refinements",
     )
 
     # Association rules
     association_rules: list[QueryAssociationRule] = Field(
-        default_factory=list, description="Association rules between query elements",
+        default_factory=list,
+        description="Association rules between query elements",
     )
 
     # User metrics
     user_metrics: dict[str, UserQueryHistoryMetrics] = Field(
-        default_factory=dict, description="Metrics on user query behavior",
+        default_factory=dict,
+        description="Metrics on user query behavior",
     )
 
     # Cross-source integration
     cross_source_events: list[str] = Field(
-        default_factory=list, description="IDs of related cross-source events",
+        default_factory=list,
+        description="IDs of related cross-source events",
     )
 
     # System metadata
@@ -457,9 +518,7 @@ class QueryPatternAnalyzer:
 
         # Configuration parameters
         self.similarity_threshold = 0.7  # Threshold for query similarity
-        self.chain_time_threshold = (
-            3600  # Maximum time between queries in a chain (1 hour)
-        )
+        self.chain_time_threshold = 3600  # Maximum time between queries in a chain (1 hour)
         self.min_pattern_support = 3  # Minimum observations for a pattern
         self.temporal_window_size = 7  # Days to look back for temporal patterns
 
@@ -533,7 +592,9 @@ class QueryPatternAnalyzer:
         return loaded_count
 
     def _process_query_entities(
-        self, query_id: str, query_data: dict[str, Any],
+        self,
+        query_id: str,
+        query_data: dict[str, Any],
     ) -> None:
         """
         Process and analyze entities in a query.
@@ -554,10 +615,7 @@ class QueryPatternAnalyzer:
             entities = []
 
             # Try to get entities from parsed results
-            if (
-                "QueryHistory" in query_data
-                and "ParsedResults" in query_data["QueryHistory"]
-            ):
+            if "QueryHistory" in query_data and "ParsedResults" in query_data["QueryHistory"]:
                 parsed = query_data["QueryHistory"]["ParsedResults"]
                 if "Entities" in parsed:
                     for entity in parsed["Entities"]:
@@ -565,47 +623,32 @@ class QueryPatternAnalyzer:
                             entities.append(entity["name"])
 
             # Check alternative paths
-            elif (
-                "ParsedResults" in query_data
-                and "Entities" in query_data["ParsedResults"]
-            ):
+            elif "ParsedResults" in query_data and "Entities" in query_data["ParsedResults"]:
                 for entity in query_data["ParsedResults"]["Entities"]:
                     if isinstance(entity, dict) and "name" in entity:
                         entities.append(entity["name"])
 
             # Determine success/failure
             has_results = False
-            if (
-                "QueryHistory" in query_data
-                and "RawResults" in query_data["QueryHistory"]
-            ):
+            if "QueryHistory" in query_data and "RawResults" in query_data["QueryHistory"]:
                 has_results = len(query_data["QueryHistory"]["RawResults"]) > 0
             elif "RawResults" in query_data:
                 has_results = len(query_data["RawResults"]) > 0
 
             # Extract execution time
             execution_time = None
-            if (
-                "QueryHistory" in query_data
-                and "ElapsedTime" in query_data["QueryHistory"]
-            ):
+            if "QueryHistory" in query_data and "ElapsedTime" in query_data["QueryHistory"]:
                 execution_time = query_data["QueryHistory"]["ElapsedTime"]
             elif "ElapsedTime" in query_data:
                 execution_time = query_data["ElapsedTime"]
 
             # Extract intent
             intent = "search"  # Default intent
-            if (
-                "QueryHistory" in query_data
-                and "ParsedResults" in query_data["QueryHistory"]
-            ):
+            if "QueryHistory" in query_data and "ParsedResults" in query_data["QueryHistory"]:
                 parsed = query_data["QueryHistory"]["ParsedResults"]
                 if "Intent" in parsed:
                     intent = parsed["Intent"]
-            elif (
-                "ParsedResults" in query_data
-                and "Intent" in query_data["ParsedResults"]
-            ):
+            elif "ParsedResults" in query_data and "Intent" in query_data["ParsedResults"]:
                 intent = query_data["ParsedResults"]["Intent"]
 
             # Update entity usage statistics
@@ -685,9 +728,7 @@ class QueryPatternAnalyzer:
                 for chain in current_chains:
                     if len(chain.queries) > 1:
                         chain.end_time = prev_time
-                        chain.duration = (
-                            chain.end_time - chain.start_time
-                        ).total_seconds()
+                        chain.duration = (chain.end_time - chain.start_time).total_seconds()
                         chains.append(chain)
 
                 # Reset current chains
@@ -718,11 +759,12 @@ class QueryPatternAnalyzer:
             similarity = self._calculate_query_similarity(prev_text, curr_text)
 
             # Determine if this is a refinement
-            is_refinement = (
-                similarity > self.similarity_threshold and len(shared_entities) > 0
-            )
+            is_refinement = similarity > self.similarity_threshold and len(shared_entities) > 0
             refinement_type = self._determine_refinement_type(
-                prev_text, curr_text, prev_entities, curr_entities,
+                prev_text,
+                curr_text,
+                prev_entities,
+                curr_entities,
             )
 
             # Check if these queries can be part of the same chain
@@ -741,9 +783,7 @@ class QueryPatternAnalyzer:
                         "time_diff": time_diff,
                         "similarity": similarity,
                         "shared_entities": shared_entities,
-                        "refinement_type": (
-                            refinement_type.value if refinement_type else None
-                        ),
+                        "refinement_type": (refinement_type.value if refinement_type else None),
                     }
                     chain.transition_patterns.append(transition)
 
@@ -751,17 +791,13 @@ class QueryPatternAnalyzer:
                     if not chain.shared_entities:
                         chain.shared_entities = shared_entities
                     else:
-                        chain.shared_entities = [
-                            e for e in chain.shared_entities if e in shared_entities
-                        ]
+                        chain.shared_entities = [e for e in chain.shared_entities if e in shared_entities]
 
                     chain_match = True
                     break
 
             # If no matching chain, create a new one
-            if not chain_match and (
-                is_refinement or (shared_entities and len(shared_entities) > 0)
-            ):
+            if not chain_match and (is_refinement or (shared_entities and len(shared_entities) > 0)):
                 # Determine chain type
                 chain_type = QueryChainType.OTHER
                 if is_refinement:
@@ -779,9 +815,7 @@ class QueryPatternAnalyzer:
                     "time_diff": time_diff,
                     "similarity": similarity,
                     "shared_entities": shared_entities,
-                    "refinement_type": (
-                        refinement_type.value if refinement_type else None
-                    ),
+                    "refinement_type": (refinement_type.value if refinement_type else None),
                 }
 
                 # Create new chain
@@ -801,11 +835,7 @@ class QueryPatternAnalyzer:
         for chain in current_chains:
             if len(chain.queries) > 1:
                 last_id, last_time = next(
-                    (
-                        id_time
-                        for id_time in timeline
-                        if id_time[0] == chain.queries[-1]
-                    ),
+                    (id_time for id_time in timeline if id_time[0] == chain.queries[-1]),
                     (None, None),
                 )
                 if last_time:
@@ -821,9 +851,7 @@ class QueryPatternAnalyzer:
                 if self._query_has_results(query):
                     successful += 1
 
-            chain.success_rate = (
-                successful / len(chain.queries) if chain.queries else 0.0
-            )
+            chain.success_rate = successful / len(chain.queries) if chain.queries else 0.0
 
         # Store in the data model
         self.data.query_chains = chains
@@ -835,10 +863,7 @@ class QueryPatternAnalyzer:
         entities = []
 
         # Try to get entities from parsed results
-        if (
-            "QueryHistory" in query_data
-            and "ParsedResults" in query_data["QueryHistory"]
-        ):
+        if "QueryHistory" in query_data and "ParsedResults" in query_data["QueryHistory"]:
             parsed = query_data["QueryHistory"]["ParsedResults"]
             if "Entities" in parsed:
                 for entity in parsed["Entities"]:
@@ -846,9 +871,7 @@ class QueryPatternAnalyzer:
                         entities.append(entity["name"])
 
         # Check alternative paths
-        elif (
-            "ParsedResults" in query_data and "Entities" in query_data["ParsedResults"]
-        ):
+        elif "ParsedResults" in query_data and "Entities" in query_data["ParsedResults"]:
             for entity in query_data["ParsedResults"]["Entities"]:
                 if isinstance(entity, dict) and "name" in entity:
                     entities.append(entity["name"])
@@ -872,7 +895,11 @@ class QueryPatternAnalyzer:
         return SequenceMatcher(None, query1.lower(), query2.lower()).ratio()
 
     def _determine_refinement_type(
-        self, query1: str, query2: str, entities1: list[str], entities2: list[str],
+        self,
+        query1: str,
+        query2: str,
+        entities1: list[str],
+        entities2: list[str],
     ) -> QueryRefinementType | None:
         """Determine the type of refinement between two queries."""
         if not query1 or not query2:
@@ -899,19 +926,13 @@ class QueryPatternAnalyzer:
             "after",
             "between",
         ]
-        has_new_temporal = any(
-            term in query2.lower() and term not in query1.lower()
-            for term in temporal_terms
-        )
+        has_new_temporal = any(term in query2.lower() and term not in query1.lower() for term in temporal_terms)
         if has_new_temporal:
             return QueryRefinementType.TEMPORAL_REFINEMENT
 
         # Check for location refinements
         location_terms = ["in", "at", "near", "location", "where"]
-        has_new_location = any(
-            term in query2.lower() and term not in query1.lower()
-            for term in location_terms
-        )
+        has_new_location = any(term in query2.lower() and term not in query1.lower() for term in location_terms)
         if has_new_location:
             return QueryRefinementType.LOCATION_REFINEMENT
 
@@ -985,12 +1006,8 @@ class QueryPatternAnalyzer:
                 intent_counts[intent] += 1
 
             # Find dominant entities and intents
-            dominant_entities = [
-                e for e, c in entity_counts.items() if c >= self.min_pattern_support
-            ]
-            dominant_intents = [
-                i for i, c in intent_counts.items() if c >= self.min_pattern_support
-            ]
+            dominant_entities = [e for e, c in entity_counts.items() if c >= self.min_pattern_support]
+            dominant_intents = [i for i, c in intent_counts.items() if c >= self.min_pattern_support]
 
             if dominant_entities or dominant_intents:
                 # We have a temporal pattern
@@ -1010,7 +1027,8 @@ class QueryPatternAnalyzer:
 
                 # Calculate confidence based on consistency
                 confidence = min(
-                    0.5 + (len(query_ids) / 20), 0.95,
+                    0.5 + (len(query_ids) / 20),
+                    0.95,
                 )  # Scales up with more observations
 
                 # Create pattern
@@ -1035,10 +1053,7 @@ class QueryPatternAnalyzer:
     def _extract_intent(self, query_data: dict[str, Any]) -> str:
         """Extract intent from query data."""
         # Try to get intent from parsed results
-        if (
-            "QueryHistory" in query_data
-            and "ParsedResults" in query_data["QueryHistory"]
-        ):
+        if "QueryHistory" in query_data and "ParsedResults" in query_data["QueryHistory"]:
             parsed = query_data["QueryHistory"]["ParsedResults"]
             if "Intent" in parsed:
                 return parsed["Intent"]
@@ -1098,9 +1113,7 @@ class QueryPatternAnalyzer:
                     observation_count=entity_usage.mention_count,
                     entities_involved=[entity_name] + [e for e, _ in top_cooccur],
                     attributes={
-                        "co_occurrence_strengths": {
-                            e: p for e, p in strong_cooccurrence
-                        },
+                        "co_occurrence_strengths": {e: p for e, p in strong_cooccurrence},
                         "success_rate": entity_usage.success_rate,
                     },
                 )
@@ -1118,11 +1131,7 @@ class QueryPatternAnalyzer:
             return patterns
 
         # Analyze refinement chains
-        refinement_chains = [
-            c
-            for c in self.data.query_chains
-            if c.chain_type == QueryChainType.REFINEMENT
-        ]
+        refinement_chains = [c for c in self.data.query_chains if c.chain_type == QueryChainType.REFINEMENT]
 
         # Skip if not enough data
         if len(refinement_chains) < self.min_pattern_support:
@@ -1154,30 +1163,27 @@ class QueryPatternAnalyzer:
                     break
 
             # Create description
-            description = (
-                f"Users frequently refine queries by {ref_type.replace('_', ' ')}"
-            )
+            description = f"Users frequently refine queries by {ref_type.replace('_', ' ')}"
 
             # Add success rate information if available
             success_rates = [
                 chain.success_rate
                 for chain in refinement_chains
-                if any(
-                    t.get("refinement_type") == ref_type
-                    for t in chain.transition_patterns
-                )
+                if any(t.get("refinement_type") == ref_type for t in chain.transition_patterns)
             ]
 
             if success_rates:
                 avg_success = sum(success_rates) / len(success_rates)
                 confidence = min(
-                    0.5 + (count / 10) * 0.4, 0.9,
+                    0.5 + (count / 10) * 0.4,
+                    0.9,
                 )  # Scale confidence with observation count
 
                 if avg_success > 0.7:
                     description += f", with high success rate ({avg_success:.1%})"
                     confidence = min(
-                        confidence + 0.1, 0.95,
+                        confidence + 0.1,
+                        0.95,
                     )  # Boost confidence for successful patterns
             else:
                 confidence = min(0.5 + (count / 10) * 0.3, 0.8)
@@ -1192,11 +1198,7 @@ class QueryPatternAnalyzer:
                 supporting_evidence=examples,
                 attributes={
                     "refinement_type": ref_type,
-                    "avg_success_rate": (
-                        sum(success_rates) / len(success_rates)
-                        if success_rates
-                        else None
-                    ),
+                    "avg_success_rate": (sum(success_rates) / len(success_rates) if success_rates else None),
                 },
             )
 
@@ -1217,16 +1219,8 @@ class QueryPatternAnalyzer:
         # Initialize metrics
         metrics = UserQueryHistoryMetrics(
             user_id="current_user",  # Default user
-            start_date=(
-                self.data.query_timeline[0][1]
-                if self.data.query_timeline
-                else datetime.now(UTC)
-            ),
-            end_date=(
-                self.data.query_timeline[-1][1]
-                if self.data.query_timeline
-                else datetime.now(UTC)
-            ),
+            start_date=(self.data.query_timeline[0][1] if self.data.query_timeline else datetime.now(UTC)),
+            end_date=(self.data.query_timeline[-1][1] if self.data.query_timeline else datetime.now(UTC)),
         )
 
         # Calculate basic metrics
@@ -1278,17 +1272,11 @@ class QueryPatternAnalyzer:
         # Calculate derived metrics
         metrics.successful_queries = successful
         metrics.empty_result_queries = metrics.total_queries - successful
-        metrics.success_rate = (
-            successful / metrics.total_queries if metrics.total_queries > 0 else 0.0
-        )
+        metrics.success_rate = successful / metrics.total_queries if metrics.total_queries > 0 else 0.0
 
         # Complexity metrics
-        metrics.avg_query_length = (
-            sum(query_lengths) / len(query_lengths) if query_lengths else 0.0
-        )
-        metrics.avg_entity_count = (
-            sum(entity_counts) / len(entity_counts) if entity_counts else 0.0
-        )
+        metrics.avg_query_length = sum(query_lengths) / len(query_lengths) if query_lengths else 0.0
+        metrics.avg_entity_count = sum(entity_counts) / len(entity_counts) if entity_counts else 0.0
 
         # Temporal metrics
         metrics.queries_by_hour = dict(hour_counts)
@@ -1305,20 +1293,12 @@ class QueryPatternAnalyzer:
         # Chain metrics
         if self.data.query_chains:
             chain_lengths = [len(chain.queries) for chain in self.data.query_chains]
-            metrics.avg_chain_length = (
-                sum(chain_lengths) / len(chain_lengths) if chain_lengths else 0.0
-            )
+            metrics.avg_chain_length = sum(chain_lengths) / len(chain_lengths) if chain_lengths else 0.0
 
             # Count refinements
-            refinement_chains = [
-                c
-                for c in self.data.query_chains
-                if c.chain_type == QueryChainType.REFINEMENT
-            ]
+            refinement_chains = [c for c in self.data.query_chains if c.chain_type == QueryChainType.REFINEMENT]
             metrics.refinement_rate = (
-                len(refinement_chains) / len(self.data.query_chains)
-                if self.data.query_chains
-                else 0.0
+                len(refinement_chains) / len(self.data.query_chains) if self.data.query_chains else 0.0
             )
 
         # Performance metrics
@@ -1347,7 +1327,8 @@ class QueryPatternAnalyzer:
         return None
 
     def generate_query_suggestions(
-        self, context: dict[str, Any] = None,
+        self,
+        context: dict[str, Any] = None,
     ) -> list[ProactiveSuggestion]:
         """
         Generate query suggestions based on detected patterns.
@@ -1370,10 +1351,7 @@ class QueryPatternAnalyzer:
 
         # 1. Temporal suggestions
         for pattern in self.data.query_patterns:
-            if (
-                pattern.pattern_type == "temporal_hour"
-                and pattern.temporal_factors.get("hour") == current_hour
-            ):
+            if pattern.pattern_type == "temporal_hour" and pattern.temporal_factors.get("hour") == current_hour:
                 # This is a pattern matching the current hour
 
                 # Only suggest high confidence patterns
@@ -1403,14 +1381,9 @@ class QueryPatternAnalyzer:
 
             # Look for entity co-occurrence patterns
             for pattern in self.data.query_patterns:
-                if (
-                    pattern.pattern_type == "entity_cooccurrence"
-                    and mentioned_entity in pattern.entities_involved
-                ):
+                if pattern.pattern_type == "entity_cooccurrence" and mentioned_entity in pattern.entities_involved:
                     # Find the other entities that co-occur with this one
-                    related_entities = [
-                        e for e in pattern.entities_involved if e != mentioned_entity
-                    ]
+                    related_entities = [e for e in pattern.entities_involved if e != mentioned_entity]
 
                     if related_entities:
                         # Check if this is a confident pattern
@@ -1435,15 +1408,11 @@ class QueryPatternAnalyzer:
                             suggestions.append(suggestion)
 
         # 3. Search strategy suggestions
-        refinement_patterns = [
-            p for p in self.data.query_patterns if p.pattern_type == "query_refinement"
-        ]
+        refinement_patterns = [p for p in self.data.query_patterns if p.pattern_type == "query_refinement"]
         if refinement_patterns and len(refinement_patterns) >= 2:
             # Pick a high-confidence refinement pattern
             successful_patterns = [
-                p
-                for p in refinement_patterns
-                if p.confidence >= 0.7 and p.attributes.get("avg_success_rate", 0) > 0.7
+                p for p in refinement_patterns if p.confidence >= 0.7 and p.attributes.get("avg_success_rate", 0) > 0.7
             ]
 
             if successful_patterns:
@@ -1451,7 +1420,8 @@ class QueryPatternAnalyzer:
 
                 # Create a suggestion based on successful refinement strategies
                 refinement_type = pattern.attributes.get("refinement_type", "").replace(
-                    "_", " ",
+                    "_",
+                    " ",
                 )
 
                 content = f"When searching, try {refinement_type} to refine your queries. This approach has been successful in similar searches."
@@ -1460,8 +1430,7 @@ class QueryPatternAnalyzer:
                     suggestion_type=SuggestionType.SEARCH_STRATEGY,
                     title="Search strategy tip",
                     content=content,
-                    expires_at=now
-                    + timedelta(days=7),  # Longer expiration for strategy tips
+                    expires_at=now + timedelta(days=7),  # Longer expiration for strategy tips
                     priority=SuggestionPriority.LOW,
                     confidence=pattern.confidence,
                     context={"pattern_id": pattern.pattern_id},
@@ -1473,16 +1442,10 @@ class QueryPatternAnalyzer:
         if self.cross_source_detector:
             try:
                 # Get suggestions from cross-source detector
-                cross_source_suggestions = (
-                    self.cross_source_detector.generate_suggestions(max_suggestions=3)
-                )
+                cross_source_suggestions = self.cross_source_detector.generate_suggestions(max_suggestions=3)
 
                 # Filter to just include query-related suggestions
-                query_suggestions = [
-                    s
-                    for s in cross_source_suggestions
-                    if s.suggestion_type == SuggestionType.QUERY
-                ]
+                query_suggestions = [s for s in cross_source_suggestions if s.suggestion_type == SuggestionType.QUERY]
 
                 suggestions.extend(query_suggestions)
             except Exception as e:
@@ -1534,16 +1497,8 @@ class QueryPatternAnalyzer:
             "pattern_count": len(patterns),
             "refinement_rate": metrics.refinement_rate if metrics else 0.0,
             "success_rate": metrics.success_rate if metrics else 0.0,
-            "top_entities": (
-                list(metrics.top_entities.keys())[:5]
-                if metrics and metrics.top_entities
-                else []
-            ),
-            "top_intents": (
-                list(metrics.top_intents.keys())
-                if metrics and metrics.top_intents
-                else []
-            ),
+            "top_entities": (list(metrics.top_entities.keys())[:5] if metrics and metrics.top_entities else []),
+            "top_intents": (list(metrics.top_intents.keys()) if metrics and metrics.top_intents else []),
         }
 
         # Log analysis results
@@ -1569,7 +1524,10 @@ def main():
     parser = argparse.ArgumentParser(description="Query Pattern Analysis demo")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     parser.add_argument(
-        "--days", type=int, default=30, help="Number of days to analyze",
+        "--days",
+        type=int,
+        default=30,
+        help="Number of days to analyze",
     )
     parser.add_argument(
         "--max-queries",
@@ -1580,7 +1538,10 @@ def main():
     parser.add_argument("--mock", action="store_true", help="Run with mock data")
     parser.add_argument("--save", action="store_true", help="Save results to a file")
     parser.add_argument(
-        "--output", type=str, default="query_patterns.json", help="Output file name",
+        "--output",
+        type=str,
+        default="query_patterns.json",
+        help="Output file name",
     )
 
     args = parser.parse_args()
@@ -1588,7 +1549,8 @@ def main():
     # Configure logging
     log_level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(
-        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
     # Create analyzer

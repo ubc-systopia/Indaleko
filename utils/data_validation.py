@@ -59,7 +59,7 @@ def validate_hostname(hostname: str) -> bool:
     try:
         socket.gethostbyname(hostname)
         return True
-    except socket.error:
+    except OSError:
         print("hostname is not valid")
         return False
 

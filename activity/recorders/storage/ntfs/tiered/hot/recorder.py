@@ -1341,7 +1341,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
         self._logger.info(
             f"SUMMARY: Stored {stored_count} out of {len(activities)} activities. Errors: {error_count}",
         )
-        
+
         # After processing all activities, log FRN lookup statistics if available
         if hasattr(self, "_frn_lookup_stats"):
             total = self._frn_lookup_stats["success"] + self._frn_lookup_stats["failed"]
@@ -1350,14 +1350,14 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 self._logger.info(
                     f"FRN lookups: {self._frn_lookup_stats['success']} successful, "
                     f"{self._frn_lookup_stats['failed']} failed "
-                    f"({success_rate:.1f}% success rate)"
+                    f"({success_rate:.1f}% success rate)",
                 )
-                
+
                 # Reset batch counters every 1000 operations to avoid number overflow in long-running sessions
                 if total % 1000 == 0:
                     self._logger.info("Resetting FRN lookup statistics counters")
                     self._frn_lookup_stats = {"success": 0, "failed": 0}
-        
+
         return activity_ids
 
     def store_activity(
@@ -1380,7 +1380,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
         # Initialize FRN lookup tracking state if not exists
         if not hasattr(self, "_frn_lookup_stats"):
             self._frn_lookup_stats = {"success": 0, "failed": 0}
-        
+
         # Track if this activity has FRN data for lookup
         has_frn_data = False
         frn_lookup_success = False
@@ -1439,13 +1439,15 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 # Continue with original activity data
 
         # Check if activity has FRN data for tracking
-        if hasattr(activity_data, "file_reference_number") and hasattr(activity_data, "volume_name"):
+        if hasattr(activity_data, "file_reference_number") and hasattr(
+            activity_data, "volume_name",
+        ):
             frn = activity_data.file_reference_number
             volume = activity_data.volume_name
-            
+
             if frn and volume:
                 has_frn_data = True
-        
+
         # Build document with hot tier enhancements
         self._logger.debug(
             f"Building hot tier document for activity {activity_data.activity_id}",
@@ -1453,14 +1455,14 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
         try:
             document = self._build_hot_tier_document(activity_data)
             self._logger.debug("Hot tier document built successfully")
-            
+
             # Consider this a successful FRN lookup if we have entity_id in the document
             if has_frn_data and "entity_id" in document and document["entity_id"]:
                 frn_lookup_success = True
                 self._frn_lookup_stats["success"] += 1
             elif has_frn_data:
                 self._frn_lookup_stats["failed"] += 1
-                
+
         except Exception as e:
             self._logger.error(f"Error building hot tier document: {e}")
             self._logger.debug(

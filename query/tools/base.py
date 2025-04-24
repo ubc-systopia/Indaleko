@@ -176,7 +176,8 @@ class BaseTool(ABC):
         for name, value in input_data.parameters.items():
             # Find the parameter definition
             param_def = next(
-                (p for p in self.definition.parameters if p.name == name), None,
+                (p for p in self.definition.parameters if p.name == name),
+                None,
             )
             if param_def is None:
                 raise ValueError(f"Unknown parameter: {name}")

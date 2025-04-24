@@ -370,7 +370,11 @@ def check_usn_journal_status(volume, verbose=False):
         volume = f"{volume}:"
 
     result = subprocess.run(
-        f"fsutil usn queryjournal {volume}", shell=True, capture_output=True, text=True, check=False,
+        f"fsutil usn queryjournal {volume}",
+        shell=True,
+        capture_output=True,
+        text=True,
+        check=False,
     )
 
     if result.returncode == 0:
@@ -394,10 +398,15 @@ def check_usn_journal_status(volume, verbose=False):
 def main():
     parser = argparse.ArgumentParser(description="USN Journal Reader using ctypes")
     parser.add_argument(
-        "--volume", type=str, default="C:", help="Volume to query (default: C:)",
+        "--volume",
+        type=str,
+        default="C:",
+        help="Volume to query (default: C:)",
     )
     parser.add_argument(
-        "--start-usn", type=int, help="Starting USN (defaults to recent entries)",
+        "--start-usn",
+        type=int,
+        help="Starting USN (defaults to recent entries)",
     )
     parser.add_argument(
         "--output",
@@ -417,10 +426,14 @@ def main():
         help="Create test files to generate USN activity",
     )
     parser.add_argument(
-        "--verbose", action="store_true", help="Enable verbose debugging output",
+        "--verbose",
+        action="store_true",
+        help="Enable verbose debugging output",
     )
     parser.add_argument(
-        "--fsutil", action="store_true", help="Check USN journal status with fsutil",
+        "--fsutil",
+        action="store_true",
+        help="Check USN journal status with fsutil",
     )
     args = parser.parse_args()
 
@@ -476,14 +489,18 @@ def main():
             if start_usn is None:
                 # Start from records further back to make sure we get some data
                 start_usn = max(
-                    journal_data.LowestValidUsn, journal_data.NextUsn - 100000,
+                    journal_data.LowestValidUsn,
+                    journal_data.NextUsn - 100000,
                 )
                 print(f"Using calculated start USN: {start_usn}")
 
             # Read journal records
             print(f"Reading USN journal records from USN {start_usn}")
             buffer, bytes_returned = read_usn_journal(
-                handle, journal_data.UsnJournalID, start_usn, args.verbose,
+                handle,
+                journal_data.UsnJournalID,
+                start_usn,
+                args.verbose,
             )
             print(f"Read {bytes_returned} bytes from USN journal")
 
@@ -496,7 +513,10 @@ def main():
             offset = 8  # Start after NextUSN
             while offset < bytes_returned:
                 record, offset = parse_usn_record(
-                    buffer, offset, bytes_returned, args.verbose,
+                    buffer,
+                    offset,
+                    bytes_returned,
+                    args.verbose,
                 )
                 if record:
                     records.append(record)

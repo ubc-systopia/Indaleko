@@ -86,7 +86,8 @@ def run_basic_test(model: str = "gpt-4o", debug: bool = False) -> None:
 
         start_time = time.time()
         response = assistant.process_message(
-            conversation_id=conversation_id, message_content=query,
+            conversation_id=conversation_id,
+            message_content=query,
         )
         end_time = time.time()
 
@@ -145,7 +146,8 @@ def run_conversation_test(model: str = "gpt-4o", interactive: bool = False) -> N
 
             print(f"{Fore.YELLOW}Processing...{Style.RESET_ALL}")
             response = assistant.process_message(
-                conversation_id=conversation_id, message_content=user_input,
+                conversation_id=conversation_id,
+                message_content=user_input,
             )
 
             print(f"{Fore.GREEN}Archivist: {response['response']}{Style.RESET_ALL}")
@@ -156,7 +158,8 @@ def run_conversation_test(model: str = "gpt-4o", interactive: bool = False) -> N
             print(f"{Fore.YELLOW}Processing...{Style.RESET_ALL}")
 
             response = assistant.process_message(
-                conversation_id=conversation_id, message_content=message,
+                conversation_id=conversation_id,
+                message_content=message,
             )
 
             print(f"{Fore.GREEN}Archivist: {response['response']}{Style.RESET_ALL}")
@@ -164,7 +167,8 @@ def run_conversation_test(model: str = "gpt-4o", interactive: bool = False) -> N
     # Save conversation to a file
     os.makedirs("conversations", exist_ok=True)
     filepath = os.path.join(
-        "conversations", f"test_conversation_{int(time.time())}.json",
+        "conversations",
+        f"test_conversation_{int(time.time())}.json",
     )
     assistant.save_conversations(filepath)
     print(f"\n{Fore.GREEN}Conversation saved to {filepath}{Style.RESET_ALL}")
@@ -179,7 +183,9 @@ def run_conversation_test(model: str = "gpt-4o", interactive: bool = False) -> N
     print(f"\n{Fore.CYAN}Content Preferences:{Style.RESET_ALL}")
     preferences = assistant.archivist_memory.memory.content_preferences
     for content_type, preference in sorted(
-        preferences.items(), key=lambda x: x[1], reverse=True,
+        preferences.items(),
+        key=lambda x: x[1],
+        reverse=True,
     ):
         print(f"  - {content_type}: {preference:.2f}")
 
@@ -210,9 +216,7 @@ def run_tool_usage_test(model: str = "gpt-4o") -> None:
     print(f"{Fore.GREEN}Assistant initialized.{Style.RESET_ALL}")
 
     # Test tool-intensive query
-    query = (
-        "Find all PDF documents modified in the last month and explain the query plan."
-    )
+    query = "Find all PDF documents modified in the last month and explain the query plan."
 
     print(f"\n{Fore.BLUE}User: {query}{Style.RESET_ALL}")
     print(
@@ -221,7 +225,8 @@ def run_tool_usage_test(model: str = "gpt-4o") -> None:
 
     start_time = time.time()
     response = assistant.process_message(
-        conversation_id=conversation_id, message_content=query,
+        conversation_id=conversation_id,
+        message_content=query,
     )
     end_time = time.time()
 
@@ -338,7 +343,8 @@ def run_context_management_test(model: str = "gpt-4o") -> None:
         print(f"{Fore.YELLOW}Processing...{Style.RESET_ALL}")
 
         response = assistant.process_message(
-            conversation_id=conversation_id, message_content=message,
+            conversation_id=conversation_id,
+            message_content=message,
         )
 
         # Show partial response to save space
@@ -358,14 +364,13 @@ def run_context_management_test(model: str = "gpt-4o") -> None:
     print(f"New thread: {refresh_result['new_thread_id']}")
 
     # Test a message after refresh
-    final_message = (
-        "Thanks for all that information. Can you summarize what we discussed?"
-    )
+    final_message = "Thanks for all that information. Can you summarize what we discussed?"
     print(f"\n{Fore.BLUE}User: {final_message}{Style.RESET_ALL}")
     print(f"{Fore.YELLOW}Processing...{Style.RESET_ALL}")
 
     response = assistant.process_message(
-        conversation_id=conversation_id, message_content=final_message,
+        conversation_id=conversation_id,
+        message_content=final_message,
     )
 
     # Show response

@@ -1,7 +1,7 @@
 """initializtion logic for the db management models in Indaleko"""
 
-import os
 import importlib
+import os
 import sys
 
 # from icecream import ic
@@ -16,9 +16,9 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from utils.singleton import IndalekoSingleton
-from utils.misc.i_docker import IndalekoDocker
 from utils.i_logging import IndalekoLogging
+from utils.misc.i_docker import IndalekoDocker
+from utils.singleton import IndalekoSingleton
 
 # pylint: enable=wrong-import-position
 

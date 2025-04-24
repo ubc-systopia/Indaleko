@@ -63,7 +63,9 @@ class EntityRegistry:
         self.logger.info(f"Registered entity: {entity.name} (ID: {entity.entity_id})")
 
     def register_entity_type(
-        self, entity_type: type[Entity], type_name: str | None = None,
+        self,
+        entity_type: type[Entity],
+        type_name: str | None = None,
     ) -> None:
         """
         Register an entity type with the registry.
@@ -150,7 +152,9 @@ class EntityRegistry:
         return [entity for entity in self.entities.values() if entity.can(capability)]
 
     def get_entities_by_name(
-        self, name: str, partial_match: bool = False,
+        self,
+        name: str,
+        partial_match: bool = False,
     ) -> list[Entity]:
         """
         Get entities by name.
@@ -163,17 +167,9 @@ class EntityRegistry:
             List of matching entities
         """
         if partial_match:
-            return [
-                entity
-                for entity in self.entities.values()
-                if name.lower() in entity.name.lower()
-            ]
+            return [entity for entity in self.entities.values() if name.lower() in entity.name.lower()]
         else:
-            return [
-                entity
-                for entity in self.entities.values()
-                if entity.name.lower() == name.lower()
-            ]
+            return [entity for entity in self.entities.values() if entity.name.lower() == name.lower()]
 
     def remove_entity(self, entity_id: str) -> bool:
         """

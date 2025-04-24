@@ -60,10 +60,7 @@ from activity.recorders.storage.ntfs.tiered.hot.recorder import NtfsHotTierRecor
 from constants.values import IndalekoConstants
 
 # Create default DB config path using pathlib.Path
-DEFAULT_DB_CONFIG_PATH = (
-    Path(IndalekoConstants.default_config_dir)
-    / IndalekoConstants.default_db_config_file_name
-)
+DEFAULT_DB_CONFIG_PATH = Path(IndalekoConstants.default_config_dir) / IndalekoConstants.default_db_config_file_name
 # pylint: enable=wrong-import-position
 
 
@@ -220,7 +217,9 @@ def main() -> None:
 
     # Output and display options
     parser.add_argument(
-        "--statistics", action="store_true", help="Display statistics after processing",
+        "--statistics",
+        action="store_true",
+        help="Display statistics after processing",
     )
     parser.add_argument(
         "--show-activities",
@@ -228,25 +227,30 @@ def main() -> None:
         help="Display recent activities after processing",
     )
     parser.add_argument(
-        "--limit", type=int, default=10, help="Maximum number of activities to display",
+        "--limit",
+        type=int,
+        default=10,
+        help="Maximum number of activities to display",
     )
 
     # Logging options
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     parser.add_argument(
-        "--quiet", action="store_true", help="Suppress all output except errors",
+        "--quiet",
+        action="store_true",
+        help="Suppress all output except errors",
     )
     parser.add_argument(
-        "--json-output", action="store_true", help="Output results as JSON",
+        "--json-output",
+        action="store_true",
+        help="Output results as JSON",
     )
 
     # Parse arguments
     args = parser.parse_args()
 
     # Configure logging
-    log_level = (
-        logging.ERROR if args.quiet else (logging.DEBUG if args.debug else logging.INFO)
-    )
+    log_level = logging.ERROR if args.quiet else (logging.DEBUG if args.debug else logging.INFO)
     logging.basicConfig(
         level=log_level,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",

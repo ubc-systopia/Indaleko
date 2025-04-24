@@ -133,8 +133,7 @@ class CircleOrchestrator:
         else:
             # Default to round robin
             self.logger.warning(
-                f"Unsupported turn taking policy: {self.turn_taking_policy}. "
-                "Using round robin instead.",
+                f"Unsupported turn taking policy: {self.turn_taking_policy}. " "Using round robin instead.",
             )
             return self.entity_ids.copy()
 
@@ -346,9 +345,7 @@ class CircleOrchestrator:
             "message_type_distribution": message_type_counts,
             "entity_participation": entity_participation,
             "phase_durations": phase_durations,
-            "phase_history": [
-                (phase, ts.isoformat()) for phase, ts in self.phase_history
-            ],
+            "phase_history": [(phase, ts.isoformat()) for phase, ts in self.phase_history],
         }
 
     def process_request(self, request: CircleRequest) -> CircleResponse:

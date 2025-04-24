@@ -55,7 +55,11 @@ def find_ntfs_jsonl_files() -> list[str]:
 
     # Also check the activity collectors directory
     activity_dir = os.path.join(
-        os.environ["INDALEKO_ROOT"], "activity", "collectors", "storage", "ntfs",
+        os.environ["INDALEKO_ROOT"],
+        "activity",
+        "collectors",
+        "storage",
+        "ntfs",
     )
     if os.path.exists(activity_dir):
         for filename in os.listdir(activity_dir):
@@ -152,7 +156,9 @@ def analyze_entity_mapping(activities: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def process_with_recorder(
-    file_path: str, debug: bool = False, stats_only: bool = True,
+    file_path: str,
+    debug: bool = False,
+    stats_only: bool = True,
 ) -> dict[str, Any]:
     """Process a JSONL file with the NTFS Hot Tier Recorder and return statistics."""
     print(f"Processing {file_path}...")
@@ -172,12 +178,8 @@ def process_with_recorder(
         return []  # Return empty list to bypass semantic attributes processing
 
     # Apply the patch
-    original_func = (
-        activity.collectors.storage.semantic_attributes.get_semantic_attributes_for_activity
-    )
-    activity.collectors.storage.semantic_attributes.get_semantic_attributes_for_activity = (
-        mock_get_semantic_attributes
-    )
+    original_func = activity.collectors.storage.semantic_attributes.get_semantic_attributes_for_activity
+    activity.collectors.storage.semantic_attributes.get_semantic_attributes_for_activity = mock_get_semantic_attributes
 
     # Track processed activities
     processed_activities = []
@@ -239,11 +241,7 @@ def process_with_recorder(
             "raw_activity_count": activity_counts["total_lines"],
             "processed_activity_count": len(processed_activities),
             "processing_time_seconds": processing_time,
-            "activities_per_second": (
-                len(processed_activities) / processing_time
-                if processing_time > 0
-                else 0
-            ),
+            "activities_per_second": (len(processed_activities) / processing_time if processing_time > 0 else 0),
             "activity_types": dict(activity_types),
             "importance_stats": importance_stats,
             "entity_stats": entity_stats,
@@ -322,10 +320,7 @@ def process_file_directly(file_path: str) -> None:
 
             # Factor 2: File type importance (basic version)
             file_path = activity.get("file_path", "")
-            if any(
-                file_path.lower().endswith(ext)
-                for ext in [".docx", ".xlsx", ".pdf", ".py", ".md"]
-            ):
+            if any(file_path.lower().endswith(ext) for ext in [".docx", ".xlsx", ".pdf", ".py", ".md"]):
                 base_score += 0.1  # Document types matter more
 
             # Factor 3: Path significance
@@ -339,10 +334,7 @@ def process_file_directly(file_path: str) -> None:
                 ]
             ):
                 base_score += 0.1  # User document areas matter more
-            elif any(
-                segment in file_path
-                for segment in ["\\Temp\\", "\\tmp\\", "\\Cache\\", "\\Downloaded\\"]
-            ):
+            elif any(segment in file_path for segment in ["\\Temp\\", "\\tmp\\", "\\Cache\\", "\\Downloaded\\"]):
                 base_score -= 0.1  # Temporary areas matter less
 
             # Factor 4: Is directory
@@ -383,7 +375,9 @@ def main():
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     parser.add_argument("--file", type=str, help="Specific JSONL file to process")
     parser.add_argument(
-        "--all", action="store_true", help="Process all found JSONL files",
+        "--all",
+        action="store_true",
+        help="Process all found JSONL files",
     )
     parser.add_argument(
         "--stats-only",
@@ -400,7 +394,8 @@ def main():
     # Configure logging
     log_level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(
-        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
     # Find JSONL files

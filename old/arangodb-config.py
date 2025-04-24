@@ -1,6 +1,6 @@
 import argparse
-import os
 import json
+import os
 
 
 class ArangoDBConfig:
@@ -57,25 +57,25 @@ class ArangoDBConfig:
 
     def write_config(self):
         self.verify_config_in_gitignore()
-        with open(self.config, "wt") as fd:
+        with open(self.config, "w") as fd:
             json.dump(self.to_dict(), fd)
         return self
 
     def verify_config_in_gitignore(self):
         if not os.path.exists(".gitignore"):
-            with open(".gitignore", "wt") as fd:
-                fd.write("{}\n".format(self.config))
+            with open(".gitignore", "w") as fd:
+                fd.write(f"{self.config}\n")
         else:
             found = False
-            with open(".gitignore", "rt") as fd:
+            with open(".gitignore") as fd:
                 for line in fd.readlines():
                     if line.strip() == self.config:
                         found = True
                     else:
-                        print("{} != {}".format(line.strip(), self.config))
+                        print(f"{line.strip()} != {self.config}")
             if not found:
                 with open(".gitignore", "at") as fd:
-                    fd.write("{}\n".format(self.config))
+                    fd.write(f"{self.config}\n")
 
 
 def main():
@@ -87,13 +87,22 @@ def main():
         help="Name of the configuration file to generate",
     )
     parser.add_argument(
-        "--host", type=str, default="127.0.0.1", help="Name or IP address of database"
+        "--host",
+        type=str,
+        default="127.0.0.1",
+        help="Name or IP address of database",
     )
     parser.add_argument(
-        "--port", type=str, default=8529, help="Port to use for accessing database"
+        "--port",
+        type=str,
+        default=8529,
+        help="Port to use for accessing database",
     )
     parser.add_argument(
-        "--user", type=str, default="tony", help="User name for credentials"
+        "--user",
+        type=str,
+        default="tony",
+        help="User name for credentials",
     )
     parser.add_argument(
         "--password",
@@ -102,15 +111,20 @@ def main():
         help="Password to use for logging into database",
     )
     parser.add_argument(
-        "--database", type=str, default="Indaleko", help="Name of database to use"
+        "--database",
+        type=str,
+        default="Indaleko",
+        help="Name of database to use",
     )
     args = parser.parse_args()
     assert args.port > 1023 and args.port < 65536, "Invalid port number"
 
     config = ArangoDBConfig()
     config.set_config(args.config).set_host(args.host).set_port(args.port).set_user(
-        args.user
-    ).set_password(args.password).set_database(args.database)
+        args.user,
+    ).set_password(
+        args.password,
+    ).set_database(args.database)
     config.write_config()
 
 

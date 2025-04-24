@@ -62,13 +62,13 @@ class AQLTranslator(TranslatorBase):
 
         # Handle collection metadata correctly
         if hasattr(self.db_collections_metadata, "get_all_collections_metadata"):
-            self.collection_data = (
-                self.db_collections_metadata.get_all_collections_metadata()
-            )
+            self.collection_data = self.db_collections_metadata.get_all_collections_metadata()
         else:
             # Fallback to using collections_metadata directly if it's a dictionary
             self.collection_data = getattr(
-                self.db_collections_metadata, "collections_metadata", {},
+                self.db_collections_metadata,
+                "collections_metadata",
+                {},
             )
             if not self.collection_data:
                 # If that's also empty, create a minimal default structure with Objects
@@ -131,11 +131,7 @@ class AQLTranslator(TranslatorBase):
             ".Timestamp",
             ".SemanticAttributes",
         ]
-        result = (
-            "FOR" in query
-            and "RETURN" in query
-            and any(field in query for field in required_fields)
-        )
+        result = "FOR" in query and "RETURN" in query and any(field in query for field in required_fields)
 
         if explain and not result:
             explanation = []

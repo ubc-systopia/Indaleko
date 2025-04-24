@@ -22,10 +22,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import uuid
+from datetime import UTC, datetime
 
-from pydantic import Field, AwareDatetime, field_validator
-from typing import Optional
-from datetime import datetime, timezone
+from pydantic import AwareDatetime, Field, field_validator
 
 # from icecream import ic
 
@@ -55,13 +54,13 @@ class IndalekoTimestampDataModel(IndalekoBaseModel):
     )
 
     Value: AwareDatetime = Field(
-        datetime.now(timezone.utc),
+        datetime.now(UTC),
         title="Value",
         description="The timestamp value.",
         example="2024-01-01T00:00:00Z",
     )
 
-    Description: Optional[str] = Field(
+    Description: str | None = Field(
         None,
         title="Description",
         description="A human-readable label for the UUID.",
@@ -74,7 +73,7 @@ class IndalekoTimestampDataModel(IndalekoBaseModel):
                 "Label": "12345678-1234-5678-1234-567812345678",
                 "Value": "2024-01-01T00:00:00Z",
                 "Description": "This is a sample IndalekoUUID.",
-            }
+            },
         }
 
     @field_validator("Value", mode="before")
@@ -82,7 +81,7 @@ class IndalekoTimestampDataModel(IndalekoBaseModel):
         if isinstance(value, str):
             value = datetime.fromisoformat(value)
         if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
+            value = value.replace(tzinfo=UTC)
         return value
 
 

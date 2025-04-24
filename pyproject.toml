@@ -58,7 +58,7 @@ requires-python = ">=3.12"
 
 [project.optional-dependencies]
 test = ["pytest>=6.0"]
-dev = ["black", "flake8"]
+dev = ["black", "flake8", "pre-commit"]
 windows = ['winsdk==1.0.0b10']
 gui = ["streamlit>=1.38.0", "plotly>=5.22.0", "pydeck>=0.8.0"]
 
@@ -66,8 +66,9 @@ gui = ["streamlit>=1.38.0", "plotly>=5.22.0", "pydeck>=0.8.0"]
 testpaths = ["tests"]
 
 [tool.black]
-line-length = 88
-target-version = ['py38']
+line-length = 120
+# Target Python 3.12 for grammar support in Black
+target-version = ['py312']
 
 [tool.pylint]
 init-hook = "import sys; sys.path.insert(0, '${workspaceFolder}')"

@@ -19,7 +19,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import inspect
-import logging
 import os
 import sys
 import uuid
@@ -36,13 +35,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from db.service_manager import IndalekoServiceManager
 from platforms.linux.machine_config import IndalekoLinuxMachineConfig
-from storage.collectors.base import BaseStorageCollector
 from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from storage.collectors.local.local_base import BaseLocalStorageCollector
-from utils.misc.file_name_management import (
-    generate_file_name,
-    extract_keys_from_file_name,
-)
 
 # pylint: enable=wrong-import-position
 
@@ -61,9 +55,7 @@ class IndalekoLinuxLocalStorageCollector(BaseLocalStorageCollector):
         "This service collects local filesystem metadata of a Linux machine."
     )
     indaleko_linux_local_collector_service_version = "1.0"
-    indaleko_linux_local_collector_service_type = (
-        IndalekoServiceManager.service_type_storage_collector
-    )
+    indaleko_linux_local_collector_service_type = IndalekoServiceManager.service_type_storage_collector
 
     indaleko_linux_local_collector_service = {
         "service_name": indaleko_linux_local_collector_service_name,
@@ -97,11 +89,12 @@ class IndalekoLinuxLocalStorageCollector(BaseLocalStorageCollector):
                 ic(f"linux_local_collector_mixin.load_machine_config: {keys}")
             if "machine_config_file" not in keys:
                 raise ValueError(
-                    f"{inspect.currentframe().f_code.co_name}: machine_config_file must be specified"
+                    f"{inspect.currentframe().f_code.co_name}: machine_config_file must be specified",
                 )
             offline = keys.get("offline", False)
             return IndalekoLinuxMachineConfig.load_config_from_file(
-                config_file=str(keys["machine_config_file"]), offline=offline
+                config_file=str(keys["machine_config_file"]),
+                offline=offline,
             )
 
     cli_handler_mixin = linux_local_collector_mixin
@@ -110,7 +103,8 @@ class IndalekoLinuxLocalStorageCollector(BaseLocalStorageCollector):
 def main():
     """The CLI handler for the linux local storage collector."""
     BaseLocalStorageCollector.local_collector_runner(
-        IndalekoLinuxLocalStorageCollector, IndalekoLinuxMachineConfig
+        IndalekoLinuxLocalStorageCollector,
+        IndalekoLinuxMachineConfig,
     )
 
 

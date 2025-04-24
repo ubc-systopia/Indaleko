@@ -106,20 +106,23 @@ class TemplateRecorder(RecorderBase):
         self._description = kwargs.get(
             "description",
             self.DEFAULT_DESCRIPTION_TEMPLATE.format(
-                name=self._name, activity_type=activity_type,
+                name=self._name,
+                activity_type=activity_type,
             ),
         )
 
         # Storage configuration
         self._collection_name = kwargs.get(
-            "collection_name", f"{self.__class__.__name__}Data",
+            "collection_name",
+            f"{self.__class__.__name__}Data",
         )
         self._db_config_path = kwargs.get("db_config_path", None)
 
         # Service configuration
         self._provider_type = kwargs.get("provider_type", "Activity")
         self._provider_subtype = kwargs.get(
-            "provider_subtype", activity_type.capitalize(),
+            "provider_subtype",
+            activity_type.capitalize(),
         )
         self._tags = kwargs.get("tags", [activity_type.lower()])
 
@@ -198,12 +201,10 @@ class TemplateRecorder(RecorderBase):
                     self._logger.info(
                         f"Creating collection for {self._collection_name} via registration service",
                     )
-                    provider_collection = (
-                        registration_service.create_provider_collection(
-                            identifier=provider_id,
-                            schema=None,  # No schema validation for now
-                            edge=False,
-                        )
+                    provider_collection = registration_service.create_provider_collection(
+                        identifier=provider_id,
+                        schema=None,  # No schema validation for now
+                        edge=False,
                     )
 
                 self._collection = provider_collection.collection
@@ -336,7 +337,8 @@ class TemplateRecorder(RecorderBase):
         return record.model_dump()
 
     def get_semantic_attributes(
-        self, activity_data: Any,
+        self,
+        activity_data: Any,
     ) -> list[IndalekoSemanticAttributeDataModel]:
         """
         Get semantic attributes for the given activity data.
@@ -484,7 +486,8 @@ class TemplateRecorder(RecorderBase):
 
             # Execute query
             cursor = self._db.db.aql.execute(
-                query, bind_vars={"@collection": self._collection_name},
+                query,
+                bind_vars={"@collection": self._collection_name},
             )
 
             # Return the first result, or empty dict if no results

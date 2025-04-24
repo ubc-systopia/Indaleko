@@ -60,10 +60,15 @@ def main():
     """Main function to run the Streamlit app"""
     parser = argparse.ArgumentParser(description="Run the Indaleko Streamlit GUI")
     parser.add_argument(
-        "--port", type=int, default=8501, help="Port to run Streamlit on",
+        "--port",
+        type=int,
+        default=8501,
+        help="Port to run Streamlit on",
     )
     parser.add_argument(
-        "--browser", action="store_true", help="Open browser automatically",
+        "--browser",
+        action="store_true",
+        help="Open browser automatically",
     )
     args = parser.parse_args()
 
@@ -95,7 +100,8 @@ def main():
             subprocess.run(
                 ["streamlit", "--version"],
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE, check=False,
+                stderr=subprocess.PIPE,
+                check=False,
             )
         except:
             print(

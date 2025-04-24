@@ -157,7 +157,7 @@ class ImportanceScorer:
         type_score = self._calculate_type_score(activity_data)
         content_score = self._calculate_content_score(activity_data)
         frequency_score = self._calculate_frequency_score(
-            activity_data, entity_metadata, search_hits
+            activity_data, entity_metadata, search_hits,
         )
         novelty_score = self._calculate_novelty_score(activity_data, entity_metadata)
 
@@ -214,7 +214,7 @@ class ImportanceScorer:
             return math.exp(-age_days / half_life)
 
         except Exception as e:
-            logging.error("Error calculating recency score: %s", e)
+            logging.exception("Error calculating recency score: %s", e)
             return 0.5
 
     def _calculate_type_score(self, activity_data):
@@ -264,7 +264,7 @@ class ImportanceScorer:
         return min(1.0, max(0.0, base_score))
 
     def _calculate_frequency_score(
-        self, activity_data, entity_metadata=None, search_hits=0
+        self, activity_data, entity_metadata=None, search_hits=0,
     ):
         """Calculate importance based on frequency."""
         base_score = 0.3
@@ -302,7 +302,7 @@ class ImportanceScorer:
             if created_at:
                 try:
                     created_time = datetime.fromisoformat(
-                        created_at.replace("Z", "+00:00")
+                        created_at.replace("Z", "+00:00"),
                     )
                     now = datetime.now(UTC)
                     age_days = (now - created_time).total_seconds() / (24 * 60 * 60)
@@ -349,7 +349,7 @@ class TestImportanceScorer(unittest.TestCase):
 
         # Very old activity (30 days ago)
         very_old_data = {
-            "timestamp": (datetime.now(UTC) - timedelta(days=30)).isoformat()
+            "timestamp": (datetime.now(UTC) - timedelta(days=30)).isoformat(),
         }
         very_old_score = self.scorer._calculate_recency_score(very_old_data)
         logging.info("30-day score: %.4f", very_old_score)

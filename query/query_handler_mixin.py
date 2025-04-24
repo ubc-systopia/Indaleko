@@ -52,7 +52,9 @@ class QueryHandlerMixin:
         parser.add_argument("--debug", action="store_true", help="Enable debug output")
 
         parser.add_argument(
-            "--no-history", action="store_true", help="Disable query history recording",
+            "--no-history",
+            action="store_true",
+            help="Disable query history recording",
         )
 
         return parser
@@ -69,7 +71,9 @@ class QueryHandlerMixin:
         """
         # Initialize configuration
         config_path = os.path.join(
-            os.environ.get("INDALEKO_ROOT", "."), "config", "indaleko-db-config.ini",
+            os.environ.get("INDALEKO_ROOT", "."),
+            "config",
+            "indaleko-db-config.ini",
         )
         db_config = IndalekoDBConfig(config_file=config_path)
         logger.info("DB config initialized")
@@ -102,7 +106,9 @@ class QueryHandlerMixin:
         import configparser
 
         config_file = os.path.join(
-            os.environ.get("INDALEKO_ROOT", "."), "config", "openai-key.ini",
+            os.environ.get("INDALEKO_ROOT", "."),
+            "config",
+            "openai-key.ini",
         )
 
         if not os.path.exists(config_file):
@@ -159,18 +165,17 @@ class QueryHandlerMixin:
         # Create structured query if needed
         if not isinstance(translated_output, TranslatorOutput):
             translated_output = TranslatorOutput(
-                aql_query="", bind_vars={}, confidence=1.0, explanation="Test query",
+                aql_query="",
+                bind_vars={},
+                confidence=1.0,
+                explanation="Test query",
             )
 
         # Prepare query history data
         query_history_data = QueryHistoryData(
             OriginalQuery=query,
             ParsedResults=parsed_results,
-            LLMName=(
-                llm_connector.get_llm_name()
-                if hasattr(llm_connector, "get_llm_name")
-                else "Unknown"
-            ),
+            LLMName=(llm_connector.get_llm_name() if hasattr(llm_connector, "get_llm_name") else "Unknown"),
             LLMQuery=StructuredQuery(query=query, search_type="query"),
             TranslatedOutput=translated_output,
             ExecutionPlan=None,  # Optional

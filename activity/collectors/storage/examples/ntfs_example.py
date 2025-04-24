@@ -54,7 +54,10 @@ def main():
         help="Comma-separated list of volumes to monitor",
     )
     parser.add_argument(
-        "--duration", type=int, default=60, help="Duration to monitor in seconds",
+        "--duration",
+        type=int,
+        default=60,
+        help="Duration to monitor in seconds",
     )
     parser.add_argument(
         "--filter-types",
@@ -68,7 +71,8 @@ def main():
     # Configure logging
     log_level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(
-        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
     logger = logging.getLogger("NtfsExample")
 
@@ -159,7 +163,9 @@ def main():
 
         logger.info("Activities by type:")
         for activity_type, count in sorted(
-            by_type.items(), key=lambda x: x[1], reverse=True,
+            by_type.items(),
+            key=lambda x: x[1],
+            reverse=True,
         ):
             logger.info(f"  {activity_type}: {count}")
 
@@ -173,7 +179,9 @@ def main():
 
         logger.info("Activities by item type:")
         for item_type, count in sorted(
-            by_item_type.items(), key=lambda x: x[1], reverse=True,
+            by_item_type.items(),
+            key=lambda x: x[1],
+            reverse=True,
         ):
             logger.info(f"  {item_type}: {count}")
 
@@ -187,7 +195,9 @@ def main():
 
         logger.info("Activities by volume:")
         for volume, count in sorted(
-            by_volume.items(), key=lambda x: x[1], reverse=True,
+            by_volume.items(),
+            key=lambda x: x[1],
+            reverse=True,
         ):
             logger.info(f"  {volume}: {count}")
 

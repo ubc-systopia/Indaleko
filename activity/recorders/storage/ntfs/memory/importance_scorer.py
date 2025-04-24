@@ -216,10 +216,7 @@ class ImportanceScorer:
         self._time_decay_rate = kwargs.get("time_decay_rate", 0.05)
 
         # Compile path significance patterns
-        self._compiled_patterns = [
-            (re.compile(pattern), weight)
-            for pattern, weight in self.PATH_SIGNIFICANCE_PATTERNS
-        ]
+        self._compiled_patterns = [(re.compile(pattern), weight) for pattern, weight in self.PATH_SIGNIFICANCE_PATTERNS]
 
     def calculate_importance(self, activity_data: dict[str, Any]) -> float:
         """
@@ -298,7 +295,8 @@ class ImportanceScorer:
         return self.EXTENSION_WEIGHTS.get(ext, 0.4)
 
     def _calculate_activity_type_importance(
-        self, activity_data: dict[str, Any],
+        self,
+        activity_data: dict[str, Any],
     ) -> float:
         """
         Calculate importance based on activity type.
@@ -312,10 +310,7 @@ class ImportanceScorer:
         activity_type = activity_data.get("activity_type", "unknown").lower()
 
         # Handle specific USN reason codes if available
-        if (
-            "attributes" in activity_data
-            and "usn_reason" in activity_data["attributes"]
-        ):
+        if "attributes" in activity_data and "usn_reason" in activity_data["attributes"]:
             usn_reason = activity_data["attributes"]["usn_reason"]
 
             # Check for particularly important combinations
@@ -381,9 +376,7 @@ class ImportanceScorer:
                 activity_time = activity_time.replace(tzinfo=UTC)
 
             # Calculate age in days
-            age_days = (datetime.now(UTC) - activity_time).total_seconds() / (
-                24 * 60 * 60
-            )
+            age_days = (datetime.now(UTC) - activity_time).total_seconds() / (24 * 60 * 60)
 
             # Apply exponential decay based on age
             recency_score = math.exp(-self._time_decay_rate * age_days)
@@ -437,7 +430,10 @@ class ImportanceScorer:
         return min(1.0, score)
 
     def calculate_importance_decay(
-        self, original_importance: float, age_days: float, access_count: int = 0,
+        self,
+        original_importance: float,
+        age_days: float,
+        access_count: int = 0,
     ) -> float:
         """
         Calculate importance decay based on age and access patterns.
@@ -464,7 +460,9 @@ class ImportanceScorer:
         return max(0.1, min(1.0, adjusted_importance))
 
     def estimate_retention_days(
-        self, importance: float, memory_type: str = "short_term",
+        self,
+        importance: float,
+        memory_type: str = "short_term",
     ) -> int:
         """
         Estimate recommended retention days based on importance and memory type.
@@ -518,7 +516,11 @@ class ImportanceScorer:
         return min(1.0, combined)
 
     def should_consolidate(
-        self, importance: float, age_hours: float, from_memory: str, to_memory: str,
+        self,
+        importance: float,
+        age_hours: float,
+        from_memory: str,
+        to_memory: str,
     ) -> bool:
         """
         Determine if an item should be consolidated to the next memory tier.
@@ -545,9 +547,7 @@ class ImportanceScorer:
         min_importance, min_age = thresholds.get(transition_key, (0.5, 24))
 
         # Higher importance items can consolidate earlier
-        adjusted_age_threshold = min_age * (
-            1.0 - (importance * 0.5)
-        )  # 50% to 100% of threshold
+        adjusted_age_threshold = min_age * (1.0 - (importance * 0.5))  # 50% to 100% of threshold
 
         return (importance >= min_importance) and (age_hours >= adjusted_age_threshold)
 
@@ -593,13 +593,16 @@ if __name__ == "__main__":
                             "importance_score": score,
                             "retention_days": {
                                 "sensory": scorer.estimate_retention_days(
-                                    score, "sensory",
+                                    score,
+                                    "sensory",
                                 ),
                                 "short_term": scorer.estimate_retention_days(
-                                    score, "short_term",
+                                    score,
+                                    "short_term",
                                 ),
                                 "long_term": scorer.estimate_retention_days(
-                                    score, "long_term",
+                                    score,
+                                    "long_term",
                                 ),
                             },
                         },
@@ -640,17 +643,13 @@ if __name__ == "__main__":
             {
                 "file_path": "C:\\Users\\Downloads\\setup.exe",
                 "activity_type": "create",
-                "timestamp": (
-                    datetime.now(UTC) - timedelta(days=1)
-                ).isoformat(),
+                "timestamp": (datetime.now(UTC) - timedelta(days=1)).isoformat(),
                 "is_directory": False,
             },
             {
                 "file_path": "C:\\Windows\\Temp\\temp12345.dat",
                 "activity_type": "delete",
-                "timestamp": (
-                    datetime.now(UTC) - timedelta(days=3)
-                ).isoformat(),
+                "timestamp": (datetime.now(UTC) - timedelta(days=3)).isoformat(),
                 "is_directory": False,
             },
             {
@@ -690,7 +689,10 @@ if __name__ == "__main__":
         for activity, age_hours in activities_with_ages:
             score = scorer.calculate_importance(activity)
             decision = scorer.should_consolidate(
-                score, age_hours, "sensory", "short_term",
+                score,
+                age_hours,
+                "sensory",
+                "short_term",
             )
             path = activity["file_path"]
 

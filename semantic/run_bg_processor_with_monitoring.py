@@ -222,10 +222,7 @@ class MonitoredBackgroundProcessor(IndalekoBackgroundProcessor):
         avg_times = []
         for e in extractors:
             if extractor_stats[e]["files_processed"] > 0:
-                avg_time = (
-                    extractor_stats[e]["total_time"]
-                    / extractor_stats[e]["files_processed"]
-                )
+                avg_time = extractor_stats[e]["total_time"] / extractor_stats[e]["files_processed"]
             else:
                 avg_time = 0
             avg_times.append(avg_time)
@@ -244,7 +241,9 @@ class MonitoredBackgroundProcessor(IndalekoBackgroundProcessor):
 
             # Get top 10 file types by count
             top_types = sorted(
-                file_type_stats.items(), key=lambda x: x[1]["count"], reverse=True,
+                file_type_stats.items(),
+                key=lambda x: x[1]["count"],
+                reverse=True,
             )[:10]
 
             mime_types = [t[0] for t in top_types]
@@ -337,7 +336,9 @@ def main():
 
     # Runtime options
     parser.add_argument(
-        "--reset", action="store_true", help="Reset all statistics and start fresh",
+        "--reset",
+        action="store_true",
+        help="Reset all statistics and start fresh",
     )
     parser.add_argument(
         "--report-only",
@@ -479,19 +480,11 @@ def generate_performance_report(stats_file, perf_file):
                 total_time = extractor_stats.get("total_time", 0)
 
                 avg_time = total_time / files if files > 0 else 0
-                mb_per_second = (
-                    (bytes_processed / (1024 * 1024)) / total_time
-                    if total_time > 0
-                    else 0
-                )
+                mb_per_second = (bytes_processed / (1024 * 1024)) / total_time if total_time > 0 else 0
 
                 success = extractor_stats.get("success_count", 0)
                 errors = extractor_stats.get("error_count", 0)
-                success_rate = (
-                    (success / (success + errors)) * 100
-                    if (success + errors) > 0
-                    else 0
-                )
+                success_rate = (success / (success + errors)) * 100 if (success + errors) > 0 else 0
 
                 f.write(
                     f"""

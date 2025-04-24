@@ -1,4 +1,3 @@
-from icecream import ic
 import math
 
 
@@ -62,7 +61,9 @@ class ResultCalculator:
         return total_n_truth / n_truth_metadata
 
     def run(
-        self, raw_results: list[str], theoretical_truth_n: int
+        self,
+        raw_results: list[str],
+        theoretical_truth_n: int,
     ) -> tuple[int, int, int]:
         """
         Main function to calculate precision and recall

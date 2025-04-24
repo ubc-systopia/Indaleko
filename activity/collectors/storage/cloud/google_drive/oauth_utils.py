@@ -121,11 +121,7 @@ class GoogleOAuthManager:
             query_user = True
 
             # Try to refresh expired credentials
-            if (
-                self.credentials
-                and self.credentials.expired
-                and self.credentials.refresh_token
-            ):
+            if self.credentials and self.credentials.expired and self.credentials.refresh_token:
                 try:
                     logger.debug("Refreshing expired credentials")
                     self.credentials.refresh(Request())
@@ -168,7 +164,8 @@ class GoogleOAuthManager:
             if os.path.exists(self.credentials_file):
                 logger.debug(f"Using client secrets file: {self.credentials_file}")
                 flow = InstalledAppFlow.from_client_secrets_file(
-                    self.credentials_file, self.scopes,
+                    self.credentials_file,
+                    self.scopes,
                 )
             else:
                 # Try to use config from storage/collectors/cloud/g_drive.py
@@ -176,7 +173,8 @@ class GoogleOAuthManager:
 
                 # Try to load existing Google Drive config
                 gdrive_config_file = os.path.join(
-                    indaleko_default_config_dir, "gdrive_config.json",
+                    indaleko_default_config_dir,
+                    "gdrive_config.json",
                 )
 
                 if os.path.exists(gdrive_config_file):
@@ -210,7 +208,8 @@ class GoogleOAuthManager:
 
             # Get auth URL from flow with the redirect_uri properly set
             auth_url, _ = flow.authorization_url(
-                access_type="offline", include_granted_scopes="true",
+                access_type="offline",
+                include_granted_scopes="true",
             )
 
             print("\nPlease visit this URL to authorize this application:", auth_url)
@@ -254,15 +253,14 @@ class GoogleOAuthManager:
 
             # Use flow.fetch_token, but monkey-patch to bypass validation
             if hasattr(flow, "_oauth2session") and hasattr(
-                flow._oauth2session, "_validate_token_response",
+                flow._oauth2session,
+                "_validate_token_response",
             ):
                 # Save original validation method
                 original_validate = flow._oauth2session._validate_token_response
 
                 # Replace with no-op function
-                flow._oauth2session._validate_token_response = (
-                    lambda *args, **kwargs: None
-                )
+                flow._oauth2session._validate_token_response = lambda *args, **kwargs: None
 
                 try:
                     # Fetch token with validation disabled
@@ -297,7 +295,8 @@ class GoogleOAuthManager:
                         client_id = flow.client_config["client_id"]
                         client_secret = flow.client_config["client_secret"]
                         token_uri = flow.client_config.get(
-                            "token_uri", "https://oauth2.googleapis.com/token",
+                            "token_uri",
+                            "https://oauth2.googleapis.com/token",
                         )
                     # For debugging
                     else:
@@ -325,7 +324,8 @@ class GoogleOAuthManager:
                         )
 
                         config_path = os.path.join(
-                            indaleko_default_config_dir, "gdrive_config.json",
+                            indaleko_default_config_dir,
+                            "gdrive_config.json",
                         )
 
                         with open(config_path) as f:
@@ -340,9 +340,7 @@ class GoogleOAuthManager:
                         )
                         raise
 
-                    token_uri = (
-                        "https://oauth2.googleapis.com/token"  # Default token URI
-                    )
+                    token_uri = "https://oauth2.googleapis.com/token"  # Default token URI
 
                 # Exchange authorization code for token
                 import requests
@@ -426,7 +424,8 @@ class GoogleOAuthManager:
             results = (
                 service.people()
                 .get(
-                    resourceName="people/me", personFields="names,emailAddresses,photos",
+                    resourceName="people/me",
+                    personFields="names,emailAddresses,photos",
                 )
                 .execute()
             )

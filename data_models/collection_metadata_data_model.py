@@ -21,8 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import json
 import os
 import sys
+from typing import Any
 
-from typing import Union, Any
 from pydantic import Field
 
 # from icecream import ic
@@ -36,8 +36,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 
 # pylint: disable=wrong-import-position
-from data_models.base import IndalekoBaseModel  # noqa: E402
-from data_models.db_index import IndalekoCollectionIndexDataModel  # noqa: E402
+from data_models.base import IndalekoBaseModel
+from data_models.db_index import IndalekoCollectionIndexDataModel
 
 # pylint: enable=wrong-import-position
 
@@ -48,16 +48,18 @@ class IndalekoCollectionMetadataDataModel(IndalekoBaseModel):
     """
 
     key: str = Field(
-        ..., title="Name", description="The name of the collection we are describing"
+        ...,
+        title="Name",
+        description="The name of the collection we are describing",
     )
 
-    Description: Union[str, None] = Field(
+    Description: str | None = Field(
         ...,
         title="Description",
         description="This describes the basic purpose of the collection",
     )
 
-    QueryGuidelines: Union[list[str], None] = Field(
+    QueryGuidelines: list[str] | None = Field(
         ...,
         Name="QueryGuidelines",
         description="Guidelines for querying this collection",
@@ -79,16 +81,14 @@ class IndalekoCollectionMetadataDataModel(IndalekoBaseModel):
 
     @staticmethod
     def deserialize(
-        data: Union[dict[str, str], str],
+        data: dict[str, str] | str,
     ) -> "IndalekoCollectionMetadataDataModel":
         """Deserialize the data model from a dictionary."""
         if isinstance(data, str):
             data = json.loads(data)
         elif not isinstance(data, dict):
             raise ValueError(f"Expected str or dict, got {type(data)}")
-        if (
-            "_key" in data and "key" not in data
-        ):  # Pydantic doesn't allow _key, ArangoDB uses it.
+        if "_key" in data and "key" not in data:  # Pydantic doesn't allow _key, ArangoDB uses it.
             data["key"] = data["_key"]
             del data["_key"]
         return IndalekoCollectionMetadataDataModel(**data)

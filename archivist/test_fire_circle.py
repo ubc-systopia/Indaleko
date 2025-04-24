@@ -376,23 +376,35 @@ def main() -> None:
     """Main function."""
     parser = argparse.ArgumentParser(description="Test Fire Circle implementation")
     parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Enable verbose output",
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable verbose output",
     )
     parser.add_argument(
-        "--debug", "-d", action="store_true", help="Enable debug output",
+        "--debug",
+        "-d",
+        action="store_true",
+        help="Enable debug output",
     )
 
     # Test selection arguments
     parser.add_argument("--entities", action="store_true", help="Test entity creation")
     parser.add_argument(
-        "--messages", action="store_true", help="Test message processing",
+        "--messages",
+        action="store_true",
+        help="Test message processing",
     )
     parser.add_argument("--orchestrator", action="store_true", help="Test orchestrator")
     parser.add_argument(
-        "--integration", action="store_true", help="Test Archivist integration",
+        "--integration",
+        action="store_true",
+        help="Test Archivist integration",
     )
     parser.add_argument(
-        "--suggestions", action="store_true", help="Test pattern suggestions",
+        "--suggestions",
+        action="store_true",
+        help="Test pattern suggestions",
     )
     parser.add_argument("--all", "-a", action="store_true", help="Run all tests")
 

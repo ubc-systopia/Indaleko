@@ -43,8 +43,7 @@ __version__ = "0.1.0"
 # Make discovered plugins available when importing the package
 # globals().update(discovered_plugins)
 
-__all__ = [
-]
+__all__ = []
 
 
 # You could also provide a function to get all discovered plugins

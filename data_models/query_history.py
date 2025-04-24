@@ -20,10 +20,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-
 from textwrap import dedent
-from pydantic import Field
 from typing import Any
+
+from pydantic import Field
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -33,8 +33,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from data_models.base import IndalekoBaseModel  # noqa: E402
-from data_models.record import IndalekoRecordDataModel  # noqa: E402
+from data_models.base import IndalekoBaseModel
+from data_models.record import IndalekoRecordDataModel
 
 # pylint: enable=wrong-import-position
 
@@ -61,7 +61,7 @@ class IndalekoQueryHistoryDataModel(IndalekoBaseModel):
             can be retrieved from the database using the record,
             as the Data element in the Record conforms to this
             schema (or a successor schema - use the version number.)
-            """
+            """,
         ),
     )
 
@@ -72,7 +72,7 @@ class IndalekoQueryHistoryDataModel(IndalekoBaseModel):
             "example": {
                 "Record": IndalekoRecordDataModel.Config.json_schema_extra["example"],
                 "QueryHistory": {},
-            }
+            },
         }
 
 

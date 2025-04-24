@@ -74,8 +74,7 @@ class IndalekoCollectionView:
         if (
             use_cache
             and IndalekoCollectionView._cached_views is not None
-            and (current_time - IndalekoCollectionView._last_cache_time)
-            < IndalekoCollectionView._cache_ttl
+            and (current_time - IndalekoCollectionView._last_cache_time) < IndalekoCollectionView._cache_ttl
         ):
             return IndalekoCollectionView._cached_views.copy()
 
@@ -150,7 +149,8 @@ class IndalekoCollectionView:
             try:
                 if view_type == "arangosearch":
                     result = db.create_arangosearch_view(
-                        name=view_name, properties=properties,
+                        name=view_name,
+                        properties=properties,
                     )
                 else:
                     # Use generic create_view for other view types
@@ -373,8 +373,7 @@ class IndalekoCollectionView:
         if (
             use_cache
             and IndalekoCollectionView._cached_analyzers is not None
-            and (current_time - IndalekoCollectionView._last_analyzer_cache_time)
-            < IndalekoCollectionView._cache_ttl
+            and (current_time - IndalekoCollectionView._last_analyzer_cache_time) < IndalekoCollectionView._cache_ttl
         ):
             return IndalekoCollectionView._cached_analyzers.copy()
 

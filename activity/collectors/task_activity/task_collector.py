@@ -58,11 +58,13 @@ class TaskActivityCollector(CollectorBase):
         """Initialize the task activity collector"""
         self._name = kwargs.get("name", "Task Activity Collector")
         self._provider_id = kwargs.get(
-            "provider_id", uuid.UUID("5a63b8d2-97f1-4e21-a589-6c47fd0e902c"),
+            "provider_id",
+            uuid.UUID("5a63b8d2-97f1-4e21-a589-6c47fd0e902c"),
         )
         self._version = kwargs.get("version", "1.0.0")
         self._description = kwargs.get(
-            "description", "Collects task activities from task management services",
+            "description",
+            "Collects task activities from task management services",
         )
 
         # Initialize data store for simulated tasks
@@ -159,10 +161,7 @@ class TaskActivityCollector(CollectorBase):
             ]
 
             # Add task completion to history if completed
-            if (
-                template["status"] == TaskStatus.COMPLETED
-                and "completed_time" in template
-            ):
+            if template["status"] == TaskStatus.COMPLETED and "completed_time" in template:
                 self._task_history[task_id].append(
                     {
                         "action": "completed",
@@ -301,9 +300,7 @@ class TaskActivityCollector(CollectorBase):
             {
                 "action": "updated",
                 "timestamp": updated_task.Timestamp,
-                "previous_state": {
-                    k: previous_state[k] for k in updates if k in previous_state
-                },
+                "previous_state": {k: previous_state[k] for k in updates if k in previous_state},
                 "task_data": updated_task.model_dump(),
             },
         )
@@ -420,8 +417,7 @@ class TaskActivityCollector(CollectorBase):
             "priority": random.choice(list(TaskPriority)),
             "category": random.choice(categories),
             "tags": random.choice(tags_list),
-            "created_time": datetime.now(UTC)
-            - timedelta(days=random.randint(0, 10)),
+            "created_time": datetime.now(UTC) - timedelta(days=random.randint(0, 10)),
         }
 
         # Add due date (50% chance)
@@ -575,9 +571,7 @@ def main():
             task_to_update.task_id,
             {
                 "status": (
-                    TaskStatus.COMPLETED
-                    if task_to_update.status != TaskStatus.COMPLETED
-                    else TaskStatus.IN_PROGRESS
+                    TaskStatus.COMPLETED if task_to_update.status != TaskStatus.COMPLETED else TaskStatus.IN_PROGRESS
                 ),
             },
         )

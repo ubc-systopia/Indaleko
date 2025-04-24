@@ -49,11 +49,13 @@ class QueryActivityData(IndalekoBaseModel):
     query_id: uuid.UUID = Field(..., description="Unique identifier for the query")
     query_text: str = Field(..., description="The text of the query")
     execution_time: float | None = Field(
-        None, description="Query execution time in milliseconds",
+        None,
+        description="Query execution time in milliseconds",
     )
     result_count: int | None = Field(None, description="Number of results returned")
     context_handle: uuid.UUID | None = Field(
-        None, description="Associated activity context",
+        None,
+        description="Associated activity context",
     )
     query_params: dict[str, Any] | None = Field(None, description="Query parameters")
     relationship_type: str | None = Field(
@@ -61,7 +63,8 @@ class QueryActivityData(IndalekoBaseModel):
         description="Relationship to previous query (refinement, broadening, pivot)",
     )
     previous_query_id: uuid.UUID | None = Field(
-        None, description="ID of the previous query in the exploration path",
+        None,
+        description="ID of the previous query in the exploration path",
     )
     timestamp: datetime = Field(
         default_factory=lambda: datetime.now(UTC),

@@ -119,7 +119,9 @@ class IndalekoSemanticChecksums(SemanticCollector):
         return checksums
 
     def create_checksum_record(
-        self, file_path: str, object_id: uuid.UUID,
+        self,
+        file_path: str,
+        object_id: uuid.UUID,
     ) -> SemanticChecksumDataModel:
         """
         Create a checksum record for a file.
@@ -152,7 +154,8 @@ class IndalekoSemanticChecksums(SemanticCollector):
                 semantic_attributes.append(
                     IndalekoSemanticAttributeDataModel(
                         Identifier=IndalekoUUIDDataModel(
-                            Identifier=uuid_obj, Label=f"{algo} Checksum",
+                            Identifier=uuid_obj,
+                            Label=f"{algo} Checksum",
                         ),
                         Data=checksum,
                     ),
@@ -161,7 +164,8 @@ class IndalekoSemanticChecksums(SemanticCollector):
         # Create record
         record = IndalekoRecordDataModel(
             SourceIdentifier=IndalekoSourceIdentifierDataModel(
-                Identifier=str(self._provider_id), Version="1.0",
+                Identifier=str(self._provider_id),
+                Version="1.0",
             ),
             Timestamp=datetime.now(UTC),
             Attributes={},
@@ -184,7 +188,9 @@ class IndalekoSemanticChecksums(SemanticCollector):
         )
 
     def get_checksums_for_file(
-        self, file_path: str, object_id: str | uuid.UUID,
+        self,
+        file_path: str,
+        object_id: str | uuid.UUID,
     ) -> dict[str, Any]:
         """
         Get checksums for a file and create a semantic data record.
@@ -347,9 +353,7 @@ def compute_checksums(file_path):
             # Use mmap for memory-efficient processing of large files
             with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as mmapped_file:
                 for offset in range(0, file_size, CHUNK_SIZE):
-                    chunk = mmapped_file[
-                        offset : offset + min(CHUNK_SIZE, file_size - offset)
-                    ]
+                    chunk = mmapped_file[offset : offset + min(CHUNK_SIZE, file_size - offset)]
                     md5.update(chunk)
                     sha1.update(chunk)
                     sha256.update(chunk)
@@ -409,10 +413,12 @@ class TestChecksum(unittest.TestCase):
         """Test large file operations"""
         checksums = compute_checksums("test_file_2.txt")
         self.assertEqual(
-            len(checksums["Dropbox"]), 64,
+            len(checksums["Dropbox"]),
+            64,
         )  # SHA-256 hash length in hex is 64 characters
         self.assertEqual(
-            len(checksums["SHA512"]), 128,
+            len(checksums["SHA512"]),
+            128,
         )  # SHA-512 hash length in hex is 128 characters
 
     def test_collector_initialization(self):

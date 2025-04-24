@@ -144,14 +144,18 @@ class RelationshipParser:
                 f"Detected relationship type {relationship_type} using pattern matching",
             )
             return self._build_relationship_query(
-                relationship_type, entities, query, enhanced_understanding,
+                relationship_type,
+                entities,
+                query,
+                enhanced_understanding,
             )
 
         # Otherwise, use the LLM for more complex analysis
         return self._extract_relationship_query_llm(query, enhanced_understanding)
 
     def _check_relationship_patterns(
-        self, query: str,
+        self,
+        query: str,
     ) -> tuple[RelationshipType, dict[str, Any] | None]:
         """
         Check if the query matches common relationship patterns.
@@ -193,7 +197,9 @@ class RelationshipParser:
         return RelationshipType.UNKNOWN, None
 
     def _extract_entities_from_match(
-        self, match: re.Match, rel_type: RelationshipType,
+        self,
+        match: re.Match,
+        rel_type: RelationshipType,
     ) -> dict[str, Any]:
         """
         Extract entities from a regex match of a relationship pattern.
@@ -285,13 +291,15 @@ class RelationshipParser:
                 else:
                     # Other user is source
                     source_entity = RelationshipEntity(
-                        entity_type=EntityType.USER, identifier=entities["user"],
+                        entity_type=EntityType.USER,
+                        identifier=entities["user"],
                     )
                     direction = RelationshipDirection.OUTBOUND
 
             # Target is a file (any file matching conditions)
             target_entity = RelationshipEntity(
-                entity_type=EntityType.FILE, attributes={},
+                entity_type=EntityType.FILE,
+                attributes={},
             )
 
         elif relationship_type in (
@@ -301,7 +309,8 @@ class RelationshipParser:
             # User-User relationship
             if entities and "target_user" in entities:
                 target_entity = RelationshipEntity(
-                    entity_type=EntityType.USER, identifier=entities["target_user"],
+                    entity_type=EntityType.USER,
+                    identifier=entities["target_user"],
                 )
 
             direction = RelationshipDirection.OUTBOUND
@@ -309,16 +318,19 @@ class RelationshipParser:
         elif relationship_type == RelationshipType.SAME_FOLDER:
             # File-File relationship
             source_entity = RelationshipEntity(
-                entity_type=EntityType.FILE, attributes={},
+                entity_type=EntityType.FILE,
+                attributes={},
             )
 
             if entities and "reference_file" in entities:
                 source_entity = RelationshipEntity(
-                    entity_type=EntityType.FILE, identifier=entities["reference_file"],
+                    entity_type=EntityType.FILE,
+                    identifier=entities["reference_file"],
                 )
 
             target_entity = RelationshipEntity(
-                entity_type=EntityType.FILE, attributes={},
+                entity_type=EntityType.FILE,
+                attributes={},
             )
 
         # Extract time constraints from enhanced understanding
@@ -367,7 +379,9 @@ class RelationshipParser:
         return relationship_query
 
     def _extract_relationship_query_llm(
-        self, query: str, enhanced_understanding: Any,
+        self,
+        query: str,
+        enhanced_understanding: Any,
     ) -> RelationshipQuery:
         """
         Use the LLM to extract a relationship query for more complex or ambiguous queries.
@@ -430,7 +444,9 @@ class RelationshipParser:
                 return str(obj)
 
             context_json = json.dumps(
-                context_data, indent=2, default=_json_serializable,
+                context_data,
+                indent=2,
+                default=_json_serializable,
             )
         except Exception as e:
             logging.warning(f"Error serializing context data: {e}")
@@ -471,7 +487,9 @@ class RelationshipParser:
 
         # Use the LLM connector to get enhanced understanding
         response = self.llm_connector.get_completion(
-            context=system_prompt, question=user_prompt, schema=schema,
+            context=system_prompt,
+            question=user_prompt,
+            schema=schema,
         )
 
         # Parse the response
@@ -485,7 +503,8 @@ class RelationshipParser:
             return RelationshipQuery(
                 relationship_type=RelationshipType.UNKNOWN,
                 source_entity=RelationshipEntity(
-                    entity_type=EntityType.USER, identifier="current_user",
+                    entity_type=EntityType.USER,
+                    identifier="current_user",
                 ),
                 natural_language_query=query,
                 confidence=0.3,  # Low confidence due to error

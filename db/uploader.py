@@ -18,13 +18,13 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import jsonlines
 import os
 import subprocess
 import sys
+from typing import Any
 
+import jsonlines
 from icecream import ic
-from typing import Any, Union
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -34,9 +34,9 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+
 from db.db_config import IndalekoDBConfig
 from utils.misc.file_name_management import extract_keys_from_file_name
-from arango import ArangoClient
 
 # pylint: enable=wrong-import-position
 
@@ -50,7 +50,7 @@ class IndalekoDBUploader:
 
     @staticmethod
     def build_load_string(
-        file_name: str, collection_name: str, db: Union[IndalekoDBConfig, None] = None
+        file_name: str, collection_name: str, db: IndalekoDBConfig | None = None,
     ) -> str:
         """
         This will build the load string for the arangoimport command.
@@ -73,7 +73,7 @@ class IndalekoDBUploader:
 
     @staticmethod
     def bulk_upload(
-        file_name: str, db: Union[IndalekoDBConfig, None] = None, chunk_size: int = 1000
+        file_name: str, db: IndalekoDBConfig | None = None, chunk_size: int = 1000,
     ) -> bool:
         """This will use the bulk_import function of arango to upload the data to the database."""
         if db is None:
@@ -102,7 +102,7 @@ class IndalekoDBUploader:
 
     @staticmethod
     def external_upload(
-        file_name: str, db: Union[IndalekoDBConfig, None] = None, chunk_size: int = 1000
+        file_name: str, db: IndalekoDBConfig | None = None, chunk_size: int = 1000,
     ) -> bool:
         """
         This will upload the data to the database using arangoimport.
@@ -110,7 +110,7 @@ class IndalekoDBUploader:
 
     @staticmethod
     def external_upload(
-        file_name: str, db: Union[IndalekoDBConfig, None] = None
+        file_name: str, db: IndalekoDBConfig | None = None,
     ) -> bool:
         """
         This will upload the data to the database using arangoimport.
@@ -126,10 +126,10 @@ class IndalekoDBUploader:
         success = False
         try:
             load_string = IndalekoDBUploader.build_load_string(
-                file_name, file_keys["collection"], db
+                file_name, file_keys["collection"], db,
             )
             process = subprocess.Popen(
-                load_string, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                load_string, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             )
             stdout, stderr = process.communicate()
             if process.returncode != 0:
@@ -185,7 +185,7 @@ class IndalekoDBUploader:
         ]:
             __run_docker_cmd(
                 f"docker cp {filename} {
-                container_name}:{dest}/{dest_filename}"
+                container_name}:{dest}/{dest_filename}",
             )
 
         # run arangoimport on both of these files
@@ -196,7 +196,7 @@ class IndalekoDBUploader:
             __run_docker_cmd(
                 f"docker exec -t {container_name} arangoimport --file {dest}/{filename} "
                 + f'--type "jsonl" --collection "{collection_name}" --server.username "{server_username}" '
-                f'--server.password "{server_password}" --server.database "{server_database}" --overwrite {overwrite}'
+                f'--server.password "{server_password}" --server.database "{server_database}" --overwrite {overwrite}',
             )
 
 

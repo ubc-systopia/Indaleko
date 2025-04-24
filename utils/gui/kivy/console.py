@@ -18,21 +18,20 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import logging
 import os
 import sys
 
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.label import Label
-from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
-from kivy.uix.image import Image
-from kivy.uix.popup import Popup
 from kivy.uix.filechooser import FileChooserIconView
-from kivy.uix.gridlayout import GridLayout
+from kivy.uix.image import Image
+from kivy.uix.label import Label
+from kivy.uix.popup import Popup
 from kivy.uix.scrollview import ScrollView
+from kivy.uix.textinput import TextInput
 from kivy.uix.widget import Widget
-import logging
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -43,12 +42,13 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from db.db_config import IndalekoDBConfig
-from utils import IndalekoDocker
 
 # pylint: enable=wrong-import-position
 
 indaleko_icon_file = os.path.join(
-    os.environ["INDALEKO_ROOT"], "figures", "indaleko-fantasy.png"
+    os.environ["INDALEKO_ROOT"],
+    "figures",
+    "indaleko-fantasy.png",
 )
 
 
@@ -92,7 +92,9 @@ class MainScreen(BoxLayout):
             left_layout.add_widget(self.search_button)
 
             self.maintenance_button = Button(
-                text="Maintenance", size_hint_y=None, height=50
+                text="Maintenance",
+                size_hint_y=None,
+                height=50,
             )
             self.maintenance_button.bind(on_press=self.on_maintenance_button_press)
             left_layout.add_widget(self.maintenance_button)
@@ -101,7 +103,7 @@ class MainScreen(BoxLayout):
         left_layout.add_widget(Widget())
 
         main_content_layout.add_widget(
-            left_layout
+            left_layout,
         )  # Adds the button menu to the left side
 
         # Adding Right-Side Interaction Area
@@ -109,7 +111,7 @@ class MainScreen(BoxLayout):
         self.interaction_content = Label(text="Select an option from the left menu.")
         self.interaction_area.add_widget(self.interaction_content)
         main_content_layout.add_widget(
-            self.interaction_area
+            self.interaction_area,
         )  # Adds the interaction area to the right side
 
         # Add the main content area to the main screen layout
@@ -117,9 +119,7 @@ class MainScreen(BoxLayout):
 
     def on_create_button_press(self, instance):
         # Logic for when the "Create" button is pressed
-        self.interaction_content.text = (
-            "Starting database creation...\nRunning pre-flight checks..."
-        )
+        self.interaction_content.text = "Starting database creation...\nRunning pre-flight checks..."
         # Here you'd add the code for checking prerequisites and creating the database
 
     def on_import_button_press(self, instance):
@@ -134,9 +134,7 @@ class MainScreen(BoxLayout):
         if selection:
             selected_file = selection[0]
             logging.info(f"Selected file: {selected_file}")
-            self.interaction_content.text = (
-                f"Importing configuration from: {selected_file}"
-            )
+            self.interaction_content.text = f"Importing configuration from: {selected_file}"
             # Placeholder for the import logic
             # Implement logic here to load the configuration and update Indaleko setup
             self.interaction_area.clear_widgets()
@@ -149,7 +147,8 @@ class MainScreen(BoxLayout):
 
         # Search Input Area
         self.query_input = TextInput(
-            hint_text="Enter search query here...", size_hint=(1, 0.1)
+            hint_text="Enter search query here...",
+            size_hint=(1, 0.1),
         )
         search_layout.add_widget(self.query_input)
 
@@ -160,7 +159,8 @@ class MainScreen(BoxLayout):
 
         # Result Display Area
         self.result_label = Label(
-            text="Results will be shown here.", size_hint=(1, 0.7)
+            text="Results will be shown here.",
+            size_hint=(1, 0.7),
         )
         search_layout.add_widget(self.result_label)
 

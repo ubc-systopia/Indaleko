@@ -75,7 +75,8 @@ class YouTubeActivityCollector(CollectorBase):
         """
         self._name = kwargs.get("name", "YouTube Activity Collector")
         self._provider_id = kwargs.get(
-            "provider_id", uuid.UUID("7a8b9c0d-1e2f-3a4b-5c6d-7e8f9a0b1c2d"),
+            "provider_id",
+            uuid.UUID("7a8b9c0d-1e2f-3a4b-5c6d-7e8f9a0b1c2d"),
         )
 
         # YouTube API credentials
@@ -210,7 +211,8 @@ class YouTubeActivityCollector(CollectorBase):
 
                     # Create activity model
                     activity = YouTubeVideoActivity.from_youtube_api(
-                        video_data=video_data, watch_data=item,
+                        video_data=video_data,
+                        watch_data=item,
                     )
 
                     self._data.append(activity)
@@ -232,15 +234,13 @@ class YouTubeActivityCollector(CollectorBase):
 
                     # Create activity model
                     activity = YouTubeVideoActivity.from_youtube_api(
-                        video_data=video, watch_data=watch_data,
+                        video_data=video,
+                        watch_data=watch_data,
                     )
 
                     # Add to data if not already present
                     video_id = video.get("id")
-                    if video_id and not any(
-                        a.AdditionalMetadata.get("video_id") == video_id
-                        for a in self._data
-                    ):
+                    if video_id and not any(a.AdditionalMetadata.get("video_id") == video_id for a in self._data):
                         self._data.append(activity)
 
             logger.info(f"Collected {len(self._data)} YouTube activities")

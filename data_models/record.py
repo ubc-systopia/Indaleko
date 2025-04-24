@@ -60,15 +60,18 @@ class IndalekoRecordDataModel(IndalekoBaseModel):
     Attributes: ClassVar[dict[str, Any] | None] = Field(
         None,
         title="Attributes",
-        description="Optional field, do not rely upon its contents or presence."
-        "Attributes from the metadata source.",
+        description="Optional field, do not rely upon its contents or presence.Attributes from the metadata source.",
     )
 
     Data: ClassVar[str] = Field(
         default=encode_binary_data(b""),
         title="Data",
-        description="The raw (uninterpreted) data from the original source. "
-        "It should be a UUENCODED binary string. Do not use any data from this field",
+        description=(
+            "The raw (uninterpreted) data from the original source, encoded as a UUENCODED binary string.\n"
+            "This field is opaque and must be treated as a single blob.\n"
+            "Do not index, parse, or reference any sub-fields within Data (e.g., Record.Data.*).\n"
+            "Use dedicated model fields or metadata instead."
+        ),
     )
 
     @field_validator("Timestamp", mode="before")

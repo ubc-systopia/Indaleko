@@ -33,8 +33,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
-import platforms.data_models.hardware as hardware
-import platforms.data_models.software as software
+from platforms.data_models import hardware, software
 
 # pylint: enable=wrong-import-position
 
@@ -43,11 +42,15 @@ class MachinePlatform(IndalekoBaseModel):
     """Defines the platform (hardware and software) information"""
 
     Software: software.Software = Field(
-        ..., title="Software", description="The software information for the machine."
+        ...,
+        title="Software",
+        description="The software information for the machine.",
     )
 
     Hardware: hardware.Hardware = Field(
-        ..., title="Hardware", description="The hardware information for the machine."
+        ...,
+        title="Hardware",
+        description="The hardware information for the machine.",
     )
 
     class Config:
@@ -57,7 +60,7 @@ class MachinePlatform(IndalekoBaseModel):
             "example": {
                 "Software": software.Software.Config.json_schema_extra["example"],
                 "Hardware": hardware.Hardware.Config.json_schema_extra["example"],
-            }
+            },
         }
 
 

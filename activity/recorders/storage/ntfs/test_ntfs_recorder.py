@@ -288,7 +288,8 @@ class TestNtfsStorageActivityRecorder(unittest.TestCase):
         """Test recorder operation in no_db mode."""
         # Create recorder with no_db=True
         recorder = NtfsStorageActivityRecorder(
-            collector=self.mock_collector, no_db=True,
+            collector=self.mock_collector,
+            no_db=True,
         )
 
         # Verify database connection was not attempted
@@ -305,7 +306,8 @@ class TestNtfsStorageActivityRecorder(unittest.TestCase):
         """Test getting recorder characteristics."""
         # Create recorder with mock collector
         recorder = NtfsStorageActivityRecorder(
-            collector=self.mock_collector, no_db=True,
+            collector=self.mock_collector,
+            no_db=True,
         )
 
         # Get characteristics
@@ -313,18 +315,13 @@ class TestNtfsStorageActivityRecorder(unittest.TestCase):
 
         # Verify characteristics
         self.assertTrue(
-            any(
-                "ACTIVITY_DATA_SYSTEM_ACTIVITY" in str(char) for char in characteristics
-            ),
+            any("ACTIVITY_DATA_SYSTEM_ACTIVITY" in str(char) for char in characteristics),
         )
         self.assertTrue(
             any("ACTIVITY_DATA_FILE_ACTIVITY" in str(char) for char in characteristics),
         )
         self.assertTrue(
-            any(
-                "ACTIVITY_DATA_WINDOWS_SPECIFIC" in str(char)
-                for char in characteristics
-            ),
+            any("ACTIVITY_DATA_WINDOWS_SPECIFIC" in str(char) for char in characteristics),
         )
 
     @patch("activity.recorders.storage.base.StorageActivityRecorder._connect_to_db")
@@ -333,7 +330,10 @@ class TestNtfsStorageActivityRecorder(unittest.TestCase):
     )
     @patch("activity.recorders.storage.ntfs.ntfs_recorder.NtfsStorageActivityCollector")
     def test_fallback_collector_creation(
-        self, mock_collector_class, mock_register, mock_connect,
+        self,
+        mock_collector_class,
+        mock_register,
+        mock_connect,
     ):
         """Test fallback collector creation when primary creation fails."""
         # Make the primary collector creation fail

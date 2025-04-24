@@ -115,6 +115,53 @@ The Fire Circle is rooted in principles drawn from indigenous wisdom, particular
 4. **Cultural rootedness**: Technology should embody values and cultural context
 5. **Emergent properties**: Deeper understanding arising from interactions between intelligences
 
+## Sleep-Time Compute
+
+FireCircle incorporates "sleep-time compute" techniques based on research in AI system efficiency and background processing optimization. This approach allows the system to perform anticipatory processing during idle periods, significantly reducing latency during active use.
+
+### Core Principles
+
+1. **Offline Processing**: FireCircle performs deep reflection and pattern analysis when not actively engaged with users
+2. **Anticipatory Computation**: Pre-computes likely needed information based on usage patterns
+3. **Task Prioritization**: Ranks background tasks by importance and available resources
+4. **Memory Optimization**: Prepares and organizes shared memory contexts for future circle sessions
+5. **Multi-Perspective Analysis**: Leverages idle time to examine data through different viewpoints
+
+### Key Components
+
+The sleep-time compute system is implemented primarily through:
+
+- **FireCircleSleepCompute**: Core class for managing sleep-time computation within FireCircle
+- **BackgroundTaskScheduler**: Schedules and executes prioritized tasks during system idle time
+- **ReflectionProcessor**: Performs deep analysis of past circle discussions and identifies patterns
+- **ContextPrefetcher**: Pre-loads relevant context for anticipated discussion topics
+- **ContinuousLearningEngine**: Evolves understanding during idle periods based on prior interactions
+
+### Archivist Integration
+
+FireCircle's sleep-time compute functionality is tightly integrated with the Archivist component's own sleep-time compute implementation. While Archivist focuses on knowledge pattern analysis and query prediction, FireCircle provides multi-perspective analysis through circle interactions.
+
+For more details on the Archivist sleep-time compute implementation, see the [Archivist README](../archivist/README.md).
+
+### CLI Integration
+
+Sleep-time compute can be controlled through the existing CLI interface:
+
+```
+/sleep start                # Begin sleep-time compute processing
+/sleep stop                 # Pause all sleep-time compute tasks
+/sleep status               # Show current task queue and processing status
+/sleep priority <task> <level>  # Adjust priority of specific tasks
+```
+
+### Benefits
+
+1. **Reduced Latency**: Pre-computed insights available immediately when needed
+2. **Deeper Analysis**: Complex pattern recognition that would be too time-consuming during active sessions
+3. **Resource Efficiency**: Utilization of system resources during otherwise idle periods
+4. **Continuous Improvement**: System evolves and improves even when not actively in use
+5. **Enhanced Multi-Perspective Insights**: More thoughtful integration of diverse viewpoints
+
 ## Technical Architecture
 
 ```
@@ -126,6 +173,7 @@ firecircle/
 │       ├── consensus/       # Agreement detection and communiqué generation
 │       ├── reflection/      # Meta-conversation and adaptation tools
 │       ├── memory/          # Context and memory management
+│       │   └── sleep_compute.py  # Sleep-time compute implementation
 │       ├── integration/     # Connections to other Indaleko systems
 │       └── utils/           # Utility functions and helpers
 ├── tests/                   # Test suite

@@ -299,21 +299,23 @@ class UsnJournalReader:
         # Maximum number of retries for handle issues
         max_retries = 1
         retries = 0
-        
+
         # Check if the requested USN is below the first valid USN
         # If so, immediately use the low water mark instead of retrying with an invalid USN
         if self.journal_data and start_usn < self.journal_data.FirstUsn:
-            print(f"Requested USN {start_usn} is below First USN {self.journal_data.FirstUsn}")
+            print(
+                f"Requested USN {start_usn} is below First USN {self.journal_data.FirstUsn}",
+            )
             print(f"Using First USN {self.journal_data.FirstUsn} as the starting point")
-            
+
             # Update the starting USN to use the first valid USN
             start_usn = self.journal_data.FirstUsn
-            
+
             # Return special buffer with the new starting USN
             empty_buffer = ctypes.create_string_buffer(8)
             struct.pack_into("<Q", empty_buffer, 0, start_usn)
             return empty_buffer, 8
-        
+
         while retries <= max_retries:
             read_data = READ_USN_JOURNAL_DATA(
                 StartUsn=start_usn,
@@ -359,14 +361,18 @@ class UsnJournalReader:
                             continue
                         except Exception as recover_error:
                             if self.verbose:
-                                print(f"Failed to recover from error 0: {recover_error}")
+                                print(
+                                    f"Failed to recover from error 0: {recover_error}",
+                                )
                             # Return empty results, allowing the collector to handle this gracefully
                             return buffer, 0
 
                     # Error 0x18 (ERROR_NO_MORE_FILES) can happen when there are no new records
                     if error == 0x18:
                         if self.verbose:
-                            print(f"No more USN records found after position {start_usn}")
+                            print(
+                                f"No more USN records found after position {start_usn}",
+                            )
                         return buffer, 0
 
                     # Error 0xC0000023 (STATUS_BUFFER_TOO_SMALL) or 0x7A (ERROR_INSUFFICIENT_BUFFER)
@@ -381,29 +387,35 @@ class UsnJournalReader:
                     nt_status = None
                     try:
                         # Use GetLastErrorEx if available (Windows 10+)
-                        if hasattr(ctypes.windll.kernel32, 'GetLastWin32ErrorEx'):
+                        if hasattr(ctypes.windll.kernel32, "GetLastWin32ErrorEx"):
                             error_ex = ctypes.c_ulong()
-                            nt_status = ctypes.windll.kernel32.GetLastWin32ErrorEx(ctypes.byref(error_ex))
+                            nt_status = ctypes.windll.kernel32.GetLastWin32ErrorEx(
+                                ctypes.byref(error_ex),
+                            )
                             error_ex = error_ex.value
                             nt_status_str = f"NT Status: 0x{nt_status:08X}"
                         else:
                             nt_status_str = "NT Status: Not available"
                     except Exception:
                         nt_status_str = "NT Status: Error retrieving"
-                    
+
                     # Log more detailed error information (only once per error type)
                     # This reduces verbosity while still providing diagnostic info
                     error_msg = f"DeviceIoControl failed with Win32 error code: {error} (0x{error:X}), {nt_status_str}"
                     if error == 0 and self.journal_data:
                         # For error 0, include USN journal state for diagnostics
-                        error_msg += f"\nJournal info - ID: {self.journal_data.UsnJournalID}, "
+                        error_msg += (
+                            f"\nJournal info - ID: {self.journal_data.UsnJournalID}, "
+                        )
                         error_msg += f"First USN: {self.journal_data.FirstUsn}, "
                         error_msg += f"Next USN: {self.journal_data.NextUsn}, "
-                        error_msg += f"Lowest Valid USN: {self.journal_data.LowestValidUsn}, "
+                        error_msg += (
+                            f"Lowest Valid USN: {self.journal_data.LowestValidUsn}, "
+                        )
                         error_msg += f"Requested USN: {start_usn}"
-                    
+
                     print(error_msg)
-                    
+
                     # Create a more informative Win32 error
                     if error == 0:
                         error_obj = OSError(f"USN Journal Error: {error_msg}")
@@ -411,14 +423,17 @@ class UsnJournalReader:
                         raise error_obj
                     else:
                         raise ctypes.WinError(error)
-                    
+
                 # If we get here, the operation was successful
                 return buffer, bytes_returned.value
-                
+
             except OSError as e:
                 # Handle ERROR_JOURNAL_ENTRY_DELETED (0x570) or STATUS_JOURNAL_ENTRY_DELETED
                 # This happens when the requested USN is too old and has been overwritten
-                if getattr(e, "winerror", 0) == 0x570 or str(e).find("journal entry has been deleted") != -1:
+                if (
+                    getattr(e, "winerror", 0) == 0x570
+                    or str(e).find("journal entry has been deleted") != -1
+                ):
                     if self.verbose:
                         print(
                             f"Journal entry at USN {start_usn} has been deleted due to journal rotation",
@@ -439,7 +454,7 @@ class UsnJournalReader:
 
                 # Re-raise other Windows errors
                 raise
-                
+
         # If we've exhausted retries, return empty results
         return buffer, 0
 
@@ -469,7 +484,11 @@ class UsnJournalReader:
             filename = "<invalid filename>"
 
         reasons = [name for flag, name in REASON_FLAGS.items() if record.Reason & flag]
-        attributes = [name for flag, name in ATTRIBUTE_FLAGS.items() if record.FileAttributes & flag]
+        attributes = [
+            name
+            for flag, name in ATTRIBUTE_FLAGS.items()
+            if record.FileAttributes & flag
+        ]
         timestamp = filetime_to_datetime(record.TimeStamp)
 
         return {

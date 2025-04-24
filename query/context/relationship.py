@@ -125,7 +125,8 @@ class QueryRelationshipDetector:
         return self._detect_relationship_rules(query1_text, query2_text)
 
     def _get_query_text(
-        self, query: str | uuid.UUID | dict[str, Any],
+        self,
+        query: str | uuid.UUID | dict[str, Any],
     ) -> str | None:
         """
         Extract query text from various input types.
@@ -149,7 +150,9 @@ class QueryRelationshipDetector:
         return None
 
     def _detect_relationship_rules(
-        self, query1: str, query2: str,
+        self,
+        query1: str,
+        query2: str,
     ) -> tuple[RelationshipType, float]:
         """
         Detect the relationship between queries using rule-based methods.
@@ -197,7 +200,9 @@ class QueryRelationshipDetector:
         refinement_detected = False
         for pattern in refinement_patterns:
             if not re.search(pattern, q1, re.IGNORECASE) and re.search(
-                pattern, q2, re.IGNORECASE,
+                pattern,
+                q2,
+                re.IGNORECASE,
             ):
                 refinement_detected = True
                 break
@@ -214,7 +219,9 @@ class QueryRelationshipDetector:
         broadening_detected = False
         for pattern in broadening_patterns:
             if not re.search(pattern, q1, re.IGNORECASE) and re.search(
-                pattern, q2, re.IGNORECASE,
+                pattern,
+                q2,
+                re.IGNORECASE,
             ):
                 broadening_detected = True
                 break
@@ -223,15 +230,11 @@ class QueryRelationshipDetector:
         backtracking = same_words_different_order or q1 == q2
 
         # Make relationship determination
-        if refinement_detected or (
-            q2_contains_q1 and not q1_contains_q2 and len(q2) > len(q1)
-        ):
+        if refinement_detected or (q2_contains_q1 and not q1_contains_q2 and len(q2) > len(q1)):
             # Refinement: query2 builds upon query1 by adding constraints
             return RelationshipType.REFINEMENT, min(0.9, 0.5 + jaccard * 0.5)
 
-        if broadening_detected or (
-            q1_contains_q2 and not q2_contains_q1 and len(q1) > len(q2)
-        ):
+        if broadening_detected or (q1_contains_q2 and not q2_contains_q1 and len(q1) > len(q2)):
             # Broadening: query2 relaxes constraints from query1
             return RelationshipType.BROADENING, min(0.9, 0.5 + jaccard * 0.5)
 
@@ -247,7 +250,9 @@ class QueryRelationshipDetector:
         return RelationshipType.UNRELATED, 1.0 - jaccard
 
     def _detect_relationship_llm(
-        self, query1: str, query2: str,
+        self,
+        query1: str,
+        query2: str,
     ) -> tuple[RelationshipType, float]:
         """
         Detect the relationship between queries using LLM-based methods.
@@ -270,7 +275,8 @@ class QueryRelationshipDetector:
         return self._detect_relationship_rules(query1, query2)
 
     def detect_relationship_batch(
-        self, queries: list[str | uuid.UUID | dict[str, Any]],
+        self,
+        queries: list[str | uuid.UUID | dict[str, Any]],
     ) -> list[tuple[RelationshipType, float]]:
         """
         Detect relationships between consecutive queries in a list.
@@ -347,7 +353,9 @@ class QueryRelationshipDetector:
         return rel_type == RelationshipType.PIVOT and confidence >= 0.5
 
     def analyze_query_sequence(
-        self, query_id: uuid.UUID, max_depth: int = 10,
+        self,
+        query_id: uuid.UUID,
+        max_depth: int = 10,
     ) -> dict[str, Any]:
         """
         Analyze the sequence of queries leading to the specified query.
@@ -384,9 +392,7 @@ class QueryRelationshipDetector:
             )
 
         # Count focus shifts (pivots)
-        focus_shifts = sum(
-            1 for rel in relationships if rel["relationship"] == RelationshipType.PIVOT
-        )
+        focus_shifts = sum(1 for rel in relationships if rel["relationship"] == RelationshipType.PIVOT)
 
         # Determine exploration pattern
         exploration_pattern = self._determine_exploration_pattern(relationships)
@@ -399,7 +405,8 @@ class QueryRelationshipDetector:
         }
 
     def _determine_exploration_pattern(
-        self, relationships: list[dict[str, Any]],
+        self,
+        relationships: list[dict[str, Any]],
     ) -> str:
         """
         Determine the overall exploration pattern from relationships.

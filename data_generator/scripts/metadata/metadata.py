@@ -1,7 +1,8 @@
-import random
-from typing import Union, Callable, Union, Any
-from abc import ABC, abstractmethod
 import json
+import random
+from abc import ABC, abstractmethod
+from collections.abc import Callable
+from typing import Any
 
 
 class Metadata(ABC):
@@ -35,22 +36,23 @@ class Metadata(ABC):
 
     def _check_return_value_within_range(
         self,
-        default_min: Union[int, float],
-        default_max: Union[int, float],
-        target_min: Union[int, float],
-        target_max: Union[int, float],
+        default_min: int | float,
+        default_max: int | float,
+        target_min: int | float,
+        target_max: int | float,
         random_func: Callable[
-            [Union[int, float], Union[int, float]], Union[int, float]
+            [int | float, int | float],
+            int | float,
         ],
-        delta: Union[int, float] = 0,
-    ) -> Union[int, float]:
+        delta: int | float = 0,
+    ) -> int | float:
         """General function to check and return a value (int or float) that is not within the specified target range."""
         if target_min - delta >= default_min and target_max + delta <= default_max:
             return random.choice(
                 [
                     random_func(default_min, target_min - delta),
                     random_func(target_max + delta, default_max),
-                ]
+                ],
             )
         elif target_min - delta < default_min and target_max + delta <= default_max:
             return random_func(target_max + delta, default_max)

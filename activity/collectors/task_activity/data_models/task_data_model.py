@@ -72,44 +72,54 @@ class TaskData(IndalekoBaseModel):
     task_id: str = Field(..., description="Unique identifier for the task")
     title: str = Field(..., description="Title or name of the task")
     description: str | None = Field(
-        None, description="Detailed description of the task",
+        None,
+        description="Detailed description of the task",
     )
     status: TaskStatus = Field(
-        TaskStatus.NOT_STARTED, description="Current status of the task",
+        TaskStatus.NOT_STARTED,
+        description="Current status of the task",
     )
     priority: TaskPriority = Field(
-        TaskPriority.NONE, description="Priority level of the task",
+        TaskPriority.NONE,
+        description="Priority level of the task",
     )
 
     # Task timestamps
     created_time: datetime = Field(..., description="When the task was created")
     due_time: datetime | None = Field(
-        None, description="When the task is due (if applicable)",
+        None,
+        description="When the task is due (if applicable)",
     )
     completed_time: datetime | None = Field(
-        None, description="When the task was completed (if applicable)",
+        None,
+        description="When the task was completed (if applicable)",
     )
 
     # Task categorization
     category: str | None = Field(
-        None, description="Category or project the task belongs to",
+        None,
+        description="Category or project the task belongs to",
     )
     tags: list[str] = Field(
-        default_factory=list, description="Tags associated with the task",
+        default_factory=list,
+        description="Tags associated with the task",
     )
 
     # Task relationships
     parent_id: str | None = Field(
-        None, description="ID of parent task (if this is a subtask)",
+        None,
+        description="ID of parent task (if this is a subtask)",
     )
     subtask_ids: list[str] = Field(
-        default_factory=list, description="IDs of subtasks under this task",
+        default_factory=list,
+        description="IDs of subtasks under this task",
     )
     assignee: str | None = Field(None, description="Person assigned to the task")
 
     # Source information
     source_app: str = Field(
-        ..., description="Application or service that generated this task",
+        ...,
+        description="Application or service that generated this task",
     )
 
     # Activity timestamp (when the activity was recorded)
@@ -119,11 +129,7 @@ class TaskData(IndalekoBaseModel):
     @classmethod
     def validate_completed_time(cls, value: datetime | None, values):
         """Ensure completed_time is only set when status is COMPLETED"""
-        if (
-            value is not None
-            and "status" in values.data
-            and values.data["status"] != TaskStatus.COMPLETED
-        ):
+        if value is not None and "status" in values.data and values.data["status"] != TaskStatus.COMPLETED:
             raise ValueError("Completed time can only be set when status is COMPLETED")
         return value
 
@@ -177,7 +183,8 @@ class TaskActivityData(IndalekoBaseModel):
 
     # The task data
     task: TaskData = Field(
-        ..., description="The task data associated with this activity",
+        ...,
+        description="The task data associated with this activity",
     )
 
     # Action that generated this activity
@@ -188,7 +195,8 @@ class TaskActivityData(IndalekoBaseModel):
 
     # Previous state for updates (optional)
     previous_state: dict | None = Field(
-        None, description="Previous state of the task (for updates)",
+        None,
+        description="Previous state of the task (for updates)",
     )
 
     # Activity timestamp (when the activity was recorded)
@@ -196,7 +204,9 @@ class TaskActivityData(IndalekoBaseModel):
 
     # Record associated with this activity
     Record: IndalekoRecordDataModel = Field(
-        ..., title="Record", description="The record for the activity data.",
+        ...,
+        title="Record",
+        description="The record for the activity data.",
     )
 
     # Semantic attributes for this activity

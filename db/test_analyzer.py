@@ -60,7 +60,8 @@ def list_analyzers(manager: IndalekoAnalyzerManager, verbose: bool = False) -> N
 
 
 def test_analyzer_creation(
-    manager: IndalekoAnalyzerManager, direct: bool = False,
+    manager: IndalekoAnalyzerManager,
+    direct: bool = False,
 ) -> None:
     """Test analyzer creation using different methods."""
     if direct:
@@ -124,7 +125,9 @@ def main() -> None:
     )
     parser.add_argument("--list", action="store_true", help="List existing analyzers")
     parser.add_argument(
-        "--verbose", action="store_true", help="Show detailed analyzer information",
+        "--verbose",
+        action="store_true",
+        help="Show detailed analyzer information",
     )
     parser.add_argument("--create", action="store_true", help="Create custom analyzers")
     parser.add_argument(
@@ -133,7 +136,9 @@ def main() -> None:
         help="Use direct arangosh execution for creation",
     )
     parser.add_argument(
-        "--test", action="store_true", help="Test tokenization with different analyzers",
+        "--test",
+        action="store_true",
+        help="Test tokenization with different analyzers",
     )
     parser.add_argument("--command", action="store_true", help="Show arangosh command")
     parser.add_argument("--all", action="store_true", help="Run all tests")

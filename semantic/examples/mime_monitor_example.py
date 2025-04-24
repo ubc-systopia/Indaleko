@@ -68,7 +68,9 @@ class MonitoredMimeDetector:
         return self.mime_detector.detect_mime_type(file_path)
 
     def process_directory(
-        self, directory: str, recursive: bool = False,
+        self,
+        directory: str,
+        recursive: bool = False,
     ) -> list[dict[str, Any]]:
         """
         Process all files in a directory.
@@ -84,7 +86,8 @@ class MonitoredMimeDetector:
 
         # Start monitoring the batch operation
         batch_context = self.monitor.start_monitoring(
-            extractor_name="MonitoredMimeDetector.batch", file_path=directory,
+            extractor_name="MonitoredMimeDetector.batch",
+            file_path=directory,
         )
 
         try:
@@ -159,7 +162,9 @@ def main():
 
     parser.add_argument("--dir", type=str, required=True, help="Directory to process")
     parser.add_argument(
-        "--recursive", action="store_true", help="Process subdirectories",
+        "--recursive",
+        action="store_true",
+        help="Process subdirectories",
     )
     parser.add_argument("--verbose", action="store_true", help="Print verbose output")
     parser.add_argument("--output", type=str, help="Output file for results")
@@ -193,7 +198,9 @@ def main():
 
     print("\nMIME Type Distribution:")
     for mime_type, count in sorted(
-        mime_counts.items(), key=lambda x: x[1], reverse=True,
+        mime_counts.items(),
+        key=lambda x: x[1],
+        reverse=True,
     ):
         print(f"  {mime_type}: {count} files")
 

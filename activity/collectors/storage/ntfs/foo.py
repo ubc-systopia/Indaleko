@@ -1,12 +1,12 @@
 import ctypes
-import struct
 import platform
+import struct
 from ctypes import wintypes
 from datetime import datetime
 
 # Windows API constants
-FSCTL_QUERY_USN_JOURNAL = 0x900f4
-FSCTL_READ_USN_JOURNAL = 0x900bb
+FSCTL_QUERY_USN_JOURNAL = 0x900F4
+FSCTL_READ_USN_JOURNAL = 0x900BB
 FILE_READ_DATA = 0x0001
 FILE_SHARE_READ = 0x00000001
 FILE_SHARE_WRITE = 0x00000002
@@ -35,7 +35,7 @@ REASON_FLAGS = {
     0x00080000: "OBJECT_ID_CHANGE",
     0x00100000: "REPARSE_POINT_CHANGE",
     0x00200000: "STREAM_CHANGE",
-    0x80000000: "CLOSE"
+    0x80000000: "CLOSE",
 }
 
 # Attribute flags
@@ -51,20 +51,22 @@ ATTRIBUTE_FLAGS = {
     0x00000800: "COMPRESSED",
     0x00001000: "OFFLINE",
     0x00002000: "NOT_CONTENT_INDEXED",
-    0x00004000: "ENCRYPTED"
+    0x00004000: "ENCRYPTED",
 }
+
 
 # Define USN_JOURNAL_DATA structure
 class USN_JOURNAL_DATA(ctypes.Structure):
     _fields_ = [
         ("UsnJournalID", ctypes.c_ulonglong),  # 64-bit unsigned
-        ("FirstUsn", ctypes.c_longlong),       # 64-bit signed
+        ("FirstUsn", ctypes.c_longlong),  # 64-bit signed
         ("NextUsn", ctypes.c_longlong),
         ("LowestValidUsn", ctypes.c_longlong),
         ("MaxUsn", ctypes.c_longlong),
         ("MaximumSize", ctypes.c_ulonglong),
-        ("AllocationDelta", ctypes.c_ulonglong)
+        ("AllocationDelta", ctypes.c_ulonglong),
     ]
+
 
 # Define READ_USN_JOURNAL_DATA structure (V0 for compatibility)
 class READ_USN_JOURNAL_DATA(ctypes.Structure):
@@ -74,8 +76,9 @@ class READ_USN_JOURNAL_DATA(ctypes.Structure):
         ("ReturnOnlyOnClose", wintypes.DWORD),
         ("Timeout", ctypes.c_ulonglong),
         ("BytesToWaitFor", ctypes.c_ulonglong),
-        ("UsnJournalID", ctypes.c_ulonglong)
+        ("UsnJournalID", ctypes.c_ulonglong),
     ]
+
 
 # Define USN_RECORD structure
 class USN_RECORD(ctypes.Structure):
@@ -93,8 +96,9 @@ class USN_RECORD(ctypes.Structure):
         ("FileAttributes", wintypes.DWORD),
         ("FileNameLength", wintypes.WORD),
         ("FileNameOffset", wintypes.WORD),
-        ("FileName", wintypes.WCHAR * 1)  # Variable length
+        ("FileName", wintypes.WCHAR * 1),  # Variable length
     ]
+
 
 def is_admin():
     """Check if the script is running with administrative privileges."""
@@ -103,6 +107,7 @@ def is_admin():
     except:
         return False
 
+
 def filetime_to_datetime(filetime):
     """Convert Windows FILETIME to Python datetime."""
     epoch_diff = 116444736000000000  # 100ns intervals from 1601 to 1970
@@ -110,6 +115,7 @@ def filetime_to_datetime(filetime):
     if timestamp < 0:
         return datetime(1601, 1, 1)
     return datetime.fromtimestamp(timestamp)
+
 
 def get_volume_handle(volume_path):
     """Open a handle to the specified volume."""
@@ -120,11 +126,12 @@ def get_volume_handle(volume_path):
         None,
         OPEN_EXISTING,
         FILE_FLAG_BACKUP_SEMANTICS,
-        None
+        None,
     )
     if handle == -1:
         raise ctypes.WinError()
     return handle
+
 
 def query_usn_journal(handle):
     """Query the USN journal for metadata."""
@@ -139,12 +146,13 @@ def query_usn_journal(handle):
         ctypes.byref(journal_data),
         ctypes.sizeof(journal_data),
         ctypes.byref(bytes_returned),
-        None
+        None,
     )
     if not success:
         raise ctypes.WinError()
 
     return journal_data
+
 
 def read_usn_journal(handle, journal_id, start_usn):
     """Read USN journal entries."""
@@ -154,7 +162,7 @@ def read_usn_journal(handle, journal_id, start_usn):
         ReturnOnlyOnClose=0,
         Timeout=0,
         BytesToWaitFor=0,
-        UsnJournalID=journal_id
+        UsnJournalID=journal_id,
     )
     buffer_size = 4096
     buffer = ctypes.create_string_buffer(buffer_size)
@@ -168,7 +176,7 @@ def read_usn_journal(handle, journal_id, start_usn):
         buffer,
         buffer_size,
         ctypes.byref(bytes_returned),
-        None
+        None,
     )
     if not success:
         error = ctypes.get_last_error()
@@ -176,6 +184,7 @@ def read_usn_journal(handle, journal_id, start_usn):
         raise ctypes.WinError(error)
 
     return buffer, bytes_returned.value
+
 
 def parse_usn_record(buffer, offset, bytes_returned):
     """Parse a USN record from the buffer."""
@@ -186,7 +195,7 @@ def parse_usn_record(buffer, offset, bytes_returned):
     if record_length == 0 or offset + record_length > bytes_returned:
         return None
 
-    record = USN_RECORD.from_buffer_copy(buffer[offset:offset + record_length])
+    record = USN_RECORD.from_buffer_copy(buffer[offset : offset + record_length])
 
     filename_offset = record.FileNameOffset
     filename_length = record.FileNameLength
@@ -195,7 +204,10 @@ def parse_usn_record(buffer, offset, bytes_returned):
         return None
 
     try:
-        filename = buffer[offset + filename_offset:offset + filename_end].decode('utf-16-le', errors='replace')
+        filename = buffer[offset + filename_offset : offset + filename_end].decode(
+            "utf-16-le",
+            errors="replace",
+        )
     except UnicodeDecodeError:
         filename = "<invalid filename>"
 
@@ -210,21 +222,33 @@ def parse_usn_record(buffer, offset, bytes_returned):
         "Reasons": reasons,
         "Attributes": attributes,
         "FileReferenceNumber": record.FileReferenceNumber,
-        "ParentFileReferenceNumber": record.ParentFileReferenceNumber
+        "ParentFileReferenceNumber": record.ParentFileReferenceNumber,
     }
+
 
 def main():
     # Add argument parsing for better integration
     import argparse
+
     parser = argparse.ArgumentParser(description="USN Journal Reader")
-    parser.add_argument("--volume", type=str, default="C:",
-                       help="Volume to query (default: C:)")
-    parser.add_argument("--start-usn", type=int,
-                       help="Starting USN (default: first USN in journal)")
-    parser.add_argument("--max-records", type=int, default=50,
-                       help="Maximum number of records to retrieve (default: 50)")
-    parser.add_argument("--verbose", action="store_true",
-                       help="Show verbose output")
+    parser.add_argument(
+        "--volume",
+        type=str,
+        default="C:",
+        help="Volume to query (default: C:)",
+    )
+    parser.add_argument(
+        "--start-usn",
+        type=int,
+        help="Starting USN (default: first USN in journal)",
+    )
+    parser.add_argument(
+        "--max-records",
+        type=int,
+        default=50,
+        help="Maximum number of records to retrieve (default: 50)",
+    )
+    parser.add_argument("--verbose", action="store_true", help="Show verbose output")
     args = parser.parse_args()
 
     if not is_admin():
@@ -233,11 +257,13 @@ def main():
 
     # Check Windows version
     win_version = platform.win32_ver()[0]
-    print(f"Running on Windows {win_version}. Note: USN journal behavior may vary across versions.")
+    print(
+        f"Running on Windows {win_version}. Note: USN journal behavior may vary across versions.",
+    )
 
     # Format volume path properly
     volume = args.volume
-    if not volume.endswith(':'):
+    if not volume.endswith(":"):
         volume = f"{volume}:"
     volume_path = f"\\\\.\\{volume}"
 
@@ -262,7 +288,11 @@ def main():
                 print(f"Starting from USN: {start_usn}")
 
             # Read USN journal
-            buffer, bytes_returned = read_usn_journal(handle, journal_data.UsnJournalID, start_usn)
+            buffer, bytes_returned = read_usn_journal(
+                handle,
+                journal_data.UsnJournalID,
+                start_usn,
+            )
 
             if args.verbose:
                 print(f"Read {bytes_returned} bytes from USN journal")
@@ -292,8 +322,9 @@ def main():
         finally:
             ctypes.windll.kernel32.CloseHandle(handle)
 
-    except WindowsError as e:
+    except OSError as e:
         print(f"Error: {e}")
+
 
 if __name__ == "__main__":
     main()

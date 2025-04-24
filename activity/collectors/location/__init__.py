@@ -32,14 +32,14 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from activity.collectors.base import CollectorBase
-from activity.collectors.location.location_base import LocationCollector
 from activity.collectors.location.ip_location import IPLocation
+from activity.collectors.location.location_base import LocationCollector
 from activity.collectors.location.tile_location import TileLocation
 from activity.collectors.location.wifi_location import WiFiLocation
 
 if platform.system() == "Windows":
     WindowsGPSLocation = importlib.import_module(
-        "activity.collectors.location.windows_gps_location"
+        "activity.collectors.location.windows_gps_location",
     ).WindowsGPSLocation
 # pylint: enable=wrong-import-position
 

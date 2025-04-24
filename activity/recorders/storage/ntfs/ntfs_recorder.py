@@ -113,11 +113,13 @@ class NtfsStorageActivityRecorder(StorageActivityRecorder):
         # Set NTFS-specific defaults
         kwargs["name"] = kwargs.get("name", "NTFS Storage Activity Recorder")
         kwargs["recorder_id"] = kwargs.get(
-            "recorder_id", uuid.UUID("9b3a7e8c-6d2f-4e91-8b5a-f3c7d2e1a0b9"),
+            "recorder_id",
+            uuid.UUID("9b3a7e8c-6d2f-4e91-8b5a-f3c7d2e1a0b9"),
         )
         kwargs["provider_type"] = StorageProviderType.LOCAL_NTFS
         kwargs["description"] = kwargs.get(
-            "description", "Records storage activities from the NTFS file system",
+            "description",
+            "Records storage activities from the NTFS file system",
         )
         # Collection name should be determined by registration service, not user
         # We'll use a UUID-based name pattern for NTFS activity collection
@@ -220,7 +222,8 @@ class NtfsStorageActivityRecorder(StorageActivityRecorder):
             )
 
     def store_activities(
-        self, activities: list[NtfsStorageActivityData],
+        self,
+        activities: list[NtfsStorageActivityData],
     ) -> list[uuid.UUID]:
         """
         Store multiple NTFS activities in the database.
@@ -237,10 +240,7 @@ class NtfsStorageActivityRecorder(StorageActivityRecorder):
         activity_ids = []
 
         # Batch update activity context if available
-        if (
-            hasattr(self, "_activity_context_integration")
-            and self._activity_context_integration.is_context_available()
-        ):
+        if hasattr(self, "_activity_context_integration") and self._activity_context_integration.is_context_available():
             try:
                 self._logger.info(
                     f"Batch updating activity context with {len(activities)} activities",
@@ -265,7 +265,8 @@ class NtfsStorageActivityRecorder(StorageActivityRecorder):
         return activity_ids
 
     def collect_and_store_activities(
-        self, start_monitoring: bool = True,
+        self,
+        start_monitoring: bool = True,
     ) -> list[uuid.UUID]:
         """
         Collect and store NTFS activities in one operation.
@@ -319,7 +320,8 @@ class NtfsStorageActivityRecorder(StorageActivityRecorder):
                     if not os.path.exists(test_dir):
                         os.makedirs(test_dir, exist_ok=True)
                     test_file = os.path.join(
-                        test_dir, f"recorder_test_{int(time.time())}.txt",
+                        test_dir,
+                        f"recorder_test_{int(time.time())}.txt",
                     )
 
                     self._logger.info(
@@ -356,7 +358,10 @@ class NtfsStorageActivityRecorder(StorageActivityRecorder):
             self._ntfs_collector.stop_monitoring()
 
     def get_activities_by_volume(
-        self, volume: str, limit: int = 100, offset: int = 0,
+        self,
+        volume: str,
+        limit: int = 100,
+        offset: int = 0,
     ) -> list[dict]:
         """
         Get activities for a specific volume.
@@ -393,7 +398,10 @@ class NtfsStorageActivityRecorder(StorageActivityRecorder):
         return [doc for doc in cursor]
 
     def get_activities_by_file_reference(
-        self, file_reference: str, limit: int = 100, offset: int = 0,
+        self,
+        file_reference: str,
+        limit: int = 100,
+        offset: int = 0,
     ) -> list[dict]:
         """
         Get activities for a specific file reference number.
@@ -450,9 +458,7 @@ class NtfsStorageActivityRecorder(StorageActivityRecorder):
         """
         # Determine filter expression based on match_all
         if match_all:
-            filter_expr = (
-                "doc.Record.Data.reason_flags & @reason_flags == @reason_flags"
-            )
+            filter_expr = "doc.Record.Data.reason_flags & @reason_flags == @reason_flags"
         else:
             filter_expr = "doc.Record.Data.reason_flags & @reason_flags > 0"
 
@@ -509,17 +515,17 @@ class NtfsStorageActivityRecorder(StorageActivityRecorder):
 
         # Execute NTFS-specific queries
         volume_cursor = self._db._arangodb.aql.execute(
-            volume_query, bind_vars={"@collection": self._collection_name},
+            volume_query,
+            bind_vars={"@collection": self._collection_name},
         )
         reason_cursor = self._db._arangodb.aql.execute(
-            reason_query, bind_vars={"@collection": self._collection_name},
+            reason_query,
+            bind_vars={"@collection": self._collection_name},
         )
 
         # Add to statistics
         stats["by_volume"] = {item["volume"]: item["count"] for item in volume_cursor}
-        stats["by_reason_flags"] = {
-            str(item["reason"]): item["count"] for item in reason_cursor
-        }
+        stats["by_reason_flags"] = {str(item["reason"]): item["count"] for item in reason_cursor}
 
         # Add information about monitored volumes
         stats["monitored_volumes"] = self._ntfs_collector._volumes
@@ -570,7 +576,8 @@ class NtfsStorageActivityRecorder(StorageActivityRecorder):
         return super().build_activity_document(activity_data, semantic_attributes)
 
     def store_activity(
-        self, activity_data: NtfsStorageActivityData | dict,
+        self,
+        activity_data: NtfsStorageActivityData | dict,
     ) -> uuid.UUID:
         """
         Store an NTFS activity in the database.
@@ -587,19 +594,14 @@ class NtfsStorageActivityRecorder(StorageActivityRecorder):
             activity_data = NtfsStorageActivityData(**activity_data)
 
         # Integrate with activity context if available
-        if (
-            hasattr(self, "_activity_context_integration")
-            and self._activity_context_integration.is_context_available()
-        ):
+        if hasattr(self, "_activity_context_integration") and self._activity_context_integration.is_context_available():
             # Associate with current activity context
             try:
                 self._logger.debug(
                     f"Associating activity {activity_data.activity_id} with activity context",
                 )
-                enhanced_data = (
-                    self._activity_context_integration.associate_with_activity_context(
-                        activity_data,
-                    )
+                enhanced_data = self._activity_context_integration.associate_with_activity_context(
+                    activity_data,
                 )
 
                 # If we get a dictionary back, convert it to NtfsStorageActivityData
@@ -675,7 +677,10 @@ if __name__ == "__main__":
 
     # Add general arguments
     parser.add_argument(
-        "--volume", type=str, default="C:", help="Volume to monitor (e.g., 'C:', 'D:')",
+        "--volume",
+        type=str,
+        default="C:",
+        help="Volume to monitor (e.g., 'C:', 'D:')",
     )
     parser.add_argument(
         "--duration",
@@ -690,7 +695,9 @@ if __name__ == "__main__":
     # Add mode-related arguments
     mode_group = parser.add_mutually_exclusive_group()
     mode_group.add_argument(
-        "--no-db", action="store_true", help="Run without database connection",
+        "--no-db",
+        action="store_true",
+        help="Run without database connection",
     )
     mode_group.add_argument(
         "--db-config",
@@ -701,10 +708,15 @@ if __name__ == "__main__":
 
     # Add monitoring options
     parser.add_argument(
-        "--interval", type=float, default=1.0, help="Monitoring interval in seconds",
+        "--interval",
+        type=float,
+        default=1.0,
+        help="Monitoring interval in seconds",
     )
     parser.add_argument(
-        "--include-close", action="store_true", help="Include file close events",
+        "--include-close",
+        action="store_true",
+        help="Include file close events",
     )
 
     # Add output options
@@ -719,7 +731,10 @@ if __name__ == "__main__":
         help="Use mock data even if real monitoring is available",
     )
     parser.add_argument(
-        "--limit", type=int, default=5, help="Maximum number of activities to display",
+        "--limit",
+        type=int,
+        default=5,
+        help="Maximum number of activities to display",
     )
     parser.add_argument(
         "--no-volume-guids",
@@ -733,7 +748,8 @@ if __name__ == "__main__":
     # Configure logging
     log_level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(
-        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
     logger = logging.getLogger("NtfsStorageActivityRecorder")
 

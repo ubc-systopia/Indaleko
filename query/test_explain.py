@@ -100,12 +100,18 @@ def test_explain(
     # Execute the query with EXPLAIN
     executor = AQLExecutor()
     explain_result = executor.explain_query(
-        query, db_config, bind_vars=bind_vars, all_plans=all_plans, max_plans=max_plans,
+        query,
+        db_config,
+        bind_vars=bind_vars,
+        all_plans=all_plans,
+        max_plans=max_plans,
     )
 
     # Process into a structured model
     execution_plan = QueryExecutionPlan.from_explain_result(
-        query_id=query_id, query=query, explain_result=explain_result,
+        query_id=query_id,
+        query=query,
+        explain_result=explain_result,
     )
 
     # Output as JSON if requested
@@ -226,10 +232,15 @@ def main():
 
     parser.add_argument("--query", type=str, help="AQL query to explain")
     parser.add_argument(
-        "--all-plans", action="store_true", help="Show all possible execution plans",
+        "--all-plans",
+        action="store_true",
+        help="Show all possible execution plans",
     )
     parser.add_argument(
-        "--max-plans", type=int, default=5, help="Maximum number of plans to return",
+        "--max-plans",
+        type=int,
+        default=5,
+        help="Maximum number of plans to return",
     )
     parser.add_argument(
         "--bind-vars",
@@ -245,7 +256,9 @@ def main():
     )
     parser.add_argument("--debug", action="store_true", help="Show debug output")
     parser.add_argument(
-        "--help-examples", action="store_true", help="Show extended help with examples",
+        "--help-examples",
+        action="store_true",
+        help="Show extended help with examples",
     )
 
     args = parser.parse_args()

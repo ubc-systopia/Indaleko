@@ -47,17 +47,18 @@ class KnownSemanticAttributes:
     full_prefix = "ACTIVITY_DATA"
 
     _modules_to_load = {
-        'collaboration': 'activity.collectors.collaboration.semantic_attributes',
-        'location': 'activity.collectors.location.semantic_attributes',
-        'network': 'activity.collectors.network.semantic_attributes',
-        'storage': 'activity.collectors.storage.semantic_attributes',
-        'ambient': 'activity.collectors.ambient.semantic_attributes'
+        "collaboration": "activity.collectors.collaboration.semantic_attributes",
+        "location": "activity.collectors.location.semantic_attributes",
+        "network": "activity.collectors.network.semantic_attributes",
+        "storage": "activity.collectors.storage.semantic_attributes",
+        "ambient": "activity.collectors.ambient.semantic_attributes",
     }
 
     @classmethod
     def _initialize(cls):
         """Dynamically construct the list of known activity data provider
-        semantic attributes"""
+        semantic attributes
+        """
         if cls._initialized:
             return
         cls._initialized = True
@@ -69,7 +70,8 @@ class KnownSemanticAttributes:
                 if label.startswith(KnownSemanticAttributes._short_prefix):
                     full_label = KnownSemanticAttributes.full_prefix + label[3:]
                     assert not hasattr(
-                        cls, full_label
+                        cls,
+                        full_label,
                     ), f"Duplicate definition of {full_label}"
                     setattr(cls, full_label, value)
                     provider_type = label.rsplit("_", maxsplit=2)[-2]

@@ -23,22 +23,21 @@ import argparse
 import logging
 import os
 import platform
-import psutil
 import sys
-
-from datetime import datetime, timezone
-from typing import List, Type, TypeVar, Union, Tuple, Annotated
+from datetime import UTC, datetime
 from pathlib import Path
-from icecream import ic
+from typing import Annotated, TypeVar
 
+import psutil
+from icecream import ic
 from pydantic import (
-    BaseModel,
-    Field,
     AwareDatetime,
-    field_validator,
-    FieldValidationInfo,
+    BaseModel,
     BeforeValidator,
     ConfigDict,
+    Field,
+    FieldValidationInfo,
+    field_validator,
 )
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -51,14 +50,14 @@ if os.environ.get("INDALEKO_ROOT") is None:
 T = TypeVar("T", bound="IndalekoCommandLineDataModel")
 
 # pylint: disable=wrong-import-position
+from db import IndalekoDBConfig  # noqa: E402
 from utils import IndalekoLogging  # noqa: E402
 from utils.misc.directory_management import (
     indaleko_default_config_dir,
     indaleko_default_data_dir,
     indaleko_default_log_dir,
-)  # noqa: E402
+)
 from utils.misc.file_name_management import generate_file_name  # noqa: E402
-from db import IndalekoDBConfig  # noqa: E402
 
 # pylint: enable=wrong-import-position
 
@@ -89,33 +88,31 @@ class IndalekoCommandLineDataModel(BaseModel):
 
     CommandLine: list = psutil.Process().cmdline()
 
-    Timestamp: AwareDatetime = datetime.now(timezone.utc)
+    Timestamp: AwareDatetime = datetime.now(UTC)
 
-    ConfigurationDir: Annotated[str, BeforeValidator(check_directory)] = (
-        indaleko_default_config_dir
-    )
+    ConfigurationDir: Annotated[str, BeforeValidator(check_directory)] = indaleko_default_config_dir
 
-    DBConfigurationFileChoices: List[str] = Field(default=[])
+    DBConfigurationFileChoices: list[str] = Field(default=[])
 
     DBConfigurationFile: str = IndalekoDBConfig.default_db_config_file
 
-    MachineConfigurationFile: Union[str, None] = None
+    MachineConfigurationFile: str | None = None
 
-    MachineConfigurationFileChoices: List[str] = []
+    MachineConfigurationFileChoices: list[str] = []
 
     DataDir: str = indaleko_default_data_dir
 
     LogDir: str = indaleko_default_log_dir
 
-    LoggingLevels: List[str] = IndalekoLogging.get_logging_levels()
+    LoggingLevels: list[str] = IndalekoLogging.get_logging_levels()
 
-    LogLevel: Union[int, None] = logging.DEBUG
+    LogLevel: int | None = logging.DEBUG
 
-    InputFileChoices: List[str] = []
+    InputFileChoices: list[str] = []
 
-    InputFile: Union[str, None] = None
+    InputFile: str | None = None
 
-    OutputFile: Union[str, None] = None
+    OutputFile: str | None = None
 
     def __init__(self, *args, **kwargs):
         """Initialize the object."""
@@ -124,11 +121,13 @@ class IndalekoCommandLineDataModel(BaseModel):
     @field_validator("Timestamp", mode="before")
     @classmethod
     def validate_timestamp(
-        cls: Type[T], value: AwareDatetime, info: FieldValidationInfo
+        cls: type[T],
+        value: AwareDatetime,
+        info: FieldValidationInfo,
     ) -> AwareDatetime:
         """Validate the timestamp."""
         if value is None:
-            value = datetime.now(timezone.utc)
+            value = datetime.now(UTC)
         if isinstance(value, AwareDatetime) or isinstance(value, datetime):
             return value
         ts = datetime.fromisoformat(value)
@@ -138,18 +137,23 @@ class IndalekoCommandLineDataModel(BaseModel):
 
     @field_validator("ConfigurationDir", "DataDir", "LogDir", mode="before")
     @classmethod
-    def validate_dir(cls: Type[T], value: str, info: FieldValidationInfo) -> str:
+    def validate_dir(cls: type[T], value: str, info: FieldValidationInfo) -> str:
         """Validate the directory."""
         if not os.path.exists(value):
             raise ValueError(f"Directory {value} does not exist.")
         return value
 
     @field_validator(
-        "DBConfigurationFile", "MachineConfigurationFile", "InputFile", mode="before"
+        "DBConfigurationFile",
+        "MachineConfigurationFile",
+        "InputFile",
+        mode="before",
     )
     @classmethod
     def validate_configuration_file(
-        cls: Type[T], value: str, info: FieldValidationInfo
+        cls: type[T],
+        value: str,
+        info: FieldValidationInfo,
     ) -> str:
         """Validate the database configuration file."""
         ic(value)
@@ -160,8 +164,9 @@ class IndalekoCommandLineDataModel(BaseModel):
 
     @staticmethod
     def find_relevant_files(
-        directory: str, substrings: List[str] = ["indaleko", "jsonl"]
-    ) -> List[str]:
+        directory: str,
+        substrings: list[str] = ["indaleko", "jsonl"],
+    ) -> list[str]:
         """Find files in the directory with the given suffix."""
         directory_path = Path(directory)
         return [
@@ -179,11 +184,11 @@ class IndalekoCommandLineDataModel(BaseModel):
         return generate_file_name(**kwargs)
 
     @staticmethod
-    def parse_command_line() -> (
-        Tuple[
-            argparse.Namespace, argparse.ArgumentParser, "IndalekoCommandLineDataModel"
-        ]
-    ):
+    def parse_command_line() -> tuple[
+        argparse.Namespace,
+        argparse.ArgumentParser,
+        "IndalekoCommandLineDataModel",
+    ]:
         """Parse the command line arguments."""
         ic(IndalekoLogging.get_logging_levels())
         cmd_data = IndalekoCommandLineDataModel()
@@ -201,10 +206,14 @@ class IndalekoCommandLineDataModel(BaseModel):
             default=cmd_data.ConfigurationDir,
         )
         pre_parser.add_argument(
-            "--datadir", help="Path to the data directory", default=cmd_data.DataDir
+            "--datadir",
+            help="Path to the data directory",
+            default=cmd_data.DataDir,
         )
         pre_parser.add_argument(
-            "--logdir", help="Path to the log directory", default=cmd_data.LogDir
+            "--logdir",
+            help="Path to the log directory",
+            default=cmd_data.LogDir,
         )
         pre_args, _ = pre_parser.parse_known_args()
         data = cmd_data.model_dump()
@@ -212,32 +221,31 @@ class IndalekoCommandLineDataModel(BaseModel):
             data["Platform"] = pre_args.platform
         if pre_args.configdir != cmd_data.ConfigurationDir:
             assert os.path.exists(
-                pre_args.configdir
+                pre_args.configdir,
             ), f"Configuration directory {pre_args.configdir} does not exist."
             data["ConfigurationDir"] = pre_args.configdir
         if pre_args.datadir != cmd_data.DataDir:
             assert os.path.exists(
-                pre_args.datadir
+                pre_args.datadir,
             ), f"Data directory {pre_args.datadir} does not exist."
             data["DataDir"] = pre_args.datadir
         if pre_args.logdir != cmd_data.LogDir:
             assert os.path.exists(
-                pre_args.logdir
+                pre_args.logdir,
             ), f"Configuration directory {pre_args.logdir} does not exist."
             data["LogDir"] = pre_args.logdir
         # now let's find the options for the configuration files
-        data["DBConfigurationFileChoices"] = (
-            IndalekoCommandLineDataModel.find_relevant_files(
-                data["ConfigurationDir"], ["indaleko", "db", "config", "ini"]
-            )
+        data["DBConfigurationFileChoices"] = IndalekoCommandLineDataModel.find_relevant_files(
+            data["ConfigurationDir"],
+            ["indaleko", "db", "config", "ini"],
         )
-        data["MachineConfigurationFileChoices"] = (
-            IndalekoCommandLineDataModel.find_relevant_files(
-                data["ConfigurationDir"], [data["Platform"], "hardware", "info", "json"]
-            )
+        data["MachineConfigurationFileChoices"] = IndalekoCommandLineDataModel.find_relevant_files(
+            data["ConfigurationDir"],
+            [data["Platform"], "hardware", "info", "json"],
         )
         data["InputFileChoices"] = IndalekoCommandLineDataModel.find_relevant_files(
-            data["DataDir"], ["indaleko", str(platform.system()), "jsonl"]
+            data["DataDir"],
+            ["indaleko", str(platform.system()), "jsonl"],
         )
         data["InputFileName"] = data["InputFileChoices"][-1]
         data["OutputFile"] = IndalekoCommandLineDataModel.default_output_file(
@@ -255,7 +263,9 @@ class IndalekoCommandLineDataModel(BaseModel):
             default=data["InputFileName"],
         )
         pre_parser.add_argument(
-            "--outputfile", help="The output file to write", default=data["OutputFile"]
+            "--outputfile",
+            help="The output file to write",
+            default=data["OutputFile"],
         )
         pre_args, _ = pre_parser.parse_known_args()
         data["InputFileName"] = pre_args.inputfile

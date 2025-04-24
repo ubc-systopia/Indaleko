@@ -96,7 +96,10 @@ def get_usn_journal_info(handle):
     try:
         print("Trying to query USN journal...")
         info = win32file.DeviceIoControl(
-            handle, win32file.FSCTL_QUERY_USN_JOURNAL, None, 1024,
+            handle,
+            win32file.FSCTL_QUERY_USN_JOURNAL,
+            None,
+            1024,
         )
         print("SUCCESS: USN journal query successful.")
         return info
@@ -113,13 +116,19 @@ def get_usn_journal_info(handle):
             struct.pack_into("QQ", buffer, 0, max_size, delta)
 
             win32file.DeviceIoControl(
-                handle, win32file.FSCTL_CREATE_USN_JOURNAL, buffer, 0,
+                handle,
+                win32file.FSCTL_CREATE_USN_JOURNAL,
+                buffer,
+                0,
             )
             print("SUCCESS: USN journal created.")
 
             # Query again
             info = win32file.DeviceIoControl(
-                handle, win32file.FSCTL_QUERY_USN_JOURNAL, None, 1024,
+                handle,
+                win32file.FSCTL_QUERY_USN_JOURNAL,
+                None,
+                1024,
             )
             print("SUCCESS: USN journal query successful after creation.")
             return info

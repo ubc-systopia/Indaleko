@@ -96,7 +96,8 @@ class StorageActivityRecorder(RecorderBase):
         # Basic configuration
         self._name = kwargs.get("name", "Storage Activity Recorder")
         self._recorder_id = kwargs.get(
-            "recorder_id", uuid.UUID("7f52e6a9-1d23-45cb-8f9a-d2a7b6c89e34"),
+            "recorder_id",
+            uuid.UUID("7f52e6a9-1d23-45cb-8f9a-d2a7b6c89e34"),
         )
         self._version = kwargs.get("version", "1.0.0")
         self._description = kwargs.get("description", "Records storage activities")
@@ -250,7 +251,8 @@ class StorageActivityRecorder(RecorderBase):
             # Use the insert method on ArangoDB collection (not add_document which doesn't exist)
             self._collection.insert(document)
             self._logger.debug(
-                "Successfully inserted document with ID %s", activity_data.activity_id,
+                "Successfully inserted document with ID %s",
+                activity_data.activity_id,
             )
         except Exception as e:
             self._logger.exception("Error inserting document: %s", e)
@@ -470,7 +472,10 @@ class StorageActivityRecorder(RecorderBase):
         return [doc for doc in cursor]
 
     def get_activities_by_path(
-        self, file_path: str, limit: int = 100, offset: int = 0,
+        self,
+        file_path: str,
+        limit: int = 100,
+        offset: int = 0,
     ) -> list[dict]:
         """
         Get activities for a specific file path.
@@ -552,36 +557,38 @@ class StorageActivityRecorder(RecorderBase):
 
         # Execute queries
         type_cursor = self._db._arangodb.aql.execute(
-            type_query, bind_vars={"@collection": self._collection_name},
+            type_query,
+            bind_vars={"@collection": self._collection_name},
         )
         provider_cursor = self._db._arangodb.aql.execute(
-            provider_query, bind_vars={"@collection": self._collection_name},
+            provider_query,
+            bind_vars={"@collection": self._collection_name},
         )
         item_cursor = self._db._arangodb.aql.execute(
-            item_query, bind_vars={"@collection": self._collection_name},
+            item_query,
+            bind_vars={"@collection": self._collection_name},
         )
         date_cursor = self._db._arangodb.aql.execute(
-            date_query, bind_vars={"@collection": self._collection_name},
+            date_query,
+            bind_vars={"@collection": self._collection_name},
         )
         count_cursor = self._db._arangodb.aql.execute(
-            count_query, bind_vars={"@collection": self._collection_name},
+            count_query,
+            bind_vars={"@collection": self._collection_name},
         )
 
         # Build statistics dictionary
         return {
             "total_count": next(count_cursor),
             "by_type": {item["type"]: item["count"] for item in type_cursor},
-            "by_provider": {
-                item["provider"]: item["count"] for item in provider_cursor
-            },
+            "by_provider": {item["provider"]: item["count"] for item in provider_cursor},
             "by_item_type": {item["item_type"]: item["count"] for item in item_cursor},
-            "by_date": [
-                {"date": item["date"], "count": item["count"]} for item in date_cursor
-            ],
+            "by_date": [{"date": item["date"], "count": item["count"]} for item in date_cursor],
         }
 
     def _get_model_class_for_provider_type(
-        self, provider_type: StorageProviderType | str,
+        self,
+        provider_type: StorageProviderType | str,
     ) -> type[BaseStorageActivityData]:
         """
         Get the appropriate model class for a provider type.
@@ -769,9 +776,7 @@ class StorageActivityRecorder(RecorderBase):
             return data.model_dump()
 
         # If data is a list of BaseStorageActivityData, convert to StorageActivityData
-        if isinstance(data, list) and all(
-            isinstance(item, BaseStorageActivityData) for item in data
-        ):
+        if isinstance(data, list) and all(isinstance(item, BaseStorageActivityData) for item in data):
             metadata = (
                 getattr(self._collector, "_metadata", None)
                 if self._collector
@@ -825,11 +830,7 @@ class StorageActivityRecorder(RecorderBase):
                     (
                         self._ensure_timezone_for_dict(item)
                         if isinstance(item, dict)
-                        else (
-                            item.replace(tzinfo=UTC)
-                            if isinstance(item, datetime) and not item.tzinfo
-                            else item
-                        )
+                        else (item.replace(tzinfo=UTC) if isinstance(item, datetime) and not item.tzinfo else item)
                     )
                     for item in value
                 ]
@@ -886,7 +887,8 @@ class StorageActivityRecorder(RecorderBase):
 
         # Execute query
         cursor = self._db._arangodb.aql.execute(
-            query, bind_vars={"@collection": self._collection_name},
+            query,
+            bind_vars={"@collection": self._collection_name},
         )
 
         # Return the first result, or empty dict if no results

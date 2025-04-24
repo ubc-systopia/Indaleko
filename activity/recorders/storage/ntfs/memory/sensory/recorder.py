@@ -51,7 +51,6 @@ except ImportError as e:
     class StorageActivityRecorder:
         """Dummy base class for testing."""
 
-
     class StorageProviderType:
         """Dummy enum for testing."""
 
@@ -99,7 +98,8 @@ class NtfsSensoryMemoryRecorder:
         self._name = kwargs.get("name", "NTFS Sensory Memory Recorder")
         self._recorder_id = kwargs.get("recorder_id", self.DEFAULT_RECORDER_ID)
         self._description = kwargs.get(
-            "description", "Records raw NTFS file system activities in sensory memory",
+            "description",
+            "Records raw NTFS file system activities in sensory memory",
         )
         self._version = kwargs.get("version", "1.0.0")
         self._provider_type = StorageProviderType.LOCAL_NTFS
@@ -139,7 +139,10 @@ class NtfsSensoryMemoryRecorder:
         ]
 
     def search_sensory_memory(
-        self, query: str, importance_min: float = 0.0, limit: int = 10,
+        self,
+        query: str,
+        importance_min: float = 0.0,
+        limit: int = 10,
     ) -> list[dict]:
         """
         Search for activities in sensory memory.

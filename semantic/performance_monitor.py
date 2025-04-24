@@ -103,7 +103,8 @@ def get_machine_id() -> uuid.UUID:
             import winreg
 
             with winreg.OpenKey(
-                winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Cryptography",
+                winreg.HKEY_LOCAL_MACHINE,
+                r"SOFTWARE\Microsoft\Cryptography",
             ) as key:
                 machine_guid = winreg.QueryValueEx(key, "MachineGuid")[0]
                 return uuid.UUID(machine_guid)
@@ -187,7 +188,8 @@ class SemanticExtractorPerformance(metaclass=Singleton):
     def __init__(self, **kwargs):
         """Initialize the performance monitor."""
         self._provider_id = kwargs.get(
-            "provider_id", uuid.UUID("f7a5b3e9-1c2d-4e8f-a9b0-c5d3e1f2a8d4"),
+            "provider_id",
+            uuid.UUID("f7a5b3e9-1c2d-4e8f-a9b0-c5d3e1f2a8d4"),
         )
         self._description = "Semantic Extractor Performance Monitor"
         self._enabled = kwargs.get("enabled", True)
@@ -222,9 +224,7 @@ class SemanticExtractorPerformance(metaclass=Singleton):
             "total_bytes": 0,
             "total_processing_time": 0.0,
             "extractor_stats": {},
-            "machine_id": (
-                str(self._machine_config_id) if self._machine_config_id else None
-            ),
+            "machine_id": (str(self._machine_config_id) if self._machine_config_id else None),
             "platform": platform.system(),
             "hostname": socket.gethostname(),
         }
@@ -265,18 +265,12 @@ class SemanticExtractorPerformance(metaclass=Singleton):
 
         # Calculate average processing time per file
         if stats["total_files"] > 0:
-            stats["avg_processing_time"] = (
-                stats["total_processing_time"] / stats["total_files"]
-            )
+            stats["avg_processing_time"] = stats["total_processing_time"] / stats["total_files"]
             stats["bytes_per_second"] = (
-                stats["total_bytes"] / stats["total_processing_time"]
-                if stats["total_processing_time"] > 0
-                else 0
+                stats["total_bytes"] / stats["total_processing_time"] if stats["total_processing_time"] > 0 else 0
             )
             stats["files_per_second"] = (
-                stats["total_files"] / stats["total_processing_time"]
-                if stats["total_processing_time"] > 0
-                else 0
+                stats["total_files"] / stats["total_processing_time"] if stats["total_processing_time"] > 0 else 0
             )
 
         # Add file type statistics
@@ -343,11 +337,7 @@ class SemanticExtractorPerformance(metaclass=Singleton):
             "mime_type": mime_type,
             "process": psutil.Process(),
             "start_cpu_times": psutil.Process().cpu_times(),
-            "start_io_counters": (
-                psutil.Process().io_counters()
-                if hasattr(psutil.Process(), "io_counters")
-                else None
-            ),
+            "start_io_counters": (psutil.Process().io_counters() if hasattr(psutil.Process(), "io_counters") else None),
             "start_memory_info": psutil.Process().memory_info(),
         }
 
@@ -394,14 +384,10 @@ class SemanticExtractorPerformance(metaclass=Singleton):
         if context["start_io_counters"] and hasattr(process, "io_counters"):
             end_io_counters = process.io_counters()
             io_stats = {
-                "read_count": end_io_counters.read_count
-                - context["start_io_counters"].read_count,
-                "write_count": end_io_counters.write_count
-                - context["start_io_counters"].write_count,
-                "read_bytes": end_io_counters.read_bytes
-                - context["start_io_counters"].read_bytes,
-                "write_bytes": end_io_counters.write_bytes
-                - context["start_io_counters"].write_bytes,
+                "read_count": end_io_counters.read_count - context["start_io_counters"].read_count,
+                "write_count": end_io_counters.write_count - context["start_io_counters"].write_count,
+                "read_bytes": end_io_counters.read_bytes - context["start_io_counters"].read_bytes,
+                "write_bytes": end_io_counters.write_bytes - context["start_io_counters"].write_bytes,
             }
 
         # Get memory usage
@@ -474,7 +460,8 @@ class SemanticExtractorPerformance(metaclass=Singleton):
         """
         # Create source identifier
         source_identifier = IndalekoSourceIdentifierDataModel(
-            Identifier=str(self._provider_id), Version="1.0",
+            Identifier=str(self._provider_id),
+            Version="1.0",
         )
 
         # Create record
@@ -523,7 +510,8 @@ class SemanticExtractorPerformance(metaclass=Singleton):
 
 
 def monitor_semantic_extraction(
-    func: Callable | None = None, extractor_name: str | None = None,
+    func: Callable | None = None,
+    extractor_name: str | None = None,
 ):
     """
     Decorator for monitoring semantic extraction functions.
@@ -606,7 +594,9 @@ def monitor_semantic_extraction(
                                 additional_data[key] = result[key]
 
                     monitor.stop_monitoring(
-                        context, success=success, additional_data=additional_data,
+                        context,
+                        success=success,
+                        additional_data=additional_data,
                     )
 
         return wrapper_monitor

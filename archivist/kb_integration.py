@@ -127,7 +127,9 @@ class ArchivistKnowledgeIntegration:
 
         # 2. Apply knowledge patterns to enhance the query with context
         enhanced_query = self.kb_manager.apply_knowledge_to_query(
-            query_text, query_intent, query_context,
+            query_text,
+            query_intent,
+            query_context,
         )
 
         # 3. Record in Archivist memory with enhanced metadata
@@ -144,17 +146,14 @@ class ArchivistKnowledgeIntegration:
             memory_metadata["context"] = context
 
         memory_entry = self.archivist_memory.add_memory(
-            memory_type="query", content=memory_metadata,
+            memory_type="query",
+            content=memory_metadata,
         )
 
         # 4. If results are available, record as a learning event with enhanced data
         if result_info:
             # Enhanced: Add first result for schema learning if available
-            if (
-                "results" in result_info
-                and result_info["results"]
-                and len(result_info["results"]) > 0
-            ):
+            if "results" in result_info and result_info["results"] and len(result_info["results"]) > 0:
                 result_info["first_result"] = result_info["results"][0]
 
             # Enhanced: Add context information to result info
@@ -251,11 +250,7 @@ class ArchivistKnowledgeIntegration:
                     "type": entity_type.value,
                     "id": str(entity_node.entity_id),
                     "canonical_name": canonical.name if canonical else entity_name,
-                    "canonical_id": (
-                        str(canonical.entity_id)
-                        if canonical
-                        else str(entity_node.entity_id)
-                    ),
+                    "canonical_id": (str(canonical.entity_id) if canonical else str(entity_node.entity_id)),
                     "all_references": reference_names,
                 },
             )
@@ -290,7 +285,8 @@ class ArchivistKnowledgeIntegration:
         if result_count > 0:
             # More results and better quality increase confidence
             confidence = min(
-                0.9, 0.6 + (0.1 * min(result_count / 10, 1.0)) + (0.2 * result_quality),
+                0.9,
+                0.6 + (0.1 * min(result_count / 10, 1.0)) + (0.2 * result_quality),
             )
 
         # Enhanced: Include additional context and metadata
@@ -326,11 +322,7 @@ class ArchivistKnowledgeIntegration:
 
         # Record as learning event
         event = self.kb_manager.record_learning_event(
-            event_type=(
-                LearningEventType.query_success
-                if result_count > 0
-                else LearningEventType.pattern_discovery
-            ),
+            event_type=(LearningEventType.query_success if result_count > 0 else LearningEventType.pattern_discovery),
             source="query_execution",
             content=content,
             confidence=confidence,
@@ -358,11 +350,7 @@ class ArchivistKnowledgeIntegration:
 
         # Enhanced: Check for database schema changes if applicable
         collections = result_info.get("collections", [])
-        if (
-            collections
-            and "first_result" in result_info
-            and result_info["first_result"]
-        ):
+        if collections and "first_result" in result_info and result_info["first_result"]:
             try:
                 # Only check the first collection for schema changes
                 schema_result = self.kb_manager.detect_schema_changes(
@@ -379,7 +367,8 @@ class ArchivistKnowledgeIntegration:
                             "schema_changes": schema_result.get("changes", {}),
                             "schema_version": schema_result.get("schema_version", 1),
                             "backwards_compatible": schema_result.get(
-                                "backwards_compatible", True,
+                                "backwards_compatible",
+                                True,
                             ),
                             "query_event_id": str(event.event_id),
                         },
@@ -464,13 +453,12 @@ class ArchivistKnowledgeIntegration:
 
         # Get top patterns by confidence
         query_patterns = self.kb_manager.get_patterns_by_type(
-            KnowledgePatternType.query_pattern, min_confidence=0.8,
+            KnowledgePatternType.query_pattern,
+            min_confidence=0.8,
         )
 
         top_patterns = []
-        for pattern in sorted(query_patterns, key=lambda p: p.confidence, reverse=True)[
-            :5
-        ]:
+        for pattern in sorted(query_patterns, key=lambda p: p.confidence, reverse=True)[:5]:
             top_patterns.append(
                 {
                     "id": str(pattern.pattern_id),
@@ -504,8 +492,7 @@ class ArchivistKnowledgeIntegration:
             "top_patterns": top_patterns,
             "top_entities": top_entities,
             "system_health": {
-                "knowledge_confidence": sum(p.confidence for p in query_patterns)
-                / max(len(query_patterns), 1),
+                "knowledge_confidence": sum(p.confidence for p in query_patterns) / max(len(query_patterns), 1),
                 "pattern_count": kb_stats.get("pattern_count", 0),
                 "entity_group_count": entity_stats.get("group_count", 0),
                 "memory_count": memory_stats.get("memory_count", 0),

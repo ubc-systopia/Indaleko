@@ -124,7 +124,8 @@ class QueryExtractor:
             """
         # adding the current date since LLM has difficulties getting today's date
         system_prompt = system_prompt.replace(
-            "{curr_date}", str(datetime.now()),
+            "{curr_date}",
+            str(datetime.now()),
         ).replace("{selected_md_schema}", selected_md_schema)
 
         user_prompt = query

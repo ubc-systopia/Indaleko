@@ -68,7 +68,8 @@ class YouTubeActivityRecorder(RecorderBase):
         """
         self._name = kwargs.get("name", "YouTube Activity Recorder")
         self._recorder_id = kwargs.get(
-            "recorder_id", uuid.UUID("8b9c0d1e-2f3a-4b5c-6d7e-8f9a0b1c2d3e"),
+            "recorder_id",
+            uuid.UUID("8b9c0d1e-2f3a-4b5c-6d7e-8f9a0b1c2d3e"),
         )
 
         # Storage parameters
@@ -156,7 +157,8 @@ class YouTubeActivityRecorder(RecorderBase):
         return YouTubeVideoActivity.schema()
 
     def process_data(
-        self, activities: list[YouTubeVideoActivity],
+        self,
+        activities: list[YouTubeVideoActivity],
     ) -> list[dict[str, Any]]:
         """
         Process activity data before storage.
@@ -214,7 +216,8 @@ class YouTubeActivityRecorder(RecorderBase):
 
             # Store in database
             result = self._collection.import_documents(
-                docs, on_duplicate="update",  # Update if duplicate found
+                docs,
+                on_duplicate="update",  # Update if duplicate found
             )
 
             # Update timestamp
@@ -228,7 +231,8 @@ class YouTubeActivityRecorder(RecorderBase):
             return False
 
     def store_data(
-        self, data: list[YouTubeVideoActivity] | YouTubeVideoActivity,
+        self,
+        data: list[YouTubeVideoActivity] | YouTubeVideoActivity,
     ) -> bool:
         """
         Store activity data.
@@ -250,7 +254,8 @@ class YouTubeActivityRecorder(RecorderBase):
             return False
 
     def update_data(
-        self, data: list[YouTubeVideoActivity] | YouTubeVideoActivity,
+        self,
+        data: list[YouTubeVideoActivity] | YouTubeVideoActivity,
     ) -> bool:
         """
         Update existing activity data.

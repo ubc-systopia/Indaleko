@@ -121,23 +121,22 @@ class TestMimeTypeCollector(unittest.TestCase):
         # Test HTML file
         html_mime = self.mime_collector.detect_mime_type(self.html_file)
         self.assertTrue(
-            html_mime["mime_type"].startswith("text/html")
-            or html_mime["mime_type"] == "text/plain",
+            html_mime["mime_type"].startswith("text/html") or html_mime["mime_type"] == "text/plain",
         )
         self.assertEqual(html_mime["mime_type_from_extension"], "text/html")
 
         # Test JSON file
         json_mime = self.mime_collector.detect_mime_type(self.json_file)
         self.assertTrue(
-            json_mime["mime_type"].startswith("application/json")
-            or json_mime["mime_type"].startswith("text/"),
+            json_mime["mime_type"].startswith("application/json") or json_mime["mime_type"].startswith("text/"),
         )
         self.assertEqual(json_mime["mime_type_from_extension"], "application/json")
 
         # Test binary file
         bin_mime = self.mime_collector.detect_mime_type(self.bin_file)
         self.assertIn(
-            bin_mime["mime_type_from_extension"], ["application/octet-stream", None],
+            bin_mime["mime_type_from_extension"],
+            ["application/octet-stream", None],
         )
 
         # Test Python file
@@ -160,7 +159,8 @@ class TestMimeTypeCollector(unittest.TestCase):
             self.mime_collector.detect_mime_type(self.text_file)["mime_type"],
         )
         self.assertGreaterEqual(
-            len(record.SemanticAttributes), 3,
+            len(record.SemanticAttributes),
+            3,
         )  # At least MIME type, confidence, and category
 
         # Serialize to verify it's valid
@@ -178,12 +178,10 @@ class TestMimeTypeCollector(unittest.TestCase):
         bin_result = self.mime_collector.detect_mime_type(self.bin_file)
 
         # If extension and MIME match, confidence should be higher
-        if (
-            html_result["mime_type"] == "text/html"
-            and html_result["mime_type_from_extension"] == "text/html"
-        ):
+        if html_result["mime_type"] == "text/html" and html_result["mime_type_from_extension"] == "text/html":
             self.assertGreater(
-                html_result["confidence"], 0.9,
+                html_result["confidence"],
+                0.9,
             )  # High confidence when they match
 
 

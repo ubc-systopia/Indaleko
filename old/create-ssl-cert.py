@@ -1,18 +1,21 @@
+import datetime
+
 from cryptography import x509
-from cryptography.x509.oid import NameOID
+from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import (
     Encoding,
-    PrivateFormat,
     NoEncryption,
+    PrivateFormat,
 )
-from cryptography.hazmat.backends import default_backend
-import datetime
+from cryptography.x509.oid import NameOID
 
 # Generate private key
 private_key = rsa.generate_private_key(
-    public_exponent=65537, key_size=2048, backend=default_backend()
+    public_exponent=65537,
+    key_size=2048,
+    backend=default_backend(),
 )
 
 timestamp = datetime.datetime.now(datetime.UTC)
@@ -25,7 +28,7 @@ subject = issuer = x509.Name(
         x509.NameAttribute(NameOID.LOCALITY_NAME, "San Francisco"),
         x509.NameAttribute(NameOID.ORGANIZATION_NAME, "My Organization"),
         x509.NameAttribute(NameOID.COMMON_NAME, "mydomain.com"),
-    ]
+    ],
 )
 certificate = (
     x509.CertificateBuilder()
@@ -37,7 +40,7 @@ certificate = (
     .not_valid_after(
         # Certificate valid for 10 year
         timestamp
-        + datetime.timedelta(days=30)
+        + datetime.timedelta(days=30),
     )
     .add_extension(
         x509.BasicConstraints(ca=True, path_length=None),
@@ -53,7 +56,7 @@ with open(f"./config/private_key-{timestamp}.pem", "wb") as f:
             encoding=Encoding.PEM,
             format=PrivateFormat.TraditionalOpenSSL,
             encryption_algorithm=NoEncryption(),
-        )
+        ),
     )
 
 # Write certificate to file

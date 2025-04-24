@@ -83,9 +83,7 @@ class Entity(abc.ABC):
         # Initialize memory
         self.message_history: list[Message] = []
         self.context_variables: dict[str, Any] = {}
-        self.relationship_memory: dict[str, dict[str, Any]] = (
-            {}
-        )  # Memory about other entities
+        self.relationship_memory: dict[str, dict[str, Any]] = {}  # Memory about other entities
 
     @abc.abstractmethod
     def process_message(self, message: Message) -> list[Message]:
@@ -160,7 +158,9 @@ class Entity(abc.ABC):
         )
 
     def get_relevant_history(
-        self, context: dict[str, Any], limit: int = 10,
+        self,
+        context: dict[str, Any],
+        limit: int = 10,
     ) -> list[Message]:
         """
         Get the most relevant messages from history given a context.
@@ -177,7 +177,9 @@ class Entity(abc.ABC):
         return self.message_history[-limit:]
 
     def update_relationship_memory(
-        self, entity_id: str, attributes: dict[str, Any],
+        self,
+        entity_id: str,
+        attributes: dict[str, Any],
     ) -> None:
         """
         Update memory about relationship with another entity.

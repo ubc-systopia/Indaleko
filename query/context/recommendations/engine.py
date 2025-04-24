@@ -52,7 +52,9 @@ class RecommendationEngine:
     """
 
     def __init__(
-        self, settings: RecommendationSettings | None = None, debug: bool = False,
+        self,
+        settings: RecommendationSettings | None = None,
+        debug: bool = False,
     ):
         """
         Initialize the recommendation engine.
@@ -94,24 +96,21 @@ class RecommendationEngine:
         )
 
         # Initialize activity context recommender
-        self.providers[RecommendationSource.ACTIVITY_CONTEXT] = (
-            ActivityContextRecommender(
-                db_config=None, debug=self.debug,  # Use default config
-            )
+        self.providers[RecommendationSource.ACTIVITY_CONTEXT] = ActivityContextRecommender(
+            db_config=None,
+            debug=self.debug,  # Use default config
         )
 
         # Initialize entity relationship recommender
-        self.providers[RecommendationSource.ENTITY_RELATIONSHIP] = (
-            EntityRelationshipRecommender(
-                db_config=None, debug=self.debug,  # Use default config
-            )
+        self.providers[RecommendationSource.ENTITY_RELATIONSHIP] = EntityRelationshipRecommender(
+            db_config=None,
+            debug=self.debug,  # Use default config
         )
 
         # Initialize temporal pattern recommender
-        self.providers[RecommendationSource.TEMPORAL_PATTERN] = (
-            TemporalPatternRecommender(
-                db_config=None, debug=self.debug,  # Use default config
-            )
+        self.providers[RecommendationSource.TEMPORAL_PATTERN] = TemporalPatternRecommender(
+            db_config=None,
+            debug=self.debug,  # Use default config
         )
 
     def register_provider(self, provider: RecommendationProvider) -> None:
@@ -151,10 +150,7 @@ class RecommendationEngine:
 
         for source_type, provider in self.providers.items():
             # Check if this source is enabled
-            if (
-                source_type not in self.settings.source_weights
-                or self.settings.source_weights[source_type] <= 0
-            ):
+            if source_type not in self.settings.source_weights or self.settings.source_weights[source_type] <= 0:
                 continue
 
             # Get suggestions from this provider
@@ -179,17 +175,15 @@ class RecommendationEngine:
         ranked_suggestions = self._rank_suggestions(all_suggestions, context_data)
 
         # Filter by confidence threshold
-        filtered_suggestions = [
-            s
-            for s in ranked_suggestions
-            if s.confidence >= self.settings.min_confidence
-        ]
+        filtered_suggestions = [s for s in ranked_suggestions if s.confidence >= self.settings.min_confidence]
 
         # Limit to max results
         return filtered_suggestions[:max_results]
 
     def _rank_suggestions(
-        self, suggestions: list[QuerySuggestion], context_data: dict[str, Any],
+        self,
+        suggestions: list[QuerySuggestion],
+        context_data: dict[str, Any],
     ) -> list[QuerySuggestion]:
         """
         Rank suggestions based on confidence and diversity.
@@ -206,7 +200,9 @@ class RecommendationEngine:
 
         # First sort by confidence
         sorted_suggestions = sorted(
-            suggestions, key=lambda x: x.confidence, reverse=True,
+            suggestions,
+            key=lambda x: x.confidence,
+            reverse=True,
         )
 
         # Then ensure diversity by limiting same-source suggestions
@@ -271,7 +267,8 @@ class RecommendationEngine:
             self.acceptance_counts[suggestion.source] += 1
 
     def get_acceptance_rate(
-        self, source_type: RecommendationSource | None = None,
+        self,
+        source_type: RecommendationSource | None = None,
     ) -> float:
         """
         Get the acceptance rate for recommendations.
@@ -291,9 +288,7 @@ class RecommendationEngine:
             total_suggestions = sum(self.suggestion_counts.values())
             total_acceptances = sum(self.acceptance_counts.values())
 
-            return (
-                total_acceptances / total_suggestions if total_suggestions > 0 else 0.0
-            )
+            return total_acceptances / total_suggestions if total_suggestions > 0 else 0.0
 
     def get_feedback_stats(self) -> dict[str, Any]:
         """
@@ -343,15 +338,9 @@ class RecommendationEngine:
         # Create the state dictionary
         state = {
             "settings": self.settings.model_dump() if self.settings else {},
-            "suggestion_counts": {
-                s.value: c for s, c in self.suggestion_counts.items()
-            },
-            "acceptance_counts": {
-                s.value: c for s, c in self.acceptance_counts.items()
-            },
-            "feedback_history": {
-                str(k): v.model_dump() for k, v in self.feedback_history.items()
-            },
+            "suggestion_counts": {s.value: c for s, c in self.suggestion_counts.items()},
+            "acceptance_counts": {s.value: c for s, c in self.acceptance_counts.items()},
+            "feedback_history": {str(k): v.model_dump() for k, v in self.feedback_history.items()},
         }
 
         # Save to file
@@ -378,20 +367,13 @@ class RecommendationEngine:
 
         # Load statistics
         if "suggestion_counts" in state:
-            self.suggestion_counts = {
-                RecommendationSource(s): c
-                for s, c in state["suggestion_counts"].items()
-            }
+            self.suggestion_counts = {RecommendationSource(s): c for s, c in state["suggestion_counts"].items()}
 
         if "acceptance_counts" in state:
-            self.acceptance_counts = {
-                RecommendationSource(s): c
-                for s, c in state["acceptance_counts"].items()
-            }
+            self.acceptance_counts = {RecommendationSource(s): c for s, c in state["acceptance_counts"].items()}
 
         # Load feedback history
         if "feedback_history" in state:
             self.feedback_history = {
-                uuid.UUID(k): RecommendationFeedback(**v)
-                for k, v in state["feedback_history"].items()
+                uuid.UUID(k): RecommendationFeedback(**v) for k, v in state["feedback_history"].items()
             }

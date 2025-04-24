@@ -108,8 +108,7 @@ if "query_results" not in st.session_state:
 # - only if not using real DB
 if not st.session_state.using_real_db:
     st.warning(
-        "⚠️ **DEMO MODE** - Running with simulated data. "
-        "Database connections are mocked.",
+        "⚠️ **DEMO MODE** - Running with simulated data. Database connections are mocked.",
     )
     st.info(
         """
@@ -126,10 +125,12 @@ render_sidebar()
 if not st.session_state.db_connected and st.session_state.current_page != "setup":
     # Welcome screen (shown when not connected)
     st.markdown(
-        "<div class='main-header'>Welcome to Indaleko</div>", unsafe_allow_html=True,
+        "<div class='main-header'>Welcome to Indaleko</div>",
+        unsafe_allow_html=True,
     )
     st.markdown(
-        "<div class='sub-header'>Unified Personal Index</div>", unsafe_allow_html=True,
+        "<div class='sub-header'>Unified Personal Index</div>",
+        unsafe_allow_html=True,
     )
 
     st.warning("Please connect to a database to continue.")
@@ -170,7 +171,9 @@ if not st.session_state.db_connected and st.session_state.current_page != "setup
 
     try:
         image_path = os.path.join(
-            os.environ.get("INDALEKO_ROOT"), "figures", "arch-diagram-solid.png",
+            os.environ.get("INDALEKO_ROOT"),
+            "figures",
+            "arch-diagram-solid.png",
         )
         if os.path.exists(image_path):
             st.image(image_path, use_container_width=True)

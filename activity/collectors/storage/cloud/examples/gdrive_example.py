@@ -40,7 +40,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -151,9 +152,7 @@ def display_activity(activity, detailed=False):
         time_str = str(timestamp)
 
     # Get user info
-    user_name = (
-        activity.user.display_name or activity.user.email or activity.user.user_id
-    )
+    user_name = activity.user.display_name or activity.user.email or activity.user.user_id
 
     # Get file info
     file_name = activity.file.name
@@ -181,10 +180,7 @@ def display_activity(activity, detailed=False):
         elif activity_type == "SHARE":
             if activity.shared_with:
                 shared_with = ", ".join(
-                    [
-                        f"{u.display_name or u.email or u.user_id}"
-                        for u in activity.shared_with
-                    ],
+                    [f"{u.display_name or u.email or u.user_id}" for u in activity.shared_with],
                 )
                 print(f"  Shared With: {shared_with}")
 
@@ -215,20 +211,32 @@ def main():
     parser.add_argument("--state", help="Path to state file")
     parser.add_argument("--output", help="Output file path for activities")
     parser.add_argument(
-        "--to-db", action="store_true", help="Store activities in database",
+        "--to-db",
+        action="store_true",
+        help="Store activities in database",
     )
     parser.add_argument(
-        "--days", type=int, default=7, help="Number of days of history to collect",
+        "--days",
+        type=int,
+        default=7,
+        help="Number of days of history to collect",
     )
     parser.add_argument(
-        "--limit", type=int, default=100, help="Maximum number of activities to display",
+        "--limit",
+        type=int,
+        default=100,
+        help="Maximum number of activities to display",
     )
     parser.add_argument(
-        "--detailed", action="store_true", help="Show detailed activity information",
+        "--detailed",
+        action="store_true",
+        help="Show detailed activity information",
     )
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     parser.add_argument(
-        "--test-oauth", action="store_true", help="Test only the OAuth flow",
+        "--test-oauth",
+        action="store_true",
+        help="Test only the OAuth flow",
     )
     parser.add_argument(
         "--reauth",
@@ -277,7 +285,8 @@ def main():
         try:
             # Get default config directory and verify its existence
             default_config_dir = os.path.join(
-                os.environ.get("INDALEKO_ROOT", "."), "config",
+                os.environ.get("INDALEKO_ROOT", "."),
+                "config",
             )
             if not os.path.exists(default_config_dir):
                 os.makedirs(default_config_dir, exist_ok=True)
@@ -285,10 +294,12 @@ def main():
 
             # Set paths for credentials and token files
             credentials_file = args.credentials or os.path.join(
-                default_config_dir, "gdrive_client_secrets.json",
+                default_config_dir,
+                "gdrive_client_secrets.json",
             )
             token_file = args.token or os.path.join(
-                default_config_dir, "gdrive_token.json",
+                default_config_dir,
+                "gdrive_token.json",
             )
 
             # Check for gdrive_config.json
@@ -385,11 +396,13 @@ def main():
                             with open(config_file) as f:
                                 client_config = json.load(f)
                             flow = InstalledAppFlow.from_client_config(
-                                client_config, scopes,
+                                client_config,
+                                scopes,
                             )
                         elif os.path.exists(credentials_file):
                             flow = InstalledAppFlow.from_client_secrets_file(
-                                credentials_file, scopes,
+                                credentials_file,
+                                scopes,
                             )
                         else:
                             print("No OAuth configuration files found")
@@ -423,7 +436,8 @@ def main():
 
                         # 5. Get auth URL and start server
                         auth_url = flow.authorization_url(
-                            access_type="offline", include_granted_scopes="true",
+                            access_type="offline",
+                            include_granted_scopes="true",
                         )[0]
                         print(
                             "\nPlease copy this URL and open it in your browser to authorize the application:",
@@ -443,7 +457,8 @@ def main():
                         client_id = flow.client_config["client_id"]
                         client_secret = flow.client_config["client_secret"]
                         token_uri = flow.client_config.get(
-                            "token_uri", "https://oauth2.googleapis.com/token",
+                            "token_uri",
+                            "https://oauth2.googleapis.com/token",
                         )
 
                         token_data = {
@@ -484,11 +499,13 @@ def main():
                             with open(config_file) as f:
                                 client_config = json.load(f)
                             flow = InstalledAppFlow.from_client_config(
-                                client_config, scopes,
+                                client_config,
+                                scopes,
                             )
                         elif os.path.exists(credentials_file):
                             flow = InstalledAppFlow.from_client_secrets_file(
-                                credentials_file, scopes,
+                                credentials_file,
+                                scopes,
                             )
                         else:
                             print("No OAuth configuration files found")
@@ -499,14 +516,10 @@ def main():
 
                         def patched_fetch_token(self, **kwargs):
                             # Save the original validation method
-                            original_validate = (
-                                self._oauth2session._validate_token_response
-                            )
+                            original_validate = self._oauth2session._validate_token_response
 
                             # Replace it with a no-op function
-                            self._oauth2session._validate_token_response = (
-                                lambda *args, **kwargs: None
-                            )
+                            self._oauth2session._validate_token_response = lambda *args, **kwargs: None
 
                             try:
                                 # Call original fetch_token without validation
@@ -514,9 +527,7 @@ def main():
                                 return result
                             finally:
                                 # Restore the original validation method
-                                self._oauth2session._validate_token_response = (
-                                    original_validate
-                                )
+                                self._oauth2session._validate_token_response = original_validate
 
                         # Apply the patch
                         InstalledAppFlow.fetch_token = patched_fetch_token
@@ -619,7 +630,8 @@ def main():
         if not token_file:
             # Get default token file path
             default_config_dir = os.path.join(
-                os.environ.get("INDALEKO_ROOT", "."), "config",
+                os.environ.get("INDALEKO_ROOT", "."),
+                "config",
             )
             token_file = os.path.join(default_config_dir, "gdrive_token.json")
 
@@ -723,9 +735,7 @@ def main():
                 print("Database connection successful")
 
                 print(f"Storing {len(processed_activities)} activities in database...")
-                storage_activities = [
-                    activity.to_storage_activity() for activity in processed_activities
-                ]
+                storage_activities = [activity.to_storage_activity() for activity in processed_activities]
                 activity_ids = recorder.store_activities(storage_activities)
 
                 print(f"Successfully stored {len(activity_ids)} activities in database")
@@ -750,7 +760,8 @@ def main():
             try:
                 # Create directory if it doesn't exist
                 os.makedirs(
-                    os.path.dirname(os.path.abspath(args.output)), exist_ok=True,
+                    os.path.dirname(os.path.abspath(args.output)),
+                    exist_ok=True,
                 )
 
                 with open(args.output, "w", encoding="utf-8") as f:

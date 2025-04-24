@@ -63,7 +63,9 @@ except ImportError:
 
 
 def register_archivist_components(
-    cli_instance, enable_proactive=True, enable_recommendations=True,
+    cli_instance,
+    enable_proactive=True,
+    enable_recommendations=True,
 ):
     """
     Register all Archivist components with the CLI.
@@ -85,10 +87,7 @@ def register_archivist_components(
 
     if HAS_QUERY_CONTEXT:
         # Check if CLI already has Query Context components
-        if (
-            hasattr(cli_instance, "query_context_integration")
-            and cli_instance.query_context_integration
-        ):
+        if hasattr(cli_instance, "query_context_integration") and cli_instance.query_context_integration:
             query_context_provider = cli_instance.query_context_integration
 
             # Import recent query activities into Archivist memory
@@ -112,7 +111,9 @@ def register_archivist_components(
         cli_instance.query_history if hasattr(cli_instance, "query_history") else None,
     )
     optimizer_integration = DatabaseOptimizerCliIntegration(
-        cli_instance, archivist_memory, database_optimizer,
+        cli_instance,
+        archivist_memory,
+        database_optimizer,
     )
 
     # Initialize proactive components if enabled
@@ -121,7 +122,9 @@ def register_archivist_components(
     if enable_proactive:
         proactive_archivist = ProactiveArchivist(archivist_memory)
         proactive_integration = ProactiveCliIntegration(
-            cli_instance, archivist_memory, proactive_archivist,
+            cli_instance,
+            archivist_memory,
+            proactive_archivist,
         )
 
     # Initialize recommendation components if enabled
@@ -132,7 +135,10 @@ def register_archivist_components(
             debug=hasattr(cli_instance, "debug") and cli_instance.debug,
         )
         recommendation_integration = RecommendationArchivistIntegration(
-            cli_instance, archivist_memory, proactive_archivist, recommendation_engine,
+            cli_instance,
+            archivist_memory,
+            proactive_archivist,
+            recommendation_engine,
         )
 
     # Register memory commands
@@ -272,5 +278,7 @@ def register_with_cli(cli_instance, enable_proactive=True, enable_recommendation
         The initialized components
     """
     return register_archivist_components(
-        cli_instance, enable_proactive, enable_recommendations,
+        cli_instance,
+        enable_proactive,
+        enable_recommendations,
     )

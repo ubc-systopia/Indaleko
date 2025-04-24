@@ -16,6 +16,91 @@ The ideal experience is exemplified by interactions like:
 
 > **Archivist**: "Tony, I see you're working on a new machine learning project. This is similar to work you did four years ago on customer churn prediction. Would you like me to pull up some relevant files?"
 
+## Sleep-Time Compute Architecture
+
+The Archivist incorporates a sleep-time compute architecture that enables sophisticated background processing during system idle time. This approach significantly reduces test-time computation during user interactions while improving response quality and system understanding.
+
+### Core Principles
+
+1. **Anticipatory Processing**: Perform complex analysis during idle periods to anticipate future user needs
+2. **Resource-Efficient Computing**: Move heavy computation to background processes, reducing user-facing latency
+3. **Knowledge Consolidation**: Build deeper insights over time through background synthesis of patterns
+4. **Multi-Perspective Analysis**: Enable thorough evaluation from multiple cognitive viewpoints
+
+### Key Components
+
+#### Knowledge Base Sleep Compute Manager
+
+The `SleepComputeManager` coordinates background analysis tasks for the knowledge base:
+
+```python
+from archivist.knowledge_base.sleep_compute import SleepComputeManager
+
+# Initialize with custom compute intervals
+manager = SleepComputeManager(
+    compute_interval=3600,  # Run every hour
+    max_compute_time=1800,  # Maximum 30 minutes per cycle
+)
+
+# Start the sleep compute process
+manager.start()
+```
+
+#### Core Analysis Tasks
+
+The sleep-time compute system performs several critical background tasks:
+
+1. **Deep Pattern Analysis**: Identifies complex relationships between knowledge patterns that would be too computationally expensive during user interactions
+   
+2. **Query Prediction**: Analyzes historical query patterns to predict future user queries and pre-compute results
+   
+3. **Schema Evolution Analysis**: Monitors database schema changes to identify optimization opportunities
+   
+4. **System Effectiveness Evaluation**: Conducts multi-perspective analysis of overall system performance
+
+#### FireCircle Integration
+
+For tasks requiring multiple analytical perspectives, the Archivist integrates with FireCircle's sleep-time compute system (see [FireCircle Sleep-Time Compute](../firecircle/README.md#sleep-time-compute)).
+
+The FireCircle sleep-time compute system complements the Archivist's capabilities by:
+
+1. **Multi-Perspective Analysis**: While Archivist performs deep pattern analysis from a single perspective, FireCircle leverages multiple AI entities to examine information from diverse viewpoints
+2. **Reflective Processing**: FireCircle conducts deeper reflection on past discussions during idle periods
+3. **Pre-loaded Context**: FireCircle pre-fetches and organizes relevant context for anticipated future discussions
+4. **Enhanced Consensus Building**: Background processing improves identification of agreement patterns across different viewpoints
+
+### CLI Integration
+
+Sleep-time compute capabilities are accessible through the Archivist CLI:
+
+```
+/sleep status              # View sleep compute status
+/sleep start               # Start sleep compute
+/sleep stop                # Stop sleep compute
+/sleep tasks               # View registered tasks
+/sleep insights            # View insights generated
+```
+
+### Benefits
+
+1. **Faster Response Times**: By pre-computing likely queries and analysis, user interactions benefit from reduced latency
+2. **Deeper Insights**: Complex pattern analysis that would be impractical during interaction becomes possible
+3. **Improved Knowledge Quality**: Background consolidation and verification enhance knowledge base accuracy
+4. **Resource Optimization**: Computation happens during low-usage periods, optimizing resource allocation
+
+### Implementation Details
+
+The sleep-time compute architecture uses a background thread that runs compute tasks in priority order during idle periods. Each compute cycle includes:
+
+1. Task selection based on priority and available time
+2. Execution of selected tasks with timeouts
+3. Storage of results for future use
+4. Performance monitoring and statistics collection
+
+Advanced implementations automatically adjust task priorities based on user behavior patterns and system load.
+
+For technical details, see the implementation in `archivist/knowledge_base/sleep_compute.py`.
+
 ## Architecture
 
 ### 1. Project Context Understanding

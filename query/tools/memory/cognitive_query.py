@@ -359,7 +359,10 @@ class CognitiveMemoryQueryTool(BaseTool):
             ic("All memory recorders initialized successfully")
 
     def _query_sensory_memory(
-        self, query: str, importance_min: float = 0.0, limit: int = 10,
+        self,
+        query: str,
+        importance_min: float = 0.0,
+        limit: int = 10,
     ) -> list[dict[str, Any]]:
         """
         Query the sensory memory tier.
@@ -381,7 +384,9 @@ class CognitiveMemoryQueryTool(BaseTool):
         try:
             # Execute the query
             results = recorder.search_sensory_memory(
-                query=query, importance_min=importance_min, limit=limit,
+                query=query,
+                importance_min=importance_min,
+                limit=limit,
             )
 
             # Process results to add the memory tier
@@ -399,7 +404,10 @@ class CognitiveMemoryQueryTool(BaseTool):
             return []
 
     def _query_short_term_memory(
-        self, query: str, importance_min: float = 0.0, limit: int = 10,
+        self,
+        query: str,
+        importance_min: float = 0.0,
+        limit: int = 10,
     ) -> list[dict[str, Any]]:
         """
         Query the short-term memory tier.
@@ -421,7 +429,9 @@ class CognitiveMemoryQueryTool(BaseTool):
         try:
             # Execute the query
             results = recorder.search_short_term_memory(
-                query=query, importance_min=importance_min, limit=limit,
+                query=query,
+                importance_min=importance_min,
+                limit=limit,
             )
 
             # Process results to add the memory tier
@@ -544,7 +554,8 @@ class CognitiveMemoryQueryTool(BaseTool):
             return []
 
     def _calculate_tier_statistics(
-        self, results_by_tier: dict[str, list[dict[str, Any]]],
+        self,
+        results_by_tier: dict[str, list[dict[str, Any]]],
     ) -> dict[str, dict[str, Any]]:
         """
         Calculate statistics for each memory tier.
@@ -644,7 +655,9 @@ class CognitiveMemoryQueryTool(BaseTool):
         return None
 
     def _rank_results(
-        self, results: list[dict[str, Any]], tier_weights: dict[str, float],
+        self,
+        results: list[dict[str, Any]],
+        tier_weights: dict[str, float],
     ) -> list[dict[str, Any]]:
         """
         Rank results based on tier weights and importance scores.
@@ -710,7 +723,8 @@ class CognitiveMemoryQueryTool(BaseTool):
         w5h_filter = input_data.parameters.get("w5h_filter", {})
         concept_filter = input_data.parameters.get("concept_filter", [])
         include_relationships = input_data.parameters.get(
-            "include_relationships", False,
+            "include_relationships",
+            False,
         )
         limit = int(input_data.parameters.get("limit", 10))
         db_config_path = input_data.parameters.get("db_config_path")
@@ -774,7 +788,9 @@ class CognitiveMemoryQueryTool(BaseTool):
                 )
 
                 results_by_tier["sensory"] = self._query_sensory_memory(
-                    query=query, importance_min=importance_min, limit=limit,
+                    query=query,
+                    importance_min=importance_min,
+                    limit=limit,
                 )
 
             # Short-Term Memory
@@ -787,7 +803,9 @@ class CognitiveMemoryQueryTool(BaseTool):
                 )
 
                 results_by_tier["short_term"] = self._query_short_term_memory(
-                    query=query, importance_min=importance_min, limit=limit,
+                    query=query,
+                    importance_min=importance_min,
+                    limit=limit,
                 )
 
             # Long-Term Memory
@@ -848,9 +866,7 @@ class CognitiveMemoryQueryTool(BaseTool):
             performance = {
                 "execution_time_seconds": elapsed_time,
                 "total_results": len(ranked_results),
-                "results_by_tier": {
-                    tier: len(results) for tier, results in results_by_tier.items()
-                },
+                "results_by_tier": {tier: len(results) for tier, results in results_by_tier.items()},
             }
 
             # Report completion
