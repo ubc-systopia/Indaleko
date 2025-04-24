@@ -218,7 +218,8 @@ class UsnJournalReader:
 
             # Read USN journal
             buffer, bytes_returned = self._read_usn_journal(
-                self.journal_data.UsnJournalID, start_usn,
+                self.journal_data.UsnJournalID,
+                start_usn,
             )
 
             if self.verbose:
@@ -295,95 +296,106 @@ class UsnJournalReader:
         This method handles the case where requested journal entries have been deleted
         due to journal rotation (circular buffer).
         """
-        read_data = READ_USN_JOURNAL_DATA(
-            StartUsn=start_usn,
-            ReasonMask=0xFFFFFFFF,  # All reasons
-            ReturnOnlyOnClose=0,
-            Timeout=0,
-            BytesToWaitFor=0,
-            UsnJournalID=journal_id,
-        )
-        buffer_size = 4096
-        buffer = ctypes.create_string_buffer(buffer_size)
-        bytes_returned = wintypes.DWORD()
-
-        try:
-            success = ctypes.windll.kernel32.DeviceIoControl(
-                self.handle,
-                FSCTL_READ_USN_JOURNAL,
-                ctypes.byref(read_data),
-                ctypes.sizeof(read_data),
-                buffer,
-                buffer_size,
-                ctypes.byref(bytes_returned),
-                None,
+        # Maximum number of retries for handle issues
+        max_retries = 1
+        retries = 0
+        
+        while retries <= max_retries:
+            read_data = READ_USN_JOURNAL_DATA(
+                StartUsn=start_usn,
+                ReasonMask=0xFFFFFFFF,  # All reasons
+                ReturnOnlyOnClose=0,
+                Timeout=0,
+                BytesToWaitFor=0,
+                UsnJournalID=journal_id,
             )
-            if not success:
-                error = ctypes.get_last_error()
+            buffer_size = 4096
+            buffer = ctypes.create_string_buffer(buffer_size)
+            bytes_returned = wintypes.DWORD()
 
-                # Error 0 can happen when the handle is invalid or when there are no records
-                if error == 0:
-                    # Check if handle is still valid by trying to query the journal again
-                    try:
-                        self.close()  # Close the current handle
-                        self.open()  # Try to reopen and get a fresh handle
+            try:
+                success = ctypes.windll.kernel32.DeviceIoControl(
+                    self.handle,
+                    FSCTL_READ_USN_JOURNAL,
+                    ctypes.byref(read_data),
+                    ctypes.sizeof(read_data),
+                    buffer,
+                    buffer_size,
+                    ctypes.byref(bytes_returned),
+                    None,
+                )
+                if not success:
+                    error = ctypes.get_last_error()
 
-                        # If we get here, the handle was invalid but we've recovered
+                    # Error 0 can happen when the handle is invalid or when there are no records
+                    if error == 0 and retries < max_retries:
+                        # Check if handle is still valid by trying to query the journal again
+                        try:
+                            self.close()  # Close the current handle
+                            self.open()  # Try to reopen and get a fresh handle
+
+                            # If we get here, the handle was invalid but we've recovered
+                            if self.verbose:
+                                print(
+                                    "Handle was invalid but has been successfully reopened",
+                                )
+
+                            # Increment retry counter and continue to next iteration
+                            retries += 1
+                            continue
+                        except Exception as recover_error:
+                            if self.verbose:
+                                print(f"Failed to recover from error 0: {recover_error}")
+                            # Return empty results, allowing the collector to handle this gracefully
+                            return buffer, 0
+
+                    # Error 0x18 (ERROR_NO_MORE_FILES) can happen when there are no new records
+                    if error == 0x18:
                         if self.verbose:
-                            print(
-                                "Handle was invalid but has been successfully reopened",
-                            )
-
-                        # Retry the operation with the new handle
-                        return self._read_usn_journal(journal_id, start_usn)
-                    except Exception as recover_error:
-                        if self.verbose:
-                            print(f"Failed to recover from error 0: {recover_error}")
-                        # Return empty results, allowing the collector to handle this gracefully
+                            print(f"No more USN records found after position {start_usn}")
                         return buffer, 0
 
-                # Error 0x18 (ERROR_NO_MORE_FILES) can happen when there are no new records
-                if error == 0x18:
-                    if self.verbose:
-                        print(f"No more USN records found after position {start_usn}")
-                    return buffer, 0
+                    # Error 0xC0000023 (STATUS_BUFFER_TOO_SMALL) or 0x7A (ERROR_INSUFFICIENT_BUFFER)
+                    if error in (0xC0000023, 0x7A):
+                        if self.verbose:
+                            print(
+                                "Buffer too small for USN records, need to increase buffer size",
+                            )
+                        raise BufferError("USN journal buffer too small")
 
-                # Error 0xC0000023 (STATUS_BUFFER_TOO_SMALL) or 0x7A (ERROR_INSUFFICIENT_BUFFER)
-                if error in (0xC0000023, 0x7A):
+                    print(f"DeviceIoControl failed with Win32 error code: {error}")
+                    raise ctypes.WinError(error)
+                    
+                # If we get here, the operation was successful
+                return buffer, bytes_returned.value
+                
+            except OSError as e:
+                # Handle ERROR_JOURNAL_ENTRY_DELETED (0x570) or STATUS_JOURNAL_ENTRY_DELETED
+                # This happens when the requested USN is too old and has been overwritten
+                if getattr(e, "winerror", 0) == 0x570 or str(e).find("journal entry has been deleted") != -1:
                     if self.verbose:
                         print(
-                            "Buffer too small for USN records, need to increase buffer size",
+                            f"Journal entry at USN {start_usn} has been deleted due to journal rotation",
                         )
-                    raise BufferError("USN journal buffer too small")
+                        print(
+                            f"Resetting to lowest valid USN: {self.journal_data.LowestValidUsn}",
+                        )
 
-                print(f"DeviceIoControl failed with Win32 error code: {error}")
-                raise ctypes.WinError(error)
-        except OSError as e:
-            # Handle ERROR_JOURNAL_ENTRY_DELETED (0x570) or STATUS_JOURNAL_ENTRY_DELETED
-            # This happens when the requested USN is too old and has been overwritten
-            if (
-                getattr(e, "winerror", 0) == 0x570
-                or str(e).find("journal entry has been deleted") != -1
-            ):
-                if self.verbose:
-                    print(
-                        f"Journal entry at USN {start_usn} has been deleted due to journal rotation",
+                    # Return empty buffer but with special metadata for the collector to handle
+                    empty_buffer = ctypes.create_string_buffer(8)
+                    struct.pack_into(
+                        "<Q",
+                        empty_buffer,
+                        0,
+                        self.journal_data.LowestValidUsn,
                     )
-                    print(
-                        f"Resetting to lowest valid USN: {self.journal_data.LowestValidUsn}",
-                    )
+                    return empty_buffer, 8
 
-                # Return empty buffer but with special metadata for the collector to handle
-                empty_buffer = ctypes.create_string_buffer(8)
-                struct.pack_into(
-                    "<Q", empty_buffer, 0, self.journal_data.LowestValidUsn,
-                )
-                return empty_buffer, 8
-
-            # Re-raise other Windows errors
-            raise
-
-        return buffer, bytes_returned.value
+                # Re-raise other Windows errors
+                raise
+                
+        # If we've exhausted retries, return empty results
+        return buffer, 0
 
     def _parse_usn_record(self, buffer, offset, bytes_returned):
         """Parse a USN record from the buffer."""
@@ -404,17 +416,14 @@ class UsnJournalReader:
 
         try:
             filename = buffer[offset + filename_offset : offset + filename_end].decode(
-                "utf-16-le", errors="replace",
+                "utf-16-le",
+                errors="replace",
             )
         except UnicodeDecodeError:
             filename = "<invalid filename>"
 
         reasons = [name for flag, name in REASON_FLAGS.items() if record.Reason & flag]
-        attributes = [
-            name
-            for flag, name in ATTRIBUTE_FLAGS.items()
-            if record.FileAttributes & flag
-        ]
+        attributes = [name for flag, name in ATTRIBUTE_FLAGS.items() if record.FileAttributes & flag]
         timestamp = filetime_to_datetime(record.TimeStamp)
 
         return {
@@ -442,10 +451,15 @@ def main():
     # Add argument parsing for better integration
     parser = argparse.ArgumentParser(description="USN Journal Reader")
     parser.add_argument(
-        "--volume", type=str, default="C:", help="Volume to query (default: C:)",
+        "--volume",
+        type=str,
+        default="C:",
+        help="Volume to query (default: C:)",
     )
     parser.add_argument(
-        "--start-usn", type=int, help="Starting USN (default: first USN in journal)",
+        "--start-usn",
+        type=int,
+        help="Starting USN (default: first USN in journal)",
     )
     parser.add_argument(
         "--max-records",
@@ -469,7 +483,8 @@ def main():
     # Use UsnJournalReader class with context manager
     with UsnJournalReader(volume=args.volume, verbose=args.verbose) as reader:
         records, next_usn = reader.read_records(
-            start_usn=args.start_usn, max_records=args.max_records,
+            start_usn=args.start_usn,
+            max_records=args.max_records,
         )
 
         # Display the records
