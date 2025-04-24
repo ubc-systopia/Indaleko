@@ -38,9 +38,11 @@ import os
 import signal
 import sys
 import time
+
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -54,6 +56,7 @@ from activity.collectors.storage.ntfs.usn_journal_collector import (
 )
 from activity.recorders.storage.ntfs.tiered.hot.recorder import NtfsHotTierRecorder
 from constants.values import IndalekoConstants
+
 
 # Create default DB config path using pathlib.Path
 DEFAULT_DB_CONFIG_PATH = Path(IndalekoConstants.default_config_dir) / IndalekoConstants.default_db_config_file_name
@@ -85,6 +88,7 @@ class IntegratedNtfsActivityRunner:
         log_level = logging.DEBUG if self.verbose else logging.INFO
         # Configure root logger
         import socket
+
         from logging import Formatter
         from logging.handlers import RotatingFileHandler
 
@@ -163,8 +167,8 @@ class IntegratedNtfsActivityRunner:
         self.consecutive_errors = 0
         self.consecutive_empty_results = 0
         self.auto_reset_enabled = kwargs.get("auto_reset", True)
-        self.error_threshold = kwargs.get("error_threshold", 5)
-        self.empty_results_threshold = kwargs.get("empty_results_threshold", 10)
+        self.error_threshold = kwargs.get("error_threshold", 3)
+        self.empty_results_threshold = kwargs.get("empty_results_threshold", 3)
 
         # Initialize recorder (only responsible for processing and storing data)
         self.logger.info("Initializing hot tier recorder")
@@ -340,36 +344,38 @@ class IntegratedNtfsActivityRunner:
                             )
                             self.collector.reset_state()
                             self.consecutive_empty_results = 0
-                except RecursionError as recursion_error:
+                except RecursionError:
                     # Handle recursion errors specifically with proper diagnostics
                     self.logger.warning(
-                        "Maximum recursion depth exceeded in USN Journal processing"
+                        "Maximum recursion depth exceeded in USN Journal processing",
                     )
-                    
+
                     # Log more details about the recursion error at debug level
                     import traceback
+
                     recursion_trace = traceback.format_exc()
                     self.logger.debug(f"Recursion error details: {recursion_trace}")
-                    
+
                     # For recursion errors, reset state more aggressively
                     if self.auto_reset_enabled:
                         self.logger.warning(
-                            "Recursion error detected - resetting collector state to recover"
+                            "Recursion error detected - resetting collector state to recover",
                         )
                         self.collector.reset_state()
                         self.consecutive_errors = 0
                         # Skip normal error handling
                         continue
-                        
+
                 except Exception as collection_error:
                     # Log other errors normally with full details
                     self.logger.error(
-                        f"Error collecting activities: {collection_error}"
+                        f"Error collecting activities: {collection_error}",
                     )
-                    
+
                     # Include stack trace for debugging
                     if self.verbose:
                         import traceback
+
                         error_trace = traceback.format_exc()
                         self.logger.debug(f"Error details: {error_trace}")
 
@@ -539,14 +545,14 @@ def main():
     parser.add_argument(
         "--error-threshold",
         type=int,
-        default=5,
-        help="Number of consecutive errors before automatic state reset (default: 5)",
+        default=3,
+        help="Number of consecutive errors before automatic state reset (default: 3)",
     )
     parser.add_argument(
         "--empty-threshold",
         type=int,
-        default=10,
-        help="Number of consecutive empty results before automatic state reset (default: 10)",
+        default=3,
+        help="Number of consecutive empty results before automatic state reset (default: 3)",
     )
 
     args = parser.parse_args()
