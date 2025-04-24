@@ -363,8 +363,39 @@ class UsnJournalReader:
                             )
                         raise BufferError("USN journal buffer too small")
 
-                    print(f"DeviceIoControl failed with Win32 error code: {error}")
-                    raise ctypes.WinError(error)
+                    # Try to get the NTSTATUS code if possible (for better diagnostics)
+                    nt_status = None
+                    try:
+                        # Use GetLastErrorEx if available (Windows 10+)
+                        if hasattr(ctypes.windll.kernel32, 'GetLastWin32ErrorEx'):
+                            error_ex = ctypes.c_ulong()
+                            nt_status = ctypes.windll.kernel32.GetLastWin32ErrorEx(ctypes.byref(error_ex))
+                            error_ex = error_ex.value
+                            nt_status_str = f"NT Status: 0x{nt_status:08X}"
+                        else:
+                            nt_status_str = "NT Status: Not available"
+                    except Exception:
+                        nt_status_str = "NT Status: Error retrieving"
+                    
+                    # Log more detailed error information
+                    error_msg = f"DeviceIoControl failed with Win32 error code: {error} (0x{error:X}), {nt_status_str}"
+                    if error == 0 and self.journal_data:
+                        # For error 0, include USN journal state for diagnostics
+                        error_msg += f"\nJournal info - ID: {self.journal_data.UsnJournalID}, "
+                        error_msg += f"First USN: {self.journal_data.FirstUsn}, "
+                        error_msg += f"Next USN: {self.journal_data.NextUsn}, "
+                        error_msg += f"Lowest Valid USN: {self.journal_data.LowestValidUsn}, "
+                        error_msg += f"Requested USN: {start_usn}"
+                    
+                    print(error_msg)
+                    
+                    # Create a more informative Win32 error
+                    if error == 0:
+                        error_obj = OSError(f"USN Journal Error: {error_msg}")
+                        error_obj.winerror = error
+                        raise error_obj
+                    else:
+                        raise ctypes.WinError(error)
                     
                 # If we get here, the operation was successful
                 return buffer, bytes_returned.value
