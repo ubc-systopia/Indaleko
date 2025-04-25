@@ -96,20 +96,52 @@ Indaleko uses a centralized approach for database collection management:
 
 Indaleko implements a biomimetic cognitive memory architecture with multiple tiers:
 
-1. **Sensory Memory**:
+1. **Sensory Memory (Hot Tier)**:
    - High-fidelity recent activity data (TTL: 4 days)
    - Entity mapping system for stable identifiers
    - Importance scoring for retention decisions
+   - See `run_ntfs_activity.bat` for primary input
 
-2. **Short-Term Memory**:
+2. **Short-Term Memory (Warm Tier)**:
    - Aggregated activity data with importance scoring
    - Longer retention period (30 days default)
    - Automatic consolidation from sensory memory
+   - See `run_tier_transition.bat` for transitions between tiers
 
-3. **Long-Term Memory** (In Development):
+3. **Long-Term Memory (Cold Tier)** (In Development):
    - Archival tier for important historical data
    - Heavily compressed representation
    - Searchable via stable entity identifiers
+   - Time-based queries like "files created last week" use these tiers
+
+To manually manage tier transitions:
+```
+run_memory_consolidation.bat --consolidate-all
+run_tier_transition.bat --run --age-hours 12 --batch-size 1000
+```
+
+### Periodic Data Collection
+
+Indaleko supports numerous periodic data collectors that can be scheduled to run at regular intervals:
+
+1. **Activity Collectors**:
+   - File System: NTFS journal activity
+   - Location: Windows GPS, WiFi, IP-based
+   - Media: Spotify, YouTube history
+   - Environment: Smart thermostat data
+   - Collaboration: Discord, Outlook, Calendar
+
+2. **Semantic Collectors**:
+   - MIME identification
+   - Checksum generation
+   - EXIF metadata extraction
+   - Unstructured content extraction (Docker-based)
+
+3. **Storage Collectors**:
+   - Local incremental file indexer
+   - Cloud storage (Google Drive, Dropbox)
+
+For a comprehensive list of all available collectors and their recommended scheduling frequency, see `SCHEDULED_TASKS.md`.
 
 ### Sleep-Time Compute Architecture
 
@@ -124,14 +156,16 @@ Indaleko implements a "sleep-time compute" pattern for background processing dur
 2. **Key Implementations**:
    - **Archivist Knowledge Base**: Deep pattern analysis and query prediction
    - **FireCircle Memory**: Multi-perspective analysis and context prefetching
+   - **Semantic Processors**: Content analysis and metadata extraction
    - See detailed implementation in:
      - `archivist/knowledge_base/sleep_compute.py`
      - `firecircle/src/firecircle/memory/sleep_compute.py`
-     - `archivist/sleep_compute_integration.py`
+     - `semantic/run_bg_processor.py`
 
 3. **Documentation**:
    - Full details in Archivist README: `archivist/README.md#sleep-time-compute-architecture`
    - FireCircle implementation: `firecircle/README.md#sleep-time-compute`
+   - Semantic background processing: `semantic/README_SCHEDULED.md`
 
 ## Development Environment
 
@@ -232,11 +266,18 @@ class MyArangoModel(IndalekoBaseModel):
 - Format code: `black .`
 - Build package: `python -m build`
 
+### Data Collection Commands
+- NTFS activity: `run_ntfs_activity.bat --volumes C: --interval 30 --verbose`
+- GPS location: `python activity/recorders/location/windows_gps_location.py`
+- Semantic extraction: `python semantic/run_scheduled.py --all --max-cpu 30 --max-memory 1024`
+- Unstructured content: `run_unstructured_extraction.bat`
+- File system indexing: `python run_incremental_indexer.py --volumes C:\Users\Name --db-records`
+
 ### Memory Commands
-- Sensory memory verification: `./verify_sensory_memory.sh --full-verification`
-- Load data to sensory memory: `./load_sensory_memory_data.sh --simulate --report`
-- Run memory consolidation: `./run_memory_consolidation.sh --run --verbose`
-- Configure consolidation: `./run_memory_consolidation.sh --run --age-hours 24 --batch-size 500`
+- Hot tier verification: `verify_hot_tier.bat`
+- Hot tier loading: `load_hot_tier_data.bat`
+- Tier transitions: `run_tier_transition.bat --run --age-hours 12 --batch-size 1000`
+- Memory consolidation: `run_memory_consolidation.bat --consolidate-all`
 
 ### Query System Commands
 - Test query tools: `python query/tools/test_tools.py --query "Your query here" --debug`
@@ -287,7 +328,7 @@ if entity:
 ```
 
 This avoids the anti-pattern of generating random UUIDs and then trying to find them later.
-See detailed notes in `activity/recorders/storage/ntfs/tiered/hot/ENTITY_MAPPING.md`
+See detailed notes in `activity/recorders/storage/ntfs/ENTITY_MAPPING.md`
 
 ### Logging
 ```python
@@ -366,6 +407,34 @@ activities = context.get_recent_activities(
 )
 ```
 
+### Data Collectors Framework
+
+Indaleko provides a diverse set of collectors for different data types. To implement your own:
+
+```python
+# Collector (collects data only, no DB interaction)
+class MyCustomCollector:
+    def collect_data(self):
+        # Collect raw data from source
+        return raw_data
+        
+# Recorder (processes and stores data in DB)
+class MyCustomRecorder:
+    def __init__(self, db_config=None):
+        self.db = IndalekoDBConfig() if db_config is None else db_config
+    
+    def process_data(self, raw_data):
+        # Transform raw data to normalized format
+        return normalized_data
+        
+    def store_data(self, normalized_data):
+        # Store in database
+        collection = self.db.get_collection(IndalekoDBCollections.My_Collection)
+        collection.insert(normalized_data)
+```
+
+For periodic scheduling, implement a main method that can be called from Task Scheduler or cron.
+
 ### Query System Integration
 Indaleko features a modular query system with natural language understanding:
 
@@ -411,3 +480,9 @@ cursor = db.aql.execute(
 - Data not being stored - Ensure recorder is properly connected to the database
 - Missing relationships - Check that entity mapping is functioning correctly
 - Incomplete activities - Verify collector implementation captures all necessary data
+
+### Scheduled Task Issues
+- Task not running - Check Task Scheduler settings and logs
+- Docker not found - Ensure Docker is running for Unstructured extraction
+- Location API unavailable - Verify Windows Location Services are enabled
+- Missing data - Check script is run with appropriate permissions

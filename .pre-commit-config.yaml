@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
       - id: trailing-whitespace
         name: Trim trailing whitespace
@@ -35,7 +35,11 @@ repos:
       - id: ruff
         name: Run Ruff linter
         description: This hook runs the Ruff linter to check code quality
-        args: [--fix, --exit-non-zero-on-fix]
+        # Ignore ERA001 (commented-out code) in template files via CLI args
+        args:
+          - --fix
+          - --exit-non-zero-on-fix
+          - --ignore=ERA001
 
   - repo: https://github.com/pycqa/isort
     rev: 5.13.2
