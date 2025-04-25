@@ -198,6 +198,46 @@ This document outlines planned enhancements, features, and improvements for the 
   - [ ] Optimize batch processing for large volumes of data
   - [ ] Add content-based aggregation beyond simple time windows
   - [ ] Fix entity metadata lookup for enriched importance scoring
+
+## CLI Template & Smoke Tests
+
+This section tracks the migration to a shared CLI template and smoke-test harness.
+
+- [ ] Create in-repo CLI template
+    • New folder `tools/cli_template/`
+    • `cli.py` invoking `IndalekoCLIRunner` with a placeholder `HandlerMixin`
+    • `HandlerMixin` stub showing all required hooks (`get_pre_parser`, `add_parameters`, `load_configuration`, `run`, `cleanup`, etc.)
+    • Sample `data_model` stub (e.g. dummy `IndalekoBaseCliDataModel`)
+    • README.md explaining “Copy this folder, edit mixin & data model, rename, go”
+
+- [ ] Provide a quick-start script
+    • Add a Makefile or small script (`make cli-template` or `scripts/instantiate_cli_template.py`)
+    • Automate copy & rename of `tools/cli_template/` into a new service folder
+
+- [ ] Update developer docs
+    • Add a “New CLI Command” section in CONTRIBUTING.md or DEV_DOCS.md
+    • Point to `tools/cli_template/` as your starting point
+    • Outline the 5–10-line code pattern: define mixin, data model, call runner
+
+- [ ] Add smoke-test for `--help` in CI
+    • Create `tests/test_cli_help.py` as described
+    • Manually list existing entry-point scripts (or auto-discover via grep)
+    • Parametrize pytest to assert `python foo.py --help` returns 0 and prints “usage”
+    • Hook into CI pipeline
+
+- [ ] Migrate one existing command end-to-end
+    • Pick an easy target (e.g. `storage/collectors/local/mac/collector.py`)
+    • Refactor it to use the new template scaffolding
+    • Confirm it still works (# of args, `--help`, actual run)
+
+- [ ] Gather feedback during evaluation month
+    • Share with the team; encourage them to scaffold new toy CLIs
+    • Note any pain points or missing hooks
+    • Adjust the template (arguments, mixin API, defaults) as needed
+
+- [ ] After evaluation period (≈1 month)
+    • Decide whether to extract `utils/cli/` + `tools/cli_template/` into a standalone repo or GitHub template
+    • Migrate docs and versioning accordingly, or lock in in-repo pattern
   - [ ] Implement query support spanning hot and warm tiers
   - [ ] Benchmark compression ratios and storage efficiency
 
