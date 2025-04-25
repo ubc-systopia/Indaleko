@@ -91,7 +91,7 @@ class MyRecorder(BaseRecorder, EntityResolutionProducer):
                 file_path=activity.path,
                 entity_type="file"
             )
-            
+
         # Continue with other processing
 ```
 

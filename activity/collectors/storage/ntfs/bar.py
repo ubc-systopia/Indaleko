@@ -404,14 +404,10 @@ class UsnJournalReader:
                     error_msg = f"DeviceIoControl failed with Win32 error code: {error} (0x{error:X}), {nt_status_str}"
                     if error == 0 and self.journal_data:
                         # For error 0, include USN journal state for diagnostics
-                        error_msg += (
-                            f"\nJournal info - ID: {self.journal_data.UsnJournalID}, "
-                        )
+                        error_msg += f"\nJournal info - ID: {self.journal_data.UsnJournalID}, "
                         error_msg += f"First USN: {self.journal_data.FirstUsn}, "
                         error_msg += f"Next USN: {self.journal_data.NextUsn}, "
-                        error_msg += (
-                            f"Lowest Valid USN: {self.journal_data.LowestValidUsn}, "
-                        )
+                        error_msg += f"Lowest Valid USN: {self.journal_data.LowestValidUsn}, "
                         error_msg += f"Requested USN: {start_usn}"
 
                     print(error_msg)
@@ -430,10 +426,7 @@ class UsnJournalReader:
             except OSError as e:
                 # Handle ERROR_JOURNAL_ENTRY_DELETED (0x570) or STATUS_JOURNAL_ENTRY_DELETED
                 # This happens when the requested USN is too old and has been overwritten
-                if (
-                    getattr(e, "winerror", 0) == 0x570
-                    or str(e).find("journal entry has been deleted") != -1
-                ):
+                if getattr(e, "winerror", 0) == 0x570 or str(e).find("journal entry has been deleted") != -1:
                     if self.verbose:
                         print(
                             f"Journal entry at USN {start_usn} has been deleted due to journal rotation",
@@ -484,11 +477,7 @@ class UsnJournalReader:
             filename = "<invalid filename>"
 
         reasons = [name for flag, name in REASON_FLAGS.items() if record.Reason & flag]
-        attributes = [
-            name
-            for flag, name in ATTRIBUTE_FLAGS.items()
-            if record.FileAttributes & flag
-        ]
+        attributes = [name for flag, name in ATTRIBUTE_FLAGS.items() if record.FileAttributes & flag]
         timestamp = filetime_to_datetime(record.TimeStamp)
 
         return {

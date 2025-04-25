@@ -1,9 +1,6 @@
 import os
-import json
 import time
-from datetime import datetime, timezone
-
-import pytest
+from datetime import UTC, datetime
 
 from activity.collectors.storage.fs_incremental import FsIncrementalCollector
 from activity.recorders.storage.fs_incremental_recorder import FsIncrementalRecorder
@@ -48,7 +45,7 @@ def test_incremental_indexer(tmp_path):
     assert len(acts2) == 0
 
     # Touch file1 to update its mtime
-    new_time = datetime.now(timezone.utc).timestamp() + 1
+    new_time = datetime.now(UTC).timestamp() + 1
     os.utime(file1, (new_time, new_time))
     # Wait a moment to ensure state change
     time.sleep(0.01)

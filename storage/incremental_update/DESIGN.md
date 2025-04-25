@@ -24,7 +24,7 @@ Create a queue-based service that:
 - Transactional safety
 - No additional infrastructure required
 
-### Processing Model 
+### Processing Model
 
 **Decision**: Single agent per machine with path-depth ordering.
 
@@ -79,16 +79,16 @@ Interface for recorders to enqueue missing entities:
 ```python
 class EntityResolutionProducer:
     def enqueue_entity_resolution(
-        self, 
-        volume_guid: str, 
-        frn: str, 
+        self,
+        volume_guid: str,
+        frn: str,
         file_path: Optional[str] = None,
         entity_type: str = "file",
         priority: int = 3
     ) -> str:
         """
         Enqueue an entity for resolution.
-        
+
         Returns:
             The queue entry ID
         """

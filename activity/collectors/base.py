@@ -169,15 +169,15 @@ class BaseActivityCollector:
             ic(self.offline)
         if "collector_data" in kwargs:
             self.collector_data = kwargs["collector_data"]
-        assert hasattr(self, "collector_data"), (
-            "collector_data must either be passed in or created in derived class"
-        )
+        assert hasattr(self, "collector_data"), "collector_data must either be passed in or created in derived class"
         self.platform = kwargs.get("platform", self.collector_data.PlatformName)
         self.file_prefix = kwargs.get(
-            "file_prefix", BaseActivityCollector.file_prefix,
+            "file_prefix",
+            BaseActivityCollector.file_prefix,
         ).replace("-", "_")
         self.file_suffix = kwargs.get(
-            "file_suffix", BaseActivityCollector.file_suffix,
+            "file_suffix",
+            BaseActivityCollector.file_suffix,
         ).replace("-", "_")
         self.data_dir = kwargs.get("data_dir", indaleko_default_data_dir)
         assert os.path.isdir(
@@ -192,7 +192,8 @@ class BaseActivityCollector:
             self.data_dir,
         ), f"{self.data_dir} must be an existing directory"
         self.timestamp = kwargs.get(
-            "timestamp", datetime.datetime.now(datetime.UTC).isoformat(),
+            "timestamp",
+            datetime.datetime.now(datetime.UTC).isoformat(),
         )
         assert isinstance(self.timestamp, str), "timestamp must be a string"
         assert hasattr(self, "collector_data"), "Must be created by derived class"
@@ -208,8 +209,7 @@ class BaseActivityCollector:
             assert hasattr(self, "machine_id")
             if "storage_description" in kwargs:
                 assert isinstance(kwargs["storage_description"], str), (
-                    "storage_description must be a string, "
-                    f'not {type(kwargs["storage_description"])}'
+                    "storage_description must be a string, " f'not {type(kwargs["storage_description"])}'
                 )
                 self.storage_description = kwargs["storage_description"]
         self.path = kwargs.get("path", None)

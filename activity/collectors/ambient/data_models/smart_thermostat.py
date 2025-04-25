@@ -53,12 +53,17 @@ class ThermostatSensorData(BaseAmbientConditionDataModel):
     )
 
     humidity: float | None = Field(
-        None, description="Relative humidity percentage", ge=0.0, le=100.0,
+        None,
+        description="Relative humidity percentage",
+        ge=0.0,
+        le=100.0,
     )
 
     # System state information
     hvac_mode: str = Field(
-        ..., description="Current HVAC system mode", pattern="^(heat|cool|auto|off)$",
+        ...,
+        description="Current HVAC system mode",
+        pattern="^(heat|cool|auto|off)$",
     )
 
     hvac_state: str = Field(
@@ -68,21 +73,30 @@ class ThermostatSensorData(BaseAmbientConditionDataModel):
     )
 
     fan_mode: str = Field(
-        ..., description="Fan operation mode", pattern="^(auto|on|scheduled)$",
+        ...,
+        description="Fan operation mode",
+        pattern="^(auto|on|scheduled)$",
     )
 
     # Target/Set points
     target_temperature: float = Field(
-        ..., description="Target temperature in Celsius", ge=-50.0, le=100.0,
+        ...,
+        description="Target temperature in Celsius",
+        ge=-50.0,
+        le=100.0,
     )
 
     # Optional enhanced sensor data
     occupancy_detected: bool | None = Field(
-        None, description="Whether occupancy is detected in the sensor's area",
+        None,
+        description="Whether occupancy is detected in the sensor's area",
     )
 
     air_quality: int | None = Field(
-        None, description="Air quality index (if available)", ge=0, le=500,
+        None,
+        description="Air quality index (if available)",
+        ge=0,
+        le=500,
     )
 
     @field_validator("temperature", "target_temperature")

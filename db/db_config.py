@@ -27,15 +27,12 @@ import secrets
 import string
 import sys
 import time
-
 from pathlib import Path
 
 import requests
-
 from arango import ArangoClient
 from arango.collection import StandardCollection
 from icecream import ic
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -58,7 +55,6 @@ from utils.misc.directory_management import (
     indaleko_default_log_dir,
 )
 from utils.misc.file_name_management import generate_file_name
-
 
 # pylint: enable=wrong-import-position
 

@@ -23,11 +23,9 @@ import logging
 import os
 import sys
 import uuid
-
 from pathlib import Path
 
 from icecream import ic
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -302,7 +300,7 @@ class IndalekoWindowsLocalStorageCollector(BaseLocalStorageCollector):
     cli_handler_mixin = windows_local_collector_mixin
 
 
-def main()  -> None:
+def main() -> None:
     """The CLI handler for the windows local storage collector."""
     BaseLocalStorageCollector.local_collector_runner(
         IndalekoWindowsLocalStorageCollector,

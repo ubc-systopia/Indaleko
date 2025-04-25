@@ -6,15 +6,16 @@ It searches for occurrences of "Record.Data." in Python source files.
 import re
 import sys
 
+
 def main(argv=None):
     argv = argv or sys.argv[1:]
     pattern = re.compile(r"\bRecord\.Data\.")
     failed = False
     for filename in argv:
-        if not filename.endswith('.py'):
+        if not filename.endswith(".py"):
             continue
         try:
-            text = open(filename, encoding='utf-8').read()
+            text = open(filename, encoding="utf-8").read()
         except Exception:
             continue
         for match in pattern.finditer(text):
@@ -23,5 +24,6 @@ def main(argv=None):
             failed = True
     return 1 if failed else 0
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     sys.exit(main())

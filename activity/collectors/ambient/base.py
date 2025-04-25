@@ -55,7 +55,9 @@ class AmbientCollector(CollectorBase):
 
     @abstractmethod
     def get_ambient_condition_history(
-        self, start_time: datetime.datetime, end_time: datetime.datetime,
+        self,
+        start_time: datetime.datetime,
+        end_time: datetime.datetime,
     ) -> list[dict[str, Any]]:
         """Get the ambient condition history"""
 
@@ -88,7 +90,8 @@ def main():
     )
     command_subparser = parser.add_subparsers(dest="command", help="Command to execute")
     parser_list = command_subparser.add_parser(
-        "list", help="List the data collectors available",
+        "list",
+        help="List the data collectors available",
     )
     parser_list.add_argument(
         "--providerdir",
@@ -97,7 +100,9 @@ def main():
     parser_list.set_defaults(func=list_data_collectors_command)
     parser.set_defaults(func=list_data_collectors_command)
     parser.add_argument(
-        "--config", type=str, help="Configuration file for the location provider",
+        "--config",
+        type=str,
+        help="Configuration file for the location provider",
     )
     args = parser.parse_args()
     args.func(args)

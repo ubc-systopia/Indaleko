@@ -60,6 +60,7 @@ class ActivityDataCharacteristics:
     ACTIVITY_DATA_SPOTIFY = "651b3b00-23f3-45ae-8d0e-79454a61ff3a"
     ACTIVITY_DATA_SYSTEM_ACTIVITY = "7e985763-ac4e-41b6-8b08-596d245be6c7"
     ACTIVITY_DATA_FILE_ACTIVITY = "008b6c9b-4428-4451-8bf4-36b4edfc123c"
+    ACTIVITY_DATA_CLOUD_STORAGE = "ecf07280-0c05-4755-b674-bfe988fb7710"
 
     # available for use beyond this point
 

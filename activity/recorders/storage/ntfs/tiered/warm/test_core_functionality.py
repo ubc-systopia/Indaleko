@@ -157,7 +157,9 @@ class ImportanceScorer:
         type_score = self._calculate_type_score(activity_data)
         content_score = self._calculate_content_score(activity_data)
         frequency_score = self._calculate_frequency_score(
-            activity_data, entity_metadata, search_hits,
+            activity_data,
+            entity_metadata,
+            search_hits,
         )
         novelty_score = self._calculate_novelty_score(activity_data, entity_metadata)
 
@@ -264,7 +266,10 @@ class ImportanceScorer:
         return min(1.0, max(0.0, base_score))
 
     def _calculate_frequency_score(
-        self, activity_data, entity_metadata=None, search_hits=0,
+        self,
+        activity_data,
+        entity_metadata=None,
+        search_hits=0,
     ):
         """Calculate importance based on frequency."""
         base_score = 0.3

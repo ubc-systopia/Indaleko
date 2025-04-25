@@ -59,32 +59,17 @@ class NestSmartThermostatCollector(SmartThermostatCollector):
                 if device["type"] == "sdm.devices.types.THERMOSTAT":
                     raw_data = {
                         "device_id": device["name"],
-                        "device_name": device["traits"]["sdm.devices.traits.Info"][
-                            "customName"
-                        ],
-                        "eco_mode": device["traits"][
-                            "sdm.devices.traits.ThermostatEco"
-                        ]["mode"]
-                        == "MANUAL_ECO",
-                        "leaf": device["traits"]["sdm.devices.traits.ThermostatEco"][
-                            "leaf"
-                        ],
-                        "heat_stage": device["traits"][
-                            "sdm.devices.traits.ThermostatHvac"
-                        ]["status"]
-                        == "HEATING",
-                        "cool_stage": device["traits"][
-                            "sdm.devices.traits.ThermostatHvac"
-                        ]["status"]
-                        == "COOLING",
+                        "device_name": device["traits"]["sdm.devices.traits.Info"]["customName"],
+                        "eco_mode": device["traits"]["sdm.devices.traits.ThermostatEco"]["mode"] == "MANUAL_ECO",
+                        "leaf": device["traits"]["sdm.devices.traits.ThermostatEco"]["leaf"],
+                        "heat_stage": device["traits"]["sdm.devices.traits.ThermostatHvac"]["status"] == "HEATING",
+                        "cool_stage": device["traits"]["sdm.devices.traits.ThermostatHvac"]["status"] == "COOLING",
                         "connected_sensors": len(
-                            device["traits"]["sdm.devices.traits.Temperature"][
-                                "ambientTemperatureCelsius"
-                            ],
+                            device["traits"]["sdm.devices.traits.Temperature"]["ambientTemperatureCelsius"],
                         ),
-                        "average_temperature": device["traits"][
-                            "sdm.devices.traits.Temperature"
-                        ]["ambientTemperatureCelsius"],
+                        "average_temperature": device["traits"]["sdm.devices.traits.Temperature"][
+                            "ambientTemperatureCelsius"
+                        ],
                     }
                     self.data = NestAmbientDataModel(**raw_data)
 

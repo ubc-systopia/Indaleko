@@ -2,15 +2,19 @@
 """
 DB-backed recorder for the incremental file system indexer.
 """
-import uuid
 import logging
-from datetime import datetime, timezone
-from typing import Any, Dict, List
+import uuid
+from datetime import UTC, datetime
+from typing import Any
+
+from activity.recorders.registration_service import (
+    IndalekoActivityDataRegistrationService,
+)
 
 # pylint: disable=wrong-import-position
 from activity.recorders.storage.base import StorageActivityRecorder
-from activity.recorders.registration_service import IndalekoActivityDataRegistrationService
 from data_models.record import IndalekoRecordDataModel
+
 # pylint: enable=wrong-import-position
 
 
@@ -22,6 +26,7 @@ class FsIncrementalDbRecorder(StorageActivityRecorder):
     derived from the file path (using deterministic UUID v5). Old records are
     overwritten in place for updated files.
     """
+
     DEFAULT_RECORDER_ID = uuid.UUID("de305d54-75b4-431b-adb2-eb6b9e546014")
 
     def __init__(
@@ -43,13 +48,13 @@ class FsIncrementalDbRecorder(StorageActivityRecorder):
         self._collection = provider_collection
         self._logger = logging.getLogger("FsIncrementalDbRecorder")
 
-    def store_activities(self, activities: List[Dict[str, Any]]) -> List[uuid.UUID]:
+    def store_activities(self, activities: list[dict[str, Any]]) -> list[uuid.UUID]:
         """
         Upsert activities into the ArangoDB collection.
 
         Returns list of UUIDs (as keys) that were stored.
         """
-        stored_ids: List[uuid.UUID] = []
+        stored_ids: list[uuid.UUID] = []
         for act in activities:
             # Derive a stable key from file path
             path_str = act.get("file_path", "")
@@ -59,11 +64,11 @@ class FsIncrementalDbRecorder(StorageActivityRecorder):
             # Build record document
             record = IndalekoRecordDataModel(
                 SourceIdentifier=self.SourceIdentifier,
-                Timestamp=datetime.now(timezone.utc),
+                Timestamp=datetime.now(UTC),
             )
-            doc = record.model_dump(mode='json')
+            doc = record.model_dump(mode="json")
             # Store raw activity under opaque Data field
-            doc['Data'] = act
+            doc["Data"] = act
             # Upsert record
             try:
                 self._collection.insert(doc, overwrite=True)

@@ -22,15 +22,11 @@ from activity.collectors.base import CollectorBase  # noqa: E402
 
 collector_dir = os.path.join(init_path, "collectors")
 collectors = [
-    x
-    for x in os.listdir(collector_dir)
-    if os.path.isdir(os.path.join(collector_dir, x)) and not x.startswith("_")
+    x for x in os.listdir(collector_dir) if os.path.isdir(os.path.join(collector_dir, x)) and not x.startswith("_")
 ]
 recorder_dir = os.path.join(init_path, "recorders")
 recorders = [
-    x
-    for x in os.listdir(recorder_dir)
-    if os.path.isdir(os.path.join(recorder_dir, x)) and not x.startswith("_")
+    x for x in os.listdir(recorder_dir) if os.path.isdir(os.path.join(recorder_dir, x)) and not x.startswith("_")
 ]
 # ic(collectors)
 

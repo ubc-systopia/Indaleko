@@ -8,7 +8,6 @@ and records them to a JSONL file.
 import argparse
 import logging
 import sys
-
 from pathlib import Path
 
 from activity.collectors.storage.fs_incremental import FsIncrementalCollector

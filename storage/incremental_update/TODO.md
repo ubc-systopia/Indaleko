@@ -57,7 +57,7 @@
 
 ### Option 2: Edge Collection Approach
 - Use ArangoDB edge collection to map events to queue agents
-- Benefits: 
+- Benefits:
   - Native graph queries for finding related entities
   - Timestamp-based ordering eliminates directory/file priority issues
   - Automatic cleanup when entities are removed

@@ -51,11 +51,11 @@ manager.start()
 The sleep-time compute system performs several critical background tasks:
 
 1. **Deep Pattern Analysis**: Identifies complex relationships between knowledge patterns that would be too computationally expensive during user interactions
-   
+
 2. **Query Prediction**: Analyzes historical query patterns to predict future user queries and pre-compute results
-   
+
 3. **Schema Evolution Analysis**: Monitors database schema changes to identify optimization opportunities
-   
+
 4. **System Effectiveness Evaluation**: Conducts multi-perspective analysis of overall system performance
 
 #### FireCircle Integration

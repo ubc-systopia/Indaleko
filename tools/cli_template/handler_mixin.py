@@ -1,5 +1,9 @@
-"""
-Template Handler Mixin for a new Indaleko CLI tool.
+#!/usr/bin/env python3
+# Allow skipping linting/formatting for this template file
+# ruff: noqa
+# isort: skip_file
+"""Template Handler Mixin for a new Indaleko CLI tool.
+"""Template Handler Mixin for a new Indaleko CLI tool.
 
 Customize this mixin to define your tool's arguments and behavior.
 """
@@ -22,7 +26,6 @@ class TemplateHandlerMixin(IndalekoHandlermixin):
     @staticmethod
     def setup_logging(args: argparse.Namespace, **kwargs: dict[str, Any]) -> None:
         """Configure logging based on parsed args."""
-        # (Customize logging setup here)
 
     @staticmethod
     def load_configuration(kwargs: dict[str, Any]) -> None:

@@ -57,9 +57,9 @@ Entity X does not exist in collection, skipping update
 ```json
 {
   "_key": "1e66edbd-fcdd-493e-b196-175c234b841e",
-  "Label": "$Recycle.Bin", 
-  "LocalPath": "c:\\", 
-  "LocalIdentifier": "844424930132032", 
+  "Label": "$Recycle.Bin",
+  "LocalPath": "c:\\",
+  "LocalIdentifier": "844424930132032",
   "Volume": "b8c4ce1b-3581-4dce-88a6-6c05dad92f61",
   "URI": "\\\\?\\Volume{b8c4ce1b-3581-4dce-88a6-6c05dad92f61}\\$Recycle.Bin",
   "WindowsFileAttributes": "FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM | FILE_ATTRIBUTE_DIRECTORY"
@@ -81,6 +81,6 @@ Entity X does not exist in collection, skipping update
    - If not found, try by file path + Volume as fallback
    - Create the entity if neither lookup succeeds
 
-## Implementation Note 
+## Implementation Note
 
 In `_update_entity_metadata`, we should modify the code to query for entities by FRN + Volume rather than expecting the UUID to already exist. This would avoid the "entity does not exist" errors when processing activities.

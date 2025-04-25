@@ -175,9 +175,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                         f"Could not find collection for recorder {self._recorder_id}",
                     )
                     # Use a fallback name if needed
-                    self._collection_name = (
-                        f"ntfs_activities_hot_{str(self._recorder_id)[:8]}"
-                    )
+                    self._collection_name = f"ntfs_activities_hot_{str(self._recorder_id)[:8]}"
 
         # Initialize activity context integration
         self._activity_context_integration = NtfsActivityContextIntegration(
@@ -247,9 +245,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             # Generate a dynamic collection name using the UUID
             if self._collection_name is None:
                 # We'll get the actual collection name from the registration service
-                temp_collection_name = (
-                    f"ntfs_activities_hot_{str(self._recorder_id)[:8]}"
-                )
+                temp_collection_name = f"ntfs_activities_hot_{str(self._recorder_id)[:8]}"
             else:
                 temp_collection_name = self._collection_name
 
@@ -324,9 +320,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 from db.i_collections import IndalekoCollections
 
                 # Make sure we're using the standard Objects collection
-                self._entity_collection_name = (
-                    IndalekoDBCollections.Indaleko_Object_Collection
-                )
+                self._entity_collection_name = IndalekoDBCollections.Indaleko_Object_Collection
 
                 self._logger.info(
                     f"Getting entity collection: {self._entity_collection_name}",
@@ -575,22 +569,13 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
 
         # Factor 2: File type importance (basic version)
         file_path = activity_data.get("file_path", "")
-        if any(
-            file_path.lower().endswith(ext)
-            for ext in [".docx", ".xlsx", ".pdf", ".py", ".md"]
-        ):
+        if any(file_path.lower().endswith(ext) for ext in [".docx", ".xlsx", ".pdf", ".py", ".md"]):
             base_score += 0.1  # Document types matter more
 
         # Factor 3: Path significance
-        if any(
-            segment in file_path
-            for segment in ["\\Documents\\", "\\Projects\\", "\\src\\", "\\source\\"]
-        ):
+        if any(segment in file_path for segment in ["\\Documents\\", "\\Projects\\", "\\src\\", "\\source\\"]):
             base_score += 0.1  # User document areas matter more
-        elif any(
-            segment in file_path
-            for segment in ["\\Temp\\", "\\tmp\\", "\\Cache\\", "\\Downloaded\\"]
-        ):
+        elif any(segment in file_path for segment in ["\\Temp\\", "\\tmp\\", "\\Cache\\", "\\Downloaded\\"]):
             base_score -= 0.1  # Temporary areas matter less
 
         # Factor 4: Is directory
@@ -733,11 +718,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             # This ensures compatibility with both lookup patterns
             entity_doc = {
                 "_key": str(entity_id),
-                "Label": (
-                    os.path.basename(file_path)
-                    if file_path
-                    else f"Object-{str(entity_id)[:8]}"
-                ),
+                "Label": (os.path.basename(file_path) if file_path else f"Object-{str(entity_id)[:8]}"),
                 # Add standard ENTITY_MAPPING.md fields at top level
                 "LocalIdentifier": frn,
                 "Volume": volume,
@@ -1246,9 +1227,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
             activity_data.activity_id,
         )  # Use activity ID as document key
         record_document["Record"] = record
-        record_document["SemanticAttributes"] = [
-            attr.model_dump() for attr in semantic_attributes
-        ]
+        record_document["SemanticAttributes"] = [attr.model_dump() for attr in semantic_attributes]
         # Top-level TTL timestamp (separate from Data blob)
         ttl_ts = datetime.now(UTC) + timedelta(days=self._ttl_days)
         record_document["ttl_timestamp"] = ttl_ts.isoformat()
@@ -1279,10 +1258,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
         )
 
         # Batch update activity context if available
-        if (
-            hasattr(self, "_activity_context_integration")
-            and self._activity_context_integration.is_context_available()
-        ):
+        if hasattr(self, "_activity_context_integration") and self._activity_context_integration.is_context_available():
             try:
                 self._logger.info(
                     f"Batch updating activity context with {len(activities)} activities",
@@ -1314,9 +1290,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 if hasattr(self, "_get_or_create_entity_uuid"):
                     # Temporarily bypass the entity creation just to test database insertion
                     orig_method = self._get_or_create_entity_uuid
-                    self._get_or_create_entity_uuid = (
-                        lambda frn, volume, file_path, is_directory: uuid.uuid4()
-                    )
+                    self._get_or_create_entity_uuid = lambda frn, volume, file_path, is_directory: uuid.uuid4()
 
                 # Process the activity
                 activity_id = self.store_activity(activity)
@@ -1324,10 +1298,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 stored_count += 1
 
                 # Restore the original method if we patched it
-                if (
-                    hasattr(self, "_get_or_create_entity_uuid")
-                    and "orig_method" in locals()
-                ):
+                if hasattr(self, "_get_or_create_entity_uuid") and "orig_method" in locals():
                     self._get_or_create_entity_uuid = orig_method
 
                 self._logger.debug(f"Successfully stored activity {i+1}: {activity_id}")
@@ -1403,19 +1374,14 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 raise
 
         # Integrate with activity context if available
-        if (
-            hasattr(self, "_activity_context_integration")
-            and self._activity_context_integration.is_context_available()
-        ):
+        if hasattr(self, "_activity_context_integration") and self._activity_context_integration.is_context_available():
             # Associate with current activity context
             try:
                 self._logger.debug(
                     f"Associating activity {activity_data.activity_id} with activity context",
                 )
-                enhanced_data = (
-                    self._activity_context_integration.associate_with_activity_context(
-                        activity_data,
-                    )
+                enhanced_data = self._activity_context_integration.associate_with_activity_context(
+                    activity_data,
                 )
                 self._logger.debug("Activity context association successful")
 
@@ -1440,7 +1406,8 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
 
         # Check if activity has FRN data for tracking
         if hasattr(activity_data, "file_reference_number") and hasattr(
-            activity_data, "volume_name",
+            activity_data,
+            "volume_name",
         ):
             frn = activity_data.file_reference_number
             volume = activity_data.volume_name
@@ -1824,9 +1791,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 bind_vars={"@collection": self._collection_name},
             )
 
-            stats["by_importance"] = {
-                f"{item['importance']:.1f}": item["count"] for item in importance_cursor
-            }
+            stats["by_importance"] = {f"{item['importance']:.1f}": item["count"] for item in importance_cursor}
 
             # Get time-based statistics
             time_query = """
@@ -1848,9 +1813,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 bind_vars={"@collection": self._collection_name},
             )
 
-            stats["by_time"] = {
-                f"{item['days_ago']} days ago": item["count"] for item in time_cursor
-            }
+            stats["by_time"] = {f"{item['days_ago']} days ago": item["count"] for item in time_cursor}
 
             # Add configuration information
             stats["ttl_days"] = self._ttl_days
@@ -2141,9 +2104,7 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                 # Add hot tier information
                 latest["tier"] = "hot"
                 latest["ttl_days"] = self._ttl_days
-                latest["expiration_date"] = (
-                    datetime.now(UTC) + timedelta(days=self._ttl_days)
-                ).isoformat()
+                latest["expiration_date"] = (datetime.now(UTC) + timedelta(days=self._ttl_days)).isoformat()
 
                 return latest
             except StopIteration:
@@ -2394,12 +2355,7 @@ if __name__ == "__main__":
                     print(f"    {time_range}: {count}")
 
         # Display some activities if not in stats-only mode
-        if (
-            not args.stats_only
-            and hasattr(recorder, "_db")
-            and recorder._db
-            and len(activity_ids) > 0
-        ):
+        if not args.stats_only and hasattr(recorder, "_db") and recorder._db and len(activity_ids) > 0:
             print(f"\nShowing {min(args.limit, len(activity_ids))} recent activities:")
 
             # Get recent activities

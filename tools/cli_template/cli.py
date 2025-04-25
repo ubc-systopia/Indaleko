@@ -1,5 +1,8 @@
-"""
-CLI template entrypoint for a new Indaleko tool.
+#!/usr/bin/env python3
+# Allow skipping linting/formatting for this template file
+# ruff: noqa
+# isort: skip_file
+"""CLI template entrypoint for a new Indaleko tool.
 
 Customize this file to wire your handler mixin into the shared runner.
 """

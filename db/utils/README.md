@@ -55,7 +55,7 @@ To retrofit existing code that uses direct AQL execute calls:
        query,
        bind_vars=bind_vars
    )
-   
+
    # After:
    cursor = timed_aql_execute(
        db,
@@ -74,7 +74,7 @@ To retrofit existing code that uses direct AQL execute calls:
        bind_vars=complex_bind_vars,
        threshold=10.0  # 10 second threshold for complex operations
    )
-   
+
    # For critical paths, use INFO level to always log
    cursor = timed_aql_execute(
        db,

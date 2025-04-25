@@ -19,12 +19,14 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # overall package/project.  It's a bit of a hack, but it works.
 # pylint: disable=wrong-import-position
 import utils.misc.file_name_management
-from utils.singleton import IndalekoSingleton
 from utils.misc.directory_management import indaleko_default_log_dir
+from utils.singleton import IndalekoSingleton
+
 
 def get_logger(name: str | None = None) -> logging.Logger:
     """Return a logger with the specified name."""
     return _logging.getLogger(name)
+
 
 # pylint: enable=wrong-import-position
 

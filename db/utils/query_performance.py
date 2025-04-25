@@ -41,6 +41,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
+from db.db_config import IndalekoDBConfig
 
 
 # pylint: enable=wrong-import-position
@@ -49,8 +50,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # Configure logger
 logger = getLogger("QueryPerformanceLogger")
 
+
 def timed_aql_execute(
-    db: Database | ArangoClient,
     query: str,
     bind_vars: dict[str, Any] | None = None,
     threshold: float = 5.0,
@@ -102,8 +103,13 @@ def timed_aql_execute(
     )
     ```
     """
+    db = IndalekoDBConfig().get_arangodb()
+
+    if db is None:
+        raise ValueError("Database connection is not established.")
+
     # Get the execute method - works with both Database and Client objects
-    execute_method = db.aql.execute if hasattr(db, "aql") else db.db("_system").aql.execute
+    execute_method = db.aql.execute
 
     # Start timing
     start_time = time.time()

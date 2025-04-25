@@ -417,16 +417,16 @@ class MyCustomCollector:
     def collect_data(self):
         # Collect raw data from source
         return raw_data
-        
+
 # Recorder (processes and stores data in DB)
 class MyCustomRecorder:
     def __init__(self, db_config=None):
         self.db = IndalekoDBConfig() if db_config is None else db_config
-    
+
     def process_data(self, raw_data):
         # Transform raw data to normalized format
         return normalized_data
-        
+
     def store_data(self, normalized_data):
         # Store in database
         collection = self.db.get_collection(IndalekoDBCollections.My_Collection)

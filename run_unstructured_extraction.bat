@@ -45,18 +45,18 @@ rem Process each directory
 for %%d in (%DOCUMENT_DIRS%) do (
     echo Processing directory: %%d
     echo [%date% %time%] Processing directory: %%d >> logs\unstructured_extraction.log
-    
+
     rem Run Unstructured processor with higher resource limits for 64GB machine
     rem Allocate more memory to Docker for better performance on large files
     python semantic\processors\unstructured_processor.py dir "%%d" ^
         --recursive ^
         --extensions %FILE_EXTENSIONS% ^
         --max-size %MAX_SIZE_MB%
-    
+
     rem Record exit code
     set EXIT_CODE=%ERRORLEVEL%
     echo [%date% %time%] Directory %%d completed with exit code %EXIT_CODE% >> logs\unstructured_extraction.log
-    
+
     rem Allow system to rest briefly between directories (shorter rest for overnight processing)
     echo Brief rest before next directory...
     timeout /t 20 /nobreak >nul

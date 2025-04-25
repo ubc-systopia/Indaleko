@@ -26,15 +26,19 @@ import os
 import socket
 import sys
 import uuid
+
 from datetime import timedelta
+from pathlib import Path
+from textwrap import dedent
 from typing import Any
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
-        current_path = os.path.dirname(current_path)
-    os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
 from activity.characteristics import ActivityDataCharacteristics
@@ -56,6 +60,8 @@ from activity.collectors.storage.semantic_attributes import (
 )
 from activity.recorders.storage.base import StorageActivityRecorder
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
+from db.utils.query_performance import timed_aql_execute
+
 
 # pylint: enable=wrong-import-position
 
@@ -68,7 +74,7 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
     functionality for storing and querying Google Drive file system activities.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: dict) -> None:
         """
         Initialize the Google Drive storage activity recorder.
 
@@ -103,35 +109,32 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
         )
 
         # Get or create Google Drive collector
-        collector = kwargs.get("collector")
-        if collector is None:
+        gdrive_collector = kwargs.get("collector")
+        if gdrive_collector is None:
             # If no collector is provided, create one with default settings
-            collector = GoogleDriveActivityCollector(
+            gdrive_collector = GoogleDriveActivityCollector(
                 auto_start=False,  # Don't start automatically here
             )
-            kwargs["collector"] = collector
-        elif not isinstance(collector, GoogleDriveActivityCollector):
+            kwargs["collector"] = gdrive_collector
+        elif not isinstance(gdrive_collector, GoogleDriveActivityCollector):
             raise ValueError(
                 "collector must be an instance of GoogleDriveActivityCollector",
             )
 
         # Get default config directory for database
-        default_config_dir = os.path.join(
-            os.environ.get("INDALEKO_ROOT", "."),
-            "config",
-        )
-        default_db_config_path = os.path.join(default_config_dir, "db_config.json")
+        default_config_dir = Path(os.environ.get("INDALEKO_ROOT", ".")) / "config"
+        default_db_config_path = default_config_dir / "db_config.json"
 
         # Set default DB config path if not provided
         if "db_config_path" not in kwargs or kwargs["db_config_path"] is None:
             kwargs["db_config_path"] = default_db_config_path
-            self._logger.info(f"Using default DB config path: {default_db_config_path}")
+            self._logger.info("Using default DB config path: %s", default_db_config_path)
 
         # Call parent initializer
         super().__init__(**kwargs)
 
         # Google Drive-specific setup
-        self._gdrive_collector = collector
+        self._gdrive_collector = gdrive_collector
 
         # Add basic metadata
         self._metadata = StorageActivityMetadata(
@@ -305,7 +308,7 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
         """
 
         # Execute query
-        cursor = self._db._arangodb.aql.execute(
+        cursor = timed_aql_execute(
             query,
             bind_vars={
                 "@collection": self._collection_name,
@@ -429,7 +432,7 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
         )
 
         # Return results
-        return [doc for doc in cursor]
+        return list(cursor)
 
     def get_google_drive_specific_statistics(self) -> dict[str, Any]:
         """
@@ -439,7 +442,7 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
             Dictionary of Google Drive-specific statistics
         """
         # Get basic statistics from parent class
-        stats = self.get_activity_statistics()
+        gdrive_stats = self.get_activity_statistics()
 
         # Add Google Drive-specific statistics
 
@@ -473,14 +476,15 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
         """
 
         # Query for count by app/mime type
-        app_query = """
+        app_query =  dedent(
+            f"""
             FOR doc IN @@collection
             FILTER doc.Record.Data.mime_type != null
             COLLECT mime_type = doc.Record.Data.mime_type WITH COUNT INTO count
             SORT count DESC
             LIMIT 10
             RETURN { mime_type, count }
-        """
+            """)
 
         # Execute Google Drive-specific queries
         try:
@@ -498,23 +502,23 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
             )
 
             # Add to statistics
-            stats["top_file_types"] = {item["file_type"]: item["count"] for item in file_type_cursor}
-            stats["top_mime_types"] = {item["mime_type"]: item["count"] for item in app_cursor}
+            gdrive_stats["top_file_types"] = {item["file_type"]: item["count"] for item in file_type_cursor}
+            gdrive_stats["top_mime_types"] = {item["mime_type"]: item["count"] for item in app_cursor}
 
             sharing_stats = next(sharing_cursor, {"shared": 0, "not_shared": 0})
-            stats["sharing"] = sharing_stats
+            gdrive_stats["sharing"] = sharing_stats
 
             # Calculate sharing percentage if there are activities
             total = sharing_stats.get("shared", 0) + sharing_stats.get("not_shared", 0)
             if total > 0:
-                stats["sharing_percentage"] = (sharing_stats.get("shared", 0) / total) * 100
+                gdrive_stats["sharing_percentage"] = (sharing_stats.get("shared", 0) / total) * 100
             else:
-                stats["sharing_percentage"] = 0
+                gdrive_stats["sharing_percentage"] = 0
 
-        except Exception as e:
+        except (KeyError, ValueError, RuntimeError) as e:
             self._logger.error(f"Error generating Google Drive statistics: {e}")
 
-        return stats
+        return gdrive_stats
 
     # Override parent class methods as needed
 
@@ -560,15 +564,13 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
         try:
             super()._register_with_service_manager()
         except Exception as e:
-            self._logger.error(f"Error registering with service manager: {e}")
+            self._logger.exception("Error registering with service manager: %s", e)
             # Continue even if registration fails
 
 
 # Example usage in __main__
 if __name__ == "__main__":
     # Configure logging
-    import logging
-
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -583,23 +585,23 @@ if __name__ == "__main__":
     # Collect and store activities
     try:
         # Collect data
-        print("Collecting Google Drive activities...")
+        print("Collecting Google Drive activities...")  # noqa: T201
         collector.collect_data()
 
         # Store collected activities
         storage_activities = [activity.to_storage_activity() for activity in collector.activities]
         activity_ids = recorder.store_activities(storage_activities)
-        print(f"Stored {len(activity_ids)} activities")
+        print(f"Stored {len(activity_ids)} activities")  # noqa: T201
 
         # Get statistics
         stats = recorder.get_google_drive_specific_statistics()
-        print("Activity statistics:")
+        print("Activity statistics:")  # noqa: T201
         for key, value in stats.items():
             # Skip complex values for cleaner output
             if isinstance(value, dict) and len(value) > 5:
-                print(f"  {key}: {len(value)} items")
+                print(f"  {key}: {len(value)} items")  # noqa: T201
             else:
-                print(f"  {key}: {value}")
+                print(f"  {key}: {value}")  # noqa: T201
 
-    except Exception as e:
-        print(f"Error: {e}")
+    except (RuntimeError, ValueError, KeyError) as e:
+        print(f"Error: {e}")  # noqa: T201

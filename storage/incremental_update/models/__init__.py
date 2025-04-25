@@ -9,12 +9,7 @@ from storage.incremental_update.models.resolution_request import (
     EntityInfo,
     EntityType,
     ResolutionRequest,
-    ResolutionStatus
+    ResolutionStatus,
 )
 
-__all__ = [
-    'EntityInfo',
-    'EntityType',
-    'ResolutionRequest',
-    'ResolutionStatus'
-]
+__all__ = ["EntityInfo", "EntityType", "ResolutionRequest", "ResolutionStatus"]

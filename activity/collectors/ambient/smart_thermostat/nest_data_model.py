@@ -34,18 +34,23 @@ class NestAmbientDataModel(ThermostatSensorData):
 
     # Nest identification - useful for tracking specific devices
     device_id: str = Field(
-        ..., description="Nest device identifier", pattern="^[a-zA-Z0-9]+$",
+        ...,
+        description="Nest device identifier",
+        pattern="^[a-zA-Z0-9]+$",
     )
 
     device_name: str = Field(
-        ..., description="Name assigned to the thermostat", min_length=1,
+        ...,
+        description="Name assigned to the thermostat",
+        min_length=1,
     )
 
     # Additional Nest-specific sensor data
     eco_mode: bool | None = Field(None, description="Whether eco mode is active")
 
     leaf: bool | None = Field(
-        None, description="Whether the Nest leaf icon is displayed",
+        None,
+        description="Whether the Nest leaf icon is displayed",
     )
 
     # Equipment stages (common in Nest systems)
@@ -65,11 +70,14 @@ class NestAmbientDataModel(ThermostatSensorData):
 
     # Remote sensor summary
     connected_sensors: int = Field(
-        0, description="Number of connected remote sensors", ge=0,
+        0,
+        description="Number of connected remote sensors",
+        ge=0,
     )
 
     average_temperature: float | None = Field(
-        None, description="Average temperature across all sensors in Celsius",
+        None,
+        description="Average temperature across all sensors in Celsius",
     )
 
     @field_validator("device_id")

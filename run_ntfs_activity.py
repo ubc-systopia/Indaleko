@@ -56,10 +56,7 @@ from activity.recorders.storage.ntfs.tiered.hot.recorder import NtfsHotTierRecor
 from constants.values import IndalekoConstants
 
 # Create default DB config path using pathlib.Path
-DEFAULT_DB_CONFIG_PATH = (
-    Path(IndalekoConstants.default_config_dir)
-    / IndalekoConstants.default_db_config_file_name
-)
+DEFAULT_DB_CONFIG_PATH = Path(IndalekoConstants.default_config_dir) / IndalekoConstants.default_db_config_file_name
 
 
 class IntegratedNtfsActivityRunner:
@@ -141,9 +138,7 @@ class IntegratedNtfsActivityRunner:
         self.current_file_size = 0
         if self.backup_to_files:
             self.output_dir = kwargs.get("output_dir", "data/ntfs_activity")
-            self.max_file_size = (
-                kwargs.get("max_file_size", 100) * 1024 * 1024
-            )  # MB to bytes
+            self.max_file_size = kwargs.get("max_file_size", 100) * 1024 * 1024  # MB to bytes
 
             # Create output directory if needed
             os.makedirs(self.output_dir, exist_ok=True)
@@ -340,11 +335,7 @@ class IntegratedNtfsActivityRunner:
                         self.consecutive_empty_results += 1
 
                         # Check if we should reset state due to persistent empty results
-                        if (
-                            self.auto_reset_enabled
-                            and self.consecutive_empty_results
-                            >= self.empty_results_threshold
-                        ):
+                        if self.auto_reset_enabled and self.consecutive_empty_results >= self.empty_results_threshold:
                             self.logger.warning(
                                 f"No activities for {self.consecutive_empty_results} consecutive cycles - resetting collector state",
                             )
@@ -389,10 +380,7 @@ class IntegratedNtfsActivityRunner:
                     self.consecutive_errors += 1
 
                     # Check if we should reset state due to persistent errors
-                    if (
-                        self.auto_reset_enabled
-                        and self.consecutive_errors >= self.error_threshold
-                    ):
+                    if self.auto_reset_enabled and self.consecutive_errors >= self.error_threshold:
                         self.logger.warning(
                             f"{self.consecutive_errors} consecutive collection errors - resetting collector state",
                         )
@@ -590,9 +578,7 @@ def main():
         "auto_reset": not args.no_auto_reset,
         "error_threshold": args.error_threshold,
         "empty_results_threshold": args.empty_threshold,
-        "use_state_file": (
-            args.use_state_file if hasattr(args, "use_state_file") else False
-        ),
+        "use_state_file": (args.use_state_file if hasattr(args, "use_state_file") else False),
     }
 
     # Display configuration

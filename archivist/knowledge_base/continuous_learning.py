@@ -408,7 +408,8 @@ class ContinuousLearningSystem:
 
                         # Calculate type distributions
                         type_distributions[collection_name] = self._calculate_type_distributions(
-                            collection_name, fields,
+                            collection_name,
+                            fields,
                         )
 
                         # Update aggregate field types

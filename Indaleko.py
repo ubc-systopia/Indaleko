@@ -103,23 +103,13 @@ class Indaleko:
     default_db_timeout = IndalekoDBConfig.default_db_timeout
 
     Indaleko_Object_Collection = IndalekoDBCollections.Indaleko_Object_Collection
-    Indaleko_Relationship_Collection = (
-        IndalekoDBCollections.Indaleko_Relationship_Collection
-    )
+    Indaleko_Relationship_Collection = IndalekoDBCollections.Indaleko_Relationship_Collection
     Indaleko_Service_Collection = IndalekoDBCollections.Indaleko_Service_Collection
-    Indaleko_MachineConfig_Collection = (
-        IndalekoDBCollections.Indaleko_MachineConfig_Collection
-    )
-    Indaleko_ActivityDataProvider_Collection = (
-        IndalekoDBCollections.Indaleko_ActivityDataProvider_Collection
-    )
-    Indaleko_ActivityContext_Collection = (
-        IndalekoDBCollections.Indaleko_ActivityContext_Collection
-    )
+    Indaleko_MachineConfig_Collection = IndalekoDBCollections.Indaleko_MachineConfig_Collection
+    Indaleko_ActivityDataProvider_Collection = IndalekoDBCollections.Indaleko_ActivityDataProvider_Collection
+    Indaleko_ActivityContext_Collection = IndalekoDBCollections.Indaleko_ActivityContext_Collection
     Indaleko_User_Collection = IndalekoDBCollections.Indaleko_User_Collection
-    Indaleko_User_Relationship_Collection = (
-        IndalekoDBCollections.Indaleko_User_Relationship_Collection
-    )
+    Indaleko_User_Relationship_Collection = IndalekoDBCollections.Indaleko_User_Relationship_Collection
 
     Indaleko_Prefix = utils.misc.file_name_management.indaleko_file_name_prefix
 
@@ -164,10 +154,8 @@ class Indaleko:
     @staticmethod
     def extract_iso_timestamp_from_file_timestamp(file_timestamp: str) -> str:
         """Given a file timestamp, convert it to an ISO timestamp."""
-        return (
-            utils.misc.timestamp_management.extract_iso_timestamp_from_file_timestamp(
-                file_timestamp,
-            )
+        return utils.misc.timestamp_management.extract_iso_timestamp_from_file_timestamp(
+            file_timestamp,
         )
 
     @staticmethod
@@ -220,13 +208,15 @@ class Indaleko:
 
     @staticmethod
     def find_candidate_files(
-        input_strings: list[str], directory: str,
+        input_strings: list[str],
+        directory: str,
     ) -> list[tuple[str, str]]:
         """Given a directory location, find a list of candidate files that match
         the input strings.
         """
         return utils.misc.file_name_management.find_candidate_files(
-            input_strings, directory,
+            input_strings,
+            directory,
         )
 
     @staticmethod

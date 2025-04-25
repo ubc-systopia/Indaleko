@@ -16,10 +16,14 @@ from utils.db.db_file_picker import IndalekoFilePicker
 
 # Attempt to import unstructured processor if available
 try:
-    from semantic.collectors.unstructured.IndalekoUnstructured_Main import process_file as process_unstructured
+    from semantic.collectors.unstructured.IndalekoUnstructured_Main import (
+        process_file as process_unstructured,
+    )
+
     UNSTRUCTURED_AVAILABLE = True
 except ImportError:
     UNSTRUCTURED_AVAILABLE = False
+
 
 def start(args):
     """
@@ -36,13 +40,15 @@ def start(args):
     try:
         picker = IndalekoFilePicker()
     except Exception as e:
-        logging.error(f"Failed to initialize file picker (DB connection issue): {e}")
+        logging.exception(f"Failed to initialize file picker (DB connection issue): {e}")
         sys.exit(1)
+
     # Graceful shutdown handler
     def shutdown(signum, frame):
         logging.info("Shutting down file picker...")
         picker.stop_background_processing(wait=True)
         sys.exit(0)
+
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
 
@@ -75,11 +81,13 @@ def start(args):
             logging.info("No files selected this round.")
         time.sleep(args.interval)
 
+
 def batch_export(args):
     """
     Batch export files for remote processing (not yet implemented).
     """
     raise NotImplementedError("batch-export is not yet implemented")
+
 
 def batch_import(args):
     """
@@ -87,45 +95,40 @@ def batch_import(args):
     """
     raise NotImplementedError("batch-import is not yet implemented")
 
+
 def main():
     parser = argparse.ArgumentParser(prog="picker", description="Indaleko file picker utility")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # start subcommand
     start_parser = subparsers.add_parser("start", help="Start background file picker")
-    start_parser.add_argument("--batch-size", type=int, default=1,
-                              help="Number of files to pick per batch")
-    start_parser.add_argument("--interval", type=int, default=300,
-                              help="Interval between batches in seconds")
-    start_parser.add_argument("--local-only", action="store_true",
-                              help="Only pick locally accessible files")
-    start_parser.add_argument("--extensions", nargs="*",
-                              help="List of file extensions to include (e.g. .txt .md)")
-    start_parser.add_argument("--unstructured", action="store_true",
-                              help="Use unstructured processor if available")
-    start_parser.add_argument("--priority", type=int, default=1,
-                              help="Processing priority (lower number = higher priority)")
+    start_parser.add_argument("--batch-size", type=int, default=1, help="Number of files to pick per batch")
+    start_parser.add_argument("--interval", type=int, default=300, help="Interval between batches in seconds")
+    start_parser.add_argument("--local-only", action="store_true", help="Only pick locally accessible files")
+    start_parser.add_argument("--extensions", nargs="*", help="List of file extensions to include (e.g. .txt .md)")
+    start_parser.add_argument("--unstructured", action="store_true", help="Use unstructured processor if available")
+    start_parser.add_argument(
+        "--priority", type=int, default=1, help="Processing priority (lower number = higher priority)",
+    )
     start_parser.set_defaults(func=start)
 
     # batch-export subcommand (TODO)
-    export_parser = subparsers.add_parser("batch-export",
-                                         help="Batch export files for remote processing")
+    export_parser = subparsers.add_parser("batch-export", help="Batch export files for remote processing")
     export_parser.set_defaults(func=batch_export)
 
     # batch-import subcommand (TODO)
-    import_parser = subparsers.add_parser("batch-import",
-                                         help="Batch import files from processing bundle")
+    import_parser = subparsers.add_parser("batch-import", help="Batch import files from processing bundle")
     import_parser.set_defaults(func=batch_import)
 
     args = parser.parse_args()
     # Configure logging
-    logging.basicConfig(level=logging.INFO,
-                        format="%(asctime)s %(levelname)s %(message)s")
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     try:
         args.func(args)
     except NotImplementedError as e:
-        logging.error(e)
+        logging.exception(e)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

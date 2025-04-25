@@ -1,6 +1,5 @@
 """
-This module handles processing and recording data from the Windows local data
-collector.
+Process and record metatada for Windows.
 
 Indaleko Windows Local Recorder
 Copyright (C) 2024-2025 Tony Mason
@@ -25,14 +24,17 @@ import os
 import sys
 import uuid
 
+from pathlib import Path
+
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
-        current_path = os.path.dirname(current_path)
-    os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
 from data_models import IndalekoRecordDataModel
@@ -49,17 +51,15 @@ from storage.recorders.local.local_base import BaseLocalStorageRecorder
 from utils.misc.data_management import encode_binary_data
 from utils.misc.file_name_management import find_candidate_files
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
-    """
-    This class handles recording of metadata from the Indaleko Windows
-    collector service.
-    """
+    """Record metadata from the local FS collector."""
 
     windows_local_recorder_uuid = "429f1f3c-7a21-463f-b7aa-cd731bb202b1"
-    windows_local_recorder_service = {
+    windows_local_recorder_service = {  # noqa: RUF012
         "service_name": "Windows Local Recorder",
         "service_description": "This service records metadata collected from the local filesystems of a Windows machine.",
         "service_version": "1.0",
@@ -80,7 +80,7 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
         ServiceDescription=windows_local_recorder_service["service_description"],
     )
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: dict) -> None:
         assert "machine_config" in kwargs, "machine_config must be specified"
         self.machine_config = kwargs["machine_config"]
         if "machine_id" not in kwargs:
@@ -103,20 +103,17 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
         """This function finds the files to record:
         search_dir: path to the search directory
         prefix: prefix of the file to record
-        suffix: suffix of the file to record (default is .json)
+        suffix: suffix of the file to record (default is .json).
         """
         if self.data_dir is None:
             raise ValueError("data_dir must be specified")
-        return [
-            x
-            for x in find_candidate_files(
+        return list(find_candidate_files(
                 [
                     IndalekoWindowsLocalStorageCollector.windows_platform,
                     IndalekoWindowsLocalStorageCollector.windows_local_collector_name,
                 ],
                 self.data_dir,
-            )
-        ]
+            ))
 
     def normalize_collector_data(self, data: dict) -> IndalekoObject:
         """
@@ -127,10 +124,7 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
             raise ValueError("Data cannot be None")
         if not isinstance(data, dict):
             raise ValueError("Data must be a dictionary")
-        if "ObjectIdentifier" in data:
-            oid = data["ObjectIdentifier"]
-        else:
-            oid = str(uuid.uuid4())
+        oid = data["ObjectIdentifier"] if "ObjectIdentifier" in data else str(uuid.uuid4())
         timestamps = []
         if "st_birthtime" in data:
             timestamps.append(
@@ -223,7 +217,7 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
         return IndalekoObject(**kwargs)
 
 
-def main():
+def main() -> None:
     """This is the CLI handler for the Windows local storage collector."""
     BaseLocalStorageRecorder.local_recorder_runner(
         IndalekoWindowsLocalStorageCollector,

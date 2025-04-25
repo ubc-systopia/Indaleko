@@ -40,9 +40,9 @@ logger = get_logger(__name__)
 
 class EntityLookupService:
     """
-    Demonstrates how to retrofit the existing entity lookup code with the new 
+    Demonstrates how to retrofit the existing entity lookup code with the new
     timed_aql_execute function.
-    
+
     This is a simplified version of the entity lookup service in the hot tier recorder.
     """
 
@@ -51,14 +51,14 @@ class EntityLookupService:
         self._db = db_config
         self._entity_collection_name = IndalekoDBCollections.Indaleko_Object_Collection
         self.connection_valid = True
-    
-    def find_entity_by_identifiers(self, 
-                                  frn: str, 
-                                  volume: str, 
+
+    def find_entity_by_identifiers(self,
+                                  frn: str,
+                                  volume: str,
                                   local_path: Optional[str] = None) -> Optional[Dict]:
         """
         Find an entity using the LocalIdentifier (file reference number) and Volume fields.
-        
+
         Original implementation:
         ```python
         query = """
@@ -67,7 +67,7 @@ class EntityLookupService:
             LIMIT 1
             RETURN doc
         """
-        
+
         cursor = self._db._arangodb.aql.execute(
             query,
             bind_vars={
@@ -77,7 +77,7 @@ class EntityLookupService:
             },
         )
         ```
-        
+
         Retrofitted implementation using timed_aql_execute:
         """
         query = """
@@ -86,13 +86,13 @@ class EntityLookupService:
             LIMIT 1
             RETURN doc
         """
-        
+
         bind_vars = {
             "@collection": self._entity_collection_name,
             "frn": frn,
             "volume": volume,
         }
-        
+
         # Use timed_aql_execute instead of direct execute
         cursor = timed_aql_execute(
             self._db,
@@ -100,19 +100,19 @@ class EntityLookupService:
             bind_vars=bind_vars,
             threshold=0.5,  # 500ms threshold for logging
         )
-        
+
         entity = next(cursor, None)
-        
+
         # If entity not found and we have a local_path, try a fallback query
         if entity is None and local_path:
             return self.find_entity_by_path(local_path, volume)
-            
+
         return entity
-    
+
     def find_entity_by_path(self, path: str, volume: str) -> Optional[Dict]:
         """
         Fallback query to find an entity by its path.
-        
+
         This demonstrates using timed_aql_execute with a more complex query.
         """
         query = """
@@ -121,13 +121,13 @@ class EntityLookupService:
             LIMIT 1
             RETURN doc
         """
-        
+
         bind_vars = {
             "@collection": self._entity_collection_name,
             "path": path,
             "volume": volume,
         }
-        
+
         # Use timed_aql_execute with capture_explain=True to get more details on slow queries
         cursor = timed_aql_execute(
             self._db,
@@ -136,53 +136,53 @@ class EntityLookupService:
             threshold=0.5,  # 500ms threshold for logging
             capture_explain=True,
         )
-        
+
         return next(cursor, None)
 
 def main():
     """Main function to demonstrate the retrofitted entity lookup service."""
     parser = argparse.ArgumentParser(description="Demonstrate timed_aql_execute with entity lookups")
-    
+
     parser.add_argument(
         "--frn",
         type=str,
         default="123456",
         help="File reference number to lookup",
     )
-    
+
     parser.add_argument(
         "--volume",
         type=str,
         default="00000000-0000-0000-0000-000000000000",
         help="Volume GUID to lookup",
     )
-    
+
     parser.add_argument(
         "--path",
         type=str,
         default="C:\\example\\file.txt",
         help="File path to use as fallback",
     )
-    
+
     args = parser.parse_args()
-    
+
     # Connect to database
     db_config = IndalekoDBConfig()
     if not db_config.started:
         logger.error("Failed to connect to database")
         return
-    
+
     # Create entity lookup service
     lookup_service = EntityLookupService(db_config)
-    
+
     # Try to find entity
     entity = lookup_service.find_entity_by_identifiers(args.frn, args.volume, args.path)
-    
+
     if entity:
         logger.info(f"Found entity with ID: {entity.get('_key', 'unknown')}")
     else:
         logger.info(f"No entity found for FRN: {args.frn}, Volume: {args.volume}")
-        
+
         # Try fallback query directly
         fallback_entity = lookup_service.find_entity_by_path(args.path, args.volume)
         if fallback_entity:

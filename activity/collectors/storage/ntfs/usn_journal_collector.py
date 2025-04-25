@@ -238,9 +238,8 @@ class NtfsUsnJournalCollector:
         # Load state if available and enabled
         if self.use_state_file:
             self._load_state()
-        else:
-            if self.verbose:
-                ic("State file persistence disabled, starting with fresh state")
+        elif self.verbose:
+            ic("State file persistence disabled, starting with fresh state")
 
         if self.verbose:
             ic(f"NtfsUsnJournalCollector initialized with volumes: {self.volumes}")

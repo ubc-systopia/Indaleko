@@ -48,20 +48,27 @@ class EcobeeAmbientDataModel(ThermostatSensorData):
 
     # Ecobee identification - useful for tracking specific devices
     device_id: str = Field(
-        ..., description="Ecobee device identifier", pattern="^[a-zA-Z0-9]+$",
+        ...,
+        description="Ecobee device identifier",
+        pattern="^[a-zA-Z0-9]+$",
     )
 
     device_name: str = Field(
-        ..., description="Name assigned to the thermostat", min_length=1,
+        ...,
+        description="Name assigned to the thermostat",
+        min_length=1,
     )
 
     # Additional ecobee-specific sensor data
     aux_heat_active: bool | None = Field(
-        None, description="Whether auxiliary/emergency heat is active",
+        None,
+        description="Whether auxiliary/emergency heat is active",
     )
 
     dehumidifier_mode: str | None = Field(
-        None, description="Current dehumidifier setting", pattern="^(auto|on|off)$",
+        None,
+        description="Current dehumidifier setting",
+        pattern="^(auto|on|off)$",
     )
 
     ventilator_mode: str | None = Field(
@@ -93,11 +100,14 @@ class EcobeeAmbientDataModel(ThermostatSensorData):
 
     # Remote sensor summary
     connected_sensors: int = Field(
-        0, description="Number of connected remote sensors", ge=0,
+        0,
+        description="Number of connected remote sensors",
+        ge=0,
     )
 
     average_temperature: float | None = Field(
-        None, description="Average temperature across all sensors in Celsius",
+        None,
+        description="Average temperature across all sensors in Celsius",
     )
 
     @field_validator("device_id")
@@ -124,17 +134,20 @@ class EcobeeAmbientDataModel(ThermostatSensorData):
         self.device_name = raw_data.get("device_name", self.device_name)
         self.aux_heat_active = raw_data.get("aux_heat_active", self.aux_heat_active)
         self.dehumidifier_mode = raw_data.get(
-            "dehumidifier_mode", self.dehumidifier_mode,
+            "dehumidifier_mode",
+            self.dehumidifier_mode,
         )
         self.ventilator_mode = raw_data.get("ventilator_mode", self.ventilator_mode)
         self.current_climate = raw_data.get("current_climate", self.current_climate)
         self.heat_stage = raw_data.get("heat_stage", self.heat_stage)
         self.cool_stage = raw_data.get("cool_stage", self.cool_stage)
         self.connected_sensors = raw_data.get(
-            "connected_sensors", self.connected_sensors,
+            "connected_sensors",
+            self.connected_sensors,
         )
         self.average_temperature = raw_data.get(
-            "average_temperature", self.average_temperature,
+            "average_temperature",
+            self.average_temperature,
         )
         # ...additional processing as needed...
 

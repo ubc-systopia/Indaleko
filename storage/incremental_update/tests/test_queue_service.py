@@ -2,26 +2,21 @@
 Tests for the entity resolution queue service.
 """
 
-import pytest
-from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
-from storage.incremental_update.models import (
-    EntityInfo,
-    EntityType,
-    ResolutionRequest,
-    ResolutionStatus
-)
+import pytest
+
+from storage.incremental_update.models import EntityInfo, EntityType, ResolutionStatus
 from storage.incremental_update.queue_service import EntityResolutionQueue
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_db_config():
     """Create a mock database configuration."""
     return MagicMock()
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_collections():
     """Create a mock collections instance."""
     mock = MagicMock()
@@ -29,11 +24,10 @@ def mock_collections():
     return mock
 
 
-@pytest.fixture
+@pytest.fixture()
 def queue_service(mock_db_config, mock_collections):
     """Create a queue service with mocked dependencies."""
-    with patch('storage.incremental_update.queue_service.IndalekoCollections', 
-               return_value=mock_collections):
+    with patch("storage.incremental_update.queue_service.IndalekoCollections", return_value=mock_collections):
         return EntityResolutionQueue(mock_db_config)
 
 
@@ -43,21 +37,14 @@ def test_enqueue(queue_service, mock_collections):
     mock_collection = MagicMock()
     mock_collection.insert.return_value = {"_key": "test_key"}
     mock_collections.get_collection.return_value = mock_collection
-    
+
     # Execute
-    entity_info = EntityInfo(
-        volume_guid="C:",
-        frn="123456",
-        file_path="/test/file.txt"
-    )
-    
+    entity_info = EntityInfo(volume_guid="C:", frn="123456", file_path="/test/file.txt")
+
     result = queue_service.enqueue(
-        machine_id="test-machine",
-        entity_info=entity_info,
-        entity_type=EntityType.FILE,
-        priority=2
+        machine_id="test-machine", entity_info=entity_info, entity_type=EntityType.FILE, priority=2,
     )
-    
+
     # Verify
     assert result == "test_key"
     mock_collection.insert.assert_called_once()
@@ -77,16 +64,12 @@ def test_find_existing_request(queue_service, mock_collections):
     mock_cursor.__iter__.return_value = ["existing_key"]
     mock_db.aql.execute.return_value = mock_cursor
     mock_collections.get_db.return_value = mock_db
-    
+
     # Execute
-    entity_info = EntityInfo(
-        volume_guid="C:",
-        frn="123456",
-        file_path="/test/file.txt"
-    )
-    
+    entity_info = EntityInfo(volume_guid="C:", frn="123456", file_path="/test/file.txt")
+
     result = queue_service._find_existing_request("test-machine", entity_info)
-    
+
     # Verify
     assert result == "existing_key"
     mock_db.aql.execute.assert_called_once()
@@ -103,14 +86,14 @@ def test_dequeue(queue_service, mock_collections):
     mock_cursor = MagicMock()
     mock_cursor.__iter__.return_value = [
         {"_key": "item1", "entity_type": "directory"},
-        {"_key": "item2", "entity_type": "file"}
+        {"_key": "item2", "entity_type": "file"},
     ]
     mock_db.aql.execute.return_value = mock_cursor
     mock_collections.get_db.return_value = mock_db
-    
+
     # Execute
     result = queue_service.dequeue("test-machine", batch_size=2)
-    
+
     # Verify
     assert len(result) == 2
     assert result[0]["_key"] == "item1"
@@ -123,19 +106,13 @@ def test_update_status(queue_service, mock_collections):
     # Setup
     mock_collection = MagicMock()
     mock_collections.get_collection.return_value = mock_collection
-    
+
     # Execute
-    result = queue_service.update_status(
-        "test_key",
-        ResolutionStatus.COMPLETED
-    )
-    
+    result = queue_service.update_status("test_key", ResolutionStatus.COMPLETED)
+
     # Verify
     assert result is True
-    mock_collection.update.assert_called_once_with(
-        "test_key", 
-        {"status": "completed"}
-    )
+    mock_collection.update.assert_called_once_with("test_key", {"status": "completed"})
 
 
 def test_update_status_with_error(queue_service, mock_collections):
@@ -143,20 +120,13 @@ def test_update_status_with_error(queue_service, mock_collections):
     # Setup
     mock_collection = MagicMock()
     mock_collections.get_collection.return_value = mock_collection
-    
+
     # Execute
-    result = queue_service.update_status(
-        "test_key",
-        ResolutionStatus.FAILED,
-        "Test error message"
-    )
-    
+    result = queue_service.update_status("test_key", ResolutionStatus.FAILED, "Test error message")
+
     # Verify
     assert result is True
-    mock_collection.update.assert_called_once_with(
-        "test_key", 
-        {"status": "failed", "last_error": "Test error message"}
-    )
+    mock_collection.update.assert_called_once_with("test_key", {"status": "failed", "last_error": "Test error message"})
 
 
 def test_get_queue_stats(queue_service, mock_collections):
@@ -164,20 +134,15 @@ def test_get_queue_stats(queue_service, mock_collections):
     # Setup
     mock_db = MagicMock()
     mock_cursor = MagicMock()
-    mock_cursor.__iter__.return_value = [{
-        "total": 10,
-        "pending": 5,
-        "processing": 2,
-        "completed": 2,
-        "failed": 1,
-        "details": []
-    }]
+    mock_cursor.__iter__.return_value = [
+        {"total": 10, "pending": 5, "processing": 2, "completed": 2, "failed": 1, "details": []},
+    ]
     mock_db.aql.execute.return_value = mock_cursor
     mock_collections.get_db.return_value = mock_db
-    
+
     # Execute
     result = queue_service.get_queue_stats("test-machine")
-    
+
     # Verify
     assert result["total"] == 10
     assert result["pending"] == 5

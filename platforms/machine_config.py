@@ -23,13 +23,10 @@ import json
 import os
 import sys
 import uuid
-
 from pathlib import Path
 
 import arango
-
 from icecream import ic
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -51,7 +48,6 @@ from db.i_collections import IndalekoCollections
 from db.service_manager import IndalekoServiceManager
 from utils.data_validation import validate_uuid_string
 
-
 # pylint: enable=wrong-import-position
 
 # Monkey patch to make this script run faster
@@ -61,7 +57,7 @@ original_get_collection = IndalekoCollections.get_collection
 
 # Faster replacement that always skips views
 @staticmethod
-def fast_get_collection(name: str, skip_views: bool=True) -> IndalekoCollection:  # noqa: FBT001, FBT002
+def fast_get_collection(name: str, skip_views: bool = True) -> IndalekoCollection:  # noqa: FBT001, FBT002
     """Get a collection by name, skipping view creation."""
     return original_get_collection(name, skip_views=skip_views)
 
@@ -70,6 +66,7 @@ def fast_get_collection(name: str, skip_views: bool=True) -> IndalekoCollection:
 # This is a monkey patch to speed up the collection retrieval process
 # by skipping view creation
 IndalekoCollections.get_collection = fast_get_collection
+
 
 class IndalekoMachineConfig:
     """Generic base for capturing a machine configuration."""
@@ -132,10 +129,8 @@ class IndalekoMachineConfig:
         """Write the configuration to the database."""
         status = False
         if not overwrite:
-            existing_machine_config = (
-                IndalekoMachineConfig.lookup_machine_configuration_by_machine_id(
-                    self.machine_id,
-                )
+            existing_machine_config = IndalekoMachineConfig.lookup_machine_configuration_by_machine_id(
+                self.machine_id,
             )
             if existing_machine_config:
                 ic("Machine configuration already exists, overwrite not set")
@@ -229,11 +224,7 @@ class IndalekoMachineConfig:
             raise TypeError("Prefix must be a string")
         if not isinstance(directory, str):
             raise TypeError("Directory must be a string")
-        return [
-            x
-            for x in Path(directory).iterdir()
-            if x.startswith(prefix) and x.endswith(suffix)
-        ]
+        return [x for x in Path(directory).iterdir() if x.startswith(prefix) and x.endswith(suffix)]
 
 
 def register_handler(args: argparse.Namespace) -> None:
@@ -266,10 +257,7 @@ class TestMachineConfig:
             "SourceIdentifier": {
                 "Identifier": "8a948e74-6e43-4a6e-91c0-0cb5fd97355e",
                 "Version": "1.0",
-                "Description": (
-                    "This service provides the configuration information "
-                    "for a macOS machine."
-                ),
+                "Description": ("This service provides the configuration information for a macOS machine."),
             },
             "Timestamp": "2024-08-09T07:52:59.839237+00:00",
             "Attributes": {
@@ -302,10 +290,8 @@ class TestMachineConfig:
     def create_test_machine_config() -> None:
         """Create a test machine configuration."""
         ic("Create a test machine configuration")
-        existing_machine_config = (
-            IndalekoMachineConfig.lookup_machine_configuration_by_machine_id(
-                TestMachineConfig.test_machine_config_data["machine_id"],
-            )
+        existing_machine_config = IndalekoMachineConfig.lookup_machine_configuration_by_machine_id(
+            TestMachineConfig.test_machine_config_data["machine_id"],
         )
         if existing_machine_config:
             ic("Machine configuration already exists")
@@ -315,10 +301,8 @@ class TestMachineConfig:
             **TestMachineConfig.test_machine_config_data,
         )
         machine_config.write_config_to_db()
-        retrieved_config = (
-            IndalekoMachineConfig.lookup_machine_configuration_by_machine_id(
-                TestMachineConfig.test_machine_config_data["machine_id"],
-            )
+        retrieved_config = IndalekoMachineConfig.lookup_machine_configuration_by_machine_id(
+            TestMachineConfig.test_machine_config_data["machine_id"],
         )
         ic(retrieved_config)
 
@@ -328,10 +312,8 @@ class TestMachineConfig:
         if machine_id is not None:
             if not validate_uuid_string(machine_id):
                 raise ValueError("Invalid machine identifier")
-            retrieved_configs = (
-                IndalekoMachineConfig.lookup_machine_configuration_by_machine_id(
-                    machine_id,
-                )
+            retrieved_configs = IndalekoMachineConfig.lookup_machine_configuration_by_machine_id(
+                machine_id,
             )
             ic("List the test machine configuration")
         else:
@@ -376,10 +358,7 @@ def test_handler(args: argparse.Namespace) -> None:
             "SourceIdentifier": {
                 "Identifier": "8a948e74-6e43-4a6e-91c0-0cb5fd97355e",
                 "Version": "1.0",
-                "Description": (
-                    "This service provides the configuration information "
-                    "for a macOS machine."
-                ),
+                "Description": ("This service provides the configuration information for a macOS machine."),
             },
             "Timestamp": "2024-08-09T07:52:59.839237+00:00",
             "Attributes": {
@@ -403,10 +382,8 @@ def test_handler(args: argparse.Namespace) -> None:
             "Hostname": "testhost",
         },
     }
-    existing_machine_config = (
-        IndalekoMachineConfig.lookup_machine_configuration_by_machine_id(
-            test_machine_config_data["machine_id"],
-        )
+    existing_machine_config = IndalekoMachineConfig.lookup_machine_configuration_by_machine_id(
+        test_machine_config_data["machine_id"],
     )
     if existing_machine_config:
         ic("Machine configuration already exists")
