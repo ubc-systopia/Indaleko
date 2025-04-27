@@ -7,6 +7,7 @@ different specialized entities in the Fire Circle.
 
 import time
 import uuid
+
 from enum import Enum, auto
 from typing import Any, Dict, List, Optional, Set, Tuple
 

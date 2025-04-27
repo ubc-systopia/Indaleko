@@ -1,3 +1,8 @@
+\n+# fmt: on
+"""
+# fmt: off
+This module contains tests for the USN journal collector. (Formatting disabled.)
+"""
 #!/usr/bin/env python
 """
 Direct USN Journal test script.

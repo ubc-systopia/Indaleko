@@ -34,6 +34,7 @@ import logging
 import os
 import sys
 import time
+
 from datetime import UTC, datetime
 
 # Import tier management components
@@ -324,7 +325,8 @@ def run_scheduled_transitions(args):
 def main():
     """Main entry point for the script."""
     parser = argparse.ArgumentParser(
-        description="NTFS Tier Transition CLI", formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        description="NTFS Tier Transition CLI",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
     # Add general arguments

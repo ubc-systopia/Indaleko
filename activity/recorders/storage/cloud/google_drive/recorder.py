@@ -476,7 +476,7 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
         """
 
         # Query for count by app/mime type
-        app_query =  dedent(
+        app_query = dedent(
             f"""
             FOR doc IN @@collection
             FILTER doc.Record.Data.mime_type != null
@@ -484,7 +484,8 @@ class GoogleDriveActivityRecorder(StorageActivityRecorder):
             SORT count DESC
             LIMIT 10
             RETURN { mime_type, count }
-            """)
+            """,
+        )
 
         # Execute Google Drive-specific queries
         try:

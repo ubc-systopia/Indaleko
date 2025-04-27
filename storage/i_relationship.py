@@ -30,10 +30,12 @@ import os
 import random
 import sys
 import uuid
+
 from enum import Enum
 
 from icecream import ic
 from pydantic import BaseModel, Field
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -57,6 +59,7 @@ from data_models import (
 from db import IndalekoDBCollections
 from utils.data_validation import validate_uuid_string
 from utils.misc.data_management import encode_binary_data
+
 
 # pylint: enable=wrong-import-position
 

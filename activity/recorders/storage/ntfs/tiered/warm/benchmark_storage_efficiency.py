@@ -35,7 +35,9 @@ import logging
 import os
 import sys
 import time
+
 from datetime import UTC, datetime
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -186,7 +188,9 @@ class StorageEfficiencyBenchmark:
             # Get hot tier statistics
             hot_stats = self.hot_tier.get_hot_tier_statistics()
             if "importance_distribution" in hot_stats:
-                metrics["hot_tier"]["importance_distribution"] = hot_stats["importance_distribution"]
+                metrics["hot_tier"]["importance_distribution"] = hot_stats[
+                    "importance_distribution"
+                ]
 
             # Get warm tier statistics
             warm_stats = self.warm_tier.get_warm_tier_statistics()
@@ -288,8 +292,12 @@ class StorageEfficiencyBenchmark:
             results["system_info"] = {
                 "platform": sys.platform,
                 "python_version": sys.version,
-                "hot_tier_ttl_days": self.hot_tier._ttl_days if hasattr(self.hot_tier, "_ttl_days") else None,
-                "warm_tier_ttl_days": self.warm_tier._ttl_days if hasattr(self.warm_tier, "_ttl_days") else None,
+                "hot_tier_ttl_days": self.hot_tier._ttl_days
+                if hasattr(self.hot_tier, "_ttl_days")
+                else None,
+                "warm_tier_ttl_days": self.warm_tier._ttl_days
+                if hasattr(self.warm_tier, "_ttl_days")
+                else None,
             }
 
             # Measure storage efficiency
@@ -300,7 +308,9 @@ class StorageEfficiencyBenchmark:
             # Measure importance distribution
             start_time = time.time()
             results["importance_distribution"] = self.measure_importance_distribution()
-            results["importance_distribution"]["measurement_time_seconds"] = time.time() - start_time
+            results["importance_distribution"]["measurement_time_seconds"] = (
+                time.time() - start_time
+            )
 
             # Measure aggregation by type
             start_time = time.time()
@@ -337,12 +347,21 @@ class StorageEfficiencyBenchmark:
                     writer.writerow(["Timestamp", results["timestamp"]])
                     writer.writerow(["Hot Tier Size (bytes)", eff.get("hot_tier_size_bytes", 0)])
                     writer.writerow(["Warm Tier Size (bytes)", eff.get("warm_tier_size_bytes", 0)])
-                    writer.writerow(["Equivalent Hot Tier Size (bytes)", eff.get("equivalent_hot_tier_size_bytes", 0)])
+                    writer.writerow(
+                        [
+                            "Equivalent Hot Tier Size (bytes)",
+                            eff.get("equivalent_hot_tier_size_bytes", 0),
+                        ]
+                    )
                     writer.writerow(["Compression Ratio", eff.get("compression_ratio", 1.0)])
                     writer.writerow(["Space Saved (bytes)", eff.get("space_saved_bytes", 0)])
                     writer.writerow(["Percent Saved", eff.get("percent_saved", 0.0)])
-                    writer.writerow(["Original Activities Count", eff.get("original_activities", 0)])
-                    writer.writerow(["Aggregated Activities Count", eff.get("aggregated_activities", 0)])
+                    writer.writerow(
+                        ["Original Activities Count", eff.get("original_activities", 0)]
+                    )
+                    writer.writerow(
+                        ["Aggregated Activities Count", eff.get("aggregated_activities", 0)]
+                    )
 
                     if "aggregation_ratio" in eff:
                         writer.writerow(["Aggregation Ratio", eff["aggregation_ratio"]])
@@ -362,11 +381,11 @@ def format_byte_size(size_bytes):
     if size_bytes < 1024:
         return f"{size_bytes} B"
     elif size_bytes < 1024 * 1024:
-        return f"{size_bytes/1024:.2f} KB"
+        return f"{size_bytes / 1024:.2f} KB"
     elif size_bytes < 1024 * 1024 * 1024:
-        return f"{size_bytes/(1024*1024):.2f} MB"
+        return f"{size_bytes / (1024 * 1024):.2f} MB"
     else:
-        return f"{size_bytes/(1024*1024*1024):.2f} GB"
+        return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
 
 
 def main():
@@ -421,7 +440,9 @@ def main():
         print("Storage Efficiency Metrics:")
         print(f"  Hot Tier Size: {format_byte_size(eff.get('hot_tier_size_bytes', 0))}")
         print(f"  Warm Tier Size: {format_byte_size(eff.get('warm_tier_size_bytes', 0))}")
-        print(f"  Equivalent Hot Tier Size: {format_byte_size(eff.get('equivalent_hot_tier_size_bytes', 0))}")
+        print(
+            f"  Equivalent Hot Tier Size: {format_byte_size(eff.get('equivalent_hot_tier_size_bytes', 0))}"
+        )
         print(f"  Compression Ratio: {eff.get('compression_ratio', 1.0):.2f}x")
         print(
             f"  Space Saved: {format_byte_size(eff.get('space_saved_bytes', 0))} ({eff.get('percent_saved', 0.0):.1f}%)",

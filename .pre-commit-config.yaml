@@ -28,6 +28,10 @@ repos:
         description: This hook formats Python code according to Black style
         language_version: python3
         additional_dependencies: ['click>=8.0.0']
+        # Exclude large generated or legacy directories to limit scope
+        # Exclude all activity except location and ambient music providers
+        # Exclude all activity except key providers: location, ambient/music, and NTFS warm tier recorder
+        exclude: '^(?:activity/(?!collectors/(?:location|ambient/music)/|recorders/(?:location|ambient/music|storage/ntfs/tiered/warm)/)|old|semantic|apollo|archivist|backup|db|doc|figures|fileaudit|firecircle|perf|platforms|query|scratch|scripts|tools|web|utils)/'
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.5.0
@@ -40,6 +44,10 @@ repos:
           - --fix
           - --exit-non-zero-on-fix
           - --ignore=ERA001
+        # Exclude large generated or legacy directories to limit scope
+        # Exclude all activity except location and ambient music providers
+        # Exclude all activity except key providers: location, ambient/music, and NTFS warm tier recorder
+        exclude: '^(?:activity/(?!collectors/(?:location|ambient/music)/|recorders/(?:location|ambient/music|storage/ntfs/tiered/warm)/)|old|semantic|apollo|archivist|backup|db|doc|figures|fileaudit|firecircle|perf|platforms|query|scratch|scripts|tools|web|utils)/'
 
   - repo: https://github.com/pycqa/isort
     rev: 5.13.2
@@ -48,6 +56,10 @@ repos:
         name: Sort imports with isort
         description: This hook sorts Python imports according to standards
         args: ["--profile", "black"]
+        # Exclude large generated or legacy directories to limit scope
+        # Exclude all activity except location and ambient music providers
+        # Exclude all activity except key providers: location, ambient/music, and NTFS warm tier recorder
+        exclude: '^(?:activity/(?!collectors/(?:location|ambient/music)/|recorders/(?:location|ambient/music|storage/ntfs/tiered/warm)/)|old|semantic|apollo|archivist|backup|db|doc|figures|fileaudit|firecircle|perf|platforms|query|scratch|scripts|tools|web|utils)/'
 
   # Custom local hooks
   - repo: local

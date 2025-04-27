@@ -29,6 +29,7 @@ import uuid
 
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -51,6 +52,7 @@ from utils.misc.file_name_management import (
     extract_keys_from_file_name,
     find_candidate_files,
 )
+
 
 # pylint: enable=wrong-import-position
 

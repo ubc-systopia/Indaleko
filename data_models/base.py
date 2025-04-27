@@ -22,10 +22,12 @@ import json
 import os
 import sys
 import uuid
+
 from typing import Any, TypeVar
 
 from icecream import ic
 from pydantic import BaseModel
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))

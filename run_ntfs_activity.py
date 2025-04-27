@@ -38,9 +38,11 @@ import os
 import signal
 import sys
 import time
+
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -54,6 +56,7 @@ from activity.collectors.storage.ntfs.usn_journal_collector import (
 )
 from activity.recorders.storage.ntfs.tiered.hot.recorder import NtfsHotTierRecorder
 from constants.values import IndalekoConstants
+
 
 # Create default DB config path using pathlib.Path
 DEFAULT_DB_CONFIG_PATH = Path(IndalekoConstants.default_config_dir) / IndalekoConstants.default_db_config_file_name
@@ -85,6 +88,7 @@ class IntegratedNtfsActivityRunner:
         log_level = logging.DEBUG if self.verbose else logging.INFO
         # Configure root logger
         import socket
+
         from logging import Formatter
         from logging.handlers import RotatingFileHandler
 

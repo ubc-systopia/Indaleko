@@ -16,7 +16,9 @@ import argparse
 import logging
 import os
 import sys
+
 from datetime import UTC, datetime, timedelta
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -30,6 +32,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from activity.recorders.storage.ntfs.memory.long_term.recorder import (
     NtfsLongTermMemoryRecorder,
 )
+
 
 # pylint: enable=wrong-import-position
 

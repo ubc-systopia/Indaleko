@@ -25,7 +25,9 @@ import logging
 import os
 import sys
 import uuid
+
 from typing import Any
+
 
 # Set up path for Indaleko imports
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -40,6 +42,7 @@ from activity.characteristics import ActivityDataCharacteristics
 from activity.recorders.template import TemplateRecorder
 from data_models.i_uuid import IndalekoUUIDDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
+
 
 # pylint: enable=wrong-import-position
 

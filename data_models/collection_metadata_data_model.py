@@ -21,9 +21,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import json
 import os
 import sys
+
 from typing import Any
 
 from pydantic import Field
+
 
 # from icecream import ic
 
@@ -38,6 +40,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
 from data_models.db_index import IndalekoCollectionIndexDataModel
+
 
 # pylint: enable=wrong-import-position
 

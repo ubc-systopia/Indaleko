@@ -30,6 +30,7 @@ import uuid
 
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -40,6 +41,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from activity.collectors.known_semantic_attributes import KnownSemanticAttributes
 from utils.singleton import IndalekoSingleton
+
 
 # pylint: enable=wrong-import-position
 

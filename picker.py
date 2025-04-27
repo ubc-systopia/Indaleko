@@ -14,6 +14,7 @@ import time
 
 from utils.db.db_file_picker import IndalekoFilePicker
 
+
 # Attempt to import unstructured processor if available
 try:
     from semantic.collectors.unstructured.IndalekoUnstructured_Main import (
@@ -108,7 +109,10 @@ def main():
     start_parser.add_argument("--extensions", nargs="*", help="List of file extensions to include (e.g. .txt .md)")
     start_parser.add_argument("--unstructured", action="store_true", help="Use unstructured processor if available")
     start_parser.add_argument(
-        "--priority", type=int, default=1, help="Processing priority (lower number = higher priority)",
+        "--priority",
+        type=int,
+        default=1,
+        help="Processing priority (lower number = higher priority)",
     )
     start_parser.set_defaults(func=start)
 

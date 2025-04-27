@@ -34,8 +34,10 @@ import os
 import signal
 import sys
 import time
+
 from datetime import datetime, timedelta
 from typing import Any
+
 
 # Configure environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -49,6 +51,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from activity.collectors.storage.ntfs.usn_journal_collector import (
     NtfsUsnJournalCollector,
 )
+
 
 try:
     from activity.recorders.storage.ntfs.tiered.hot.recorder import NtfsHotTierRecorder

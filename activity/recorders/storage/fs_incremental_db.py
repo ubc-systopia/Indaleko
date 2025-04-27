@@ -4,6 +4,7 @@ DB-backed recorder for the incremental file system indexer.
 """
 import logging
 import uuid
+
 from datetime import UTC, datetime
 from typing import Any
 
@@ -14,6 +15,7 @@ from activity.recorders.registration_service import (
 # pylint: disable=wrong-import-position
 from activity.recorders.storage.base import StorageActivityRecorder
 from data_models.record import IndalekoRecordDataModel
+
 
 # pylint: enable=wrong-import-position
 

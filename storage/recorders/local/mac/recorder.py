@@ -26,8 +26,10 @@ import os
 import subprocess
 import sys
 import uuid
+
 from pathlib import Path
 from textwrap import dedent
+
 
 # from icecream import ic
 
@@ -49,6 +51,7 @@ from storage.i_object import IndalekoObject
 from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from storage.recorders.local.local_base import BaseLocalStorageRecorder
 from utils.misc.data_management import encode_binary_data
+
 
 # pylint: enable=wrong-import-position
 
@@ -80,7 +83,11 @@ class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
     )
 
     def __init__(
-        self, reset_collection=False, objects_file="", relations_file="", **kwargs,
+        self,
+        reset_collection=False,
+        objects_file="",
+        relations_file="",
+        **kwargs,
     ) -> None:
         self.db_config = IndalekoDBConfig()
         if "input_file" not in kwargs:
@@ -151,7 +158,9 @@ class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
         @staticmethod
         def find_machine_config_files(config_dir, platform=None, machine_id=None):
             return IndalekoMacLocalStorageCollector.local_collector_mixin.find_machine_config_files(
-                config_dir, platform, machine_id,
+                config_dir,
+                platform,
+                machine_id,
             )
 
         @staticmethod
@@ -163,14 +172,20 @@ class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
 
         @staticmethod
         def find_data_files(
-            data_dir: str | Path, keys: dict[str, str], prefix: str, suffix: str,
+            data_dir: str | Path,
+            keys: dict[str, str],
+            prefix: str,
+            suffix: str,
         ) -> list[str] | None:
             """This method is used to find data files"""
             # This is a hack, but the input files are labeled Darwin.  Need to track it down
             # and fix it, but for now this works.
             keys["plt"] = "Darwin"
             candidates = BaseLocalStorageRecorder.local_recorder_mixin.find_data_files(
-                data_dir, keys, prefix, suffix,
+                data_dir,
+                keys,
+                prefix,
+                suffix,
             )
             return candidates
 
@@ -195,7 +210,8 @@ class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
                 {
                     "Label": IndalekoObject.CREATION_TIMESTAMP,
                     "Value": datetime.datetime.fromtimestamp(
-                        data["st_birthtime"], datetime.UTC,
+                        data["st_birthtime"],
+                        datetime.UTC,
                     ).isoformat(),
                     "Description": "Created",
                 },
@@ -205,7 +221,8 @@ class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
                 {
                     "Label": IndalekoObject.MODIFICATION_TIMESTAMP,
                     "Value": datetime.datetime.fromtimestamp(
-                        data["st_mtime"], datetime.UTC,
+                        data["st_mtime"],
+                        datetime.UTC,
                     ).isoformat(),
                     "Description": "Modified",
                 },
@@ -215,7 +232,8 @@ class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
                 {
                     "Label": IndalekoObject.ACCESS_TIMESTAMP,
                     "Value": datetime.datetime.fromtimestamp(
-                        data["st_atime"], datetime.UTC,
+                        data["st_atime"],
+                        datetime.UTC,
                     ).isoformat(),
                     "Description": "Accessed",
                 },
@@ -225,7 +243,8 @@ class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
                 {
                     "Label": IndalekoObject.CHANGE_TIMESTAMP,
                     "Value": datetime.datetime.fromtimestamp(
-                        data["st_ctime"], datetime.UTC,
+                        data["st_ctime"],
+                        datetime.UTC,
                     ).isoformat(),
                     "Description": "Changed",
                 },
@@ -280,14 +299,14 @@ class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
         overwrite = str(self.reset_collection).lower()
 
         # copy the files first
+        # Copy the generated JSONL files into the database container
         for filename, dest_filename in [
             (self.objects_file, "objects.jsonl"),
             (self.relations_file, "relations.jsonl"),
         ]:
-            self.__run_docker_cmd(
-                f"docker cp {filename} {
-                                  container_name}:{dest}/{dest_filename}",
-            )
+            # Construct and run the docker cp command
+            cmd = f"docker cp {filename} {container_name}:{dest}/{dest_filename}"
+            self.__run_docker_cmd(cmd)
 
         # run arangoimport on both of these files
         for filename, collection_name in [
@@ -306,7 +325,7 @@ class IndalekoMacLocalStorageRecorder(BaseLocalStorageRecorder):
                     --server.database "{server_database}"
                     --overwrite {overwrite}
                     """,
-                                                      ),
+                ),
             )
 
     def __run_docker_cmd(self, cmd):

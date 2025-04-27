@@ -5,10 +5,23 @@ It registers the IPLocation collector as an activity data provider,
 builds and inserts location activity documents into its ArangoDB collection.
 """
 
+import os
+import sys
 import uuid
-from datetime import datetime
+
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
+
+if os.environ.get("INDALEKO_ROOT") is None:
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
+
+# pylint: disable=wrong-import-position
 from activity.collectors.location.data_models.ip_location_data_model import (
     IPLocationDataModel,
 )
@@ -25,6 +38,9 @@ from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from utils.misc.data_management import decode_binary_data
 
 
+# pylint: enable=wrong-import-position
+
+
 class IPLocationRecorder(BaseLocationDataRecorder):
     """Recorder for IP-based location data."""
 
@@ -32,7 +48,8 @@ class IPLocationRecorder(BaseLocationDataRecorder):
     version = "1.0.0"
     description = "IP Location Recorder"
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: dict) -> None:
+        """Initialize the IPLocationRecorder."""
         super().__init__(**kwargs)
         # Instantiate the IP location collector
         self.provider = IPLocation()
@@ -49,7 +66,7 @@ class IPLocationRecorder(BaseLocationDataRecorder):
             "Description": self.description,
             "Record": IndalekoRecordDataModel(
                 SourceIdentifier=source_id,
-                Timestamp=datetime.now(),
+                Timestamp=datetime.now(UTC),
                 Attributes={},
                 Data="",
             ),
@@ -68,24 +85,27 @@ class IPLocationRecorder(BaseLocationDataRecorder):
             )
 
     def get_recorder_characteristics(self) -> list[Any]:
+        """Return characteristics of the recorder."""
         return self.provider.get_collector_characteristics()
 
     def get_recorder_name(self) -> str:
+        """Return the name of the recorder."""
         return "ip_location"
 
     def get_collector_class_model(self) -> dict[str, type]:
+        """Return the class model of the collector."""
         return {"IPLocation": IPLocationDataModel}
 
     def get_recorder_id(self) -> uuid.UUID:
+        """Return the unique identifier of the recorder."""
         return self.identifier
 
-    def process_data(self, data: Any) -> dict[str, Any]:
-        # The collector returns a dict of the serialized data
+    def process_data(self, data: dict) -> dict:
+        """The collector returns a dict of the serialized data."""
         return data if isinstance(data, dict) else data.serialize()
 
     def store_data(self, data: dict[str, Any]) -> None:
-        # Data persistence handled in update_data via ArangoDB insert
-        pass
+        """Data persistence handled in update_data via ArangoDB insert."""
 
     def update_data(self) -> IPLocationDataModel | None:
         """Collect new data, compare to last DB entry, and insert if changed."""
@@ -106,27 +126,27 @@ class IPLocationRecorder(BaseLocationDataRecorder):
         sem_attrs = [
             IndalekoSemanticAttributeDataModel(
                 Identifier=IndalekoUUIDDataModel(
-                    Identifier=ksa.ACTIVITY_DATA_LOCATION_LATITUDE,
+                    Identifier=ksa.ACTIVITY_DATA_LOCATION_LATITUDE,  # pylint: disable=no-member
                     Version="1",
                     Description="Latitude",
                 ),
-                Value=model.Location.latitude,
+                Value=model.Location.latitude,  # pylint: disable=no-member
             ),
             IndalekoSemanticAttributeDataModel(
                 Identifier=IndalekoUUIDDataModel(
-                    Identifier=ksa.ACTIVITY_DATA_LOCATION_LONGITUDE,
+                    Identifier=ksa.ACTIVITY_DATA_LOCATION_LONGITUDE,  # pylint: disable=no-member
                     Version="1",
                     Description="Longitude",
                 ),
-                Value=model.Location.longitude,
+                Value=model.Location.longitude,  # pylint: disable=no-member
             ),
             IndalekoSemanticAttributeDataModel(
                 Identifier=IndalekoUUIDDataModel(
-                    Identifier=ksa.ACTIVITY_DATA_LOCATION_ACCURACY,
+                    Identifier=ksa.ACTIVITY_DATA_LOCATION_ACCURACY,  # pylint: disable=no-member
                     Version="1",
                     Description="Accuracy",
                 ),
-                Value=model.Location.accuracy,
+                Value=model.Location.accuracy,  # pylint: disable=no-member
             ),
         ]
         # Build and insert activity document

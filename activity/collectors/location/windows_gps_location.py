@@ -5,10 +5,13 @@ import datetime
 import os
 import sys
 import uuid
+
 from typing import Any
 
 import winsdk.windows.devices.geolocation as wdg
+
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -26,6 +29,7 @@ from activity.collectors.location.location_base import LocationCollector
 from data_models.location_data_model import LocationDataModel
 from data_models.record import IndalekoRecordDataModel
 from utils.misc.data_management import encode_binary_data
+
 
 # pylint: enable=wrong-import-position
 
@@ -102,7 +106,7 @@ class WindowsGPSLocation(LocationCollector):
         return self._collector_id
 
     def retrieve_data(self, data_type: str) -> str:
-        """Retrieve data from the provider"""
+        """Retrieve data from the provider."""
         raise NotImplementedError("This method is not implemented yet.")
 
     def retrieve_temporal_data(
@@ -112,11 +116,13 @@ class WindowsGPSLocation(LocationCollector):
         subsequent_time_window: datetime.timedelta,
         max_entries: int = 0,
     ) -> list[dict]:
-        """Retrieve temporal data from the provider"""
+        """Retrieve temporal data from the provider."""
         raise NotImplementedError("This method is not implemented yet.")
 
     def get_cursor(self, activity_context: uuid.UUID) -> uuid.UUID:
-        """Retrieve the current cursor for this data provider
+        """
+        Retrieve the current cursor for this data provider.
+
         Input:
              activity_context: the activity context into which this cursor is
              being used
@@ -125,23 +131,25 @@ class WindowsGPSLocation(LocationCollector):
              data from this provider (via the retrieve_data call).
         """
 
-    def cache_duration(self) -> datetime.timedelta:
-        """
-        Retrieve the maximum duration that data from this provider may be
-        cached
-        """
+    @staticmethod
+    def cache_duration() -> datetime.timedelta:
+        """Retrieve the maximum duration that data from this provider may be cached"""
         return datetime.timedelta(minutes=10)
 
-    def get_description(self) -> str:
+    @staticmethod
+    def get_description() -> str:
         """
-        Retrieve a description of the data provider. Note: this is used for
+        Retrieve a description of the data provider.
+
+        Note: this is used for
         prompt construction, so please be concise and specific in your
         description.
         """
         return """WindowsGPSLocation is a geolocation service."""
 
+    @staticmethod
     def get_json_schema(self) -> dict:
-        """Get the JSON schema for the provider"""
+        """Get the JSON schema for the provider."""
         return WindowsGPSLocationDataModel(
             **WindowsGPSLocationDataModel.Config.json_schema_extra["example"],
         ).model_json_schema()

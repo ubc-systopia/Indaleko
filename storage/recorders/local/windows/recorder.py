@@ -107,13 +107,15 @@ class IndalekoWindowsLocalStorageRecorder(BaseLocalStorageRecorder):
         """
         if self.data_dir is None:
             raise ValueError("data_dir must be specified")
-        return list(find_candidate_files(
+        return list(
+            find_candidate_files(
                 [
                     IndalekoWindowsLocalStorageCollector.windows_platform,
                     IndalekoWindowsLocalStorageCollector.windows_local_collector_name,
                 ],
                 self.data_dir,
-            ))
+            ),
+        )
 
     def normalize_collector_data(self, data: dict) -> IndalekoObject:
         """

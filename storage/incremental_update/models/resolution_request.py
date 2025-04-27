@@ -46,7 +46,8 @@ class ResolutionRequest(IndalekoBaseModel):
     """
 
     status: ResolutionStatus = Field(
-        default=ResolutionStatus.PENDING, description="Current status of the resolution request",
+        default=ResolutionStatus.PENDING,
+        description="Current status of the resolution request",
     )
     machine_id: str = Field(description="Identifier for the machine this entity belongs to")
     entity_info: EntityInfo = Field(description="Information about the entity to resolve")
@@ -54,7 +55,8 @@ class ResolutionRequest(IndalekoBaseModel):
     path_depth: int = Field(default=0, description="Depth of the path (for ordering - directories before files)")
     priority: int = Field(default=3, ge=1, le=5, description="Priority (1-5, where 1 is highest)")
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(UTC), description="When this request was created",
+        default_factory=lambda: datetime.now(UTC),
+        description="When this request was created",
     )
     attempts: int = Field(default=0, description="Number of resolution attempts")
     last_error: str | None = Field(default=None, description="Last error message if failed")

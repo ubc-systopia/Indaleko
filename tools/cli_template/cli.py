@@ -25,6 +25,7 @@ from handler_mixin import TemplateHandlerMixin
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.runner import IndalekoCLIRunner
+from utils.logging_setup import setup_logging
 
 
 def run_template(kwargs: dict) -> None:
@@ -34,6 +35,8 @@ def run_template(kwargs: dict) -> None:
 
 def main() -> None:
     """Main entrypoint for the CLI template."""
+    # Configure logging (console + file with rotation) before running
+    setup_logging()
     cli_data = IndalekoBaseCliDataModel(
         RegistrationServiceName="TemplateService",
         FileServiceName="template_service",

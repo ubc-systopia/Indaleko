@@ -26,8 +26,10 @@ import os
 import sys
 import unittest
 import uuid
+
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -49,6 +51,7 @@ from activity.collectors.storage.cloud.data_models.gdrive_activity_model import 
 from activity.collectors.storage.cloud.gdrive_activity_collector import (
     GoogleDriveActivityCollector,
 )
+
 
 # Import paths may be different when running tests directly vs through a module
 try:

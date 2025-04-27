@@ -22,11 +22,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # import math
 import os
 import sys
+
 from typing import Any
 
 # from datetime import datetime
 from icecream import ic
 from pyecobee import EcobeeService
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -42,6 +44,7 @@ from activity.collectors.ambient.smart_thermostat.ecobee_data_model import (
 from activity.collectors.ambient.smart_thermostat.smart_thermostat import (
     SmartThermostatCollector,
 )
+
 
 # pylint: enable=wrong-import-position
 

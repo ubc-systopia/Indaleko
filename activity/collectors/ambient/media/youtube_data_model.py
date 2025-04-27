@@ -22,8 +22,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import uuid
+
 from datetime import UTC, datetime
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -37,6 +39,7 @@ from activity.data_model.activity_classification import (
     IndalekoActivityClassification,
     IndalekoMultiClassifiedActivityDataModel,
 )
+
 
 # pylint: enable=wrong-import-position
 

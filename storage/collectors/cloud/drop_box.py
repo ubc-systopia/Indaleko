@@ -30,12 +30,15 @@ import os
 import sys
 import time
 import uuid
+
 from pathlib import Path
 from urllib.parse import urlencode
 
 import dropbox
 import requests
+
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -49,6 +52,7 @@ from db import IndalekoServiceManager
 from storage.collectors.cloud.cloud_base import BaseCloudStorageCollector
 from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from utils.misc.directory_management import indaleko_default_config_dir
+
 
 # pylint: enable=wrong-import-position
 

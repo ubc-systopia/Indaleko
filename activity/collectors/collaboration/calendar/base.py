@@ -26,8 +26,10 @@ import json
 import logging
 import os
 import sys
+
 from abc import abstractmethod
 from typing import Any
+
 
 # Ensure INDALEKO_ROOT is available
 if os.environ.get("INDALEKO_ROOT") is None:

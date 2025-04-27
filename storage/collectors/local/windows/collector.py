@@ -23,9 +23,11 @@ import logging
 import os
 import sys
 import uuid
+
 from pathlib import Path
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -41,6 +43,7 @@ from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from storage.collectors.local.local_base import BaseLocalStorageCollector
 from utils.cli.base import IndalekoBaseCLI
+
 
 # pylint: enable=wrong-import-position
 

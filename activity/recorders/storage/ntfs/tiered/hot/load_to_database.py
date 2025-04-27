@@ -38,9 +38,11 @@ import os
 import sys
 import textwrap
 import time
+
 from collections import Counter
 from datetime import UTC, datetime
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:

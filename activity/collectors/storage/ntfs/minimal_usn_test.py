@@ -12,6 +12,7 @@ import time
 
 import win32file
 
+
 # Define constants
 FSCTL_QUERY_USN_JOURNAL = 0x000900F4
 FSCTL_CREATE_USN_JOURNAL = 0x000900E7

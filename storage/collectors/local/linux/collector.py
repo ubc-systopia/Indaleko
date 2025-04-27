@@ -25,6 +25,7 @@ import uuid
 
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -37,6 +38,7 @@ from db.service_manager import IndalekoServiceManager
 from platforms.linux.machine_config import IndalekoLinuxMachineConfig
 from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from storage.collectors.local.local_base import BaseLocalStorageCollector
+
 
 # pylint: enable=wrong-import-position
 

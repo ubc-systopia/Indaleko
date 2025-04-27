@@ -3,6 +3,7 @@
 import os
 import sys
 
+
 # from icecream import ic
 
 init_path = os.path.dirname(os.path.abspath(__file__))
@@ -17,6 +18,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from activity.characteristics import ActivityDataCharacteristics  # noqa: E402
 from activity.collectors.base import CollectorBase  # noqa: E402
+
 
 # pylint: enable=wrong-import-position
 

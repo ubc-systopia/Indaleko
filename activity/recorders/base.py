@@ -22,10 +22,12 @@ import datetime
 import os
 import sys
 import uuid
+
 from abc import ABC, abstractmethod
 from typing import Any
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -36,6 +38,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from activity.characteristics import ActivityDataCharacteristics
+
 
 # pylint: enable=wrong-import-position
 

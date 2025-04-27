@@ -49,8 +49,10 @@ import sys
 import time
 import traceback
 import uuid
+
 from datetime import UTC, datetime, timedelta
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -77,6 +79,7 @@ from activity.recorders.storage.ntfs.activity_context_integration import (
     NtfsActivityContextIntegration,
 )
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
+
 
 # Import ServiceManager upfront to avoid late binding issues
 
@@ -959,15 +962,6 @@ class NtfsHotTierRecorder(StorageActivityRecorder):
                         )
 
                     if not current_doc:
-                        self._logger.info(
-                            f"Entity {entity_id} does not exist in collection, skipping update",
-                        )
-
-                        # Suggest the proper approach in the logs to help debug
-                        if frn and volume:
-                            self._logger.info(
-                                f"Consider creating entity with FRN={frn}, Volume={volume} first",
-                            )
                         return
 
                     # Log the actual document structure for debugging

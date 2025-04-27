@@ -25,7 +25,9 @@ import json
 import logging
 import os
 import sys
+
 from typing import Any
+
 
 # Import path setup
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -194,6 +196,7 @@ class GoogleOAuthManager:
 
             # Create a local server to receive the callback
             import socket
+
             from wsgiref.simple_server import make_server
 
             # Find an available port first

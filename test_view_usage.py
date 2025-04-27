@@ -8,6 +8,7 @@ for text search operations.
 import os
 import sys
 
+
 # Set up environment variables and path
 current_path = os.path.dirname(os.path.abspath(__file__))
 if current_path not in sys.path:

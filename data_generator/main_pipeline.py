@@ -9,9 +9,11 @@ import json
 import os
 import shutil
 import sys
+
 from datetime import datetime
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -56,11 +58,16 @@ class Validator:
         self.logger = ResultLogger(result_path=self.file_path)
 
         self.db_config = IndalekoDBConfig()
-        self.db_config.setup_database(
-            self.db_config.config["database"]["database"],
-            reset=True,
-        )
-        self.db_config.collections = IndalekoCollections()
+        try:
+            self.db_config.setup_database(
+                self.db_config.config["database"]["database"],
+                reset=True,
+            )
+            self.db_config.collections = IndalekoCollections()
+        except Exception as e:
+            print(f"Database connection error: {e}")
+            print("Please ensure ArangoDB is running and credentials are correct")
+            raise
 
         self.query_extractor = QueryExtractor()
         self.data_generator = Dataset_Generator(self.config)

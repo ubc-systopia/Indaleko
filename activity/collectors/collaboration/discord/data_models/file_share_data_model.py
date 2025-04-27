@@ -24,6 +24,7 @@ import sys
 
 from pydantic import AwareDatetime, Field, HttpUrl
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -36,6 +37,7 @@ from activity.collectors.collaboration.data_models.collaboration_data_model impo
     BaseCollaborationDataModel,
 )
 from activity.collectors.collaboration.data_models.shared_file import SharedFileData
+
 
 # pylint: enable=wrong-import-position
 

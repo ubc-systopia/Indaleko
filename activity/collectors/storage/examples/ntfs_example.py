@@ -27,6 +27,7 @@ import os
 import sys
 import time
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -40,6 +41,7 @@ from activity.collectors.storage.data_models.storage_activity_data_model import 
 )
 from activity.collectors.storage.ntfs.ntfs_collector import NtfsStorageActivityCollector
 from activity.recorders.storage.ntfs.ntfs_recorder import NtfsStorageActivityRecorder
+
 
 # pylint: enable=wrong-import-position
 

@@ -62,10 +62,12 @@ import sys
 import threading
 import time
 import uuid
+
 from datetime import UTC, datetime
 from typing import Any
 
 from icecream import ic
+
 
 # Define Windows constants directly in case they're missing from pywin32
 # These are the USN journal control codes
@@ -290,6 +292,7 @@ from activity.collectors.storage.data_models.storage_activity_data_model import 
     StorageItemType,
     StorageProviderType,
 )
+
 
 # pylint: enable=wrong-import-position
 

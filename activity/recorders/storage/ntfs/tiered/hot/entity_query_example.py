@@ -1,3 +1,8 @@
+\n+# fmt: on
+"""
+# fmt: off
+Example AQL query for entity relationships. Formatting disabled.
+"""
 """
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason

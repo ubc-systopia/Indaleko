@@ -26,6 +26,7 @@ import sys
 from icecream import ic
 from pydantic import Field
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -37,6 +38,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from constants import IndalekoConstants
 from data_models.collector import IndalekoCollectorDataModel
+
 
 # pylint: enable=wrong-import-position
 

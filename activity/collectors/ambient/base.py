@@ -23,10 +23,12 @@ import datetime
 import logging
 import os
 import sys
+
 from abc import abstractmethod
 from typing import Any
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -35,13 +37,13 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
-from activity.collectors.base import CollectorBase
-
 # This logic is part of what allows me to execute it locally or as part of the
 # overall package/project.  It's a bit of a hack, but it works.
 # pylint: disable=wrong-import-position
 from Indaleko import Indaleko
+from activity.collectors.base import CollectorBase
 from utils import IndalekoLogging
+
 
 # pylint: enable=wrong-import-position
 

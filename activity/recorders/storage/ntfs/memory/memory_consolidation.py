@@ -40,8 +40,10 @@ import logging
 import os
 import sys
 import time
+
 from datetime import UTC, datetime
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -53,6 +55,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from utils.i_logging import get_logger
+
 
 # pylint: enable=wrong-import-position
 

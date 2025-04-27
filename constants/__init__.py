@@ -25,6 +25,7 @@ import sys
 
 from icecream import ic
 
+
 init_path = os.path.dirname(os.path.abspath(__file__))
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -36,6 +37,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from constants.values import IndalekoConstants
+
 
 # pylint: enable=wrong-import-position
 

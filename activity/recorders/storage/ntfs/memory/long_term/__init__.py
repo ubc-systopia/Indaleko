@@ -11,4 +11,5 @@ Components:
 
 from .recorder import NtfsLongTermMemoryRecorder
 
+
 __all__ = ["NtfsLongTermMemoryRecorder"]

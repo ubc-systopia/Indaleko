@@ -2,4 +2,5 @@
 
 from .recorder import NtfsShortTermMemoryRecorder
 
+
 __all__ = ["NtfsShortTermMemoryRecorder"]

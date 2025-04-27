@@ -28,9 +28,7 @@ from logging import getLogger
 from pathlib import Path
 from typing import Any
 
-from arango import ArangoClient
 from arango.cursor import Cursor
-from arango.database import Database
 
 
 if os.environ.get("INDALEKO_ROOT") is None:

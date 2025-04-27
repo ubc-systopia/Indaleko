@@ -43,16 +43,18 @@ import socket
 import sys
 import time
 import uuid
+
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 
-# Set up environment
+
 if os.environ.get("INDALEKO_ROOT") is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
-        current_path = os.path.dirname(current_path)
-    os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
 from activity.characteristics import ActivityDataCharacteristics
@@ -64,6 +66,7 @@ from activity.collectors.storage.data_models.storage_activity_data_model import 
 )
 from activity.collectors.storage.semantic_attributes import StorageActivityAttributes
 from activity.recorders.storage.base import StorageActivityRecorder
+
 
 # Import ServiceManager upfront to avoid late binding issues
 
@@ -96,11 +99,12 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
     KNOWLEDGE_GRAPH_COLLECTION_NAME = "archival_knowledge_graph"
     IMPORTANCE_THRESHOLD = 0.8  # Higher threshold for archival memory
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: dict) -> None:
         """
         Initialize the archival memory recorder.
 
         Args:
+            kwargs: Additional arguments for the recorder
             collection_name: Name of the archival memory collection
             entity_collection_name: Name of the entity collection
             long_term_collection_name: Name of the long-term memory collection
@@ -148,7 +152,7 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
 
         # Use consistent collection name based on recorder ID to avoid conflicts
         if "collection_name" not in kwargs:
-            recorder_id_hash = hashlib.md5(
+            recorder_id_hash = hashlib.md5(  # noqa: S324  - not used for security
                 str(kwargs["recorder_id"]).encode(),
             ).hexdigest()
             kwargs["collection_name"] = f"{self._collection_name}_{recorder_id_hash[:8]}"
@@ -161,8 +165,8 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
         # Call parent initializer with updated kwargs
         try:
             super().__init__(**kwargs)
-        except Exception as e:
-            self._logger.error(f"Error during parent initialization: {e}")
+        except (ValueError, KeyError, AttributeError):  # Replace with specific exceptions
+            self._logger.exception("Error during parent initialization")
             if not kwargs.get("no_db", False):
                 raise  # Only re-raise if we're supposed to connect to the database
 
@@ -1184,9 +1188,6 @@ class NtfsArchivalMemoryRecorder(StorageActivityRecorder):
                         uuid.UUID(entity_id),
                     )
                     if not entity_data:
-                        self._logger.warning(
-                            f"Entity {entity_id} not found in entity collection",
-                        )
                         continue
 
                     # Check if entity meets importance threshold for archival memory

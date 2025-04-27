@@ -25,6 +25,7 @@ import sys
 from icecream import ic
 from pydantic import Field, HttpUrl
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -36,6 +37,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from activity.collectors.collaboration.data_models.collaboration_data_model import (
     BaseCollaborationDataModel,
 )
+
 
 # pylint: enable=wrong-import-position
 

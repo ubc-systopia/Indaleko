@@ -29,13 +29,16 @@ import socket
 import sys
 import threading
 import time
+
 from queue import Queue
 from uuid import UUID
 
 import msal
 import requests
+
 from icecream import ic
 from pyngrok import ngrok
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -50,6 +53,7 @@ from storage.collectors.cloud.cloud_base import BaseCloudStorageCollector
 from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from utils.misc.directory_management import indaleko_default_config_dir
 from utils.misc.file_name_management import generate_file_name
+
 
 # pylint: enable=wrong-import-position
 

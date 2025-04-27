@@ -3,6 +3,7 @@ Recorder for incremental file system collector that writes JSONL output.
 """
 
 import json
+
 from pathlib import Path
 from typing import Any
 

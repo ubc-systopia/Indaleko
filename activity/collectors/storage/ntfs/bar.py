@@ -3,8 +3,10 @@ import ctypes
 import platform
 import struct
 import sys
+
 from ctypes import wintypes
 from datetime import UTC, datetime
+
 
 # Windows API constants
 FSCTL_QUERY_USN_JOURNAL = 0x900F4

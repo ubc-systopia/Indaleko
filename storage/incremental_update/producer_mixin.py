@@ -6,10 +6,10 @@ to enqueue entity resolution requests when they encounter entities
 that don't exist in the database.
 """
 
-
 from storage.incremental_update.models import EntityInfo, EntityType
 from storage.incremental_update.queue_service import EntityResolutionQueue
 from utils.i_logging import get_logger
+
 
 logger = get_logger(__name__)
 
@@ -124,7 +124,10 @@ class EntityResolutionProducer:
 
         # Enqueue the resolution request
         request_id = queue.enqueue(
-            machine_id=machine_id, entity_info=entity_info, entity_type=entity_type, priority=priority,
+            machine_id=machine_id,
+            entity_info=entity_info,
+            entity_type=entity_type,
+            priority=priority,
         )
 
         logger.debug(f"Enqueued entity resolution request {request_id} for {entity_type}:{volume_guid}:{frn}")

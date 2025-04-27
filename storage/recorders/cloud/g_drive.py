@@ -146,8 +146,7 @@ class IndalekoGDriveCloudStorageRecorder(BaseCloudStorageRecorder):
         """Builds directory/file map for Google Drive."""
         # First: build the directory map from the list of known directories.
         self.dirmap = {
-            item.indaleko_object.LocalIdentifier:
-            item.indaleko_object.ObjectIdentifier for item in self.dir_data
+            item.indaleko_object.LocalIdentifier: item.indaleko_object.ObjectIdentifier for item in self.dir_data
         }
         for item in self.file_data:
             # now, walk through all the files
@@ -162,11 +161,7 @@ class IndalekoGDriveCloudStorageRecorder(BaseCloudStorageRecorder):
             doc = item.indaleko_object.serialize()
             if "parents" in doc:
                 parent_id = doc["parents"][0]
-            item.args["Path"] = (
-                self.root_dir.indaleko_object.LocalIdentifier
-                if parent_id == "/"
-                else parent_id
-            )
+            item.args["Path"] = self.root_dir.indaleko_object.LocalIdentifier if parent_id == "/" else parent_id
 
     def normalize_collector_data(self, data: dict) -> dict:
         """Create normalized record from the collector data."""

@@ -42,7 +42,10 @@ def test_enqueue(queue_service, mock_collections):
     entity_info = EntityInfo(volume_guid="C:", frn="123456", file_path="/test/file.txt")
 
     result = queue_service.enqueue(
-        machine_id="test-machine", entity_info=entity_info, entity_type=EntityType.FILE, priority=2,
+        machine_id="test-machine",
+        entity_info=entity_info,
+        entity_type=EntityType.FILE,
+        priority=2,
     )
 
     # Verify

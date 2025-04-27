@@ -28,7 +28,9 @@ import os
 import sys
 import time
 import uuid
+
 from datetime import UTC, datetime
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -48,6 +50,7 @@ from activity.recorders.storage.ntfs.activity_context_integration import (
     NtfsActivityContextIntegration,
 )
 from activity.recorders.storage.ntfs.ntfs_recorder import NtfsStorageActivityRecorder
+
 
 # pylint: enable=wrong-import-position
 

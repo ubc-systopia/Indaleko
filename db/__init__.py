@@ -21,7 +21,7 @@ from db.db_collections import IndalekoDBCollections  # noqa: E402
 from db.db_config import IndalekoDBConfig  # noqa: E402
 from db.i_collections import IndalekoCollections  # noqa: E402
 from db.service_manager import IndalekoServiceManager  # noqa: E402
-from db.utils import timed_aql_execute  # noqa: E402
+from db.utils.query_performance import timed_aql_execute  # noqa: E402
 
 # pylint: enable=wrong-import-position
 

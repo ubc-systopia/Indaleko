@@ -36,7 +36,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from pathlib import Path
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -47,11 +49,13 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # Import the constants for default paths
 from constants.values import IndalekoConstants
 
+
 # Create default DB config path using pathlib.Path
 DEFAULT_DB_CONFIG_PATH = Path(IndalekoConstants.default_config_dir) / IndalekoConstants.default_db_config_file_name
 
 # Import the recorder CLI module
 from activity.recorders.storage.ntfs.tiered.hot.ntfs_recorder_cli import main
+
 
 if __name__ == "__main__":
     main()

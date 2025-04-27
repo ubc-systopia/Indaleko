@@ -10,11 +10,13 @@ import os
 import struct
 import sys
 import time
+
 from ctypes import *
 from datetime import datetime
 
 import pywintypes
 import win32file
+
 
 # Constants for USN journal operations
 # Documented at https://learn.microsoft.com/en-us/windows/win32/api/winioctl/ni-winioctl-fsctl_query_usn_journal

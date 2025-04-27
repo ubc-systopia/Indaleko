@@ -24,6 +24,7 @@ import sys
 
 from pydantic import BaseModel, Field
 
+
 # from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:

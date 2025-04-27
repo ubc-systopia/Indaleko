@@ -22,7 +22,9 @@ import argparse
 import logging
 import os
 import sys
+
 from datetime import UTC, datetime
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -35,6 +37,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from activity.collectors.ambient.media.youtube_collector import YouTubeActivityCollector
 from activity.collectors.ambient.media.youtube_data_model import YouTubeVideoActivity
 from activity.recorders.ambient.youtube_recorder import YouTubeActivityRecorder
+
 
 # pylint: enable=wrong-import-position
 

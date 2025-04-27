@@ -27,8 +27,10 @@ import json
 import os
 import sys
 import time
+
 from datetime import UTC, datetime
 from typing import Any
+
 
 # Check if we're on Windows
 IS_WINDOWS = sys.platform.startswith("win")

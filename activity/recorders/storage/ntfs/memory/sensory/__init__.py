@@ -2,4 +2,5 @@
 
 from .recorder import NtfsSensoryMemoryRecorder
 
+
 __all__ = ["NtfsSensoryMemoryRecorder"]

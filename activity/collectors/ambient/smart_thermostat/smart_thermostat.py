@@ -20,7 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from typing import Any
+
 
 # from datetime import datetime
 
@@ -38,6 +40,7 @@ from activity.collectors.ambient.base import AmbientCollector
 from activity.collectors.ambient.data_models.smart_thermostat import (
     ThermostatSensorData,
 )
+
 
 # pylint: enable=wrong-import-position
 

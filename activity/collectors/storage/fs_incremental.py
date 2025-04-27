@@ -6,6 +6,7 @@ with modification timestamps newer than a stored "last run" timestamp.
 """
 
 import json
+
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any

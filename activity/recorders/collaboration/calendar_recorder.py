@@ -27,7 +27,9 @@ import logging
 import os
 import sys
 import uuid
+
 from typing import Any
+
 
 # Ensure INDALEKO_ROOT is available
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -37,6 +39,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
+# Indaleko imports
+from Indaleko import Indaleko
 from activity.collectors.collaboration.calendar.google_calendar import (
     GoogleCalendarCollector,
 )
@@ -70,9 +74,6 @@ from data_models.activity_data_registration import (
 )
 from data_models.i_uuid import IndalekoUUIDDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
-
-# Indaleko imports
-from Indaleko import Indaleko
 
 
 class CalendarRecorder(RecorderBase):

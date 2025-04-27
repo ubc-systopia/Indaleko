@@ -9,6 +9,7 @@ ArangoDB Views for text search operations.
 import os
 import sys
 
+
 # Set up environment variables
 current_path = os.path.dirname(os.path.abspath(__file__))
 os.environ["INDALEKO_ROOT"] = current_path

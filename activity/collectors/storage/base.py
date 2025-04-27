@@ -28,9 +28,11 @@ import os
 import socket
 import sys
 import uuid
+
 from abc import abstractmethod
 from datetime import UTC, datetime, timedelta
 from typing import Any
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -50,6 +52,7 @@ from activity.collectors.storage.data_models.storage_activity_data_model import 
     StorageProviderType,
 )
 from data_models.timestamp import IndalekoTimestampDataModel
+
 
 # pylint: enable=wrong-import-position
 

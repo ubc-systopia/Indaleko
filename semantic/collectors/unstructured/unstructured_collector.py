@@ -506,8 +506,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger("unstructured_processor")
 
-def process_files():
-    """Process all files in the input directory"""
+    def process_files():
+    # Process all files in the input directory
     all_elements = []
 
     # Get all files in input directory

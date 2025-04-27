@@ -33,6 +33,7 @@ import sys
 import time
 import traceback
 
+
 # Standard Python check for Windows platform
 IS_WINDOWS = sys.platform.startswith("win")
 

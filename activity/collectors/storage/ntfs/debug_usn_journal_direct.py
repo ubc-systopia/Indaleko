@@ -18,8 +18,10 @@ import random
 import struct
 import sys
 import time
+
 from ctypes import *
 from datetime import datetime
+
 
 # Check if running on Windows
 if not sys.platform.startswith("win"):

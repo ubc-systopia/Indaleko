@@ -20,10 +20,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from uuid import UUID
 
 from icecream import ic
 from pydantic import Field
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -38,6 +40,7 @@ from data_models.record import IndalekoRecordDataModel
 from data_models.timestamp import IndalekoTimestampDataModel
 from platforms.data_models.hardware import Hardware as hardware
 from platforms.data_models.software import Software as software
+
 
 # pylint: enable=wrong-import-position
 

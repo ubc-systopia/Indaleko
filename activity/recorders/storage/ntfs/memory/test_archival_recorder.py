@@ -36,6 +36,7 @@ import os
 import sys
 import uuid
 
+
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))

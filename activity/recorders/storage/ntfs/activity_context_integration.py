@@ -27,6 +27,7 @@ import os
 import sys
 import uuid
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -40,6 +41,7 @@ from activity.collectors.storage.data_models.storage_activity_data_model import 
     StorageActivityType,
 )
 from activity.context.service import IndalekoActivityContextService
+
 
 # pylint: enable=wrong-import-position
 

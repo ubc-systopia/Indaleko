@@ -39,8 +39,10 @@ import logging
 import math
 import os
 import re
+
 from datetime import UTC, datetime, timedelta
 from typing import Any
+
 
 # Document types with higher importance
 IMPORTANT_DOCUMENT_EXTENSIONS = {

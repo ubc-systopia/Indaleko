@@ -18,6 +18,7 @@ from storage.incremental_update.models import (
 )
 from utils.i_logging import get_logger
 
+
 logger = get_logger(__name__)
 
 
@@ -101,7 +102,10 @@ class EntityResolutionQueue:
 
         # Create the resolution request
         request = ResolutionRequest(
-            machine_id=machine_id, entity_info=entity_info, entity_type=entity_type, priority=priority,
+            machine_id=machine_id,
+            entity_info=entity_info,
+            entity_type=entity_type,
+            priority=priority,
         )
 
         # Insert into database
@@ -259,7 +263,10 @@ class EntityResolutionQueue:
         return list(cursor)
 
     def update_status(
-        self, request_id: str, status: ResolutionStatus | str, error_message: str | None = None,
+        self,
+        request_id: str,
+        status: ResolutionStatus | str,
+        error_message: str | None = None,
     ) -> bool:
         """
         Update the status of a resolution request.

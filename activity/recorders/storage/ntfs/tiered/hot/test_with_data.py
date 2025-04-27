@@ -27,8 +27,10 @@ import json
 import logging
 import os
 import sys
+
 from collections import Counter
 from typing import Any
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:

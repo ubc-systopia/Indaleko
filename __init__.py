@@ -23,6 +23,7 @@ import sys
 
 from icecream import ic
 
+
 if "INDALEKO_ROOT" not in os.environ:
     os.environ["INDALEKO_ROOT"] = os.path.dirname(os.path.abspath(__file__))
     sys.path.append(os.environ["INDALEKO_ROOT"])

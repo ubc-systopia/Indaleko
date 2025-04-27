@@ -13,6 +13,7 @@ from storage.incremental_update.models import ResolutionStatus
 from storage.incremental_update.queue_service import EntityResolutionQueue
 from utils.i_logging import get_logger
 
+
 logger = get_logger(__name__)
 
 
@@ -134,7 +135,9 @@ class EntityResolutionService:
                         f"Request {request_id} exceeded maximum retries ({self.max_retries}), marking as failed",
                     )
                     self.queue.update_status(
-                        request_id, ResolutionStatus.FAILED, f"Exceeded maximum retries ({self.max_retries})",
+                        request_id,
+                        ResolutionStatus.FAILED,
+                        f"Exceeded maximum retries ({self.max_retries})",
                     )
                     continue
 
@@ -146,7 +149,9 @@ class EntityResolutionService:
                     successful += 1
                 else:
                     self.queue.update_status(
-                        request_id, ResolutionStatus.PENDING, "Resolution attempt failed, will retry",
+                        request_id,
+                        ResolutionStatus.PENDING,
+                        "Resolution attempt failed, will retry",
                     )
 
             except Exception as e:

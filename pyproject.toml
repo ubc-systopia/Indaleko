@@ -20,6 +20,7 @@ dependencies = [
     "google_api_python_client==2.165.0",
     "google_auth_oauthlib==1.2.1",
     "icecream==2.1.4",
+    "pyyaml>=6.0",
     "jsonlines==4.0.0",
     "jsonschema==4.23.0",
     "keyring==25.6.0",
@@ -55,6 +56,9 @@ dependencies = [
 ]
 
 requires-python = ">=3.12"
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["indaleko*"]
 
 [project.optional-dependencies]
 test = ["pytest>=6.0"]

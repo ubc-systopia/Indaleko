@@ -61,11 +61,13 @@ import sys
 import threading
 import time
 import uuid
+
 from ctypes import wintypes
 from datetime import UTC, datetime
 from typing import Any
 
 from icecream import ic
+
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -94,6 +96,7 @@ from platforms.machine_config import IndalekoMachineConfig  # noqa: E402
 from utils.cli.base import IndalekoBaseCLI  # noqa: E402
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel  # noqa: E402
 from utils.cli.runner import IndalekoCLIRunner  # noqa: E402
+
 
 # Only import Windows-specific base class if on Windows
 if WINDOWS_AVAILABLE:

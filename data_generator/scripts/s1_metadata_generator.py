@@ -4,7 +4,9 @@ import os
 import random
 import re
 import sys
+
 from datetime import datetime
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -25,6 +27,7 @@ from data_generator.scripts.metadata.music_activity_metadata import MusicActivit
 from data_generator.scripts.metadata.posix_metadata import PosixMetadata
 from data_generator.scripts.metadata.semantic_metadata import SemanticMetadata
 from data_generator.scripts.metadata.temp_activity_metadata import TempActivityData
+
 
 # Define the named tuple outside the function
 DataGeneratorResults = namedtuple(
