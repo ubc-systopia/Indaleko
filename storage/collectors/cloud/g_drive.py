@@ -28,7 +28,6 @@ import json
 import logging
 import os
 import sys
-
 from pathlib import Path
 from uuid import UUID
 
@@ -38,7 +37,6 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import HttpError, build
 from icecream import ic
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -57,7 +55,6 @@ from storage.collectors.base import BaseStorageCollector
 from storage.collectors.cloud.cloud_base import BaseCloudStorageCollector
 from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from utils.misc.directory_management import indaleko_default_config_dir
-
 
 # pylint: enable=wrong-import-position
 

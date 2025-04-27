@@ -28,11 +28,9 @@ import logging
 import os
 import sys
 import uuid
-
 from pathlib import Path
 
 from icecream import ic
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -51,7 +49,6 @@ from db import IndalekoCollections, IndalekoDBConfig
 from db.db_collections import IndalekoDBCollections
 from utils import IndalekoLogging, IndalekoSingleton
 from utils.misc.file_name_management import generate_file_name
-
 
 # pylint: enable=wrong-import-position
 

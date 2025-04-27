@@ -23,7 +23,6 @@ import sys
 
 from pydantic import Field
 
-
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -34,7 +33,6 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from activity.data_model.activity import IndalekoActivityDataModel
 from data_models.location_data_model import LocationDataModel
-
 
 # pylint: enable=wrong-import-position
 

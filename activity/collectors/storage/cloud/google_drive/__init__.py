@@ -34,6 +34,5 @@ from activity.collectors.storage.cloud.google_drive.google_drive_collector impor
     GoogleDriveActivityCollector,
 )
 
-
 # Import version info
 __version__ = "0.1.0"

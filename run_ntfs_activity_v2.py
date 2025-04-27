@@ -40,7 +40,6 @@ import os
 import signal
 import sys
 import time
-
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -55,7 +54,7 @@ except ImportError:
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[logging.StreamHandler()]
+            handlers=[logging.StreamHandler()],
         )
 
 
@@ -76,7 +75,6 @@ from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.handlermixin import IndalekoHandlermixin
 from utils.cli.runner import IndalekoCLIRunner
-
 
 # Constants
 DEFAULT_DB_PATH = Path(IndalekoConstants.default_config_dir)
@@ -593,7 +591,7 @@ class NtfsActivityHandlerMixin(IndalekoHandlermixin):
         if args.debug:
             # Set the root logger to DEBUG level if --debug is specified
             logging.getLogger().setLevel(logging.DEBUG)
-            
+
         # Create a logger for this module
         logger = logging.getLogger(__name__)
         logger.info("NTFS Activity Collector V2 logging initialized")
@@ -868,7 +866,7 @@ def main() -> None:
     """Main entrypoint for the NTFS activity collector v2."""
     # Configure logging (console + file with rotation) before running
     setup_logging()
-    
+
     cli_data = IndalekoBaseCliDataModel(
         RegistrationServiceName="NtfsActivityCollector",
         FileServiceName="ntfs_activity_v2",

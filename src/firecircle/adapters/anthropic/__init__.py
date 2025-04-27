@@ -6,13 +6,10 @@ with Anthropic's API, allowing integration with Claude models and other Anthropi
 """
 
 import json
-
 from typing import Any, Dict, List, Optional
-
 
 try:
     import anthropic
-
     from anthropic import Anthropic
 
     HAS_ANTHROPIC = True

@@ -22,11 +22,9 @@ import os
 import random
 import sys
 import uuid
-
 from datetime import UTC, datetime, timedelta
 
 from icecream import ic
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -44,7 +42,6 @@ from activity.collectors.task_activity.data_models.task_data_model import (
     TaskPriority,
     TaskStatus,
 )
-
 
 # pylint: enable=wrong-import-position
 

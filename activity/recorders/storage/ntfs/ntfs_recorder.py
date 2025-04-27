@@ -49,10 +49,8 @@ import socket
 import sys
 import time
 import uuid
-
 from datetime import timedelta
 from typing import Any
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -81,7 +79,6 @@ from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 
 # Import ServiceManager upfront to avoid late binding issues
 from db.service_manager import IndalekoServiceManager
-
 
 # pylint: enable=wrong-import-position
 

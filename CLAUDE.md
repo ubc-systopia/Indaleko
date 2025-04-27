@@ -30,11 +30,11 @@ The data generator creates synthetic metadata records to test Indaleko's search 
 
 The data generator requires several modifications to work with the current codebase:
 
-1. **Database Authentication**: 
+1. **Database Authentication**:
    - Error: `arango.exceptions.CollectionListError: [HTTP 401][ERR 11] not authorized to execute this request`
    - Fix: Update ArangoDB credentials in database configuration
 
-2. **Module Import Structure**: 
+2. **Module Import Structure**:
    - The data generator uses outdated import paths and interfaces
    - Several modules from the `query` package have different interfaces than expected:
      - `TranslatorBase` class has a different method signature
@@ -204,7 +204,7 @@ from pydantic import Field
 class MyModel(IndalekoBaseModel):
     # Timezone-aware dates
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    
+
     @validator('created_at')
     def ensure_timezone(cls, v):
         if v.tzinfo is None:
@@ -226,7 +226,7 @@ class MyArangoModel(IndalekoBaseModel):
 
 ### Testing & Development
 - Run tests: `pytest tests/`
-- Format code: `black .` 
+- Format code: `black .`
 - Lint code: `flake8`
 
 ### Data Collection

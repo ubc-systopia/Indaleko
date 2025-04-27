@@ -24,13 +24,11 @@ import logging
 import os
 import platform
 import sys
-
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, TypeVar
 
 import psutil
-
 from icecream import ic
 from pydantic import (
     AwareDatetime,
@@ -41,7 +39,6 @@ from pydantic import (
     FieldValidationInfo,
     field_validator,
 )
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -61,7 +58,6 @@ from utils.misc.directory_management import (
     indaleko_default_log_dir,
 )
 from utils.misc.file_name_management import generate_file_name  # noqa: E402
-
 
 # pylint: enable=wrong-import-position
 

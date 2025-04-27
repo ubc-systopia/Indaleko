@@ -24,7 +24,6 @@ import os
 import sys
 import uuid
 
-
 # from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -44,7 +43,6 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from data_models import IndalekoObjectDataModel
 from storage.recorders.tokenization import tokenize_filename
 from utils.misc.data_management import encode_binary_data
-
 
 # pylint: enable=wrong-import-position
 

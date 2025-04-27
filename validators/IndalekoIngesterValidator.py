@@ -4,7 +4,6 @@ import json
 import os
 
 import arango
-
 from arango import ArangoClient
 from dbconfig import DBConfig
 

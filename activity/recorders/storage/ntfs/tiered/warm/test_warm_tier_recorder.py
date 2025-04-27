@@ -33,11 +33,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import unittest
-
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from unittest.mock import MagicMock, patch
-
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -392,9 +390,7 @@ class TestNtfsWarmTierRecorder(unittest.TestCase):
         aggregated = self.recorder.aggregate_activities(activities)
 
         # Check results
-        self.assertEqual(
-            len(aggregated), 3
-        )  # 3 groups: modify, high-importance create, low-importance creates
+        self.assertEqual(len(aggregated), 3)  # 3 groups: modify, high-importance create, low-importance creates
 
         # Verify each type
         modify_aggregated = None
@@ -459,9 +455,7 @@ class TestNtfsWarmTierRecorder(unittest.TestCase):
                             "file_name": "Medium.docx",
                             "volume_name": "C:",
                             "is_directory": False,
-                            "timestamp": (
-                                base_time - timedelta(hours=12, minutes=i * 10)
-                            ).isoformat(),
+                            "timestamp": (base_time - timedelta(hours=12, minutes=i * 10)).isoformat(),
                             "importance_score": 0.5,
                         },
                     },
@@ -480,9 +474,7 @@ class TestNtfsWarmTierRecorder(unittest.TestCase):
                             "file_name": f"temp{i}.txt",
                             "volume_name": "C:",
                             "is_directory": False,
-                            "timestamp": (
-                                base_time - timedelta(hours=6, minutes=i * 10)
-                            ).isoformat(),
+                            "timestamp": (base_time - timedelta(hours=6, minutes=i * 10)).isoformat(),
                             "importance_score": 0.2,
                         },
                     },

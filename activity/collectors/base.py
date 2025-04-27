@@ -22,12 +22,10 @@ import datetime
 import os
 import sys
 import uuid
-
 from abc import ABC, abstractmethod
 from typing import Any
 
 from icecream import ic
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -45,7 +43,6 @@ from utils.misc.directory_management import (
     indaleko_default_log_dir,
 )
 from utils.misc.file_name_management import indaleko_file_name_prefix
-
 
 # pylint: enable=wrong-import-position
 

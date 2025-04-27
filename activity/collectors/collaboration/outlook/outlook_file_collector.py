@@ -25,14 +25,12 @@ import sys
 import threading
 import time
 import uuid
-
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from flask import Flask, jsonify, request
 from pyngrok import ngrok
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -48,7 +46,6 @@ from activity.collectors.collaboration.data_models.email_file_share import (
     EmailFileShareData,
 )
 from activity.collectors.collaboration.data_models.shared_file import SharedFileData
-
 
 # pylint: enable=wrong-import-position
 

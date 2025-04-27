@@ -12,5 +12,4 @@ from storage.incremental_update.models.resolution_request import (
     ResolutionStatus,
 )
 
-
 __all__ = ["EntityInfo", "EntityType", "ResolutionRequest", "ResolutionStatus"]

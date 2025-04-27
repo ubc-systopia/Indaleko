@@ -30,9 +30,7 @@ import logging
 import os
 import platform
 import sys
-
 from datetime import UTC, datetime, timedelta
-
 
 # Import path setup
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -336,7 +334,6 @@ def main():
                 # Also try importing other dependencies to check they're available
                 import google.auth
                 import requests
-
                 from google.oauth2.credentials import Credentials
                 from google_auth_oauthlib.flow import InstalledAppFlow
                 from googleapiclient.discovery import build

@@ -27,10 +27,8 @@ import json
 import os
 import sys
 import uuid
-
 from datetime import UTC, datetime
 from typing import Any
-
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:

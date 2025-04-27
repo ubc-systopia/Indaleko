@@ -24,7 +24,6 @@ import uuid
 
 from icecream import ic
 
-
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -35,7 +34,6 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from constants import IndalekoConstants
 from data_models.base import IndalekoBaseModel
-
 
 # pylint: enable=wrong-import-position
 

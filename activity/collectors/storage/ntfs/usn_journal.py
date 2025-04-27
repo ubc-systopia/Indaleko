@@ -27,11 +27,9 @@ import logging
 import os
 import struct
 import sys
-
 from ctypes import wintypes
 from datetime import UTC, datetime
 from typing import Any
-
 
 # Constants for USN journal operations (these might not be defined in pywin32)
 FSCTL_QUERY_USN_JOURNAL = 0x000900F4

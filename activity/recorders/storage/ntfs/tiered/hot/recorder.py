@@ -49,10 +49,8 @@ import sys
 import time
 import traceback
 import uuid
-
 from datetime import UTC, datetime, timedelta
 from typing import Any
-
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -79,7 +77,6 @@ from activity.recorders.storage.ntfs.activity_context_integration import (
     NtfsActivityContextIntegration,
 )
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
-
 
 # Import ServiceManager upfront to avoid late binding issues
 

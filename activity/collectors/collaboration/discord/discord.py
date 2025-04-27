@@ -20,13 +20,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-
 from typing import Any
 
 import discord
-
 from icecream import ic
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -37,7 +34,6 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from activity.collectors.collaboration.collaboration_base import CollaborationCollector
-
 
 # from activity.collectors.collaboration.discord.discord_data_model import DiscordDataModel
 # pylint: enable=wrong-import-position

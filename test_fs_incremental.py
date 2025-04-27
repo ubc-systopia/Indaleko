@@ -1,6 +1,5 @@
 import os
 import time
-
 from datetime import UTC, datetime
 
 from activity.collectors.storage.fs_incremental import FsIncrementalCollector

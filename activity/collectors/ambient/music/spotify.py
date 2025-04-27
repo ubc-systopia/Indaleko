@@ -21,15 +21,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import uuid
-
 from datetime import datetime, timedelta
 from typing import Any
 
 import spotipy
-
 from icecream import ic
 from spotipy.oauth2 import SpotifyOAuth
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -38,14 +35,14 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
-# pylint: disable=wrong-import-position
-from Indaleko import Indaleko
 from activity.characteristics import ActivityDataCharacteristics
 from activity.collectors.ambient.base import AmbientCollector
 from activity.collectors.ambient.music.spotify_data_model import SpotifyAmbientData
 from data_models.record import IndalekoRecordDataModel
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 
+# pylint: disable=wrong-import-position
+from Indaleko import Indaleko
 
 # pylint: enable=wrong-import-position
 

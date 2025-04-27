@@ -21,7 +21,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
-
 # from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -34,7 +33,6 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
-
 
 # pylint: enable=wrong-import-position
 

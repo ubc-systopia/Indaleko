@@ -24,7 +24,6 @@ import uuid
 
 from pydantic import Field
 
-
 # from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -36,7 +35,6 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
-
 
 # pylint: enable=wrong-import-position
 

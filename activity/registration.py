@@ -23,11 +23,9 @@ import json
 import os
 import sys
 import uuid
-
 from typing import Any
 
 from icecream import ic
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -36,13 +34,13 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
-# pylint: disable=wrong-import-position
-from Indaleko import Indaleko
 from data_models.activity_data_registration import (
     IndalekoActivityDataRegistrationDataModel,
 )
 from db import IndalekoCollection
 
+# pylint: disable=wrong-import-position
+from Indaleko import Indaleko
 
 # pylint: enable=wrong-import-position
 

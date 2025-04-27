@@ -20,12 +20,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-
 from datetime import UTC, datetime
 
 from icecream import ic
 from pydantic import AwareDatetime, HttpUrl
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -37,7 +35,6 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from activity.collectors.collaboration.data_models.shared_file import SharedFileData
 from activity.data_model.activity import IndalekoActivityDataModel
-
 
 # pylint: enable=wrong-import-position
 

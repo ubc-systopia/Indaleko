@@ -29,10 +29,8 @@ import sys
 import tempfile
 import unittest
 import uuid
-
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
-
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:

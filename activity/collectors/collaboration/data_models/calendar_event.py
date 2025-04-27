@@ -23,11 +23,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-
 from datetime import UTC, datetime
 from enum import Enum
 from uuid import UUID, uuid4
-
 
 # Ensure INDALEKO_ROOT is available
 if os.environ.get("INDALEKO_ROOT") is None:

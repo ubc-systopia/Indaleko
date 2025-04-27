@@ -18,10 +18,8 @@ import os
 import re
 import sys
 import unittest
-
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:

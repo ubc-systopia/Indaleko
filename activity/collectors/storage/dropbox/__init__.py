@@ -24,5 +24,4 @@ from activity.collectors.storage.dropbox.dropbox_collector import (
     DropboxStorageActivityCollector,
 )
 
-
 __all__ = ["DropboxStorageActivityCollector"]

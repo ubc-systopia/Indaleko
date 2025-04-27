@@ -21,7 +21,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
-
 # from icecream import ic
 
 init_path = os.path.dirname(os.path.abspath(__file__))

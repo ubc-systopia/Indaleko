@@ -21,7 +21,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
-
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -33,7 +32,6 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from activity.collectors.ambient.smart_thermostat.ecobee_data_model import (
     EcobeeAmbientDataModel,
 )
-
 
 # pylint: enable=wrong-import-position
 

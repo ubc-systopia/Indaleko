@@ -29,10 +29,8 @@ import os
 import struct
 import sys
 import time
-
 from ctypes import wintypes
 from datetime import UTC, datetime
-
 
 # Make sure we're on Windows
 if not sys.platform.startswith("win"):

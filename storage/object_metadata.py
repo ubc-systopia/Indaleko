@@ -20,9 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import json
 import os
 import sys
-
 from textwrap import dedent
-
 
 # from typing import Any
 
@@ -42,7 +40,6 @@ from data_models.collection_metadata_data_model import (
 from db import IndalekoDBCollections
 from storage.i_object import IndalekoObject
 from utils import IndalekoSingleton
-
 
 # pylint: enable=wrong-import-position
 

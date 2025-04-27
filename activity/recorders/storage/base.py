@@ -27,11 +27,9 @@ import os
 import socket
 import sys
 import uuid
-
 from datetime import UTC, datetime, timedelta
 from textwrap import dedent
 from typing import Any
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))

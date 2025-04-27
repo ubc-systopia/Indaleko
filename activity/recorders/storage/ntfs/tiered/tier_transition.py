@@ -35,10 +35,8 @@ import logging
 import os
 import sys
 import time
-
 from datetime import UTC, datetime, timedelta
 from typing import Any
-
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:

@@ -24,7 +24,6 @@ import sys
 
 from pydantic import Field
 
-
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -34,7 +33,6 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from activity.collectors.ambient.music.music_data_model import AmbientMusicData
-
 
 # pylint: enable=wrong-import-position
 

@@ -4,10 +4,8 @@ import platform
 import struct
 import sys
 import uuid
-
 from ctypes import wintypes
 from datetime import datetime
-
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -25,7 +23,6 @@ from activity.collectors.storage.data_models.storage_activity_data_model import 
     StorageProviderType,
 )
 from db.service_manager import IndalekoServiceManager
-
 
 # pylint: enable=wrong-import-position
 

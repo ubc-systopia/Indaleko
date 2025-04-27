@@ -60,7 +60,6 @@ import datetime
 import os
 import sys
 
-
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -82,7 +81,6 @@ import utils.misc.data_management
 import utils.misc.directory_management
 import utils.misc.file_name_management
 import utils.misc.timestamp_management
-
 from db.db_collections import IndalekoDBCollections
 from db.db_config import IndalekoDBConfig
 from utils.i_logging import IndalekoLogging
@@ -91,7 +89,6 @@ from utils.misc.directory_management import (
     indaleko_default_data_dir,
     indaleko_default_log_dir,
 )
-
 
 # pylint: enable=wrong-import-position
 

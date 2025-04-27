@@ -9,11 +9,9 @@ import json
 import os
 import shutil
 import sys
-
 from datetime import datetime
 
 from icecream import ic
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))

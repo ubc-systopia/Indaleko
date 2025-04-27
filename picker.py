@@ -14,7 +14,6 @@ import time
 
 from utils.db.db_file_picker import IndalekoFilePicker
 
-
 # Attempt to import unstructured processor if available
 try:
     from semantic.collectors.unstructured.IndalekoUnstructured_Main import (

@@ -6,7 +6,6 @@ in the Fire Circle protocol.
 """
 
 import uuid
-
 from typing import Any, Dict, List, Optional, Tuple, Type
 
 from ..adapters.anthropic import AnthropicAdapter

@@ -21,11 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-
 from datetime import UTC, datetime
 
 from pydantic import AwareDatetime, Field, field_validator
-
 
 # from icecream import ic
 
@@ -38,7 +36,6 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from data_models.location_data_model import BaseLocationDataModel
-
 
 # pylint: enable=wrong-import-position
 

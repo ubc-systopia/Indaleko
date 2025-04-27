@@ -5,13 +5,10 @@ import ipaddress
 import os
 import sys
 import uuid
-
 from typing import Any
 
 import requests
-
 from icecream import ic
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -30,7 +27,6 @@ from activity.collectors.location.data_models.base_location_data_model import (
 from activity.collectors.location.data_models.ip_location_data_model import (
     IPLocationDataModel,
 )
-
 
 # pylint: enable=wrong-import-position
 

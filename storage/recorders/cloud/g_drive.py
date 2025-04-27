@@ -23,11 +23,9 @@ import json
 import os
 import sys
 import uuid
-
 from pathlib import Path
 
 from icecream import ic
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -51,7 +49,6 @@ from utils.misc.file_name_management import (
     extract_keys_from_file_name,
     find_candidate_files,
 )
-
 
 # pylint: enable=wrong-import-position
 

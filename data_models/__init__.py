@@ -3,7 +3,6 @@
 import os
 import sys
 
-
 # from icecream import ic
 
 init_path = os.path.dirname(os.path.abspath(__file__))
@@ -39,7 +38,6 @@ from data_models.source_identifier import (  # noqa: E402
 )
 from data_models.timestamp import IndalekoTimestampDataModel  # noqa: E402
 from data_models.user_identity import IndalekoUserDataModel  # noqa: E402
-
 
 # pylint: enable=wrong-import-position
 

@@ -26,12 +26,10 @@ import os
 import socket
 import sys
 import uuid
-
 from datetime import timedelta
 from pathlib import Path
 from textwrap import dedent
 from typing import Any
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -61,7 +59,6 @@ from activity.collectors.storage.semantic_attributes import (
 from activity.recorders.storage.base import StorageActivityRecorder
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 from db.utils.query_performance import timed_aql_execute
-
 
 # pylint: enable=wrong-import-position
 

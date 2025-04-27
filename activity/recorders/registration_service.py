@@ -22,9 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import json
 import os
 import sys
-
 from typing import Any
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -33,15 +31,15 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
-# pylint: disable=wrong-import-position
-from Indaleko import Indaleko
 from activity.registration import IndalekoActivityDataRegistration
 from data_models.activity_data_registration import (
     IndalekoActivityDataRegistrationDataModel,
 )
 from db import IndalekoCollection, IndalekoServiceManager
-from utils.registration_service import IndalekoRegistrationService
 
+# pylint: disable=wrong-import-position
+from Indaleko import Indaleko
+from utils.registration_service import IndalekoRegistrationService
 
 # pylint: enable=wrong-import-position
 

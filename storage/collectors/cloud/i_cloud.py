@@ -29,15 +29,12 @@ import logging
 import os
 import sys
 import uuid
-
 from datetime import UTC, datetime
 from getpass import getpass
 
 import keyring
-
 from icecream import ic
 from pyicloud import PyiCloudService
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -52,7 +49,6 @@ from storage.collectors.base import BaseStorageCollector
 from storage.collectors.cloud.cloud_base import BaseCloudStorageCollector
 from storage.collectors.data_model import IndalekoStorageCollectorDataModel
 from utils.misc.file_name_management import generate_file_name
-
 
 # pylint: enable=wrong-import-position
 

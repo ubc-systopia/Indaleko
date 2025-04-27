@@ -14,6 +14,5 @@ from .anthropic import AnthropicAdapter
 from .base import FireCircleMessage, FireCircleRequest, FireCircleResponse, ModelAdapter
 from .openai import OpenAIAdapter
 
-
 # Dictionary of available adapter classes, keyed by provider name
 AVAILABLE_ADAPTERS = {"openai": OpenAIAdapter, "anthropic": AnthropicAdapter}

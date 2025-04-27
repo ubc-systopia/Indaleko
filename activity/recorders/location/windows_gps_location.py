@@ -21,12 +21,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import uuid
-
 from datetime import UTC, datetime
 from pathlib import Path
 
 from icecream import ic
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -53,7 +51,6 @@ from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from db.db_config import IndalekoDBConfig
 from utils.misc.data_management import decode_binary_data
-
 
 # pylint: enable=wrong-import-position
 

@@ -26,10 +26,8 @@ import os
 import socket
 import sys
 import uuid
-
 from datetime import timedelta
 from typing import Any
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -58,7 +56,6 @@ from activity.collectors.storage.semantic_attributes import (
 )
 from activity.recorders.storage.base import StorageActivityRecorder
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
-
 
 # pylint: enable=wrong-import-position
 

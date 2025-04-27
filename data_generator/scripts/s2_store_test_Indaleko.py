@@ -1,6 +1,5 @@
 import json
 import uuid
-
 from datetime import datetime
 
 from icecream import ic
@@ -12,7 +11,6 @@ from data_models.record import IndalekoRecordDataModel
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from db.collection import IndalekoCollection
 from db.i_collections import IndalekoCollections
-
 
 """
 MetadataStorer for moving the metadata dataset onto the Indaleko DB

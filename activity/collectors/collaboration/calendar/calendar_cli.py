@@ -29,7 +29,6 @@ import logging
 import os
 import sys
 
-
 # Ensure INDALEKO_ROOT is available
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))

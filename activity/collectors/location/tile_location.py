@@ -6,13 +6,11 @@ import datetime
 import os
 import sys
 import uuid
-
 from typing import Any
 
 from aiohttp import ClientSession
 from icecream import ic
 from pytile import async_login
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -27,7 +25,6 @@ from activity.collectors.location import LocationCollector
 from activity.collectors.location.data_models.tile_location_data_model import (
     TileLocationDataModel,
 )
-
 
 # pylint: enable=wrong-import-position
 

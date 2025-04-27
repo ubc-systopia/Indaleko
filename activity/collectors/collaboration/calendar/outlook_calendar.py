@@ -26,12 +26,10 @@ import json
 import os
 import sys
 import uuid
-
 from typing import Any
 
 import msal
 import requests
-
 
 # Ensure INDALEKO_ROOT is available
 if os.environ.get("INDALEKO_ROOT") is None:

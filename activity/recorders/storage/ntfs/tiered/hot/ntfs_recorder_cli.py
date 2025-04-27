@@ -43,11 +43,9 @@ import logging
 import os
 import sys
 import time
-
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -60,7 +58,6 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from activity.recorders.storage.ntfs.tiered.hot.recorder import NtfsHotTierRecorder
 from constants.values import IndalekoConstants
-
 
 # Create default DB config path using pathlib.Path
 DEFAULT_DB_CONFIG_PATH = Path(IndalekoConstants.default_config_dir) / IndalekoConstants.default_db_config_file_name

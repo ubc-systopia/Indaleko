@@ -6,7 +6,6 @@ builds and inserts location activity documents into its ArangoDB collection.
 """
 
 import uuid
-
 from datetime import datetime
 from typing import Any
 

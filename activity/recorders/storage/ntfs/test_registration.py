@@ -28,7 +28,6 @@ import os
 import sys
 import uuid
 
-
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,

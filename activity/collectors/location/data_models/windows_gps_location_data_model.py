@@ -21,11 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-
 from datetime import UTC, datetime
 
 from pydantic import AwareDatetime, Field, field_validator
-
 
 # from icecream import ic
 
@@ -41,7 +39,6 @@ from activity.collectors.location.data_models.windows_gps_satellite_data import 
     WindowsGPSLocationSatelliteDataModel,
 )
 from data_models.location_data_model import BaseLocationDataModel
-
 
 # pylint: enable=wrong-import-position
 

@@ -23,12 +23,10 @@ import json
 import os
 import sys
 import uuid
-
 from datetime import datetime, timedelta
 from typing import Any
 
 from icecream import ic
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -37,8 +35,6 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
-# pylint: disable=wrong-import-position
-from Indaleko import Indaleko
 from activity.collectors.ambient.music.spotify import SpotifyMusicCollector
 from activity.collectors.ambient.music.spotify_data_model import SpotifyAmbientData
 from activity.collectors.base import CollectorBase
@@ -55,6 +51,9 @@ from data_models.record import IndalekoRecordDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from db import IndalekoCollection, IndalekoDBConfig
+
+# pylint: disable=wrong-import-position
+from Indaleko import Indaleko
 
 
 class SpotifyRecorder(RecorderBase):

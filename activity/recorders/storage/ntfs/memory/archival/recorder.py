@@ -43,11 +43,9 @@ import socket
 import sys
 import time
 import uuid
-
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -66,7 +64,6 @@ from activity.collectors.storage.data_models.storage_activity_data_model import 
 )
 from activity.collectors.storage.semantic_attributes import StorageActivityAttributes
 from activity.recorders.storage.base import StorageActivityRecorder
-
 
 # Import ServiceManager upfront to avoid late binding issues
 

@@ -5,6 +5,7 @@ from typing import Any
 # Original import has interface mismatch - needs to be fixed
 # from query.query_processing.query_translator.translator_base import TranslatorBase
 
+
 class AQLQueryConverter:
     """
     Translator for converting parsed queries to AQL (ArangoDB Query Language).

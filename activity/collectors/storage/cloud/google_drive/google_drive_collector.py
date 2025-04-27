@@ -29,10 +29,8 @@ import logging
 import os
 import sys
 import uuid
-
 from datetime import UTC, datetime, timedelta
 from typing import Any
-
 
 # Import path setup
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -46,7 +44,6 @@ if os.environ.get("INDALEKO_ROOT") is None:
 try:
     import google.auth
     import google.auth.transport.requests
-
     from google.oauth2.credentials import Credentials
     from google_auth_oauthlib.flow import InstalledAppFlow
     from googleapiclient.discovery import build
@@ -70,7 +67,6 @@ from activity.collectors.storage.cloud.google_drive.data_models.google_drive_act
 )
 from activity.data_model.activity_classification import IndalekoActivityClassification
 from utils.misc.directory_management import indaleko_default_config_dir
-
 
 # pylint: enable=wrong-import-position
 

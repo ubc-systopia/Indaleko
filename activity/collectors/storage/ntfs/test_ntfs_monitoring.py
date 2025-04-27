@@ -40,9 +40,7 @@ import sys
 import threading
 import time
 import traceback
-
 from datetime import datetime
-
 
 # Ensure we can import from the main Indaleko package
 if os.environ.get("INDALEKO_ROOT") is None:

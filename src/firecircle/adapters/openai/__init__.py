@@ -6,13 +6,10 @@ with OpenAI's API, allowing integration with GPT models and other OpenAI service
 """
 
 import json
-
 from typing import Any, Dict, List, Optional
-
 
 try:
     import openai
-
     from openai import OpenAI
 
     HAS_OPENAI = True

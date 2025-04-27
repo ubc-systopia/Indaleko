@@ -26,10 +26,8 @@ import os
 import subprocess
 import sys
 import uuid
-
 from pathlib import Path
 from textwrap import dedent
-
 
 # from icecream import ic
 
@@ -51,7 +49,6 @@ from storage.i_object import IndalekoObject
 from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from storage.recorders.local.local_base import BaseLocalStorageRecorder
 from utils.misc.data_management import encode_binary_data
-
 
 # pylint: enable=wrong-import-position
 

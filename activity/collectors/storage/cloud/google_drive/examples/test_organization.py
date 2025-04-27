@@ -8,7 +8,6 @@ This script tests the new organizational structure for Google Drive collectors.
 import os
 import sys
 
-
 # Import path setup
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))

@@ -28,13 +28,10 @@ import stat
 import sys
 import tempfile
 import uuid
-
 from pathlib import Path
 
 import jsonlines
-
 from icecream import ic
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -57,7 +54,6 @@ from utils.misc.file_name_management import (
     generate_file_name,
     indaleko_file_name_prefix,
 )
-
 
 # pylint: enable=wrong-import-position
 

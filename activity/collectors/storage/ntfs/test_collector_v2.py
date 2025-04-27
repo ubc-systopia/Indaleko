@@ -24,12 +24,10 @@ import os
 import sys
 import time
 import uuid
-
 from datetime import datetime
 from pathlib import Path
 
 from icecream import ic
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -47,7 +45,6 @@ from platforms.windows.machine_config import IndalekoWindowsMachineConfig
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.runner import IndalekoCLIRunner
-
 
 # pylint: enable=wrong-import-position
 

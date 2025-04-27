@@ -8,11 +8,9 @@ builds and inserts location activity documents into its ArangoDB collection.
 import os
 import sys
 import uuid
-
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -36,7 +34,6 @@ from data_models.record import IndalekoRecordDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from utils.misc.data_management import decode_binary_data
-
 
 # pylint: enable=wrong-import-position
 

@@ -23,12 +23,10 @@ import logging
 import os
 import sys
 import uuid
-
 from datetime import datetime, timedelta
 from typing import Any
 
 import requests
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -44,7 +42,6 @@ from activity.collectors.collaboration.data_models.shared_file import SharedFile
 from activity.collectors.collaboration.discord.data_models.file_share_data_model import (
     DiscordDataModel,
 )
-
 
 # pylint: enable=wrong-import-position
 

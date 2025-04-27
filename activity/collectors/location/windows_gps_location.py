@@ -5,13 +5,10 @@ import datetime
 import os
 import sys
 import uuid
-
 from typing import Any
 
 import winsdk.windows.devices.geolocation as wdg
-
 from icecream import ic
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -29,7 +26,6 @@ from activity.collectors.location.location_base import LocationCollector
 from data_models.location_data_model import LocationDataModel
 from data_models.record import IndalekoRecordDataModel
 from utils.misc.data_management import encode_binary_data
-
 
 # pylint: enable=wrong-import-position
 

@@ -22,11 +22,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-
 from typing import Any
 
 from icecream import ic
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -42,7 +40,6 @@ from db.collection import IndalekoCollection
 from db.db_collections import IndalekoDBCollections
 from db.service_manager import IndalekoServiceManager
 from utils.registration_service import IndalekoRegistrationService
-
 
 # pylint: enable=wrong-import-position
 

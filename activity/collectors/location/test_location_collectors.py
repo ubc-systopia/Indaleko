@@ -7,9 +7,7 @@ import datetime
 import os
 import sys
 import unittest
-
 from unittest.mock import MagicMock, patch
-
 
 # Setup project root path
 if os.environ.get("INDALEKO_ROOT") is None:

@@ -26,9 +26,7 @@ import json
 import os
 import sys
 import uuid
-
 from typing import Any
-
 
 try:
     from google.auth.transport.requests import Request

@@ -22,11 +22,9 @@ import argparse
 import logging
 import os
 import sys
-
 from pathlib import Path
 
 from icecream import ic
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -35,12 +33,12 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
-# pylint: disable=wrong-import-position
-from Indaleko import Indaleko
 from activity.collectors.discover import IndalekoActivityDataProviderCollectorDiscovery
 from activity.collectors.known_semantic_attributes import KnownSemanticAttributes
-from utils import IndalekoLogging
 
+# pylint: disable=wrong-import-position
+from Indaleko import Indaleko
+from utils import IndalekoLogging
 
 # pylint: enable=wrong-import-position
 

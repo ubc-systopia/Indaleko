@@ -18,7 +18,6 @@ from storage.incremental_update.models import (
 )
 from utils.i_logging import get_logger
 
-
 logger = get_logger(__name__)
 
 

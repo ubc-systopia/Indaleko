@@ -20,13 +20,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-
 from datetime import UTC, datetime
 from pathlib import Path
 from textwrap import dedent
 
 from pydantic import AwareDatetime, Field, field_validator
-
 
 # > from icecream import ic
 
@@ -41,7 +39,6 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from data_models.base import IndalekoBaseModel
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from utils.misc.data_management import encode_binary_data
-
 
 # pylint: enable=wrong-import-position
 

@@ -22,5 +22,4 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from activity.collectors.storage.ntfs.ntfs_collector import NtfsStorageActivityCollector
 
-
 __all__ = ["NtfsStorageActivityCollector"]
