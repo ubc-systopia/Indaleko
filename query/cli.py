@@ -128,7 +128,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         self.query_executor = AQLExecutor()
         self.metadata_analyzer = MetadataAnalyzer()
         self.prompt = "Indaleko Search> "
-        
+
         # Initialize facet generator with CLI args
         conversational = hasattr(self.args, 'conversational') and self.args.conversational
         self.facet_generator = FacetGenerator(
@@ -137,14 +137,14 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             min_value_count=2,
             conversational=conversational
         )
-        
+
         # Initialize query refiner for interactive facet refinement
         self.query_refiner = QueryRefiner()
-        
+
         # Initialize query plan visualizer
         colorize = not (hasattr(self.args, 'no_color') and self.args.no_color)
         self.plan_visualizer = PlanVisualizer(colorize=colorize)
-        
+
         self.result_ranker = ResultRanker()
         self.schema = self.build_schema_table()
 
@@ -160,10 +160,10 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             Note the default implementation here does not add any additional parameters.
             """
             parser = argparse.ArgumentParser(add_help=False)
-            
+
             # Add global options
             parser.add_argument(
-                "--explain", 
+                "--explain",
                 action="store_true",
                 help="Explain query execution plans instead of executing queries"
             )
@@ -173,17 +173,17 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 help="Show query execution plan before executing the query"
             )
             parser.add_argument(
-                "--perf", 
+                "--perf",
                 action="store_true",
                 help="Collect and display performance metrics for query execution"
             )
             parser.add_argument(
-                "--all-plans", 
+                "--all-plans",
                 action="store_true",
                 help="Show all possible execution plans when using --explain or --show-plan"
             )
             parser.add_argument(
-                "--max-plans", 
+                "--max-plans",
                 type=int,
                 default=5,
                 help="Maximum number of plans to show when using --all-plans (default: 5)"
@@ -230,26 +230,26 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 help="Disable colorized output for query plans and other displays"
             )
             parser.add_argument(
-                "--enhanced-nl", 
+                "--enhanced-nl",
                 action="store_true",
                 help="Use enhanced natural language understanding for queries"
             )
             parser.add_argument(
-                "--context-aware", 
+                "--context-aware",
                 action="store_true",
                 help="Enable context-aware queries using query history"
             )
             parser.add_argument(
-                "--archivist", 
+                "--archivist",
                 action="store_true",
                 help="Enable the Archivist memory system for maintaining context across sessions"
             )
             parser.add_argument(
-                "--optimizer", 
+                "--optimizer",
                 action="store_true",
                 help="Enable the database optimizer for analyzing and improving query performance"
             )
-            
+
             # Add command subparsers
             subparsers = parser.add_subparsers(
                 dest="command",
@@ -296,7 +296,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             with open(self.args.batch_input_file, "rt") as batch_file:
                 batch_queries = batch_file.readlines()
             batch = True
-            
+
         # Initialize Archivist system
         self.archivist_components = None
         if HAS_ARCHIVIST and hasattr(self.args, 'archivist') and self.args.archivist:
@@ -317,13 +317,13 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 
             if user_query.lower() in ["exit", "quit", "bye", "leave"]:
                 return
-                
+
             # Special processing for interactive mode
             if user_query == "!status" or user_query == "!help":
                 # Reuse the last query if this is just a status check or help request
                 if hasattr(self, 'current_refined_query'):
                     user_query = self.current_refined_query
-                    
+
             # Check for Archivist commands
             if self.archivist_components and user_query.startswith("/"):
                 # Try to handle commands with the appropriate component
@@ -331,7 +331,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                     memory_integration = self.archivist_components.get("memory_integration")
                     if memory_integration and memory_integration.handle_command(user_query):
                         continue
-                        
+
                 elif user_query.startswith(("/optimize", "/analyze", "/index", "/view", "/query", "/impact")):
                     optimizer_integration = self.archivist_components.get("optimizer_integration")
                     if optimizer_integration and optimizer_integration.handle_command(user_query):
@@ -344,36 +344,36 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             # Check if we should use enhanced NL parsing
             use_enhanced = hasattr(self.args, 'enhanced_nl') and self.args.enhanced_nl
             use_context = hasattr(self.args, 'context_aware') and self.args.context_aware
-            
+
             if use_enhanced:
                 # Use enhanced natural language parser
                 ic(f"Enhanced parsing of query: {user_query}")
-                
+
                 # Get dynamic facets for context if available
                 facet_context = self.facet_generator.last_facets if hasattr(self.facet_generator, 'last_facets') else None
-                
+
                 # Parse with enhanced understanding
                 enhanced_understanding = self.nl_parser.parse_enhanced(
                     query=user_query,
                     facet_context=facet_context,
                     include_history=use_context
                 )
-                
+
                 # Create input for enhanced translator
                 query_data = TranslatorInput(
                     Query=enhanced_understanding,
                     Connector=self.llm_connector,
                 )
-                
+
                 # Translate using enhanced translator
                 translated_query = self.query_translator.translate_enhanced(
                     enhanced_understanding,
                     query_data
                 )
-                
+
                 # Store for history and facet context
                 self.last_query_understanding = enhanced_understanding
-                
+
             else:
                 # Standard parsing flow
                 ic(f"Parsing query: {user_query}")
@@ -434,21 +434,22 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 
                 # Standard translation
                 translated_query = self.query_translator.translate(query_data)
-            print(translated_query.model_dump_json(indent=2))
+            print(f"translated query: {translated_query.model_dump_json(indent=2)}")
 
             # Always get the query execution plan first
             explain_results = self.query_executor.explain_query(
-                translated_query.aql_query, 
+                translated_query.aql_query,
                 self.db_config,
+                bind_vars=getattr(translated_query, 'bind_vars'),
                 all_plans=self.args.all_plans if hasattr(self.args, 'all_plans') else False,
                 max_plans=self.args.max_plans if hasattr(self.args, 'max_plans') else 5
             )
-            
+
             # Execute the query or only display the execution plan
             if hasattr(self.args, 'explain') and self.args.explain:
                 # Display the execution plan
                 self.display_execution_plan(explain_results, translated_query.aql_query)
-                
+
                 # In EXPLAIN mode, we don't process results further
                 raw_results = explain_results
                 analyzed_results = explain_results
@@ -459,15 +460,16 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 collect_perf = hasattr(self.args, 'perf') and self.args.perf
                 deduplicate = hasattr(self.args, 'deduplicate') and self.args.deduplicate
                 similarity_threshold = self.args.similarity_threshold if hasattr(self.args, 'similarity_threshold') else 0.85
-                
+
                 raw_results = self.query_executor.execute(
-                    translated_query.aql_query, 
-                    self.db_config, 
+                    translated_query.aql_query,
+                    self.db_config,
+                    bind_vars=getattr(translated_query, 'bind_vars'),
                     collect_performance=collect_perf,
                     deduplicate=deduplicate,
                     similarity_threshold=similarity_threshold
                 )
-                
+
                 # If requested, display the execution plan
                 if hasattr(self.args, 'show_plan') and self.args.show_plan:
                     self.display_execution_plan(explain_results, translated_query.aql_query)
@@ -476,11 +478,11 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 if isinstance(raw_results, FormattedResults):
                     # For deduplicated results, we already have analyzed data
                     analyzed_results = raw_results
-                    
+
                     # Extract the primary results for facet generation
                     primary_results = [group.primary for group in raw_results.result_groups]
                     facets = self.facet_generator.generate(primary_results)
-                    
+
                     # No need for further ranking since deduplication handles this
                     ranked_results = raw_results
                 else:
@@ -491,8 +493,28 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 
             # Display results to user
             self.display_results(ranked_results, facets)
+            ic(facets)
 
-            # Update query history
+            # Prepare query history entry, capping result sizes to avoid huge payloads
+            MAX_HISTORY_RESULTS = 10
+            # RawResults may be a list or FormattedResults; truncate to primaries if needed
+            if isinstance(raw_results, FormattedResults):
+                history_raw = [grp.primary for grp in raw_results.result_groups[:MAX_HISTORY_RESULTS]]
+            else:
+                history_raw = raw_results[:MAX_HISTORY_RESULTS]
+            # AnalyzedResults is a list of dicts or None; truncate list
+            if isinstance(analyzed_results, list):
+                history_analyzed = analyzed_results[:MAX_HISTORY_RESULTS]
+            else:
+                history_analyzed = analyzed_results
+            # RankedResults should be a list of dicts; truncate or extract primaries
+            if isinstance(ranked_results, FormattedResults):
+                history_ranked = [grp.primary for grp in ranked_results.result_groups[:MAX_HISTORY_RESULTS]]
+            elif isinstance(ranked_results, list):
+                history_ranked = ranked_results[:MAX_HISTORY_RESULTS]
+            else:
+                history_ranked = ranked_results
+            # Build history record
             end_time = datetime.now(timezone.utc)
             time_diference = end_time - start_time
             query_history = QueryHistoryData(
@@ -502,10 +524,10 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 LLMQuery=structured_query,
                 TranslatedOutput=translated_query,
                 ExecutionPlan=explain_results,
-                RawResults=raw_results,
-                AnalyzedResults=analyzed_results,
+                RawResults=history_raw,
+                AnalyzedResults=history_analyzed,
                 Facets=facets,
-                RankedResults=ranked_results,
+                RankedResults=history_ranked,
                 StartTimestamp=start_time,
                 EndTimestamp=end_time,
                 ElapsedTime=time_diference.total_seconds(),
@@ -579,7 +601,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
     def get_query(self) -> str:
         """Get a query from the user."""
         query = input(self.prompt).strip()
-        
+
         # Special commands for interactive refinement
         if query.startswith("!refine "):
             if hasattr(self, 'last_facet_options') and self.last_facet_options:
@@ -591,18 +613,18 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                         # Apply the refinement
                         if hasattr(self, 'original_query'):
                             refined_query, _ = self.query_refiner.apply_refinement(
-                                option["facet"], 
+                                option["facet"],
                                 option["value"]
                             )
                             print(f"Refined query: {refined_query}")
                             return refined_query
                 except Exception as e:
                     print(f"Error applying refinement: {e}")
-            
+
             # If we couldn't apply refinement, return the original query
             if hasattr(self, 'current_refined_query'):
                 return self.current_refined_query
-                
+
         # Special command to clear refinements
         if query == "!clear":
             if hasattr(self, 'original_query') and self.query_refiner.current_state:
@@ -610,14 +632,14 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 print(f"Cleared all refinements. Back to: {original}")
                 self.current_refined_query = original
                 return original
-                
+
         # Special command to show active refinements
         if query == "!status":
             if self.query_refiner.current_state:
                 print(self.query_refiner.format_active_refinements())
                 if hasattr(self, 'current_refined_query'):
                     return "!status"  # Special marker to reuse last query
-                    
+
         # Special command to remove a refinement
         if query.startswith("!remove "):
             if self.query_refiner.current_state:
@@ -626,7 +648,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                     refinement = self.query_refiner.get_active_refinement_by_index(index)
                     if refinement:
                         refined_query, _ = self.query_refiner.remove_refinement(
-                            refinement.facet_name, 
+                            refinement.facet_name,
                             refinement.value
                         )
                         print(f"Removed refinement: {refinement.facet_name}: {refinement.value}")
@@ -635,22 +657,22 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                         return refined_query
                 except Exception as e:
                     print(f"Error removing refinement: {e}")
-                    
+
         # Special command to show help for interactive mode
         if query == "!help":
             self._print_interactive_help()
             if hasattr(self, 'current_refined_query'):
                 return "!help"  # Special marker to reuse last query
-        
+
         # Store the original query for refinement
         if not query.startswith("!"):
             self.original_query = query
             self.current_refined_query = query
             # Initialize refinement state with this query
             self.query_refiner.initialize_state(query)
-            
+
         return query
-        
+
     def _print_interactive_help(self):
         """Print help information for interactive refinement mode."""
         print("\n=== Interactive Refinement Help ===")
@@ -666,8 +688,8 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         print("==================================\n")
 
     def display_results(
-        self, 
-        results: Union[list[dict[str, Any]], FormattedResults], 
+        self,
+        results: Union[list[dict[str, Any]], FormattedResults],
         facets: Union[list[str], DynamicFacets]
     ) -> None:
         """
@@ -692,7 +714,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 include_summary=True
             )
             print(formatted_display)
-            
+
             # Display facets after results
             self._display_facets(facets)
             return
@@ -728,11 +750,11 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 
         # Display facets after results
         self._display_facets(facets)
-        
+
     def _display_facets(self, facets: Union[list[str], DynamicFacets]) -> None:
         """
         Display facets to the user.
-        
+
         Args:
             facets: Either a list of string facets or a DynamicFacets object
         """
@@ -742,26 +764,26 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             use_dynamic = hasattr(self.args, 'dynamic_facets') and self.args.dynamic_facets
             conversational = hasattr(self.args, 'conversational') and self.args.conversational
             interactive = hasattr(self.args, 'interactive') and self.args.interactive
-            
+
             # Generate facet options for interactive mode
             if interactive:
                 self.last_facet_options = self.query_refiner.get_facet_options(facets)
-            
+
             # Show active refinements if there are any
             if interactive and self.query_refiner.current_state and self.query_refiner.current_state.active_refinements:
                 print("\n" + self.query_refiner.format_active_refinements())
-            
+
             if use_dynamic or interactive:
                 # Display enhanced facets
                 print("\n=== Dynamic Facet Explorer ===")
-                
+
                 # Display statistics
                 if facets.facet_statistics:
                     print("\nResult Statistics:")
                     for key, value in sorted(facets.facet_statistics.items()):
                         # Format the key for display
                         display_key = key.replace('_', ' ').capitalize()
-                        
+
                         # Format values appropriately
                         if isinstance(value, int) and key.endswith('size'):
                             # Format file sizes
@@ -778,18 +800,18 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                             display_value = f"{value * 100:.1f}%"
                         else:
                             display_value = str(value)
-                            
+
                         print(f"- {display_key}: {display_value}")
-                
+
                 # Display facets with interactive options if enabled
                 option_count = 1
                 for facet in facets.facets:
                     print(f"\n{facet.name}:")
-                    
+
                     # Print facet metadata
                     coverage_percent = facet.coverage * 100
                     print(f"Coverage: {coverage_percent:.1f}% of results")
-                    
+
                     # Print facet values
                     for i, value in enumerate(facet.values[:5], 1):
                         if interactive:
@@ -800,23 +822,23 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                             # Show regular format for non-interactive mode
                             print(f"  {i}. {value.value} ({value.count} results)")
                             print(f"     Refine with: {value.query_refinement}")
-                        
+
                     # If there are more values, indicate this
                     if len(facet.values) > 5:
                         remaining = len(facet.values) - 5
                         print(f"  ... and {remaining} more values")
-                
+
                 # Display conversational hints if enabled
                 if conversational and facets.conversational_hints:
                     print("\nSuggestions:")
                     for hint in facets.conversational_hints:
                         print(f"- {hint}")
-                
+
                 # Display interactive mode help if enabled
                 if interactive:
                     print("\nTo refine results, type: !refine <number>")
                     print("For more commands: !help")
-                
+
                 print("\n" + "=" * 30)
             else:
                 # Just display suggestions in simple format
@@ -824,17 +846,17 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                     print("\nSuggested refinements:")
                     for suggestion in facets.suggestions:
                         print(f"- {suggestion}")
-        
+
         # Handle legacy string facets
         elif facets:
             print("\nSuggested refinements:")
             for facet in facets:
                 print(f"- {facet}")
-                
+
     def display_execution_plan(self, plan_data: dict, query: str) -> None:
         """
         Displays the query execution plan in a formatted way.
-        
+
         Args:
             plan_data (Dict): The execution plan from ArangoDB
             query (str): The original AQL query
@@ -842,13 +864,13 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         # Add the query to the plan data if not present
         if not "query" in plan_data:
             plan_data["query"] = query
-            
+
         # Use our enhanced plan visualizer
         verbose = hasattr(self.args, 'verbose') and self.args.verbose
-        
+
         # Parse the plan and visualize it as text
         visualization = self.plan_visualizer.visualize_text(plan_data, verbose=verbose)
-        
+
         # Print the visualization
         print("\n=== QUERY EXECUTION PLAN ===\n")
         print(visualization)
@@ -857,14 +879,14 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
     def continue_session(self) -> bool:
         """Check if the user wants to continue the session."""
         continue_session = input("Do you want to continue? [Y/N] ").strip().lower() in ["y", "yes"]
-        
+
         # If ending the session and Archivist is enabled, update memory
         if not continue_session and self.archivist_components:
             memory_integration = self.archivist_components.get("memory_integration")
             if memory_integration:
                 memory_integration.update_from_session(self.query_history)
                 print("Archivist memory updated with session knowledge.")
-            
+
         return continue_session
 
     def build_schema_table(self):
@@ -883,7 +905,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 def main():
     """A CLI based query tool for Indaleko."""
     ic("Starting Indaleko Query CLI")
-    
+
     print("\nIndaleko Query CLI")
     print("=================")
     print("Type 'exit' or 'quit' to exit the program.")
@@ -901,7 +923,7 @@ def main():
     print("\n- Enable the database optimizer to improve query performance:")
     print("  Example: python -m query.cli --optimizer")
     print("  Use /optimize to see available commands for the database optimizer.\n")
-    
+
     IndalekoQueryCLI().run()
     print("Thank you for using Indaleko Query CLI")
     print("Have a lovely day!")

@@ -41,9 +41,10 @@ from data_models.base import IndalekoBaseModel  # noqa: E402
 from data_models.record import IndalekoRecordDataModel  # noqa: E402
 from query.query_processing.data_models.parser_data import ParserResults  # noqa: E402
 from query.query_processing.data_models.query_input import StructuredQuery  # noqa: E402
-from query.query_processing.data_models.translator_response import (
-    TranslatorOutput,
+from query.query_processing.data_models.translator_response import (    # noqa: E402
+    TranslatorOutput,    # noqa: E402
 )  # noqa: E402
+from query.result_analysis.data_models.facet_data_model import DynamicFacets  # noqa: E402
 
 # pylint: enable=wrong-import-position
 
@@ -74,7 +75,7 @@ class QueryHistoryData(BaseModel):
     TranslatedOutput: TranslatorOutput = Field(
         ..., title="TranslatedOutput", description="The translated output from the LLM."
     )
-    
+
     ExecutionPlan: Optional[dict[str, Any]] = Field(
         None, title="ExecutionPlan", description="The execution plan for the query."
     )
@@ -89,8 +90,9 @@ class QueryHistoryData(BaseModel):
         description="The analyzed results of the database query.",
     )
 
-    Facets: Union[list[dict[str, Any]], None] = Field(
-        ..., title="Facets", description="The facets extracted from the query results."
+    # Facets extracted from the query results
+    Facets: DynamicFacets = Field(
+        ..., title="Facets", description="The dynamic facets extracted from the query results."
     )
 
     RankedResults: Union[list[dict[str, Any]], None] = Field(

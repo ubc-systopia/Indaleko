@@ -7,8 +7,9 @@ class ExecutorBase(ABC):
     Abstract base class for query executors.
     """
 
+    @staticmethod
     @abstractmethod
-    def execute(self, query: str, data_connector: Any) -> List[Dict[str, Any]]:
+    def execute(query: str, data_connector: Any, **kwargs) -> List[Dict[str, Any]]:
         """
         Execute the query using the provided data connector.
 

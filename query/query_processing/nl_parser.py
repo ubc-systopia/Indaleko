@@ -79,6 +79,10 @@ class NLParser:
         self.llm_connector = llm_connector
         self.collections_metadata = collections_metadata
         self.collection_data = self.collections_metadata.get_all_collections_metadata()
+        # Memoize a summary of available collections and the response schema for prompts
+        self.collections_summary = ", ".join(self.collection_data.keys())
+        # Precompute JSON schema for category response
+        self.category_response_schema = LLMCollectionCategoryQueryResponse.model_json_schema()
 
     def parse(self, query: str) -> ParserResults:
         """
@@ -223,34 +227,17 @@ class NLParser:
         typical_categories = [category.value for category in LLMCollectionCategoryEnum]
         ic(typical_categories)
 
-        # Create a prompt for the LLM
+        # Create a concise prompt for the LLM
         prompt = dedent(
-            "You are a personal digital archivist collaborating with a human user and a tool called "
-            "Indaleko.  Together your goal is to help the human user find a specific storage object "
-            "(typically a file) that is stored in a storage services.  Indaleko is an index of all this "
-            "human user's storage services, with normalized data.  The human user has submitted a query "
-            "and our third step in our collaborative process is to identify the ArangoDB collections "
-            "that may be useful for evaluating this query against the schema of the collection. "
-            "Indaleko is a unified personal index of storage services, and the collections include "
-            "normalized metadata about storage objects, which are maintained across multiple "
-            "disparate storage services, "
-            "semantic information, which is derived from those storage objects, and activity information, which is "
-            "derived from the user's experiential data, which we call activity data.  The goal is to weave "
-            "our human user's episodic memories with this rich metadata to augment their ability "
-            "to find specific "
-            "storage objects.  The better we do this, the more efficient our user is, which satisfies "
-            "our mutual utility "
-            "functions. "
-            f"Thus, broadly speaking the categories of collections correspond to {typical_categories}, though "
-            "we suspect that more refined categories might be useful.  "
-            f"The current data for the Indaleko ArangoDB collections is: {self.collection_data}\n"
-            f"The current data schema for the response data is: {category_response.model_json_schema()}\n"
-            "Since this is a collaboration between us, we value your feedback on this process, "
-            "ao that we can work together to improve the quality of the results. "
+            "You are a personal digital archivist collaborating with a human user and a tool called Indaleko. "
+            "Identify which of the following collections may be useful for evaluating the query: "
+            f"{self.collections_summary}.\n"
+            "Please return your response as JSON matching this schema:\n"
+            f"{self.category_response_schema}\n"
         )
 
         response = self.llm_connector.answer_question(
-            prompt, query, category_response.model_json_schema()
+            prompt, query, self.category_response_schema
         )
         doc = json.loads(response)
         ic(doc)

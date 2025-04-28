@@ -20,6 +20,7 @@ dependencies = [
     "google_api_python_client==2.165.0",
     "google_auth_oauthlib==1.2.1",
     "icecream==2.1.4",
+    "pyyaml>=6.0",
     "jsonlines==4.0.0",
     "jsonschema==4.23.0",
     "keyring==25.6.0",
@@ -40,22 +41,51 @@ dependencies = [
     "tiktoken==0.7.0",
     "regex==2024.5.15",
     "winsdk==1.0.0b10 ; platform_system == 'Windows'",
+    "win32more==0.5.10 ; platform_system == 'Windows'",
     "pillow>=10.2.0",
     "exifread>=3.0.0",
+    "colorama>=0.4.6",
+    "tqdm>=4.66.0",
+    "python-magic>=0.4.27",
+    "matplotlib>=3.8.0",
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",
+    "pytest>=6.0",
+    "lazy_import>=0.2.2",
+    "ruff>=0.6.9",
 ]
+
 requires-python = ">=3.12"
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [project.optional-dependencies]
 test = ["pytest>=6.0"]
-dev = ["black", "flake8"]
+dev = ["black", "flake8", "pre-commit"]
 windows = ['winsdk==1.0.0b10']
+gui = ["streamlit>=1.38.0", "plotly>=5.22.0", "pydeck>=0.8.0"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
 [tool.black]
-line-length = 88
-target-version = ['py38']
+line-length = 120
+# Target Python 3.12 for grammar support in Black
+target-version = ['py312']
 
 [tool.pylint]
 init-hook = "import sys; sys.path.insert(0, '${workspaceFolder}')"
+
+[tool.ruff]
+# Select specific linting rules to reduce noise
+select = [
+    "E",  # pycodestyle errors
+    "F",  # pyflakes
+    "B",  # flake8-bugbear
+]
+# Ignore overly verbose rules
+ignore = [
+    "E501",  # Line too long
+]
+# Formatting settings
+line-length = 120
