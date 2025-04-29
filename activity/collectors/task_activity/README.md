@@ -75,8 +75,8 @@ updated_task = collector.update_task(
 
 # Store the update activity
 recorder.store_task_activity(
-    updated_task, 
-    "updated", 
+    updated_task,
+    "updated",
     {"status": "not_started"}
 )
 
@@ -88,8 +88,8 @@ completed_task = collector.update_task(
 
 # Store the completion activity
 recorder.store_task_activity(
-    completed_task, 
-    "completed", 
+    completed_task,
+    "completed",
     {"status": "in_progress"}
 )
 
@@ -157,7 +157,7 @@ class TrelloTaskCollector(TaskActivityCollector):
     def __init__(self, api_key, token, **kwargs):
         super().__init__(**kwargs)
         self.client = TrelloClient(api_key=api_key, token=token)
-        
+
     def get_tasks(self, filters=None):
         # Implement Trello-specific logic to fetch cards as tasks
         # ...

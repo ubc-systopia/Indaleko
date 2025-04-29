@@ -16,8 +16,8 @@ empirical support for this modeling:
    URL: https://dl.acm.org/doi/10.1145/265910.265918
 """
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
 
 # Seed for reproducibility
@@ -26,13 +26,17 @@ np.random.seed(42)
 # Generate synthetic data to simulate file sizes
 # Mode 1: Small files (1 KB to 1 MB)
 small_files = np.random.lognormal(
-    mean=10, sigma=0.5, size=10000
+    mean=10,
+    sigma=0.5,
+    size=10000,
 )  # lognormal distribution for small files
 small_files = small_files[small_files < 1e6]  # Limit to files smaller than 1MB
 
 # Mode 2: Large files (100 MB to 10 GB)
 large_files = np.random.lognormal(
-    mean=20, sigma=1, size=1000
+    mean=20,
+    sigma=1,
+    size=1000,
 )  # lognormal distribution for large files
 large_files = large_files[large_files > 1e8]  # Limit to files larger than 100MB
 
@@ -87,9 +91,7 @@ plt.grid(True, which="both", ls="--")
 plt.savefig("cdf_file_sizes.png", dpi=300, bbox_inches="tight")
 
 # Generate synthetic I/O activity (assuming more activity for large files)
-io_activity = np.random.rand(len(file_sizes)) * (
-    file_sizes / np.mean(file_sizes)
-)  # synthetic I/O
+io_activity = np.random.rand(len(file_sizes)) * (file_sizes / np.mean(file_sizes))  # synthetic I/O
 
 plt.figure(figsize=(10, 6))
 plt.scatter(file_sizes_mb, io_activity, alpha=0.5, color="red")

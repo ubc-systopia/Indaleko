@@ -22,49 +22,19 @@ import importlib
 import os
 import platform
 import sys
+from pathlib import Path
 
 if os.environ.get("INDALEKO_ROOT") is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
-        current_path = os.path.dirname(current_path)
-    os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
+
 
 # pylint: disable=wrong-import-position
-from activity.collectors.base import CollectorBase
-from activity.collectors.location.location_base import LocationCollector
-from activity.collectors.location.ip_location import IPLocation
-from activity.collectors.location.tile_location import TileLocation
-from activity.collectors.location.wifi_location import WiFiLocation
 
-if platform.system() == "Windows":
-    WindowsGPSLocation = importlib.import_module(
-        "activity.collectors.location.windows_gps_location"
-    ).WindowsGPSLocation
 # pylint: enable=wrong-import-position
 
 # Define what should be available when importing from this package
-__all__ = [
-    "LocationCollector",
-    "IPLocation",
-    "TileLocation",
-    "WiFiLocation",
-    "WindowsGPSLocation",
-]
-
-if platform.system() == "Windows":
-    __all__.append("WindowsGPSLocation")
-
-
-def activity_providers() -> list[CollectorBase]:
-    """
-    This method retrieves the activity data providers in this module.
-    """
-    providers = [
-        IPLocation,
-        TileLocation,
-        WiFiLocation,
-    ]
-    if platform.system() == "Windows":
-        providers.append(WindowsGPSLocation)
-    return providers
+__all__ = []

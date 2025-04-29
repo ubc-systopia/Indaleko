@@ -25,8 +25,6 @@ import json
 import os
 import sys
 
-from icecream import ic
-
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
@@ -45,7 +43,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # from IndalekoDataModel import IndalekoDataModel
 # from utils.i_logging import IndalekoLogging
 # from utils.singleton import IndalekoSingleton
-from data_models import IndalekoServiceDataModel, IndalekoRecordDataModel
+from data_models import IndalekoRecordDataModel, IndalekoServiceDataModel
 
 # pylint: enable=wrong-import-position
 
@@ -81,32 +79,28 @@ class IndalekoService:
         self.record = kwargs.get("Record", kwargs.get("record", None))
         self.service_type = kwargs.get("service_type", kwargs.get("ServiceType", None))
         self.service_identifier = kwargs.get(
-            "service_identifier", kwargs.get("Identifier", None)
+            "service_identifier",
+            kwargs.get("Identifier", None),
         )
         self.service_name = kwargs.get("service_name", kwargs.get("Name", None))
         self.service_description = kwargs.get(
-            "service_description", kwargs.get("Description", "Unknown Service")
+            "service_description",
+            kwargs.get("Description", "Unknown Service"),
         )
         self.service_version = kwargs.get(
-            "service_version", kwargs.get("Version", "0.1")
+            "service_version",
+            kwargs.get("Version", "0.1"),
         )
         self.creation_date = kwargs.get(
-            "creation_date", datetime.datetime.now(datetime.timezone.utc).isoformat()
+            "creation_date",
+            datetime.datetime.now(datetime.UTC).isoformat(),
         )
         assert self.record is not None, "Record is required for IndalekoService"
-        assert (
-            self.service_type is not None
-        ), f"Type is required for IndalekoService {kwargs}"
+        assert self.service_type is not None, f"Type is required for IndalekoService {kwargs}"
         assert self.service_name is not None, "Name is required for IndalekoService"
-        assert (
-            self.service_version is not None
-        ), "Version is required for IndalekoService"
-        assert (
-            self.service_description is not None
-        ), "Description is required for IndalekoService"
-        assert (
-            self.service_identifier is not None
-        ), "Identifier is required for IndalekoService"
+        assert self.service_version is not None, "Version is required for IndalekoService"
+        assert self.service_description is not None, "Description is required for IndalekoService"
+        assert self.service_identifier is not None, "Identifier is required for IndalekoService"
 
         if type(self.record) is dict:
             self.record = IndalekoRecordDataModel.deserialize(self.record)

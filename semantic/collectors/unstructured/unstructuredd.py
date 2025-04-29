@@ -26,8 +26,6 @@ import os
 import sys
 import uuid
 
-from typing import Union
-
 # third-party imports
 from icecream import ic
 
@@ -41,13 +39,12 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # Indaleko imports
 # pylint: disable=wrong-import-position
-from Indaleko import Indaleko
-from storage.i_object import IndalekoObject
-from utils.i_logging import IndalekoLogging
 from lookup import UnstructuredLookup
 from retrieve import UnstructuredRetrieval
 
+from Indaleko import Indaleko
 from semantic.collectors.semantic_collector import SemanticCollector
+from utils.i_logging import IndalekoLogging
 
 # pylint: enable=wrong-import-position
 
@@ -102,14 +99,15 @@ class IndalekoUnstructured(SemanticCollector):
             del kwargs["config_file"]
         else:
             self.config_file = os.path.join(
-                Indaleko.default_config_dir, self.config_file_name
+                Indaleko.default_config_dir,
+                self.config_file_name,
             )
         if not os.path.exists(self.config_file):
             self.config = configparser.ConfigParser()
             for section, options in self.config_file_layout.items():
                 ic(f"Adding section {section} with options {options}")
                 self.config[section] = options
-            with open(self.config_file, "wt", encoding="utf-8-sig") as config_file:
+            with open(self.config_file, "w", encoding="utf-8-sig") as config_file:
                 self.config.write(config_file)
         else:
             self.config = self.load_config_file()
@@ -122,7 +120,8 @@ class IndalekoUnstructured(SemanticCollector):
         """Load the configuration file for the unstructured data collector"""
         if self.config_file is None:
             self.config_file = os.path.join(
-                Indaleko.default_config_dir, self.config_file_name
+                Indaleko.default_config_dir,
+                self.config_file_name,
             )
         config = configparser.ConfigParser()
         config.read(self.config_file, encoding="utf-8-sig")
@@ -190,7 +189,10 @@ def main():
     )
     parser.add_argument("--log_file", default=None, type=str, help="Log file name")
     parser.add_argument(
-        "--config_file", default=None, type=str, help="Configuration file name"
+        "--config_file",
+        default=None,
+        type=str,
+        help="Configuration file name",
     )
     parser.add_argument("--data_file", default=None, type=str, help="Data file name")
     parser.add_argument(

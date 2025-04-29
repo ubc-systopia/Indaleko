@@ -21,15 +21,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # standard library imports
 import configparser
-import logging
-import os
-import sys
-import re
 import json
+import os
+import re
+import sys
+
+from arango import ArangoClient
 
 # third-party imports
 from icecream import ic
-from arango import ArangoClient
 
 #  Find Indaleko Root
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -57,7 +57,7 @@ class UnstructuredLookup:
     4. Get volume GUID path to file in local.
     5. Convert the local paths to a unix path
 
-    TODO:
+    Todo:
     - Add logging
     - More error handling
     - Checksums
@@ -83,7 +83,8 @@ class UnstructuredLookup:
 
     def __init__(self):
         unstructured_config_file = os.path.join(
-            Indaleko.default_config_dir, self.unstructured_config_file_name
+            Indaleko.default_config_dir,
+            self.unstructured_config_file_name,
         )
         unstructured_config = configparser.ConfigParser()
         unstructured_config.read(unstructured_config_file, encoding="utf-8-sig")
@@ -96,7 +97,8 @@ class UnstructuredLookup:
 
     def windows_to_unix_path(self, windows_path):
         """Converts the given windows path of a file to a unix one. With
-        the root directory set to the host drive's Bind Mount in Docker"""
+        the root directory set to the host drive's Bind Mount in Docker
+        """
         normalized_path = os.path.normpath(windows_path)
         linux_path = normalized_path.replace("\\", "/")
         match = re.split(r"//\?/Volume{.+}", linux_path)
@@ -106,9 +108,11 @@ class UnstructuredLookup:
 
     def connect_db(self):
         """Returns a StandardDatabase object after connecting to ArangoDB
-        using information specified in the DB configuration file"""
+        using information specified in the DB configuration file
+        """
         arango_config_file = os.path.join(
-            Indaleko.default_config_dir, self.arango_config_file_name
+            Indaleko.default_config_dir,
+            self.arango_config_file_name,
         )
         config = configparser.ConfigParser()
         config.read(arango_config_file, encoding="utf-8-sig")
@@ -145,7 +149,8 @@ class UnstructuredLookup:
     def generate_input(self):
         """Creates a jsonl file in the Data directory with a set of inputs to be sent to Unstructured for processing. Each row contains a unique ObjectIdentifier and unix-base URI converted from the original Windows one.
 
-        Additional feature to be added later: Checksums"""
+        Additional feature to be added later: Checksums
+        """
         cursor = self.perform_query()
         if not os.path.exists(self.unstructured_data_dir):
             os.mkdir(self.unstructured_data_dir)
@@ -165,7 +170,7 @@ class UnstructuredLookup:
                             {
                                 "ObjectIdentifier": object_uuid,
                                 "URI": self.windows_to_unix_path(object_uri),
-                            }
+                            },
                         )
-                        + "\n"
+                        + "\n",
                     )

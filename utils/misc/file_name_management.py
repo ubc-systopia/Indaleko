@@ -111,7 +111,7 @@ def generate_file_name(**kwargs) -> str:
     if "timestamp" in kwargs:
         if kwargs["timestamp"] is not None:
             ts = utils.misc.timestamp_management.generate_iso_timestamp_for_file(
-                kwargs["timestamp"]
+                kwargs["timestamp"],
             )
         else:
             ts = None
@@ -126,13 +126,14 @@ def generate_file_name(**kwargs) -> str:
         suffix = suffix[1:]  # avoid ".." for suffix
     if target_platform and "-" in target_platform:
         raise ValueError(
-            f"platform must not contain a hyphen (platform={target_platform})"
+            f"platform must not contain a hyphen (platform={target_platform})",
         )
     if "-" in service:
         raise ValueError(f"service must not contain a hyphen (service={service})")
 
     return generate_final_name(
-        [prefix, target_platform, service, ts, suffix, max_len], **kwargs
+        [prefix, target_platform, service, ts, suffix, max_len],
+        **kwargs,
     )
 
 
@@ -173,20 +174,20 @@ def extract_keys_from_file_name(file_name: str) -> dict:
     data = parse_file_name(file_name)
     assert "svc" in data, f"service field must be present in file name ({file_name})"
     if "ts" in data:
-        data["timestamp"] = (
-            utils.misc.timestamp_management.extract_iso_timestamp_from_file_timestamp(
-                data["ts"]
-            )
+        data["timestamp"] = utils.misc.timestamp_management.extract_iso_timestamp_from_file_timestamp(
+            data["ts"],
         )
         del data["ts"]
     return data
 
 
 def find_candidate_files(
-    input_strings: list[str], directory: str
+    input_strings: list[str],
+    directory: str,
 ) -> list[tuple[str, str]]:
     """Given a directory location, find a list of candidate files that match
-    the input strings."""
+    the input strings.
+    """
 
     def get_unique_identifier(file_name, all_files):
         """

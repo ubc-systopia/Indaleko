@@ -16,9 +16,9 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import json
 import os
 import sys
-import json
 from textwrap import dedent
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -28,8 +28,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
-from activity.data_model.activity import IndalekoActivityDataModel
 from activity.collectors.known_semantic_attributes import KnownSemanticAttributes
+from activity.data_model.activity import IndalekoActivityDataModel
 from data_models.collection_metadata_data_model import (
     IndalekoCollectionMetadataDataModel,
 )
@@ -45,7 +45,7 @@ class ActivityCollectionMetadata(IndalekoSingleton):
         for category, value in KnownSemanticAttributes.get_all_attributes().items():
             for key, detail in value.items():
                 attributes.append(
-                    {"SemanticLabel": key, "UUID": detail, "Category": category}
+                    {"SemanticLabel": key, "UUID": detail, "Category": category},
                 )
         return json.dumps(attributes, indent=4)
 
@@ -71,7 +71,7 @@ class ActivityCollectionMetadata(IndalekoSingleton):
 
             ### Semantic Attributes
             The following attributes describe key data points collected from activity providers:
-            """
+            """,
         )
         + "\n"
         + build_semantic_attribute_description(),
@@ -94,8 +94,8 @@ class ActivityCollectionMetadata(IndalekoSingleton):
                 3. **Overlapping Attributes**: Some attributes have **synonyms** (e.g., `filename` vs. `document_name`).
                    Consider alternative labels.
                 4. **Query Optimization**: Structure AQL queries to accommodate **flexible and evolving schemas**.
-                """
-            )
+                """,
+            ),
         ],
         Schema=IndalekoActivityDataModel.get_json_schema(),
     )

@@ -21,9 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-
 from datetime import datetime
-from typing import List
+
 from pydantic import Field
 
 # from icecream import ic
@@ -59,7 +58,9 @@ class IndalekoActivityDataModel(IndalekoBaseModel):
     """
 
     Record: IndalekoRecordDataModel = Field(
-        ..., title="Record", description="The record for the activity data."
+        ...,
+        title="Record",
+        description="The record for the activity data.",
     )
 
     Timestamp: datetime = Field(
@@ -68,7 +69,7 @@ class IndalekoActivityDataModel(IndalekoBaseModel):
         description="The timestamp when the activity data was collected.",
     )
 
-    SemanticAttributes: List[IndalekoSemanticAttributeDataModel] = Field(
+    SemanticAttributes: list[IndalekoSemanticAttributeDataModel] = Field(
         ...,
         title="SemanticAttributes",
         description="The semantic attributes captured by the activity data provider.",
@@ -82,9 +83,9 @@ class IndalekoActivityDataModel(IndalekoBaseModel):
                 "Record": IndalekoRecordDataModel.get_json_example(),
                 "Timestamp": "2024-01-01T00:00:00Z",
                 "SemanticAttributes": [
-                    IndalekoSemanticAttributeDataModel.get_json_example()
+                    IndalekoSemanticAttributeDataModel.get_json_example(),
                 ],
-            }
+            },
         }
 
 

@@ -18,14 +18,12 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from datetime import datetime, timezone
-from enum import Enum
 import json
 import os
 import sys
+from datetime import UTC, datetime
+from enum import Enum
 from uuid import UUID, uuid4
-
-from typing import Optional
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -55,9 +53,9 @@ class IndalekoNamedEntityDataModel(IndalekoBaseModel):
     name: str
     uuid: UUID = uuid4()
     category: IndalekoNamedEntityType
-    description: Optional[str] = None
-    gis_location: Optional[LocationDataModel] = None  # GIS location for places
-    device_id: Optional[UUID] = None  # Device identifier for things
+    description: str | None = None
+    gis_location: LocationDataModel | None = None  # GIS location for places
+    device_id: UUID | None = None  # Device identifier for things
 
     class Config:
         """Sample configuration data for the data model."""
@@ -83,7 +81,7 @@ class NamedEntityCollection(IndalekoBaseModel):
                 "entities": [
                     IndalekoNamedEntityDataModel.Config.json_schema_extra["example"],
                 ],
-            }
+            },
         }
 
 
@@ -102,7 +100,7 @@ example_entities = NamedEntityCollection(
             description="Capital of France",
             gis_location=LocationDataModel(
                 source="defined",
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 latitude=48.8566,
                 longitude=2.3522,
             ),
@@ -113,7 +111,7 @@ example_entities = NamedEntityCollection(
             description="User's personal laptop",
             device_id="3dd1f5f6-1bd1-4822-864a-7470eeb8eebc",
         ),
-    ]
+    ],
 )
 
 

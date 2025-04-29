@@ -44,7 +44,7 @@ result = recorder.process_file("path/to/file.xyz")
 results = recorder.process_directory("path/to/directory", recursive=True)
 
 # Filter by file extensions
-results = recorder.process_directory("path/to/directory", 
+results = recorder.process_directory("path/to/directory",
                                     recursive=True,
                                     file_extensions=[".jpg", ".png", ".gif"])
 

@@ -38,8 +38,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from utils.singleton import IndalekoSingleton
 from storage.known_attributes import KnownStorageAttributes
+from utils.singleton import IndalekoSingleton
 
 # pylint: enable=wrong-import-position
 
@@ -52,7 +52,8 @@ class IndalekoStorageDataProvidersKnownStorageAttributes(IndalekoSingleton):
 
     def __init__(self):
         """Initialize the known semantic attributes for the activity data
-        providers."""
+        providers.
+        """
         if self._initialized:
             return
         self.uuid_to_label = {}
@@ -76,7 +77,8 @@ class IndalekoStorageDataProvidersKnownStorageAttributes(IndalekoSingleton):
     def get_provider_label(identifier: uuid.UUID):
         """Get the label for the provider"""
         return IndalekoStorageDataProvidersKnownStorageAttributes().uuid_to_label.get(
-            identifier, None
+            identifier,
+            None,
         )
 
 

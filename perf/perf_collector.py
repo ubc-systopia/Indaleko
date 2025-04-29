@@ -18,32 +18,32 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 """
-
 import json
 import os
-import psutil
 import sys
 import time
 import uuid
 
-from datetime import datetime, timezone
-from typing import Dict, Any, Callable, Union
+from collections.abc import Callable
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
 
+import psutil
 from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
-        current_path = os.path.dirname(current_path)
-    os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
-
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
 from data_models import (
     IndalekoPerformanceDataModel,
-    IndalekoSourceIdentifierDataModel,
     IndalekoRecordDataModel,
+    IndalekoSourceIdentifierDataModel,
 )
 from perf.source_code_version import IndalekoGitInfo
 from utils.misc.data_management import encode_binary_data
@@ -61,7 +61,7 @@ class IndalekoPerformanceDataCollector:
     def __init__(self, *args, **kwargs):
         """Initialize the object."""
         self.perf_data: IndalekoPerformanceDataModel = IndalekoPerformanceDataModel(
-            **kwargs
+            **kwargs,
         )
 
     @staticmethod
@@ -69,25 +69,22 @@ class IndalekoPerformanceDataCollector:
         task_func: Callable[..., Any],
         source: IndalekoSourceIdentifierDataModel,
         description: str,
-        MachineIdentifier: Union[uuid.UUID, None],
-        process_results_func: Callable[..., Dict[str, Union[int, float, str]]] = None,
-        input_file_name: Union[str, None] = None,
-        output_file_name: Union[str, None] = None,
-        *args: Union[Any, None],
-        **kwargs: Union[Dict[str, Any], None],
+        MachineIdentifier: uuid.UUID | None,  # noqa: N803
+        process_results_func: Callable[..., dict[str, int | float | str]] = None,
+        input_file_name: str | None = None,
+        output_file_name: str | None = None,
+        *args: object | None,
+        **kwargs: dict[str, Any] | None,
     ) -> "IndalekoPerformanceDataCollector":
         """Measure the performance of a function."""
         process = psutil.Process(os.getpid())
-        start_time = datetime.now(timezone.utc).isoformat()
+        start_time = datetime.now(UTC).isoformat()
         start_user_time = process.cpu_times().user
         start_system_time = process.cpu_times().system
-        if hasattr(process, "io_counters"):
-            start_io_counters = process.io_counters()
-        else:
-            start_io_counters = None
+        start_io_counters = process.io_counters() if hasattr(process, "io_counters") else None
         start_memory = process.memory_info().rss  # Resident Set Size (RSS) memory
         start_thread_count = process.num_threads()
-        input_file_size = None
+        if input_file_name is not None and Path(input_file_name).exists():
         if input_file_name is not None and os.path.exists(input_file_name):
             input_file_size = os.stat(input_file_name).st_size
         results_data = {}
@@ -112,14 +109,14 @@ class IndalekoPerformanceDataCollector:
             elapsed_time = end_clock - start_clock
         except Exception as e:
             ic(
-                f"measure_performance (calling {task_func} with {args} and {kwargs}): {e}"
+                f"measure_performance (calling {task_func} with {args} and {kwargs}): {e}",
             )
             result = None
             end_clock = time.perf_counter()
             elapsed_time = end_clock - start_clock
             raise e
 
-        end_time = datetime.now(timezone.utc).isoformat()
+        end_time = datetime.now(UTC).isoformat()
         end_user_time = process.cpu_times().user
         end_system_time = process.cpu_times().system
         if hasattr(process, "io_counters"):
@@ -154,12 +151,8 @@ class IndalekoPerformanceDataCollector:
         data["output_file_name"] = output_file_name
         data["output_file_size"] = output_file_size
         if start_io_counters and end_io_counters:
-            data["io_read_bytes"] = (
-                end_io_counters.read_bytes - start_io_counters.read_bytes
-            )
-            data["io_write_bytes"] = (
-                end_io_counters.write_bytes - start_io_counters.write_bytes
-            )
+            data["io_read_bytes"] = end_io_counters.read_bytes - start_io_counters.read_bytes
+            data["io_write_bytes"] = end_io_counters.write_bytes - start_io_counters.write_bytes
         else:
             data["io_read_bytes"] = 0
             data["io_write_bytes"] = 0
@@ -170,7 +163,7 @@ class IndalekoPerformanceDataCollector:
             "InputFileName": input_file_name,
             "OutputFileName": output_file_name,
             "SourceVersionInformation": IndalekoGitInfo.get_framework_source_version_data(
-                as_json=True
+                as_json=True,
             ),
         }
 
@@ -199,6 +192,13 @@ class IndalekoPerformanceDataCollector:
             AdditionalData=data["additional_data"],
         )
 
+    def start(self) -> None:
+        """Start the performance data collection."""
+
+
+    def stop(self) -> None:
+        """Stop the performance data collection."""
+
     @staticmethod
     def deserialize(data: dict) -> "IndalekoPerformanceDataCollector":
         """Deserialize a dictionary to an object."""
@@ -216,7 +216,7 @@ class IndalekoPerformanceDataCollector:
                 "Identifier": "1697394b-0f8f-44b4-91c0-a0fbd9d77feb",
                 "Version": "1.0",
             },
-            "Timestamp": datetime.now(timezone.utc),
+            "Timestamp": datetime.now(UTC),
             "Attributes": {},
             "Data": encode_binary_data(b""),
         },
@@ -241,7 +241,7 @@ def main():
                 "Identifier": "1697394b-0f8f-44b4-91c0-a0fbd9d77feb",
                 "Version": "1.0",
             },
-            "Timestamp": datetime.now(timezone.utc),
+            "Timestamp": datetime.now(UTC),
             "Attributes": {},
             "Data": encode_binary_data(b""),
         },
@@ -256,7 +256,7 @@ def main():
         ThreadCount=1,
         AdditionalData={
             "SourceVersionInformation": IndalekoGitInfo.get_framework_source_version_data(
-                as_json=True
+                as_json=True,
             ),
         },
     )

@@ -1,21 +1,21 @@
+import logging
 import os
 import subprocess
-import logging
 import sys  # Added to use sys.exit()
 from datetime import datetime
 
 # Prompt the user for the necessary paths
 PathToWhereLogFileWillBeStored = input(
-    "Type path where you want the log file for this process to be stored: \n"
+    "Type path where you want the log file for this process to be stored: \n",
 )
 PathToIndalekoProjectDirectory = input(
-    "Please input path to directory where project is: \n"
+    "Please input path to directory where project is: \n",
 )
 PathToUserDefinedFolder = input(
-    "Input the directory you want to have indexed by Unstructured: \n"
+    "Input the directory you want to have indexed by Unstructured: \n",
 )
 PathToOutputFileWillBeSaved = input(
-    "Please specify where you want the resulting JSONL file to be stored: \n"
+    "Please specify where you want the resulting JSONL file to be stored: \n",
 )
 
 # Ask the user for the output file name
@@ -57,6 +57,7 @@ def get_local_image_version(image_name, image_tag):
         ["docker", "images", "--format", "{{.Repository}}:{{.Tag}}"],
         capture_output=True,
         text=True,
+        check=False,
     )
     images = result.stdout.splitlines()
     image_full_name = f"{image_name}:{image_tag}"
@@ -97,13 +98,14 @@ def container_exists(container_name):
         ["docker", "ps", "-aq", "-f", f"name=^{container_name}$"],
         capture_output=True,
         text=True,
+        check=False,
     )
     return bool(result.stdout.strip())
 
 
 def run_docker_container(container_name, image_name, image_tag, output_file_name):
     logger.info(
-        f"Running the Docker container '{container_name}' with necessary volume mounts..."
+        f"Running the Docker container '{container_name}' with necessary volume mounts...",
     )
     volume_args = []
     for volume in volumes:
@@ -143,7 +145,7 @@ def run_docker_container(container_name, image_name, image_tag, output_file_name
             text=True,
         )
         logger.info(
-            f"Successfully ran Docker container '{container_name}' and executed '{script_name}'"
+            f"Successfully ran Docker container '{container_name}' and executed '{script_name}'",
         )
         logger.info(f"Container stdout:\n{result.stdout}")
         logger.info(f"Container stderr:\n{result.stderr}")
@@ -153,10 +155,10 @@ def run_docker_container(container_name, image_name, image_tag, output_file_name
         raise
 
 
-"""The following function is not necessary atm. It would require creating a 
+"""The following function is not necessary atm. It would require creating a
 temporary file to pass it back to the main script via a shared volume or another method.
-Since the second script -MetadataProcess- runs inside the Docker container created here, 
-sharing this information back to the main script can be complex. 
+Since the second script -MetadataProcess- runs inside the Docker container created here,
+sharing this information back to the main script can be complex.
 
 This is not necessary as I can access the full log file in the log directory.
 
@@ -167,7 +169,7 @@ def access_logs():
     logger.info("Displaying logs from the host machine...")
     log_file_path = os.path.join(logs_directory, "indexing.log")
     if os.path.exists(log_file_path):
-        with open(log_file_path, "r") as log_file:
+        with open(log_file_path) as log_file:
             logs = log_file.read()
             print(logs)
             logger.info("Log file content:")
@@ -182,11 +184,11 @@ def clean_up(container_name):
         subprocess.run(["docker", "stop", container_name], check=True)
         subprocess.run(["docker", "rm", container_name], check=True)
         logger.info(
-            f"Successfully stopped and removed Docker container '{container_name}'"
+            f"Successfully stopped and removed Docker container '{container_name}'",
         )
     except subprocess.CalledProcessError as e:
         logger.error(
-            f"Failed to stop and remove Docker container '{container_name}': {e}"
+            f"Failed to stop and remove Docker container '{container_name}': {e}",
         )
 
 
@@ -208,5 +210,5 @@ if __name__ == "__main__":
         logger.error(f"An unexpected error occurred: {e}")
         sys.exit(1)  # Exit the script with a non-zero status code
     logger.info(
-        f"Docker Unstructured script finished on: {PathToUserDefinedFolder}.\nSaved to: {PathToOutputFileWillBeSaved}"
+        f"Docker Unstructured script finished on: {PathToUserDefinedFolder}.\nSaved to: {PathToOutputFileWillBeSaved}",
     )

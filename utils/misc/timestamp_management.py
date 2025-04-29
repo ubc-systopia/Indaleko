@@ -43,7 +43,7 @@ def validate_iso_timestamp(source: str) -> bool:
 def generate_iso_timestamp(ts: datetime = None) -> str:
     """Given a timestamp, convert it to an ISO timestamp."""
     if ts is None:
-        ts = datetime.datetime.now(datetime.timezone.utc)
+        ts = datetime.datetime.now(datetime.UTC)
     assert isinstance(ts, datetime.datetime), f"ts must be a datetime, not {type(ts)}"
     return ts.isoformat()
 
@@ -60,7 +60,7 @@ def extract_iso_timestamp_from_file_timestamp(file_timestamp: str) -> str:
 def generate_iso_timestamp_for_file(ts: str = None) -> str:
     """Create an ISO timestamp for the current time."""
     if ts is None:
-        ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        ts = datetime.datetime.now(datetime.UTC).isoformat()
     ts_check = extract_iso_timestamp_from_file_timestamp(ts)
     if ts_check != ts:  # validate that the timestamp is reversible
         raise ValueError(f"timestamp mismatch {ts} != {ts_check}")

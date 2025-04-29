@@ -17,6 +17,7 @@ __pycache__/*
 wmiobject-list.txt
 *.log
 *.json
+*.csv
 scratch*.py
 scratch*.ipynb
 scratch/*
@@ -31,3 +32,4 @@ upload-notes.md
 .uv*
 .venv*
 uv.lock
+ntfs-journal-output.txt

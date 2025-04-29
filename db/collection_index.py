@@ -1,5 +1,7 @@
 """
-IndalekoCollectionIndex: This module is used to manage index creation for
+IndalekoCollectionIndex.
+
+This module is used to manage index creation for
 IndalekoCollection objects.
 
 Project Indaleko
@@ -22,23 +24,29 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
+from pathlib import Path
+
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
-        current_path = os.path.dirname(current_path)
-    os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
+from utils.singleton import IndalekoSingleton
+
+
 # pylint: enable=wrong-import-position
 
 
-class IndalekoCollectionIndex:
+class IndalekoCollectionIndex(IndalekoSingleton):
     """Manages an index for an IndalekoCollection object."""
 
-    index_args = {
+    index_args = {  # noqa: RUF012
         "hash": {
             "fields": str,
             "name": str,
@@ -109,30 +117,29 @@ class IndalekoCollectionIndex:
         },
     }
 
-    def __init__(self, collection, **kwargs):
-        """Parameters:
+    def __init__(self, collection: str, **kwargs: dict) -> None:
+        """
         This class is used to create indices for IndalekoCollection objects.
 
+        Args:
         collection: this points to the ArangoDB collection object to use for
-                    this index.
-
-        index_type: 'persistent' or 'hash'
-
-        fields: list of fields to be indexed
-
-        unique: if True, the index is unique
+                    this index (not a string - just avoiding init issues.)
+        kwargs: the parameters to pass to the add_index method of the collection.
+            Note: these vary by index type.
         """
         self.collection = collection
-        ic(kwargs)
-        assert kwargs.get("type") is not None, "type is a required parameter"
-        assert kwargs.get("fields") is not None, "fields is a required parameter"
+        if kwargs.get("type") is None:
+            raise ValueError("type is a required parameter")
+        if kwargs.get("fields") is None:
+            raise ValueError("fields is a required parameter")
         self.index = self.collection.add_index(data=kwargs, formatter=False)
-        ic(f"Created index for collection {self.collection}: {self.index}")
+        self.debug = kwargs.get("debug", False)
+        if self.debug:
+            ic(f"Created index for collection {self.collection}: {self.index}")
 
 
-def main():
+def main() -> None:
     """Test the IndalekoCollectionIndex class."""
-    print("IndalekoCollectionIndex: called.  No tests yet.")
 
 
 if __name__ == "__main__":

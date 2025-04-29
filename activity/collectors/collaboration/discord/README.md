@@ -1,197 +1,239 @@
-# Discord File Sharing Activity Generator for Indaleko
+# Discord File Sharing Collector
 
-## Overview
-
-The Discord File Sharing Activity Generator is a component for the Indaleko system that collects, processes, and stores information about files shared through Discord. It follows Indaleko's collector/recorder architecture pattern, where:
-
-- **Collector**: Connects to the Discord API and gathers information about shared files from DMs and servers
-- **Recorder**: Processes file sharing data and stores it in the Indaleko database with appropriate semantic attributes
-
-This component tracks shared files across Discord channels, maintaining the relationship between Discord CDN URLs (which have no obvious connection to the original file) and their original filenames.
-
-## Architecture
-
-The Discord File Sharing Activity Generator consists of:
-
-1. **Data Models**:
-   - `SharedFileData`: Represents a shared file with properties like filename, URL, size, and content type
-   - `DiscordDataModel`: Represents a Discord file sharing event with message context, channel/guild information, and file data
-
-2. **Collector**:
-   - `DiscordFileShareCollector`: Connects to Discord's API using a user token to scan messages for attachments
-   - Extracts metadata about shared files including original filename, CDN URL, and sharing context
-   - Supports scanning both direct messages and server channels
-
-3. **Recorder**:
-   - `DiscordFileShareRecorder`: Processes file attachment data and stores it in the Indaleko database
-   - Creates semantic attributes for efficient querying
-   - Maintains mappings between original filenames and Discord CDN URLs
-   - Provides utilities for retrieving file sharing information
-
-4. **Semantic Attributes**:
-   - Custom UUIDs for file properties (filename, URL, content type, etc.)
-   - Contextual attributes (channel, server, message details)
-   - Sharing details (sender, timestamp)
+This module collects information about files shared on Discord servers and direct messages. It tracks file sharing activities and stores metadata about the shared files to enable contextualized search and discovery.
 
 ## Features
 
-- Cross-platform file sharing tracking
-- Association of CDN URLs with original filenames
-- Metadata extraction (file size, MIME type)
-- Context capture (message content, channel information)
-- Advanced querying capabilities (by filename, URL, server, etc.)
-- Incremental syncing to avoid duplicates
-- Support for both DMs and server channels
+- Monitors Discord servers and direct messages for file sharing activities
+- Extracts rich metadata about shared files and their context
+- Works on any platform (Windows, macOS, Linux) with Python support
+- Designed for scheduled execution via cron, Task Scheduler, or similar
+- Maintains state between runs to support incremental collection
+- Implements careful rate limiting to respect Discord API constraints
+
+## Setup
+
+### Prerequisites
+
+- Python 3.12 or newer
+- Discord account with access to servers/channels you want to monitor
+- Discord bot token or user token
+- Indaleko environment properly configured
+
+### Configuration
+
+Create a configuration file `discord_collector_config.json` in your Indaleko config directory:
+
+```json
+{
+  "token": "YOUR_DISCORD_TOKEN",
+  "token_type": "bot",  // "bot" or "user"
+  "state_file": "/path/to/indaleko/data/discord_collector_state.json",
+  "output_file": "/path/to/indaleko/data/discord_file_shares.jsonl",
+  "direct_to_db": true,
+  "db_config": {
+    "use_default": true
+  },
+  "log_file": "/path/to/indaleko/logs/discord_collector.log",
+  "log_level": "INFO",
+  "scan_dms": true,
+  "scan_servers": true,
+  "excluded_servers": ["Server to exclude"],
+  "excluded_channels": ["general"],
+  "lookback_days": 7,
+  "batch_size": 100,
+  "rate_limit": {
+    "requests_per_second": 1
+  }
+}
+```
+
+### Getting a Discord Token
+
+#### Bot Token (Recommended)
+
+1. Go to the [Discord Developer Portal](https://discord.com/developers/applications)
+2. Create a New Application
+3. Navigate to the "Bot" tab
+4. Click "Add Bot" and confirm
+5. Under the "Token" section, click "Copy" to copy your bot token
+6. Add the bot to your servers with proper permissions
+
+#### User Token (Advanced Users)
+
+Using a user token provides access to your personal Discord account. This approach is not officially supported by Discord and may violate their Terms of Service.
+
+For testing purposes only:
+1. Open Discord in your web browser
+2. Open Developer Tools (F12)
+3. Go to the Network tab
+4. Look for requests to Discord's API
+5. Find the "Authorization" header, which contains your user token
+
+### Setting Up Scheduled Execution
+
+#### Linux/macOS (cron)
+
+1. Edit your crontab:
+   ```
+   crontab -e
+   ```
+
+2. Add an entry to run every 30 minutes:
+   ```
+   */30 * * * * cd /path/to/indaleko && /path/to/indaleko/.venv-linux-python3.12/bin/python activity/collectors/collaboration/discord/discord_file_collector.py --config /path/to/indaleko/config/discord_collector_config.json >> /path/to/indaleko/logs/discord_cron.log 2>&1
+   ```
+
+#### Windows (Task Scheduler)
+
+1. Create a batch script `run_discord_collector.bat`:
+   ```batch
+   @echo off
+   cd /d C:\path\to\indaleko
+   call .venv-win32-python3.12\Scripts\activate.bat
+   python activity\collectors\collaboration\discord\discord_file_collector.py --config C:\path\to\indaleko\config\discord_collector_config.json
+   ```
+
+2. Open Task Scheduler (taskschd.msc)
+3. Create a new Basic Task:
+   - Name: "Indaleko Discord File Collector"
+   - Trigger: Daily, recur every 1 day, repeat every 30 minutes
+   - Action: Start a program, browse to your batch script
+   - Finish and adjust settings as needed
 
 ## Usage
 
-### Basic Usage
+### Manual Execution
 
-```python
-from activity.collectors.collaboration.discord.discord_file_collector import DiscordFileShareCollector
-from activity.recorders.collaboration.discord_file_recorder import DiscordFileShareRecorder
+You can run the collector manually to test or for one-time collection:
 
-# Initialize components with a Discord user token
-collector = DiscordFileShareCollector(token="YOUR_DISCORD_TOKEN")
-recorder = DiscordFileShareRecorder(collector=collector)
-
-# Collect and store Discord file attachments
-count = recorder.sync_attachments()
-print(f"Synced {count} new attachments to database")
-
-# Retrieve attachments by filename
-attachments = recorder.retrieve_attachments_by_filename("example.pdf")
-for attachment in attachments:
-    print(f"Found: {attachment['filename']} at URL: {attachment['url']}")
-
-# Generate a mapping from filenames to CDN URLs
-mapping = recorder.generate_filename_to_url_mapping()
-for filename, urls in mapping.items():
-    print(f"{filename}: {len(urls)} URLs")
+```bash
+python activity/collectors/collaboration/discord/discord_file_collector.py --config /path/to/config.json
 ```
 
-### Security and Token Management
+### Command-Line Options
 
-For security, store your Discord token in a JSON configuration file rather than hardcoding it:
+- `--config PATH`: Path to the configuration file
+- `--verbose`: Enable verbose logging
+- `--dry-run`: Run without saving data to database
+- `--lookback DAYS`: Override lookback days from config
+- `--output FILE`: Override output file from config
+- `--state FILE`: Override state file from config
 
-```python
-# Store token in config/discord-token.json
-{
-    "token": "YOUR_DISCORD_TOKEN"
-}
+### Monitoring Collection
 
-# Load token from file
-collector = DiscordFileShareCollector(token_file="./config/discord-token.json")
-```
+The collector writes detailed logs to the configured log file. You can monitor these logs for any issues:
 
-### Scanning Specific Discord Servers
-
-```python
-# Collect data from Discord
-attachments = collector.collect_data()
-
-# Get guild-specific attachments
-guild_id = "123456789012345678"
-guild_attachments = [a for a in attachments if a.get("guild_id") == guild_id]
-print(f"Found {len(guild_attachments)} attachments in guild {guild_id}")
+```bash
+tail -f /path/to/indaleko/logs/discord_collector.log
 ```
 
 ## Implementation Details
 
-### Authentication
+### State Management
 
-The collector uses a Discord user token (not a bot token) to access the API. This approach has some benefits:
+The collector maintains state in a JSON file with the following structure:
 
-1. Access to the user's DMs, which bot tokens cannot access
-2. Access to all servers the user is a member of
-3. No need to add a bot to servers or set up OAuth flows
-
-However, this approach requires the user to provide their token, which should be handled securely.
-
-### CDN URL Structure
-
-Discord CDN URLs have a structure like:
+```json
+{
+  "last_run": "2024-04-20T12:34:56Z",
+  "servers": {
+    "server_id_1": {
+      "last_message_id": "123456789012345678",
+      "channels": {
+        "channel_id_1": "123456789012345678",
+        "channel_id_2": "123456789012345678"
+      }
+    }
+  },
+  "dms": {
+    "dm_channel_id_1": "123456789012345678"
+  },
+  "stats": {
+    "total_files_found": 123,
+    "total_runs": 45,
+    "last_run_files": 5
+  }
+}
 ```
-https://cdn.discordapp.com/attachments/CHANNEL_ID/MESSAGE_ID/FILENAME
-```
 
-However, the filename in the URL may not match the original filename. The collector captures the original filename from the message metadata and stores it along with the CDN URL.
+### Data Model
+
+The collector captures the following data for each shared file:
+
+```json
+{
+  "file_id": "uuid",
+  "message_id": "discord_message_id",
+  "channel_id": "discord_channel_id",
+  "server_id": "discord_server_id",
+  "user_id": "discord_user_id",
+  "username": "username#1234",
+  "filename": "example.pdf",
+  "file_url": "https://cdn.discordapp.com/...",
+  "file_size": 12345,
+  "content_type": "application/pdf",
+  "created_at": "2024-04-20T12:34:56Z",
+  "message_content": "Check out this file!",
+  "context": {
+    "channel_name": "general",
+    "server_name": "My Server",
+    "thread_name": "Discussion Thread",
+    "conversation_snippet": ["Previous message", "Current message", "Next message"]
+  },
+  "metadata": {
+    "has_embeds": true,
+    "is_reply": false,
+    "mentioned_users": ["user1#1234", "user2#5678"],
+    "reactions": [{"emoji": "👍", "count": 3}, {"emoji": "❤️", "count": 1}]
+  }
+}
+```
 
 ### Rate Limiting
 
-Discord's API has rate limits, so the collector implements sensible defaults to avoid hitting these limits:
-- Limits message history retrieval to 100 messages per channel
-- Adds delays between API calls
-- Implements exponential backoff for retries
+The collector implements careful rate limiting to respect Discord's API constraints:
 
-### Incremental Syncing
+- Default rate: 1 request per second
+- Adaptive backoff when approaching rate limits
+- Pause and resume mechanism when hitting rate limits
 
-The recorder implements incremental syncing to avoid storing duplicate attachments:
-1. When syncing, it compares new attachments against existing ones
-2. Only stores attachments that don't already exist in the database
-3. Uses the attachment URL as a unique identifier
+## Troubleshooting
 
-## Extending the Component
+### Common Issues
 
-### Adding Support for More Discord Data
+1. **Authentication failures**:
+   - Verify your token is correct and has not expired
+   - Check that the token has appropriate permissions
 
-To extend this component to capture more Discord data:
+2. **Permission issues**:
+   - Ensure the bot/user has access to the channels being monitored
+   - Check that the bot has the "Read Message History" permission
 
-1. Update the data models to include new fields
-2. Add collection logic in the collector
-3. Add semantic attributes and processing in the recorder
+3. **Rate limiting**:
+   - Reduce the batch size in configuration
+   - Increase the interval between scheduled runs
+   - Check logs for rate limit warnings
 
-For example, to add support for reactions:
+4. **Missing data**:
+   - Verify Discord's CDN (Content Delivery Network) is accessible
+   - Check that the state file is being updated correctly
+   - Ensure lookback period covers the expected time range
 
-```python
-# Add to the data model
-class DiscordDataModel(BaseCollaborationDataModel):
-    # ...existing fields...
-    Reactions: List[Dict[str, Any]] = Field(
-        default_factory=list,
-        description="List of reactions to the message"
-    )
+5. **Database issues**:
+   - Verify ArangoDB is running
+   - Check database credentials
+   - Ensure network connectivity if using remote database
 
-# Update collector to capture reactions
-def extract_file_attachments(self, messages, channel_data):
-    # ...existing code...
-    for message in messages:
-        # ...existing code...
-        
-        # Add reactions
-        if "reactions" in message:
-            file_data["reactions"] = message["reactions"]
-```
+### Getting Help
 
-### Adding File Content Extraction
+If you encounter persistent issues:
 
-To extract and process the actual file content:
+1. Check the full log file for detailed error messages
+2. Run with the `--verbose` flag for enhanced logging
+3. Verify that the state file is being updated correctly
+4. Consult the Indaleko documentation or seek assistance from the development team
 
-1. Add file downloading capability to the collector
-2. Implement content processing based on file type
-3. Store content metadata in the database
+## Contact
 
-For example:
-
-```python
-def download_attachment(self, url, filename):
-    """Download a file from a Discord CDN URL"""
-    headers = self._get_discord_api_headers()
-    response = requests.get(url, headers=headers, stream=True)
-    
-    if response.status_code == 200:
-        with open(filename, 'wb') as f:
-            for chunk in response.iter_content(1024):
-                f.write(chunk)
-        return True
-    return False
-```
-
-## Future Enhancements
-
-- Real-time monitoring using Discord's WebSocket API
-- Content extraction and analysis
-- User activity correlation
-- Integration with other collaboration providers
-- Advanced search capabilities
-- Automatic file categorization based on content and context
+For assistance with this collector, contact the Indaleko development team.

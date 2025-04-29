@@ -30,11 +30,7 @@ class IndalekoIndex:
         assert os.path.isdir(search_dir), "search_dir must be a valid directory"
         assert prefix is not None, "prefix must be a valid string"
         assert suffix is not None, "suffix must be a valid string"
-        return [
-            x
-            for x in os.listdir(search_dir)
-            if x.startswith(prefix) and x.endswith(suffix)
-        ]
+        return [x for x in os.listdir(search_dir) if x.startswith(prefix) and x.endswith(suffix)]
 
 
 def main():

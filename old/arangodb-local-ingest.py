@@ -1,11 +1,12 @@
-import os
-import json
-import uuid
-import stat
-from arango import ArangoClient
-import arango
 import argparse
 import datetime
+import json
+import os
+import stat
+import uuid
+
+import arango
+from arango import ArangoClient
 
 
 class IndalekoDB:
@@ -49,12 +50,15 @@ class IndalekoDB:
 
     def connect(self):
         if self.client is None:
-            url = "http://{}:{}".format(self.hostname, self.port)
+            url = f"http://{self.hostname}:{self.port}"
             self.client = ArangoClient(hosts=url)
             assert self.client is not None
         if self.db is None:
             self.db = self.client.db(
-                self.database, self.username, self.password, auth_method="basic"
+                self.database,
+                self.username,
+                self.password,
+                auth_method="basic",
             )
 
 
@@ -78,7 +82,8 @@ class IndalekoIndex:
         self.index_type = index_type
         assert index_type == "persistent", "Only support persistent indices"
         self.index = self.collection.add_persistent_index(
-            fields=self.fields, unique=self.unique
+            fields=self.fields,
+            unique=self.unique,
         )
 
     def find_entries(self, **kwargs):
@@ -98,7 +103,11 @@ class IndalekoCollection:
         self.indices = {}
 
     def create_index(
-        self, name: str, index_type: str, fields: list, unique: bool
+        self,
+        name: str,
+        index_type: str,
+        fields: list,
+        unique: bool,
     ) -> "IndalekoCollection":
         self.indices[name] = IndalekoIndex(self.collection, index_type, fields, unique)
         return self
@@ -150,13 +159,13 @@ class FileSystemObject:
         self.size = self.stat_info.st_size
         self.timestamps = {
             "created": datetime.datetime.fromtimestamp(
-                self.stat_info.st_ctime
+                self.stat_info.st_ctime,
             ).isoformat(),
             "modified": datetime.datetime.fromtimestamp(
-                self.stat_info.st_mtime
+                self.stat_info.st_mtime,
             ).isoformat(),
             "accessed": datetime.datetime.fromtimestamp(
-                self.stat_info.st_atime
+                self.stat_info.st_atime,
             ).isoformat(),
         }
         self.collection = collection
@@ -170,12 +179,13 @@ class FileSystemObject:
             self.dbinfo = collection.insert(self.to_dict())
         except arango.exceptions.DocumentInsertError as e:
             documents = collection.find_entries(
-                dev=self.stat_info.st_dev, inode=self.stat_info.st_ino
+                dev=self.stat_info.st_dev,
+                inode=self.stat_info.st_ino,
             )
             if len(documents) > 0:
                 self.dbinfo = documents[0]
             else:
-                print("Exception {} on file {}".format(e, path))
+                print(f"Exception {e} on file {path}")
                 documents = collection.find_entries(url=self.url)
                 if len(documents) > 0:
                     self.dbinfo = documents[0]
@@ -184,10 +194,12 @@ class FileSystemObject:
         FileSystemObject.ObjectCount += 1
 
     def add_contain_relationship(
-        self, collections: dict, child_obj: "FileSystemObject"
+        self,
+        collections: dict,
+        child_obj: "FileSystemObject",
     ) -> "FileSystemObject":
         assert stat.S_ISDIR(
-            self.stat_info.st_mode
+            self.stat_info.st_mode,
         ), "Should only add contain relationships from directories"
         parent_id = self.dbinfo["_id"]
         child_id = child_obj.dbinfo["_id"]
@@ -198,8 +210,8 @@ class FileSystemObject:
                     "_to": child_id,
                     "uuid1": self.uuid,
                     "uuid2": child_obj.uuid,
-                }
-            )
+                },
+            ),
         )
         collections["contained_by"].insert(
             json.dumps(
@@ -208,8 +220,8 @@ class FileSystemObject:
                     "_to": parent_id,
                     "uuid1": child_obj.uuid,
                     "uuid2": self.uuid,
-                }
-            )
+                },
+            ),
         )
         FileSystemObject.RelationshipCount += 2
         return self
@@ -245,13 +257,13 @@ class FileSystemObject:
             "url": self.url,
             "timestamps": {
                 "created": datetime.datetime.fromtimestamp(
-                    self.stat_info.st_ctime
+                    self.stat_info.st_ctime,
                 ).isoformat(),
                 "modified": datetime.datetime.fromtimestamp(
-                    self.stat_info.st_mtime
+                    self.stat_info.st_mtime,
                 ).isoformat(),
                 "accessed": datetime.datetime.fromtimestamp(
-                    self.stat_info.st_atime
+                    self.stat_info.st_atime,
                 ).isoformat(),
             },
             "size": self.size,
@@ -355,7 +367,7 @@ Indaleko_Collections = {
                 "fields": ["uuid1", "uuid2"],
                 "unique": True,
                 "type": "persistent",
-            }
+            },
         },
     },
     "contained_by": {
@@ -392,7 +404,7 @@ def process_directory(collections: dict, path: str, root_obj=None) -> int:
             except Exception as e:
                 # not sure what triggers this.
                 print(
-                    "Processing File {}, exception {}\n**Ignored**".format(file_path, e)
+                    f"Processing File {file_path}, exception {e}\n**Ignored**",
                 )
                 continue
             root_obj.add_contain_relationship(collections, file_obj)
@@ -406,7 +418,7 @@ def process_directory(collections: dict, path: str, root_obj=None) -> int:
             except Exception as e:
                 # not sure what triggers this.
                 print(
-                    "Processing File {}, exception {}\n**Ignored**".format(file_path, e)
+                    f"Processing File {file_path}, exception {e}\n**Ignored**",
                 )
                 continue
             root_obj.add_contain_relationship(collections, dir_obj)
@@ -428,7 +440,10 @@ def setup_collections(db, collection_names, reset=False) -> dict:
                 e = collection_names[name]["indices"][index]
                 assert e["type"] == "persistent", "Only support persistent"
                 collections[name].create_index(
-                    index, e["type"], e["fields"], e["unique"]
+                    index,
+                    e["type"],
+                    e["fields"],
+                    e["unique"],
                 )
     return collections
 
@@ -436,17 +451,26 @@ def setup_collections(db, collection_names, reset=False) -> dict:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--config", type=str, default="config.json", help="Configuration file to use"
+        "--config",
+        type=str,
+        default="config.json",
+        help="Configuration file to use",
     )
     parser.add_argument(
-        "--host", type=str, help="URL to use for ArangoDB (overrides config file)"
+        "--host",
+        type=str,
+        help="URL to use for ArangoDB (overrides config file)",
     )
     parser.add_argument(
-        "--port", type=int, help="Port number to use (overrides config file)"
+        "--port",
+        type=int,
+        help="Port number to use (overrides config file)",
     )
     parser.add_argument("--user", type=str, help="user name (overrides config file)")
     parser.add_argument(
-        "--password", type=str, help="user password (overrides config file)"
+        "--password",
+        type=str,
+        help="user password (overrides config file)",
     )
     parser.add_argument(
         "--database",
@@ -454,7 +478,10 @@ def main():
         help="Name of the database to use (overrides config file)",
     )
     parser.add_argument(
-        "--path", type=str, default="C:\\", help="the path where indexing should start"
+        "--path",
+        type=str,
+        default="C:\\",
+        help="the path where indexing should start",
     )
     parser.add_argument(
         "--reset",
@@ -464,7 +491,7 @@ def main():
     )
     args = parser.parse_args()
     # load the config information from the config file
-    with open(args.config, "rt") as fd:
+    with open(args.config) as fd:
         config = json.load(fd)
     if args.host != None:
         config["host"] = args.host
@@ -504,9 +531,7 @@ def main():
     execution_time = end - start
     if count > 0:
         print(
-            "Added {} in {} time ({} seconds per entry)".format(
-                count, execution_time, execution_time.total_seconds() / count
-            )
+            f"Added {count} in {execution_time} time ({execution_time.total_seconds() / count} seconds per entry)",
         )
 
 

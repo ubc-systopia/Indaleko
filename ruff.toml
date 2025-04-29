@@ -1,0 +1,82 @@
+# Ruff configuration file
+
+# Assume Python 3.12
+target-version = "py312"
+
+# Configure line length for the project
+line-length = 100
+
+# Enable all rules by default, then explicitly disable irrelevant ones
+[lint]
+select = ["ALL"]
+ignore = [
+    "D203", # one-blank-line-before-class (conflicts with another rule)
+    "D212", # multi-line-summary-first-line (conflicts with another rule)
+    "ANN101", # missing-type-self (unnecessary - self is always Self)
+    "ANN102", # missing-type-cls (unnecessary - cls is always Type[Self])
+    "B904", # raise from BaseException is too strict for our needs
+    "TRY003", # outside of except/raise may shadow flow-control
+    "EM101", # unnecessary import error message (too pedantic)
+    "EM102", # unnecessary exception message (too pedantic)
+]
+
+# Exclude patterns for all operations
+exclude = [
+    ".git",
+    ".venv*",
+    "*/__pycache__",
+    "*/\\.git/*",
+    "*\\.ipynb_checkpoints/*",
+    "*/.venv*/*",
+    "build",
+    "dist",
+    "venv",
+]
+
+# Configure format rule options
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+skip-magic-trailing-comma = false
+
+[lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[lint.flake8-quotes]
+docstring-quotes = "double"
+
+[lint.isort]
+case-sensitive = true
+combine-as-imports = true
+lines-after-imports = 2
+lines-between-types = 1
+order-by-type = true
+
+[lint.pylint]
+max-args = 8
+max-returns = 6
+max-statements = 50
+
+[lint.mccabe]
+max-complexity = 18
+
+[lint.pydocstyle]
+convention = "google"
+
+# Per-file ignores
+[lint.per-file-ignores]
+"*/__init__.py" = [
+    "F401", # Unused imports are ok in __init__ files
+    "D104", # No docstring required in __init__ files
+]
+"*/tests/*" = [
+    "S101", # Use of assert is ok in tests
+    "ANN", # Type annotations in tests are optional
+    "D", # Docstrings in tests are optional
+]
+"*test_*.py" = [
+    "S101", # Use of assert is ok in tests
+    "ANN", # Type annotations in tests are optional
+    "D", # Docstrings in tests are optional
+]

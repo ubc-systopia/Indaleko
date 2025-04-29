@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-from typing import Any, Dict
+from typing import Any
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -52,13 +52,13 @@ class BaseAmbientDataCollector:
         """
         raise NotImplementedError("Subclasses must implement this method")
 
-    def process_data(self, data: Any) -> Dict[str, Any]:
+    def process_data(self, data: Any) -> dict[str, Any]:
         """
         Process the collected data. This method should be implemented by subclasses.
         """
         raise NotImplementedError("Subclasses must implement this method")
 
-    def store_data(self, data: Dict[str, Any]) -> None:
+    def store_data(self, data: dict[str, Any]) -> None:
         """
         Store the processed data. This method should be implemented by subclasses.
         """
@@ -70,7 +70,7 @@ class BaseAmbientDataCollector:
         """
         return "Base class for ambient data collectors"
 
-    def get_latest_db_update(self) -> Dict[str, Any]:
+    def get_latest_db_update(self) -> dict[str, Any]:
         """
         Get the latest data update from the database. This method should be implemented by subclasses.
         """

@@ -22,7 +22,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
-
 from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -65,7 +64,6 @@ class KnownStorageAttributes:
     # STORAGE_ATTRIBUTES_MIME_TYPE = 'bce15d05-d4fd-4d37-933f-ff6b4e5dde9d'  # MIME type from file analysis
     # STORAGE_ATTRIBUTES_FILE_SUFFIX = 'd4282ceb-ec50-4bbf-8718-680c67a4d257'  # File suffix
     # STORAGE_ATTRIBUTES_LOWERCASE_FILE_NAME = 'c6724410-a717-44a7-b9d3-6b276e250c1d'  # Lowercase file name
-
 
     @classmethod
     def _initialize(cls: "KnownStorageAttributes") -> None:

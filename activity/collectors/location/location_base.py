@@ -22,7 +22,6 @@ import argparse
 import logging
 import os
 import sys
-
 from typing import Any
 
 from icecream import ic
@@ -101,7 +100,8 @@ def main():
     )
     command_subparser = parser.add_subparsers(dest="command", help="Command to execute")
     parser_list = command_subparser.add_parser(
-        "list", help="List the data providers available"
+        "list",
+        help="List the data providers available",
     )
     parser_list.add_argument(
         "--providerdir",
@@ -110,7 +110,9 @@ def main():
     parser_list.set_defaults(func=list_data_providers_command)
     parser.set_defaults(func=list_data_providers_command)
     parser.add_argument(
-        "--config", type=str, help="Configuration file for the location provider"
+        "--config",
+        type=str,
+        help="Configuration file for the location provider",
     )
     args = parser.parse_args()
     args.func(args)

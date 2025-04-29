@@ -20,12 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-import uuid
 
-from typing import List, Union
-
-from pydantic import Field, BaseModel
 from icecream import ic
+from pydantic import Field
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -36,10 +33,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
-from data_models.record import IndalekoRecordDataModel
-from data_models.timestamp import IndalekoTimestampDataModel
-from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 from data_models.i_uuid import IndalekoUUIDDataModel
+from data_models.record import IndalekoRecordDataModel
 
 # pylint: enable=wrong-import-position
 
@@ -60,7 +55,9 @@ class IndalekoIdentityDomainDataModel(IndalekoBaseModel):
     )
 
     Description: str = Field(
-        None, title="Description", description="Description of the identity domain."
+        None,
+        title="Description",
+        description="Description of the identity domain.",
     )
 
     class Config:
@@ -73,7 +70,7 @@ class IndalekoIdentityDomainDataModel(IndalekoBaseModel):
                 "Record": IndalekoRecordDataModel.Config.json_schema_extra["example"],
                 "Domain": IndalekoUUIDDataModel.Config.json_schema_extra["example"],
                 "Description": "This is a sample description of the identity domain.",
-            }
+            },
         }
 
 

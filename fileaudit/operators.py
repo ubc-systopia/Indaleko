@@ -1,6 +1,6 @@
 import re
 import subprocess
-import typing
+
 from abstract import IOperator, IReader
 
 
@@ -30,7 +30,7 @@ class InputReader(IReader):
 
     """
 
-    def __init__(self, cmd: typing.List[str]):
+    def __init__(self, cmd: list[str]):
         """
         Initialize InputReader with the provided command.
 
@@ -73,7 +73,7 @@ class InputReader(IReader):
                     f"Command exited with non-zero code: {process.returncode}; stderr: {stderr}",
                 )
         except Exception as e:
-            yield (1, f"Error: {str(e)}")
+            yield (1, f"Error: {e!s}")
 
 
 class FileInputReader(IReader):
@@ -82,7 +82,7 @@ class FileInputReader(IReader):
 
         self.input_filepath = input_file_path
         assert path.exists(
-            self.input_filepath
+            self.input_filepath,
         ), f"the input file does not exists at {self.input_filepath}"
 
     def run(self):
@@ -139,12 +139,13 @@ class ToList(IOperator):
 
         Args:
             input_tuple (tuple): A tuple containing status information and input string.
+
         Returns:
             tuple: A tuple containing status code and resulting list after conversion.
 
         """
         assert isinstance(
-            input_tuple, tuple
+            input_tuple, tuple,
         ), f"input is not a tuple; got {
             input_tuple}, type of {input_tuple}"
         self.status, self.input_str = input_tuple
@@ -219,17 +220,17 @@ class FilterField(IOperator):
         """
         self.position, self.contains_value = filter_args
 
-    def execute(self, input_tuple: tuple[int, typing.List[str]]):
+    def execute(self, input_tuple: tuple[int, list[str]]):
         """
         Execute the filtering process based on provided parameters.
 
         Args:
             input_tuple (tuple[int, List[str]]): A tuple containing status information and input list.
+
         Returns:
             tuple: A tuple containing status code and filtered list after applying the filter.
 
         """
-
         self.status, self.input_list = input_tuple
         if (
             self.status == 0
@@ -259,7 +260,7 @@ class FilterFields(IOperator):
         execute(): Execute the filtering process based on provided parameters.
     """
 
-    def __init__(self, pos: int, queries: typing.List[str], exact_match=None):
+    def __init__(self, pos: int, queries: list[str], exact_match=None):
         """
         Initialize FilterFields with the provided parameters.
 
@@ -273,8 +274,8 @@ class FilterFields(IOperator):
         self.exact_match = exact_match
 
     def execute(
-        self, input_tuple: tuple[int, typing.List[str]]
-    ) -> tuple[int, typing.List[str]]:
+        self, input_tuple: tuple[int, list[str]],
+    ) -> tuple[int, list[str]]:
         """
         Execute the filtering process based on provided parameters.
 
@@ -313,7 +314,6 @@ class Canonize:
         """
         Initializes Canonize object.
         """
-        pass
 
     def clean(self, word: str) -> str:
         """
@@ -341,7 +341,7 @@ class Canonize:
             return fid_match.group(1)
         return None
 
-    def find_tspent_index(self, arr: typing.List[str]) -> int:
+    def find_tspent_index(self, arr: list[str]) -> int:
         """
         Finds the index of the time spent pattern in the given array.
 
@@ -357,8 +357,8 @@ class Canonize:
         return -1
 
     def extract_path_pid_procname(
-        self, arr: typing.List[str], syscall: str
-    ) -> typing.Tuple[str, str, str]:
+        self, arr: list[str], syscall: str,
+    ) -> tuple[str, str, str]:
         """
         Extracts path, PID, and process name from the given array based on the syscall.
 
@@ -417,7 +417,7 @@ class Canonize:
 
         return (path, pid, procname)
 
-    def execute(self, input_arr) -> typing.Tuple[int, typing.List]:
+    def execute(self, input_arr) -> tuple[int, list]:
         """
         Executes the processing of the input array.
 
@@ -439,7 +439,7 @@ class Canonize:
             ret.append(fd)
 
             path, pid, procname = self.extract_path_pid_procname(
-                details, action.lower()
+                details, action.lower(),
             )
             if path:
                 ret.append(path)

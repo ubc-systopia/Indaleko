@@ -1,11 +1,10 @@
-import unittest
-import functools
+import hashlib
+import random
 import string
+import unittest
+
 from fileaudit.abstract import IWriter
 from fileaudit.logcompator import CompactRecord, LogCompactor
-import hashlib
-import typing
-import random
 
 
 class MockData:
@@ -45,7 +44,7 @@ class MockData:
                     "com.docker.cli",
                     "381337",
                 ],
-            )
+            ),
         ]
 
     @staticmethod
@@ -61,7 +60,7 @@ class MockData:
                     "com.docker.cli",
                     "381337",
                 ],
-            )
+            ),
         ]
 
     @staticmethod
@@ -118,7 +117,7 @@ class MockWriter(IWriter):
             type(arr)}"
         self.state.append(arr)
 
-    def get_state(self) -> typing.List:
+    def get_state(self) -> list:
         return self.state
 
 
@@ -201,9 +200,9 @@ class TestCompactRecord(unittest.TestCase):
                 all_ops[2][0][0],
                 [
                     CompactRecord.event_name_datets_sep.join(
-                        [x, CompactRecord.date_ts_sep.join([y, z])]
+                        [x, CompactRecord.date_ts_sep.join([y, z])],
                     )
-                    for x, y, z in zip(events[::3], events[1::3], events[2::3])
+                    for x, y, z in zip(events[::3], events[1::3], events[2::3], strict=False)
                 ],
             ]
 
@@ -219,7 +218,7 @@ class TestCompactRecord(unittest.TestCase):
 
 
 class TestLogCompactor(unittest.TestCase):
-    def get_sha256(self, record: typing.List[str]) -> str:
+    def get_sha256(self, record: list[str]) -> str:
         assert (
             type(record) == list
         ), f"record is not a list; type={
@@ -255,7 +254,7 @@ class TestLogCompactor(unittest.TestCase):
                         "app1",
                         "/path/foo/text1",
                         ["open|today_13:38:34.127529", "close|today_13:38:34.127535"],
-                    ]
+                    ],
                 ]
 
                 data = MockData.only_open_close()
@@ -275,7 +274,7 @@ class TestLogCompactor(unittest.TestCase):
                             "write|today_13:38:34.127533",
                             "close|today_13:38:34.127535",
                         ],
-                    ]
+                    ],
                 ]
 
                 data = MockData.open_close_rw()
@@ -288,7 +287,7 @@ class TestLogCompactor(unittest.TestCase):
                         "app1",
                         "",
                         ["read|today_13:38:34.127532", "write|today_13:38:34.127533"],
-                    ]
+                    ],
                 ]
 
                 data = MockData.only_rw()
@@ -305,7 +304,7 @@ class TestLogCompactor(unittest.TestCase):
                         "com.docker.cli",
                         "/path/foo/nosuccess",
                         ["open|today_13:38:23.403654"],
-                    ]
+                    ],
                 ]
                 data = MockData.only_open()
             case 6:
@@ -372,7 +371,7 @@ class TestLogCompactor(unittest.TestCase):
 
         # validate against the length of the returned state
         assert len(state) == len(
-            expects
+            expects,
         ), f"the state's length is not matched with the expected length; expects {
             len(expects)}, got={len(state)}; state={state} expects={expects}"
 

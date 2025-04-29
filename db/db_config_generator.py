@@ -19,12 +19,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import argparse
-from datetime import datetime, timezone
 import os
 import sys
+from datetime import UTC, datetime
 
 from icecream import ic
-from typing import Union
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -35,12 +34,12 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from constants import IndalekoConstants
-from db import IndalekoDBConfig
 from data_models.db_config import (
     IndalekoDBConfigDataModel,
-    IndalekoDBConfigUserDataModel,
     IndalekoDBConfigDockerConfigurationDataModel,
+    IndalekoDBConfigUserDataModel,
 )
+from db import IndalekoDBConfig
 
 # from utils import IndalekoDocker, IndalekoLogging, IndalekoSingleton
 # from utils.data_validation import validate_ip_address, validate_hostname
@@ -56,7 +55,8 @@ class IndalekoDBLocal:
     """
 
     def __init__(
-        self, config_data: Union[None, IndalekoDBConfigDataModel] = None
+        self,
+        config_data: None | IndalekoDBConfigDataModel = None,
     ) -> None:
         """
         Set up the docker configuration for the database.
@@ -82,7 +82,7 @@ class IndalekoDBLocal:
         port: int = 8529,
         ssl: bool = True,
         hostname: str = "activitycontext.work",
-        timestamp: datetime = datetime.now(timezone.utc),
+        timestamp: datetime = datetime.now(UTC),
         admin_user: str = "root",
     ) -> IndalekoDBConfigDataModel:
         """Generate remote configuration data."""
@@ -92,7 +92,8 @@ class IndalekoDBLocal:
             "Local": False,
             "Name": IndalekoConstants.project_name,
             "AdminUser": IndalekoDBConfigUserDataModel(
-                Name=admin_user, Password=admin_password
+                Name=admin_user,
+                Password=admin_password,
             ),
             "DBUser": IndalekoDBConfigUserDataModel(
                 Name=db_user,
@@ -110,7 +111,7 @@ class IndalekoDBLocal:
         hostname: str = "localhost",
         port: int = 8529,
         ssl: bool = False,
-        timestamp: datetime = datetime.now(timezone.utc),
+        timestamp: datetime = datetime.now(UTC),
     ) -> IndalekoDBConfigDataModel:
         """Generate a new docker configuration."""
         new_config_data = {
@@ -119,17 +120,16 @@ class IndalekoDBLocal:
             "Local": False,
             "Name": IndalekoConstants.project_name,
             "AdminUser": IndalekoDBConfigUserDataModel(
-                Name="root", Password=IndalekoDBConfig.generate_random_password()
+                Name="root",
+                Password=IndalekoDBConfig.generate_random_password(),
             ),
             "DBUser": IndalekoDBConfigUserDataModel(
                 Name=IndalekoDBConfig.generate_random_username(),
                 Password=IndalekoDBConfig.generate_random_password(),
             ),
             "DockerConfiguration": IndalekoDBConfigDockerConfigurationDataModel(
-                ContainerName=f"arango-{IndalekoConstants.default_prefix}-"
-                f"{timestamp.strftime('%Y%m%d%H%M%S')}",
-                VolumeName=f"{IndalekoConstants.default_prefix}-db-1-"
-                f"{timestamp.strftime('%Y%m%d%H%M%S')}",
+                ContainerName=f"arango-{IndalekoConstants.default_prefix}-{timestamp.strftime('%Y%m%d%H%M%S')}",
+                VolumeName=f"{IndalekoConstants.default_prefix}-db-1-{timestamp.strftime('%Y%m%d%H%M%S')}",
             ),
             "Hostname": hostname,
             "Port": port,
@@ -143,17 +143,21 @@ def main2():
     """Construct a new configuration file."""
     parser = argparse.ArgumentParser(description="Indaleko DB Configuration Generator.")
     parser.add_argument(
-        "--hostname", help="Hostname for the database", default="localhost"
+        "--hostname",
+        help="Hostname for the database",
+        default="localhost",
     )
     parser.add_argument("--port", help="Port for the database", default=8529)
     parser.add_argument("--ssl", help="Use SSL", default=False, action="store_true")
     parser.add_argument(
         "--timestamp",
         help="Timestamp for the configuration",
-        default=datetime.now(timezone.utc),
+        default=datetime.now(UTC),
     )
     parser.add_argument(
-        "--admin_user", help="Admin user for the database", default="root"
+        "--admin_user",
+        help="Admin user for the database",
+        default="root",
     )
     parser.add_argument(
         "--admin_password",
@@ -166,7 +170,10 @@ def main2():
         default=IndalekoDBConfig.generate_random_username(),
     )
     parser.add_argument(
-        "--docker", help="Use Docker", default=False, action="store_true"
+        "--docker",
+        help="Use Docker",
+        default=False,
+        action="store_true",
     )
     args = parser.parse_args()
     ic(args)
@@ -193,25 +200,32 @@ def main():
         default=indaleko_default_config_dir,
     )
     subparsers = parser.add_subparsers(
-        dest="command", title="command", help="Command to execute"
+        dest="command",
+        title="command",
+        help="Command to execute",
     )
     list_parser = subparsers.add_parser(
-        "list", help="List the current configuration files."
+        "list",
+        help="List the current configuration files.",
     )
     list_parser.set_defaults(func=list_command)
     add_parser = subparsers.add_parser("add", help="Add a new configuration file.")
     add_parser.add_argument(
-        "--hostname", help="Hostname for the database", default="localhost"
+        "--hostname",
+        help="Hostname for the database",
+        default="localhost",
     )
     add_parser.add_argument("--port", help="Port for the database", default=8529)
     add_parser.add_argument("--ssl", help="Use SSL", default=False, action="store_true")
     add_parser.add_argument(
         "--timestamp",
         help="Timestamp for the configuration",
-        default=datetime.now(timezone.utc),
+        default=datetime.now(UTC),
     )
     add_parser.add_argument(
-        "--admin_user", help="Admin user for the database", default="root"
+        "--admin_user",
+        help="Admin user for the database",
+        default="root",
     )
     add_parser.add_argument(
         "--admin_password",
@@ -224,7 +238,10 @@ def main():
         default=IndalekoDBConfig.generate_random_username(),
     )
     add_parser.add_argument(
-        "--docker", help="Use Docker", default=False, action="store_true"
+        "--docker",
+        help="Use Docker",
+        default=False,
+        action="store_true",
     )
     add_parser.set_defaults(func=add_command)
     args = parser.parse_args()

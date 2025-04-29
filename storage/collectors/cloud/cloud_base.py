@@ -20,10 +20,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import argparse
 import os
-from pathlib import Path
 import sys
-
-from typing import Union, Callable, Any
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any
 
 from icecream import ic
 
@@ -38,10 +38,10 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from data_models import IndalekoSourceIdentifierDataModel
 from perf.perf_collector import IndalekoPerformanceDataCollector
 from perf.perf_recorder import IndalekoPerformanceDataRecorder
+from storage.collectors import BaseStorageCollector
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 from utils.cli.runner import IndalekoCLIRunner
-from storage.collectors import BaseStorageCollector
 
 # pylint: enable=wrong-import-position
 
@@ -69,7 +69,7 @@ class BaseCloudStorageCollector(BaseStorageCollector):
     class cloud_collector_mixin(IndalekoBaseCLI.default_handler_mixin):
 
         @staticmethod
-        def get_pre_parser() -> Union[argparse.ArgumentParser, None]:
+        def get_pre_parser() -> argparse.ArgumentParser | None:
             """This method returns the pre-parser for the cloud storage collector."""
             parser = argparse.ArgumentParser(add_help=False)
             default_path = "/"  # root of the cloud storage
@@ -95,7 +95,7 @@ class BaseCloudStorageCollector(BaseStorageCollector):
     cli_handler_mixin = cloud_collector_mixin
 
     @staticmethod
-    def local_run(keys: dict[str, str]) -> Union[dict, None]:
+    def local_run(keys: dict[str, str]) -> dict | None:
         """This function is used to run the cloud storage collector."""
         args = keys["args"]  # must be there
         cli = keys["cli"]  # must be there
@@ -124,7 +124,8 @@ class BaseCloudStorageCollector(BaseStorageCollector):
                 return {}
 
         def capture_performance(
-            task_func: Callable[..., Any], output_file_name: Union[Path, str] = None
+            task_func: Callable[..., Any],
+            output_file_name: Path | str = None,
         ) -> None:
             assert output_file_name
             perf_data = IndalekoPerformanceDataCollector.measure_performance(
@@ -144,7 +145,7 @@ class BaseCloudStorageCollector(BaseStorageCollector):
                 perf_recorder = IndalekoPerformanceDataRecorder()
                 if args.performance_file:
                     perf_file = str(
-                        Path(args.datadir) / config_data["PerformanceDataFile"]
+                        Path(args.datadir) / config_data["PerformanceDataFile"],
                     )
                     perf_recorder.add_data_to_file(perf_file, perf_data)
                     if debug:

@@ -25,16 +25,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import argparse
-from datetime import datetime, timezone
-import keyring
 import logging
 import os
 import sys
 import uuid
-
+from datetime import UTC, datetime
 from getpass import getpass
+
+import keyring
 from icecream import ic
-from typing import Union
 from pyicloud import PyiCloudService
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -46,10 +45,10 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from db import IndalekoServiceManager
-from utils.misc.file_name_management import generate_file_name
 from storage.collectors.base import BaseStorageCollector
 from storage.collectors.cloud.cloud_base import BaseCloudStorageCollector
 from storage.collectors.data_model import IndalekoStorageCollectorDataModel
+from utils.misc.file_name_management import generate_file_name
 
 # pylint: enable=wrong-import-position
 
@@ -61,23 +60,19 @@ class IndalekoICloudStorageCollector(BaseCloudStorageCollector):
 
     indaleko_icloud_collector_uuid = "cf8694ff-6cfe-4801-9842-4315fc7a02e6"
     indaleko_icloud_collector_service_name = "iCloud Collector"
-    indaleko_icloud_collector_service_description = (
-        "This service indexes the iCloud folder of the user."
-    )
+    indaleko_icloud_collector_service_description = "This service indexes the iCloud folder of the user."
     indaleko_icloud_collector_service_version = "1.0"
-    indaleko_icloud_collector_service_type_identifier = (
-        IndalekoServiceManager.service_type_storage_collector
-    )
+    indaleko_icloud_collector_service_type_identifier = IndalekoServiceManager.service_type_storage_collector
 
     icloud_root_folder = {
         "ObjectIdentifier": "d0dac621-4de3-44df-a2c9-49841b86b508",
         "name": "icloud_root_dir",
         "path_display": "root",
         "size": 0,
-        "modified": datetime.now(timezone.utc),
-        "date_changed": datetime.now(timezone.utc),
-        "created": datetime.now(timezone.utc),
-        "last_opened": datetime.now(timezone.utc),
+        "modified": datetime.now(UTC),
+        "date_changed": datetime.now(UTC),
+        "created": datetime.now(UTC),
+        "last_opened": datetime.now(UTC),
     }
 
     indaleko_icloud_local_collector_service = {
@@ -139,14 +134,14 @@ class IndalekoICloudStorageCollector(BaseCloudStorageCollector):
             for stored_username in usernames:
                 print(f"- {stored_username}")
         user_id = input(
-            "Enter your iCloud username (or press Enter to select from the list above): "
+            "Enter your iCloud username (or press Enter to select from the list above): ",
         ).strip()
         if not user_id and usernames:
             if len(usernames) == 1:
                 user_id = usernames[0]
             else:
                 user_id = input(
-                    "Please select a username from the list above: "
+                    "Please select a username from the list above: ",
                 ).strip()
         return user_id
 
@@ -224,8 +219,10 @@ class IndalekoICloudStorageCollector(BaseCloudStorageCollector):
 
     @staticmethod
     def authenticate(
-        user_id: str, password: str, prompt: bool = False
-    ) -> Union[PyiCloudService, None]:
+        user_id: str,
+        password: str,
+        prompt: bool = False,
+    ) -> PyiCloudService | None:
         """
         This method authenticates the user.
 
@@ -251,7 +248,7 @@ class IndalekoICloudStorageCollector(BaseCloudStorageCollector):
                 ic("2FA required in a non-interactive session, failed")
                 return None
             code = input(
-                "Enter the code you received on one of your approved devices: "
+                "Enter the code you received on one of your approved devices: ",
             )
             result = api.validate_2fa_code(code)
             if not result:
@@ -265,7 +262,8 @@ class IndalekoICloudStorageCollector(BaseCloudStorageCollector):
     @staticmethod
     def generate_icloud_collector_file_name(**kwargs):
         """This method generates the name of the file that wiil contain the metadata
-        of the files in the iCloud folder."""
+        of the files in the iCloud folder.
+        """
         assert "user_id" in kwargs, "No user_id found in kwargs"
         return generate_file_name(**kwargs)
 
@@ -275,19 +273,13 @@ class IndalekoICloudStorageCollector(BaseCloudStorageCollector):
         if isinstance(data, (int, float, str, bool, type(None))):
             return data
         elif isinstance(data, list):
-            return [
-                IndalekoICloudStorageCollector.convert_to_serializable(item)
-                for item in data
-            ]
+            return [IndalekoICloudStorageCollector.convert_to_serializable(item) for item in data]
         elif isinstance(data, dict):
-            return {
-                key: IndalekoICloudStorageCollector.convert_to_serializable(value)
-                for key, value in data.items()
-            }
+            return {key: IndalekoICloudStorageCollector.convert_to_serializable(value) for key, value in data.items()}
         else:
             if hasattr(data, "__dict__"):
                 return IndalekoICloudStorageCollector.convert_to_serializable(
-                    data.__dict__
+                    data.__dict__,
                 )
             return None
 
@@ -295,29 +287,21 @@ class IndalekoICloudStorageCollector(BaseCloudStorageCollector):
         def to_utc_iso(dt):
             # Convert to UTC and format with 'Z' suffix
             if dt is not None:
-                return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+                return dt.astimezone(UTC).isoformat().replace("+00:00", "Z")
             else:
                 # Return the default UTC time with 'Z' suffix
-                return (
-                    datetime(1970, 1, 1, 0, 0, tzinfo=timezone.utc)
-                    .isoformat()
-                    .replace("+00:00", "Z")
-                )
+                return datetime(1970, 1, 1, 0, 0, tzinfo=UTC).isoformat().replace("+00:00", "Z")
 
         metadata = {
             "name": item.name,
-            "path_display": IndalekoICloudStorageCollector.icloud_root_folder[
-                "path_display"
-            ]
-            + "/"
-            + item_path,
+            "path_display": IndalekoICloudStorageCollector.icloud_root_folder["path_display"] + "/" + item_path,
             "size": getattr(item, "size", 0) or 0,  # Default to 0 if size is None or 0
             "date_created": to_utc_iso(getattr(item, "date_created", None)),
             "date_modified": to_utc_iso(getattr(item, "date_modified", None)),
             "last_opened": to_utc_iso(getattr(item, "date_last_opened", None)),
             "date_changed": to_utc_iso(getattr(item, "date_changed", None)),
             "ObjectIdentifier": str(
-                uuid.uuid4()
+                uuid.uuid4(),
             ),  # Generate and add a UUID for each file
             "drivewsid": getattr(item, "drivewsid", "Unknown"),
             "docwsid": getattr(item, "docwsid", "Unknown"),
@@ -351,16 +335,14 @@ class IndalekoICloudStorageCollector(BaseCloudStorageCollector):
                     metadata_list.append(metadata)
                     logging.debug(f"Indexed Item: {metadata}")
         except Exception as e:
-            logging.error(f"Failed to process folder: {path}, Error: {e}")
+            logging.exception(f"Failed to process folder: {path}, Error: {e}")
         return metadata_list
 
     def collect(self, recursive=True):
         """This method collects the data from the iCloud folder."""
         # need to get the user name, which isn't captured anywhere easy for us
         # to get.
-        pre_parser = (
-            IndalekoICloudStorageCollector.icloud_collector_mixin.get_pre_parser()
-        )
+        pre_parser = IndalekoICloudStorageCollector.icloud_collector_mixin.get_pre_parser()
         pre_args, _ = pre_parser.parse_known_args()
         # try to get the cached password.  If this fails, it should return None
         password = keyring.get_password("iCloud", pre_args.userid)
@@ -391,24 +373,20 @@ class IndalekoICloudStorageCollector(BaseCloudStorageCollector):
         suffix: suffix of the file to ingest (default is .json)
         """
         prospects = BaseStorageCollector.find_collector_files(
-            search_dir, prefix, suffix
+            search_dir,
+            prefix,
+            suffix,
         )
-        return [
-            f for f in prospects if IndalekoICloudStorageCollector.icloud_platform in f
-        ]
+        return [f for f in prospects if IndalekoICloudStorageCollector.icloud_platform in f]
 
     class icloud_collector_mixin(BaseCloudStorageCollector.cloud_collector_mixin):
         """This is the mixin for the iCloud collector"""
 
         @staticmethod
-        def get_pre_parser() -> Union[argparse.ArgumentParser, None]:
+        def get_pre_parser() -> argparse.ArgumentParser | None:
             """This method returns the pre-parser for the cloud storage collector."""
             parser = BaseCloudStorageCollector.cloud_collector_mixin.get_pre_parser()
-            known_users = [
-                x
-                for x in IndalekoICloudStorageCollector.get_stored_usernames()
-                if len(x) > 3
-            ]
+            known_users = [x for x in IndalekoICloudStorageCollector.get_stored_usernames() if len(x) > 3]
             default_user = None
             if len(known_users) > 0:
                 default_user = known_users[0]
@@ -416,8 +394,7 @@ class IndalekoICloudStorageCollector(BaseCloudStorageCollector):
                 "--userid",
                 type=str,
                 default=default_user,
-                help=f'The iCloud username (known users: {",".join(known_users)},'
-                f"default: {default_user})",
+                help=f'The iCloud username (known users: {",".join(known_users)},' f"default: {default_user})",
             )
             return parser
 
@@ -425,30 +402,29 @@ class IndalekoICloudStorageCollector(BaseCloudStorageCollector):
         def generate_output_file_name(keys: dict[str, str]) -> str:
             """This method is used to generate an output file name.  Note
             that it assumes the keys are in the desired format. Don't just
-            pass in configuration data."""
+            pass in configuration data.
+            """
             if not keys.get("UserId"):
-                pre_parser = (
-                    IndalekoICloudStorageCollector.icloud_collector_mixin.get_pre_parser()
-                )
+                pre_parser = IndalekoICloudStorageCollector.icloud_collector_mixin.get_pre_parser()
                 pre_args, _ = pre_parser.parse_known_args()
                 if pre_args.userid:
                     keys["UserId"] = pre_args.userid
             if not keys.get("UserId"):
                 collector = IndalekoICloudStorageCollector(
-                    config_dir=keys["ConfigDirectory"]
+                    config_dir=keys["ConfigDirectory"],
                 )
                 keys["UserId"] = collector.get_user_id(keys)
             if not keys.get("UserId"):
                 keys["UserId"] = "unknown@unknown.com"
             return BaseCloudStorageCollector.cloud_collector_mixin.generate_output_file_name(
-                keys
+                keys,
             )
 
     cli_handler_mixin = icloud_collector_mixin
 
 
 def main() -> None:
-    """iCloud collector main"""
+    """ICloud collector main"""
     BaseCloudStorageCollector.cloud_collector_runner(
         IndalekoICloudStorageCollector,
     )

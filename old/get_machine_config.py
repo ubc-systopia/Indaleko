@@ -1,10 +1,9 @@
-import platform
-import subprocess
+import datetime
 import json
 import multiprocessing
-import datetime
 import os
 import platform
+import subprocess
 
 
 class IndalekoWindowsMachine:
@@ -12,9 +11,7 @@ class IndalekoWindowsMachine:
     def __init__(self):
         self.max_execution_time = 60
         self.platform = platform.system()
-        assert (
-            self.platform == "Windows"
-        ), "Windows specific configuration requires execution on windows platform"
+        assert self.platform == "Windows", "Windows specific configuration requires execution on windows platform"
         self.data = {}
         self.operations = self.l()
         self.operations += self.capture_partition_operations()
@@ -24,7 +21,8 @@ class IndalekoWindowsMachine:
         self.pool = multiprocessing.Pool(cpu_count)
         print("24 ", len(self.operations), type(self.operations))
         self.results = self.pool.map(
-            IndalekoWindowsMachine.process_operation, self.operations
+            IndalekoWindowsMachine.process_operation,
+            self.operations,
         )
         for item in self.results:
             dt, name, output, exec_time = item
@@ -37,25 +35,25 @@ class IndalekoWindowsMachine:
     @staticmethod
     def process_operation(item: tuple) -> tuple():
         data_class, data_name, command, max_execution_time = item
-        start = datetime.datetime.now(datetime.timezone.utc)
+        start = datetime.datetime.now(datetime.UTC)
         try:
             operation_results = IndalekoWindowsMachine.capture_powershell_output(
-                command, max_execution_time
+                command,
+                max_execution_time,
             )
-        except subprocess.TimeoutExpired as e:
+        except subprocess.TimeoutExpired:
             operation_results = {}
-        end = datetime.datetime.now(datetime.timezone.utc)
+        end = datetime.datetime.now(datetime.UTC)
         result = (data_class, data_name, operation_results, str(end - start))
         return result
 
     def capture_wmi_operations(self):
         operations = []
         wmi_data_types = self.capture_powershell_output(
-            "Get-WmiObject -List", self.max_execution_time
+            "Get-WmiObject -List",
+            self.max_execution_time,
         )
-        w32_wmi_data_types = [
-            x for x in wmi_data_types if x["Name"].startswith("Win32_")
-        ]
+        w32_wmi_data_types = [x for x in wmi_data_types if x["Name"].startswith("Win32_")]
         cim_data_types = [x for x in wmi_data_types if x["Name"].startswith("CIM_")]
         self.data["cim_data"] = {}
         self.data["wim_data"] = {}
@@ -65,9 +63,9 @@ class IndalekoWindowsMachine:
                 (
                     "cim_data",
                     name,
-                    "Get-WmiObject -Class {}".format(name),
+                    f"Get-WmiObject -Class {name}",
                     self.max_execution_time,
-                )
+                ),
             )
         for dt in w32_wmi_data_types:
             name = dt["Name"]
@@ -75,9 +73,9 @@ class IndalekoWindowsMachine:
                 (
                     "wim_data",
                     name,
-                    "Get-WmiObject -Class {}".format(name),
+                    f"Get-WmiObject -Class {name}",
                     self.max_execution_time,
-                )
+                ),
             )
         return operations
 
@@ -91,7 +89,7 @@ class IndalekoWindowsMachine:
                 "os_data",
                 "hardware_data",
                 self.max_execution_time,
-            )
+            ),
         ]
 
     def capture_volume_operations(self):
@@ -104,21 +102,25 @@ class IndalekoWindowsMachine:
                 "hardware_data",
                 "-File windows-hardware-info.ps1",
                 self.max_execution_time,
-            )
+            ),
         ]
 
     @staticmethod
     def capture_powershell_output(cmd: str, max_execution_time: int) -> dict:
         ps_cmd = ["powershell.exe", cmd + " | ConvertTo-Json"]
         result = subprocess.run(
-            ps_cmd, capture_output=True, text=True, timeout=max_execution_time
+            ps_cmd,
+            capture_output=True,
+            text=True,
+            timeout=max_execution_time,
+            check=False,
         )
-        if 0 != result.returncode:
+        if result.returncode != 0:
             output = json.loads("{}")
         else:
             try:
                 output = json.loads(result.stdout)
-            except json.decoder.JSONDecodeError as e:
+            except json.decoder.JSONDecodeError:
                 output = json.loads("{}")
         return output
 
@@ -127,16 +129,15 @@ class IndalekoLinuxMachine:
 
     def __init__(self):
         self.platform = platform.system()
-        assert (
-            self.platform == "Linux"
-        ), "Linux specific configuration requires execution on linux platform"
+        assert self.platform == "Linux", "Linux specific configuration requires execution on linux platform"
         self.data = {}
 
         self.operations = self.capture_linux_operations()
         cpu_count = min(multiprocessing.cpu_count(), 48)
         self.pool = multiprocessing.Pool(cpu_count)
         self.results = self.pool.map(
-            IndalekoLinuxMachine.process_operation, self.operations
+            IndalekoLinuxMachine.process_operation,
+            self.operations,
         )
         for item in self.results:
             dt, name, output, exec_time = item
@@ -157,17 +158,17 @@ def main():
     args = parser.parse_args()
     data = {}
     if os.path.exists(args.output):
-        with open(args.output, "rt") as fd:
+        with open(args.output) as fd:
             data = json.load(fd)
     else:
-        start = datetime.datetime.now(datetime.timezone.utc)
+        start = datetime.datetime.now(datetime.UTC)
         machineinfo = IndalekoWindowsMachine()
-        end = datetime.datetime.now(datetime.timezone.utc)
-        with open(args.output, "wt") as fd:
+        end = datetime.datetime.now(datetime.UTC)
+        with open(args.output, "w") as fd:
             json.dump(machineinfo.data, fd)
         data = machineinfo.data
-    print("Data Captured: {}".format(len(data)))
-    print(" Elapsed Time: {}".format(end - start))
+    print(f"Data Captured: {len(data)}")
+    print(f" Elapsed Time: {end - start}")
     print(json.dumps(data, indent=4))
 
 

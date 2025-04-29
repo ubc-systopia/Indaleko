@@ -30,13 +30,13 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from db import IndalekoDBConfig, IndalekoCollections
+import utils.misc.file_name_management
+from db import IndalekoCollections, IndalekoDBConfig
 from utils import IndalekoDocker, IndalekoLogging
 from utils.misc.directory_management import (
-    indaleko_default_log_dir,
     indaleko_create_secure_directories,
+    indaleko_default_log_dir,
 )
-import utils.misc.file_name_management
 
 # from Indaleko import Indaleko
 # from IndalekoDBConfig import IndalekoDBConfig
@@ -48,33 +48,24 @@ import utils.misc.file_name_management
 
 def run_container(db_config: IndalekoDBConfig):
     # the configuration
-    if (
-        "container" not in db_config
-        or "volume" not in db_config
-        or "admin_passwd" not in db_config
-    ):
+    if "container" not in db_config or "volume" not in db_config or "admin_passwd" not in db_config:
         logging.critical(
-            'run_container: there is no "container", '
-            '"volume" or "admin_password" configuration in the config file'
+            'run_container: there is no "container", "volume" or "admin_password" configuration in the config file',
         )
         exit(1)
 
     indaleko_docker = IndalekoDocker(
-        **{
-            "container_name": db_config["container"],
-            "container_volume": db_config["volume"],
-        }
+        container_name=db_config["container"],
+        container_volume=db_config["volume"],
     )
 
     if db_config["container"] not in indaleko_docker.list_containers():
         logging.debug(
-            'run_container: there is no container with the name "%s"!'
-            "Creating one ...",
+            'run_container: there is no container with the name "%s"!' "Creating one ...",
             db_config["container"],
         )
         logging.debug(
-            'run_container: there is no container with the name "%s"!'
-            "Creating one ...",
+            'run_container: there is no container with the name "%s"!' "Creating one ...",
             db_config["container"],
         )
         # we don't have the container! create one
@@ -112,7 +103,7 @@ def setup_command(args: argparse.Namespace) -> None:
     )
     print(
         f"Create container {db_config.config['database']['container']} "
-        f"with volume {db_config.config['database']['volume']}"
+        f"with volume {db_config.config['database']['volume']}",
     )
     indaleko_docker.create_container(
         db_config.config["database"]["container"],
@@ -122,7 +113,7 @@ def setup_command(args: argparse.Namespace) -> None:
     logging.info("Created container %s", db_config.config["database"]["container"])
     print(
         f"Created container {db_config.config['database']['container']} "
-        f"with volume {db_config.config['database']['volume']}"
+        f"with volume {db_config.config['database']['volume']}",
     )
     logging.info("Start container %s", db_config.config["database"]["container"])
     print(f"Start container {db_config.config['database']['container']}")
@@ -186,7 +177,7 @@ def delete_command(args: argparse.Namespace) -> None:
     try:
         indaleko_docker.delete_container(container_name, stop=stop)
     except Exception as e:
-        logging.error("Could not delete container %s, Exception %s", container_name, e)
+        logging.exception("Could not delete container %s, Exception %s", container_name, e)
         print(f"Could not delete running container {container_name}, Exception {e}")
         return
     logging.info("Delete volume %s", volume_name)
@@ -207,22 +198,26 @@ def default_command(args: argparse.Namespace) -> None:
         check_command(args)
     else:
         setup_command(args)
-    return
 
 
 def main():
     """Main entry point for the program"""
     # Make sure our data/log/config directories exist.
     indaleko_create_secure_directories()
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     timestamp = now.isoformat()
     parser = argparse.ArgumentParser(description="Indaleko DB Setup")
     parser.add_argument(
-        "--log_dir", help="Log directory to use", default=indaleko_default_log_dir
+        "--log_dir",
+        help="Log directory to use",
+        default=indaleko_default_log_dir,
     )
     parser.add_argument("--log", help="Log file to write")
     parser.add_argument(
-        "--loglevel", type=int, default=logging.DEBUG, help="Log level to use"
+        "--loglevel",
+        type=int,
+        default=logging.DEBUG,
+        help="Log level to use",
     )
 
     command_subparser = parser.add_subparsers(dest="command")
@@ -230,7 +225,8 @@ def main():
     parser_check = command_subparser.add_parser("check", help="Check the database")
     parser_check.set_defaults(func=check_command)
     parser_setup = command_subparser.add_parser(
-        "setup", help="Set up a clean instance of the database"
+        "setup",
+        help="Set up a clean instance of the database",
     )
     parser_setup.set_defaults(func=setup_command)
 
@@ -241,7 +237,9 @@ def main():
     args = parser.parse_args()
     if args.log is None:
         args.log = utils.misc.file_name_management.generate_file_name(
-            suffix="log", service="dbsetup", timestamp=timestamp
+            suffix="log",
+            service="dbsetup",
+            timestamp=timestamp,
         )
     print(args)
     IndalekoLogging(
@@ -254,7 +252,6 @@ def main():
     logging.debug(args)
     args.func(args)
     logging.info("Ending Indaleko database setup")
-    return
 
 
 if __name__ == "__main__":

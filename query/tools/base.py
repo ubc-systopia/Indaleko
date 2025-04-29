@@ -24,7 +24,7 @@ import time
 import traceback
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -38,100 +38,150 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 class ToolParameter(BaseModel):
     """Definition of a tool parameter."""
-    
+
     name: str
     description: str
     type: str
     required: bool = True
-    default: Optional[Any] = None
-    enum: Optional[List[Any]] = None
+    default: Any | None = None
+    enum: list[Any] | None = None
 
 
 class ToolDefinition(BaseModel):
     """Definition of a tool."""
-    
+
     name: str
     description: str
-    parameters: List[ToolParameter]
-    returns: Dict[str, Any]
-    examples: Optional[List[Dict[str, Any]]] = None
-    
+    parameters: list[ToolParameter]
+    returns: dict[str, Any]
+    examples: list[dict[str, Any]] | None = None
+
 
 class ToolInput(BaseModel):
     """Input data for a tool invocation."""
-    
+
     tool_name: str
-    parameters: Dict[str, Any]
-    conversation_id: Optional[str] = None
-    invocation_id: Optional[str] = None
+    parameters: dict[str, Any]
+    conversation_id: str | None = None
+    invocation_id: str | None = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 
 class ToolOutput(BaseModel):
     """Output data from a tool invocation."""
-    
+
     tool_name: str
     success: bool
-    result: Optional[Any] = None
-    error: Optional[str] = None
-    trace: Optional[str] = None
+    result: Any | None = None
+    error: str | None = None
+    trace: str | None = None
     elapsed_time: float
-    invocation_id: Optional[str] = None
+    invocation_id: str | None = None
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ProgressCallback(BaseModel):
+    """Callback data for tool progress updates."""
+
+    tool_name: str
+    stage: str
+    message: str
+    progress: float = 0.0  # 0.0 to 1.0
+    data: dict[str, Any] | None = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 
 class BaseTool(ABC):
     """Base class for all Indaleko tools."""
-    
+
     def __init__(self):
         """Initialize the tool."""
-        pass
-    
+        self._progress_callback = None
+
     @property
     @abstractmethod
     def definition(self) -> ToolDefinition:
         """Get the tool definition."""
-        pass
-    
+
     @abstractmethod
     def execute(self, input_data: ToolInput) -> ToolOutput:
         """
         Execute the tool with the given input.
-        
+
         Args:
             input_data (ToolInput): The input parameters for the tool.
-            
+
         Returns:
             ToolOutput: The result of the tool execution.
         """
-        pass
-    
+
+    def set_progress_callback(self, callback_func: callable) -> None:
+        """
+        Set a callback function to receive progress updates during tool execution.
+
+        Args:
+            callback_func (callable): A function that takes a ProgressCallback object.
+                                     Set to None to disable progress updates.
+        """
+        self._progress_callback = callback_func
+
+    def report_progress(
+        self,
+        stage: str,
+        message: str,
+        progress: float = 0.0,
+        data: dict[str, Any] | None = None,
+    ) -> None:
+        """
+        Report progress during tool execution.
+
+        Args:
+            stage (str): The current execution stage (e.g., "parsing", "translating", "executing")
+            message (str): A human-readable message describing the current status
+            progress (float, optional): Progress value between 0.0 and 1.0. Defaults to 0.0.
+            data (Dict[str, Any], optional): Additional data to include with the progress report
+        """
+        if self._progress_callback is not None:
+            callback_data = ProgressCallback(
+                tool_name=self.definition.name,
+                stage=stage,
+                message=message,
+                progress=progress,
+                data=data,
+            )
+            self._progress_callback(callback_data)
+
     def validate_input(self, input_data: ToolInput) -> None:
         """
         Validate that the input data matches the tool's parameter specifications.
-        
+
         Args:
             input_data (ToolInput): The input data to validate.
-            
+
         Raises:
             ValueError: If the input data is invalid.
         """
         # Check that the tool name matches
         if input_data.tool_name != self.definition.name:
-            raise ValueError(f"Tool name mismatch: {input_data.tool_name} != {self.definition.name}")
-        
+            raise ValueError(
+                f"Tool name mismatch: {input_data.tool_name} != {self.definition.name}",
+            )
+
         # Check required parameters
         for param in self.definition.parameters:
             if param.required and param.name not in input_data.parameters:
                 raise ValueError(f"Missing required parameter: {param.name}")
-        
+
         # Check parameter types and enum values
         for name, value in input_data.parameters.items():
             # Find the parameter definition
-            param_def = next((p for p in self.definition.parameters if p.name == name), None)
+            param_def = next(
+                (p for p in self.definition.parameters if p.name == name),
+                None,
+            )
             if param_def is None:
                 raise ValueError(f"Unknown parameter: {name}")
-            
+
             # Check type
             type_map = {
                 "string": str,
@@ -139,45 +189,49 @@ class BaseTool(ABC):
                 "number": (int, float),
                 "boolean": bool,
                 "array": list,
-                "object": dict
+                "object": dict,
             }
             expected_type = type_map.get(param_def.type)
             if expected_type and not isinstance(value, expected_type):
-                raise ValueError(f"Parameter {name} has wrong type: {type(value).__name__} != {param_def.type}")
-            
+                raise ValueError(
+                    f"Parameter {name} has wrong type: {type(value).__name__} != {param_def.type}",
+                )
+
             # Check enum values
             if param_def.enum is not None and value not in param_def.enum:
-                raise ValueError(f"Parameter {name} has invalid value: {value} not in {param_def.enum}")
-    
+                raise ValueError(
+                    f"Parameter {name} has invalid value: {value} not in {param_def.enum}",
+                )
+
     def wrapped_execute(self, input_data: ToolInput) -> ToolOutput:
         """
         Wrapper for execute method that handles timing, validation, and error handling.
-        
+
         Args:
             input_data (ToolInput): The input parameters for the tool.
-            
+
         Returns:
             ToolOutput: The result of the tool execution.
         """
         start_time = time.time()
-        
+
         try:
             # Validate input
             self.validate_input(input_data)
-            
+
             # Execute the tool
             result = self.execute(input_data)
             elapsed_time = time.time() - start_time
             result.elapsed_time = elapsed_time
-            
+
             return result
-            
+
         except Exception as e:
             elapsed_time = time.time() - start_time
-            
+
             # Capture the stack trace
             trace = traceback.format_exc()
-            
+
             # Create an error result
             return ToolOutput(
                 tool_name=self.definition.name,
@@ -185,5 +239,5 @@ class BaseTool(ABC):
                 error=str(e),
                 trace=trace,
                 elapsed_time=elapsed_time,
-                invocation_id=input_data.invocation_id
+                invocation_id=input_data.invocation_id,
             )

@@ -1,11 +1,12 @@
 import argparse
+import datetime
 import json
+import logging
 import os
+import sys
+
 import msal
 import requests
-import logging
-import sys
-import datetime
 
 
 class MicrosoftGraphCredentials:
@@ -16,7 +17,7 @@ class MicrosoftGraphCredentials:
         cache_file: str = "data/msgraph-cache.bin",
     ):
         self.__chosen_account__ = -1
-        self.config = json.load(open(config, "rt"))
+        self.config = json.load(open(config))
         self.cache_file = cache_file
         self.__load_cache__()
         self.__output_file_name__ = None
@@ -39,11 +40,11 @@ class MicrosoftGraphCredentials:
 
     def __load_cache__(self):
         if hasattr(self, "cache"):
-            return
+            return None
         self.cache = msal.SerializableTokenCache()
         if os.path.exists(self.cache_file):
             logging.info("Cache file exists, deserializing")
-            self.cache.deserialize(open(self.cache_file, "r").read())
+            self.cache.deserialize(open(self.cache_file).read())
             logging.info(f"Loaded cache: {self.cache}")
         return self
 
@@ -78,15 +79,17 @@ class MicrosoftGraphCredentials:
             accounts = self.app.get_accounts()
             if accounts:
                 self.__output_file_name__ = accounts[self.__get_chosen_account__()].get(
-                    "username"
+                    "username",
                 )
         return self.__output_file_name__
 
     def get_output_file_name(self):
         return f"data/microsoft-onedrive-data-{self.get_account_name()}-{datetime.datetime.now(datetime.UTC)}-data.json".replace(
-            " ", "_"
+            " ",
+            "_",
         ).replace(
-            ":", "-"
+            ":",
+            "-",
         )
 
     def __get_token__(self):
@@ -96,20 +99,21 @@ class MicrosoftGraphCredentials:
         result = None
         accounts = self.app.get_accounts()
         logging.info(
-            f"{len(accounts)} account(s) exist in cache, hopefully with tokens.  Checking."
+            f"{len(accounts)} account(s) exist in cache, hopefully with tokens.  Checking.",
         )
         if self.__chosen_account__ < 0 and len(accounts) > 0:
             self.chosen_account = self.__choose_account__()
         if self.__chosen_account__ >= 0:
             result = self.app.acquire_token_silent(
-                self.config["scope"], account=accounts[self.__chosen_account__]
+                self.config["scope"],
+                account=accounts[self.__chosen_account__],
             )
         if result is None:
             logging.info("Suitable token not found in cache. Request from user.")
             flow = self.app.initiate_device_flow(scopes=self.config["scope"])
             if "user_code" not in flow:
                 raise ValueError(
-                    f"Failed to create device flow. Err: {json.dumps(flow,indent=4)}"
+                    f"Failed to create device flow. Err: {json.dumps(flow,indent=4)}",
                 )
             print(flow["message"])
             sys.stdout.flush()
@@ -124,16 +128,12 @@ class MicrosoftGraphCredentials:
         return self.token
 
     def __save_cache__(self):
-        if hasattr(self, "cache") and getattr(self, "cache") is not None:
+        if hasattr(self, "cache") and self.cache is not None:
             print(type(self.cache))
             open(self.cache_file, "w").write(self.cache.serialize())
 
     def __del__(self):
-        if (
-            hasattr(self, "cache")
-            and self.cache is not None
-            and self.cache.has_state_changed
-        ):
+        if hasattr(self, "cache") and self.cache is not None and self.cache.has_state_changed:
             self.__save_cache__()
 
     def get_token(self):
@@ -156,9 +156,7 @@ def get_onedrive_metadata_recursive(cred: MicrosoftGraphCredentials, folder_id=N
     if folder_id is None:
         endpoint = "https://graph.microsoft.com/v1.0/me/drive/root/children"
     else:
-        endpoint = (
-            f"https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}/children"
-        )
+        endpoint = f"https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}/children"
 
     while endpoint:
         response = requests.get(endpoint, headers=headers)
@@ -170,12 +168,12 @@ def get_onedrive_metadata_recursive(cred: MicrosoftGraphCredentials, folder_id=N
                     # Recursively fetch metadata for subfolder
                     subfolder_id = item["id"]
                     metadata_list.extend(
-                        get_onedrive_metadata_recursive(cred, subfolder_id)
+                        get_onedrive_metadata_recursive(cred, subfolder_id),
                     )
             endpoint = data.get("@odata.nextLink")
         else:
             print(f"Error: {response.status_code} - {response.text}")
-            if 401 == response.status_code:  # seems to indicate a stale token
+            if response.status_code == 401:  # seems to indicate a stale token
                 cred.clear_token()
                 headers = get_headers()
             # try again
@@ -230,14 +228,20 @@ def main():
         help="Name and location from whence to retrieve the Microsoft Graph Config info",
     )
     parser.add_argument(
-        "--host", type=str, help="URL to use for ArangoDB (overrides config file)"
+        "--host",
+        type=str,
+        help="URL to use for ArangoDB (overrides config file)",
     )
     parser.add_argument(
-        "--port", type=int, help="Port number to use (overrides config file)"
+        "--port",
+        type=int,
+        help="Port number to use (overrides config file)",
     )
     parser.add_argument("--user", type=str, help="user name (overrides config file)")
     parser.add_argument(
-        "--password", type=str, help="user password (overrides config file)"
+        "--password",
+        type=str,
+        help="user password (overrides config file)",
     )
     parser.add_argument(
         "--database",
@@ -256,10 +260,10 @@ def main():
     metadata = get_onedrive_metadata_recursive(graphcreds)
     end = datetime.datetime.now(datetime.UTC)
     if len(metadata) > 0:
-        with open(args.output, "wt") as output_file:
+        with open(args.output, "w") as output_file:
             json.dump(metadata, output_file, indent=4)
         print(
-            f"Saved {len(metadata)} records to {args.output} in {end-start} seconds ({(end-start)/len(metadata)} seconds per record)"
+            f"Saved {len(metadata)} records to {args.output} in {end-start} seconds ({(end-start)/len(metadata)} seconds per record)",
         )
 
 

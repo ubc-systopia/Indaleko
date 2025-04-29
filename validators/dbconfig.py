@@ -34,8 +34,4 @@ class DBConfig:
         return self.db_config[self.__db]
 
     def __str__(self):
-        return ", ".join(
-            f"{key}={value}"
-            for key, value in self.__dict__.items()
-            if not key.startswith("_")
-        )
+        return ", ".join(f"{key}={value}" for key, value in self.__dict__.items() if not key.startswith("_"))

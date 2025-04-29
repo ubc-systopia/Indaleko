@@ -21,10 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+from datetime import UTC, datetime
 
-from pydantic import Field, field_validator, AwareDatetime
-from typing import Optional, Union
-from datetime import datetime, timezone
+from pydantic import AwareDatetime, Field, field_validator
 
 # from icecream import ic
 
@@ -36,10 +35,10 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from data_models.location_data_model import BaseLocationDataModel
 from activity.collectors.location.data_models.windows_gps_satellite_data import (
     WindowsGPSLocationSatelliteDataModel,
 )
+from data_models.location_data_model import BaseLocationDataModel
 
 # pylint: enable=wrong-import-position
 
@@ -47,27 +46,37 @@ from activity.collectors.location.data_models.windows_gps_satellite_data import 
 class WindowsGPSLocationDataModel(BaseLocationDataModel):
     """This is the data model for the Windows GPS location service."""
 
-    altitude_accuracy: Union[float, None] = Field(
-        None, description="Accuracy of altitude measurement"
+    altitude_accuracy: float | None = Field(
+        None,
+        description="Accuracy of altitude measurement",
     )
-    is_remote_source: Union[bool, None] = Field(None, description="Is the source remote?")
-    point: Optional[str] = Field(
-        None, description="A string representation of the point data"
+    is_remote_source: bool | None = Field(
+        None,
+        description="Is the source remote?",
     )
-    position_source: Union[str, None] = Field(
-        None, description="The source of the position data"
+    point: str | None = Field(
+        None,
+        description="A string representation of the point data",
     )
-    position_source_timestamp: Union[AwareDatetime, None] = Field(
-        None, description="Timestamp of the position source"
+    position_source: str | None = Field(
+        None,
+        description="The source of the position data",
     )
-    satellite_data: Union[WindowsGPSLocationSatelliteDataModel, None] = Field(
-        None, description="Details about satellite data used for the position"
+    position_source_timestamp: AwareDatetime | None = Field(
+        None,
+        description="Timestamp of the position source",
     )
-    civic_address: Union[str, None] = Field(
-        None, description="Civic address for the location, if available"
+    satellite_data: WindowsGPSLocationSatelliteDataModel | None = Field(
+        None,
+        description="Details about satellite data used for the position",
     )
-    venue_data: Union[str, None] = Field(
-        None, description="Details about the venue data for the location, if available"
+    civic_address: str | None = Field(
+        None,
+        description="Civic address for the location, if available",
+    )
+    venue_data: str | None = Field(
+        None,
+        description="Details about the venue data for the location, if available",
     )
 
     @field_validator("position_source_timestamp", mode="before")
@@ -76,11 +85,10 @@ class WindowsGPSLocationDataModel(BaseLocationDataModel):
             value = datetime.fromisoformat(value)
         assert isinstance(value, datetime)
         if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
+            value = value.replace(tzinfo=UTC)
         return value
 
     class Config:
-
         @staticmethod
         def generate_example():
             """Generate an example for the data model"""
@@ -90,9 +98,7 @@ class WindowsGPSLocationDataModel(BaseLocationDataModel):
             example["point"] = "POINT(49.2827 -123.1207)"
             example["position_source"] = "GPS"
             example["position_source_timestamp"] = "2023-09-21T10:31:00Z"
-            example["satellite_data"] = WindowsGPSLocationSatelliteDataModel.Config.json_schema_extra[
-                "example"
-            ]
+            example["satellite_data"] = WindowsGPSLocationSatelliteDataModel.Config.json_schema_extra["example"]
             example["civic_address"] = None
             example["venue_data"] = None
             return example

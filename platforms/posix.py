@@ -37,10 +37,7 @@ class IndalekoPosix:
         """This function maps the file attributes to the string representation."""
         file_attributes = []
         for attr in IndalekoPosix.FILE_ATTRIBUTES.items():
-            if (
-                attributes & IndalekoPosix.FILE_ATTRIBUTES[attr[0]]
-                == IndalekoPosix.FILE_ATTRIBUTES[attr[0]]
-            ):
+            if attributes & IndalekoPosix.FILE_ATTRIBUTES[attr[0]] == IndalekoPosix.FILE_ATTRIBUTES[attr[0]]:
                 file_attributes.append(attr[0])
         return " | ".join(file_attributes)
 
@@ -49,7 +46,11 @@ def main():
     """Test code for IndalekoPosix class."""
     parser = argparse.ArgumentParser(description="Indaleko Posix test logic")
     parser.add_argument(
-        "--attr", "-a", default=0xFF, type=int, help="file attribute bits to test"
+        "--attr",
+        "-a",
+        default=0xFF,
+        type=int,
+        help="file attribute bits to test",
     )
     args = parser.parse_args()
 
@@ -59,7 +60,7 @@ def main():
             print(f"{attributes} = {IndalekoPosix.FILE_ATTRIBUTES[attributes[0]]}")
             print(
                 f"{attributes} = \
-                  {IndalekoPosix.map_file_attributes(IndalekoPosix.FILE_ATTRIBUTES[attributes[0]])}"
+                  {IndalekoPosix.map_file_attributes(IndalekoPosix.FILE_ATTRIBUTES[attributes[0]])}",
             )
     else:
         print(f"{args.attr} = {IndalekoPosix.map_file_attributes(args.attr)}")

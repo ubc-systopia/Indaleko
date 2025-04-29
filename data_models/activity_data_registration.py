@@ -23,8 +23,8 @@ import os
 import sys
 import uuid
 
-from pydantic import Field
 from icecream import ic
+from pydantic import Field
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -48,11 +48,15 @@ class IndalekoActivityDataRegistrationDataModel(IndalekoBaseModel):
     """
 
     Identifier: uuid.UUID = Field(
-        ..., title="Identifier", description="The UUID for the activity data provider."
+        ...,
+        title="Identifier",
+        description="The UUID for the activity data provider.",
     )
 
     Version: str = Field(
-        ..., title="Version", description="The version of the activity data provider."
+        ...,
+        title="Version",
+        description="The version of the activity data provider.",
     )
 
     Description: str = Field(
@@ -62,7 +66,9 @@ class IndalekoActivityDataRegistrationDataModel(IndalekoBaseModel):
     )
 
     Record: IndalekoRecordDataModel = Field(
-        ..., title="Record", description="Standard data record format."
+        ...,
+        title="Record",
+        description="Standard data record format.",
     )
 
     class Config:
@@ -74,7 +80,7 @@ class IndalekoActivityDataRegistrationDataModel(IndalekoBaseModel):
                 "Version": "1.0",
                 "Description": "This is a sample activity data provider registration.",
                 "Record": IndalekoRecordDataModel.Config.json_schema_extra["example"],
-            }
+            },
         }
 
 

@@ -58,20 +58,20 @@ class DnsActivityData(IndalekoBaseModel):
     query_domain: str = Field(..., description="Queried domain name")
     query_type: Union[str, int] = Field(..., description="DNS record type")
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    
+
     # Process attribution (if available)
     process_id: Optional[int] = Field(None)
     process_name: Optional[str] = Field(None)
-    
+
     # Source information
     source_ip: Optional[str] = Field(None)
     source_port: Optional[int] = Field(None)
-    
+
     # Response information
     response_ips: List[str] = Field(default_factory=list)
     response_ttl: Optional[int] = Field(None)
     response_error: Optional[str] = Field(None)
-    
+
     # Contextual enrichment
     device_name: Optional[str] = Field(None)
     device_type: Optional[str] = Field(None)
@@ -226,20 +226,20 @@ DNS activity includes these semantic attributes:
 class DnsActivityAttributes(str, Enum):
     """Semantic attributes for DNS activity."""
     DNS_ACTIVITY = "6c7d8e9f-0a1b-2c3d-4e5f-6a7b8c9d0e1f"
-    
+
     # Domain categories
     CATEGORY_DEVELOPMENT = "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d"
     CATEGORY_PRODUCTIVITY = "b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7"
     CATEGORY_SOCIAL = "c3d4e5f6-a7b8-9c0d-1e2f-3a4b5c6d7e8"
     CATEGORY_ENTERTAINMENT = "d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f9"
     CATEGORY_CLOUD = "e5f6a7b8-c9d0-1e2f-3a4b-5c6d7e8f9a0"
-    
+
     # Application categories
     APP_BROWSER = "f6a7b8c9-d0e1-2f3a-4b5c-6d7e8f9a0b1"
     APP_DEVELOPMENT = "a7b8c9d0-e1f2-3a4b-5c6d-7e8f9a0b1c2"
     APP_SYSTEM = "b8c9d0e1-f2a3-4b5c-6d7e-8f9a0b1c2d3"
     APP_COLLABORATION = "c9d0e1f2-a3b4-5c6d-7e8f-9a0b1c2d3e4"
-    
+
     # Special attributes
     HIGH_FREQUENCY = "d0e1f2a3-b4c5-6d7e-8f9a-0b1c2d3e4f5"
     UNUSUAL_PATTERN = "e1f2a3b4-c5d6-7e8f-9a0b-1c2d3e4f5a6"
@@ -311,7 +311,7 @@ collector.start_collection()
 ```python
 # Get all queries to a specific domain
 github_queries = recorder.get_queries_by_domain(
-    domain="github.com", 
+    domain="github.com",
     include_subdomains=True
 )
 
@@ -351,20 +351,20 @@ def find_file_source_domains(file_path):
     """Find domains that might be the source of a downloaded file."""
     # Get file creation time
     file_creation = ntfs_recorder.get_file_creation(file_path)
-    
+
     if not file_creation:
         return []
-    
+
     # Look for DNS queries in a window before file creation
     window_start = file_creation.timestamp - timedelta(minutes=5)
     window_end = file_creation.timestamp
-    
+
     # Get DNS queries in this window
     queries = dns_recorder.get_queries_by_time_range(
         start_time=window_start,
         end_time=window_end
     )
-    
+
     # Look for download domains
     download_domains = []
     for query in queries:
@@ -376,7 +376,7 @@ def find_file_source_domains(file_path):
                 "timestamp": query.timestamp,
                 "time_before_file": (file_creation.timestamp - query.timestamp).total_seconds()
             })
-    
+
     return sorted(download_domains, key=lambda x: x["time_before_file"])
 ```
 
@@ -391,19 +391,19 @@ def associate_domains_with_task(task_id):
     task = task_recorder.get_task_by_id(task_id)
     if not task:
         return []
-    
+
     # Get DNS queries during task active periods
     task_domains = []
     for session in task.active_sessions:
         session_start = session.start_time
         session_end = session.end_time
-        
+
         # Get DNS queries in this session
         queries = dns_recorder.get_queries_by_time_range(
             start_time=session_start,
             end_time=session_end
         )
-        
+
         # Group by domain
         domains = {}
         for query in queries:
@@ -415,17 +415,17 @@ def associate_domains_with_task(task_id):
                     "first_seen": None,
                     "last_seen": None
                 }
-            
+
             domains[domain]["query_count"] += 1
-            
+
             if not domains[domain]["first_seen"] or query.timestamp < domains[domain]["first_seen"]:
                 domains[domain]["first_seen"] = query.timestamp
-                
+
             if not domains[domain]["last_seen"] or query.timestamp > domains[domain]["last_seen"]:
                 domains[domain]["last_seen"] = query.timestamp
-        
+
         task_domains.extend(domains.values())
-    
+
     # Return sorted by query count
     return sorted(task_domains, key=lambda x: x["query_count"], reverse=True)
 ```
@@ -438,18 +438,18 @@ Generate comprehensive activity timelines:
 def generate_network_activity_timeline(user_id, start_time, end_time):
     """Generate network activity timeline for a user."""
     timeline_items = []
-    
+
     # Get user's devices
     devices = device_recorder.get_devices_by_user(user_id)
     device_ips = [device.ip_address for device in devices]
-    
+
     # Get DNS activity for these devices
     dns_events = dns_recorder.get_queries_by_sources(
         sources=device_ips,
         start_time=start_time,
         end_time=end_time
     )
-    
+
     # Add to timeline
     for event in dns_events:
         timeline_items.append({
@@ -460,13 +460,13 @@ def generate_network_activity_timeline(user_id, start_time, end_time):
             "source": event.source_ip,
             "application": event.application if hasattr(event, "application") else None
         })
-    
+
     # Get file activities
     file_events = ntfs_recorder.get_activities_by_time_range(
         start_time=start_time,
         end_time=end_time
     )
-    
+
     # Add to timeline
     for event in file_events:
         timeline_items.append({
@@ -476,10 +476,10 @@ def generate_network_activity_timeline(user_id, start_time, end_time):
             "file_path": event.file_path,
             "process": event.process_name
         })
-    
+
     # Sort by timestamp
     timeline_items.sort(key=lambda x: x["timestamp"])
-    
+
     return timeline_items
 ```
 

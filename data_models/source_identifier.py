@@ -22,8 +22,6 @@ import os
 import sys
 import uuid
 
-from typing import Optional
-
 from pydantic import Field
 
 # from icecream import ic
@@ -60,7 +58,7 @@ class IndalekoSourceIdentifierDataModel(IndalekoBaseModel):
         example="3.1",
     )
 
-    Description: Optional[str] = Field(
+    Description: str | None = Field(
         None,
         title="Description",
         description="A human-readable description of the data source.",
@@ -75,7 +73,7 @@ class IndalekoSourceIdentifierDataModel(IndalekoBaseModel):
                 "Identifier": "12345678-1234-5678-1234-567812345678",
                 "Version": "3.1",
                 "Description": "This is a sample IndalekoSourceIdentifierDataModel.",
-            }
+            },
         }
 
 

@@ -100,7 +100,8 @@ class IndalekoGitInfo:
 
     @staticmethod
     def get_framework_source_version_data(
-        as_str: bool = False, as_json: bool = False
+        as_str: bool = False,
+        as_json: bool = False,
     ) -> IndalekoGitInfoDataModel:
         """Retrieve the source code version information for the framework."""
         data = IndalekoGitInfoDataModel(

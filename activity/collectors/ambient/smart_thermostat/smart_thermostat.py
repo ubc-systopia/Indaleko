@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-from typing import Any, Dict
+from typing import Any
 
 # from datetime import datetime
 
@@ -34,10 +34,10 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+from activity.collectors.ambient.base import AmbientCollector
 from activity.collectors.ambient.data_models.smart_thermostat import (
     ThermostatSensorData,
 )
-from activity.collectors.ambient.base import AmbientCollector
 
 # pylint: enable=wrong-import-position
 
@@ -56,11 +56,11 @@ class SmartThermostatCollector(AmbientCollector):
         """Collect smart thermostat data"""
         raise NotImplementedError("Subclasses must implement this method")
 
-    def process_data(self, data: Any) -> Dict[str, Any]:
+    def process_data(self, data: Any) -> dict[str, Any]:
         """Process the collected data"""
         raise NotImplementedError("Subclasses must implement this method")
 
-    def store_data(self, data: Dict[str, Any]) -> None:
+    def store_data(self, data: dict[str, Any]) -> None:
         """Store the processed data"""
         raise NotImplementedError("Subclasses must implement this method")
 
@@ -74,6 +74,6 @@ class SmartThermostatCollector(AmbientCollector):
         """
         return "Base class for smart thermostat data collectors"
 
-    def get_latest_db_update(self) -> Dict[str, Any]:
+    def get_latest_db_update(self) -> dict[str, Any]:
         """Get the latest data update from the database"""
         raise NotImplementedError("Subclasses must implement this method")

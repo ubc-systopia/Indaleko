@@ -2,8 +2,8 @@
 
 import configparser
 import os
-import openai
 
+import openai
 from icecream import ic
 
 
@@ -11,7 +11,7 @@ class OpenAITest:
     """Simple test class for working with the OpenAI API"""
 
     def __init__(self, **kwargs) -> None:
-        """set up the class"""
+        """Set up the class"""
         self.api_key_file = kwargs.get("api_key_file", "../config/openai-key.ini")
         self.api_key = self.get_api_key()
         self.client = openai.OpenAI(api_key=self.api_key)

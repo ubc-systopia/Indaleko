@@ -19,15 +19,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import argparse
-import logging
 import os
-from pathlib import Path
 import sys
+from collections.abc import Callable
+from typing import Any
 
-from typing import Type, Union, TypeVar, Any, Callable
-from abc import ABC, abstractmethod
-
-from icecream import ic
 from pydantic import BaseModel
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -45,12 +41,10 @@ if os.environ.get("INDALEKO_ROOT") is None:
 class IndalekoCLIRunnerData(BaseModel):
     """This class provides a common CLI runner"""
 
-    GetPreParser: Union[Callable[..., Union[argparse.ArgumentParser, None]], None] = (
-        None
-    )
+    GetPreParser: Callable[..., argparse.ArgumentParser | None] | None = None
     SetupLogging: Callable[..., None]
     LoadConfiguration: Callable[..., bool]
-    AddParameters: Union[Callable[..., argparse.ArgumentParser], None] = None
+    AddParameters: Callable[..., argparse.ArgumentParser] | None = None
     PerformanceConfiguration: Callable[..., bool]
     Run: Callable[..., None]
     RunParameters: dict[str, Any] = {}

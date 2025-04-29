@@ -21,7 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-from typing import Optional
+
 from pydantic import Field, field_validator
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -48,23 +48,30 @@ class EcobeeAmbientDataModel(ThermostatSensorData):
 
     # Ecobee identification - useful for tracking specific devices
     device_id: str = Field(
-        ..., description="Ecobee device identifier", pattern="^[a-zA-Z0-9]+$"
+        ...,
+        description="Ecobee device identifier",
+        pattern="^[a-zA-Z0-9]+$",
     )
 
     device_name: str = Field(
-        ..., description="Name assigned to the thermostat", min_length=1
+        ...,
+        description="Name assigned to the thermostat",
+        min_length=1,
     )
 
     # Additional ecobee-specific sensor data
-    aux_heat_active: Optional[bool] = Field(
-        None, description="Whether auxiliary/emergency heat is active"
+    aux_heat_active: bool | None = Field(
+        None,
+        description="Whether auxiliary/emergency heat is active",
     )
 
-    dehumidifier_mode: Optional[str] = Field(
-        None, description="Current dehumidifier setting", pattern="^(auto|on|off)$"
+    dehumidifier_mode: str | None = Field(
+        None,
+        description="Current dehumidifier setting",
+        pattern="^(auto|on|off)$",
     )
 
-    ventilator_mode: Optional[str] = Field(
+    ventilator_mode: str | None = Field(
         None,
         description="Current ventilator setting",
         pattern="^(auto|minontime|on|off)$",
@@ -77,14 +84,14 @@ class EcobeeAmbientDataModel(ThermostatSensorData):
     )
 
     # Equipment stages (common in ecobee systems)
-    heat_stage: Optional[int] = Field(
+    heat_stage: int | None = Field(
         None,
         description="Current heating stage (0 = off, 1 = stage 1, 2 = stage 2)",
         ge=0,
         le=2,
     )
 
-    cool_stage: Optional[int] = Field(
+    cool_stage: int | None = Field(
         None,
         description="Current cooling stage (0 = off, 1 = stage 1, 2 = stage 2)",
         ge=0,
@@ -93,11 +100,14 @@ class EcobeeAmbientDataModel(ThermostatSensorData):
 
     # Remote sensor summary
     connected_sensors: int = Field(
-        0, description="Number of connected remote sensors", ge=0
+        0,
+        description="Number of connected remote sensors",
+        ge=0,
     )
 
-    average_temperature: Optional[float] = Field(
-        None, description="Average temperature across all sensors in Celsius"
+    average_temperature: float | None = Field(
+        None,
+        description="Average temperature across all sensors in Celsius",
     )
 
     @field_validator("device_id")
@@ -110,7 +120,7 @@ class EcobeeAmbientDataModel(ThermostatSensorData):
 
     @field_validator("average_temperature")
     @classmethod
-    def validate_avg_temperature(cls, value: Optional[float]) -> Optional[float]:
+    def validate_avg_temperature(cls, value: float | None) -> float | None:
         """Validate average temperature is within reasonable bounds"""
         if value is not None and not -50.0 <= value <= 100.0:
             raise ValueError("Average temperature must be between -50°C and 100°C")
@@ -124,17 +134,20 @@ class EcobeeAmbientDataModel(ThermostatSensorData):
         self.device_name = raw_data.get("device_name", self.device_name)
         self.aux_heat_active = raw_data.get("aux_heat_active", self.aux_heat_active)
         self.dehumidifier_mode = raw_data.get(
-            "dehumidifier_mode", self.dehumidifier_mode
+            "dehumidifier_mode",
+            self.dehumidifier_mode,
         )
         self.ventilator_mode = raw_data.get("ventilator_mode", self.ventilator_mode)
         self.current_climate = raw_data.get("current_climate", self.current_climate)
         self.heat_stage = raw_data.get("heat_stage", self.heat_stage)
         self.cool_stage = raw_data.get("cool_stage", self.cool_stage)
         self.connected_sensors = raw_data.get(
-            "connected_sensors", self.connected_sensors
+            "connected_sensors",
+            self.connected_sensors,
         )
         self.average_temperature = raw_data.get(
-            "average_temperature", self.average_temperature
+            "average_temperature",
+            self.average_temperature,
         )
         # ...additional processing as needed...
 
@@ -158,7 +171,7 @@ class EcobeeAmbientDataModel(ThermostatSensorData):
                 "average_temperature": 22.5,
                 # Override source to specify ecobee
                 "source": "ecobee",
-            }
+            },
         }
 
 

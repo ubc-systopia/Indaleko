@@ -45,18 +45,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import argparse
 import datetime
-import logging
 import json
-import jsonlines
+import logging
 import mimetypes
 import os
-from pathlib import Path
-import uuid
 import sys
 import tempfile
+import uuid
+from pathlib import Path
+from typing import Any
 
-from typing import Union, Any
-
+import jsonlines
 from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -68,29 +67,31 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from constants import IndalekoConstants
-from data_models import IndalekoSourceIdentifierDataModel
+from data_models import (
+    IndalekoSemanticAttributeDataModel,
+    IndalekoSourceIdentifierDataModel,
+)
+from data_models.storage_semantic_attributes import StorageSemanticAttributes
 from db import (
     IndalekoCollection,
-    IndalekoDBConfig,
     IndalekoDBCollections,
+    IndalekoDBConfig,
     IndalekoServiceManager,
 )
+from storage.i_object import IndalekoObject
+from storage.i_relationship import IndalekoRelationship
+from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from utils.cli.base import IndalekoBaseCLI
 from utils.decorators import type_check
 from utils.misc.directory_management import (
-    indaleko_default_data_dir,
     indaleko_default_config_dir,
+    indaleko_default_data_dir,
     indaleko_default_log_dir,
 )
 from utils.misc.file_name_management import (
-    generate_file_name,
     extract_keys_from_file_name,
+    generate_file_name,
 )
-from data_models import IndalekoSemanticAttributeDataModel
-from data_models.storage_semantic_attributes import StorageSemanticAttributes
-from storage.i_object import IndalekoObject
-from storage.recorders.data_model import IndalekoStorageRecorderDataModel
-from storage.i_relationship import IndalekoRelationship
 
 # pylint: enable=wrong-import-position
 
@@ -111,8 +112,7 @@ class BaseStorageRecorder:
     storage_recorder_uuid = "526e0240-1ee4-46e9-9dac-3e557a8fb654"
     storage_recorder_service_name = "Indaleko Generic Storage Recorder"
     storage_recorder_service_description = (
-        "This is the base (non-specialized) Indaleko Storage Recorder. "
-        + "You should not see it in the database."
+        "This is the base (non-specialized) Indaleko Storage Recorder. " + "You should not see it in the database."
     )
     storage_recorder_service_version = "1.0"
 
@@ -170,14 +170,11 @@ class BaseStorageRecorder:
             self.recorder = kwargs["recorder"]
         self.storage_description = None
         if "storage_description" in kwargs:
-            if (
-                kwargs["storage_description"] is None
-                or kwargs["storage_description"] == "unknown"
-            ):
+            if kwargs["storage_description"] is None or kwargs["storage_description"] == "unknown":
                 del kwargs["storage_description"]
             else:
                 self.storage_description = str(
-                    uuid.UUID(kwargs["storage_description"]).hex
+                    uuid.UUID(kwargs["storage_description"]).hex,
                 )
                 if self.debug:
                     ic("Storage description: ", self.storage_description)
@@ -289,10 +286,7 @@ class BaseStorageRecorder:
         }
         if hasattr(self, "machine_id") and self.machine_id is not None:
             kwargs["machine"] = str(uuid.UUID(self.machine_id).hex)
-        if (
-            hasattr(self, "storage_description")
-            and self.storage_description is not None
-        ):
+        if hasattr(self, "storage_description") and self.storage_description is not None:
             kwargs["storage"] = str(uuid.UUID(self.storage_description).hex)
         if hasattr(self, "user_id") and self.user_id is not None:
             kwargs["user"] = self.user_id
@@ -312,7 +306,9 @@ class BaseStorageRecorder:
 
     @staticmethod
     def write_data_to_file(
-        data: list, file_name: str = None, jsonlines_output: bool = True
+        data: list,
+        file_name: str = None,
+        jsonlines_output: bool = True,
     ) -> int:
         """
         This will write the given data to the specified file.
@@ -337,10 +333,10 @@ class BaseStorageRecorder:
                         writer.write(entry.serialize())
                         output_count += 1
                     except TypeError as err:
-                        logging.error("Error writing entry to JSONLines file: %s", err)
-                        logging.error("Entry: %s", entry)
-                        logging.error("Output count: %d", output_count)
-                        logging.error("Data size %d", len(data))
+                        logging.exception("Error writing entry to JSONLines file: %s", err)
+                        logging.exception("Entry: %s", entry)
+                        logging.exception("Output count: %d", output_count)
+                        logging.exception("Data size %d", len(data))
                         raise err
             logging.info("Wrote JSONLines data to %s", file_name)
             ic("Wrote JSON data to", file_name)
@@ -353,7 +349,7 @@ class BaseStorageRecorder:
     def upload_data_to_database(
         self,
         data: list,
-        collection: Union[IndalekoCollection, str] = "Objects",
+        collection: IndalekoCollection | str = "Objects",
         database: IndalekoDBConfig = IndalekoDBConfig(),
         chunk_size: int = 5000,
     ) -> bool:
@@ -367,16 +363,17 @@ class BaseStorageRecorder:
             * chunk_size: the number of records to upload at a time (defaults to 5000)
         """
         raise NotImplementedError(
-            "upload_data_to_database implementation is not complete."
+            "upload_data_to_database implementation is not complete.",
         )
         if isinstance(collection, str):
             collection = IndalekoCollection(collection, db_config=database)
             assert isinstance(
-                collection, IndalekoCollection
+                collection,
+                IndalekoCollection,
             ), "Collection is not an IndalekoCollection"
         count = 0
         while count < len(data):
-            chunk = data[count: count + chunk_size]
+            chunk = data[count : count + chunk_size]
             count += chunk_size
             assert chunk
 
@@ -399,7 +396,8 @@ class BaseStorageRecorder:
         endpoint += db_config.get_hostname() + ":" + db_config.get_port()
         load_string += " --server.endpoint " + endpoint
         load_string += " --server.database " + kwargs.get(
-            "database", db_config.get_database_name()
+            "database",
+            db_config.get_database_name(),
         )
         if "file" in kwargs:
             load_string += " " + kwargs["file"]
@@ -415,7 +413,7 @@ class BaseStorageRecorder:
                 for entry in reader:
                     self.collector_data.append(entry)
         elif self.input_file.endswith(".json"):
-            with open(self.input_file, "r", encoding="utf-8-sig") as file:
+            with open(self.input_file, encoding="utf-8-sig") as file:
                 self.collector_data = json.load(file)
         else:
             raise ValueError(f"Input file {self.input_file} is an unknown type")
@@ -424,7 +422,9 @@ class BaseStorageRecorder:
         self.input_count = len(self.collector_data)
 
     @staticmethod
-    def map_suffix_to_mime_type(filename: str) -> list[IndalekoSemanticAttributeDataModel]:
+    def map_suffix_to_mime_type(
+        filename: str,
+    ) -> list[IndalekoSemanticAttributeDataModel]:
         """
         Maps a file's suffix to an estimated MIME type and returns it as a semantic attribute.
 
@@ -437,7 +437,6 @@ class BaseStorageRecorder:
         Returns:
             A list containing a semantic attribute with the estimated MIME type
         """
-
         # Extract file extension and convert to lowercase
         _, ext = os.path.splitext(filename)
         ext = ext.lower()
@@ -447,8 +446,8 @@ class BaseStorageRecorder:
             return [
                 IndalekoSemanticAttributeDataModel(
                     Identifier=StorageSemanticAttributes.STORAGE_ATTRIBUTES_MIMETYPE_FROM_SUFFIX,
-                    Value="application/octet-stream"
-                )
+                    Value="application/octet-stream",
+                ),
             ]
 
         # Get MIME type from extension
@@ -463,17 +462,17 @@ class BaseStorageRecorder:
         return [
             IndalekoSemanticAttributeDataModel(
                 Identifier=StorageSemanticAttributes.STORAGE_ATTRIBUTES_MIMETYPE_FROM_SUFFIX,
-                Value=guessed_type
+                Value=guessed_type,
             ),
             IndalekoSemanticAttributeDataModel(
                 Identifier=StorageSemanticAttributes.STORAGE_ATTRIBUTES_SUFFIX,
-                Value=ext[1:] if ext.startswith('.') else ext
-            )
+                Value=ext[1:] if ext.startswith(".") else ext,
+            ),
         ]
 
     @staticmethod
     def map_name_to_semantic_attributes(
-        filename: str
+        filename: str,
     ) -> list[IndalekoSemanticAttributeDataModel]:
         """
         Maps a file's name to semantic attributes.
@@ -500,10 +499,10 @@ class BaseStorageRecorder:
 
     @staticmethod
     def build_storage_relationship(
-        id1: Union[str, uuid.UUID],
-        id2: Union[str, uuid.UUID],
-        relationship: Union[str, uuid.UUID],
-        source_id: Union[str, uuid.UUID],
+        id1: str | uuid.UUID,
+        id2: str | uuid.UUID,
+        relationship: str | uuid.UUID,
+        source_id: str | uuid.UUID,
     ) -> IndalekoRelationship:
         """This builds a storage relationship object between two objects."""
         return IndalekoRelationship(
@@ -523,9 +522,9 @@ class BaseStorageRecorder:
 
     @staticmethod
     def build_dir_contains_relationship(
-        parent: Union[str, uuid.UUID],  # parent
-        child: Union[str, uuid.UUID],  # child
-        source_id: Union[str, uuid.UUID],
+        parent: str | uuid.UUID,  # parent
+        child: str | uuid.UUID,  # child
+        source_id: str | uuid.UUID,
     ) -> IndalekoRelationship:
         """This builds a contains relationship object for a directory and a child."""
         return BaseStorageRecorder.build_storage_relationship(
@@ -537,9 +536,9 @@ class BaseStorageRecorder:
 
     @staticmethod
     def build_contained_by_dir_relationship(
-        child: Union[str, uuid.UUID],  # child
-        parent: Union[str, uuid.UUID],  # parent
-        source_id: Union[str, uuid.UUID],
+        child: str | uuid.UUID,  # child
+        parent: str | uuid.UUID,  # parent
+        source_id: str | uuid.UUID,
     ) -> IndalekoRelationship:
         """This builds a contains relationship object for a directory and a child."""
         return BaseStorageRecorder.build_storage_relationship(
@@ -551,9 +550,9 @@ class BaseStorageRecorder:
 
     @staticmethod
     def build_volume_contains_relationship(
-        volume: Union[str, uuid.UUID],  # volume
-        child: Union[str, uuid.UUID],  # child
-        source_id: Union[str, uuid.UUID],
+        volume: str | uuid.UUID,  # volume
+        child: str | uuid.UUID,  # child
+        source_id: str | uuid.UUID,
     ) -> IndalekoRelationship:
         """This builds a contains relationship object for a volume and a child."""
         return BaseStorageRecorder.build_storage_relationship(
@@ -565,9 +564,9 @@ class BaseStorageRecorder:
 
     @staticmethod
     def build_contained_by_volume_relationship(
-        child: Union[str, uuid.UUID],  # child
-        volume: Union[str, uuid.UUID],  # volume
-        source_id: Union[str, uuid.UUID],
+        child: str | uuid.UUID,  # child
+        volume: str | uuid.UUID,  # volume
+        source_id: str | uuid.UUID,
     ) -> IndalekoRelationship:
         """This builds a contains relationship object for a volume and a child."""
         return BaseStorageRecorder.build_storage_relationship(
@@ -579,9 +578,9 @@ class BaseStorageRecorder:
 
     @staticmethod
     def build_machine_contains_relationship(
-        machine: Union[str, uuid.UUID],  # machine
-        child: Union[str, uuid.UUID],  # child
-        source_id: Union[str, uuid.UUID],
+        machine: str | uuid.UUID,  # machine
+        child: str | uuid.UUID,  # child
+        source_id: str | uuid.UUID,
     ) -> IndalekoRelationship:
         """This builds a contains relationship object for a machine and a child."""
         return BaseStorageRecorder.build_storage_relationship(
@@ -593,9 +592,9 @@ class BaseStorageRecorder:
 
     @staticmethod
     def build_contained_by_machine_relationship(
-        child: Union[str, uuid.UUID],  # child
-        machine: Union[str, uuid.UUID],  # machine
-        source_id: Union[str, uuid.UUID],
+        child: str | uuid.UUID,  # child
+        machine: str | uuid.UUID,  # machine
+        source_id: str | uuid.UUID,
     ) -> IndalekoRelationship:
         """This builds a contains relationship object for a machine and a child."""
         return BaseStorageRecorder.build_storage_relationship(
@@ -627,42 +626,54 @@ class BaseStorageRecorder:
             parent_id = self.dirmap[parent]
             self.dir_edges.append(
                 BaseStorageRecorder.build_dir_contains_relationship(
-                    parent_id, item.args["ObjectIdentifier"], source_id
-                )
+                    parent_id,
+                    item.args["ObjectIdentifier"],
+                    source_id,
+                ),
             )
             self.edge_count += 1
             self.dir_edges.append(
                 BaseStorageRecorder.build_contained_by_dir_relationship(
-                    item.args["ObjectIdentifier"], parent_id, source_id
-                )
+                    item.args["ObjectIdentifier"],
+                    parent_id,
+                    source_id,
+                ),
             )
             self.edge_count += 1
             volume = item.args.get("Volume")
             if volume:
                 self.dir_edges.append(
                     BaseStorageRecorder.build_volume_contains_relationship(
-                        volume, item.args["ObjectIdentifier"], source_id
-                    )
+                        volume,
+                        item.args["ObjectIdentifier"],
+                        source_id,
+                    ),
                 )
                 self.edge_count += 1
                 self.dir_edges.append(
                     BaseStorageRecorder.build_contained_by_volume_relationship(
-                        item.args["ObjectIdentifier"], volume, source_id
-                    )
+                        item.args["ObjectIdentifier"],
+                        volume,
+                        source_id,
+                    ),
                 )
                 self.edge_count += 1
             machine_id = item.args.get("machine_id")
             if machine_id:
                 self.dir_edges.append(
                     BaseStorageRecorder.build_machine_contains_relationship(
-                        machine_id, item.args["ObjectIdentifier"], source_id
-                    )
+                        machine_id,
+                        item.args["ObjectIdentifier"],
+                        source_id,
+                    ),
                 )
                 self.edge_count += 1
                 self.dir_edges.append(
                     BaseStorageRecorder.build_contained_by_machine_relationship(
-                        item.args["ObjectIdentifier"], machine_id, source_id
-                    )
+                        item.args["ObjectIdentifier"],
+                        machine_id,
+                        source_id,
+                    ),
                 )
                 self.edge_count += 1
 
@@ -684,7 +695,8 @@ class BaseStorageRecorder:
     def bulk_upload_object_data(recorder: "BaseStorageRecorder") -> None:
         """Bulk upload the object data to the database"""
         assert isinstance(
-            recorder, BaseStorageRecorder
+            recorder,
+            BaseStorageRecorder,
         ), "recorder is not a BaseStorageRecorder"
         raise NotImplementedError("bulk_upload_object_data must be implemented")
 
@@ -692,7 +704,8 @@ class BaseStorageRecorder:
     def bulk_upload_relationship_data(recorder: "BaseStorageRecorder") -> None:
         """Bulk upload the relationship data to the database"""
         assert isinstance(
-            recorder, BaseStorageRecorder
+            recorder,
+            BaseStorageRecorder,
         ), "recorder is not a BaseStorageRecorder"
         raise NotImplementedError("bulk_upload_relationship_data must be implemented")
 
@@ -709,9 +722,7 @@ class BaseStorageRecorder:
             output_type_choices = [default_output_type]
             output_type_help = "Output type: file  = write to a file, "
             output_type_choices.append("incremental")
-            output_type_help += (
-                "incremental = add new entries, update changed entries in database, "
-            )
+            output_type_help += "incremental = add new entries, update changed entries in database, "
             output_type_choices.append("bulk")
             output_type_help += "bulk = write all entries to the database using the bulk uploader interface, "
             output_type_choices.append("docker")
@@ -753,11 +764,13 @@ class BaseStorageRecorder:
         if not output_file:
             output_file = recorder.generate_file_name(target_dir=recorder.output_dir)
             ic(
-                f"Warning: falling back to auto-generated output file name {output_file}"
+                f"Warning: falling back to auto-generated output file name {output_file}",
             )
         output_file = str(Path(recorder.output_dir) / output_file)
         data_file_name, count = recorder.record_data_in_file(
-            recorder.dir_data + recorder.file_data, recorder.data_dir, output_file
+            recorder.dir_data + recorder.file_data,
+            recorder.data_dir,
+            output_file,
         )
         recorder.object_data_load_string = recorder.build_load_string(
             collection=IndalekoDBCollections.Indaleko_Object_Collection,
@@ -793,8 +806,8 @@ class BaseStorageRecorder:
     @staticmethod
     def record_data_in_file(
         data: list,
-        dir_name: Union[Path, str],
-        preferred_file_name: Union[Path, str, None] = None,
+        dir_name: Path | str,
+        preferred_file_name: Path | str | None = None,
     ) -> tuple[str, int]:
         """
         Record the specified data in a file.
@@ -828,13 +841,13 @@ class BaseStorageRecorder:
             FileExistsError,
             OSError,
         ) as e:
-            logging.error(
+            logging.exception(
                 "Unable to rename temp file %s to output file %s",
                 temp_file_name,
                 preferred_file_name,
             )
             print(
-                f"Unable to rename temp file {temp_file_name} to output file {preferred_file_name}"
+                f"Unable to rename temp file {temp_file_name} to output file {preferred_file_name}",
             )
             print(f"Error: {e}")
             preferred_file_name = temp_file_name
@@ -847,12 +860,13 @@ class BaseStorageRecorder:
     def is_object_directory(self: "BaseStorageRecorder", obj: IndalekoObject) -> bool:
         """Return True if the object is a directory"""
         assert isinstance(
-            obj, IndalekoObject
+            obj,
+            IndalekoObject,
         ), f"obj is {type(obj)}, not an IndalekoObject"
-        return "S_IFDIR" in obj.args[
-            "PosixFileAttributes"
-        ] or "FILE_ATTRIBUTE_DIRECTORY" in getattr(
-            obj.args, "WindowsFileAttributes", ""
+        return "S_IFDIR" in obj.args["PosixFileAttributes"] or "FILE_ATTRIBUTE_DIRECTORY" in getattr(
+            obj.args,
+            "WindowsFileAttributes",
+            "",
         )
 
     def normalize(self) -> None:
@@ -862,18 +876,20 @@ class BaseStorageRecorder:
             try:
                 obj = self.normalize_collector_data(item)
             except OSError as e:
-                logging.error("Error normalizing data: %s", e)
-                logging.error("Data: %s", item)
+                logging.exception("Error normalizing data: %s", e)
+                logging.exception("Data: %s", item)
                 ic(f"Error normalizing data: {e}")
                 self.error_count += 1
                 continue
             assert isinstance(
-                obj, IndalekoObject
+                obj,
+                IndalekoObject,
             ), f"obj is {type(obj)}, not an IndalekoObject"
             if self.is_object_directory(obj):
                 if "LocalPath" not in obj:
                     logging.warning(
-                        "Directory object does not have a path: %s", obj.serialize()
+                        "Directory object does not have a path: %s",
+                        obj.serialize(),
                     )
                     ic(f"Directory object does not have a path: {obj.serialize()}")
                     continue  # skip
@@ -886,7 +902,7 @@ class BaseStorageRecorder:
                 self.file_data.append(obj)
                 self.file_count += 1
                 if self.file_count % 1000 == 0:
-                    ic('Processed', self.file_count, 'files')
+                    ic("Processed", self.file_count, "files")
 
     @staticmethod
     def map_posix_storage_attributes_to_semantic_attributes(
@@ -899,55 +915,59 @@ class BaseStorageRecorder:
                 IndalekoSemanticAttributeDataModel(
                     Identifier=StorageSemanticAttributes.STORAGE_ATTRIBUTES_DEVICE,
                     Value=posix_attributes["st_dev"],
-                )
+                ),
             )
         if "st_gid" in posix_attributes:
             semantic_attributes.append(
                 IndalekoSemanticAttributeDataModel(
                     Identifier=StorageSemanticAttributes.STORAGE_ATTRIBUTES_GID,
                     Value=posix_attributes["st_gid"],
-                )
+                ),
             )
         if "st_mode" in posix_attributes:
             semantic_attributes.append(
                 IndalekoSemanticAttributeDataModel(
                     Identifier=StorageSemanticAttributes.STORAGE_ATTRIBUTES_MODE,
                     Value=posix_attributes["st_mode"],
-                )
+                ),
             )
         if "st_nlink" in posix_attributes:
             semantic_attributes.append(
                 IndalekoSemanticAttributeDataModel(
                     Identifier=StorageSemanticAttributes.STORAGE_ATTRIBUTES_NLINK,
                     Value=posix_attributes["st_nlink"],
-                )
+                ),
             )
         if "st_reparse_tag" in posix_attributes:
             semantic_attributes.append(
                 IndalekoSemanticAttributeDataModel(
                     Identifier=StorageSemanticAttributes.STORAGE_ATTRIBUTES_REPARSE_TAG,
                     Value=posix_attributes["st_reparse_tag"],
-                )
+                ),
             )
         if "st_uid" in posix_attributes:
             semantic_attributes.append(
                 IndalekoSemanticAttributeDataModel(
                     Identifier=StorageSemanticAttributes.STORAGE_ATTRIBUTES_UID,
                     Value=posix_attributes["st_uid"],
-                )
+                ),
             )
         if "st_inode" in posix_attributes:
             semantic_attributes.append(
                 IndalekoSemanticAttributeDataModel(
                     Identifier=StorageSemanticAttributes.STORAGE_ATTRIBUTES_INODE,
                     Value=posix_attributes["st_inode"],
-                )
+                ),
             )
-        file_name = posix_attributes.get('Name')
+        file_name = posix_attributes.get("Name")
         if file_name:
-            semantic_attributes.extend(BaseStorageRecorder.map_name_to_semantic_attributes(file_name))
-            if 'st_mode' in posix_attributes:
-                semantic_attributes.extend(BaseStorageRecorder.map_suffix_to_mime_type(file_name))
+            semantic_attributes.extend(
+                BaseStorageRecorder.map_name_to_semantic_attributes(file_name),
+            )
+            if "st_mode" in posix_attributes:
+                semantic_attributes.extend(
+                    BaseStorageRecorder.map_suffix_to_mime_type(file_name),
+                )
         return semantic_attributes
 
     def record(self) -> None:

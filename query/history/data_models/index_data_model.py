@@ -39,11 +39,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import os
 import sys
+from typing import Any
 
-from typing import List, Optional, Dict, Any
-
-from pydantic import Field, AwareDatetime
 from icecream import ic
+from pydantic import AwareDatetime, Field
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -55,8 +54,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
-from data_models.record import IndalekoRecordDataModel
 from data_models.i_uuid import IndalekoUUIDDataModel
+from data_models.record import IndalekoRecordDataModel
 
 # pylint: enable=wrong-import-position
 
@@ -68,7 +67,9 @@ class IndalekoIndexDataModel(IndalekoBaseModel):
     """
 
     IndexId: IndalekoUUIDDataModel = Field(
-        None, title="IndexId", description="The UUID for the index."
+        None,
+        title="IndexId",
+        description="The UUID for the index.",
     )
 
     FieldName: str = Field(
@@ -89,23 +90,25 @@ class IndalekoIndexDataModel(IndalekoBaseModel):
         description="The timestamp of when the index was created.",
     )
 
-    LastUsed: Optional[AwareDatetime] = Field(
+    LastUsed: AwareDatetime | None = Field(
         None,
         title="LastUsed",
         description="The timestamp of when the index was last accessed.",
     )
 
     UsageCount: int = Field(
-        0, title="UsageCount", description="Number of queries that used this index."
+        0,
+        title="UsageCount",
+        description="Number of queries that used this index.",
     )
 
-    OverheadCost: Optional[float] = Field(
+    OverheadCost: float | None = Field(
         None,
         title="OverheadCost",
         description="Overhead cost of maintaining this index.",
     )
 
-    ArchivedImpact: Optional[Dict[str, Any]] = Field(
+    ArchivedImpact: dict[str, Any] | None = Field(
         default_factory=dict,
         title="ArchivedImpact",
         description="Impact on archived queries",
@@ -123,12 +126,10 @@ class IndalekoIndexDataModel(IndalekoBaseModel):
                 "UsageCount": 0,
                 "OverheadCost": 0.0,
                 "ArchivedImpact": {
-                    "QueryIdentifier": IndalekoUUIDDataModel.Config.json_schema_extra[
-                        "example"
-                    ],
+                    "QueryIdentifier": IndalekoUUIDDataModel.Config.json_schema_extra["example"],
                     "Impact": 0.0,
                 },
-            }
+            },
         }
 
 

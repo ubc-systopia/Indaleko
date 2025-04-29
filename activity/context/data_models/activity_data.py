@@ -19,16 +19,11 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import json
 import os
 import sys
 import uuid
 
-from datetime import datetime
-from typing import List, Optional, Dict
 from pydantic import Field
-
-from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -51,17 +46,21 @@ class ActivityDataModel(IndalekoBaseModel):
     """
 
     Provider: uuid.UUID = Field(
-        ..., title="Provider", description="The provider of the activity data."
+        ...,
+        title="Provider",
+        description="The provider of the activity data.",
     )
     ProviderReference: uuid.UUID = Field(
         ...,
         title="ProviderReference",
         description="The provider reference for the activity data.",
     )
-    ProviderData: Optional[str] = Field(
-        None, title="ProviderData", description="The provider data (if any)."
+    ProviderData: str | None = Field(
+        None,
+        title="ProviderData",
+        description="The provider data (if any).",
     )
-    ProviderAttributes: Optional[Dict[str, str]] = Field(
+    ProviderAttributes: dict[str, str] | None = Field(
         None,
         title="ProviderAttributes",
         description="The provider attributes (if any).",
@@ -78,7 +77,7 @@ class ActivityDataModel(IndalekoBaseModel):
                 "ProviderReference": "00000000-0000-0000-0000-000000000000",
                 "ProviderData": "Some data",
                 "ProviderAttributes": {"key1": "value1", "key2": "value2"},
-            }
+            },
         }
 
 

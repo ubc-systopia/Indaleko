@@ -9,4 +9,3 @@ The activity data system consists of three core pieces:
 To make this usable in the LLM query driven system, the recorders must be able to return a description of what each label represents.  It _can_ pull information from the underlying collector, but this isn't required.  For common labels, the same description will be returned for each occurrence of the given label.
 
 For example, we have multiple sources for location information.  We define three "well known" labels: longitude, latitude, and accuracy.  All the location services return additional metadata, but we haven't identified common data types.
-

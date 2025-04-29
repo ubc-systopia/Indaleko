@@ -36,12 +36,10 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from data_models.collection_metadata_data_model import (
     IndalekoCollectionMetadataDataModel,
-)  # noqa: E402
-from data_models.db_index import IndalekoCollectionIndexDataModel  # noqa: E402
-from data_models.named_entity import NamedEntityCollection  # noqa: E402
-from query.query_processing.data_models.query_output import (
-    LLMIntentTypeEnum,
-)  # noqa: E402
+)
+from data_models.db_index import IndalekoCollectionIndexDataModel
+from data_models.named_entity import NamedEntityCollection
+from query.query_processing.data_models.query_output import LLMIntentTypeEnum
 
 # pylint: enable=wrong-import-position
 
@@ -60,21 +58,21 @@ class StructuredQuery(BaseModel):
     )
 
     intent: LLMIntentTypeEnum = Field(
-        ..., title="Intent", description="The intent of the query"
+        ...,
+        title="Intent",
+        description="The intent of the query",
     )  # "search", "filter", etc.
 
     entities: NamedEntityCollection = Field(  # Extracted entities
         ...,
         title="Entities",
-        description="The mapping of named entities in the query "
-        "to their values in the NER collection (if any)",
+        description="The mapping of named entities in the query to their values in the NER collection (if any)",
     )
 
     db_info: list[IndalekoCollectionMetadataDataModel] = Field(
         ...,
         title="Database Information",
-        description="The metadata for the database collections, "
-        "including guidelines and schema",
+        description="The metadata for the database collections, including guidelines and schema",
     )
 
     db_indices: dict[str, list[IndalekoCollectionIndexDataModel]] = Field(

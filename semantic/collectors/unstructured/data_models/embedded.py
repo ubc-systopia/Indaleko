@@ -19,18 +19,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 # standard imports
-import mimetypes
 import json
+import mimetypes
 import os
 import sys
-
-from uuid import UUID, uuid4
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 # third-party imports
-from typing import Optional, List
-from pydantic import Field, field_validator, AwareDatetime
+from uuid import UUID, uuid4
 
+from pydantic import AwareDatetime, Field, field_validator
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -39,10 +37,11 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
+from data_models.base import IndalekoBaseModel
+
 # Indaleko imports
 # pylint: disable=wrong-import-position
 from Indaleko import Indaleko
-from data_models.base import IndalekoBaseModel
 
 # pylint: enable=wrong-import-position
 
@@ -57,26 +56,29 @@ class UnstructuredEmbeddedDataModel(IndalekoBaseModel):
         description="The unique identifier for the unstructured data element.",
     )
     FileUUID: UUID = Field(
-        ..., desdription="The UUID for the file object in the database."
+        ...,
+        desdription="The UUID for the file object in the database.",
     )
-    FileType: Optional[str] = Field(..., description="The MIME type of the file.")
+    FileType: str | None = Field(..., description="The MIME type of the file.")
     LastModified: AwareDatetime = Field(
-        ..., description="The last modified time for the file."
+        ...,
+        description="The last modified time for the file.",
     )
-    PageNumber: Optional[int] = Field(
+    PageNumber: int | None = Field(
         None,
         title="Page Number",
         description="The page number where the element starts.",
     )
-    Languages: List[str] = Field(
-        ..., description="The languages detected in the element."
+    Languages: list[str] = Field(
+        ...,
+        description="The languages detected in the element.",
     )
-    EmphasizedTextContents: Optional[List[str]] = Field(
+    EmphasizedTextContents: list[str] | None = Field(
         None,
         title="Emphasized Text Contents",
         description="The emphasized text contents.",
     )
-    EmphasizedTextTags: Optional[List[str]] = Field(
+    EmphasizedTextTags: list[str] | None = Field(
         None,
         title="Emphasized Text Tags",
         description="Tags corresponding (e.g,. bold, italic) for emphasized text.",
@@ -103,7 +105,7 @@ class UnstructuredEmbeddedDataModel(IndalekoBaseModel):
         if isinstance(value, str):
             value = datetime.fromisoformat(value)
         if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
+            value = value.replace(tzinfo=UTC)
         return value
 
     class Config:
@@ -134,10 +136,10 @@ class UnstructuredEmbeddedDataModel(IndalekoBaseModel):
                             },
                             "text": "Singapore, Asia",
                             "type": "Title",
-                        }
-                    )
+                        },
+                    ),
                 ),
-            }
+            },
         }
 
 

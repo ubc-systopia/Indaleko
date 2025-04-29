@@ -74,14 +74,14 @@ class RelationshipCollectionMetadata(IndalekoSingleton):
             "However, you do not need to consider that in your AQL construction as this is a prototype "
             "and we can address that in future versions, if necessary. "
             "Currently, the relationship definitions are storage-focused.  In your consideration of the "
-            "human queries, feedback on adding additional relationships will be appreciated. "
+            "human queries, feedback on adding additional relationships will be appreciated. ",
         ),
         QueryGuidelines=[
             dedent(
                 'One example of a common relationship is the "contains" relationship, which is used to indicate that '
                 "an object is logically contained inside another object, like a file (or directory) contained inside a "
                 "directory. The UUID for this relationship is "
-                f"{IndalekoRelationship.RelationshipType.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR}. "
+                f"{IndalekoRelationship.RelationshipType.DIRECTORY_CONTAINS_RELATIONSHIP_UUID_STR}. ",
             ),
             dedent(
                 'Another example of a relationship, albeit uncommon, is the "contained by" relationship, which is used '
@@ -89,7 +89,7 @@ class RelationshipCollectionMetadata(IndalekoSingleton):
                 '"contained by" a directory. '
                 "This relationship permits finding all of the locations from which a given object is referenced. "
                 "The UUID for this relationship is "
-                f"{IndalekoRelationship.RelationshipType.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR}. "
+                f"{IndalekoRelationship.RelationshipType.CONTAINED_BY_DIRECTORY_RELATIONSHIP_UUID_STR}. ",
             ),
             dedent(
                 "Many local storage systems have a concept of a volume, which in turn is made "
@@ -100,7 +100,7 @@ class RelationshipCollectionMetadata(IndalekoSingleton):
                 f"{IndalekoRelationship.RelationshipType.VOLUME_CONTAINS_RELATIONSHIP_UUID_STR}, which indicates "
                 'that the volume "contains" the object, and '
                 f"{IndalekoRelationship.RelationshipType.CONTAINED_BY_VOLUME_RELATIONSHIP_UUID_STR}, which indicates "
-                'that the object is "contained by" the volume. '
+                'that the object is "contained by" the volume. ',
             ),
             dedent(
                 "Objects may be associated with a specific machine, and there may be relationships between objects and "
@@ -109,17 +109,15 @@ class RelationshipCollectionMetadata(IndalekoSingleton):
                 f"{IndalekoRelationship.RelationshipType.MACHINE_CONTAINS_RELATIONSHIP_UUID_STR}, which indicates that "
                 'the machine "contains" the object, and '
                 f"{IndalekoRelationship.RelationshipType.CONTAINED_BY_MACHINE_RELATIONSHIP_UUID_STR}, which indicates "
-                'that the object is "contained by" the machine. '
+                'that the object is "contained by" the machine. ',
             ),
             dedent(
                 "The Indaleko system is designed to allow extensibility, so that new relationships can be added as "
                 "they are found to be useful.  In evaluating queries, you should suggest relationships that, "
-                "in your opinion, would be useful to have. "
+                "in your opinion, would be useful to have. ",
             ),
         ],
-        Schema=IndalekoDBCollections.Collections[
-            IndalekoDBCollections.Indaleko_Relationship_Collection
-        ]["schema"],
+        Schema=IndalekoDBCollections.Collections[IndalekoDBCollections.Indaleko_Relationship_Collection]["schema"],
     )
 
 

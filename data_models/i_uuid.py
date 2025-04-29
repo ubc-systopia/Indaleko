@@ -23,9 +23,7 @@ import os
 import sys
 import uuid
 
-from typing import Optional, Union
 from pydantic import Field
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -45,14 +43,14 @@ class IndalekoUUIDDataModel(IndalekoBaseModel):
     This class defines the UUID data model for Indaleko.
     """
 
-    Identifier: Union[uuid.UUID, str] = Field(
+    Identifier: uuid.UUID | str = Field(
         uuid.uuid4(),
         title="Identifier",
         description="The UUID for the record.",
         example="12345678-1234-5678-1234-567812345678",
     )
 
-    Label: Optional[str] = Field(
+    Label: str | None = Field(
         None,
         title="Label",
         description="A human-readable label for the UUID.",
@@ -64,7 +62,7 @@ class IndalekoUUIDDataModel(IndalekoBaseModel):
             "example": {
                 "Identifier": "12345678-1234-5678-1234-567812345678",
                 "Label": "This is a sample IndalekoUUID.",
-            }
+            },
         }
 
 

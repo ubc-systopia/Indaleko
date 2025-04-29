@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-import typing
 
 
 class IReader(ABC):
@@ -10,7 +9,7 @@ class IReader(ABC):
 
 class IWriter(ABC):
     @abstractmethod
-    def write(self, arr: typing.List):
+    def write(self, arr: list):
         raise NotImplementedError("Needs to be implemebted")
 
 

@@ -1,8 +1,9 @@
+import ctypes
 import os
 import stat
 from datetime import datetime
+
 from neo4j import GraphDatabase, basic_auth
-import ctypes
 
 # Windows API setup for getting file reference number
 _GetFileInformationByHandleEx = ctypes.windll.kernel32.GetFileInformationByHandleEx

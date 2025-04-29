@@ -1,11 +1,11 @@
 import argparse
 import configparser
-import os
-from arango import ArangoClient
-from arango import DefaultHTTPClient
-import arango
-from dbconfig import DBConfig
 import json
+import os
+
+import arango
+from arango import ArangoClient
+from dbconfig import DBConfig
 
 
 class Validator:
@@ -23,7 +23,7 @@ class Validator:
 
     def __init__(self, config_path: str, json_path: str):
         assert os.path.isfile(
-            config_path
+            config_path,
         ), f"Err: no config path at this file: {config_path}"
         assert os.path.isfile(json_path), f"Err: no json file at this path: {json_path}"
 
@@ -33,9 +33,7 @@ class Validator:
         config_parser.read(config_path)
 
         # make sure we have the database section
-        assert (
-            "database" in config_parser
-        ), f"couldn't find 'database' section in the config file"
+        assert "database" in config_parser, "couldn't find 'database' section in the config file"
         self.db_config = DBConfig(config_parser["database"])
 
         # filled when called with db_connect
@@ -62,7 +60,7 @@ class Validator:
         return True
 
     def generate_objects_from_json_file(self):
-        with open(self.json_path, "r") as file:
+        with open(self.json_path) as file:
             for line in file:
                 try:
                     # Attempt to load each line as a JSON object
@@ -88,7 +86,7 @@ class Validator:
         total_misses = 0
         total = 0
         for line_num, validation_obj in enumerate(
-            self.generate_objects_from_json_file()
+            self.generate_objects_from_json_file(),
         ):
             if not validation_obj:
                 continue
@@ -103,88 +101,80 @@ class Validator:
 
                         # Compare the query result with the given count field
                         if count == validation_obj["count"]:
+                            # Matching count equals expected count
                             print(
-                                f"Matching count for field '{
-                                validation_obj['value']}' in '{self.db.db_name}', count={validation_obj['count']}"
+                                f"Matching count for field '{validation_obj['value']}' in '{self.db.db_name}', count={validation_obj['count']}",
                             )
                         else:
+                            # Count does not match expected
                             print(
-                                f"Mismatching count for field '{validation_obj['value']}' in {
-                                self.db.db_name}: Expected {validation_obj['count']}, Got {count}"
+                                f"Mismatching count for field '{validation_obj['value']}' in {self.db.db_name}: Expected {validation_obj['count']}, Got {count}",
                             )
                     case "contains":
                         # escape the spaces
-                        validation_obj["parent_uri"] = validation_obj[
-                            "parent_uri"
-                        ].replace(r"'", r"\'")
+                        validation_obj["parent_uri"] = validation_obj["parent_uri"].replace(r"'", r"\'")
 
                         # find the parent_uri object
                         find_parent_query = Validator.queries["relationships"].format(
-                            parent_uri=validation_obj["parent_uri"]
+                            parent_uri=validation_obj["parent_uri"],
                         )
 
-                        parent_obj = [
-                            obj for obj in self.db.aql.execute(find_parent_query)
-                        ]
+                        parent_obj = [obj for obj in self.db.aql.execute(find_parent_query)]
                         if not len(parent_obj):
                             print(
-                                f"[CONTAINS] SKIPPED VALIATION: couldn't find the parent obj for {validation_obj['parent_uri']}"
+                                f"[CONTAINS] SKIPPED VALIATION: couldn't find the parent obj for {validation_obj['parent_uri']}",
                             )
                             continue
                         parent_obj = parent_obj.pop()
 
-                        find_1hop_neighbors = Validator.queries[
-                            "k_hop_contains"
-                        ].format(min_depth=1, max_depth=1, parent_uri=parent_obj["_id"])
+                        find_1hop_neighbors = Validator.queries["k_hop_contains"].format(
+                            min_depth=1,
+                            max_depth=1,
+                            parent_uri=parent_obj["_id"],
+                        )
                         neighbors_cursor = self.db.aql.execute(find_1hop_neighbors)
-                        results = [
-                            document["URI"] for document in neighbors_cursor if document
-                        ]
+                        results = [document["URI"] for document in neighbors_cursor if document]
 
                         if len(results) != len(validation_obj["children_uri"]):
                             print(
-                                f"CONTAINS[MISS]: skipped : {validation_obj['parent_uri']}"
+                                f"CONTAINS[MISS]: skipped : {validation_obj['parent_uri']}",
                             )
                             total_misses += 1
                     case "contained_by":
                         # escape the spaces
-                        validation_obj["child_uri"] = validation_obj[
-                            "child_uri"
-                        ].replace(" ", r"\ ")
+                        validation_obj["child_uri"] = validation_obj["child_uri"].replace(" ", r"\ ")
 
                         find_parent_query = Validator.queries["relationships"].format(
-                            parent_uri=validation_obj["child_uri"]
+                            parent_uri=validation_obj["child_uri"],
                         )
 
-                        parent_obj = [
-                            obj for obj in self.db.aql.execute(find_parent_query)
-                        ]
+                        parent_obj = [obj for obj in self.db.aql.execute(find_parent_query)]
                         if not len(parent_obj):
                             print(
-                                f"[CONTAINED_BY] SKIPPED VALIDATION: couldn't find the parent obj for {validation_obj['child_uri']}"
+                                f"[CONTAINED_BY] SKIPPED VALIDATION: couldn't find the parent obj for {validation_obj['child_uri']}",
                             )
                             continue
                         parent_obj = parent_obj.pop()
 
-                        find_1hop_contained_by = Validator.queries[
-                            "k_hop_contained_by"
-                        ].format(min_depth=1, max_depth=1, parent_uri=parent_obj["_id"])
+                        find_1hop_contained_by = Validator.queries["k_hop_contained_by"].format(
+                            min_depth=1,
+                            max_depth=1,
+                            parent_uri=parent_obj["_id"],
+                        )
 
                         parents_cursor = self.db.aql.execute(find_1hop_contained_by)
-                        results = [
-                            document["URI"] for document in parents_cursor if document
-                        ]
+                        results = [document["URI"] for document in parents_cursor if document]
 
                         if len(results) != len(validation_obj["parent_uris"]):
                             print(
-                                f"CONTAINED_BY[MISS]: skipped: {validation_obj['child_uri']}"
+                                f"CONTAINED_BY[MISS]: skipped: {validation_obj['child_uri']}",
                             )
                             total_misses += 1
 
             except (arango.exceptions.AQLQueryExecuteError, StopIteration) as e:
                 print("{:-^10} Error at line {}".format("", line_num))
                 print(
-                    f"Error querying and comparing in {self.db.db_name} for {validation_obj['parent_uri']}: Exception Type: {type(e)}, Exception: {e}"
+                    f"Error querying and comparing in {self.db.db_name} for {validation_obj['parent_uri']}: Exception Type: {type(e)}, Exception: {e}",
                 )
                 find_parent_query and print(find_parent_query)
                 find_1hop_neighbors and print(find_1hop_neighbors)
@@ -192,7 +182,7 @@ class Validator:
 
         if not total:
             print(
-                "Total processed is 0. Either the input is empty or all entries are not valid"
+                "Total processed is 0. Either the input is empty or all entries are not valid",
             )
         if total_misses not in (0, 1, 2):
             print("Total misses has to be among 0, 1 and 2.")
@@ -209,7 +199,7 @@ def main():
     config_path = args.config_path if args.config_path else None
     if config_path:
         assert os.path.exists(config_path) and os.path.isfile(
-            config_path
+            config_path,
         ), f"Err: config file doesn't exist or is not a file; path={config_path}"
     json_path = args.json_file_path
 

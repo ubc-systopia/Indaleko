@@ -21,11 +21,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-
-from pydantic import Field
-from typing import Optional, Union
 from ipaddress import IPv4Address, IPv6Address
+
 from icecream import ic
+from pydantic import Field
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -43,36 +42,46 @@ from data_models.location_data_model import BaseLocationDataModel
 class IPLocationDataModel(BaseLocationDataModel):
     """This is the data model for the ip location service."""
 
-    ip_address: Union[IPv4Address, IPv6Address] = Field(
-        ..., description="The public facing IP address for the device"
+    ip_address: IPv4Address | IPv6Address = Field(
+        ...,
+        description="The public facing IP address for the device",
     )
-    city: Optional[str] = Field(None, description="City inferred from the IP address")
-    country: Optional[str] = Field(
-        None, description="Country inferred from the IP address"
+    city: str | None = Field(None, description="City inferred from the IP address")
+    country: str | None = Field(
+        None,
+        description="Country inferred from the IP address",
     )
-    country_code: Optional[str] = Field(
-        None, description="ISO country code inferred from the IP address"
+    country_code: str | None = Field(
+        None,
+        description="ISO country code inferred from the IP address",
     )
-    region: Optional[str] = Field(
-        None, description="Region or state inferred from the IP address"
+    region: str | None = Field(
+        None,
+        description="Region or state inferred from the IP address",
     )
-    region_name: Optional[str] = Field(
-        None, description="Full name of the region or state"
+    region_name: str | None = Field(
+        None,
+        description="Full name of the region or state",
     )
-    postal_code: Optional[str] = Field(
-        None, description="Postal or ZIP code inferred from the IP address"
+    postal_code: str | None = Field(
+        None,
+        description="Postal or ZIP code inferred from the IP address",
     )
-    isp: Optional[str] = Field(
-        None, description="Internet Service Provider associated with the IP address"
+    isp: str | None = Field(
+        None,
+        description="Internet Service Provider associated with the IP address",
     )
-    org: Optional[str] = Field(
-        None, description="Organization associated with the IP address"
+    org: str | None = Field(
+        None,
+        description="Organization associated with the IP address",
     )
-    as_name: Optional[str] = Field(
-        None, description="Autonomous System (AS) associated with the IP address"
+    as_name: str | None = Field(
+        None,
+        description="Autonomous System (AS) associated with the IP address",
     )
-    timezone: Optional[str] = Field(
-        None, description="Timezone of the inferred location"
+    timezone: str | None = Field(
+        None,
+        description="Timezone of the inferred location",
     )
 
     class Config:
@@ -97,14 +106,14 @@ class IPLocationDataModel(BaseLocationDataModel):
                 "org": "Cloudflare",
                 "as_name": "AS13335 Cloudflare, Inc.",
                 "timezone": "Australia/Sydney",
-            }
+            },
         }
 
 
 def main():
     """This allows testing the data model"""
     data = IPLocationDataModel(
-        **IPLocationDataModel.Config.json_schema_extra["example"]
+        **IPLocationDataModel.Config.json_schema_extra["example"],
     )
     ic(data)
     serial_data = data.serialize()

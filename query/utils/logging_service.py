@@ -1,7 +1,7 @@
-import logging
-from typing import Dict, Any
 import json
+import logging
 from datetime import datetime
+from typing import Any
 
 
 class LoggingService:
@@ -21,7 +21,7 @@ class LoggingService:
         self.logger.setLevel(level)
 
         formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         )
 
         file_handler = logging.FileHandler(log_file)
@@ -32,7 +32,7 @@ class LoggingService:
         console_handler.setFormatter(formatter)
         self.logger.addHandler(console_handler)
 
-    def log_query(self, query: str, metadata: Dict[str, Any] = None):
+    def log_query(self, query: str, metadata: dict[str, Any] = None):
         """
         Log a user query.
 
@@ -102,7 +102,7 @@ class LoggingService:
         }
         self.logger.info(json.dumps(log_data))
 
-    def log_user_action(self, action: str, metadata: Dict[str, Any] = None):
+    def log_user_action(self, action: str, metadata: dict[str, Any] = None):
         """
         Log a user action.
 

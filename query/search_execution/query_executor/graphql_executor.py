@@ -1,4 +1,5 @@
-from typing import List, Dict, Any
+from typing import Any
+
 from .executor_base import ExecutorBase
 
 
@@ -7,7 +8,7 @@ class GraphQLExecutor(ExecutorBase):
     Executor for GraphQL queries.
     """
 
-    def execute(self, query: str, data_connector: Any) -> List[Dict[str, Any]]:
+    def execute(self, query: str, data_connector: Any) -> list[dict[str, Any]]:
         """
         Execute a GraphQL query using the provided data connector.
 
@@ -38,7 +39,7 @@ class GraphQLExecutor(ExecutorBase):
         # This is a placeholder implementation
         return "query" in query or "mutation" in query
 
-    def format_results(self, raw_results: Any) -> List[Dict[str, Any]]:
+    def format_results(self, raw_results: Any) -> list[dict[str, Any]]:
         """
         Format the raw GraphQL query results into a standardized format.
 

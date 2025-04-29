@@ -21,12 +21,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import argparse
 import logging
 import os
-from pathlib import Path
 import sys
-
 from abc import ABC, abstractmethod
+from pathlib import Path
+from typing import Any
+
 from icecream import ic
-from typing import Type, Union, Any
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -52,9 +52,9 @@ class IndalekoCLIRunner:
 
     def __init__(
         self,
-        cli_data: Union[IndalekoBaseCliDataModel, None] = None,
-        handler_mixin: Union[IndalekoHandlermixin, None] = None,
-        features: Union[IndalekoBaseCLI.cli_features, None] = None,
+        cli_data: IndalekoBaseCliDataModel | None = None,
+        handler_mixin: IndalekoHandlermixin | None = None,
+        features: IndalekoBaseCLI.cli_features | None = None,
         **kwargs: dict[str, Any],
     ) -> None:
         keys = {}
@@ -74,7 +74,8 @@ class IndalekoCLIRunner:
             IndalekoCLIRunner.default_runner_mixin.performance_recording,
         )
         keys["Cleanup"] = kwargs.get(
-            "Cleanup", IndalekoCLIRunner.default_runner_mixin.cleanup
+            "Cleanup",
+            IndalekoCLIRunner.default_runner_mixin.cleanup,
         )
         self.runner_data = IndalekoCLIRunnerData(**keys)
         if not cli_data:
@@ -84,7 +85,9 @@ class IndalekoCLIRunner:
         if not features:
             features = IndalekoBaseCLI.cli_features()
         self.cli = IndalekoBaseCLI(
-            cli_data=cli_data, handler_mixin=handler_mixin, features=features
+            cli_data=cli_data,
+            handler_mixin=handler_mixin,
+            features=features,
         )
         self.args = self.cli.get_args()
         if self.args.debug:
@@ -134,7 +137,7 @@ class IndalekoCLIRunner:
                     "args": self.args,
                     "cli": self.cli,
                     "parameters": self.runner_data.RunParameters,
-                }
+                },
             )
         self.cleanup()
 
@@ -142,7 +145,7 @@ class IndalekoCLIRunner:
         """This class provides a mixin for the CLI runner"""
 
         @abstractmethod
-        def get_pre_parser() -> Union[argparse.ArgumentParser, None]:
+        def get_pre_parser() -> argparse.ArgumentParser | None:
             """This method is used to get the pre-parser"""
 
         @abstractmethod
@@ -180,7 +183,7 @@ class IndalekoCLIRunner:
         """This class provides a default runner mixin"""
 
         @staticmethod
-        def get_pre_parser() -> Union[argparse.ArgumentParser, None]:
+        def get_pre_parser() -> argparse.ArgumentParser | None:
             """
             This method is used to get the pre-parser.  This implementation
             does not add any initial arguments to the parser.
@@ -198,19 +201,23 @@ class IndalekoCLIRunner:
                 * cli - the CLI object
                 * kwargs - additional arguments
             """
-            if not getattr(args, "logdir"):
+            if not args.logdir:
                 return
             filename = kwargs.get("logfile", None)
             filename: Path = Path(args.logdir) / args.logfile
             log_level: int = getattr(args, "log_level", logging.INFO)
             log_format: str = kwargs.get(
-                "log_format", "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+                "log_format",
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
             )
             force: bool = kwargs.get("force", True)
             if filename is None:
                 return
             logging.basicConfig(
-                filename=str(filename), level=log_level, format=log_format, force=force
+                filename=str(filename),
+                level=log_level,
+                format=log_format,
+                force=force,
             )
             logging.info(f"Logging started: {filename}")
             assert os.path.exists(filename), f"Failed to create log file: {filename}"
@@ -218,11 +225,11 @@ class IndalekoCLIRunner:
         @staticmethod
         def load_configuration(
             kwargs: dict[str, Any] = {},
-        ) -> Union[IndalekoMachineConfig, None]:
+        ) -> IndalekoMachineConfig | None:
             """This method is used to load configuration"""
-            args: Union[argparse.Namespace, None] = kwargs.get("args", None)
-            cli: Union[IndalekoBaseCLI, None] = kwargs.get("cli", None)
-            machine_config_class: Type[IndalekoMachineConfig] = kwargs["class"]
+            args: argparse.Namespace | None = kwargs.get("args")
+            cli: IndalekoBaseCLI | None = kwargs.get("cli")
+            machine_config_class: type[IndalekoMachineConfig] = kwargs["class"]
             if not args or not cli:
                 ic("load_configuration: No args or cli, returning None")
                 return None
@@ -264,9 +271,7 @@ class IndalekoCLIRunner:
         @staticmethod
         def performance_recording():
             """This method is used to record performance"""
-            pass
 
         @staticmethod
         def cleanup():
             """This method is used to cleanup"""
-            pass

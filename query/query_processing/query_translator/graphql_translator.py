@@ -1,4 +1,5 @@
-from typing import Dict, Any
+from typing import Any
+
 from .translator_base import TranslatorBase
 
 
@@ -7,7 +8,7 @@ class GraphQLTranslator(TranslatorBase):
     Translator for converting parsed queries to GraphQL.
     """
 
-    def translate(self, parsed_query: Dict[str, Any], llm_connector: Any) -> str:
+    def translate(self, parsed_query: dict[str, Any], llm_connector: Any) -> str:
         """
         Translate a parsed query into a GraphQL query.
 
@@ -56,7 +57,7 @@ class GraphQLTranslator(TranslatorBase):
         # This is a placeholder implementation
         return query.strip()
 
-    def _create_translation_prompt(self, parsed_query: Dict[str, Any]) -> str:
+    def _create_translation_prompt(self, parsed_query: dict[str, Any]) -> str:
         """
         Create a prompt for the LLM to generate a GraphQL query.
 
@@ -67,6 +68,4 @@ class GraphQLTranslator(TranslatorBase):
             str: The prompt for the LLM
         """
         # Implement prompt creation logic
-        return (
-            f"Translate the following parsed query into a GraphQL query: {parsed_query}"
-        )
+        return f"Translate the following parsed query into a GraphQL query: {parsed_query}"

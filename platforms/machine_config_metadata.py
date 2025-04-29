@@ -63,7 +63,7 @@ class MachineConfigCollectionMetadata(IndalekoSingleton):
             "For example, Windows explicitly surfaces the concept of volumes, while Linux and Mac "
             "obfuscate this concept in the hierarchy of the file system. "
             'Thus, this prototype does contain "volume" information for Windows platforms but not for '
-            "Linux or Mac platforms. "
+            "Linux or Mac platforms. ",
         ),
         QueryGuidelines=[
             dedent(
@@ -78,26 +78,26 @@ class MachineConfigCollectionMetadata(IndalekoSingleton):
                 f"The UUID {IndalekoMacOSMachineConfig.macos_machine_config_uuid_str} is used to identify the "
                 "Mac machine configuration agent as the source. "
                 f"The UUID {IndalekoWindowsMachineConfig.windows_machine_config_uuid_str} is used to identify the "
-                "Windows machine configuration agent as the source. "
+                "Windows machine configuration agent as the source. ",
             ),
             dedent(
                 "The Captured field is a timestamp of when the data was captured. "
                 "It could be used to filter for machine configuration data captured within a specific time frame. "
                 "It could also be used to sort multiple instances of the machine configuration data "
-                "for time series analysis. This timestamp is in ISO8601 format, with a time zone specifier. "
+                "for time series analysis. This timestamp is in ISO8601 format, with a time zone specifier. ",
             ),
             dedent(
                 "The Hardware field contains information about the hardware of the machine. "
-                "The Software field contains information about the software of the machine. "
+                "The Software field contains information about the software of the machine. ",
             ),
             dedent(
                 "The MachineUUID field that used to "
                 "uniquely identify the machine. Two documents with the same MachineUUID should represent "
-                "machine configuration state at different points in time. "
+                "machine configuration state at different points in time. ",
             ),
             dedent(
                 "This collection is expected to be small, so it is acceptable to scan the entire collection. "
-                "None of the document fields are indexed at the present time. "
+                "None of the document fields are indexed at the present time. ",
             ),
             dedent(
                 'If the user were to ask "Find all machine configurations captured in the last 7 days." You could '
@@ -105,12 +105,10 @@ class MachineConfigCollectionMetadata(IndalekoSingleton):
                 "FOR doc IN MachineConfig FILTER DATE_DIFF(doc.Captured.Value, DATE_NOW(), 'days') <= 7 RETURN doc\n"
                 "Similarly, for a query like 'List all machines running Windows 11.' you could use the Software field: "
                 "FOR doc IN MachineConfig FILTER doc.Software.OS == "
-                "'Windows' AND doc.Software.Version STARTS WITH '11' RETURN doc"
+                "'Windows' AND doc.Software.Version STARTS WITH '11' RETURN doc",
             ),
         ],
-        Schema=IndalekoDBCollections.Collections[
-            IndalekoDBCollections.Indaleko_MachineConfig_Collection
-        ]["schema"],
+        Schema=IndalekoDBCollections.Collections[IndalekoDBCollections.Indaleko_MachineConfig_Collection]["schema"],
     )
 
 

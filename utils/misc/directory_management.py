@@ -29,7 +29,6 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-import utils.misc.timestamp_management
 from constants.values import IndalekoConstants
 
 # pylint: enable=wrong-import-position

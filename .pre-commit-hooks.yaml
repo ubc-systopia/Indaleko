@@ -1,0 +1,20 @@
+- id: check-no-pip-usage
+  name: Check for direct pip usage
+  description: This hook prevents using pip directly (use uv instead)
+  entry: scripts/check_no_pip_usage.py
+  language: python
+  types: [python]
+
+- id: check-create-collection-usage
+  name: Check for unauthorized create_collection calls
+  description: This hook ensures create_collection is only called from authorized locations
+  entry: scripts/check_create_collection_usage.py
+  language: python
+  types: [python]
+
+- id: check-collection-constants
+  name: Check for hardcoded collection names
+  description: This hook ensures collection names are referenced via IndalekoDBCollections constants
+  entry: scripts/check_collection_constants.py
+  language: python
+  types: [python]

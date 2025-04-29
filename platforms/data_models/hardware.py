@@ -23,7 +23,6 @@ import sys
 
 from icecream import ic
 from pydantic import Field
-from typing import Optional
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -45,12 +44,16 @@ class Hardware(IndalekoBaseModel):
 
     Version: str = Field(..., title="Version", description="Version of the processor.")
 
-    Cores: Optional[int] = Field(
-        None, title="Cores", description="Number of cores on the processor."
+    Cores: int | None = Field(
+        None,
+        title="Cores",
+        description="Number of cores on the processor.",
     )
 
-    Threads: Optional[int] = Field(
-        None, title="Threads", description="Number of threads on the processor."
+    Threads: int | None = Field(
+        None,
+        title="Threads",
+        description="Number of threads on the processor.",
     )
 
     class Config:
@@ -62,7 +65,7 @@ class Hardware(IndalekoBaseModel):
                 "Version": "Intel(R) Core(TM) i7-7700HQ CPU @ 2.80GHz",
                 "Cores": 4,
                 "Threads": 8,
-            }
+            },
         }
 
 

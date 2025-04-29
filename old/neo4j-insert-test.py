@@ -1,6 +1,7 @@
 import time
-from neo4j import GraphDatabase
 import uuid
+
+from neo4j import GraphDatabase
 
 # Neo4j connection settings
 neo4j_uri = "bolt://127.0.0.1:7687"

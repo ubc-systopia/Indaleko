@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import Any
 
 
 class MetadataAnalyzer:
@@ -6,7 +6,7 @@ class MetadataAnalyzer:
     Analyzes metadata of search results to extract useful information.
     """
 
-    def analyze(self, raw_results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def analyze(self, raw_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """
         Analyze the metadata of the raw search results.
 
@@ -27,7 +27,7 @@ class MetadataAnalyzer:
             analyzed_results.append(analyzed_result)
         return analyzed_results
 
-    def _extract_metadata(self, result: Dict[str, Any]) -> Dict[str, Any]:
+    def _extract_metadata(self, result: dict[str, Any]) -> dict[str, Any]:
         """
         Extract useful metadata from a single result.
 
@@ -40,7 +40,7 @@ class MetadataAnalyzer:
         # Implement metadata extraction logic
         return {}  # Placeholder
 
-    def _summarize_content(self, result: Dict[str, Any]) -> str:
+    def _summarize_content(self, result: dict[str, Any]) -> str:
         """
         Generate a summary of the content for a single result.
 
@@ -53,7 +53,7 @@ class MetadataAnalyzer:
         # Implement content summarization logic
         return ""  # Placeholder
 
-    def _calculate_relevance(self, result: Dict[str, Any]) -> float:
+    def _calculate_relevance(self, result: dict[str, Any]) -> float:
         """
         Calculate a relevance score for a single result.
 

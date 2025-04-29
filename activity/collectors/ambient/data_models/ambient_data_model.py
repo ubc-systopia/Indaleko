@@ -1,4 +1,6 @@
 """
+Indaleko Ambient Data Model.
+
 This module defines the base data model for ambient data collectors
 and recorders.
 
@@ -22,23 +24,27 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
+from pathlib import Path
+
 from pydantic import Field
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
-        current_path = os.path.dirname(current_path)
-    os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
 from activity.data_model.activity import IndalekoActivityDataModel
+
 
 # pylint: enable=wrong-import-position
 
 
 class BaseAmbientConditionDataModel(IndalekoActivityDataModel):
-    """This is the base data model for ambient condition data"""
+    """This is the base data model for ambient condition data."""
 
     source: str = Field(
         ...,
@@ -46,23 +52,22 @@ class BaseAmbientConditionDataModel(IndalekoActivityDataModel):
     )
 
     class Config:
-        """Sample configuration for the data model"""
+        """Sample configuration for the data model."""
 
         @staticmethod
-        def generate_example():
-            '''Generate an example for the data model'''
-            example = IndalekoActivityDataModel.Config.json_schema_extra['example']
+        def generate_example() -> str:
+            """Generate an example for the data model."""
+            example = IndalekoActivityDataModel.Config.json_schema_extra["example"]
             example["source"] = "Spotify"
             return example
 
-        json_schema_extra = {
+        json_schema_extra = {  # noqa: RUF012
             # Note: this example
             "example": generate_example(),
         }
 
-
-def main():
-    """This allows testing the data model"""
+def main() -> None:
+    """This allows testing the data model."""
     BaseAmbientConditionDataModel.test_model_main()
 
 

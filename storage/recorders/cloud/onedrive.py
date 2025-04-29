@@ -41,15 +41,15 @@ from data_models import IndalekoRecordDataModel
 from db import IndalekoServiceManager
 from platforms.unix import UnixFileAttributes
 from platforms.windows_attributes import IndalekoWindows
-from storage.i_object import IndalekoObject
 from storage.collectors.cloud.one_drive import IndalekoOneDriveCloudStorageCollector
-from storage.recorders.data_model import IndalekoStorageRecorderDataModel
+from storage.i_object import IndalekoObject
 from storage.recorders.cloud.cloud_base import BaseCloudStorageRecorder
-from utils.misc.file_name_management import (
-    find_candidate_files,
-    extract_keys_from_file_name,
-)
+from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from utils.misc.data_management import encode_binary_data
+from utils.misc.file_name_management import (
+    extract_keys_from_file_name,
+    find_candidate_files,
+)
 
 # pylint: enable=wrong-import-position
 
@@ -92,9 +92,7 @@ class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
         if "user_id_ not in kwargs":
             assert "input_file" in kwargs
             keys = extract_keys_from_file_name(kwargs["input_file"])
-            assert (
-                "userid" in keys
-            ), f'userid not found in input file name: {kwargs["input_file"]}'
+            assert "userid" in keys, f'userid not found in input file name: {kwargs["input_file"]}'
             self.user_id = keys["userid"]
         else:
             self.user_id = kwargs["user_id"]
@@ -160,10 +158,10 @@ class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
                     {
                         "Label": IndalekoObject.CREATION_TIMESTAMP,
                         "Value": datetime.datetime.fromisoformat(
-                            data["fileSystemInfo"]["createdDateTime"]
+                            data["fileSystemInfo"]["createdDateTime"],
                         ).isoformat(),
                         "Description": "Creation Time",
-                    }
+                    },
                 )
             if "lastModifiedDateTime" in data["fileSystemInfo"]:
                 # No distinction between modified and changed.
@@ -171,19 +169,19 @@ class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
                     {
                         "Label": IndalekoObject.MODIFICATION_TIMESTAMP,
                         "Value": datetime.datetime.fromisoformat(
-                            data["fileSystemInfo"]["lastModifiedDateTime"]
+                            data["fileSystemInfo"]["lastModifiedDateTime"],
                         ).isoformat(),
                         "Description": "Modification Time",
-                    }
+                    },
                 )
                 timestamps.append(
                     {
                         "Label": IndalekoObject.CHANGE_TIMESTAMP,
                         "Value": datetime.datetime.fromisoformat(
-                            data["fileSystemInfo"]["lastModifiedDateTime"]
+                            data["fileSystemInfo"]["lastModifiedDateTime"],
                         ).isoformat(),
                         "Description": "Access Time",
-                    }
+                    },
                 )
         else:
             if "createdDateTime" in data:
@@ -191,10 +189,10 @@ class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
                     {
                         "Label": IndalekoObject.CREATION_TIMESTAMP,
                         "Value": datetime.datetime.fromisoformat(
-                            data["createdTime"]
+                            data["createdTime"],
                         ).isoformat(),
                         "Description": "Creation Time",
-                    }
+                    },
                 )
             if "lastModifiedDateTime" in data:
                 # No distinction between modified and changed.
@@ -202,32 +200,28 @@ class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
                     {
                         "Label": IndalekoObject.MODIFICATION_TIMESTAMP,
                         "Value": datetime.datetime.fromisoformat(
-                            data["modifiedTime"]
+                            data["modifiedTime"],
                         ).isoformat(),
                         "Description": "Modification Time",
-                    }
+                    },
                 )
                 timestamps.append(
                     {
                         "Label": IndalekoObject.CHANGE_TIMESTAMP,
                         "Value": datetime.datetime.fromisoformat(
-                            data["modifiedTime"]
+                            data["modifiedTime"],
                         ).isoformat(),
                         "Description": "Access Time",
-                    }
+                    },
                 )
         data["Path"] = path
         data["Name"] = data["name"]
         if "folder" in data:
             unix_file_attributes = UnixFileAttributes.FILE_ATTRIBUTES["S_IFDIR"]
-            windows_file_attributes = IndalekoWindows.FILE_ATTRIBUTES[
-                "FILE_ATTRIBUTE_DIRECTORY"
-            ]
+            windows_file_attributes = IndalekoWindows.FILE_ATTRIBUTES["FILE_ATTRIBUTE_DIRECTORY"]
         elif "file" in data:
             unix_file_attributes = UnixFileAttributes.FILE_ATTRIBUTES["S_IFREG"]
-            windows_file_attributes = IndalekoWindows.FILE_ATTRIBUTES[
-                "FILE_ATTRIBUTE_NORMAL"
-            ]
+            windows_file_attributes = IndalekoWindows.FILE_ATTRIBUTES["FILE_ATTRIBUTE_NORMAL"]
         else:
             raise ValueError("Unknown file type")
         kwargs = {
@@ -236,20 +230,20 @@ class IndalekoOneDriveCloudStorageRecorder(BaseCloudStorageRecorder):
                 Timestamp=self.timestamp,
                 Data=encode_binary_data(bytes(json.dumps(data).encode("utf-8"))),
             ),
-            "URI": data.get("webUrl", None),
+            "URI": data.get("webUrl"),
             "ObjectIdentifier": str(oid),
             "Timestamps": timestamps,
             "Size": int(data.get("size", 0)),
             "SemanticAttributes": None,
-            "Label": data.get("name", None),
+            "Label": data.get("name"),
             "LocalPath": path,
-            "LocalIdentifier": data.get("id", None),
+            "LocalIdentifier": data.get("id"),
             "Volume": None,
             "PosixFileAttributes": UnixFileAttributes.map_file_attributes(
-                unix_file_attributes
+                unix_file_attributes,
             ),
             "WindowsFileAttributes": IndalekoWindows.map_file_attributes(
-                windows_file_attributes
+                windows_file_attributes,
             ),
         }
         # ic(kwargs)

@@ -6,12 +6,11 @@ import datetime
 import os
 import sys
 import uuid
+from typing import Any
 
-from typing import List, Dict, Any
-
+from aiohttp import ClientSession
 from icecream import ic
 from pytile import async_login
-from aiohttp import ClientSession
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -21,8 +20,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from activity.collectors.location import LocationCollector
 from activity.characteristics import ActivityDataCharacteristics
+from activity.collectors.location import LocationCollector
 from activity.collectors.location.data_models.tile_location_data_model import (
     TileLocationDataModel,
 )
@@ -46,12 +45,14 @@ class TileLocation(LocationCollector):
         config = configparser.ConfigParser()
         if config_file is None:
             config_file = os.path.join(
-                os.environ["INDALEKO_ROOT"], "config", "tile.ini"
+                os.environ["INDALEKO_ROOT"],
+                "config",
+                "tile.ini",
             )
         config.read(config_file)
         return config
 
-    def get_tile_data(self) -> List[TileLocationDataModel]:
+    def get_tile_data(self) -> list[TileLocationDataModel]:
         """Get the Tile data"""
 
         async def get_tile_data_async(email: str, password: str) -> dict:
@@ -62,8 +63,9 @@ class TileLocation(LocationCollector):
 
         tiles = asyncio.run(
             get_tile_data_async(
-                self.tile_config["tile"]["email"], self.tile_config["tile"]["password"]
-            )
+                self.tile_config["tile"]["email"],
+                self.tile_config["tile"]["password"],
+            ),
         )
         return_data = []
         for tile_id, tile_data in tiles.items():
@@ -92,7 +94,7 @@ class TileLocation(LocationCollector):
             return_data.append(TileLocationDataModel(**kwargs))
         return return_data
 
-    def get_collector_characteristics(self) -> List[ActivityDataCharacteristics]:
+    def get_collector_characteristics(self) -> list[ActivityDataCharacteristics]:
         """Get the provider characteristics"""
         return [
             ActivityDataCharacteristics.ACTIVITY_DATA_SPATIAL,
@@ -118,7 +120,7 @@ class TileLocation(LocationCollector):
         prior_time_window: datetime.timedelta,
         subsequent_time_window: datetime.timedelta,
         max_entries: int = 0,
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """Retrieve temporal data from the provider"""
         raise NotImplementedError("This method is not implemented yet.")
 
@@ -160,18 +162,22 @@ class TileLocation(LocationCollector):
             location = ""
         return location
 
-    def get_coordinates(self) -> Dict[str, float]:
+    def get_coordinates(self) -> dict[str, float]:
         """Get the coordinates for the location"""
         return {"latitude": 0.0, "longitude": 0.0}
 
     def get_location_history(
-        self, start_time: datetime.datetime, end_time: datetime.datetime
-    ) -> List[Dict[str, Any]]:
+        self,
+        start_time: datetime.datetime,
+        end_time: datetime.datetime,
+    ) -> list[dict[str, Any]]:
         """Get the location history for the location"""
         return []
 
     def get_distance(
-        self, location1: Dict[str, float], location2: Dict[str, float]
+        self,
+        location1: dict[str, float],
+        location2: dict[str, float],
     ) -> float:
         """Get the distance between two locations"""
         raise NotImplementedError("This method is not implemented yet.")

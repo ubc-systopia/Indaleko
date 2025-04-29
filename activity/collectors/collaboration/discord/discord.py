@@ -20,9 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-import discord
-from typing import Any, Dict
+from typing import Any
 
+import discord
 from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -65,7 +65,7 @@ class DiscordDataCollector(CollaborationCollector):
                         if message.attachments:
                             messagelink = f"https://discord.com/channels/{guild.id}/{channel.id}/{message.id}"
                             print(
-                                f"Found attachment: {message.attachments[0].url} in message {messagelink}"
+                                f"Found attachment: {message.attachments[0].url} in message {messagelink}",
                             )
                             # Capture shared file information
                             shared_file_info = {
@@ -89,19 +89,19 @@ class DiscordDataCollector(CollaborationCollector):
         """Collect data from Discord."""
         self.client.run(self.token)
 
-    def process_data(self, data: Any) -> Dict[str, Any]:
+    def process_data(self, data: Any) -> dict[str, Any]:
         """Process the collected data."""
         ic("Processing Discord data")
         # Example: Convert processed data to a dictionary
         return data.dict()
 
-    def store_data(self, data: Dict[str, Any]) -> None:
+    def store_data(self, data: dict[str, Any]) -> None:
         """Store the processed data."""
         ic("Storing Discord data")
         # Example: Print data to simulate storing
         print("Storing data:", data)
 
-    def get_latest_db_update(self) -> Dict[str, Any]:
+    def get_latest_db_update(self) -> dict[str, Any]:
         """Get the latest data update from the database."""
         ic("Getting latest Discord data update from the database")
         # Example: Simulate fetching the latest data

@@ -25,13 +25,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import gc
 import inspect
 import os
-from pathlib import Path
-import psutil
 import sys
 import uuid
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any
 
-from typing import Union, Callable, Any
-
+import psutil
 from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -47,10 +47,10 @@ from db import IndalekoDBCollections
 from perf.perf_collector import IndalekoPerformanceDataCollector
 from perf.perf_recorder import IndalekoPerformanceDataRecorder
 from platforms.machine_config import IndalekoMachineConfig
-from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
-from utils.cli.runner import IndalekoCLIRunner
 from storage.collectors import BaseStorageCollector
 from storage.recorders.base import BaseStorageRecorder
+from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
+from utils.cli.runner import IndalekoCLIRunner
 
 # pylint: enable=wrong-import-position
 
@@ -61,7 +61,7 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
     def find_collector_files(self) -> list:
         """This function should be overridden: it is used to find the collector files for the recorder."""
         raise NotImplementedError(
-            "This function must be overridden by the derived class"
+            "This function must be overridden by the derived class",
         )
 
     @staticmethod
@@ -71,19 +71,20 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
             ic(f"local_recorder_mixin.load_machine_config: {keys}")
         if "machine_config_file" not in keys:
             raise ValueError(
-                f"{inspect.currentframe().f_code.co_name}: machine_config_file must be specified"
+                f"{inspect.currentframe().f_code.co_name}: machine_config_file must be specified",
             )
         offline = keys.get("offline", False)
         platform_class = keys["class"]  # must exist
         return platform_class.load_config_from_file(
-            config_file=str(keys["machine_config_file"]), offline=offline
+            config_file=str(keys["machine_config_file"]),
+            offline=offline,
         )
 
     @staticmethod
     def get_local_storage_recorder() -> "BaseLocalStorageRecorder":
         """This function should be overridden: it is used to create the appropriate local storage recorder."""
         raise NotImplementedError(
-            "This function must be overridden by the derived class"
+            "This function must be overridden by the derived class",
         )
 
     class local_recorder_mixin(BaseStorageRecorder.base_recorder_mixin):
@@ -95,7 +96,7 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
             return BaseLocalStorageRecorder.load_machine_config(keys)
 
     @staticmethod
-    def local_run(keys: dict[str, str]) -> Union[dict, None]:
+    def local_run(keys: dict[str, str]) -> dict | None:
         """Run the recorder"""
         args = keys["args"]  # must be there.
         cli = keys["cli"]  # must be there.
@@ -113,11 +114,11 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
             "machine_config": cli.handler_mixin.load_machine_config(
                 {
                     "machine_config_file": str(
-                        Path(args.configdir) / args.machine_config
+                        Path(args.configdir) / args.machine_config,
                     ),
                     "offline": args.offline,
                     "class": machine_config_class,
-                }
+                },
             ),
             "timestamp": config_data["Timestamp"],
             "input_file": str(Path(args.datadir) / args.inputfile),
@@ -144,7 +145,8 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
         recorder = recorder_class(**kwargs)
 
         def capture_performance(
-            task_func: Callable[..., Any], output_file_name: Union[Path, str] = None
+            task_func: Callable[..., Any],
+            output_file_name: Path | str = None,
         ):
             perf_data = IndalekoPerformanceDataCollector.measure_performance(
                 task_func,
@@ -164,7 +166,7 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
                 perf_recorder = IndalekoPerformanceDataRecorder()
                 if args.performance_file:
                     perf_file = str(
-                        Path(args.datadir) / config_data["PerformanceDataFile"]
+                        Path(args.datadir) / config_data["PerformanceDataFile"],
                     )
                     perf_recorder.add_data_to_file(perf_file, perf_data)
                     if debug:
@@ -185,7 +187,8 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
         if args.debug:
             ic("Writing object data to file")
         capture_performance(
-            recorder.write_object_data_to_file, output_file_name=output_file
+            recorder.write_object_data_to_file,
+            output_file_name=output_file,
         )
         # Step 3: record the time to save the edge data.
         if args.debug:
@@ -207,7 +210,7 @@ class BaseLocalStorageRecorder(BaseStorageRecorder):
 
         if args.arangoimport and args.bulk:
             ic(
-                "Warning: both arangoimport and bulk upload specified.  Using arangoimport ONLY."
+                "Warning: both arangoimport and bulk upload specified.  Using arangoimport ONLY.",
             )
         if args.arangoimport:
             # Step 4: upload the data to the database using the arangoimport utility

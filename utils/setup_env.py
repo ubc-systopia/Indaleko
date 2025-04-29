@@ -21,12 +21,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import argparse
 import os
 import pathlib
-import sys
-import subprocess
 import shutil
+import subprocess
+import sys
 import tempfile
-
-from typing import Union
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -74,7 +72,7 @@ class SetupIndalekoDevelopmentEnvironment:
                         if install_dir not in os.environ["PATH"]:
                             os.environ["PATH"] += os.pathsep + install_dir
                             print(
-                                f"You will need to add {install_dir} to your PATH.  Adding it temporarily now."
+                                f"You will need to add {install_dir} to your PATH.  Adding it temporarily now.",
                             )
 
             return True
@@ -92,7 +90,9 @@ class SetupIndalekoDevelopmentEnvironment:
                     stdout=subprocess.PIPE,
                 )
                 sh_process = subprocess.Popen(
-                    ["sh"], stdin=curl_process.stdout, stdout=temp_file
+                    ["sh"],
+                    stdin=curl_process.stdout,
+                    stdout=temp_file,
                 )
                 curl_process.stdout.close()
                 sh_process.communicate()
@@ -105,7 +105,7 @@ class SetupIndalekoDevelopmentEnvironment:
                         if install_dir not in os.environ["PATH"]:
                             os.environ["PATH"] += os.pathsep + install_dir
                             print(
-                                f"You will need to add {install_dir} to your PATH.  Adding it temporarily now."
+                                f"You will need to add {install_dir} to your PATH.  Adding it temporarily now.",
                             )
 
             # curl -fsSL https://astral.sh/uv/install.sh | sh
@@ -137,7 +137,7 @@ class SetupIndalekoDevelopmentEnvironment:
         try:
             subprocess.run(["uv", "--version"], check=True)
             # if we get here, then it is installed
-            return
+            return None
         except (subprocess.CalledProcessError, FileNotFoundError):
             print("UV is not installed, attempting to install it now.")
         system = sys.platform
@@ -156,16 +156,18 @@ class SetupIndalekoDevelopmentEnvironment:
         if sys.version_info < min_version:
             min_version_str = f"{min_version[0]}.{min_version[1]}"
             print(
-                f"Error: Python {min_version_str} or higher is required to run this script."
+                f"Error: Python {min_version_str} or higher is required to run this script.",
             )
             sys.exit(1)
         else:
             print(
-                f"Using Python {sys.version_info.major}.{sys.version_info.minor}, which is acceptable."
+                f"Using Python {sys.version_info.major}.{sys.version_info.minor}, which is acceptable.",
             )
 
     def compute_venv_name(
-        self, platform: str = None, python_version: tuple = None
+        self,
+        platform: str = None,
+        python_version: tuple = None,
     ) -> str:
         """
         This routine constructs a virtual environment name that incorporates
@@ -187,24 +189,22 @@ class SetupIndalekoDevelopmentEnvironment:
             platform = sys.platform
         if python_version is None:
             python_version = (sys.version_info.major, sys.version_info.minor)
-        self.venv_name = (
-            f".venv-{platform}-python{python_version[0]}.{python_version[1]}"
-        )
+        self.venv_name = f".venv-{platform}-python{python_version[0]}.{python_version[1]}"
         return self.venv_name
 
     def check_or_create_virtualenv(
-        self, platform: str = None, python_version: str = None
+        self,
+        platform: str = None,
+        python_version: str = None,
     ) -> None:
         """Check if a virtual environment exists and create one if it does not."""
         if platform is None:
             platform = sys.platform
         if python_version is None:
             python_version = (sys.version_info.major, sys.version_info.minor)
-        if not hasattr(sys, "real_prefix") and not (
-            hasattr(sys, "base_prefix") and sys.base_prefix != sys.prefix
-        ):
+        if not hasattr(sys, "real_prefix") and not (hasattr(sys, "base_prefix") and sys.base_prefix != sys.prefix):
             print(
-                f"No virtual environment detected. Creating one with 'uv' using Python {sys.version}..."
+                f"No virtual environment detected. Creating one with 'uv' using Python {sys.version}...",
             )
             if not pathlib.Path("pyproject.toml").exists():
                 try:
@@ -213,7 +213,8 @@ class SetupIndalekoDevelopmentEnvironment:
                             "uv",
                             "venv",
                             self.compute_venv_name(
-                                platform=platform, python_version=python_version
+                                platform=platform,
+                                python_version=python_version,
                             ),
                             "--python",
                             f"python{python_version[0]}.{python_version[1]}",
@@ -229,7 +230,8 @@ class SetupIndalekoDevelopmentEnvironment:
                         "uv",
                         "venv",
                         self.compute_venv_name(
-                            platform=platform, python_version=python_version
+                            platform=platform,
+                            python_version=python_version,
                         ),
                     ],
                     check=True,
@@ -239,11 +241,17 @@ class SetupIndalekoDevelopmentEnvironment:
                 sys.exit(1)
         if sys.platform.startswith("win"):
             self.venv_command = os.path.join(
-                self.cwd, self.venv_name, "Scripts", "activate"
+                self.cwd,
+                self.venv_name,
+                "Scripts",
+                "activate",
             )
         else:
             self.venv_command = os.path.join(
-                self.cwd, self.venv_name, "bin", "activate"
+                self.cwd,
+                self.venv_name,
+                "bin",
+                "activate",
             )
 
     def handle_lock_file(self, lock_file: str = None, reset_lock_file: bool = False):
@@ -285,7 +293,7 @@ class SetupIndalekoDevelopmentEnvironment:
                 new_lock_files = current_lock_files - existing_lock_files
                 if len(new_lock_files) != 1:
                     print(
-                        f"Error: Expected one new lock file, found {len(new_lock_files)}"
+                        f"Error: Expected one new lock file, found {len(new_lock_files)}",
                     )
                     print(f"Before: {existing_lock_files}")
                     print(f"After: {current_lock_files}")
@@ -296,26 +304,30 @@ class SetupIndalekoDevelopmentEnvironment:
             print(f"Using existing lock file: {main_lock_file}")
 
     def install_dependencies(
-        self, platform: str = None, python_version: tuple = None
+        self,
+        platform: str = None,
+        python_version: tuple = None,
     ) -> None:
         """Install project dependencies using 'uv'."""
         try:
             venv_name = self.compute_venv_name(
-                platform=platform, python_version=python_version
+                platform=platform,
+                python_version=python_version,
             )
             os.environ["VIRTUAL_ENV"] = venv_name
             subprocess.run(
-                ["uv", "pip", "install", "--requirement", "pyproject.toml"], check=True
+                ["uv", "pip", "install", "--requirement", "pyproject.toml"],
+                check=True,
             )
             print("Environment setup complete.")
         except subprocess.CalledProcessError as e:
             print(f"Failed to install environment: {e}")
             print(
-                "Please verify internet connectivity, as that is a common source of this error."
+                "Please verify internet connectivity, as that is a common source of this error.",
             )
             sys.exit(1)
 
-    def find_best_lockfile(self) -> Union[str, None]:
+    def find_best_lockfile(self) -> str | None:
         """
         Find the best lock file to use in the current directory.
 
@@ -332,7 +344,7 @@ class SetupIndalekoDevelopmentEnvironment:
         if best_lockfile is not None:
             return best_lockfile
         for lockfile in lock_files:
-            if ".uv.lock" == lockfile or "uv.lock" == lockfile:
+            if lockfile == ".uv.lock" or lockfile == "uv.lock":
                 best_lockfile = lockfile
                 break
         if best_lockfile is not None:
@@ -352,7 +364,7 @@ class SetupIndalekoDevelopmentEnvironment:
         # First, let's see what lock files already exist.
         default_lock_file = self.find_best_lockfile()
         parser = argparse.ArgumentParser(
-            description="Setup environment for the project."
+            description="Setup environment for the project.",
         )
         parser.add_argument(
             "--python-version",
@@ -361,7 +373,9 @@ class SetupIndalekoDevelopmentEnvironment:
             help="Specify the Python version to use for the virtual environment.",
         )
         parser.add_argument(
-            "--force-install", action="store_true", help="Force reinstall 'uv' package."
+            "--force-install",
+            action="store_true",
+            help="Force reinstall 'uv' package.",
         )
         parser.add_argument(
             "--lock-file",
@@ -398,7 +412,8 @@ class SetupIndalekoDevelopmentEnvironment:
         if args.lock_file:
             print(f"Using custom lock file: {args.lock_file}")
         self.handle_lock_file(
-            lock_file=args.lock_file, reset_lock_file=args.reset_lock_file
+            lock_file=args.lock_file,
+            reset_lock_file=args.reset_lock_file,
         )
         if args.reset_lock_file:
             print("Lock file reset")
@@ -412,15 +427,14 @@ class SetupIndalekoDevelopmentEnvironment:
         # Final Step: Guide the user on next steps
         print("\nNext steps:")
         print(
-            "1. Activate the virtual environment if it's not already active: "
-            + self.get_venv_activation_command()
+            "1. Activate the virtual environment if it's not already active: " + self.get_venv_activation_command(),
         )
         # TODO: Add instructions for activating the virtual environment, since this is platform-specific
         print(
-            f"2. Run 'python {os.getcwd()}/db/db_config.py' to verify the database is set up properly."
+            f"2. Run 'python {os.getcwd()}/db/db_config.py' to verify the database is set up properly.",
         )
         print(
-            f"   If it is not set up, you will need to run the setup script: python {os.getcwd()}/db/db_setup.py"
+            f"   If it is not set up, you will need to run the setup script: python {os.getcwd()}/db/db_setup.py",
         )
         print("3. Refer to the README for more detailed instructions.")
 

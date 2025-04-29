@@ -22,10 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
-from typing import Optional, Union
-from pydantic import Field, HttpUrl, AwareDatetime
-
-from icecream import ic
+from pydantic import AwareDatetime, Field, HttpUrl
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -35,10 +32,10 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from activity.collectors.collaboration.data_models.shared_file import SharedFileData
 from activity.collectors.collaboration.data_models.collaboration_data_model import (
     BaseCollaborationDataModel,
 )
+from activity.collectors.collaboration.data_models.shared_file import SharedFileData
 
 # pylint: enable=wrong-import-position
 
@@ -47,56 +44,47 @@ class DiscordDataModel(BaseCollaborationDataModel):
     """
     Discord-specific implementation of the collaboration data model.
     """
-    GuildName: Union[str, None] = Field(
+
+    GuildName: str | None = Field(
         None,
-        description="Name of the Discord server (guild)"
+        description="Name of the Discord server (guild)",
     )
 
-    GuildID: Union[str, None] = Field(
+    GuildID: str | None = Field(None, description="ID of the Discord server")
+
+    ChannelName: str | None = Field(
         None,
-        description="ID of the Discord server"
+        description="Name of the Discord channel",
     )
 
-    ChannelName: Union[str, None] = Field(
+    ChannelID: str | None = Field(None, description="ID of the Discord channel")
+
+    MessageID: str | None = Field(None, description="ID of the Discord message")
+
+    MessageURI: HttpUrl | None = Field(
         None,
-        description="Name of the Discord channel"
+        description="Link to the original message",
     )
 
-    ChannelID: Union[str, None] = Field(
+    Sender: str | None = Field(
         None,
-        description="ID of the Discord channel"
+        description="Username or handle of the sender",
     )
 
-    MessageID: Union[str, None] = Field(
+    Timestamp: AwareDatetime | None = Field(
         None,
-        description="ID of the Discord message"
+        description="When the message was sent",
     )
 
-    MessageURI: Union[HttpUrl, None] = Field(
+    MessageContent: str | None = Field(
         None,
-        description="Link to the original message"
-    )
-
-    Sender: Union[str, None] = Field(
-        None,
-        description="Username or handle of the sender"
-    )
-
-    Timestamp: Union[AwareDatetime, None] = Field(
-        None,
-        description="When the message was sent"
-    )
-
-    MessageContent: Union[str, None] = Field(
-        None,
-        description="Text content of the message"
+        description="Text content of the message",
     )
 
     Files: list[SharedFileData] = Field(
         ...,
-        description="List of files shared in the message"
+        description="List of files shared in the message",
     )
-
 
     class Config:
         """Configuration and example data for the Discord data model"""
@@ -106,29 +94,31 @@ class DiscordDataModel(BaseCollaborationDataModel):
             """Generate an example for the data model"""
             example = BaseCollaborationDataModel.Config.generate_example()
             sfd_example = SharedFileData.Config.json_schema_extra["example"]
-            example.update({
-                "CollaborationType": "discord",
-                "GuildName": "Indaleko",
-                "GuildID": "123456789",
-                "ChannelName": "general",
-                "ChannelID": "987654321",
-                "MessageID": "123456789",
-                "MessageURI": "https://discord.com/channels/123456789/987654321/123456789",
-                "Sender": "Aki#1234",
-                "Timestamp": "2025-01-01T12:00:00Z",
-                "MessageContent": "Hello, World!",
-                "Files": [{
-                    "filename": "example.pdf",
-                    "url": "https://cdn.discordapp.com/...",
-                    "size_bytes": 1048576,
-                    "content_type": "application/pdf"
-                }]
-            })
+            example.update(
+                {
+                    "CollaborationType": "discord",
+                    "GuildName": "Indaleko",
+                    "GuildID": "123456789",
+                    "ChannelName": "general",
+                    "ChannelID": "987654321",
+                    "MessageID": "123456789",
+                    "MessageURI": "https://discord.com/channels/123456789/987654321/123456789",
+                    "Sender": "Aki#1234",
+                    "Timestamp": "2025-01-01T12:00:00Z",
+                    "MessageContent": "Hello, World!",
+                    "Files": [
+                        {
+                            "filename": "example.pdf",
+                            "url": "https://cdn.discordapp.com/...",
+                            "size_bytes": 1048576,
+                            "content_type": "application/pdf",
+                        },
+                    ],
+                },
+            )
             return example
 
-        json_schema_extra = {
-            "example": generate_example()
-        }
+        json_schema_extra = {"example": generate_example()}
 
 
 def main():

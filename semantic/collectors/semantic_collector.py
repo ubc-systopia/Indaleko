@@ -21,9 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # standard imports
 import os
 import sys
-
 from abc import ABC, abstractmethod
-from typing import List, Dict
+
 from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -51,7 +50,7 @@ class SemanticCollector(ABC):
         """Initialize the semantic data collector"""
 
     @abstractmethod
-    def get_collector_characteristics(self) -> List[SemanticDataCharacteristics]:
+    def get_collector_characteristics(self) -> list[SemanticDataCharacteristics]:
         """
         This call returns the characteristics of the semantic data provider.  This is
         intended to be used to help users understand the data provider and to
@@ -70,7 +69,7 @@ class SemanticCollector(ABC):
         """Get the UUID for the collector"""
 
     @abstractmethod
-    def retrieve_data(self, data_id: str) -> Dict:
+    def retrieve_data(self, data_id: str) -> dict:
         """
         This call retrieves the data associated with the provided data_id.
 

@@ -1,7 +1,8 @@
 import unittest
-from unittest.mock import patch
 from io import StringIO
-from operators import InputReader, ToList, FilterField, FilterFields, Canonize
+from unittest.mock import patch
+
+from operators import Canonize, FilterField, FilterFields, InputReader, ToList
 
 
 class TestInputReader(unittest.TestCase):
@@ -30,7 +31,7 @@ class TestInputReader(unittest.TestCase):
             output_lines = list(reader.run())
 
         self.assertEqual(
-            output_lines, [(1, "Command exited with non-zero code: 1; stderr: ")]
+            output_lines, [(1, "Command exited with non-zero code: 1; stderr: ")],
         )
 
     def test_exception_handling(self):
@@ -50,7 +51,7 @@ class TestToList(unittest.TestCase):
     def test_valid_input_with_remove_true(self):
         valid_input = (0, "a b c d e")
         status, to_list_valid = ToList(sep=" ", remove_empty_fields=True).execute(
-            valid_input
+            valid_input,
         )
         self.assertEqual(status, 0)
         self.assertEqual(list(to_list_valid), ["a", "b", "c", "d", "e"])
@@ -58,7 +59,7 @@ class TestToList(unittest.TestCase):
     def test_valid_input_with_remove_false(self):
         valid_input = (0, "a b c d e")
         status, to_list_valid = ToList(sep=" ", remove_empty_fields=False).execute(
-            valid_input
+            valid_input,
         )
         self.assertEqual(status, 0)
         self.assertEqual(list(to_list_valid), ["a", "b", "c", "d", "e"])
@@ -66,7 +67,7 @@ class TestToList(unittest.TestCase):
     def test_empty_input_with_remove_true(self):
         empty_input = (0, "")
         status, to_list_empty = ToList(sep=" ", remove_empty_fields=True).execute(
-            empty_input
+            empty_input,
         )
         self.assertEqual(status, 0)
         self.assertEqual(list(to_list_empty), [])
@@ -74,7 +75,7 @@ class TestToList(unittest.TestCase):
     def test_empty_input_with_remove_false(self):
         empty_input = (0, "")
         status, to_list_empty = ToList(sep=" ", remove_empty_fields=False).execute(
-            empty_input
+            empty_input,
         )
         self.assertEqual(status, 0)
         self.assertEqual(list(to_list_empty), [""])
@@ -164,7 +165,7 @@ class TestFilterFieldsWithPos(unittest.TestCase):
             pos, queries, input_arrs = tc["pos"], tc["queries"], tc["input_arrs"]
             for i, ia in enumerate(input_arrs):
                 status, res_arr = FilterFields(pos, queries, exact_match=True).execute(
-                    ia
+                    ia,
                 )
                 self.assertEqual(
                     status,
@@ -572,13 +573,13 @@ class TestCanonize(unittest.TestCase):
                 (0, ["19:52:18.512452", "mmap", "0", "<>", "git", "464994"]),
                 (0, ["19:52:18.513592", "mmap", "0", "<>", "git", "464994"]),
                 (0, ["19:52:18.514199", "mmap", "7077888", "<>", "git", "464994"]),
-            ]
+            ],
         }
 
         for i, arr in enumerate(self.generate_mock_input("mmap")):
             res = Canonize().execute(arr)
             # fmt: off
-            self.assertEqual(res, test_cases['expect'][i], f'expected: {test_cases['expect'][i]}, got: {res} for input={arr}')
+            self.assertEqual(res, test_cases["expect"][i], f"expected: {test_cases['expect'][i]}, got: {res} for input={arr}")
             # fmt: on
 
     def test_rename(self):
@@ -617,13 +618,13 @@ class TestCanonize(unittest.TestCase):
                         "8803",
                     ],
                 ),
-            ]
+            ],
         }
 
         for i, arr in enumerate(self.generate_mock_input("rename")):
             res = Canonize().execute(arr)
             # fmt: off
-            self.assertEqual(res, test_cases['expect'][i], f'expected: {test_cases['expect'][i]}, got: {res} for input={arr}')
+            self.assertEqual(res, test_cases["expect"][i], f"expected: {test_cases['expect'][i]}, got: {res} for input={arr}")
             # fmt: on
 
     def test_mkdir(self):
@@ -662,13 +663,13 @@ class TestCanonize(unittest.TestCase):
                         "464995",
                     ],
                 ),
-            ]
+            ],
         }
 
         for i, arr in enumerate(self.generate_mock_input("mkdir")):
             res = Canonize().execute(arr)
             # fmt: off
-            self.assertEqual(res, test_cases['expect'][i], f'expected: {test_cases['expect'][i]}, got: {res} for input={arr}')
+            self.assertEqual(res, test_cases["expect"][i], f"expected: {test_cases['expect'][i]}, got: {res} for input={arr}")
             # fmt: on
 
     def test_write(self):
@@ -676,13 +677,13 @@ class TestCanonize(unittest.TestCase):
             "expect": [
                 (0, ["19:52:17.818965", "write", "17", "Code Helper", "21271"]),
                 (0, ["19:52:17.953316", "write", "78", "acumbrellaagent", "6946"]),
-            ]
+            ],
         }
 
         for i, arr in enumerate(self.generate_mock_input("write")):
             res = Canonize().execute(arr)
             # fmt: off
-            self.assertEqual(res, test_cases['expect'][i], f'expected: {test_cases['expect'][i]}, got: {res} for input={arr}')
+            self.assertEqual(res, test_cases["expect"][i], f"expected: {test_cases['expect'][i]}, got: {res} for input={arr}")
             # fmt: on
 
     def test_read(self):
@@ -691,14 +692,14 @@ class TestCanonize(unittest.TestCase):
                 (0, ["19:52:17.818972", "read", "16", "Code Helper", "21271"]),
                 (0, ["19:52:17.824597", "read", "35", "ampdaemon", "8720"]),
                 (0, ["19:52:17.882232", "read", "33", "ampdaemon", "8244"]),
-            ]
+            ],
         }
 
         # fmt: on
         for i, arr in enumerate(self.generate_mock_input("read")):
             res = Canonize().execute(arr)
             # fmt: off
-            self.assertEqual(res, test_cases['expect'][i], f'expected: {test_cases['expect'][i]}, got: {res} for input={arr}')
+            self.assertEqual(res, test_cases["expect"][i], f"expected: {test_cases['expect'][i]}, got: {res} for input={arr}")
             # fmt: on
 
     def test_open(self):
@@ -748,14 +749,14 @@ class TestCanonize(unittest.TestCase):
                         "7874",
                     ],
                 ),
-            ]
+            ],
         }
 
         # fmt: on
         for i, arr in enumerate(self.generate_mock_input(syscall="open")):
             res = Canonize().execute(arr)
             # fmt: off
-            self.assertEqual(res, test_cases['expect'][i], f'expected: {test_cases['expect'][i]}, got: {res} for input={arr}')
+            self.assertEqual(res, test_cases["expect"][i], f"expected: {test_cases['expect'][i]}, got: {res} for input={arr}")
             # fmt: on
 
     def test_close(self):
@@ -765,14 +766,14 @@ class TestCanonize(unittest.TestCase):
                 (0, ["19:52:57.953020", "close", "3", "com.docker.cli", "466051"]),
                 (0, ["19:52:19.418225", "close", "8088", "lsof", "465025"]),
                 (0, ["19:52:19.416572", "close", "1045", "lsof", "465025"]),
-            ]
+            ],
         }
 
         # fmt: on
         for i, arr in enumerate(self.generate_mock_input(syscall="close")):
             res = Canonize().execute(arr)
             # fmt: off
-            self.assertEqual(res, test_cases['expect'][i], f'expected: {test_cases['expect'][i]}, got: {res} for input={arr}')
+            self.assertEqual(res, test_cases["expect"][i], f"expected: {test_cases['expect'][i]}, got: {res} for input={arr}")
             # fmt: on
 
 

@@ -23,9 +23,8 @@ import os
 import sys
 import uuid
 
-from icecream import ic
 import jsonlines
-from typing import Union
+from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -38,12 +37,12 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from data_models import IndalekoPerformanceDataModel
 from db import IndalekoCollections, IndalekoDBCollections
+from perf.perf_collector import IndalekoPerformanceDataCollector
 from utils.misc.directory_management import indaleko_default_data_dir
 from utils.misc.file_name_management import (
-    indaleko_file_name_prefix,
     generate_file_name,
+    indaleko_file_name_prefix,
 )
-from perf.perf_collector import IndalekoPerformanceDataCollector
 
 # pylint: enable=wrong-import-position
 
@@ -58,11 +57,14 @@ class IndalekoPerformanceDataRecorder:
     def __init__(self):
         """Initialize the object."""
         self.perf_data_collection = IndalekoCollections().get_collection(
-            IndalekoDBCollections.Indaleko_Performance_Data_Collection
+            IndalekoDBCollections.Indaleko_Performance_Data_Collection,
         )
 
     def generate_perf_file_name(
-        self, platform: str, service: str, machine: Union[str, uuid.UUID, None] = None
+        self,
+        platform: str,
+        service: str,
+        machine: str | uuid.UUID | None = None,
     ) -> str:
         """Generate a performance data file name."""
         if isinstance(machine, uuid.UUID):
@@ -94,7 +96,9 @@ class IndalekoPerformanceDataRecorder:
         self.perf_data_collection.insert(doc)
 
     def add_data_to_file(
-        self, file_name: str, perf_data: IndalekoPerformanceDataModel
+        self,
+        file_name: str,
+        perf_data: IndalekoPerformanceDataModel,
     ) -> None:
         """
         Add performance data to a file.
@@ -125,7 +129,7 @@ def main():
     """Test code for the IndalekoPerformanceData class."""
     ic("IndalekoPerformanceDataRecorder test code")
     test_perf_data = IndalekoPerformanceDataCollector(
-        **IndalekoPerformanceDataCollector.test_data
+        **IndalekoPerformanceDataCollector.test_data,
     )
     ic(test_perf_data.serialize())
     perf_data_recorder = IndalekoPerformanceDataRecorder()

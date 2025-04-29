@@ -22,10 +22,8 @@ import os
 import sys
 import uuid
 
-from typing import List, Union
-
-from pydantic import Field
 from icecream import ic
+from pydantic import Field
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -38,8 +36,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
 from data_models.record import IndalekoRecordDataModel
-from data_models.timestamp import IndalekoTimestampDataModel
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
+from data_models.timestamp import IndalekoTimestampDataModel
 
 # pylint: enable=wrong-import-position
 
@@ -50,7 +48,9 @@ class IndalekoObjectDataModel(IndalekoBaseModel):
     """
 
     Record: IndalekoRecordDataModel = Field(
-        None, title="Record", description="The record associated with the object."
+        None,
+        title="Record",
+        description="The record associated with the object.",
     )
 
     URI: str = Field(None, title="URI", description="The URI for the object.")
@@ -61,7 +61,7 @@ class IndalekoObjectDataModel(IndalekoBaseModel):
         description="The UUID representing this object.",
     )
 
-    Timestamps: List[IndalekoTimestampDataModel] = Field(
+    Timestamps: list[IndalekoTimestampDataModel] = Field(
         None,
         title="Timestamps",
         description="The timestamps (if any) associated with the object.",
@@ -73,13 +73,13 @@ class IndalekoObjectDataModel(IndalekoBaseModel):
         description="Optional field: the size of the object in bytes (if applicable).",
     )
 
-    SemanticAttributes: Union[List[IndalekoSemanticAttributeDataModel], None] = Field(
+    SemanticAttributes: list[IndalekoSemanticAttributeDataModel] | None = Field(
         None,
         title="SemanticAttributes",
         description="The semantic attributes related to this object by the storage service.",
     )
 
-    Label: Union[str, None] = Field(
+    Label: str | None = Field(
         None,
         title="Label",
         description="This is the base name of the storage object. This field is indexed.",
@@ -91,51 +91,55 @@ class IndalekoObjectDataModel(IndalekoBaseModel):
         description="Local path to this storage object",
     )
 
-    LocalIdentifier: Union[str, None] = Field(
+    LocalIdentifier: str | None = Field(
         None,
         title="LocalIdentifier",
         description="The local identifier associated with the object in the storage system. "
         "Typically this is the inode number or equivalent.",
     )
 
-    Volume: Union[uuid.UUID, None] = Field(
+    Volume: uuid.UUID | None = Field(
         None,
         title="Volume",
         description="The volume associated with the object.  This field is optional.",
     )
 
-    PosixFileAttributes: Union[str, None] = Field(
+    PosixFileAttributes: str | None = Field(
         None,
         title="PosixFileAttributes",
         description="The POSIX file attributes associated with the object in the storage system"
         " (e.g., S_IFREG, S_IFDIR, etc.). This field is optional.",
     )
 
-    WindowsFileAttributes: Union[str, None] = Field(
+    WindowsFileAttributes: str | None = Field(
         None,
         title="WindowsFileAttributes",
         description="The Windows file attributes associated with the object in the storage system "
         "(e.g., FILE_ATTRIBUTE_READ_ONLY, FILE_ATTRIBUTE_ARCHIVE, etc.) This field is optional.",
     )
 
-    CamelCaseTokenizedName: Union[str, None] = Field(
+    CamelCaseTokenizedName: str | None = Field(
         None,
         title="CamelCaseTokenizedName",
         description="Name tokenization assuming CamelCase format.",
     )
 
-    SnakeCaseTokenizedName: Union[str, None] = Field(
+    SnakeCaseTokenizedName: str | None = Field(
         None,
         title="SnakeCaseTokenizedName",
         description="Name tokenization assuming snake_case format.",
     )
 
-    NgramTokenizedName: Union[List[str], None] = Field(
-        None, title="NgramTokenizedName", description="Name tokenization using n-grams."
+    NgramTokenizedName: list[str] | None = Field(
+        None,
+        title="NgramTokenizedName",
+        description="Name tokenization using n-grams.",
     )
 
-    SpaceTokenizedName: Union[List[str], None] = Field(
-        None, title="SpaceTokenizedName", description="Name tokenization using spaces."
+    SpaceTokenizedName: list[str] | None = Field(
+        None,
+        title="SpaceTokenizedName",
+        description="Name tokenization using spaces.",
     )
 
     class Config:
@@ -145,13 +149,11 @@ class IndalekoObjectDataModel(IndalekoBaseModel):
                 "URI": "https://www.example.com/this/is/a/sample/uri",
                 "ObjectIdentifier": "429f1f3c-7a21-463f-b7aa-cd731bb202b1",
                 "Timestamps": [
-                    IndalekoTimestampDataModel.Config.json_schema_extra["example"]
+                    IndalekoTimestampDataModel.Config.json_schema_extra["example"],
                 ],
                 "Size": 1024,
                 "SemanticAttributes": [
-                    IndalekoSemanticAttributeDataModel.Config.json_schema_extra[
-                        "example"
-                    ]
+                    IndalekoSemanticAttributeDataModel.Config.json_schema_extra["example"],
                 ],
                 "Label": "This is a sample file or directory name.",
                 "LocalPath": "D:\\dist",
@@ -159,7 +161,7 @@ class IndalekoObjectDataModel(IndalekoBaseModel):
                 "Volume": "429f1f3c-7a21-463f-b7aa-cd731bb202b1",
                 "PosixFileAttributes": "S_IFREG",
                 "WindowsFileAttributes": "FILE_ATTRIBUTE_ARCHIVE",
-            }
+            },
         }
 
 

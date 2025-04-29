@@ -1,9 +1,10 @@
 """Generic log management for Indaleko"""
 
-import logging
-import os
-import datetime
 import argparse
+import datetime
+import logging
+import logging as _logging
+import os
 import platform
 import sys
 
@@ -17,9 +18,15 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # This logic is part of what allows me to execute it locally or as part of the
 # overall package/project.  It's a bit of a hack, but it works.
 # pylint: disable=wrong-import-position
-from utils import IndalekoSingleton
-from utils.misc.directory_management import indaleko_default_log_dir
 import utils.misc.file_name_management
+from utils.misc.directory_management import indaleko_default_log_dir
+from utils.singleton import IndalekoSingleton
+
+
+def get_logger(name: str | None = None) -> logging.Logger:
+    """Return a logger with the specified name."""
+    return _logging.getLogger(name)
+
 
 # pylint: enable=wrong-import-position
 
@@ -34,7 +41,8 @@ class IndalekoLogging(IndalekoSingleton):
         self.log_level = kwargs.get("log_level", logging.DEBUG)
         self.log_dir = kwargs.get("log_dir", indaleko_default_log_dir)
         self.log_file = kwargs.get(
-            "log_file", IndalekoLogging.generate_log_file_name(**kwargs)
+            "log_file",
+            IndalekoLogging.generate_log_file_name(**kwargs),
         )
         log_name = os.path.join(self.log_dir, self.log_file)
         logging.basicConfig(
@@ -43,11 +51,12 @@ class IndalekoLogging(IndalekoSingleton):
             format="%(asctime)s %(levelname)s %(message)s",
         )
         logging.info(
-            "IndalekoLogging initialized, logging level set to %s", self.log_level
+            "IndalekoLogging initialized, logging level set to %s",
+            self.log_level,
         )
         self._initialized = True
 
-    def __del__(self):
+    def __del__(self) -> None:
         """Delete an instance of the IndalekoLogging class object."""
         logging.info("IndalekoLogging terminated.")
 
@@ -89,13 +98,14 @@ class IndalekoLogging(IndalekoSingleton):
     def map_logging_level_to_type(logging_level: int) -> str:
         """Map a logging level to a logging type."""
         assert isinstance(
-            logging_level, int
+            logging_level,
+            int,
         ), f"logging_level must be an integer, not {type(logging_level)}"
         return logging.getLevelName(logging_level)
 
     @staticmethod
     def generate_log_file_name(**kwargs) -> str:
-        now = datetime.datetime.now(datetime.timezone.utc)
+        now = datetime.datetime.now(datetime.UTC)
         timestamp = now.isoformat()
         service_name = kwargs.get("service_name", "unknown_service")
         fnargs = {"service": service_name, "timestamp": timestamp, "suffix": "log"}
@@ -198,7 +208,10 @@ def main():
         help="Directory where logs are stored.",
     )
     parser.add_argument(
-        "--service", default=None, type=str, help="Service name to filter logs against."
+        "--service",
+        default=None,
+        type=str,
+        help="Service name to filter logs against.",
     )
     parser.add_argument(
         "--platform",

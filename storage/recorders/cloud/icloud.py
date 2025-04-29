@@ -22,11 +22,11 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from datetime import datetime
-import os
 import json
+import os
 import sys
 import uuid
+from datetime import datetime
 
 from icecream import ic
 
@@ -41,15 +41,15 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from db import IndalekoServiceManager
 from platforms.unix import UnixFileAttributes
 from platforms.windows_attributes import IndalekoWindows
-from storage.i_object import IndalekoObject
 from storage.collectors.cloud.i_cloud import IndalekoICloudStorageCollector
-from storage.recorders.data_model import IndalekoStorageRecorderDataModel
+from storage.i_object import IndalekoObject
 from storage.recorders.cloud.cloud_base import BaseCloudStorageRecorder
-from utils.misc.file_name_management import (
-    find_candidate_files,
-    extract_keys_from_file_name,
-)
+from storage.recorders.data_model import IndalekoStorageRecorderDataModel
 from utils.misc.data_management import encode_binary_data
+from utils.misc.file_name_management import (
+    extract_keys_from_file_name,
+    find_candidate_files,
+)
 
 # pylint: enable=wrong-import-position
 
@@ -91,9 +91,7 @@ class IndalekoICloudStorageRecorder(BaseCloudStorageRecorder):
         if "user_id" not in kwargs:
             assert "input_file" in kwargs
             keys = extract_keys_from_file_name(kwargs["input_file"])
-            assert (
-                "userid" in keys
-            ), f'userid not found in input file name: {kwargs["input_file"]}'
+            assert "userid" in keys, f'userid not found in input file name: {kwargs["input_file"]}'
             self.user_id = keys["userid"]
         else:
             self.user_id = kwargs["user_id"]
@@ -125,7 +123,7 @@ class IndalekoICloudStorageRecorder(BaseCloudStorageRecorder):
                     "Label": IndalekoObject.CREATION_TIMESTAMP,
                     "Value": datetime.fromisoformat(data["date_created"]).isoformat(),
                     "Description": "Date Created",
-                }
+                },
             )
         if "last_opened" in data:
             if isinstance(data["last_opened"], str):
@@ -135,7 +133,7 @@ class IndalekoICloudStorageRecorder(BaseCloudStorageRecorder):
                     "Label": IndalekoObject.ACCESS_TIMESTAMP,
                     "Value": data["last_opened"].isoformat(),
                     "Description": "Last Opened",
-                }
+                },
             )
         if "date_changed" in data:
             if isinstance(data["date_changed"], str):
@@ -145,18 +143,14 @@ class IndalekoICloudStorageRecorder(BaseCloudStorageRecorder):
                     "Label": IndalekoObject.ACCESS_TIMESTAMP,
                     "Value": data["date_changed"].isoformat(),
                     "Description": "Changed",
-                }
+                },
             )
         if data["type"] == "folder":
             unix_file_attributes = UnixFileAttributes.FILE_ATTRIBUTES["S_IFDIR"]
-            windows_file_attributes = IndalekoWindows.FILE_ATTRIBUTES[
-                "FILE_ATTRIBUTE_DIRECTORY"
-            ]
+            windows_file_attributes = IndalekoWindows.FILE_ATTRIBUTES["FILE_ATTRIBUTE_DIRECTORY"]
         else:
             unix_file_attributes = UnixFileAttributes.FILE_ATTRIBUTES["S_IFREG"]
-            windows_file_attributes = IndalekoWindows.FILE_ATTRIBUTES[
-                "FILE_ATTRIBUTE_NORMAL"
-            ]
+            windows_file_attributes = IndalekoWindows.FILE_ATTRIBUTES["FILE_ATTRIBUTE_NORMAL"]
 
         # Ensure all datetime objects are converted to strings
         for key, value in data.items():
@@ -193,10 +187,10 @@ class IndalekoICloudStorageRecorder(BaseCloudStorageRecorder):
             "Attributes": data,
             "Label": data["name"],
             "PosixFileAttributes": UnixFileAttributes.map_file_attributes(
-                unix_file_attributes
+                unix_file_attributes,
             ),
             "WindowsFileAttributes": IndalekoWindows.map_file_attributes(
-                windows_file_attributes
+                windows_file_attributes,
             ),
         }
         return IndalekoObject(**kwargs)

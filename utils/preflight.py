@@ -1,9 +1,8 @@
-import platform
-import sys
-import subprocess
 import argparse
-import typing
 import os
+import platform
+import subprocess
+import sys
 
 # Check if Python version is >= 3.12
 
@@ -33,7 +32,7 @@ class Command:
         self.args.extend(arg)
 
     """
-    returns a list consisting of the command and all of its arguments. 
+    returns a list consisting of the command and all of its arguments.
     e.g: For the command 'docker ps -a', it will return ['docker', 'ps', '-a']
     """
 
@@ -64,7 +63,7 @@ class CommandBuilder:
         return self.command
 
 
-def run_commands(commands: typing.List[Command]):
+def run_commands(commands: list[Command]):
     # Create necessary folders
     folders_to_create = ["./config", "./data", "./logs"]
     for folder in folders_to_create:
@@ -105,20 +104,13 @@ def main():
     build_db_commands = [CommandBuilder("python").add_arg("dbsetup.py")]
 
     build_machine_config_commands = [
-        CommandBuilder("python")
-        .add_arg("MacHardwareInfoGenerator.py")
-        .add_arg("-d", "./config")
-        .add_arg("--skip"),
+        CommandBuilder("python").add_arg("MacHardwareInfoGenerator.py").add_arg("-d", "./config").add_arg("--skip"),
         CommandBuilder("sleep").add_arg("10"),
-        CommandBuilder("python")
-        .add_arg("IndalekoMacMachineConfig.py")
-        .add_arg("--add"),
+        CommandBuilder("python").add_arg("IndalekoMacMachineConfig.py").add_arg("--add"),
     ]
 
     index_commands = [
-        CommandBuilder("python")
-        .add_arg("IndalekoMacLocalIndexer.py")
-        .add_arg("--path", args.path),
+        CommandBuilder("python").add_arg("IndalekoMacLocalIndexer.py").add_arg("--path", args.path),
         CommandBuilder("sleep").add_arg("10"),
     ]
 

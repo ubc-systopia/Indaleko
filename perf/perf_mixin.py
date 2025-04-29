@@ -23,9 +23,8 @@ import argparse
 import logging
 import os
 import sys
-
 from abc import abstractmethod
-from typing import Any, Union
+from typing import Any
 
 # from icecream import ic
 
@@ -38,8 +37,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 
 # pylint: disable=wrong-import-position
-# from perf_collector import IndalekoPerformanceDataCollector
-from perf_recorder import IndalekoPerformanceDataRecorder
+# from perf.perf_collector import IndalekoPerformanceDataCollector
+from perf.perf_recorder import IndalekoPerformanceDataRecorder
 
 # pylint: enable=wrong-import-position
 
@@ -49,8 +48,9 @@ class IndalekoPerformanceMixin:
 
     @abstractmethod
     def get_platform_config_data(
-        self, args: argparse.Namespace
-    ) -> Union[None, dict[str, Any]]:
+        self,
+        args: argparse.Namespace,
+    ) -> None | dict[str, Any]:
         """Retrieve information about the current platform state (e.g, version data)"""
 
     @abstractmethod
@@ -63,7 +63,9 @@ class IndalekoPerformanceMixin:
 
     @abstractmethod
     def record_performance(
-        self, perf_data: dict[str, Any], args: argparse.Namespace
+        self,
+        perf_data: dict[str, Any],
+        args: argparse.Namespace,
     ) -> None:
         """Record performance data based on configuration"""
 

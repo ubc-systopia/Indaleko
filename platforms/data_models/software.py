@@ -21,8 +21,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
-from typing import Union
-
 from icecream import ic
 from pydantic import Field
 
@@ -43,7 +41,9 @@ class Software(IndalekoBaseModel):
     """Defines the machine Software information"""
 
     OS: str = Field(
-        ..., title="OS", description="The operating system for the machine."
+        ...,
+        title="OS",
+        description="The operating system for the machine.",
     )
 
     Version: str = Field(
@@ -53,11 +53,15 @@ class Software(IndalekoBaseModel):
     )
 
     Hostname: str = Field(
-        ..., title="Hostname", description="The hostname of the machine."
+        ...,
+        title="Hostname",
+        description="The hostname of the machine.",
     )
 
-    Architecture: Union[str, None] = Field(
-        ..., title="Architecture", description="The architecture of the machine."
+    Architecture: str | None = Field(
+        ...,
+        title="Architecture",
+        description="The architecture of the machine.",
     )
 
     class Config:
@@ -69,7 +73,7 @@ class Software(IndalekoBaseModel):
                 "Version": "5.4.0-1043-aws",
                 "Hostname": "ip-10-0-0-1",
                 "Architecture": "x86_64",
-            }
+            },
         }
 
 

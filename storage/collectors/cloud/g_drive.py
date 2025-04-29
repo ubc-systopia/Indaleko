@@ -24,20 +24,19 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from googleapiclient.discovery import build, HttpError
-from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request
-from google.auth.exceptions import RefreshError
-from google_auth_oauthlib.flow import InstalledAppFlow
-from icecream import ic
 import json
 import logging
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 from uuid import UUID
 
-from typing import Union
+from google.auth.exceptions import RefreshError
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import HttpError, build
+from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -50,12 +49,12 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from data_models import IndalekoSourceIdentifierDataModel
 from db import IndalekoServiceManager
-from utils.misc.directory_management import indaleko_default_config_dir
+from perf.perf_collector import IndalekoPerformanceDataCollector
+from perf.perf_recorder import IndalekoPerformanceDataRecorder
 from storage.collectors.base import BaseStorageCollector
 from storage.collectors.cloud.cloud_base import BaseCloudStorageCollector
 from storage.collectors.data_model import IndalekoStorageCollectorDataModel
-from perf.perf_collector import IndalekoPerformanceDataCollector
-from perf.perf_recorder import IndalekoPerformanceDataRecorder
+from utils.misc.directory_management import indaleko_default_config_dir
 
 # pylint: enable=wrong-import-position
 
@@ -66,13 +65,9 @@ class IndalekoGDriveCloudStorageCollector(BaseCloudStorageCollector):
 
     indaleko_gdrive_collector_uuid = "74c82969-6bbb-4450-97f5-44d65c65e133"
     indaleko_gdrive_collector_service_name = "Google Drive Indexer"
-    indaleko_gdrive_collector_service_description = (
-        "Indexes the Google Drive folder for Indaleko."
-    )
+    indaleko_gdrive_collector_service_description = "Indexes the Google Drive folder for Indaleko."
     indaleko_gdrive_collector_service_version = "1.0"
-    indaleko_gdrive_collector_service_type = (
-        IndalekoServiceManager.service_type_storage_collector
-    )
+    indaleko_gdrive_collector_service_type = IndalekoServiceManager.service_type_storage_collector
 
     collector_data = IndalekoStorageCollectorDataModel(
         PlatformName=gdrive_platform,
@@ -155,13 +150,15 @@ class IndalekoGDriveCloudStorageCollector(BaseCloudStorageCollector):
         self.email = None
         self.config_dir = kwargs.get("config_dir", indaleko_default_config_dir)
         self.gdrive_config_file = os.path.join(
-            self.config_dir, IndalekoGDriveCloudStorageCollector.gdrive_config_file
+            self.config_dir,
+            IndalekoGDriveCloudStorageCollector.gdrive_config_file,
         )
         assert os.path.exists(
-            self.gdrive_config_file
+            self.gdrive_config_file,
         ), f"No GDrive config file found at {self.gdrive_config_file}"
         self.gdrive_token_file = os.path.join(
-            self.config_dir, IndalekoGDriveCloudStorageCollector.gdrive_token_file
+            self.config_dir,
+            IndalekoGDriveCloudStorageCollector.gdrive_token_file,
         )
         self.gdrive_config = None
         self.load_gdrive_config()
@@ -170,9 +167,7 @@ class IndalekoGDriveCloudStorageCollector(BaseCloudStorageCollector):
         if "platform" not in kwargs:
             kwargs["platform"] = IndalekoGDriveCloudStorageCollector.gdrive_platform
         if "collector_data" not in kwargs:
-            kwargs["collector_data"] = (
-                IndalekoGDriveCloudStorageCollector.collector_data
-            )
+            kwargs["collector_data"] = IndalekoGDriveCloudStorageCollector.collector_data
         super().__init__(
             **kwargs,
             collector_name=IndalekoGDriveCloudStorageCollector.gdrive_collector_name,
@@ -181,7 +176,7 @@ class IndalekoGDriveCloudStorageCollector(BaseCloudStorageCollector):
 
     def load_gdrive_config(self) -> "IndalekoGDriveCloudStorageCollector":
         """This method loads the GDrive configuration"""
-        with open(self.gdrive_config_file, "rt") as f:
+        with open(self.gdrive_config_file) as f:
             self.gdrive_config = json.load(f)
         return self
 
@@ -190,20 +185,17 @@ class IndalekoGDriveCloudStorageCollector(BaseCloudStorageCollector):
         if os.path.exists(self.gdrive_token_file):
             logging.debug("Loading GDrive credentials from %s", self.gdrive_token_file)
             self.gdrive_credentials = Credentials.from_authorized_user_file(
-                self.gdrive_token_file, IndalekoGDriveCloudStorageCollector.SCOPES
+                self.gdrive_token_file,
+                IndalekoGDriveCloudStorageCollector.SCOPES,
             )
         if not self.gdrive_credentials or not self.gdrive_credentials.valid:
             query_user = True
-            if (
-                self.gdrive_credentials
-                and self.gdrive_credentials.expired
-                and self.gdrive_credentials.refresh_token
-            ):
+            if self.gdrive_credentials and self.gdrive_credentials.expired and self.gdrive_credentials.refresh_token:
                 try:
                     self.gdrive_credentials.refresh(Request())
                     query_user = False
                 except RefreshError as error:
-                    logging.error("Error refreshing credentials: %s", error)
+                    logging.exception("Error refreshing credentials: %s", error)
             if query_user:
                 self.query_user_for_credentials()
             if self.gdrive_credentials and self.gdrive_credentials.valid:
@@ -217,28 +209,26 @@ class IndalekoGDriveCloudStorageCollector(BaseCloudStorageCollector):
     def store_gdrive_credentials(self) -> "IndalekoGDriveCloudStorageCollector":
         """This method stores the credentials"""
         assert self.gdrive_credentials is not None, "No credentials to store"
-        with open(self.gdrive_token_file, "wt") as f:
+        with open(self.gdrive_token_file, "w") as f:
             f.write(self.gdrive_credentials.to_json())
         return self
 
     def query_user_for_credentials(self) -> "IndalekoGDriveCloudStorageCollector":
         """This method queries the user for credentials"""
         flow = InstalledAppFlow.from_client_config(
-            self.gdrive_config, IndalekoGDriveCloudStorageCollector.SCOPES
+            self.gdrive_config,
+            IndalekoGDriveCloudStorageCollector.SCOPES,
         )
         self.gdrive_credentials = flow.run_local_server(port=0)
         return self
 
     def get_email(self) -> str:
         """This method returns the email address associated with the
-        credentials"""
+        credentials
+        """
         if self.email is None:
             service = build("people", "v1", credentials=self.gdrive_credentials)
-            results = (
-                service.people()
-                .get(resourceName="people/me", personFields="emailAddresses")
-                .execute()
-            )
+            results = service.people().get(resourceName="people/me", personFields="emailAddresses").execute()
             email = "dummy@dummy.com"
             if "emailAddresses" not in results:
                 logging.warning("No email addresses found in %s", results)
@@ -257,14 +247,10 @@ class IndalekoGDriveCloudStorageCollector(BaseCloudStorageCollector):
         """Fetch metadata for the root directory"""
         service = build("drive", "v3", credentials=self.gdrive_credentials)
         try:
-            root_metadata = (
-                service.files()
-                .get(fileId="root", fields=",".join(self.FILE_METADATA_FIELDS))
-                .execute()
-            )
+            root_metadata = service.files().get(fileId="root", fields=",".join(self.FILE_METADATA_FIELDS)).execute()
             return self.build_stat_dict(root_metadata)
         except HttpError as error:
-            logging.error("Error fetching root metadata: %s", error)
+            logging.exception("Error fetching root metadata: %s", error)
             ic("Error fetching root metadata: ", error)
             return {}
 
@@ -276,7 +262,7 @@ class IndalekoGDriveCloudStorageCollector(BaseCloudStorageCollector):
             self.load_gdrive_credentials()
         page_token = None
         field_to_use = "nextPageToken, files({})".format(
-            ", ".join(IndalekoGDriveCloudStorageCollector.FILE_METADATA_FIELDS)
+            ", ".join(IndalekoGDriveCloudStorageCollector.FILE_METADATA_FIELDS),
         )
         metadata_list = []
         service = None
@@ -294,11 +280,7 @@ class IndalekoGDriveCloudStorageCollector(BaseCloudStorageCollector):
             if service is None:
                 service = build("drive", "v3", credentials=self.gdrive_credentials)
             try:
-                results = (
-                    service.files()
-                    .list(fields=field_to_use, pageToken=page_token)
-                    .execute()
-                )
+                results = service.files().list(fields=field_to_use, pageToken=page_token).execute()
             except HttpError as error:
                 # this should handle a token expiration by refreshing it
                 if error.resp.status == 401:
@@ -333,13 +315,11 @@ class IndalekoGDriveCloudStorageCollector(BaseCloudStorageCollector):
         suffix: suffix of the file to ingest (default is .json)
         """
         prospects = BaseStorageCollector.find_collector_files(
-            search_dir, prefix, suffix
+            search_dir,
+            prefix,
+            suffix,
         )
-        return [
-            f
-            for f in prospects
-            if IndalekoGDriveCloudStorageCollector.gdrive_platform in f
-        ]
+        return [f for f in prospects if IndalekoGDriveCloudStorageCollector.gdrive_platform in f]
 
     class gdrive_collector_mixin(BaseCloudStorageCollector.cloud_collector_mixin):
         """This is the mixin for the Google Drive collector"""
@@ -349,18 +329,18 @@ class IndalekoGDriveCloudStorageCollector(BaseCloudStorageCollector):
             """Generate the output file name"""
             if not keys.get("UserId"):
                 collector = IndalekoGDriveCloudStorageCollector(
-                    config_dir=keys["ConfigDirectory"]
+                    config_dir=keys["ConfigDirectory"],
                 )
                 keys["UserId"] = collector.get_email()
             return BaseCloudStorageCollector.cloud_collector_mixin.generate_output_file_name(
-                keys
+                keys,
             )
 
     cli_handler_mixin = gdrive_collector_mixin
 
 
 @staticmethod
-def local_run(keys: dict[str, str]) -> Union[dict, None]:
+def local_run(keys: dict[str, str]) -> dict | None:
     """Run the collector"""
     args = keys["args"]
     cli = keys["cli"]
@@ -373,13 +353,13 @@ def local_run(keys: dict[str, str]) -> Union[dict, None]:
     output_file_name = str(Path(args.datadir) / args.outputfile)
 
     def collect(collector: IndalekoGDriveCloudStorageCollector):
-        """local implementation of collect"""
+        """Local implementation of collect"""
         data = collector.collect(not args.norecurse)
         output_file = output_file_name
         collector.write_data_to_file(data, output_file)
 
     def extract_counters(**kwargs):
-        """local implementation of extract_counters"""
+        """Local implementation of extract_counters"""
         collector = kwargs.get("collector")
         if collector:
             return ic(collector.get_counts())

@@ -28,14 +28,14 @@ function expandOneDriveUrl($shortenedUrl) {
 
 function fetchOneDriveMetadata($itemId, $accessToken) {
     $client = new GuzzleHttp\Client();
-    
+
     try {
         $response = $client->request('GET', "https://graph.microsoft.com/v1.0/me/drive/items/$itemId", [
             'headers' => [
                 'Authorization' => "Bearer $accessToken"
             ]
         ]);
-        
+
         $data = json_decode($response->getBody(), true);
         return $data;
     } catch (Exception $e) {

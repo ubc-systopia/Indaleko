@@ -20,39 +20,44 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import time
-from arango.exceptions import AQLQueryExecuteError
-from typing import Any, Dict, List, Optional, Union
 
+from pathlib import Path
+from typing import Any
+
+from arango.exceptions import AQLQueryExecuteError
+from arango.cursor import Cursor
 from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
-        current_path = os.path.dirname(current_path)
-    os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
 
 
 # pylint: disable=wrong-import-position
 from db import IndalekoDBConfig
-from query.search_execution.query_executor.executor_base import ExecutorBase
-from query.result_analysis.result_formatter import deduplicate_results, FormattedResults
 from perf.perf_collector import IndalekoPerformanceDataCollector
+from query.result_analysis.result_formatter import FormattedResults, deduplicate_results
+from query.search_execution.query_executor.executor_base import ExecutorBase
+from query.utils.llm_connector.llm_base import LLMBase
+
 
 # pylint: enable=wrong-import-position
 
+# ruff: noqa: S101,S311,FBT001,FBT002,G004
+# pylint: disable=W1203
 
 class AQLExecutor(ExecutorBase):
-    """
-    Executor for AQL (ArangoDB Query Language) queries.
-    """
+    """Executor for AQL (ArangoDB Query Language) queries."""
 
     @staticmethod
     def execute(
         query: str,
-        data_connector: Any,
-        **kwargs: dict,
-    ) -> Union[List[Dict[str, Any]], Dict[str, Any], FormattedResults]:
+        data_connector: LLMBase,
+        **kwargs: dict[str, Any],
+    ) -> list[dict[str, Any]] | dict[str, Any] | FormattedResults:
         """
         Execute an AQL query using the provided data connector.
 
@@ -60,21 +65,23 @@ class AQLExecutor(ExecutorBase):
             query (str): The AQL query to execute
             data_connector (Any): The connector to the ArangoDB data source
             **kwargs: Additional arguments for query execution
-
-            bind_vars (Optional[Dict[str, Any]]): Bind variables for the query
-            explain (bool): Whether to return the query plan instead of executing
-            collect_performance (bool): Whether to collect performance metrics
-            deduplicate (bool): Whether to deduplicate similar results
-            similarity_threshold (float): Threshold for considering items as duplicates (when deduplicate=True)
+            Note: these values (via kwargs) are used by the AQL executor:
+                bind_vars (Optional[Dict[str, Any]]): Bind variables for the query
+                explain (bool): Whether to return the query plan instead of executing
+                collect_performance (bool): Whether to collect performance metrics
+                deduplicate (bool): Whether to deduplicate similar results
+                similarity_threshold (float): Threshold for considering items
+                    as duplicates (when deduplicate=True)
 
         Returns:
-            Union[List[Dict[str, Any]], Dict[str, Any], FormattedResults]:
+            list[dict[str, Any]], dict[str, Any] | FormattedResults
                 - The query results (when explain=False, deduplicate=False)
                 - The query execution plan (when explain=True)
                 - A FormattedResults object with deduplicated results (when explain=False, deduplicate=True)
         """
         assert isinstance(
-            data_connector, IndalekoDBConfig
+            data_connector,
+            IndalekoDBConfig,
         ), "Data connector must be an instance of IndalekoDBConfig"
 
         bind_vars = kwargs.get("bind_vars",)
@@ -93,84 +100,84 @@ class AQLExecutor(ExecutorBase):
         if explain:
             return AQLExecutor.explain_query(query, data_connector, bind_vars)
 
-        # Set up performance collection if requested
-        perf_collector = None
-        if collect_performance:
-            perf_collector = IndalekoPerformanceDataCollector()
-            perf_collector.start()
-            start_time = time.time()
-
         try:
             # Execute the AQL query
-            raw_results = data_connector.db.aql.execute(query, bind_vars=bind_vars)
+            query_to_execute = query
+            vars_to_bind = bind_vars
+            def execute_query(**_kwargs: dict | None) -> Cursor:
+                return data_connector.db.aql.execute(query_to_execute, vars_to_bind)
+
+            def process_query_response(**kwargs: dict | None) -> dict:
+                result = kwargs.get("result")
+                if not isinstance(result, Cursor):
+                    raise TypeError("Expected a Cursor object")
+                return {"query response": result}
 
             # If collecting performance metrics, prepare performance info
             performance_info = None
-            if collect_performance and perf_collector:
-                perf_collector.stop()
-                execution_time = time.time() - start_time
-                perf_data = perf_collector.get_performance_data()
+            if collect_performance:
+                perf_data = IndalekoPerformanceDataCollector.measure_performance(
+                    task_func=execute_query,
+                    description="Executing AQL query",
+                    query=query,
+                    bind_vars=bind_vars,
+                    process_results_func=process_query_response,
+                )
 
                 # Create performance metadata entry
                 performance_info = {
                     "performance": {
-                        "execution_time_seconds": execution_time,
+                        "execution_time_seconds": perf_data.ElapsedTime,
                         "cpu": {
-                            "user_time": perf_data.user_time,
-                            "system_time": perf_data.system_time
+                            "user_time": perf_data.UserCPUTime,
+                            "system_time": perf_data.SystemCPUTime,
                         },
-                        "memory": {
-                            "rss": perf_data.rss,
-                            "vms": perf_data.vms
-                        },
+                        "memory": {"vms": perf_data.PeakMemoryUsage},
                         "io": {
-                            "read_count": perf_data.io_read_count,
-                            "write_count": perf_data.io_write_count,
-                            "read_bytes": perf_data.io_read_bytes,
-                            "write_bytes": perf_data.io_write_bytes
+                            "read_bytes": perf_data.IoReadBytes,
+                            "write_bytes": perf_data.IoWriteBytes,
                         },
-                        "threads": perf_data.num_threads,
-                        "query_length": len(query)
-                    }
+                        "threads": perf_data.ThreadCount,
+                        "query_length": len(query),
+                    },
                 }
+                query_result = perf_data.AdditionalData["query response"]
+            else:
+                query_result = execute_query()
 
             # Format the results with or without deduplication
             formatted_results = AQLExecutor.format_results(
-                raw_results,
+                query_result,
                 deduplicate=deduplicate,
-                similarity_threshold=similarity_threshold
+                similarity_threshold=similarity_threshold,
             )
 
             # Add performance info if available and not deduplicating
             if performance_info and not deduplicate:
                 formatted_results.append(performance_info)
 
-            return formatted_results
-
         except TimeoutError as e:
             ic(
-                f"The query execution has timed out:\n\tquery: {query}\n\tException: {e}"
+                f"The query execution has timed out:\n\tquery: {query}\n\tException: {e}",
             )
             ic("Terminating")
             sys.exit(1)
         except AQLQueryExecuteError as e:
             ic(
-                f"An error occurred while executing the AQL query:\n\tquery: {query}\n\tException: {e}"
+                f"""An error occurred while executing the AQL query:\n
+                \tquery: {query}\n\tException: {e}""",
             )
-            return [{'result': f'Exception: {str(e)}'}]
-        finally:
-            # Ensure performance collection is stopped if we have an exception
-            if collect_performance and perf_collector:
-                perf_collector.stop()
+            return [{"result": f"Exception: {e!s}"}]
+        return formatted_results
 
     @staticmethod
     def explain_query(
         query: str,
-        data_connector: Any,
-        bind_vars: Optional[Dict[str, Any]] = None,
+        data_connector: LLMBase,
+        bind_vars: dict[str, Any] | None = None,
         all_plans: bool = False,
-        max_plans: int = 5
-    ) -> Dict[str, Any]:
+        max_plans: int = 5,
+    ) -> dict[str, Any]:
         """
         Get the execution plan for an AQL query without executing it.
 
@@ -185,7 +192,8 @@ class AQLExecutor(ExecutorBase):
             Dict[str, Any]: The query execution plan(s) with analysis
         """
         assert isinstance(
-            data_connector, IndalekoDBConfig
+            data_connector,
+            IndalekoDBConfig,
         ), "Data connector must be an instance of IndalekoDBConfig"
 
         # Initialize bind variables if not provided
@@ -195,12 +203,28 @@ class AQLExecutor(ExecutorBase):
         try:
             # Check if we have parameters in the query for which we don't have bind values
             import re
-            param_pattern = r'@([a-zA-Z0-9_]+)'
+
+            param_pattern = r"@([a-zA-Z0-9_]+)"
             params_in_query = set(re.findall(param_pattern, query))
 
             # Log parameters found in query
             ic(f"Parameters found in query: {params_in_query}")
             ic(f"Bind variables provided: {bind_vars.keys()}")
+
+            # Add some sample values for common parameters if they're missing
+            for param in params_in_query:
+                if param not in bind_vars:
+                    if param.lower() in ['size', 'filesize', 'minsize']:
+                        bind_vars[param] = 1000000
+                    elif param.lower() in ['timestamp', 'date', 'time']:
+                        bind_vars[param] = "2024-01-01"
+                    elif param.lower() in ['path', 'file', 'filename']:
+                        bind_vars[param] = "test.pdf"
+                    elif param.lower() in ['limit', 'max', 'count']:
+                        bind_vars[param] = 10
+                    else:
+                        # Default to a string for unknown parameters
+                        bind_vars[param] = "sample_value"
 
             # Log the final set of bind variables
             ic(f"Final bind variables: {bind_vars}")
@@ -230,7 +254,7 @@ class AQLExecutor(ExecutorBase):
 
         except AQLQueryExecuteError as e:
             ic(
-                f"An error occurred while explaining the AQL query:\n\tquery: {query}\n\tException: {e}"
+                f"An error occurred while explaining the AQL query:\n\tquery: {query}\n\tException: {e}",
             )
             return {
                 'error': str(e),
@@ -243,7 +267,7 @@ class AQLExecutor(ExecutorBase):
             }
 
     @staticmethod
-    def _enhance_explain_result(explain_result: Any, query: str) -> Dict[str, Any]:
+    def _enhance_explain_result(explain_result: Any, query: str) -> dict[str, Any]:
         """
         Enhance the ArangoDB explain result with additional analysis.
 
@@ -263,10 +287,10 @@ class AQLExecutor(ExecutorBase):
                 "estimated_cost": 0,
                 "collections_used": 0,
                 "operations": 0,
-                "cacheable": False
+                "cacheable": False,
             },
             "warnings": [],
-            "recommendations": []
+            "recommendations": [],
         }
 
         # Process the explain result based on its type
@@ -291,10 +315,10 @@ class AQLExecutor(ExecutorBase):
             if collection_scans:
                 scan_collections = [n.get("collection", "unknown") for n in collection_scans]
                 analysis["warnings"].append(
-                    f"Full collection scan(s) detected on: {', '.join(scan_collections)}"
+                    f"Full collection scan(s) detected on: {', '.join(scan_collections)}",
                 )
                 analysis["recommendations"].append(
-                    "Consider adding indexes to collections that are being full-scanned"
+                    "Consider adding indexes to collections that are being full-scanned",
                 )
 
             # Add info about indexes being used
@@ -309,16 +333,16 @@ class AQLExecutor(ExecutorBase):
             else:
                 analysis["warnings"].append("No indexes are being used in this query")
                 analysis["recommendations"].append(
-                    "Review your query and consider adding appropriate indexes"
+                    "Review your query and consider adding appropriate indexes",
                 )
 
             # Check for very high estimated cost
             if plan.get("estimatedCost", 0) > 1000:
                 analysis["warnings"].append(
-                    f"High estimated cost: {plan.get('estimatedCost')}"
+                    f"High estimated cost: {plan.get('estimatedCost')}",
                 )
                 analysis["recommendations"].append(
-                    "Query may be inefficient and could benefit from optimization"
+                    "Query may be inefficient and could benefit from optimization",
                 )
 
             # Add any warnings from ArangoDB itself
@@ -375,9 +399,11 @@ class AQLExecutor(ExecutorBase):
                 if not parens_stack:
                     return False
                 last_open = parens_stack.pop()
-                if (char == ")" and last_open != "(") or \
-                   (char == "}" and last_open != "{") or \
-                   (char == "]" and last_open != "["):
+                if (
+                    (char == ")" and last_open != "(")
+                    or (char == "}" and last_open != "{")
+                    or (char == "]" and last_open != "[")
+                ):
                     return False
 
         # Check if all parentheses were closed
@@ -387,17 +413,22 @@ class AQLExecutor(ExecutorBase):
         return True
 
     @staticmethod
-    def format_results(raw_results: Any, deduplicate: bool = False, similarity_threshold: float = 0.85) -> Union[List[Dict[str, Any]], FormattedResults]:
+    def format_results(
+        raw_results: Any,
+        deduplicate: bool = False,
+        similarity_threshold: float = 0.85,
+    ) -> list[dict[str, Any]] | FormattedResults:
         """
         Format the raw AQL query results into a standardized format.
 
         Args:
             raw_results (Any): The raw results from the AQL query execution
             deduplicate (bool): Whether to deduplicate similar results
-            similarity_threshold (float): Threshold for considering items as duplicates (when deduplicate=True)
+            similarity_threshold (float): Threshold for considering items as
+                duplicates (when deduplicate=True)
 
         Returns:
-            Union[List[Dict[str, Any]], FormattedResults]:
+            list[dict[str, Any]] | FormattedResults:
                 - A list of formatted results (when deduplicate=False)
                 - A FormattedResults object with deduplicated results (when deduplicate=True)
         """
@@ -445,13 +476,15 @@ class AQLExecutor(ExecutorBase):
         if deduplicate:
             deduped_results = deduplicate_results(
                 formatted_results,
-                similarity_threshold=similarity_threshold
+                similarity_threshold=similarity_threshold,
             )
 
             # Add performance info if available
-            if performance_info and "performance" in performance_info:
-                if "execution_time_seconds" in performance_info["performance"]:
-                    deduped_results.query_time = performance_info["performance"]["execution_time_seconds"]
+            if (performance_info and
+                "performance" in performance_info and
+                "execution_time_seconds" in performance_info["performance"]
+            ):
+                deduped_results.query_time = performance_info["performance"]["execution_time_seconds"]
 
             return deduped_results
 

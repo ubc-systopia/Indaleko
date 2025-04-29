@@ -21,10 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+from datetime import UTC, datetime
 
-from pydantic import Field, field_validator, AwareDatetime
-from typing import Optional
-from datetime import datetime, timezone
+from pydantic import AwareDatetime, Field, field_validator
 
 # from icecream import ic
 
@@ -68,25 +67,29 @@ class TileLocationDataModel(BaseLocationDataModel):
     """
 
     tile_id: str = Field(..., description="Unique identifier for the Tile device")
-    archetype: Optional[str] = Field(None, description="Archetype of the Tile device")
+    archetype: str | None = Field(None, description="Archetype of the Tile device")
     dead: bool = Field(
-        False, description="Boolean indicating if the Tile device is dead"
+        False,
+        description="Boolean indicating if the Tile device is dead",
     )
-    firmware_version: Optional[str] = Field(None, description="Version of the firmware")
-    hardware_version: Optional[str] = Field(None, description="Version of the hardware")
-    kind: Optional[str] = Field(None, description="Kind of Tile device")
+    firmware_version: str | None = Field(None, description="Version of the firmware")
+    hardware_version: str | None = Field(None, description="Version of the hardware")
+    kind: str | None = Field(None, description="Kind of Tile device")
     lost: bool = Field(
-        False, description="Boolean indicating if the Tile device is lost"
+        False,
+        description="Boolean indicating if the Tile device is lost",
     )
-    lost_timestamp: Optional[AwareDatetime] = Field(
-        None, description="Timestamp when the Tile device was lost"
+    lost_timestamp: AwareDatetime | None = Field(
+        None,
+        description="Timestamp when the Tile device was lost",
     )
     name: str = Field(..., description="User defined name for the Tile device")
-    ring_state: Optional[str] = Field(None, description="Current ring state")
+    ring_state: str | None = Field(None, description="Current ring state")
     visible: bool = Field(
-        False, description="Boolean indicating if the Tile device is visible"
+        False,
+        description="Boolean indicating if the Tile device is visible",
     )
-    voip_state: Optional[str] = Field(None, description="State of the voip connection")
+    voip_state: str | None = Field(None, description="State of the voip connection")
     email: str = Field(..., description="Email address associated with the Tile device")
 
     @classmethod
@@ -95,7 +98,7 @@ class TileLocationDataModel(BaseLocationDataModel):
         if isinstance(value, str):
             value = datetime.fromisoformat(value)
         if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
+            value = value.replace(tzinfo=UTC)
         return value
 
     class Config:
@@ -124,7 +127,7 @@ class TileLocationDataModel(BaseLocationDataModel):
                 "visible": True,
                 "voip_state": "OFFLINE",
                 "email": "aki@null.com",
-            }
+            },
         }
 
 

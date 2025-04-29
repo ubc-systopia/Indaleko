@@ -65,12 +65,13 @@ class IndalekoObject:
         self.args = kwargs
         assert "ObjectIdentifier" in kwargs, "ObjectIdentifier is missing."
         assert isinstance(
-            kwargs["ObjectIdentifier"], str
+            kwargs["ObjectIdentifier"],
+            str,
         ), "ObjectIdentifier is not a string."
-        assert "None" != kwargs["ObjectIdentifier"], "ObjectIdentifier is None."
+        assert kwargs["ObjectIdentifier"] != "None", "ObjectIdentifier is None."
         assert "Record" in kwargs, f"Record is missing: {kwargs}"
-        if kwargs.get('Label'):
-            tokenized = tokenize_filename(kwargs.get('Label'))
+        if kwargs.get("Label"):
+            tokenized = tokenize_filename(kwargs.get("Label"))
             for key, value in tokenized.items():
                 if key not in kwargs:
                     kwargs[key] = value
@@ -79,7 +80,7 @@ class IndalekoObject:
             for timestamp in self.indaleko_object.Timestamps:
                 if timestamp.Value.tzinfo is None:
                     timestamp.Value = timestamp.Value.replace(
-                        tzinfo=datetime.timezone.utc
+                        tzinfo=datetime.UTC,
                     )
 
     @staticmethod
@@ -90,7 +91,7 @@ class IndalekoObject:
     def serialize(self) -> dict:
         """Serialize the object to a dictionary."""
         doc = json.loads(
-            self.indaleko_object.model_dump_json(exclude_none=True, exclude_unset=True)
+            self.indaleko_object.model_dump_json(exclude_none=True, exclude_unset=True),
         )
         doc["_key"] = self.args["ObjectIdentifier"]
         return doc

@@ -1,4 +1,6 @@
 """
+Indaleko Database Collections.
+
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason
 
@@ -19,33 +21,68 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import json
 import os
 import sys
+from pathlib import Path
 
 from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
-        current_path = os.path.dirname(current_path)
-    os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.append(str(current_path))
 
 # pylint: disable=wrong-import-position
+from activity.context.data_models.context_data_model import (
+    IndalekoActivityContextDataModel,
+)
+from activity.data_model.activity import IndalekoActivityDataModel
 from data_models import (
     IndalekoActivityDataRegistrationDataModel,
+    IndalekoCollectionMetadataDataModel,
     IndalekoIdentityDomainDataModel,
-    IndalekoObjectDataModel,
     IndalekoMachineConfigDataModel,
+    IndalekoObjectDataModel,
     IndalekoPerformanceDataModel,
     IndalekoQueryHistoryDataModel,
     IndalekoRelationshipDataModel,
     IndalekoServiceDataModel,
     IndalekoUserDataModel,
-    IndalekoCollectionMetadataDataModel,
 )
-
 from data_models.named_entity import IndalekoNamedEntityDataModel
-from activity.data_model.activity import IndalekoActivityDataModel
 from semantic.data_models.base_data_model import BaseSemanticDataModel
+
+# Import the Archivist memory model if available
+try:
+    from query.memory.archivist_memory import IndalekoArchivistMemoryModel
+
+    HAS_ARCHIVIST_MEMORY = True
+except ImportError:
+    HAS_ARCHIVIST_MEMORY = False
+
+# Import the Entity Equivalence models if available
+try:
+    from archivist.entity_equivalence import (
+        EntityEquivalenceGroup,
+        EntityEquivalenceNode,
+        EntityEquivalenceRelation,
+    )
+
+    HAS_ENTITY_EQUIVALENCE = True
+except ImportError:
+    HAS_ENTITY_EQUIVALENCE = False
+
+# Import the Knowledge Base models if available
+try:
+    from archivist.knowledge_base.data_models import (
+        FeedbackRecordDataModel,
+        KnowledgePatternDataModel,
+        LearningEventDataModel,
+    )
+
+    HAS_KNOWLEDGE_BASE = True
+except ImportError:
+    HAS_KNOWLEDGE_BASE = False
 
 # pylint: enable=wrong-import-position
 
@@ -70,8 +107,26 @@ class IndalekoDBCollections:
     Indaleko_SemanticData_Collection = "SemanticData"
     Indaleko_Named_Entity_Collection = "NamedEntities"
     Indaleko_Collection_Metadata = "CollectionMetadata"
+    Indaleko_Archivist_Memory_Collection = "ArchivistMemory"
 
-    Collections = {
+    # Entity Equivalence Collections
+    Indaleko_Entity_Equivalence_Node_Collection = "EntityEquivalenceNodes"
+    Indaleko_Entity_Equivalence_Relation_Collection = "EntityEquivalenceRelations"
+    Indaleko_Entity_Equivalence_Group_Collection = "EntityEquivalenceGroups"
+
+    # Knowledge Base collections
+    Indaleko_Learning_Event_Collection = "LearningEvents"
+    Indaleko_Knowledge_Pattern_Collection = "KnowledgePatterns"
+    Indaleko_Feedback_Record_Collection = "FeedbackRecords"
+
+    # Define view names
+    Indaleko_Objects_Text_View = "ObjectsTextView"
+    Indaleko_Named_Entity_Text_View = "NamedEntityTextView"
+    Indaleko_Activity_Text_View = "ActivityTextView"
+    Indaleko_Entity_Equivalence_Text_View = "EntityEquivalenceTextView"
+    Indaleko_Knowledge_Text_View = "KnowledgeTextView"
+
+    Collections = {  # noqa: RUF012
         Indaleko_Object_Collection: {
             "internal": False,
             "schema": IndalekoObjectDataModel.get_arangodb_schema(),
@@ -100,6 +155,23 @@ class IndalekoDBCollections:
                     "type": "persistent",
                 },
             },
+            "views": [
+                {
+                    "name": Indaleko_Objects_Text_View,
+                    "fields": {
+                        "Label": [
+                            "text_en",
+                            "indaleko_camel_case",
+                            "indaleko_snake_case",
+                            "indaleko_filename",
+                        ],
+                        "Record.Attributes.URI": ["text_en"],
+                        "Record.Attributes.Description": ["text_en"],
+                        "Tags": ["text_en"],
+                    },
+                    "stored_values": ["_key", "Label"],
+                },
+            ],
         },
         Indaleko_Relationship_Collection: {
             "internal": False,
@@ -154,9 +226,33 @@ class IndalekoDBCollections:
         },
         Indaleko_ActivityContext_Collection: {
             "internal": False,
-            "schema": IndalekoActivityDataModel.get_arangodb_schema(),
+            "schema": IndalekoActivityContextDataModel.get_arangodb_schema(),
             "edge": False,
-            "indices": {},
+            "indices": {
+                "handle": {
+                    "fields": ["Handle"],
+                    "unique": True,
+                    "type": "persistent",
+                },
+                "timestamp": {
+                    "fields": ["Timestamp"],
+                    "unique": True,
+                    "type": "persistent",
+                },
+                "cursors": {
+                    "fields": ["Cursors"],
+                    "unique": True,
+                    "type": "persistent",
+                },
+            },
+            "views": [
+                {
+                    "name": Indaleko_Activity_Text_View,
+                    "fields": ["Description", "Location", "Notes", "Tags"],
+                    "analyzers": ["text_en"],
+                    "stored_values": ["_key", "ActivityType", "Timestamp"],
+                },
+            ],
         },
         Indaleko_MusicActivityData_Collection: {
             "internal": False,
@@ -184,7 +280,7 @@ class IndalekoDBCollections:
                     "fields": ["ObjectIdentifier"],
                     "unique": True,
                     "type": "persistent",
-                }
+                },
             },
         },
         Indaleko_Identity_Domain_Collection: {
@@ -236,12 +332,175 @@ class IndalekoDBCollections:
                     "type": "persistent",
                 },
             },
+            "views": [
+                {
+                    "name": Indaleko_Named_Entity_Text_View,
+                    "fields": ["name", "description", "address", "tags"],
+                    "analyzers": ["text_en"],
+                    "stored_values": ["_key", "name", "entity_type"],
+                },
+            ],
         },
         Indaleko_Collection_Metadata: {
             "internal": True,  # metadata about collections, not generally useful for querying
             "schema": IndalekoCollectionMetadataDataModel.get_arangodb_schema(),
             "edge": False,
             "indices": {},
+        },
+        Indaleko_Archivist_Memory_Collection: {
+            "internal": True,  # archivist memory is not generally useful for user queries
+            "schema": (IndalekoArchivistMemoryModel.get_arangodb_schema() if HAS_ARCHIVIST_MEMORY else {}),
+            "edge": False,
+            "indices": {
+                "timestamp": {
+                    "fields": ["Record.Timestamp"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+            },
+        },
+        Indaleko_Entity_Equivalence_Node_Collection: {
+            "internal": False,
+            "schema": (EntityEquivalenceNode.get_arangodb_schema() if HAS_ENTITY_EQUIVALENCE else {}),
+            "edge": False,
+            "indices": {
+                "name": {
+                    "fields": ["name"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+                "entity_type": {
+                    "fields": ["entity_type"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+                "canonical": {
+                    "fields": ["canonical"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+            },
+            "views": [
+                {
+                    "name": Indaleko_Entity_Equivalence_Text_View,
+                    "fields": ["name", "context"],
+                    "analyzers": ["text_en"],
+                    "stored_values": ["_key", "name", "entity_id", "canonical"],
+                },
+            ],
+        },
+        Indaleko_Entity_Equivalence_Relation_Collection: {
+            "internal": False,
+            "schema": (EntityEquivalenceRelation.get_arangodb_schema() if HAS_ENTITY_EQUIVALENCE else {}),
+            "edge": True,
+            "indices": {
+                "source": {
+                    "fields": ["source_id"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+                "target": {
+                    "fields": ["target_id"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+                "relation_type": {
+                    "fields": ["relation_type"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+                "confidence": {
+                    "fields": ["confidence"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+            },
+        },
+        Indaleko_Entity_Equivalence_Group_Collection: {
+            "internal": False,
+            "schema": (EntityEquivalenceGroup.get_arangodb_schema() if HAS_ENTITY_EQUIVALENCE else {}),
+            "edge": False,
+            "indices": {
+                "canonical_id": {
+                    "fields": ["canonical_id"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+                "entity_type": {
+                    "fields": ["entity_type"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+            },
+        },
+        Indaleko_Learning_Event_Collection: {
+            "internal": False,
+            "schema": (LearningEventDataModel.get_arangodb_schema() if HAS_KNOWLEDGE_BASE else {}),
+            "edge": False,
+            "indices": {
+                "event_type": {
+                    "fields": ["event_type"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+                "timestamp": {
+                    "fields": ["timestamp"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+            },
+            "views": [
+                {
+                    "name": Indaleko_Knowledge_Text_View,
+                    "fields": ["content", "source", "metadata"],
+                    "analyzers": ["text_en"],
+                    "stored_values": ["_key", "event_type", "timestamp"],
+                },
+            ],
+        },
+        Indaleko_Knowledge_Pattern_Collection: {
+            "internal": False,
+            "schema": (KnowledgePatternDataModel.get_arangodb_schema() if HAS_KNOWLEDGE_BASE else {}),
+            "edge": False,
+            "indices": {
+                "pattern_type": {
+                    "fields": ["pattern_type"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+                "confidence": {
+                    "fields": ["confidence"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+                "usage_count": {
+                    "fields": ["usage_count"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+            },
+        },
+        Indaleko_Feedback_Record_Collection: {
+            "internal": False,
+            "schema": (FeedbackRecordDataModel.get_arangodb_schema() if HAS_KNOWLEDGE_BASE else {}),
+            "edge": False,
+            "indices": {
+                "feedback_type": {
+                    "fields": ["feedback_type"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+                "timestamp": {
+                    "fields": ["timestamp"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+                "feedback_strength": {
+                    "fields": ["feedback_strength"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+            },
         },
     }
 
@@ -254,7 +513,7 @@ def main():
         ic(f"Collection: {collection}")
         if verbose:
             for key, value in IndalekoDBCollections.Collections[collection].items():
-                if "schema" == key:
+                if key == "schema":
                     schema = json.dumps(value, indent=4)
                     print(f"Schema: {schema}")
                 else:

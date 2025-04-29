@@ -485,4 +485,3 @@ Queries can then be made against that view:
 ```
 
 ArangoDB does allows us to have multiple views.
-

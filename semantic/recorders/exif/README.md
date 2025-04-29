@@ -16,7 +16,7 @@ This semantic extractor processes image files to extract EXIF and other metadata
   - PNG (.png) - limited metadata
   - RAW formats (.nef, .cr2, .dng)
   - HEIF/HEIC (.heic, .heif)
-  
+
 - Performance optimizations:
   - In-memory processing with minimal file I/O
   - Caching to avoid reprocessing

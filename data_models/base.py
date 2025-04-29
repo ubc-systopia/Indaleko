@@ -18,15 +18,14 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import json
 import os
 import sys
-import json
 import uuid
+from typing import Any, TypeVar, Self
 
-from typing import Dict, Any, Type, TypeVar
-
-from pydantic import BaseModel
 from icecream import ic
+from pydantic import BaseModel
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -44,12 +43,12 @@ class IndalekoBaseModel(BaseModel):
     Pydanic data model with ArangoDB and our usuage model.
     """
 
-    def serialize(self) -> Dict[str, Any]:
+    def serialize(self) -> dict[str, Any]:
         """Serialize the object to a dictionary"""
         return self.model_dump(mode="json", exclude_unset=True, exclude_none=True)
 
     @classmethod
-    def deserialize(cls: Type[T], data: Dict[str, Any]) -> T:
+    def deserialize(cls: type[T], data: dict[str, Any]) -> T:
         """Deserialize the object from a dictionary"""
         if isinstance(data, str):
             return cls(**json.loads(data))
@@ -59,34 +58,39 @@ class IndalekoBaseModel(BaseModel):
             raise ValueError(f"Expected str or dict, got {type(data)}")
 
     @classmethod
-    def get_json_example(cls: Type[T]) -> dict:
+    def get_json_example(cls: type[T]) -> dict:
         """This will return a JSON compatible encoding as a python dictionary"""
         return json.loads(
-            cls(**cls.Config.json_schema_extra["example"]).model_dump_json()
+            cls(**cls.Config.json_schema_extra["example"]).model_dump_json(),
         )
 
     @classmethod
-    def get_example(cls: Type[T]) -> T:
+    def get_example(cls: type[T]) -> T:
         return cls(**cls.get_json_example())
 
-    @classmethod
-    def build_arangodb_doc(cls: Type[T], _key: uuid.UUID = uuid.uuid4()) -> dict:
+    def build_arangodb_doc(self, _key: uuid.UUID = None) -> dict:
         """
         Builds a dictionary that can be used to insert the data into ArangoDB.
         If a key is provided, it will be used, otherwise a random UUID is generated.
+
+        Returns:
+            A dictionary (not a JSON string) that can be inserted into ArangoDB.
         """
-        data = json.loads(cls.model_dump_json())
+        if _key is None:
+            _key = uuid.uuid4()
+
+        data = json.loads(self.model_dump_json())
         assert "_key" not in data, f"Key already exists in data: {data}"
         data["_key"] = str(_key)
-        return json.dumps(data)
+        return data
 
     @classmethod
-    def get_json_schema(cls: Type[T]) -> dict:
+    def get_json_schema(cls) -> dict:
         """Returns the JSON schema for the data model in Python dictionary format."""
         return cls.get_example().model_json_schema()
 
     @classmethod
-    def get_arangodb_schema(cls: Type[T]) -> dict:
+    def get_arangodb_schema(cls: type[T]) -> dict:
         """Returns the JSON schema for the data model in the format required by ArangoDB"""
         return {
             "message": "Unfortunately, your data did not conform to the schema.",
@@ -96,7 +100,7 @@ class IndalekoBaseModel(BaseModel):
         }
 
     @classmethod
-    def test_model_main(cls: Type[T]) -> None:
+    def test_model_main(cls: type[T]) -> None:
         """This function can be used to do basic testing of the data model."""
         data = cls.get_example()
         ic(data)

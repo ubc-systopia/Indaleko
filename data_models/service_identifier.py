@@ -22,7 +22,6 @@ import os
 import sys
 import uuid
 
-from typing import List, Union, Optional
 from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -33,8 +32,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from data_models.base import IndalekoBaseModel
 from constants import IndalekoConstants
+from data_models.base import IndalekoBaseModel
 
 # pylint: enable=wrong-import-position
 
@@ -44,10 +43,10 @@ class IndalekoServiceIdentifierDataModel(IndalekoBaseModel):
 
     # Name : str = Field(..., title='Name', description='This is the service name.')
 
-    Name: Optional[Union[str, None]]
-    Identifier: Union[uuid.UUID, str]
+    Name: str | None
+    Identifier: uuid.UUID | str
     Version: str
-    Description: Union[str, None]
+    Description: str | None
     ServiceType: str
 
     class Config:
@@ -58,7 +57,7 @@ class IndalekoServiceIdentifierDataModel(IndalekoBaseModel):
                 "Version": "1.0.0",
                 "ServiceType": IndalekoConstants.service_type_storage_collector,
                 "Description": "Example Collector Service",
-            }
+            },
         }
 
 

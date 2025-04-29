@@ -23,9 +23,8 @@ import datetime
 import logging
 import os
 import sys
-
 from abc import abstractmethod
-from typing import List, Dict, Any
+from typing import Any
 
 from icecream import ic
 
@@ -36,12 +35,13 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
+from activity.collectors.base import CollectorBase
+
 # This logic is part of what allows me to execute it locally or as part of the
 # overall package/project.  It's a bit of a hack, but it works.
 # pylint: disable=wrong-import-position
 from Indaleko import Indaleko
 from utils import IndalekoLogging
-from activity.collectors.base import CollectorBase
 
 # pylint: enable=wrong-import-position
 
@@ -55,8 +55,10 @@ class AmbientCollector(CollectorBase):
 
     @abstractmethod
     def get_ambient_condition_history(
-        self, start_time: datetime.datetime, end_time: datetime.datetime
-    ) -> List[Dict[str, Any]]:
+        self,
+        start_time: datetime.datetime,
+        end_time: datetime.datetime,
+    ) -> list[dict[str, Any]]:
         """Get the ambient condition history"""
 
 
@@ -68,7 +70,6 @@ def list_data_collectors_command(args: argparse.Namespace):
 
 def main():
     """This is a test interface for the ambient condition base data collector."""
-
     parser = argparse.ArgumentParser(description="Location provider test interface")
     # pylint: disable=no-member
     # the reference is valid, but pylint doesn't see it
@@ -89,7 +90,8 @@ def main():
     )
     command_subparser = parser.add_subparsers(dest="command", help="Command to execute")
     parser_list = command_subparser.add_parser(
-        "list", help="List the data collectors available"
+        "list",
+        help="List the data collectors available",
     )
     parser_list.add_argument(
         "--providerdir",
@@ -98,7 +100,9 @@ def main():
     parser_list.set_defaults(func=list_data_collectors_command)
     parser.set_defaults(func=list_data_collectors_command)
     parser.add_argument(
-        "--config", type=str, help="Configuration file for the location provider"
+        "--config",
+        type=str,
+        help="Configuration file for the location provider",
     )
     args = parser.parse_args()
     args.func(args)

@@ -4,7 +4,7 @@ $data = json_decode(file_get_contents('php://input'), true);
 
 // Check if data is received
 if (!empty($data)) {
-    
+
 
     // Generate a unique filename based on current timestamp
     $filename = 'jsons/data_' . time() . '.json';

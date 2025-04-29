@@ -20,13 +20,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-
-from typing import List
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from icecream import ic
-from pydantic import Field, field_validator, AwareDatetime
+from pydantic import AwareDatetime, Field, field_validator
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -37,10 +35,10 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 
 # pylint: disable=wrong-import-position
-from data_models.record import IndalekoRecordDataModel
 from data_models.base import IndalekoBaseModel
-from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 from data_models.i_uuid import IndalekoUUIDDataModel
+from data_models.record import IndalekoRecordDataModel
+from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 
 # pylint: enable=wrong-import-position
 
@@ -61,7 +59,9 @@ class BaseSemanticDataModel(IndalekoBaseModel):
     """
 
     Record: IndalekoRecordDataModel = Field(
-        ..., title="Record", description="The record for the activity data."
+        ...,
+        title="Record",
+        description="The record for the activity data.",
     )
 
     Timestamp: AwareDatetime = Field(
@@ -76,14 +76,14 @@ class BaseSemanticDataModel(IndalekoBaseModel):
         description="ObjectIdentifier of the original source file",
     )
 
-    RelatedObjects: List[UUID] = Field(
+    RelatedObjects: list[UUID] = Field(
         ...,
         title="RelatedObjects",
         description="The UUIDs of storage objects related to this metadata.",
         min_items=1,
     )
 
-    SemanticAttributes: List[IndalekoSemanticAttributeDataModel] = Field(
+    SemanticAttributes: list[IndalekoSemanticAttributeDataModel] = Field(
         ...,
         title="SemanticAttributes",
         description="The semantic attributes captured by the activity data provider.",
@@ -97,7 +97,7 @@ class BaseSemanticDataModel(IndalekoBaseModel):
         if isinstance(value, str):
             value = datetime.fromisoformat(value)
         if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
+            value = value.replace(tzinfo=UTC)
         return value
 
     class Config:
@@ -135,7 +135,7 @@ class BaseSemanticDataModel(IndalekoBaseModel):
                         "Data": "xAJlbg==",
                     },
                 ],
-            }
+            },
         }
 
 

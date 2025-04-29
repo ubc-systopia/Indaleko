@@ -18,13 +18,12 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+
 import os
 import sys
 
-from pydantic import Field, HttpUrl
-from typing import Optional
-
 from icecream import ic
+from pydantic import Field, HttpUrl
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -34,8 +33,9 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-from activity.collectors.collaboration.data_models.collaboration_data_model \
-    import BaseCollaborationDataModel
+from activity.collectors.collaboration.data_models.collaboration_data_model import (
+    BaseCollaborationDataModel,
+)
 
 # pylint: enable=wrong-import-position
 
@@ -43,8 +43,8 @@ from activity.collectors.collaboration.data_models.collaboration_data_model \
 class SharedFileData(BaseCollaborationDataModel):
     filename: str = Field(..., description="The name of the file shared")
     url: HttpUrl = Field(..., description="The URL to access the file")
-    size_bytes: Optional[int] = Field(None, description="Size of the file in bytes")
-    content_type: Optional[str] = Field(None, description="MIME type of the file")
+    size_bytes: int | None = Field(None, description="Size of the file in bytes")
+    content_type: str | None = Field(None, description="MIME type of the file")
 
     class Config:
         @staticmethod
@@ -57,9 +57,8 @@ class SharedFileData(BaseCollaborationDataModel):
             example["content_type"] = "application/pdf"
             return example
 
-        json_schema_extra = {
-            "example": generate_example()
-        }
+        json_schema_extra = {"example": generate_example()}
+
 
 def main():
     """This allows testing the data model"""

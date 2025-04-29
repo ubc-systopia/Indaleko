@@ -20,11 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
-import uuid
 
-from typing import List, Union, Dict, Any
-from pydantic import Field
 from icecream import ic
+from pydantic import Field
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -44,17 +42,17 @@ class IndalekoServiceDataModel(IndalekoServiceIdentifierDataModel):
     """This is the data model for the Indaleko service definition."""
 
     Record: IndalekoRecordDataModel = Field(
-        None, title="Record", description="The record associated with the object."
+        None,
+        title="Record",
+        description="The record associated with the object.",
     )
 
     class Config:
         json_schema_extra = {
             "example": {
                 "Record": IndalekoRecordDataModel.Config.json_schema_extra["example"],
-                **IndalekoServiceIdentifierDataModel.Config.json_schema_extra[
-                    "example"
-                ],
-            }
+                **IndalekoServiceIdentifierDataModel.Config.json_schema_extra["example"],
+            },
         }
 
 

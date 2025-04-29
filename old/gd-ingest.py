@@ -1,11 +1,12 @@
-import IndalekoIngest
+import logging
 import os
+
+import IndalekoIngest
+from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-import logging
 
 
 class GoogleDriveIngest(IndalekoIngest.IndalekoIngest):
@@ -75,11 +76,10 @@ class GoogleDriveIngest(IndalekoIngest.IndalekoIngest):
 
     def _get_output_file(self) -> str:
         """This method returns the output file name"""
-        return (
-            f"{self.data_dir}/gdrive-{self.get_email()}-{self.timestamp}.json".replace(
-                " ", "_"
-            ).replace(":", "-")
-        )
+        return f"{self.data_dir}/gdrive-{self.get_email()}-{self.timestamp}.json".replace(
+            " ",
+            "_",
+        ).replace(":", "-")
 
     def main(self):
         """Set up the specific features for this ingestor"""
@@ -101,9 +101,11 @@ class GoogleDriveIngest(IndalekoIngest.IndalekoIngest):
             if self.gdrive_creds is None:
                 self._get_credentials()
             self.args.output = f"{self.data_dir}/gdrive-{self.get_email()}-{self.timestamp}.json".replace(
-                " ", "_"
+                " ",
+                "_",
             ).replace(
-                ":", "-"
+                ":",
+                "-",
             )
 
     def get_metadata(self):
@@ -112,7 +114,7 @@ class GoogleDriveIngest(IndalekoIngest.IndalekoIngest):
             self._get_credentials()
         page_token = None
         field_to_use = "nextPageToken, files({})".format(
-            ", ".join(GoogleDriveIngest.FILE_METADATA_FIELDS)
+            ", ".join(GoogleDriveIngest.FILE_METADATA_FIELDS),
         )
         self.metadata = []
         service = None
@@ -121,11 +123,7 @@ class GoogleDriveIngest(IndalekoIngest.IndalekoIngest):
             if service is None:
                 service = build("drive", "v3", credentials=self.gdrive_creds)
             try:
-                results = (
-                    service.files()
-                    .list(fields=field_to_use, pageToken=page_token)
-                    .execute()
-                )
+                results = service.files().list(fields=field_to_use, pageToken=page_token).execute()
             except HttpError as error:
                 # this should handle a token expiration by refreshing it
                 if error.resp.status == 401:
@@ -142,36 +140,32 @@ class GoogleDriveIngest(IndalekoIngest.IndalekoIngest):
     def _get_credentials(self) -> None:
         """This method obtains credentials if we have them stored, fetches new
         ones if we don't, and refreshes the token upon expiration. The token is
-        stored in the given file."""
+        stored in the given file.
+        """
         if os.path.exists(self.args.token):
             self.gdrive_creds = Credentials.from_authorized_user_file(
-                self.args.token, GoogleDriveIngest.SCOPES
+                self.args.token,
+                GoogleDriveIngest.SCOPES,
             )
         if not self.gdrive_creds or not self.gdrive_creds.valid:
-            if (
-                self.gdrive_creds
-                and self.gdrive_creds.expired
-                and self.gdrive_creds.refresh_token
-            ):
+            if self.gdrive_creds and self.gdrive_creds.expired and self.gdrive_creds.refresh_token:
                 self.gdrive_creds.refresh(Request())
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(
-                    self.args.creds, GoogleDriveIngest.SCOPES
+                    self.args.creds,
+                    GoogleDriveIngest.SCOPES,
                 )
                 self.gdrive_creds = flow.run_local_server(port=0, prompt="consent")
-            with open(self.args.token, "wt") as token:
+            with open(self.args.token, "w") as token:
                 token.write(self.gdrive_creds.to_json())
 
     def get_email(self) -> str:
         """This method returns the email address associated with the
-        credentials"""
+        credentials
+        """
         if self.email is None:
             service = build("people", "v1", credentials=self.gdrive_creds)
-            results = (
-                service.people()
-                .get(resourceName="people/me", personFields="emailAddresses")
-                .execute()
-            )
+            results = service.people().get(resourceName="people/me", personFields="emailAddresses").execute()
             email = "dummy@dummy.com"
             if "emailAddresses" not in results:
                 logging.warning("No email addresses found in %s", results)

@@ -135,4 +135,4 @@ class IndalekoSemanticAttributeDataModel(IndalekoBaseModel):
 
 The idea behind this is that we can construct an index of these elements, which will make it efficient to search for them (or so goes the theory, as it hasn't been formally verified yet.)  Whether this works "in reality" or not, remains to be seen.
 
-Thus, we can define a set of semantic attributes for the metadata 
+Thus, we can define a set of semantic attributes for the metadata

@@ -31,9 +31,10 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from archivist.database_optimizer import DatabaseOptimizer
+from db import IndalekoDBConfig
 from query.memory.archivist_memory import ArchivistMemory
 from query.query_processing.query_history import QueryHistory
-from db import IndalekoDBConfig
+
 # pylint: enable=wrong-import-position
 
 
@@ -41,26 +42,26 @@ def main():
     """Run tests for the database optimizer."""
     print("Indaleko Database Optimizer Test")
     print("================================")
-    
+
     # Connect to the database
     print("\nConnecting to ArangoDB...")
     db_config = IndalekoDBConfig()
-    
+
     # Initialize components
     archivist_memory = ArchivistMemory(db_config)
     query_history = QueryHistory()
-    
+
     print("Initializing database optimizer...")
-    optimizer = DatabaseOptimizer(db_config.db, archivist_memory, query_history)
-    
+    optimizer = DatabaseOptimizer(db_config._arangodb, archivist_memory, query_history)
+
     # Analyze query patterns
     print("\nAnalyzing query patterns (last 30 days)...")
     analysis = optimizer.analyze_query_patterns(timedelta(days=30))
-    
+
     # Print summary
     print(f"\nAnalyzed {analysis.get('analyzed_queries', 0)} queries.")
     print(f"Found {len(analysis.get('slow_queries', []))} slow queries.")
-    
+
     # Print index recommendations
     index_recs = analysis.get("index_recommendations", [])
     if index_recs:
@@ -71,7 +72,7 @@ def main():
             print(f"   Explanation: {rec.explanation}")
     else:
         print("\nNo index recommendations.")
-    
+
     # Print view recommendations
     view_recs = analysis.get("view_recommendations", [])
     if view_recs:
@@ -82,7 +83,7 @@ def main():
             print(f"   Explanation: {rec.explanation}")
     else:
         print("\nNo view recommendations.")
-    
+
     # Print query optimizations
     query_opts = analysis.get("query_optimizations", [])
     if query_opts:
@@ -93,7 +94,7 @@ def main():
             print(f"   Explanation: {opt.explanation}")
     else:
         print("\nNo query optimization recommendations.")
-    
+
     print("\nTest complete!")
 
 

@@ -7,7 +7,7 @@ Project Indaleko
 
 import os
 import sys
-from typing import Optional
+
 from pydantic import Field, field_validator
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -34,29 +34,34 @@ class NestAmbientDataModel(ThermostatSensorData):
 
     # Nest identification - useful for tracking specific devices
     device_id: str = Field(
-        ..., description="Nest device identifier", pattern="^[a-zA-Z0-9]+$"
+        ...,
+        description="Nest device identifier",
+        pattern="^[a-zA-Z0-9]+$",
     )
 
     device_name: str = Field(
-        ..., description="Name assigned to the thermostat", min_length=1
+        ...,
+        description="Name assigned to the thermostat",
+        min_length=1,
     )
 
     # Additional Nest-specific sensor data
-    eco_mode: Optional[bool] = Field(None, description="Whether eco mode is active")
+    eco_mode: bool | None = Field(None, description="Whether eco mode is active")
 
-    leaf: Optional[bool] = Field(
-        None, description="Whether the Nest leaf icon is displayed"
+    leaf: bool | None = Field(
+        None,
+        description="Whether the Nest leaf icon is displayed",
     )
 
     # Equipment stages (common in Nest systems)
-    heat_stage: Optional[int] = Field(
+    heat_stage: int | None = Field(
         None,
         description="Current heating stage (0 = off, 1 = stage 1, 2 = stage 2)",
         ge=0,
         le=2,
     )
 
-    cool_stage: Optional[int] = Field(
+    cool_stage: int | None = Field(
         None,
         description="Current cooling stage (0 = off, 1 = stage 1, 2 = stage 2)",
         ge=0,
@@ -65,11 +70,14 @@ class NestAmbientDataModel(ThermostatSensorData):
 
     # Remote sensor summary
     connected_sensors: int = Field(
-        0, description="Number of connected remote sensors", ge=0
+        0,
+        description="Number of connected remote sensors",
+        ge=0,
     )
 
-    average_temperature: Optional[float] = Field(
-        None, description="Average temperature across all sensors in Celsius"
+    average_temperature: float | None = Field(
+        None,
+        description="Average temperature across all sensors in Celsius",
     )
 
     @field_validator("device_id")
@@ -82,7 +90,7 @@ class NestAmbientDataModel(ThermostatSensorData):
 
     @field_validator("average_temperature")
     @classmethod
-    def validate_avg_temperature(cls, value: Optional[float]) -> Optional[float]:
+    def validate_avg_temperature(cls, value: float | None) -> float | None:
         """Validate average temperature is within reasonable bounds"""
         if value is not None and not -50.0 <= value <= 100.0:
             raise ValueError("Average temperature must be between -50°C and 100°C")
@@ -106,7 +114,7 @@ class NestAmbientDataModel(ThermostatSensorData):
                 "average_temperature": 21.0,
                 # Override source to specify Nest
                 "source": "nest",
-            }
+            },
         }
 
 

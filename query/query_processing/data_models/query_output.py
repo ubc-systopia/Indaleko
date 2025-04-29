@@ -18,13 +18,12 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from enum import Enum
 import os
 import sys
+from enum import Enum
 from textwrap import dedent
 
-from pydantic import BaseModel, Field, ConfigDict
-from typing import Union
+from pydantic import BaseModel, ConfigDict, Field
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -41,7 +40,8 @@ class LLMTranslateQueryResponse(BaseModel):
     aql_query: str = Field(..., title="AQL Query")
     rationale: str = Field(..., title="Rationale")
     alternatives_considered: list[dict[str, str]] = Field(
-        ..., title="Alternatives Considered"
+        ...,
+        title="Alternatives Considered",
     )
     index_warnings: list[dict[str, str]] = Field(..., title="Index Warnings")
 
@@ -52,8 +52,8 @@ class LLMTranslateQueryResponse(BaseModel):
                 "rationale",
                 "alternatives_considered",
                 "index_warnings",
-            ]
-        }
+            ],
+        },
     )
 
 
@@ -74,7 +74,7 @@ class LLMIntentQueryResponse(BaseModel):
         title="Intent",
         description=dedent(
             "The intent of the user query, with the following possible values:\n"
-            f"{', '.join([intent.value for intent in LLMIntentTypeEnum])}"
+            f"{', '.join([intent.value for intent in LLMIntentTypeEnum])}",
         ),
     )
 
@@ -97,7 +97,7 @@ class LLMIntentQueryResponse(BaseModel):
             "The alternatives considered for the intent classification (if any)."
             "This can include other intents that were considered, or other factors"
             "that were taken into account."
-            "If none were considered, this should be an empty list."
+            "If none were considered, this should be an empty list.",
         ),
     )
 
@@ -107,7 +107,7 @@ class LLMIntentQueryResponse(BaseModel):
         description="The confidence score of the intent classification, ranging from 0 to 1",
     )
 
-    suggestion: Union[str, None] = Field(
+    suggestion: str | None = Field(
         None,
         title="Suggestion",
         description="Suggest ways to improve the intent classification process, "
@@ -116,8 +116,13 @@ class LLMIntentQueryResponse(BaseModel):
 
     model_config = ConfigDict(
         json_schema_extra={
-            "required": ["intent", "rationale", "alternatives_considered", "confidence"]
-        }
+            "required": [
+                "intent",
+                "rationale",
+                "alternatives_considered",
+                "confidence",
+            ],
+        },
     )
 
 
@@ -125,7 +130,8 @@ class LLMFilterConstraintQueryResponse(BaseModel):
     filter_constraints: list[dict[str, str]] = Field(..., title="Filter Constraints")
     rationale: str = Field(..., title="Rationale")
     alternatives_considered: list[dict[str, str]] = Field(
-        ..., title="Alternatives Considered"
+        ...,
+        title="Alternatives Considered",
     )
     index_warnings: list[dict[str, str]] = Field(..., title="Index Warnings")
 
@@ -142,11 +148,11 @@ class LLMFilterConstraintQueryResponse(BaseModel):
                 "2022-01-01 and 2022-01-02",
                 "alternatives_considered": [
                     {
-                        "example": "this is an example, so it is static and nothing else was considered"
-                    }
+                        "example": "this is an example, so it is static and nothing else was considered",
+                    },
                 ],
                 "index_warnings": [],
-            }
+            },
         }
 
 
@@ -166,12 +172,14 @@ class LLMCollectionCategory(BaseModel):
         title="Category",
         description=dedent(
             "The category of the collection, with the following possible values:\n"
-            f"{', '.join([category.value for category in LLMCollectionCategoryEnum])}"
+            f"{', '.join([category.value for category in LLMCollectionCategoryEnum])}",
         ),
     )
 
     collection: str = Field(
-        ..., title="Collection", description="The name of the collection in ArangoDB."
+        ...,
+        title="Collection",
+        description="The name of the collection in ArangoDB.",
     )
 
     confidence: float = Field(
@@ -187,17 +195,17 @@ class LLMCollectionCategory(BaseModel):
     )
 
     alternatives_considered: list[dict[str, str]] = Field(
-        ...,
+        default_factory=list,
         title="Alternatives Considered",
         description=dedent(
             "The alternatives considered for the collection category classification (if any)."
             "This can include other categories that were considered, or other factors"
             "that were taken into account."
-            "If none were considered, this should be an empty list."
+            "If none were considered, this should be an empty list.",
         ),
     )
 
-    suggestion: Union[str, None] = Field(
+    suggestion: str | None = Field(
         None,
         title="Suggestion",
         description="Suggest ways to improve the collection category classification process, "
@@ -213,7 +221,6 @@ class LLMCollectionCategory(BaseModel):
                 "collection",
                 "confidence",
                 "rationale",
-                "alternatives_considered",
             ],
             "example": {
                 "category": "objects",
@@ -222,8 +229,8 @@ class LLMCollectionCategory(BaseModel):
                 "rationale": "The collection contains objects.",
                 "alternatives_considered": [
                     {
-                        "example": "this is an example, so it is static and nothing else was considered"
-                    }
+                        "example": "this is an example, so it is static and nothing else was considered",
+                    },
                 ],
             },
         }
@@ -238,8 +245,10 @@ class LLMCollectionCategoryQueryResponse(BaseModel):
         description="This is the recommended mapping of collections to categories.",
     )
 
-    feedback: Union[str, None] = Field(
-        None, title="Feedback", description="General feedback on the collections."
+    feedback: str | None = Field(
+        None,
+        title="Feedback",
+        description="General feedback on the collections.",
     )
 
     class Config:
@@ -254,11 +263,11 @@ class LLMCollectionCategoryQueryResponse(BaseModel):
                         "rationale": "The collection contains objects.",
                         "alternatives_considered": [
                             {
-                                "example": "this is an example, so it is static and nothing else was considered"
-                            }
+                                "example": "this is an example, so it is static and nothing else was considered",
+                            },
                         ],
-                    }
+                    },
                 ],
                 "feedback": "This is feedback.",
-            }
+            },
         }

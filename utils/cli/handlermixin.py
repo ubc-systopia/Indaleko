@@ -19,12 +19,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import argparse
-from pathlib import Path
 import os
 import sys
-
-from typing import Union
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 # from icecream import ic
 
@@ -50,29 +48,32 @@ class IndalekoHandlermixin(ABC):
         """This method is used to get the platform name"""
 
     @abstractmethod
-    def get_pre_parser() -> Union[argparse.Namespace, None]:
+    def get_pre_parser() -> argparse.Namespace | None:
         """This method is used to get the pre-parser"""
 
     @abstractmethod
     def get_additional_parameters(
         pre_parser: argparse.Namespace,
-    ) -> Union[argparse.Namespace, None]:
+    ) -> argparse.Namespace | None:
         """This method is used to add additional parameters to the parser."""
 
     @abstractmethod
     def get_default_file(
-        data_directory: Union[str, Path], candidates: list[Union[str, Path]]
-    ) -> Union[str, None]:
+        data_directory: str | Path,
+        candidates: list[str | Path],
+    ) -> str | None:
         """Pick the preferred/default file from a list of candidates (None if the list is empty)"""
 
     @abstractmethod
-    def find_db_config_files(config_dir: Union[str, Path]) -> Union[list[str], None]:
+    def find_db_config_files(config_dir: str | Path) -> list[str] | None:
         """This method is used to find database configuration files"""
 
     @abstractmethod
     def find_machine_config_files(
-        config_dir: Union[str, Path], platform: str = None, machine_id: str = None
-    ) -> Union[list[str], None]:
+        config_dir: str | Path,
+        platform: str = None,
+        machine_id: str = None,
+    ) -> list[str] | None:
         """
         This method is used to find machine configuration files
 
@@ -91,8 +92,11 @@ class IndalekoHandlermixin(ABC):
 
     @abstractmethod
     def find_data_files(
-        data_dir: Union[str, Path], keys: dict[str, str], prefix: str, suffix: str
-    ) -> Union[list[str], None]:
+        data_dir: str | Path,
+        keys: dict[str, str],
+        prefix: str,
+        suffix: str,
+    ) -> list[str] | None:
         """This method is used to find data files"""
 
     @abstractmethod
@@ -116,9 +120,9 @@ class IndalekoHandlermixin(ABC):
         """This method is used to parse the file name."""
 
     @abstractmethod
-    def get_storage_identifier(parser: argparse.Namespace) -> Union[str, None]:
+    def get_storage_identifier(parser: argparse.Namespace) -> str | None:
         """This method is used to get the storage identifier (if any) for a path"""
 
     @abstractmethod
-    def get_user_identifier(parser: argparse.Namespace) -> Union[str, None]:
+    def get_user_identifier(parser: argparse.Namespace) -> str | None:
         """This method is used to get the user identifier (if any)"""

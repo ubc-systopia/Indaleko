@@ -2,6 +2,19 @@
 
 ## Recent Changes
 
+April 15, 2025
+
+Added Fire Circle integration to implement specialized entity roles for collaborative AI analysis. The Fire Circle framework provides a standardized approach to integrating diverse AI perspectives into query analysis and knowledge pattern discovery.
+
+Key features of the Fire Circle implementation:
+- Four specialized entity roles - Storyteller, Analyst, Critic, and Synthesizer
+- Adapter layer for different AI models (OpenAI, Anthropic)
+- Integration with Archivist's knowledge base system
+- CLI commands for multi-perspective analysis
+- Pattern analysis with different viewpoints
+
+You can enable Fire Circle features with the `--fc` flag when running the CLI.
+
 October 18, 2024
 
 There have been some changes around terminology, and I suspect this will lead to a consolidation around this new terminology.

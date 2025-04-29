@@ -3,14 +3,12 @@
 import datetime
 import ipaddress
 import os
-import requests
 import sys
 import uuid
+from typing import Any
 
-from typing import List, Dict, Any
-
+import requests
 from icecream import ic
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -21,8 +19,11 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 # now we can import modules from the project root
-from activity.collectors.location import LocationCollector
 from activity.characteristics import ActivityDataCharacteristics
+from activity.collectors.location import LocationCollector
+from activity.collectors.location.data_models.base_location_data_model import (
+    BaseLocationDataModel,
+)
 from activity.collectors.location.data_models.ip_location_data_model import (
     IPLocationDataModel,
 )
@@ -41,7 +42,7 @@ class IPLocation(LocationCollector):
         self.ip_address = self.capture_public_ip_address()
         self.ip_location_data = self.get_ip_location_data()
         self.location_data = self.map_ip_location_data_to_data_model(
-            self.ip_location_data
+            self.ip_location_data,
         )
 
     @staticmethod
@@ -52,7 +53,8 @@ class IPLocation(LocationCollector):
         return data.get("ip")
 
     def map_ip_location_data_to_data_model(
-        self, location_data: dict
+        self,
+        location_data: dict,
     ) -> IPLocationDataModel:
         """Map the IP location data to the data model"""
         # start with the required fields
@@ -63,46 +65,43 @@ class IPLocation(LocationCollector):
                 ip_address = ipaddress.IPv4Address(location_data.get("query"))
             except ipaddress.AddressValueError:
                 ip_address = ipaddress.IPv6Address(location_data.get("query"))
-        assert isinstance(ip_address, ipaddress.IPv4Address) or isinstance(
-            ip_address, ipaddress.IPv6Address
-        ), f"The IP address is not a valid IP address. It is {type(ip_address)}"
-        kwargs = {
+        # Build nested Location data
+        location_dict: dict[str, Any] = {
             "latitude": location_data.get("lat"),
             "longitude": location_data.get("lon"),
+            # Use UTC timezone for timestamp
             "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
             "source": "IP",
-            "ip_address": ip_address,
         }
-        # add the optional fields
+        # Add optional location attributes
         if "altitude" in location_data:
-            kwargs["altitude"] = location_data.get("altitude")
+            location_dict["altitude"] = location_data.get("altitude")
         if "accuracy" in location_data:
-            kwargs["accuracy"] = location_data.get("accuracy")
+            location_dict["accuracy"] = location_data.get("accuracy")
         if "heading" in location_data:
-            kwargs["heading"] = location_data.get("heading")
+            location_dict["heading"] = location_data.get("heading")
         if "speed" in location_data:
-            kwargs["speed"] = location_data.get("speed")
-        if "city" in location_data:
-            kwargs["city"] = location_data.get("city")
-        if "country" in location_data:
-            kwargs["country"] = location_data.get("country")
-        if "country_code" in location_data:
-            kwargs["country_code"] = location_data.get("country_code")
-        if "region" in location_data:
-            kwargs["region"] = location_data.get("region")
-        if "region_name" in location_data:
-            kwargs["region_name"] = location_data.get("region_name")
-        if "postal_code" in location_data:
-            kwargs["postal_code"] = location_data.get("postal_code")
-        if "isp" in location_data:
-            kwargs["isp"] = location_data.get("isp")
-        if "org" in location_data:
-            kwargs["org"] = location_data.get("org")
-        if "as_name" in location_data:
-            kwargs["as_name"] = location_data.get("as_name")
-        if "timezone" in location_data:
-            kwargs["timezone"] = location_data.get("timezone")
-        return IPLocationDataModel(**kwargs)
+            location_dict["speed"] = location_data.get("speed")
+        # Build full example to populate required activity metadata fields
+        example = BaseLocationDataModel.Config.json_schema_extra["example"].copy()
+        example["Location"] = location_dict
+        example["ip_address"] = ip_address
+        # Add optional IP-related fields
+        for field in [
+            "city",
+            "country",
+            "country_code",
+            "region",
+            "region_name",
+            "postal_code",
+            "isp",
+            "org",
+            "as_name",
+            "timezone",
+        ]:
+            if field in location_data:
+                example[field] = location_data.get(field)
+        return IPLocationDataModel(**example)
 
     def get_ip_location_data(self) -> dict:
         """Get the coordinates for the location"""
@@ -116,7 +115,7 @@ class IPLocation(LocationCollector):
         else:
             return None
 
-    def get_collector_characteristics(self) -> List[ActivityDataCharacteristics]:
+    def get_collector_characteristics(self) -> list[ActivityDataCharacteristics]:
         """Get the provider characteristics"""
         return [
             ActivityDataCharacteristics.ACTIVITY_DATA_SPATIAL,
@@ -124,17 +123,23 @@ class IPLocation(LocationCollector):
             ActivityDataCharacteristics.PROVIDER_DEVICE_STATE_DATA,
         ]
 
-    def get_collectorr_name(self) -> str:
+    def get_collector_name(self) -> str:
         """Get the provider name"""
         return self._name
+
+    # alias for backwards compatibility
+    get_collectorr_name = get_collector_name
 
     def get_provider_id(self) -> uuid.UUID:
         """Get the provider ID"""
         return self._provider_id
 
-    def retrieve_data(self, data_type: str) -> str:
-        """Retrieve data from the provider"""
-        raise NotImplementedError("This method is not implemented yet.")
+    def retrieve_data(self, data_id: uuid.UUID) -> dict[str, Any]:
+        """Retrieve the data associated with the given data_id"""
+        # Return the latest stored data for this provider
+        if data_id == self.get_provider_id() and hasattr(self, "data") and self.data:
+            return self.data[-1]
+        return {}
 
     def retrieve_temporal_data(
         self,
@@ -142,9 +147,16 @@ class IPLocation(LocationCollector):
         prior_time_window: datetime.timedelta,
         subsequent_time_window: datetime.timedelta,
         max_entries: int = 0,
-    ) -> List[Dict]:
+    ) -> list[dict[str, Any]]:
         """Retrieve temporal data from the provider"""
-        raise NotImplementedError("This method is not implemented yet.")
+        # Determine time window
+        start = reference_time - prior_time_window
+        end = reference_time + subsequent_time_window
+        history = self.get_location_history(start, end)
+        # Limit entries if requested
+        if max_entries and len(history) > max_entries:
+            return history[:max_entries]
+        return history
 
     def get_cursor(self, activity_context: uuid.UUID) -> uuid.UUID:
         """Retrieve the current cursor for this data provider
@@ -155,6 +167,8 @@ class IPLocation(LocationCollector):
              The cursor for this data provider, which can be used to retrieve
              data from this provider (via the retrieve_data call).
         """
+        # Use provider ID as cursor for simplicity
+        return self.get_provider_id()
 
     def cache_duration(self) -> datetime.timedelta:
         """
@@ -178,6 +192,34 @@ class IPLocation(LocationCollector):
         """Get the JSON schema for the provider"""
         return IPLocationDataModel.schema_json()
 
+    def collect_data(self) -> None:
+        """Collect and store the latest IP location data"""
+        # Fetch the public IP and corresponding geolocation
+        self.ip_address = self.capture_public_ip_address(self.timeout)
+        self.ip_location_data = self.get_ip_location_data()
+        self.location_data = None
+        if self.ip_location_data:
+            self.location_data = self.map_ip_location_data_to_data_model(
+                self.ip_location_data,
+            )
+            processed = self.process_data(self.location_data)
+            self.store_data(processed)
+
+    def process_data(self, data: Any) -> dict[str, Any]:
+        """Process collected data into a serializable dict"""
+        if isinstance(data, IPLocationDataModel):
+            return data.dict()
+        if isinstance(data, dict):
+            model = self.map_ip_location_data_to_data_model(data)
+            return model.dict()
+        raise TypeError(f"Unsupported data type: {type(data)}")
+
+    def store_data(self, data: dict[str, Any]) -> None:
+        """Store processed data in memory"""
+        if not hasattr(self, "data"):
+            self.data = []
+        self.data.append(data)
+
     def get_location_name(self) -> str:
         """Get the location"""
         location = self._location
@@ -185,18 +227,44 @@ class IPLocation(LocationCollector):
             location = ""
         return location
 
-    def get_coordinates(self) -> Dict[str, float]:
+    def get_coordinates(self) -> dict[str, float]:
         """Get the coordinates for the location"""
+        # Return the most recent stored coordinates
+        if hasattr(self, "data") and self.data:
+            loc = self.data[-1].get("Location", {}) or {}
+            return {
+                "latitude": loc.get("latitude", 0.0),
+                "longitude": loc.get("longitude", 0.0),
+            }
         return {"latitude": 0.0, "longitude": 0.0}
 
     def get_location_history(
-        self, start_time: datetime.datetime, end_time: datetime.datetime
-    ) -> List[Dict[str, Any]]:
+        self,
+        start_time: datetime.datetime,
+        end_time: datetime.datetime,
+    ) -> list[dict[str, Any]]:
         """Get the location history for the location"""
-        return []
+        events: list[dict[str, Any]] = []
+        for record in getattr(self, "data", []):
+            # extract timestamp from nested Location
+            loc = record.get("Location", {}) or {}
+            ts_val = loc.get("timestamp")
+            # Handle both datetime and isoformat string
+            if isinstance(ts_val, datetime.datetime):
+                ts = ts_val
+            else:
+                try:
+                    ts = datetime.datetime.fromisoformat(ts_val)
+                except Exception:
+                    continue
+            if start_time <= ts <= end_time:
+                events.append(record)
+        return events
 
     def get_distance(
-        self, location1: Dict[str, float], location2: Dict[str, float]
+        self,
+        location1: dict[str, float],
+        location2: dict[str, float],
     ) -> float:
         """Get the distance between two locations"""
         raise NotImplementedError("This method is not implemented yet.")

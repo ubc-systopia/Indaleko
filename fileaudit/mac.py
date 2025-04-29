@@ -1,8 +1,8 @@
+import argparse
+
 import logcompator
 import operators
 import pipeline
-import argparse
-from typing import List
 
 
 def print_result(t):
@@ -38,7 +38,8 @@ def main():
     subparsers = parser.add_subparsers(title="subcommands", dest="subcommands")
 
     fs_usage_parser = subparsers.add_parser(
-        "fs_usage", help="fs_usage subcommand (mac)"
+        "fs_usage",
+        help="fs_usage subcommand (mac)",
     )
     fs_usage_parser.add_argument(
         "--time",
@@ -50,10 +51,15 @@ def main():
     )
 
     file_input_parser = subparsers.add_parser(
-        "file_input", help="reads from the input file"
+        "file_input",
+        help="reads from the input file",
     )
     file_input_parser.add_argument(
-        "--input-file", "-i", dest="input_file", type=str, help="the input file"
+        "--input-file",
+        "-i",
+        dest="input_file",
+        type=str,
+        help="the input file",
     )
 
     args = parser.parse_args()
@@ -65,7 +71,7 @@ def main():
             input_reader = operators.InputReader([command])
         case "file_input":
             assert path.exists(
-                args.input_file
+                args.input_file,
             ), f"the input file does not exist at {args.input_file}"
 
             input_reader = operators.FileInputReader(args.input_file)
@@ -79,7 +85,7 @@ def main():
             1,
             ["open", "close", "mmap", "read", "write", "mkdir", "rename"],
             exact_match=True,
-        )
+        ),
     ).add(operators.Canonize())
 
     if args.compress:
