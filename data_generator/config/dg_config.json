@@ -1,6 +1,5 @@
 {
-    "output_json": "/Indaleko/data/",
     "n_metadata_records": 30,
-    "n_matching_queries": 5,
-    "query":"Find PDF files modified in January 2025 containing 'vancouver'"
+    "n_matching_queries": 10,
+    "query":"Add query here"
 }

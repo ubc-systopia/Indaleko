@@ -31,12 +31,9 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
-# from db.db_collection_metadata import IndalekoDBCollectionsMetadata
 from query.query_processing.data_models.translator_input import TranslatorInput
 from query.query_processing.data_models.translator_response import TranslatorOutput
 
-# from query.query_processing.data_models.query_output import LLMTranslateQueryResponse
-# from query.llm_base import IndalekoLLMBase
 # pylint: enable=wrong-import-position
 
 

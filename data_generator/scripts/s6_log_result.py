@@ -1,14 +1,26 @@
+"""Log the result of the metadata generator."""
 import json
 import logging
-from datetime import datetime
-from logging import Logger
 
+from datetime import UTC, datetime
+from logging import Logger
+from pathlib import Path
+from textwrap import dedent
+
+
+# ruff: noqa: S101,S311,FBT001,FBT002,G004
+# pylint: disable=W1203
 
 class ResultLogger:
     """
     A service for logging the result of the metadata generator.
+
     Adapted from LoggingService from logging_service.py
     """
+
+    SPACER = "----------------------------------------------"
+    "----------------------------------------------"
+
 
     def __init__(self, result_path: str) -> None:
         """
@@ -22,19 +34,23 @@ class ResultLogger:
         result_formatting = "%(message)s"
 
         self.progress_logger = self.create_logger(
-            result_path + "validator_progress.log",
-            "ProgressLogger",
-            progress_formatting,
+            result_path / "validator_progress.log",
+            "ProgressLogger", progress_formatting,
         )
         self.result_logger = self.create_logger(
-            result_path + "validator_result.log",
-            "ResultLogger",
+            result_path / "validator_result.log", "ResultLogger",
             result_formatting,
         )
 
-    def create_logger(self, log_file, logger_name, formatting) -> Logger:
+    def create_logger(
+            self,
+            log_file: Path | str,
+            logger_name: str | None,
+            formatting: str | None,
+    ) -> Logger:
         """
-        Creates a new logger instance
+        Creates a new logger instance.
+
         Args:
             log_file (str): the name of the logger file
             logger_name (str): the name of the logger
@@ -55,7 +71,8 @@ class ResultLogger:
 
     def log_config(self, config: dict) -> None:
         """
-        Progress Logger: Logs the contents of a given config file
+        Progress Logger: Logs the contents of a given config file.
+
         Args:
             config(dict) : the given config file
         """
@@ -63,89 +80,93 @@ class ResultLogger:
             "event": "user_config",
             "n_truth_attributes": config["n_matching_queries"],
             "n_total_metadata": config["n_metadata_records"],
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
         self.progress_logger.info(json.dumps(log_data))
 
     def log_process(self, description: str) -> None:
         """
-        Progress Logger: Logs current process in validator_progress.log
+        Progress Logger: Logs current process in validator_progress.log.
+
         Args:
             description(str) : the description of the process that is occurring
         """
         self.progress_logger.info(description)
 
-    def log_process_result(self, description: str, epoch: str, results=None) -> None:
+    def log_process_result(
+            self,
+            description: str,
+            epoch: str,
+            results: dict | None = None) -> None:
         """
-        Progress Logger: Logs general processes occuring
+        Progress Logger: Logs general processes occuring.
+
         Args:
             description(str) : the description of the process
             epoch(str) : the epoch time for the process
+            results(dict) : the result of the process
         """
         log_data = {"event": description, "epoch": epoch}
 
-        if results != None:
+        if results is not None:
             log_data["results"] = results
 
         self.progress_logger.info(json.dumps(log_data))
 
-    def log_final_result(self, total_epoch: str, results: dict):
+    def log_final_result(
+            self,
+            total_epoch:str,
+            results: dict) -> None:
         """
-        Result Logger: Logs a summary results including
-        the query, extracted features, aql query, total epoch, number of truth files queried, total number of metadata queried,
-        total files returned by Indaleko
-        and precision and recall calculations
+        Logs summary of results.
+
+        The summary consists of:
+            - the query
+            - total epoch
+            - total number of files in th DB before and after generation
+            - number of truth files queried
+            - total number of metadata queried
+            - total files returned by Indaleko
+            - precision and recall calculations
+
         Args:
-            config(dict) :
-                total epoch (str) : the total epoch taken for the entire validation process
-                results (dict) : a dictionary consisting of all requires elements to create the summary
+            total_epoch (str) : the total epoch taken for the entire user interaction
+            results (dict) : a dictionary consisting of all requires elements to create the summary
         """
         self.result_logger.info("SUMMARY OF RESULT:")
-        self.result_logger.info(f" Total Metadata Queried: {results['n_metadata']}")
-        self.result_logger.info(
-            f" Total Truth Metadata Queried: {results['n_total_truth']}",
-        )
-        self.result_logger.info(
-            "--------------------------------------------------------------------------------------------",
-        )
-        self.result_logger.info("LLM Results:")
         self.result_logger.info(f" Original Query: {results['query']}")
+        self.result_logger.info(f" Number of Files Originally in the DB: {results['db_number']}")
+        self.result_logger.info(f" Total Metadata Generated: {results['n_metadata']}")
+        self.result_logger.info(f" Total Truth Metadata Queried: {results['n_total_truth']}")
         self.result_logger.info(
-            f" Truth File Attributes:\n{json.dumps(results['selected_md_attributes'], indent=4)}",
+            dedent(
+                f"""
+                Number of Files After Metadata Generation ({results['n_metadata']}
+                x 6 collections + 3 activity providers): {results['db_number_update']}""",
+            ),
         )
-        # self.result_logger.info(f" Converted Truth File Attributes:\n{json.dumps(results['converted_selected_md_attributes'], indent=4)}")
-        self.result_logger.info(f" Geographical Coordinates: {results['geo_coord']}")
-        self.result_logger.info(f" AQL Query:\n{results['aql_query']}")
-        self.result_logger.info(
-            "--------------------------------------------------------------------------------------------",
-        )
+        self.result_logger.info(self.SPACER)
         self.result_logger.info("Metadata Generation:")
+        self.result_logger.info(f" Truth Files Made: {results['metadata_stats']['truth']}")
+        self.result_logger.info(f" Filler Files Made: {results['metadata_stats']['filler']}")
         self.result_logger.info(
-            f" Truth Files Made: {results['metadata_stats']['truth']}",
+            f"""
+            Of the Filler Files, Truth-like Filler Files:
+            {results['metadata_stats']['truth_like']}
+            """,
         )
-        self.result_logger.info(
-            f" Filler Files Made: {results['metadata_stats']['filler']}",
-        )
-        self.result_logger.info(
-            f" Of the Filler Files, Truth-like Filler Files: {results['metadata_stats']['truth-like']}",
-        )
-        self.result_logger.info(
-            "--------------------------------------------------------------------------------------------",
-        )
+        self.result_logger.info(self.SPACER)
         self.result_logger.info("Indaleko Results:")
+        self.result_logger.info(f" Actual Metadata Returned: {results['metadata_number']}")
         self.result_logger.info(
-            f" Actual Metadata Returned: {results['actual_n_metadata']}",
-        )
+            f" Actual Truth Metadata Returned: {results['results'].truth_number}")
+        self.result_logger.info(f" Filler Metadata Returned: {results['results'].filler_number}")
         self.result_logger.info(
-            f" Actual Truth Metadata Returned: {results['actual_n_total_truth']}",
-        )
+            f" Metadata Returned From User's Database: {results['results'].original_number}")
         self.result_logger.info(
-            f" UUID of Indaleko Objects Returned: {results['uuid_returned']}",
-        )
-        self.result_logger.info(
-            "--------------------------------------------------------------------------------------------",
-        )
+            f" UUID of Indaleko Objects Returned: {results['results'].returned_uuid}")
+        self.result_logger.info(self.SPACER)
         self.result_logger.info("Summary Stats:")
         self.result_logger.info(f" Total epoch: {total_epoch}")
-        self.result_logger.info(f" Precision: {results['precision']}")
-        self.result_logger.info(f" Recall: {results['recall']}")
+        self.result_logger.info(f" Precision: {results['results'].precision}")
+        self.result_logger.info(f" Recall: {results['results'].recall}")

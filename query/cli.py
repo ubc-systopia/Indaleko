@@ -916,7 +916,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 # Let's get the index data
                 indices = {}
                 for category in collection_categories:
-                    collection_indices = self.db_config._arangodb.collection(
+                    collection_indices = self.db_config.get_arangodb().collection(
                         category,
                     ).indexes()
                     for index in collection_indices:
@@ -1199,7 +1199,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         can be mapped, the entry is replaced with the mapped value from the NER collection.
         """
         mapped_entities = []
-        collection = self.db_config._arangodb.collection(
+        collection = self.db_config.get_arangodb().collection(
             IndalekoDBCollections.Indaleko_Named_Entity_Collection,
         )
         if collection is None:
@@ -1207,7 +1207,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         for entity in entity_list.entities:
             if entity.name is None:
                 continue
-            docs = [doc for doc in collection.find({"name": entity.name})]
+            docs = list(collection.find({"name": entity.name}))
             if docs is None or len(docs) == 0:
                 ic(f"NER mapping: Could not find entity: {entity.name}")
                 continue
@@ -1215,6 +1215,9 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 ic(f"NER mapping: Multiple entities found for: {entity.name}")
                 raise NotImplementedError("Multiple entities found, not handled yet")
             doc = docs[0]
+            ic(docs)
+            ic(doc)
+
             mapped_entities.append(
                 IndalekoNamedEntityDataModel(
                     name=entity.name,
@@ -1629,11 +1632,11 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
     def build_schema_table(self):
         """Build the schema table."""
         schema = {}
-        for collection in self.db_config._arangodb.collections():
+        for collection in self.db_config.get_arangodb().collections():
             name = collection["name"]
             if name.startswith("_"):
                 continue
-            doc = self.db_config._arangodb.collection(name)
+            doc = self.db_config.get_arangodb().collection(name)
             properties = doc.properties()
             schema[name] = properties["schema"]
         return schema
