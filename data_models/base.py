@@ -22,7 +22,7 @@ import json
 import os
 import sys
 import uuid
-from typing import Any, TypeVar
+from typing import Any, TypeVar, Self
 
 from icecream import ic
 from pydantic import BaseModel
@@ -85,7 +85,7 @@ class IndalekoBaseModel(BaseModel):
         return data
 
     @classmethod
-    def get_json_schema(cls: type[T]) -> dict:
+    def get_json_schema(cls) -> dict:
         """Returns the JSON schema for the data model in Python dictionary format."""
         return cls.get_example().model_json_schema()
 

@@ -47,6 +47,8 @@ from query.query_processing.query_translator.translator_base import TranslatorBa
 
 # pylint: enable=wrong-import-position
 
+# ruff: noqa: S101,S311,FBT001,FBT002,G004
+
 
 class AQLTranslator(TranslatorBase):
     """Translator for converting parsed queries to AQL (ArangoDB Query Language)."""
@@ -71,19 +73,6 @@ class AQLTranslator(TranslatorBase):
                 "collections_metadata",
                 {},
             )
-            if not self.collection_data:
-                # If that's also empty, create a minimal default structure with the object collection
-                from db.db_collections import IndalekoDBCollections
-
-                self.collection_data = {
-                    IndalekoDBCollections.Indaleko_Object_Collection: {
-                        "Name": IndalekoDBCollections.Indaleko_Object_Collection,
-                        "Description": "Storage objects collection",
-                        "Indices": [],
-                        "Schema": {},
-                        "QueryGuidelines": ["Search for files and folders"],
-                    },
-                }
 
     def translate(self, input_data: TranslatorInput) -> TranslatorOutput:
         """
@@ -94,10 +83,10 @@ class AQLTranslator(TranslatorBase):
                 and metadata attributes.
 
         Returns:
-            str: The translated AQL query
+            TranslatorOutput: The translated AQL query
         """
         # Use the LLM to help generate the AQL query
-        assert isinstance(input_data, TranslatorInput)  # noqa: S101
+        assert isinstance(input_data, TranslatorInput)
         prompt = self._create_translation_prompt2(input_data)
         completion = input_data.Connector.get_completion(
             context=prompt["system"],
@@ -116,12 +105,13 @@ class AQLTranslator(TranslatorBase):
             additional_notes=response_data.get("additional_notes", None),
         )
 
-    def validate_query(self, query: str, explain: bool=False) -> bool:  # noqa: D417, FBT001, FBT002
+    def validate_query(self, query: str, explain: bool=False) -> bool:
         """
         Validate the translated AQL query.
 
         Args:
             query (str): The translated AQL query
+            explain (bool): Whether to provide an explanation of the query strategy.
 
         Returns:
             bool: True if the query is valid, False otherwise
@@ -184,7 +174,7 @@ class AQLTranslator(TranslatorBase):
             str: The prompt for the LLM.
         """
         # Implement prompt creation logic
-        system_prompt = dedent(
+        system_prompt = (
             """
             You are an assistant that generates ArangoDB queries for a Unified
             Personal Index (UPI) system.
@@ -194,9 +184,11 @@ class AQLTranslator(TranslatorBase):
               the corresponding AQL
             query that retrieves matching information. The schema includes two main collections:
 
-            {IndalekoDBCollections.Indaleko_ActivityContext_Collection}: Stores metadata related to the context of activities.
+            {IndalekoDBCollections.Indaleko_ActivityContext_Collection}: Stores
+            metadata related to the context of activities.
             It includes the location field.
-            {IndalekoDBCollections.Indaleko_Object_Collection}: Stores information about digital objects, such as files and directories.
+            {IndalekoDBCollections.Indaleko_Object_Collection}: Stores information about
+            digital objects, such as files and directories.
             You should iterate through each context in ActivityContext and access
             the SemanticAttributes
             or relevant fields as required. Do not use both collections in a
@@ -205,7 +197,8 @@ class AQLTranslator(TranslatorBase):
             ActivityContext collection.
 
             Important Instructions:
-            If 'Activity' is specified in selected_md_attributes, search within the ActivityContext
+            If 'Activity' is specified in selected_md_attributes, search within the
+            {IndalekoDBCollection.Indaleko_ActivityContext_Collection} collection.
             if not, search within Objects.
 
             In selected_md_attributes['Posix']:
@@ -217,6 +210,8 @@ class AQLTranslator(TranslatorBase):
                     "google_drive": /file/d/
                     "dropbox": /s/...?dl=0
                     "icloud": /iclouddrive/
+                    "local": paths that contain the local_dir_name specified in
+                    selected_md_attributes.
                     "local": paths that contain the local_dir_name specified in
                     selected_md_attributes.
             Do not include path filters in the query unless they are explicitly specified in the
@@ -366,7 +361,8 @@ class AQLTranslator(TranslatorBase):
         if needs_activity_data:
             # Step 5: Query `ActivityDataProviders` to find available sources
             activity_providers = self.db_config.db.aql.execute(
-                f"FOR provider IN {IndalekoDBCollections.Indaleko_ActivityDataProvider_Collection} RETURN provider.Name",
+                f"FOR provider IN {IndalekoDBCollections.Indaleko_ActivityDataProvider_Collection} "
+                "RETURN provider.Name",
             )
             provider_collections = list(activity_providers)
 
@@ -390,16 +386,18 @@ class AQLTranslator(TranslatorBase):
         if hasattr(self.db_config, "db"):
             available_views = list(self.db_config.db.views())
 
+        # Create collection to view mapping for text search
+
         # Determine if this is a text search query
         is_text_search = False
-        query_keywords = ["show", "find", "search", "contain", "like", "where", "text"]
+        query_keywords = ("show", "find", "search", "contain", "like", "where", "text")
         query_lower = input_data.Query.original_query.lower()
         if any(keyword in query_lower for keyword in query_keywords):
             is_text_search = True
 
         # Look for entities that suggest text search
         if hasattr(input_data.Query, "entities") and len(input_data.Query.entities.entities) > 0:
-                is_text_search = True
+            is_text_search = True
 
         system_prompt = dedent(f"""
         You are **Archivist**, an expert at working with Indaleko to find pertinent
@@ -417,10 +415,14 @@ class AQLTranslator(TranslatorBase):
         {available_collections}
 
         The most important collections are:
-        - {IndalekoDBCollections.Indaleko_Object_Collection}: Contains file and directory information (Label is the filename field)
-        - {IndalekoDBCollections.Indaleko_SemanticData_Collection}: Contains semantic information extracted from objects
-        - {IndalekoDBCollections.Indaleko_ActivityContext_Collection}: Contains activity information related to objects
-        - {IndalekoDBCollections.Indaleko_Named_Entity_Collection}: Contains named entities referenced in objects
+        - {IndalekoDBCollections.Indaleko_Object_Collection}:
+        Contains file and directory information (Label is the filename field)
+        - {IndalekoDBCollections.Indaleko_SemanticData_Collection}:
+        Contains semantic information extracted from objects
+        - {IndalekoDBCollections.Indaleko_ActivityContext_Collection}:
+        Contains activity information related to objects
+        - {IndalekoDBCollections.Indaleko_Named_Entity_Collection}:
+        Contains named entities referenced in objects
 
         CRITICAL: The database has the following ArangoSearch views available for text search:
         {available_views}
@@ -428,13 +430,18 @@ class AQLTranslator(TranslatorBase):
         For ANY text search operations (searching for file names, descriptions, content, etc.),
         you MUST use the appropriate view instead of filtering directly on a collection:
 
-        - Use {IndalekoDBCollections.Indaleko_Objects_Text_View} instead of {IndalekoDBCollections.Indaleko_Object_Collection} when searching file names or text
-        - Use {IndalekoDBCollections.Indaleko_Named_Entity_Text_View} instead of {IndalekoDBCollections.Indaleko_Named_Entity_Collection} when searching entity names
-        - Use {IndalekoDBCollections.Indaleko_Activity_Text_View} instead of {IndalekoDBCollections.Indaleko_ActivityContext_Collection} when searching activity descriptions
+        - Use {IndalekoDBCollections.Indaleko_Objects_Text_View} instead of
+        {IndalekoDBCollections.Indaleko_Object_Collection} when searching file names or text
+        - Use {IndalekoDBCollections.Indaleko_Named_Entity_Text_View} instead of
+        {IndalekoDBCollections.Indaleko_Named_Entity_Collection} when searching entity names
+        - Use {IndalekoDBCollections.Indaleko_Activity_Text_View} instead of
+        {IndalekoDBCollections.Indaleko_ActivityContext_Collection} when searching
+        activity descriptions
 
         When using views, follow this pattern:
         ```aql
-        FOR doc IN {IndalekoDBCollections.Indaleko_Objects_Text_View}  // Use the view, not the collection
+        FOR doc IN
+        {IndalekoDBCollections.Indaleko_Objects_Text_View}  // Use the view, not the collection
         SEARCH ANALYZER(            // Use SEARCH ANALYZER instead of FILTER
             LIKE(doc.Label, @searchTerm),  // Use LIKE for text matching
             "text_en"               // Specify the analyzer
@@ -471,11 +478,16 @@ class AQLTranslator(TranslatorBase):
                 THIS QUERY SHOULD USE AN ARANGOSEARCH VIEW RATHER THAN FILTERING A COLLECTION.
 
                 Collection → View mapping for text search:
-                - {IndalekoDBCollections.Indaleko_Object_Collection} → {IndalekoDBCollections.Indaleko_Objects_Text_View}
-                - {IndalekoDBCollections.Indaleko_Named_Entity_Collection} → {IndalekoDBCollections.Indaleko_Named_Entity_Text_View}
-                - {IndalekoDBCollections.Indaleko_ActivityContext_Collection} → {IndalekoDBCollections.Indaleko_Activity_Text_View}
-                - {IndalekoDBCollections.Indaleko_Entity_Equivalence_Node_Collection} → {IndalekoDBCollections.Indaleko_Entity_Equivalence_Text_View}
-                - {IndalekoDBCollections.Indaleko_Learning_Event_Collection} → {IndalekoDBCollections.Indaleko_Knowledge_Text_View}
+                - {IndalekoDBCollections.Indaleko_Object_Collection} →
+                {IndalekoDBCollections.Indaleko_Objects_Text_View}
+                - {IndalekoDBCollections.Indaleko_Named_Entity_Collection} →
+                {IndalekoDBCollections.Indaleko_Named_Entity_Text_View}
+                - {IndalekoDBCollections.Indaleko_ActivityContext_Collection}
+                → {IndalekoDBCollections.Indaleko_Activity_Text_View}
+                - {IndalekoDBCollections.Indaleko_Entity_Equivalence_Node_Collection}
+                → {IndalekoDBCollections.Indaleko_Entity_Equivalence_Text_View}
+                - {IndalekoDBCollections.Indaleko_Learning_Event_Collection}
+                → {IndalekoDBCollections.Indaleko_Knowledge_Text_View}
                 """,
             )
 
