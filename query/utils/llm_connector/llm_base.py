@@ -20,8 +20,21 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import os
+import sys
 from abc import ABC, abstractmethod
 from typing import Any
+
+if os.environ.get("INDALEKO_ROOT") is None:
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
+        current_path = os.path.dirname(current_path)
+    os.environ["INDALEKO_ROOT"] = current_path
+    sys.path.append(current_path)
+
+# pylint: disable=wrong-import-position
+from query.query_processing.data_models.query_output import LLMTranslateQueryResponse
+# pylint: enable=wrong-import-position
 
 
 class LLMBase(ABC):
@@ -103,25 +116,68 @@ class LLMBase(ABC):
 class IndalekoLLMBase(ABC):
     """
     Extended abstract base class for Indaleko LLM connectors with additional functionality.
+
+    This is the primary interface for all LLM connectors in the Indaleko system.
     """
 
     @abstractmethod
-    def get_completion(
-        self,
-        context: str,
-        question: str,
-        schema: dict[str, Any] | None = None,
-    ) -> Any:
+    def get_llm_name(self) -> str:
         """
-        Get a completion from the LLM based on the given context and question.
-
-        Args:
-            context (str): The context for the completion
-            question (str): The question or prompt to complete
-            schema (Optional[Dict[str, Any]]): Optional schema for validating the response
+        Get the name of the LLM.
 
         Returns:
-            Any: The completion response object
+            str: The name of the LLM
+        """
+
+    @abstractmethod
+    def generate_query(self, prompt: str) -> LLMTranslateQueryResponse:
+        """
+        Generate a query based on the given prompt.
+
+        Args:
+            prompt (str): The prompt to generate the query from
+
+        Returns:
+            LLMTranslateQueryResponse: The generated query response
+        """
+
+    @abstractmethod
+    def summarize_text(self, text: str, max_length: int = 100) -> str:
+        """
+        Summarize the given text.
+
+        Args:
+            text (str): The text to summarize
+            max_length (int): The maximum length of the summary
+
+        Returns:
+            str: The summarized text
+        """
+
+    @abstractmethod
+    def extract_keywords(self, text: str, num_keywords: int = 5) -> list[str]:
+        """
+        Extract keywords from the given text.
+
+        Args:
+            text (str): The text to extract keywords from
+            num_keywords (int): The number of keywords to extract
+
+        Returns:
+            list[str]: The extracted keywords
+        """
+
+    @abstractmethod
+    def classify_text(self, text: str, categories: list[str]) -> str:
+        """
+        Classify the given text into one of the provided categories.
+
+        Args:
+            text (str): The text to classify
+            categories (list[str]): The list of possible categories
+
+        Returns:
+            str: The predicted category
         """
 
     @abstractmethod
@@ -129,18 +185,42 @@ class IndalekoLLMBase(ABC):
         self,
         context: str,
         question: str,
-        schema: dict[str, Any] | None = None,
-    ) -> str:
+        schema: dict[str, Any],
+    ) -> dict[str, Any]:
         """
         Answer a question based on the given context.
 
         Args:
             context (str): The context to base the answer on
             question (str): The question to answer
-            schema (Optional[Dict[str, Any]]): Optional schema for validating the response
+            schema (dict[str, Any]): The schema for the response
 
         Returns:
-            str: The answer to the question
+            dict[str, Any]: The structured answer to the question
+        """
+
+    @abstractmethod
+    def get_completion(
+        self,
+        context: str,
+        question: str,
+        schema: Any,
+    ) -> Any:
+        """
+        Get a completion based on the given context.
+
+        Args:
+            context (str): The context to base the completion on
+            question (str): The question to answer
+            schema (Any): The schema (or a model) for the response
+
+        Returns:
+            Any: The completion response object
+
+        Note: This method allows returning extended information
+        from the LLM, but requires the caller understand the explicit
+        format of the response, which does obviate the point of this
+        abstraction layer somewhat.
         """
 
     @abstractmethod
@@ -176,5 +256,5 @@ class IndalekoLLMBase(ABC):
             attr_types (Optional[list[str]]): Types of attributes to extract
 
         Returns:
-            Dict[str, Any]: Dictionary of extracted attributes
+            dict[str, Any]: Dictionary of extracted attributes
         """

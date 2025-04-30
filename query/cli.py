@@ -22,17 +22,20 @@ import argparse
 import configparser
 import os
 import sys
+
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
-        current_path = os.path.dirname(current_path)
-    os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
 from data_models.collection_metadata_data_model import (
@@ -72,6 +75,7 @@ from query.search_execution.query_visualizer import PlanVisualizer
 from query.utils.llm_connector.openai_connector import OpenAIConnector
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
+
 
 # Import Query Context Integration components
 try:
@@ -386,7 +390,14 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 help="Enable debug output",
             )
 
-            # Add command subparsers
+            # Add direct file input option
+            parser.add_argument(
+                "input_file",
+                nargs="?",
+                help="Optional input file containing queries to process (one per line). If provided, runs in batch mode.",
+            )
+
+            # Add backward compatibility for the batch command
             subparsers = parser.add_subparsers(
                 dest="command",
                 help="The mode in which to run the script (batch or interactive).",
@@ -457,11 +468,19 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         ic(f"Added help text: {text}")
 
     def run(self):
+        batch_queries = []
         batch = False
         if self.args is None:
             self.args = self.pre_parser.parse_args()
         ic(self.args)
-        if self.args.command == "batch":
+
+        # Check for direct file input first
+        if hasattr(self.args, "input_file") and self.args.input_file:
+            with open(self.args.input_file) as batch_file:
+                batch_queries = batch_file.readlines()
+            batch = True
+        # Legacy batch mode support
+        elif self.args.command == "batch":
             with open(self.args.batch_input_file) as batch_file:
                 batch_queries = batch_file.readlines()
             batch = True
@@ -599,7 +618,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                         if result:
                             print(result)
                         continue
-                    except Exception as e:
+                    except OSError as e:
                         print(f"Error executing command {command}: {e!s}")
                         continue
 
@@ -689,12 +708,12 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                                     args.split(),
                                 )
                                 continue
-                            elif command == "/experiments":
+                            if command == "/experiments":
                                 self.semantic_performance_integration.handle_experiments_command(
                                     args.split(),
                                 )
                                 continue
-                            elif command == "/report":
+                            if command == "/report":
                                 self.semantic_performance_integration.handle_report_command(
                                     args.split(),
                                 )
@@ -837,7 +856,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                                 "original_text": entity.name,
                             },
                         )
-                except Exception as e:
+                except OSError as e:
                     # If entity extraction fails, proceed without entities
                     ic(f"Failed to extract entities for KB: {e}")
 
@@ -1163,7 +1182,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                                     "original_text": entity.name,
                                 },
                             )
-                except Exception as e:
+                except OSError as e:
                     # If entity extraction fails, proceed without entities
                     ic(f"Failed to extract entities for KB recording: {e}")
 
@@ -1177,6 +1196,11 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 )
 
             # Check if user wants to continue
+            # In batch mode, don't prompt to continue
+            if batch:
+                continue
+
+            # Only in interactive mode, check if user wants to continue
             if not self.continue_session():
                 break
 
@@ -1294,7 +1318,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                             )
                             print(f"Refined query: {refined_query}")
                             return refined_query
-                except Exception as e:
+                except OSError as e:
                     print(f"Error applying refinement: {e}")
 
             # If we couldn't apply refinement, return the original query
@@ -1335,7 +1359,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                         print(f"Refined query: {refined_query}")
                         self.current_refined_query = refined_query
                         return refined_query
-                except Exception as e:
+                except OSError as e:
                     print(f"Error removing refinement: {e}")
 
         # Special command to show help for interactive mode
@@ -1772,7 +1796,14 @@ def add_arguments(parser):
         help="Enable analytics capabilities for file statistics",
     )
 
-    # Add command subparsers
+    # Add direct file input option
+    parser.add_argument(
+        "input_file",
+        nargs="?",
+        help="Optional input file containing queries to process (one per line). If provided, runs in batch mode.",
+    )
+
+    # Add backward compatibility for the batch command
     subparsers = parser.add_subparsers(
         dest="command",
         help="Mode to run the script (batch or interactive)",
@@ -1806,6 +1837,10 @@ def main():
         )
         print("  Example: python -m query.cli --deduplicate --show-duplicates")
         print("  This will group similar results and reduce information overload.")
+
+        print("\n- Run in batch mode by simply providing an input file:")
+        print("  Example: python -m query.cli query/examples/exemplar_queries.txt")
+        print("  This processes all queries in the file without prompting and exits when done.")
         print("\n- Try the new enhanced natural language capabilities:")
         print("  Example: python -m query.cli --enhanced-nl --context-aware")
         print(
@@ -1885,7 +1920,7 @@ def main():
         cli.run()
         print("Thank you for using Indaleko Query CLI")
         print("Have a lovely day!")
-    except Exception as e:
+    except OSError as e:
         print(f"Error initializing Query CLI: {e!s}")
         print("Try running with --help for usage information.")
 

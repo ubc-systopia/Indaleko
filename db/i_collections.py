@@ -1,7 +1,5 @@
 """
-IndalecoCollections.py - This module is used to manage the collections in the
-Indaleko database.
-
+Manage the collections in the Indaleko database.
 
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason
@@ -26,14 +24,17 @@ import logging
 import os
 import sys
 
+from pathlib import Path
+
 import arango
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
-        current_path = os.path.dirname(current_path)
-    os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
 
 
 # pylint: disable=wrong-import-position
@@ -47,15 +48,15 @@ from db.db_collections import IndalekoDBCollections
 from db.db_config import IndalekoDBConfig
 from utils.singleton import IndalekoSingleton
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoCollections(IndalekoSingleton):
-    """
-    This class is used to manage the collections in the Indaleko database.
-    """
+    """This class is used to manage the collections in the Indaleko database."""
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: dict) -> None:
+        """Initialize the IndalekoCollections class."""
         # db_config: IndalekoDBConfig = None, reset: bool = False) -> None:
         self.db_config = kwargs.get("db_config", IndalekoDBConfig())
         if self.db_config is None:
@@ -92,7 +93,20 @@ class IndalekoCollections(IndalekoSingleton):
                             indent=2,
                         ),
                     )
-                raise error
+                raise
+            except TypeError as error:
+                logging.exception("Failed to configure collection %s", name)
+                print(f"Failed to configure collection {name}")
+                print(error)
+                if IndalekoDBCollections.Collections[name]["schema"] is not None:
+                    print("Schema:")
+                    print(
+                        json.dumps(
+                            IndalekoDBCollections.Collections[name]["schema"],
+                            indent=2,
+                        ),
+                    )
+                raise
 
         # Create or update views (unless skipped)
         if not self.skip_views:

@@ -47,6 +47,7 @@ class IndalekoNamedEntityType(str, Enum):
     event = "event"
     product = "product"
     item = "item"
+    keyword = "keyword"  # Added for query processing
 
 
 class IndalekoNamedEntityDataModel(IndalekoBaseModel):

@@ -59,20 +59,25 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
     Indaleko database.
     """
 
-    default_collection_metadata = {
-        IndalekoDBCollections.Indaleko_Object_Collection: ObjectCollectionMetadata.default_metadata,
-        IndalekoDBCollections.Indaleko_Relationship_Collection: RelationshipCollectionMetadata.default_metadata,
-        IndalekoDBCollections.Indaleko_MachineConfig_Collection: MachineConfigCollectionMetadata.default_metadata,
+    default_collection_metadata = {  # noqa: RUF012
+        IndalekoDBCollections.Indaleko_Object_Collection:
+        ObjectCollectionMetadata.default_metadata,
+        IndalekoDBCollections.Indaleko_Relationship_Collection:
+        RelationshipCollectionMetadata.default_metadata,
+        IndalekoDBCollections.Indaleko_MachineConfig_Collection:
+        MachineConfigCollectionMetadata.default_metadata,
         "ActivityData": ActivityCollectionMetadata.default_metadata,
     }
 
-    def __init__(self, db_config: IndalekoDBConfig = IndalekoDBConfig()):
+    def __init__(self, db_config: IndalekoDBConfig | None = None):
         """Initialize the object."""
         if self._initialized:
             return
+        if db_config is None:
+            db_config = IndalekoDBConfig()
         self.collections = {}
         self.db_config = db_config
-        self.collections = self.db_config._arangodb.collections()
+        self.collections = self.db_config.get_arangodb().collections()
         self.collections_metadata = {}
         self.collections_additional_data = {}
         self._initialized = True
@@ -86,8 +91,12 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
                 or not IndalekoDBCollections.Collections[collection["name"]]["internal"]
             ):
                 # Only gather metadata for external collections
-                self.collections_metadata[collection["name"]] = self.get_collection_metadata(collection["name"])
-            if collection["name"] not in self._collection_handlers:  # handlers can add more information
+                self.collections_metadata[
+                    collection["name"]
+                ] = self.get_collection_metadata(
+                    collection["name"],
+                )
+            if collection["name"] not in self._collection_handlers:  # handlers can add more info
                 continue  # Done with this collection
             ic(f'Processing additional data for collection {collection["name"]}')
             assert (
@@ -102,7 +111,7 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
         """Generate a new collection metadata object."""
         if self.default_collection_metadata.get(name):
             return self.default_collection_metadata[name]
-        db_collection = self.db_config._arangodb.collection(name)
+        db_collection = self.db_config.get_arangodb().collection(name)
         assert db_collection is not None, f"Failed to get collection {name}"
         description = db_collection.properties().get(
             "description",
@@ -131,7 +140,7 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
         collection_name: str,
     ) -> IndalekoCollectionMetadataDataModel | None:
         """Get the metadata for the specified collection."""
-        db_collection = self.db_config._arangodb.collection(
+        db_collection = self.db_config.get_arangodb().collection(
             IndalekoDBCollections.Indaleko_Collection_Metadata,
         )
         assert (
@@ -155,7 +164,7 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
         """
         collection_data = {}
         for name, data in self.collections_metadata.items():
-            collection = self.db_config._arangodb.collection(name)
+            collection = self.db_config.get_arangodb().collection(name)
             if collection is None:
                 ic(f"Failed to get collection {name}")
                 continue
@@ -183,7 +192,7 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
         """Handle the activity data provider collection."""
         collection_data = {}
         collections_metadata = IndalekoDBCollectionsMetadata()
-        for provider in IndalekoActivityDataRegistrationService.get_provider_list():
+        for provider in IndalekoActivityDataRegistrationService().get_provider_list():
             collection = IndalekoActivityDataRegistrationService.lookup_activity_provider_collection(
                 provider["Identifier"],
             )

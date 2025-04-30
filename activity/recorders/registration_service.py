@@ -1,6 +1,5 @@
 """
-IndalekoActivityRegistrationService is the class that implements the
-registration service for activity data providers.
+Implements registration service for activity data providers.
 
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason
@@ -19,26 +18,25 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import json
 import os
 import sys
+from pathlib import Path
 from typing import Any
 
 if os.environ.get("INDALEKO_ROOT") is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
-        current_path = os.path.dirname(current_path)
-    os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
+
+# pylint: disable=wrong-import-position
 
 from activity.registration import IndalekoActivityDataRegistration
 from data_models.activity_data_registration import (
     IndalekoActivityDataRegistrationDataModel,
 )
-from db import IndalekoCollection, IndalekoServiceManager
-
-# pylint: disable=wrong-import-position
-from Indaleko import Indaleko
+from db import IndalekoCollection, IndalekoDBCollections, IndalekoServiceManager
 from utils.registration_service import IndalekoRegistrationService
 
 # pylint: enable=wrong-import-position
@@ -46,8 +44,7 @@ from utils.registration_service import IndalekoRegistrationService
 
 class IndalekoActivityDataRegistrationService(IndalekoRegistrationService):
     """
-    This class is used to implement and access the Indaleko Activity Data
-    Provider Registration Service.
+    Implements the Indaleko Activity Data Provider Registration Service.
 
     This service manages the registration of activity data providers,
     which collect and record user and system activities.
@@ -58,14 +55,12 @@ class IndalekoActivityDataRegistrationService(IndalekoRegistrationService):
     service_version = "1.0"
     service_description = "Indaleko Activity Data Provider Registration Service"
     service_name = "IndalekoActivityDataProviderRegistrationService"
-    collection_name = Indaleko.Indaleko_ActivityDataProvider_Collection
+    collection_name = IndalekoDBCollections.Indaleko_ActivityDataProvider_Collection
     collection_prefix = IndalekoActivityDataRegistration.provider_prefix
     service_type = IndalekoServiceManager.service_type_activity_data_registrar
 
-    def __init__(self):
-        """
-        Create an instance of the registration service.
-        """
+    def __init__(self) -> None:
+        """Create an instance of the registration service."""
         super().__init__(
             service_uuid=self.service_uuid_str,
             service_name=self.collection_name,  # For backward compatibility
@@ -78,8 +73,10 @@ class IndalekoActivityDataRegistrationService(IndalekoRegistrationService):
 
         # For backward compatibility
         self.activity_provider_collection = self.provider_collection
+        # pylint: disable=invalid-name
         self.Version = self.service_version
         self.Description = self.service_description
+        # pylint: enable=invalid-name
         self.Name = self.service_name
 
     def _process_registration_data(self, kwargs: dict[str, Any]) -> dict[str, Any]:
@@ -98,21 +95,13 @@ class IndalekoActivityDataRegistrationService(IndalekoRegistrationService):
         )
 
         # Use the model_dump_json method to process the data
-        registration_data = activity_registration.model_dump_json()
-
-        # For debugging (maintain existing behavior)
-        check_data = json.dumps(registration_data, indent=2)
-        print(check_data)
-
-        return registration_data
+        return activity_registration.model_dump_json()
 
     # Legacy compatibility methods
 
     @staticmethod
     def deserialize(data: dict) -> "IndalekoActivityDataRegistrationService":
-        """
-        Deserialize the registration service from a dictionary.
-        """
+        """Deserialize the registration service from a dictionary."""
         return IndalekoActivityDataRegistrationService(**data)
 
     @staticmethod
@@ -158,14 +147,14 @@ class IndalekoActivityDataRegistrationService(IndalekoRegistrationService):
     @staticmethod
     def create_activity_provider_collection(
         identifier: str,
-        schema: dict | str = None,
-        edge: bool = False,
-        indices: list = None,
-        reset: bool = False,
+        schema: dict | str | None = None,
+        edge: bool = False,  # noqa: FBT001
+        indices: list | None = None,
+        reset: bool = False,  # noqa: FBT001
     ) -> IndalekoCollection:
-        """
-        Create an activity provider collection. If it exists, the existing
-        entry is returned.
+        """Create/lookup  an activity provider collection.
+
+        If it exists, the existing entry is returned.
         """
         service = IndalekoActivityDataRegistrationService()
         return service.create_provider_collection(
@@ -179,7 +168,7 @@ class IndalekoActivityDataRegistrationService(IndalekoRegistrationService):
     @staticmethod
     def delete_activity_provider_collection(
         identifier: str,
-        delete_data_collection: bool = True,
+        delete_data_collection: bool = True,  # noqa: FBT001, FBT002
     ) -> bool:
         """Delete an activity provider collection."""
         service = IndalekoActivityDataRegistrationService()
@@ -188,7 +177,7 @@ class IndalekoActivityDataRegistrationService(IndalekoRegistrationService):
             delete_data=delete_data_collection,
         )
 
-    def register_activity_provider(self, **kwargs) -> tuple[dict, IndalekoCollection]:
+    def register_activity_provider(self, **kwargs: dict) -> tuple[dict, IndalekoCollection]:
         """Register an activity data provider with a friendlier name."""
         return self.register_provider(**kwargs)
 
@@ -206,25 +195,24 @@ class IndalekoActivityDataRegistrationService(IndalekoRegistrationService):
         service = IndalekoActivityDataRegistrationService()
         providers = service.get_provider_list()
 
-        matching_providers = []
-        for provider in providers:
-            if "DataProviderSubType" in provider and provider["DataProviderSubType"] == provider_type:
-                matching_providers.append(provider)
+        return [
+            provider
+            for provider in providers
+            if ("DataProviderSubType" in provider and provider["DataProviderSubType"] == provider_type)
+        ]
 
-        return matching_providers
 
-
-def main():
+def main() -> None:
     """Test the IndalekoActivityDataRegistrationService."""
     service = IndalekoActivityDataRegistrationService()
 
-    print(f"Initialized {service.__class__.__name__}")
-    print(f"Service UUID: {service.service_uuid_str}")
-    print(f"Collection name: {service.collection_name}")
-    print(f"Provider count: {len(service.get_provider_list())}")
-    print()
-    print("Service JSON:")
-    print(service.to_json())
+    print(f"Initialized {service.__class__.__name__}")  # noqa: T201
+    print(f"Service UUID: {service.service_uuid_str}")  # noqa: T201
+    print(f"Collection name: {service.collection_name}")  # noqa: T201
+    print(f"Provider count: {len(service.get_provider_list())}")  # noqa: T201
+    print()  # noqa: T201
+    print("Service JSON:")  # noqa: T201
+    print(service.to_json())  # noqa: T201
 
 
 if __name__ == "__main__":

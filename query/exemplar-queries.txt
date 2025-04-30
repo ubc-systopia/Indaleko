@@ -1,0 +1,6 @@
+Show me documents with "report" in their titles.
+Find files I edited on my phone while traveling last month.
+Get documents I exchanged with Dr. Okafor regarding the conference paper.
+Show me files I created while on vacation in Bali last June.
+Show me photos taken within 16 kilometers of my house.
+Find PDFs I opened in the last week.

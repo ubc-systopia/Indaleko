@@ -8,6 +8,7 @@ src/firecircle/adapters/openai/__init__.py
 src/firecircle/core/__init__.py
 src/firecircle/orchestrator/__init__.py
 src/firecircle/protocol/__init__.py
+src/indaleko/__init__.py
 src/indaleko.egg-info/PKG-INFO
 src/indaleko.egg-info/SOURCES.txt
 src/indaleko.egg-info/dependency_links.txt

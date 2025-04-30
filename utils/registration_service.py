@@ -21,30 +21,35 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+
 import json
 import logging
 import os
 import sys
+
+from contextlib import suppress
+from pathlib import Path
 from typing import Any
 
-if os.environ.get("INDALEKO_ROOT") is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
-        current_path = os.path.dirname(current_path)
-    os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
 
+if os.environ.get("INDALEKO_ROOT") is None:
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
+
+# pylint: disable=wrong-import-position
 from db import (
     IndalekoCollection,
     IndalekoCollections,
     IndalekoDBConfig,
     IndalekoServiceManager,
 )
-
-# pylint: disable=wrong-import-position
-from Indaleko import Indaleko
+from utils.data_validation import validate_uuid_string
 from utils.misc.service import IndalekoService
 from utils.singleton import IndalekoSingleton
+
 
 # pylint: enable=wrong-import-position
 
@@ -67,7 +72,7 @@ class IndalekoRegistrationService(IndalekoSingleton):
         service_type: str,
         collection_name: str,
         collection_prefix: str,
-    ):
+    ) -> None:
         """
         Initialize the registration service.
 
@@ -108,18 +113,18 @@ class IndalekoRegistrationService(IndalekoSingleton):
         self.provider_collection = IndalekoCollections().get_collection(
             self.collection_name,
         )
-        assert self.provider_collection is not None, f"Provider collection {self.collection_name} must exist"
+        assert self.provider_collection is not None, (    # noqa: S101
+            f"Provider collection {self.collection_name} must exist"
+        )
 
         self._initialized = True
-        self.logger.info(f"Initialized {self.__class__.__name__}")
+        self.logger.info("Initialized %s", self.__class__.__name__)
 
     def serialize(self) -> dict:
-        """
-        Serialize the registration service to a dictionary.
-        """
+        """Serialize the registration service to a dictionary."""
         serialized_data = IndalekoService.serialize(self.service)
         if isinstance(serialized_data, tuple):
-            assert len(serialized_data) == 1, "Serialized data is a multi-entry tuple."
+            assert len(serialized_data) == 1, "Serialized data is a multi-entry tuple."  # noqa: S101
             serialized_data = serialized_data[0]
         if isinstance(serialized_data, dict):
             serialized_data["_key"] = self.service_uuid_str
@@ -147,10 +152,10 @@ class IndalekoRegistrationService(IndalekoSingleton):
             if providers is None or len(providers) == 0:
                 return None
 
-            assert len(providers) > 0, "Expected at least one provider"
+            assert len(providers) > 0, "Expected at least one provider"  # noqa: S101
             return providers[0]
-        except Exception as e:
-            self.logger.error(f"Error looking up provider by identifier: {e}")
+        except OSError:
+            self.logger.exception("Error looking up provider by identifier %s", identifier)
             return None
 
     def lookup_provider_by_name(self, name: str) -> dict[str, Any] | None:
@@ -168,10 +173,10 @@ class IndalekoRegistrationService(IndalekoSingleton):
             if providers is None or len(providers) == 0:
                 return None
 
-            assert len(providers) > 0, "Expected at least one provider"
+            assert len(providers) > 0, "Expected at least one provider"  # noqa: S101
             return providers[0]
-        except Exception as e:
-            self.logger.error(f"Error looking up provider by name: {e}")
+        except OSError:
+            self.logger.exception("Error looking up provider by name")
             return None
 
     def get_provider_list(self) -> list[dict[str, Any]]:
@@ -186,10 +191,10 @@ class IndalekoRegistrationService(IndalekoSingleton):
                 FOR provider IN {self.collection_name}
                 RETURN provider
             """
-            cursor = IndalekoDBConfig()._arangodb.aql.execute(aql_query)
-            return [document for document in cursor]
-        except Exception as e:
-            self.logger.error(f"Error getting provider list: {e}")
+            cursor = IndalekoDBConfig().get_arangodb().execute(aql_query)
+            return list(cursor)
+        except OSError:
+            self.logger.exception("Error getting provider list")
             return []
 
     def generate_provider_collection_name(self, identifier: str) -> str:
@@ -202,11 +207,11 @@ class IndalekoRegistrationService(IndalekoSingleton):
         Returns:
             Collection name
         """
-        assert isinstance(
+        assert isinstance(  # noqa: S101
             identifier,
             str,
         ), f"Identifier {identifier} must be a string is {type(identifier)}"
-        assert Indaleko.validate_uuid_string(
+        assert validate_uuid_string(  # noqa: S101
             identifier,
         ), f"Identifier {identifier} must be a valid UUID"
 
@@ -231,9 +236,9 @@ class IndalekoRegistrationService(IndalekoSingleton):
         self,
         identifier: str,
         schema: dict | None | str = None,
-        edge: bool = False,
+        edge: bool = False,  # noqa: FBT001, FBT002
         indices: list | None = None,
-        reset: bool = False,
+        reset: bool = False,  # noqa: FBT001, FBT002
     ) -> IndalekoCollection:
         """
         Create a collection for a provider's data.
@@ -248,8 +253,8 @@ class IndalekoRegistrationService(IndalekoSingleton):
         Returns:
             The IndalekoCollection for the provider
         """
-        assert isinstance(identifier, str), "Identifier must be a string"
-        assert Indaleko.validate_uuid_string(
+        assert isinstance(identifier, str), "Identifier must be a string"  # noqa: S101
+        assert validate_uuid_string(  # noqa: S101
             identifier,
         ), "Identifier must be a valid UUID"
 
@@ -257,12 +262,11 @@ class IndalekoRegistrationService(IndalekoSingleton):
 
         # Check if the collection already exists
         existing_collection = None
-        try:
+
+        with suppress(ValueError):
             existing_collection = IndalekoCollections.get_collection(
                 provider_collection_name,
             )
-        except ValueError:
-            pass  # Collection doesn't exist, which is fine
 
         if existing_collection is not None and not reset:
             return existing_collection
@@ -281,32 +285,27 @@ class IndalekoRegistrationService(IndalekoSingleton):
             config["indices"] = indices
 
         # Create the collection
-        provider_collection = IndalekoCollections.get_collection(
+        return IndalekoCollections.get_collection(
             self.collection_name,
         ).create_collection(name=provider_collection_name, config=config, reset=reset)
-
-        return provider_collection
 
     def delete_provider_collection(
         self,
         identifier: str,
-        delete_data: bool = True,
     ) -> bool:
         """
         Delete a provider's data collection.
 
         Args:
             identifier: UUID string of the provider
-            delete_data: Whether to delete the data collection
 
         Returns:
             True if successful, False otherwise
         """
         # Clean up identifier if it includes the prefix
-        if identifier.startswith(self.collection_prefix):
-            identifier = identifier[len(self.collection_prefix) :]
+        identifier = identifier.removeprefix(self.collection_prefix)
 
-        assert Indaleko.validate_uuid_string(
+        assert validate_uuid_string(  # noqa: S101
             identifier,
         ), "Identifier must be a valid UUID"
 
@@ -315,28 +314,27 @@ class IndalekoRegistrationService(IndalekoSingleton):
         try:
             # Find the collection
             existing_collection = None
-            try:
+
+            with suppress(ValueError):
                 existing_collection = IndalekoCollections.get_collection(
                     provider_collection_name,
                 )
-            except ValueError:
-                pass  # Collection doesn't exist, which is fine
 
             # Delete the collection if it exists
             if existing_collection is not None:
                 self.logger.info(
-                    f"Collection {provider_collection_name} exists, deleting",
+                    "Collection %s exists, deleting",
+                    provider_collection_name,
                 )
                 existing_collection.delete_collection(provider_collection_name)
                 return True
-            else:
-                self.logger.info(
-                    f"Collection {provider_collection_name} does not exist",
-                )
-                return False
-        except Exception as e:
-            self.logger.error(f"Error deleting provider collection: {e}")
-            return False
+            self.logger.info(
+                "Collection %s does not exist", provider_collection_name,
+            )
+        except OSError:
+            self.logger.exception("Error deleting provider collection")
+
+        return False
 
     def delete_provider(self, identifier: str) -> bool:
         """
@@ -352,18 +350,18 @@ class IndalekoRegistrationService(IndalekoSingleton):
             # Check if the provider exists
             existing_provider = self.lookup_provider_by_identifier(identifier)
             if existing_provider is None:
-                self.logger.info(f"Provider {identifier} does not exist")
+                self.logger.info("Provider %s does not exist", identifier)
                 return False
 
             # Delete the provider
-            self.logger.info(f"Deleting provider {identifier}")
+            self.logger.info("Deleting provider %s", identifier)
             self.provider_collection.delete(identifier)
-            return True
-        except Exception as e:
-            self.logger.error(f"Error deleting provider: {e}")
+        except OSError:
+            self.logger.exception("Error deleting provider")
             return False
+        return True
 
-    def register_provider(self, **kwargs) -> tuple[dict, IndalekoCollection]:
+    def register_provider(self, **kwargs: dict) -> tuple[dict, IndalekoCollection]:
         """
         Register a data provider.
 
@@ -377,13 +375,12 @@ class IndalekoRegistrationService(IndalekoSingleton):
             Tuple of (provider_data, provider_collection)
         """
         # Basic validation
-        assert "Identifier" in kwargs, f"Identifier must be in kwargs: {kwargs}"
+        if "Identifier" not in kwargs:
+            raise ValueError(f"Identifier must be in kwargs: {kwargs}")
         provider_id = kwargs["Identifier"]
-        assert isinstance(
-            provider_id,
-            str,
-        ), f"Provider ID must be a string: {provider_id}"
-        assert Indaleko.validate_uuid_string(
+        if not isinstance(provider_id, str):
+            raise TypeError(f"Provider ID must be a string: {provider_id}")
+        assert validate_uuid_string(  # noqa: S101
             provider_id,
         ), f"Provider ID must be a valid UUID: {provider_id}"
 
@@ -405,9 +402,9 @@ class IndalekoRegistrationService(IndalekoSingleton):
         provider_collection = None
         create_collection = kwargs.get("CreateCollection", True)
         if create_collection:
-            schema = kwargs.get("Schema", None)
+            schema = kwargs.get("Schema")
             edge = kwargs.get("Edge", False)
-            indices = kwargs.get("Indices", None)
+            indices = kwargs.get("Indices")
 
             provider_collection = self.create_provider_collection(
                 provider_id,
@@ -418,9 +415,10 @@ class IndalekoRegistrationService(IndalekoSingleton):
 
         # Verify registration
         registered_provider = self.lookup_provider_by_identifier(provider_id)
-        assert registered_provider is not None, "Provider registration failed"
+        if registered_provider is None:
+            raise ValueError("Provider registration failed")
 
-        self.logger.info(f"Registered provider {provider_id}")
+        self.logger.info("Registered provider %s", provider_id)
         return registration_data, provider_collection
 
     def _process_registration_data(self, kwargs: dict[str, Any]) -> dict[str, Any]:
@@ -454,24 +452,23 @@ class IndalekoRegistrationService(IndalekoSingleton):
             # Check if the provider exists
             existing_provider = self.lookup_provider_by_identifier(identifier)
             if existing_provider is None:
-                self.logger.info(f"Provider {identifier} does not exist")
+                self.logger.info("Provider %s does not exist", identifier)
                 return False
-
             # Update the provider to mark it as inactive
             existing_provider["Active"] = False
             self.provider_collection.update(identifier, existing_provider)
-
-            return True
-        except Exception as e:
-            self.logger.error(f"Error deactivating provider: {e}")
+        except OSError:
+            self.logger.exception("Error deactivating provider")
             return False
 
+        return True
 
-def main():
+
+def main() -> None:
     """Test the registration service."""
     # Can't instantiate the base class directly
-    print("IndalekoRegistrationService is an abstract base class.")
-    print("It should be extended by specific registration services.")
+    print("IndalekoRegistrationService is an abstract base class.")  # noqa: T201
+    print("It should be extended by specific registration services.")  # noqa: T201
 
 
 if __name__ == "__main__":

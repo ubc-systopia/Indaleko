@@ -38,7 +38,7 @@ dependencies = [
     "pytile==2024.12.0",
     "spotipy==2.25.0",
     "pyecobee==1.3.11",
-    "tiktoken==0.7.0",
+    "tiktoken==0.9.0",
     "regex==2024.5.15",
     "winsdk==1.0.0b10 ; platform_system == 'Windows'",
     "win32more==0.5.10 ; platform_system == 'Windows'",
@@ -65,6 +65,9 @@ test = ["pytest>=6.0"]
 dev = ["black", "flake8", "pre-commit"]
 windows = ['winsdk==1.0.0b10']
 gui = ["streamlit>=1.38.0", "plotly>=5.22.0", "pydeck>=0.8.0"]
+
+[tool.setuptools]
+py-modules = []  # No Python modules to package
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

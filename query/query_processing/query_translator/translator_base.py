@@ -36,7 +36,7 @@ from query.query_processing.data_models.translator_input import TranslatorInput
 from query.query_processing.data_models.translator_response import TranslatorOutput
 
 # from query.query_processing.data_models.query_output import LLMTranslateQueryResponse
-# from query.llm_base import IndalekoLLMBase
+# from query.utils.llm_connector.llm_base import IndalekoLLMBase
 # pylint: enable=wrong-import-position
 
 
