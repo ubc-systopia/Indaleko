@@ -2,6 +2,33 @@
 
 This directory contains utility functions to enhance database operations in the Indaleko project.
 
+## ArangoDB Command Wrapper Utility
+
+The `arango_commands.py` module provides wrappers for ArangoDB command-line tools to simplify their use with proper authentication and connection parameters:
+
+- `ArangoImportGenerator` - Generate arangoimport commands
+- `ArangoRestoreGenerator` - Generate arangorestore commands
+- `ArangoDumpGenerator` - Generate arangodump commands
+- `ArangoShellGenerator` - Generate arangosh commands
+
+See [ARANGO_COMMANDS_README.md](./ARANGO_COMMANDS_README.md) for detailed documentation.
+
+### Basic Usage
+
+```python
+from db.utils import ArangoRestoreGenerator
+
+# Create and configure restore command
+restore_cmd = ArangoRestoreGenerator()
+cmd_string = restore_cmd.with_input_directory("/path/to/backup") \
+                 .with_create(True) \
+                 .build_command()
+
+# Execute the command
+result = restore_cmd.execute()
+print(f"Command completed with exit code {result.returncode}")
+```
+
 ## Query Performance Monitoring
 
 The `query_performance.py` module provides tools for monitoring ArangoDB query performance. It includes:
