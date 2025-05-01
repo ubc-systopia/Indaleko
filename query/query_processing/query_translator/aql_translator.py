@@ -22,6 +22,7 @@ import json
 import os
 import sys
 
+from datetime import UTC, datetime
 from pathlib import Path
 from textwrap import dedent
 from typing import Any
@@ -103,7 +104,19 @@ class AQLTranslator(TranslatorBase):
         )
         performance_data = json.loads(completion.usage.model_dump_json())
         response_data = json.loads(completion.choices[0].message.content)
-        # > print(json.dumps(response_data, indent=2))
+        if ("aql_query" not in response_data and
+             "example" in response_data and
+             "aql_query" in response_data["example"]
+        ):
+            return TranslatorOutput(
+                aql_query=response_data["example"]["aql_query"],
+                explanation=response_data["example"]["explanation"],
+                confidence=response_data["example"]["confidence"],
+                observations=response_data["example"].get("observations", None),
+                performance_info=performance_data,
+                bind_vars=response_data["example"].get("bind_vars", {}),
+                additional_notes=response_data["example"].get("additional_notes", None),
+            )
         return TranslatorOutput(
             aql_query=response_data["aql_query"],
             explanation=response_data["explanation"],
@@ -309,8 +322,6 @@ class AQLTranslator(TranslatorBase):
             dict[str, str]: A mapping of keywords to their relevant collections.
         """
         # Fetch all collection metadata from CollectionMetadata
-        for data in self.collection_data:
-            ic(dir(data))
 
         return {
             "file": "Objects",
@@ -384,18 +395,8 @@ class AQLTranslator(TranslatorBase):
 
         # Get available views if db_config is available
         available_views = []
-        try:
-            if hasattr(self.db_config, "db"):
-                available_views = list(self.db_config.db.views())
-        except (TypeError, AttributeError):
-            # Default views from db_collections.py if we can't access the database
-            available_views = [
-                "ObjectsTextView",
-                "NamedEntityTextView",
-                "ActivityTextView",
-                "EntityEquivalenceTextView",
-                "KnowledgeTextView",
-            ]
+        if hasattr(self.db_config, "db"):
+            available_views = list(self.db_config.db.views())
 
         # Determine if this is a text search query
         is_text_search = False
@@ -409,6 +410,7 @@ class AQLTranslator(TranslatorBase):
                 is_text_search = True
 
         system_prompt = f"""
+        Hello. The curren time is {datetime.now(UTC).isoformat()}.
         You are **Archivist**, an expert at working with Indaleko to find pertinent
         digital objects (e.g., files).
         **Indaleko** implements a unified personal index (UPI) system

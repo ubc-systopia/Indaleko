@@ -37,6 +37,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 
 # pylint: disable=wrong-import-position
+from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from db import IndalekoDBConfig
 from perf.perf_collector import IndalekoPerformanceDataCollector
 from query.result_analysis.result_formatter import FormattedResults, deduplicate_results
@@ -84,7 +85,7 @@ class AQLExecutor(ExecutorBase):
             IndalekoDBConfig,
         ), "Data connector must be an instance of IndalekoDBConfig"
 
-        bind_vars = kwargs.get("bind_vars",)
+        bind_vars = kwargs.get("bind_vars")
         explain = kwargs.get("explain", False)
         collect_performance = kwargs.get("collect_performance", False)
         deduplicate = kwargs.get("deduplicate", False)
@@ -94,18 +95,29 @@ class AQLExecutor(ExecutorBase):
         if bind_vars is None:
             bind_vars = {}
 
-        ic(query)
-
         # If explain mode is requested, return the query plan
         if explain:
             return AQLExecutor.explain_query(query, data_connector, bind_vars)
 
         try:
             # Execute the AQL query
-            query_to_execute = query
-            vars_to_bind = bind_vars
-            def execute_query(**_kwargs: dict | None) -> Cursor:
-                return data_connector.db.aql.execute(query_to_execute, vars_to_bind)
+            class LocalExecutor:
+                """A local executor class to handle query execution."""
+                def __init__(self, query: str, bind_vars: dict[str, Any] | None = None):
+                    self.query = query
+                    self.bind_vars = bind_vars or {}
+
+                def execute_query(self, **_kwargs: dict | None) -> Cursor:
+                    """Execute the AQL query."""
+                    revised_query = self.query
+                    for key, value in self.bind_vars.items():
+                        bind_key = f"@{key}"
+                        bind_value = f'"{value}"'
+                        revised_query = revised_query.replace(bind_key, bind_value)
+                    ic(self.query, " -> ", revised_query)
+                    return data_connector.db.aql.execute(revised_query)
+
+            executor = LocalExecutor(query, bind_vars)
 
             def process_query_response(**kwargs: dict | None) -> dict:
                 result = kwargs.get("result")
@@ -117,8 +129,14 @@ class AQLExecutor(ExecutorBase):
             performance_info = None
             if collect_performance:
                 perf_data = IndalekoPerformanceDataCollector.measure_performance(
-                    task_func=execute_query,
+                    task_func=executor.execute_query,
+                    source=IndalekoSourceIdentifierDataModel(
+                        Identifier="6b2c9343-d6f5-4360-b43c-39094f83170f",
+                        Version="1.0,0",
+                        Description="AQL execution",
+                    ),
                     description="Executing AQL query",
+                    MachineIdentifier=None,
                     query=query,
                     bind_vars=bind_vars,
                     process_results_func=process_query_response,
@@ -143,7 +161,7 @@ class AQLExecutor(ExecutorBase):
                 }
                 query_result = perf_data.AdditionalData["query response"]
             else:
-                query_result = execute_query()
+                query_result = executor.execute_query()
 
             # Format the results with or without deduplication
             formatted_results = AQLExecutor.format_results(

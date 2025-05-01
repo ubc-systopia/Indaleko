@@ -67,6 +67,10 @@ from activity.collectors.storage.semantic_attributes import (
 
 # pylint: disable=wrong-import-position
 from activity.recorders.storage.base import StorageActivityRecorder
+# Local imports for transition snapshots
+import json
+import os
+from datetime import UTC, datetime
 from activity.recorders.storage.ntfs.tiered.importance_scorer import ImportanceScorer
 from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 
@@ -509,6 +513,64 @@ class NtfsWarmTierRecorder(StorageActivityRecorder):
         except Exception as e:
             self._logger.error(f"Error marking hot tier activities as transitioned: {e}")
             return 0
+    
+    def run_transition_with_snapshots(
+        self,
+        age_threshold_hours: int = 12,
+        batch_size: int = 1000,
+        data_root: str = "data",
+    ) -> tuple[int, int]:
+        """
+        Run a transition batch from hot tier to warm tier, writing JSON snapshots.
+
+        Args:
+            age_threshold_hours: age in hours to select hot-tier docs
+            batch_size: maximum docs per batch
+            data_root: root directory for snapshots
+
+        Returns:
+            Tuple of (hot_count, warm_count)
+        """
+        # Prepare snapshot directory
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H")
+        snapshot_dir = os.path.join(data_root, "warm_snapshots", timestamp)
+        os.makedirs(snapshot_dir, exist_ok=True)
+
+        # Fetch hot-tier docs
+        hot_docs = self.find_hot_tier_activities_to_transition(
+            age_threshold_hours, batch_size
+        )
+        hot_count = len(hot_docs)
+        # Write raw hot docs
+        hot_path = os.path.join(snapshot_dir, "hot.jsonl")
+        with open(hot_path, "w", encoding="utf-8") as hf:
+            for doc in hot_docs:
+                hf.write(json.dumps(doc, default=str) + "\n")
+
+        # Process for warm tier
+        warm_docs = self.process_hot_tier_activities(hot_docs)
+        warm_count = len(warm_docs)
+        # Write processed warm docs
+        warm_path = os.path.join(snapshot_dir, "warm.jsonl")
+        with open(warm_path, "w", encoding="utf-8") as wf:
+            for doc in warm_docs:
+                wf.write(json.dumps(doc, default=str) + "\n")
+
+        # Store to warm tier collection
+        self.store_activities(warm_docs)
+
+        # Optionally mark hot docs as transitioned
+        try:
+            self.mark_hot_tier_activities_transitioned(hot_docs)
+        except Exception:
+            pass
+
+        # Log compression ratio
+        ratio = (warm_count / hot_count) if hot_count else 0.0
+        self._logger.info(
+            f"Warm tier compression ratio: {warm_count}/{hot_count} = {ratio:.2f}"
+        )
+        return hot_count, warm_count
 
     def get_entity_metadata(self, entity_id: str) -> dict[str, Any] | None:
         """
@@ -1530,7 +1592,10 @@ if __name__ == "__main__":
 
     # Add operation modes
     parser.add_argument("--stats", action="store_true", help="Show warm tier statistics")
-    parser.add_argument("--transition", action="store_true", help="Enable automatic transition from hot tier")
+    parser.add_argument("--transition", action="store_true", help="Run warm-tier transition with snapshots")
+    parser.add_argument("--age-hours", type=int, default=12, help="Age threshold in hours for transition")
+    parser.add_argument("--batch-size", type=int, default=1000, help="Max activities per transition batch")
+    parser.add_argument("--data-dir", type=str, default="data", help="Root directory for snapshot files")
 
     # Parse arguments
     args = parser.parse_args()
@@ -1561,6 +1626,7 @@ if __name__ == "__main__":
             no_db=args.no_db,
             db_config_path=args.db_config,
             transition_enabled=args.transition,
+            data_dir=args.data_dir,
         )
 
         # Show statistics if requested
@@ -1606,18 +1672,34 @@ if __name__ == "__main__":
         # Check hot tier for transition-ready activities
         if args.hot_tier:
             print("\nChecking hot tier for transition-ready activities...")
-            activities = recorder.find_hot_tier_activities_to_transition()
+            activities = recorder.find_hot_tier_activities_to_transition(
+                age_threshold_hours=args.age_hours,
+                batch_size=args.batch_size,
+            )
 
             if activities:
                 print(f"Found {len(activities)} activities ready for transition")
 
-                # If transition is enabled, process them
+                # If transition is enabled, process them directly
                 if args.transition:
-                    print("Processing activities for warm tier...")
+                    print("Processing activities for warm tier (direct)...")
                     count = recorder.transition_from_hot_tier()
                     print(f"Transitioned {count} activities to warm tier")
             else:
                 print("No activities found ready for transition")
+        # Run warm-tier transition with snapshots
+        elif args.transition:
+            print("\nRunning warm-tier transition with snapshots...")
+            hot_count, warm_count = recorder.run_transition_with_snapshots(
+                age_threshold_hours=args.age_hours,
+                batch_size=args.batch_size,
+                data_root=args.data_dir,
+            )
+            ratio = (warm_count / hot_count) if hot_count else 0.0
+            print(
+                f"Snapshot transition complete: {hot_count} hot -> {warm_count} warm "
+                f"(ratio {ratio:.2f})"
+            )
 
         print("\nDone.")
 

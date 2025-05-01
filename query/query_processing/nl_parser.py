@@ -24,10 +24,12 @@ import os
 import sys
 import time
 import traceback
+
 from textwrap import dedent
 from typing import Any
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -44,7 +46,7 @@ from data_models.named_entity import (
     example_entities,
 )
 from db.db_collection_metadata import IndalekoDBCollectionsMetadata
-from query.query_processing.data_models.query_input import StructuredQuery
+from query.query_processing.data_models.parser_data import ParserResults
 from query.query_processing.data_models.query_output import (
     LLMCollectionCategory,
     LLMCollectionCategoryEnum,
@@ -53,6 +55,7 @@ from query.query_processing.data_models.query_output import (
     LLMIntentTypeEnum,
 )
 from query.utils.llm_connector.llm_base import IndalekoLLMBase
+
 
 # pylint: enable=wrong-import-position
 
@@ -261,7 +264,7 @@ class NLParser:
                     },
                 }
 
-    def parse(self, query: str) -> StructuredQuery:
+    def parse(self, query: str) -> ParserResults:
         """
         Parse the natural language query into a structured format.
 
@@ -271,56 +274,13 @@ class NLParser:
         Returns:
             ParserResults: A structured representation of the query
         """
-        logging.info(f"Parsing query: {query}")
+        return ParserResults(
+            OriginalQuery=query,
+            Intent=self._detect_intent(query),
+            Entities=self._extract_entities(query),
+            Categories=self._extract_categories(query),
+        )
 
-        try:
-            # Extract categories
-            categories = self._extract_categories(query)
-
-            # Detect intent
-            intent = self._detect_intent(query)
-
-            # Extract entities
-            entities = self._extract_entities(query)
-
-            # Create structured query
-            structured_query = StructuredQuery(
-                original_query=query,
-                intent=intent.intent,
-                entities=entities,
-            )
-
-            return structured_query
-
-        except Exception as e:
-            # Log and track the error
-            logger.error(f"Error parsing query: {e}")
-            logger.debug(traceback.format_exc())
-            self.error_count["total"] += 1
-            self.error_log.append(
-                {
-                    "timestamp": time.time(),
-                    "query": query,
-                    "stage": "parse",
-                    "error": str(e),
-                    "traceback": traceback.format_exc(),
-                },
-            )
-
-            # Create a fallback structured query
-            entity = IndalekoNamedEntityDataModel(
-                name=query,
-                category=IndalekoNamedEntityType.keyword,
-                description=query,
-            )
-
-            entity_collection = NamedEntityCollection(entities=[entity])
-
-            return StructuredQuery(
-                original_query=query,
-                intent="search",
-                entities=entity_collection,
-            )
 
     def _detect_intent(self, query: str) -> LLMIntentQueryResponse:
         """
@@ -440,7 +400,6 @@ class NLParser:
             LLMCollectionCategoryQueryResponse: A response with category mappings
         """
         try:
-            ic(type(self.collection_data["Objects"]))
 
             # Define existing category types
             typical_categories = [category.value for category in LLMCollectionCategoryEnum]
@@ -498,7 +457,6 @@ class NLParser:
                 category_response.model_json_schema(),
             )
             doc = json.loads(response)
-            ic(doc)
 
             # Validate and repair category response
             try:
@@ -616,7 +574,7 @@ class NLParser:
                 # Create default entity
                 entity = IndalekoNamedEntityDataModel(
                     name=query,
-                    category=IndalekoNamedEntityType.keyword,
+                    category=IndalekoNamedEntityType.item,
                     description=query,
                 )
                 return NamedEntityCollection(entities=[entity])
@@ -643,7 +601,7 @@ class NLParser:
             # Create default entity
             entity = IndalekoNamedEntityDataModel(
                 name=query,
-                category=IndalekoNamedEntityType.keyword,
+                category=IndalekoNamedEntityType.item,
                 description=query,
             )
             return NamedEntityCollection(entities=[entity])

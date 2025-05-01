@@ -924,7 +924,9 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 
                 # Use the categories to obtain the metadata attributes
                 # of the corresponding collection
-                collection_categories = [entity.collection for entity in parsed_query.Categories.category_map]
+                collection_categories = [
+                    entity.collection for entity in parsed_query.Categories.category_map
+                ]
                 collection_metadata = self.get_collection_metadata(
                     collection_categories,
                 )
@@ -970,6 +972,8 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 # Standard translation
                 translated_query = self.query_translator.translate(query_data)
 
+            ic(translated_query.bind_vars)
+
             # Always get the query execution plan first
             explain_results = self.query_executor.explain_query(
                 translated_query.aql_query,
@@ -1000,9 +1004,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 # Use the bind variables from the translated query
                 bind_vars = getattr(translated_query, "bind_vars", {})
 
-                # Log the bind variables being used
-                if bind_vars:
-                    pass
+                ic("cli", bind_vars)
 
                 raw_results = self.query_executor.execute(
                     translated_query.aql_query,
@@ -1061,7 +1063,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             else:
                 pass
             # Build history record
-            end_time = datetime.now(timezone.utc)
+            end_time = datetime.now(UTC)
             time_diference = end_time - start_time
 
             # Convert facets to the right format for QueryHistoryData
@@ -1211,10 +1213,6 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                     intent="search",
                     entities=entities,
                 )
-
-            # Check if user wants to continue
-            if not self.continue_session():
-                break
 
         # self.logging_service.log_session_end()
 
@@ -1779,32 +1777,14 @@ def main() -> None:
         parser = argparse.ArgumentParser(description="Indaleko Query CLI")
         add_arguments(parser)
         parser.print_help()
-
-
-
-
-
-
         return
 
-    # Display normal welcome message for interactive use
 
-    # Run the full CLI with all components
-    debug_mode = "--debug" in sys.argv
+    # Create the CLI instance with better error handling
+    cli = IndalekoQueryCLI()
 
-    try:
-        # Create the CLI instance with better error handling
-        cli = IndalekoQueryCLI()
-
-        # Run the CLI with better error handling
-        cli.run()
-    except Exception:
-
-        # For debugging, print more detailed error information if available
-        if debug_mode:
-            import traceback
-
-            traceback.print_exc()
+    # Run the CLI with better error handling
+    cli.run()
 
 
 if __name__ == "__main__":

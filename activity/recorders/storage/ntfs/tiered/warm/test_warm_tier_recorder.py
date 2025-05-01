@@ -606,6 +606,159 @@ class TestImportanceScorer(unittest.TestCase):
         self.assertLess(unimportant_score, 0.4)
 
 
+"""
+Transition Snapshots Tests: Verify run_transition_with_snapshots behavior
+"""
+class TestWarmTierTransitionSnapshots(unittest.TestCase):
+    """Test the warm-tier transition snapshots and compression logic."""
+
+    def setUp(self):
+        # Create a temporary data directory for snapshots
+        import tempfile
+        self.temp_dir = tempfile.mkdtemp()
+
+        # Initialize recorder in no-db mode with snapshot dir
+        self.recorder = NtfsWarmTierRecorder(
+            ttl_days=1,
+            debug=False,
+            no_db=True,
+            transition_enabled=True,
+            data_dir=self.temp_dir,
+        )
+
+        # Prepare fake hot-tier documents and processed warm-tier docs
+        self.raw_docs = [{'_key': f'doc{i}', 'foo': 'bar'} for i in range(5)]
+        self.processed_docs = self.raw_docs[:2]
+
+        # Monkey-patch methods
+        self.recorder.find_hot_tier_activities_to_transition = MagicMock(return_value=self.raw_docs)
+        self.recorder.process_hot_tier_activities = MagicMock(return_value=self.processed_docs)
+        self.recorder.store_activities = MagicMock()
+        self.recorder.mark_hot_tier_activities_transitioned = MagicMock()
+
+    def tearDown(self):
+        # Remove temporary data directory
+        import shutil
+        shutil.rmtree(self.temp_dir)
+
+    def test_run_transition_with_snapshots_creates_files_and_calls_store(self):
+        # Execute transition with snapshots
+        hot_count, warm_count = self.recorder.run_transition_with_snapshots(
+            age_threshold_hours=1,
+            batch_size=10,
+            data_root=self.temp_dir,
+        )
+        # Verify counts
+        self.assertEqual(hot_count, len(self.raw_docs))
+        self.assertEqual(warm_count, len(self.processed_docs))
+
+        # Verify store_activities called with processed docs
+        self.recorder.store_activities.assert_called_once_with(self.processed_docs)
+
+        # Verify snapshot files exist and have correct line counts
+        import os
+        # Locate snapshot subdirectory
+        snapshot_root = os.path.join(self.temp_dir, 'warm_snapshots')
+        subdirs = os.listdir(snapshot_root)
+        self.assertEqual(len(subdirs), 1)
+        snapshot_dir = os.path.join(snapshot_root, subdirs[0])
+        hot_path = os.path.join(snapshot_dir, 'hot.jsonl')
+        warm_path = os.path.join(snapshot_dir, 'warm.jsonl')
+        self.assertTrue(os.path.isfile(hot_path))
+        self.assertTrue(os.path.isfile(warm_path))
+
+        # Check line counts
+        with open(hot_path, 'r', encoding='utf-8') as hf:
+            self.assertEqual(sum(1 for _ in hf), len(self.raw_docs))
+        with open(warm_path, 'r', encoding='utf-8') as wf:
+            self.assertEqual(sum(1 for _ in wf), len(self.processed_docs))
+
 if __name__ == "__main__":
     # Run tests
     unittest.main()
+    
+class TestWarmTierTransitionIntegration(unittest.TestCase):
+    """Integration test: run transition against a live test database."""
+
+    @classmethod
+    def setUpClass(cls):
+        # Attempt to load real database config
+        from db.db_config import IndalekoDBConfig
+        import tempfile, shutil
+
+        # Path to test DB config (adjust as needed)
+        config_path = os.path.join(os.environ.get("INDALEKO_ROOT", ""), "config", "indaleko-db-config-local.ini")
+        if not os.path.exists(config_path):
+            raise unittest.SkipTest(f"Integration DB config not found: {config_path}")
+        # Connect to DB
+        cls.db_config = IndalekoDBConfig(config_file=config_path)
+        if not getattr(cls.db_config, 'started', False):
+            raise unittest.SkipTest("Could not start database for integration test")
+        cls.db = cls.db_config
+        # Prepare test collections
+        import uuid
+        cls.hot_name = f"test_hot_{uuid.uuid4().hex[:8]}"
+        cls.warm_name = f"test_warm_{uuid.uuid4().hex[:8]}"
+        # Create or get collections
+        cls.db_config._arangodb.db(cls.db_config.config['database']['database']).create_collection(cls.hot_name)
+        cls.db_config._arangodb.db(cls.db_config.config['database']['database']).create_collection(cls.warm_name)
+        cls.hot_coll = cls.db.get_collection(cls.hot_name)
+        cls.warm_coll = cls.db.get_collection(cls.warm_name)
+        # Insert test hot-tier docs (older than threshold)
+        from datetime import UTC, datetime, timedelta
+        now = datetime.now(UTC)
+        docs = []
+        for i in range(5):
+            docs.append({
+                '_key': f'doc{i}',
+                'Record': {'Data': {
+                    'timestamp': (now - timedelta(hours=13)).isoformat(),
+                    'transitioned': False
+                }}
+            })
+        for d in docs:
+            cls.hot_coll.insert(d)
+        # Create recorder
+        tmpdir = tempfile.mkdtemp()
+        cls.tmpdir = tmpdir
+        from activity.recorders.storage.ntfs.tiered.warm.recorder import NtfsWarmTierRecorder
+        cls.recorder = NtfsWarmTierRecorder(
+            ttl_days=1,
+            debug=False,
+            no_db=True,
+            transition_enabled=True,
+            data_dir=tmpdir,
+        )
+        # Override DB and collections
+        cls.recorder._db = cls.db_config
+        cls.recorder._hot_tier_collection_name = cls.hot_name
+        cls.recorder._collection_name = cls.warm_name
+        cls.recorder._collection = cls.warm_coll
+
+    @classmethod
+    def tearDownClass(cls):
+        # Cleanup test collections and tempdir
+        cls.db_config._arangodb.db(cls.db_config.config['database']['database']).delete_collection(cls.hot_name)
+        cls.db_config._arangodb.db(cls.db_config.config['database']['database']).delete_collection(cls.warm_name)
+        import shutil
+        shutil.rmtree(cls.tmpdir)
+
+    def test_integration_transition_writes_db_and_snapshots(self):
+        # Run transition
+        hot_count, warm_count = self.recorder.run_transition_with_snapshots(
+            age_threshold_hours=12,
+            batch_size=10,
+            data_root=self.tmpdir,
+        )
+        # Verify counts
+        self.assertEqual(hot_count, 5)
+        self.assertEqual(warm_count, 5)
+        # Verify warm-tier collection has docs
+        self.assertEqual(self.warm_coll.count(), 5)
+        # Verify snapshot files exist
+        snapshot_root = os.path.join(self.tmpdir, 'warm_snapshots')
+        subdirs = os.listdir(snapshot_root)
+        self.assertEqual(len(subdirs), 1)
+        sd = os.path.join(snapshot_root, subdirs[0])
+        self.assertTrue(os.path.isfile(os.path.join(sd, 'hot.jsonl')))
+        self.assertTrue(os.path.isfile(os.path.join(sd, 'warm.jsonl')))

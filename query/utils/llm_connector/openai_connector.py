@@ -42,9 +42,7 @@ from query.utils.llm_connector.llm_base import IndalekoLLMBase
 
 
 class OpenAIConnector(IndalekoLLMBase):
-    """
-    Connector for OpenAI's language models.
-    """
+    """Connector for OpenAI's language models."""
 
     llm_name = "OpenAI"
 
@@ -204,7 +202,6 @@ class OpenAIConnector(IndalekoLLMBase):
                 total += len(enc.encode(value))
         if total > 4096:
             ic(f"Total length of messages {total} exceeds 4096 characters")
-            ic(messages)
         completion = self.client.beta.chat.completions.parse(
             model=self.model,
             messages=messages,
@@ -217,7 +214,6 @@ class OpenAIConnector(IndalekoLLMBase):
                 },
             },
         )
-        ic(completion)
         return completion.choices[0].message.content
 
     def get_completion(
@@ -239,7 +235,7 @@ class OpenAIConnector(IndalekoLLMBase):
         """
         prompt = f"Context: {context}\n\n"
         question = f"User query: {question}"
-        completion = self.client.beta.chat.completions.parse(
+        return self.client.beta.chat.completions.parse(
             model=self.model,
             messages=[
                 {"role": "system", "content": prompt},
@@ -254,7 +250,6 @@ class OpenAIConnector(IndalekoLLMBase):
                 },
             },
         )
-        return completion
 
     def generate_text(
         self,

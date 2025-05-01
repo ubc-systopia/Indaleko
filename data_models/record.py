@@ -40,6 +40,7 @@ from data_models.base import IndalekoBaseModel
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from utils.misc.data_management import encode_binary_data
 
+
 # pylint: enable=wrong-import-position
 
 

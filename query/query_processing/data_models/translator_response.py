@@ -24,7 +24,7 @@ import sys
 from datetime import UTC, datetime
 from typing import Any
 
-from pydantic import Field, validator
+from pydantic import Field, field_validator
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -54,30 +54,29 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 
 class TranslatorOutput(IndalekoBaseModel):
-    """
-    Define the output data model for the translator.
-    """
+    """Define the output data model for the translator."""
 
     aql_query: str
     explanation: str
     confidence: float
     observations: str | None = None
-    performance_info: dict[str, Any] = {}
+    performance_info: dict[str, int | float | str | dict | list] = {}
     additional_notes: str | None = None
-    bind_vars: dict[str, Any] = {}
+    bind_vars: dict[str, int | float | str | dict | list] = {}
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
-    @validator("timestamp")
-    def ensure_timezone(cls, v):
+    @classmethod
+    @field_validator("timestamp")
+    def ensure_timezone(cls, v: datetime) -> datetime:
         """Ensure the timestamp has a timezone."""
         if v.tzinfo is None:
             return v.replace(tzinfo=UTC)
         return v
 
     class Config:
-        arbitrary_types_allowed = True
+        """Configuration."""
 
-        json_schema_extra = {
+        json_schema_extra = {  # noqa: RUF012
             "example": {
                 "aql_query": "FOR doc IN collection FILTER doc.attribute == @value RETURN doc",
                 "explanation": "The query filters documents in the collection where the attribute equals the provided value.",
@@ -94,3 +93,16 @@ class TranslatorOutput(IndalekoBaseModel):
                 "timestamp": "2025-02-17T12:34:56.789Z",
             },
         }
+
+
+def main() -> None:
+    """This allows testing the data model."""
+    import json
+    from icecream import ic
+    ic("Testing TranslatorOutput")
+    # TranslatorOutput.test_model_main()
+    print(json.dumps(TranslatorOutput.model_json_schema(), indent=2))
+
+
+if __name__ == "__main__":
+    main()
