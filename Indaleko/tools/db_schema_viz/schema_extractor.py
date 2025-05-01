@@ -74,7 +74,7 @@ COLLECTION_DESCRIPTIONS = {
 def extract_collections() -> List[Dict[str, Any]]:
     """
     Extract collection information from the ArangoDB database.
-
+    
     Returns:
         A list of dictionaries containing collection information, with
         each dictionary having the following keys:
@@ -91,51 +91,51 @@ def extract_collections() -> List[Dict[str, Any]]:
     except Exception as e:
         logging.error(f"Failed to connect to ArangoDB: {e}")
         return []
-
+    
     collections_info = []
-
+    
     try:
         # Get all collections from ArangoDB
         logging.debug("Retrieving collections from ArangoDB...")
         collections = db.collections()
-
+        
         # Filter out system collections
         user_collections = [c for c in collections if not c["name"].startswith("_")]
-
+        
         for collection in user_collections:
             collection_name = collection["name"]
             logging.debug(f"Processing collection: {collection_name}")
-
+            
             # Determine collection type
             collection_type = EDGE_COLLECTION if collection["type"] == 3 else DOCUMENT_COLLECTION
-
+            
             # Get collection information
             collection_obj = db.collection(collection_name)
-
+            
             # Get indexes
             try:
                 indexes = collection_obj.indexes()
             except Exception as e:
                 logging.warning(f"Failed to get indexes for {collection_name}: {e}")
                 indexes = []
-
+            
             # Get document count
             try:
                 count = collection_obj.count()
             except Exception as e:
                 logging.warning(f"Failed to get document count for {collection_name}: {e}")
                 count = 0
-
+            
             # Get description
             description = COLLECTION_DESCRIPTIONS.get(
-                collection_name,
+                collection_name, 
                 f"{collection_type.capitalize()} collection"
             )
-
+            
             # If it's an ActivityProviderData collection with UUID, use a generic description
             if collection_name.startswith("ActivityProviderData_"):
                 description = "Activity data for a specific provider"
-
+            
             collections_info.append({
                 "name": collection_name,
                 "type": collection_type,
@@ -143,10 +143,10 @@ def extract_collections() -> List[Dict[str, Any]]:
                 "indexes": indexes,
                 "count": count
             })
-
+        
         logging.info(f"Extracted information for {len(collections_info)} collections")
         return collections_info
-
+    
     except Exception as e:
         logging.error(f"Error extracting collections: {e}")
         return []
@@ -155,10 +155,10 @@ def extract_collections() -> List[Dict[str, Any]]:
 def extract_relationships(collections: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     Extract relationships between collections.
-
+    
     Args:
         collections: List of collection information as returned by extract_collections()
-
+    
     Returns:
         A list of dictionaries representing relationships, with each dictionary
         having the following keys:
@@ -169,22 +169,22 @@ def extract_relationships(collections: List[Dict[str, Any]]) -> List[Dict[str, A
     """
     logging.info("Extracting relationships between collections...")
     relationships = []
-
+    
     try:
         db_config = IndalekoDBConfig()
         db = db_config.get_arangodb()
     except Exception as e:
         logging.error(f"Failed to connect to ArangoDB: {e}")
         return []
-
+    
     # Find edge collections
     edge_collections = [c for c in collections if c["type"] == EDGE_COLLECTION]
-
+    
     # Extract relationships from edge collections
     for edge_collection in edge_collections:
         collection_name = edge_collection["name"]
         logging.debug(f"Processing edge collection: {collection_name}")
-
+        
         try:
             # For most edge collections, we would examine a sample of documents to find
             # the _from and _to collections, but we'll use predefined relationships for now
@@ -222,7 +222,7 @@ def extract_relationships(collections: List[Dict[str, Any]]) -> List[Dict[str, A
                 ])
         except Exception as e:
             logging.warning(f"Failed to process relationships for {collection_name}: {e}")
-
+    
     # Add known semantic relationships that aren't strictly edge-based
     semantic_relationships = [
         {
@@ -305,7 +305,7 @@ def extract_relationships(collections: List[Dict[str, Any]]) -> List[Dict[str, A
         }
     ]
     relationships.extend(semantic_relationships)
-
+    
     logging.info(f"Extracted {len(relationships)} relationships between collections")
     return relationships
 
@@ -313,32 +313,32 @@ def extract_relationships(collections: List[Dict[str, Any]]) -> List[Dict[str, A
 def extract_collection_schema(collection_name: str) -> Dict[str, Any]:
     """
     Extract schema information for a specific collection.
-
+    
     Args:
         collection_name: The name of the collection to extract schema for
-
+    
     Returns:
         A dictionary containing schema information, with fields and their types
     """
     logging.info(f"Extracting schema for collection: {collection_name}")
-
+    
     try:
         db_config = IndalekoDBConfig()
         db = db_config.get_arangodb()
-
+        
         # Get a sample document from the collection
         query = f"FOR doc IN {collection_name} LIMIT 1 RETURN doc"
         cursor = db.aql.execute(query)
-
+        
         # Extract schema from the sample document
         schema = {}
-
+        
         for document in cursor:
             _extract_schema_from_document(document, schema)
             break  # Only process the first document
-
+        
         return schema
-
+    
     except Exception as e:
         logging.error(f"Failed to extract schema for {collection_name}: {e}")
         return {}
@@ -347,7 +347,7 @@ def extract_collection_schema(collection_name: str) -> Dict[str, Any]:
 def _extract_schema_from_document(document: Dict[str, Any], schema: Dict[str, Any], prefix: str = "") -> None:
     """
     Helper function to recursively extract schema from a document.
-
+    
     Args:
         document: The document to extract schema from
         schema: The schema dictionary to update
@@ -357,9 +357,9 @@ def _extract_schema_from_document(document: Dict[str, Any], schema: Dict[str, An
         # Skip internal ArangoDB fields
         if key.startswith("_"):
             continue
-
+        
         field_name = f"{prefix}{key}" if prefix else key
-
+        
         if isinstance(value, dict):
             schema[field_name] = "object"
             _extract_schema_from_document(value, schema, f"{field_name}.")

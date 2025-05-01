@@ -108,7 +108,7 @@ class IndalekoActivityContextDataModel(IndalekoBaseModel):
 
         json_schema_extra = {  # noqa: RUF012
             "example": {
-                "Handle": uuid.uuid4(),
+                "Handle": str(uuid.uuid4()),
                 "Timestamp": "2024-01-01T00:00:00Z",
                 "Cursors": [
                     ActivityDataModel.Config.json_schema_extra["example"],

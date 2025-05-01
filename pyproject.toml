@@ -53,6 +53,7 @@ dependencies = [
     "pytest>=6.0",
     "lazy_import>=0.2.2",
     "ruff>=0.6.9",
+    "graphviz>=0.20.1",
 ]
 
 requires-python = ">=3.12"

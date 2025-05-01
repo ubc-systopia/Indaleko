@@ -1,7 +1,8 @@
 """
-Indaleko tools package.
+Database Schema Visualization Tool for Indaleko.
 
-This package contains various tools for the Indaleko project.
+This module provides tools to visualize the Indaleko database schema,
+including collections, relationships, and key indexes.
 
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason
@@ -19,3 +20,16 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+
+from indaleko.tools.db_schema_viz.schema_extractor import extract_collections, extract_relationships
+from indaleko.tools.db_schema_viz.schema_analyzer import group_collections, analyze_indexes
+from indaleko.tools.db_schema_viz.graphviz_generator import generate_dot, generate_output
+
+__all__ = [
+    'extract_collections',
+    'extract_relationships',
+    'group_collections',
+    'analyze_indexes',
+    'generate_dot',
+    'generate_output',
+]

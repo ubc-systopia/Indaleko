@@ -39,25 +39,25 @@ def generate_dot(
 ) -> str:
     """
     Generate a GraphViz DOT representation of the database schema.
-
+    
     Args:
         collections: List of collection information
         relationships: List of relationships between collections
         groups: Dictionary mapping group names to lists of collection names
         show_indexes: Whether to show key indexes
-
+    
     Returns:
         A string containing the GraphViz DOT representation
     """
     logging.info("Generating GraphViz DOT representation...")
-
+    
     # Create a new directed graph
     dot = graphviz.Digraph(
         name="IndalekoDB",
         comment="Indaleko Database Schema",
         format="pdf"
     )
-
+    
     # Set graph attributes
     dot.attr(
         rankdir="TB",  # Top to bottom layout
@@ -68,9 +68,9 @@ def generate_dot(
         fontsize="14",
         bgcolor="white"
     )
-
+    
     # Define node and edge attributes
-    dot.attr("node",
+    dot.attr("node", 
         shape="box",
         style="filled,rounded",
         fontname="Arial",
@@ -79,14 +79,14 @@ def generate_dot(
         height="0.6",
         width="2.5"
     )
-
+    
     dot.attr("edge",
         fontname="Arial",
         fontsize="10",
         fontcolor="#333333",
         arrowsize="0.8"
     )
-
+    
     # Create subgraphs for groups
     for group_name, collection_names in groups.items():
         with dot.subgraph(name=f"cluster_{group_name.replace(' ', '_')}") as subgraph:
@@ -98,22 +98,22 @@ def generate_dot(
                 fontsize="14",
                 labeljust="l"
             )
-
+            
             # Add nodes for each collection in this group
             for collection_name in collection_names:
                 collection = next((c for c in collections if c["name"] == collection_name), None)
                 if collection:
                     _add_collection_node(subgraph, collection)
-
+                    
                     # Add index nodes if requested
                     if show_indexes and collection.get("key_indexes"):
                         _add_index_nodes(subgraph, collection)
-
+    
     # Add relationships as edges
     for relationship in relationships:
         from_collection = relationship["from"]
         to_collection = relationship["to"]
-
+        
         # Check if both collections exist
         if from_collection in [c["name"] for c in collections] and to_collection in [c["name"] for c in collections]:
             edge_style = "dashed" if relationship.get("type") in ["enriches", "contextualizes", "references"] else "solid"
@@ -125,17 +125,17 @@ def generate_dot(
                 color="#AA0000",
                 tooltip=relationship.get("description", "")
             )
-
+    
     # Add a legend
     _add_legend(dot)
-
+    
     return dot.source
 
 
 def _add_collection_node(graph, collection: Dict[str, Any]) -> None:
     """
     Add a node for a collection to the graph.
-
+    
     Args:
         graph: The GraphViz graph to add the node to
         collection: The collection information
@@ -147,10 +147,10 @@ def _add_collection_node(graph, collection: Dict[str, Any]) -> None:
     else:  # Edge collection
         fillcolor = "#ffe6e6"  # Light red
         color = "#800000"      # Dark red
-
+    
     # Create the node label with collection name and description
     label = f"{collection['name']}\\n{collection['description']}"
-
+    
     graph.node(
         collection["name"],
         label=label,
@@ -164,7 +164,7 @@ def _add_collection_node(graph, collection: Dict[str, Any]) -> None:
 def _add_index_nodes(graph, collection: Dict[str, Any]) -> None:
     """
     Add nodes for collection indexes to the graph.
-
+    
     Args:
         graph: The GraphViz graph to add the nodes to
         collection: The collection information
@@ -172,14 +172,14 @@ def _add_index_nodes(graph, collection: Dict[str, Any]) -> None:
     key_indexes = collection.get("key_indexes", [])
     for i, index in enumerate(key_indexes):
         index_name = f"{collection['name']}_idx{i+1}"
-
+        
         # Create a label for the index
         fields_str = ", ".join(index.get("fields", []))
         index_type = index.get("type", "unknown")
         unique = "unique " if index.get("unique", False) else ""
-
+        
         label = f"{unique}{index_type}\\n({fields_str})"
-
+        
         # Add the index node
         graph.node(
             index_name,
@@ -193,7 +193,7 @@ def _add_index_nodes(graph, collection: Dict[str, Any]) -> None:
             height="0.4",
             tooltip=f"{index_type.capitalize()} index on {fields_str}"
         )
-
+        
         # Connect the index to its collection
         graph.edge(
             index_name,
@@ -207,7 +207,7 @@ def _add_index_nodes(graph, collection: Dict[str, Any]) -> None:
 def _add_legend(graph) -> None:
     """
     Add a legend to the graph.
-
+    
     Args:
         graph: The GraphViz graph to add the legend to
     """
@@ -220,7 +220,7 @@ def _add_legend(graph) -> None:
             fontsize="12",
             bgcolor="#f5f5f5"
         )
-
+        
         # Add legend nodes
         legend.node(
             "document_collection",
@@ -231,7 +231,7 @@ def _add_legend(graph) -> None:
             color="#003380",
             fontsize="10"
         )
-
+        
         legend.node(
             "edge_collection",
             label="Edge Collection",
@@ -241,7 +241,7 @@ def _add_legend(graph) -> None:
             color="#800000",
             fontsize="10"
         )
-
+        
         legend.node(
             "index",
             label="Index",
@@ -251,7 +251,7 @@ def _add_legend(graph) -> None:
             color="#006600",
             fontsize="10"
         )
-
+        
         # Add legend edges
         legend.edge(
             "document_collection",
@@ -261,7 +261,7 @@ def _add_legend(graph) -> None:
             color="#AA0000",
             fontsize="10"
         )
-
+        
         legend.edge(
             "edge_collection",
             "index",
@@ -270,7 +270,7 @@ def _add_legend(graph) -> None:
             color="#AA0000",
             fontsize="10"
         )
-
+        
         # Set legend layout
         legend.attr(rank="sink")
 
@@ -283,41 +283,64 @@ def generate_output(
 ) -> None:
     """
     Generate output in the specified format from a DOT representation.
-
+    
     Args:
         dot: The GraphViz DOT representation
         output_path: The path to save the output to
         format: The output format (pdf, png, svg)
         orientation: The diagram orientation (portrait or landscape)
     """
-    logging.info(f"Generating DOT file to {output_path}...")
-
-    # If the output path has a format extension, replace it with .dot
-    dot_output_path = os.path.splitext(output_path)[0] + ".dot"
-
-    # Write the DOT file
+    logging.info(f"Generating {format} output at {output_path}...")
+    
+    # Create a temporary file for the DOT source
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.dot', delete=False) as temp:
+        temp.write(dot)
+        temp_path = temp.name
+    
     try:
-        # Create directory if it doesn't exist
-        output_dir = os.path.dirname(dot_output_path)
-        if output_dir and not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-
-        # Write the DOT source to a file
-        with open(dot_output_path, 'w') as f:
-            f.write(dot)
-
-        logging.info(f"DOT file written to {dot_output_path}")
-        logging.info(f"To generate output, run: dot -T{format} -o {output_path} {dot_output_path}")
-
-        # Also try to use the graphviz library if it works
-        try:
-            source = graphviz.Source(dot, format=format)
-            source.render(os.path.splitext(os.path.basename(dot_output_path))[0],
-                         directory=os.path.dirname(dot_output_path),
-                         cleanup=False)
-            logging.info(f"Graphviz rendering attempted. Check for output files in {os.path.dirname(dot_output_path)}")
-        except Exception as render_e:
-            logging.warning(f"Could not render with graphviz library: {render_e}")
-
+        # Create a Source object from the DOT source
+        source = graphviz.Source(dot, format=format)
+        
+        # Set rendering options
+        render_args = []
+        
+        # Set orientation
+        if orientation == "portrait":
+            render_args.extend(["-Gorientation=portrait"])
+        else:  # landscape
+            render_args.extend(["-Gorientation=landscape"])
+        
+        # Add additional rendering options for high quality
+        if format == "pdf":
+            render_args.extend(["-Gdpi=300"])
+        elif format == "png":
+            render_args.extend(["-Gdpi=300"])
+        
+        # Render to the output file
+        output_dir = os.path.dirname(output_path) or '.'
+        output_filename = os.path.basename(output_path)
+        output_base = os.path.splitext(output_filename)[0]
+        
+        source.render(
+            filename=output_base,
+            directory=output_dir,
+            cleanup=True,
+            format=format,
+            renderer='dot',
+            formatter=None,
+            quiet=False,
+            quiet_view=True,
+            outfile=output_path,
+            engine='dot',
+            args=render_args
+        )
+        
+        logging.info(f"Output generated successfully: {output_path}")
+    
     except Exception as e:
         logging.error(f"Error generating output: {e}")
+    
+    finally:
+        # Clean up the temporary file
+        if os.path.exists(temp_path):
+            os.unlink(temp_path)

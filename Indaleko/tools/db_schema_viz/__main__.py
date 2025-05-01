@@ -36,63 +36,63 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
-from tools.db_schema_viz.schema_extractor import extract_collections, extract_relationships
-from tools.db_schema_viz.schema_analyzer import group_collections, analyze_indexes
-from tools.db_schema_viz.graphviz_generator import generate_dot, generate_output
-from tools.db_schema_viz.config import DEFAULT_GROUPS, load_config, save_config
+from indaleko.tools.db_schema_viz.schema_extractor import extract_collections, extract_relationships
+from indaleko.tools.db_schema_viz.schema_analyzer import group_collections, analyze_indexes
+from indaleko.tools.db_schema_viz.graphviz_generator import generate_dot, generate_output
+from indaleko.tools.db_schema_viz.config import DEFAULT_GROUPS, load_config, save_config
 # pylint: enable=wrong-import-position
 
 
 def main():
     """
     Main entry point for the schema visualization tool.
-
+    
     Parses command-line arguments and generates the schema visualization
     based on the specified options.
     """
     parser = argparse.ArgumentParser(
         description="Generate visualization of the Indaleko database schema"
     )
-
+    
     # Output options
     parser.add_argument(
-        "--output", "-o",
-        default="schema.pdf",
+        "--output", "-o", 
+        default="schema.pdf", 
         help="Output file path"
     )
     parser.add_argument(
         "--format", "-f",
-        choices=["pdf", "png", "svg"],
+        choices=["pdf", "png", "svg"], 
         default="pdf",
         help="Output format"
     )
-
+    
     # Visualization options
     parser.add_argument(
         "--groups", "-g",
-        action="store_true",
+        action="store_true", 
         default=True,
         help="Show collection groupings"
     )
     parser.add_argument(
         "--indexes", "-i",
-        action="store_true",
+        action="store_true", 
         default=True,
         help="Show key indexes (limited to 1-2 per collection)"
     )
     parser.add_argument(
         "--relationships", "-r",
-        action="store_true",
+        action="store_true", 
         default=True,
         help="Show relationships between collections"
     )
     parser.add_argument(
         "--orientation",
-        choices=["portrait", "landscape"],
+        choices=["portrait", "landscape"], 
         default="landscape",
         help="Diagram orientation"
     )
-
+    
     # Configuration options
     parser.add_argument(
         "--config", "-c",
@@ -107,34 +107,34 @@ def main():
         action="store_true",
         help="Enable verbose logging"
     )
-
+    
     args = parser.parse_args()
-
+    
     # Configure logging
     logging_level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(
         level=logging_level,
         format="%(asctime)s - %(levelname)s - %(message)s"
     )
-
+    
     # Load configuration
     config = load_config(args.config) if args.config else {"groups": DEFAULT_GROUPS}
-
+    
     # Extract schema information
     logging.info("Extracting collection information from database...")
     collections = extract_collections()
-
+    
     logging.info("Detecting relationships between collections...")
     relationships = extract_relationships(collections) if args.relationships else []
-
+    
     # Analyze schema
     logging.info("Grouping collections...")
     groups = group_collections(collections, config["groups"]) if args.groups else {}
-
+    
     logging.info("Analyzing indexes...")
     if args.indexes:
         collections = analyze_indexes(collections)
-
+    
     # Generate DOT file
     logging.info("Generating GraphViz DOT file...")
     dot = generate_dot(
@@ -143,7 +143,7 @@ def main():
         groups=groups,
         show_indexes=args.indexes
     )
-
+    
     # Generate output
     logging.info(f"Generating {args.format.upper()} output to {args.output}...")
     generate_output(
@@ -152,7 +152,7 @@ def main():
         format=args.format,
         orientation=args.orientation
     )
-
+    
     # Save configuration if requested
     if args.save_config:
         config = {
@@ -160,7 +160,7 @@ def main():
         }
         save_config(config, args.save_config)
         logging.info(f"Configuration saved to {args.save_config}")
-
+    
     logging.info(f"Schema visualization complete: {args.output}")
 
 

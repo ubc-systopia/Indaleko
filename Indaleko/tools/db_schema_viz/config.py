@@ -68,29 +68,29 @@ DEFAULT_GROUPS = {
 def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
     """
     Load configuration from a JSON file.
-
+    
     Args:
         config_path: Path to the configuration file. If None, default configuration is used.
-
+    
     Returns:
         A dictionary containing the configuration
     """
     if not config_path:
         logging.info("Using default configuration")
         return {"groups": DEFAULT_GROUPS}
-
+    
     try:
         logging.info(f"Loading configuration from {config_path}")
         with open(config_path, 'r') as f:
             config = json.load(f)
-
+        
         # Ensure the configuration has the expected structure
         if "groups" not in config:
             logging.warning("Configuration file missing 'groups' key, using default groups")
             config["groups"] = DEFAULT_GROUPS
-
+        
         return config
-
+    
     except Exception as e:
         logging.error(f"Error loading configuration from {config_path}: {e}")
         logging.info("Falling back to default configuration")
@@ -100,25 +100,25 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
 def save_config(config: Dict[str, Any], config_path: str) -> bool:
     """
     Save configuration to a JSON file.
-
+    
     Args:
         config: The configuration to save
         config_path: Path to save the configuration to
-
+    
     Returns:
         True if the configuration was saved successfully, False otherwise
     """
     try:
         logging.info(f"Saving configuration to {config_path}")
-
+        
         # Create directory if it doesn't exist
         os.makedirs(os.path.dirname(os.path.abspath(config_path)), exist_ok=True)
-
+        
         with open(config_path, 'w') as f:
             json.dump(config, f, indent=2)
-
+        
         return True
-
+    
     except Exception as e:
         logging.error(f"Error saving configuration to {config_path}: {e}")
         return False

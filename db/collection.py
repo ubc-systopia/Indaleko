@@ -112,17 +112,18 @@ class IndalekoCollection:
             )
             if "schema" in config:
                 try:
+                    ic(config["schema"])
                     self._arangodb_collection.configure(schema=config["schema"])
                 except arango.exceptions.CollectionConfigureError as error:  # pylint: disable=no-member
-                    print(f"Failed to configure collection {name}")
-                    print(error)
-                    print("Schema:")
-                    print(json.dumps(config["schema"], indent=2))
-                    raise error
+                    print(f"Failed to configure collection {name}")  # noqa: T201
+                    print(error)    # noqa: T201
+                    print("Schema:")    # noqa: T201
+                    print(json.dumps(config["schema"], indent=2))    # noqa: T201
+                    raise
             if "indices" in config:
                 for index in config["indices"]:
                     self.create_index(index, **config["indices"][index])
-        assert isinstance(
+        assert isinstance(  # noqa: S101
             self._arangodb_collection,
             arango.collection.StandardCollection,
         ), f"self.collection is unexpected type {type(self._arangodb_collection)}"
