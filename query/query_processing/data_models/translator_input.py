@@ -35,10 +35,6 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from query.utils.llm_connector.llm_base import IndalekoLLMBase
-
-# from data_models.collection_metadata_data_model import IndalekoCollectionMetadataDataModel
-# from data_models.db_index import IndalekoCollectionIndexDataModel
-# from data_models.named_entity import NamedEntityCollection
 from query.query_processing.data_models.query_input import StructuredQuery
 
 # pylint: enable=wrong-import-position
@@ -58,4 +54,16 @@ class TranslatorInput(BaseModel):
     NTruth: int = 1
 
     class Config:
+        """Configuration Info."""
         arbitrary_types_allowed = True
+
+
+def main() -> None:
+    """This allows testing the data model."""
+    from icecream import ic
+    ic("Testing TranslatorInput")
+    TranslatorInput.test_model_main()
+
+
+if __name__ == "__main__":
+    main()

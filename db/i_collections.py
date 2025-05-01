@@ -19,7 +19,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import argparse
-import json
 import logging
 import os
 import sys
@@ -27,6 +26,8 @@ import sys
 from pathlib import Path
 
 import arango
+
+from icecream import ic
 
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -36,9 +37,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = str(current_path)
     sys.path.insert(0, str(current_path))
 
-
 # pylint: disable=wrong-import-position
-# from Indaleko import Indaleko
 from data_models.db_view import IndalekoViewDefinition
 from db.analyzer_manager import IndalekoAnalyzerManager
 from db.collection import IndalekoCollection
@@ -56,7 +55,7 @@ class IndalekoCollections(IndalekoSingleton):
     """This class is used to manage the collections in the Indaleko database."""
 
     def __init__(self, **kwargs: dict) -> None:
-        """Initialize the IndalekoCollections class."""
+        """Set up Indaleko Collections."""
         # db_config: IndalekoDBConfig = None, reset: bool = False) -> None:
         self.db_config = kwargs.get("db_config", IndalekoDBConfig())
         if self.db_config is None:
@@ -110,8 +109,10 @@ class IndalekoCollections(IndalekoSingleton):
 
         # Create or update views (unless skipped)
         if not self.skip_views:
+            ic("creating views")
             self._create_views()
         else:
+            ic("Skipping view creation (skip_views=True)")
             logging.debug("Skipping view creation (skip_views=True)")
 
     def _ensure_custom_analyzers(self) -> None:
@@ -163,29 +164,35 @@ class IndalekoCollections(IndalekoSingleton):
         ) in IndalekoDBCollections.Collections.items():
             # Skip collections without view definitions
             if "views" not in collection_def:
+                ic("skipping collection (no views)", collection_name)
                 continue
 
             # Process each view definition for this collection
             for view_def in collection_def["views"]:
                 view_name = view_def["name"]
-                logging.debug(
-                    f"Processing view {view_name} for collection {collection_name}",
+                logger = logging.getLogger(__name__)
+                logger.debug(
+                    "Processing view %s for collection %s",
+                    view_name,
+                    collection_name,
                 )
 
                 # Skip if already processed
                 if view_name in created_views:
+                    ic("skipping view (already processed)", view_name)
                     continue
 
                 # Create the view definition
                 fields_dict = {collection_name: view_def["fields"]}
 
                 # Handle the case where fields are defined with specific analyzers per field
-                # Format: {"Field1": ["analyzer1", "analyzer2"], "Field2": ["analyzer3"]}
+                # Format: {"Field1": ["analyzer1", "analyzer2"], "Field2": ["analyzer3"]}  # noqa: ERA001
 
                 # Ensure we use the default analyzers if not specified
                 analyzers = view_def.get("analyzers", ["text_en"])
 
-                # For collections that deal with file objects, ensure we include our custom analyzers
+                # For collections that deal with file objects,
+                # ensure we include our custom analyzers
                 if collection_name.lower() in ["objects"]:
                     # Add our custom analyzers if not already included
                     custom_analyzers = [
@@ -206,13 +213,20 @@ class IndalekoCollections(IndalekoSingleton):
                     stored_values=view_def.get("stored_values"),
                 )
 
+                ic(view_definition)
+
                 # Create or update the view
                 if view_manager.view_exists(view_name):
+                    ic(view_name)
+
                     result = view_manager.update_view(view_definition)
-                    logging.debug(f"Updated view {view_name}: {result['status']}")
+                    logger = logging.getLogger(__name__)
+                    logger.debug("Updated view %s: %s", view_name, result)
                 else:
                     result = view_manager.create_view(view_definition)
-                    logging.debug(f"Created view {view_name}: {result['status']}")
+                    logging.debug("Result: %s", result)
+                    logging.debug("Created view %s: %s", view_name, result)
+                    ic(result)
 
                 # Add to processed list
                 created_views.append(view_name)
@@ -269,13 +283,12 @@ def extract_params() -> tuple:
     return common_params, unique_params_by_index
 
 
-def main():
+def main() -> None:
     """Test the IndalekoCollections class."""
-    # start_time = datetime.datetime.now(datetime.UTC).isoformat()
     IndalekoCollections()
     common_params, unique_params_by_index = extract_params()
-    print(common_params)
-    print(unique_params_by_index)
+    ic(common_params)
+    ic(unique_params_by_index)
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument(
         "--collection",
@@ -292,7 +305,7 @@ def main():
     )
     for common_arg in common_params:
         arg_type = IndalekoCollectionIndex.index_args["hash"][common_arg]
-        print(f"Adding argument {common_arg} with type {arg_type}")
+        ic(f"Adding argument {common_arg} with type {arg_type}")
         pre_parser.add_argument(
             f"--{common_arg}",
             type=IndalekoCollectionIndex.index_args["hash"][common_arg],
@@ -323,7 +336,7 @@ def main():
     args = parser.parse_args()
     if hasattr(args, "fields"):
         args.fields = [field.strip() for field in pre_args.fields.split(",")]
-    print(args)
+    ic(args)
     index_args = {"collection": args.collection}
     for index_arg in common_params:
         if getattr(args, index_arg) is not None:
@@ -331,8 +344,8 @@ def main():
     for index_arg in unique_params_by_index[pre_args.type]:
         if getattr(args, index_arg) is not None:
             index_args[index_arg] = getattr(args, index_arg)
-    print(index_args)
-    print("TODO: add tests for the various type of indices")
+    ic(index_args)
+    ic("TODO: add tests for the various type of indices")
 
 
 if __name__ == "__main__":

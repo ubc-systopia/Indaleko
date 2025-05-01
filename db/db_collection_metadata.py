@@ -54,10 +54,7 @@ from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 
 
 class IndalekoDBCollectionsMetadata(IndalekoSingleton):
-    """
-    This class is used to manage the metadata for the collections in the
-    Indaleko database.
-    """
+    """Manage the metadata for the collections in Indaleko database."""
 
     default_collection_metadata = {  # noqa: RUF012
         IndalekoDBCollections.Indaleko_Object_Collection:
@@ -69,7 +66,7 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
         "ActivityData": ActivityCollectionMetadata.default_metadata,
     }
 
-    def __init__(self, db_config: IndalekoDBConfig | None = None):
+    def __init__(self, db_config: IndalekoDBConfig | None = None) -> None:
         """Initialize the object."""
         if self._initialized:
             return
@@ -156,7 +153,7 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
 
     def get_all_collections_metadata(
         self,
-    ) -> dict[str, IndalekoCollectionMetadataDataModel]:
+    ) -> dict[str, CollectionInfo]:
         """
         Get the metadata for all collections.
 
@@ -192,8 +189,9 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
         """Handle the activity data provider collection."""
         collection_data = {}
         collections_metadata = IndalekoDBCollectionsMetadata()
-        for provider in IndalekoActivityDataRegistrationService().get_provider_list():
-            collection = IndalekoActivityDataRegistrationService.lookup_activity_provider_collection(
+        activity_registration_service = IndalekoActivityDataRegistrationService()
+        for provider in activity_registration_service.get_provider_list():
+            collection = activity_registration_service.lookup_activity_provider_collection(
                 provider["Identifier"],
             )
             collection_metadata = collections_metadata.get_collection_metadata(
@@ -202,8 +200,9 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
             self.collections_metadata[collection.name] = collection_metadata
         return collection_data
 
-    _collection_handlers = {
-        IndalekoDBCollections.Indaleko_ActivityDataProvider_Collection: __activity_data_provider_collection_handler,
+    _collection_handlers = {  # noqa: RUF012
+        IndalekoDBCollections.Indaleko_ActivityDataProvider_Collection:
+        __activity_data_provider_collection_handler,
     }
 
 

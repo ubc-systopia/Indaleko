@@ -267,78 +267,20 @@ class NLParser:
         Returns:
             ParserResults: A structured representation of the query
         """
-        logger.info("Parsing query: %s", query)
+        return ParserResults(
+            OriginalQuery=query,
+            Intent=self._detect_intent(query),
+            Entities=self._extract_entities(query),
+            Categories=self._extract_categories(query),
+        )
 
-        try:
-            # Extract categories
-            categories = self._extract_categories(query)
-
-            # Detect intent
-            intent = self._detect_intent(query)
-
-            # Extract entities
-            entities = self._extract_entities(query)
-
-            # Extract categories
-            categories = self._extract_categories(query)
-
-            # Create ParserResults object
-            return ParserResults(
-                OriginalQuery=query,
-                Intent=intent,
-                Entities=entities,
-                Categories=categories,
-            )
-
-
-        except OSError:
-            # Log and track the error
-            logger.exception("Error parsing query")
-            logger.debug(traceback.format_exc())
-            self.error_count["total"] += 1
-            self.error_log.append(
-                {
-                    "timestamp": time.time(),
-                    "query": query,
-                    "stage": "parse",
-                    "traceback": traceback.format_exc(),
-                },
-            )
-
-            # Create a fallback structured query
-            entity = IndalekoNamedEntityDataModel(
-                name=query,
-                category=IndalekoNamedEntityType.keyword,
-                description=query,
-            )
-
-            entity_collection = NamedEntityCollection(entities=[entity])
-
-            # Create a basic intent
-            fallback_intent = LLMIntentQueryResponse(
-                intent="search",
-                confidence=0.5,
-                rationale="Fallback intent due to parsing error",
-                alternatives_considered=[],
-            )
-
-            # Create an empty category response
-            fallback_categories = self._extract_categories(query)
-
-            # Create ParserResults
-            return ParserResults(
-                OriginalQuery=query,
-                Intent=fallback_intent,
-                Entities=entity_collection,
-                Categories=fallback_categories,
-            )
 
     def _detect_intent(self, query: str) -> LLMIntentQueryResponse:
         """
         Detect the primary intent of the query.
 
         Args:
-            query: The user's query
+            query: The query
 
         Returns:
             LLMIntentQueryResponse: The detected intent
@@ -461,7 +403,6 @@ class NLParser:
             LLMCollectionCategoryQueryResponse: A response with category mappings
         """
         try:
-            ic(type(self.collection_data["Objects"]))
 
             # Define existing category types
             typical_categories = [category.value for category in LLMCollectionCategoryEnum]
@@ -534,7 +475,6 @@ class NLParser:
                 category_response.model_json_schema(),
             )
             doc = json.loads(response)
-            ic(doc)
 
             # Validate and repair category response
             try:
@@ -655,7 +595,7 @@ class NLParser:
                 # Create default entity
                 entity = IndalekoNamedEntityDataModel(
                     name=query,
-                    category=IndalekoNamedEntityType.keyword,
+                    category=IndalekoNamedEntityType.item,
                     description=query,
                 )
                 return NamedEntityCollection(entities=[entity])
@@ -681,7 +621,7 @@ class NLParser:
             # Create default entity
             entity = IndalekoNamedEntityDataModel(
                 name=query,
-                category=IndalekoNamedEntityType.keyword,
+                category=IndalekoNamedEntityType.item,
                 description=query,
             )
             return NamedEntityCollection(entities=[entity])

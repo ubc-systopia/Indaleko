@@ -23,6 +23,7 @@ import configparser
 import os
 import sys
 
+
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -38,6 +39,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
+import contextlib
+
 from data_models.collection_metadata_data_model import (
     IndalekoCollectionMetadataDataModel,
 )
@@ -142,7 +145,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 
     service_name = "IndalekoQueryCLI"
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Create an instance of the IndalekoQueryCLI class."""
         cli_data = IndalekoBaseCliDataModel(
             RegistrationServiceName=IndalekoQueryCLI.service_name,
@@ -217,7 +220,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         self.schema = self.build_schema_table()
 
     class query_handler_mixin(IndalekoBaseCLI.default_handler_mixin):
-        """Handler mixin for the CLI"""
+        """Handler mixin for the CLI."""
 
         @staticmethod
         def get_pre_parser() -> argparse.Namespace | None:
@@ -420,7 +423,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
     query_cli_handler_mixin = query_handler_mixin
 
     def get_api_key(self, api_key_file: str | None = None) -> str:
-        """Get the API key from the config file"""
+        """Get the API key from the config file."""
         if api_key_file is None:
             api_key_file = os.path.join(
                 self.config_data["ConfigDirectory"],
@@ -467,7 +470,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         self.help_text.append(text)
         ic(f"Added help text: {text}")
 
-    def run(self):
+    def run(self) -> None:
         batch_queries = []
         batch = False
         if self.args is None:
@@ -509,27 +512,20 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         if hasattr(self.args, "kb") and self.args.kb:
             self.kb_integration = initialize_kb_for_cli(self)
             if self.kb_integration:
-                print(
-                    "Knowledge Base integration enabled. Use /kb to see available commands.",
-                )
+                pass
 
         # Initialize Fire Circle integration
         self.fire_circle_integration = None
         if HAS_FIRE_CIRCLE and hasattr(self.args, "fc") and self.args.fc:
             self.fire_circle_integration = initialize_firecircle_for_cli(self)
             if self.fire_circle_integration:
-                print(
-                    "Fire Circle integration enabled. Use /firecircle or /fc to see available commands.",
-                )
+                pass
 
         # Initialize Semantic Performance Monitoring
         self.semantic_performance_integration = None
         if HAS_SEMANTIC_PERFORMANCE and hasattr(self.args, "semantic_performance") and self.args.semantic_performance:
             self.semantic_performance_integration = register_semantic_performance_cli(
                 self,
-            )
-            print(
-                "Semantic Performance Monitoring enabled. Use /perf, /experiments, or /report to access commands.",
             )
 
         # Initialize Query Pattern Analysis
@@ -539,7 +535,6 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 self,
                 self.db_config,
             )
-            print("Query Pattern Analysis enabled. Use /patterns to access commands.")
 
         # Initialize Query Context Integration
         self.query_context_integration = None
@@ -566,13 +561,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 self.query_path_visualizer = QueryPathVisualizer(
                     debug=hasattr(self.args, "debug") and self.args.debug,
                 )
-                print(
-                    "Query Path Visualization enabled. Use /query-path to visualize query exploration paths.",
-                )
 
-            print(
-                "Query Context Integration enabled. Queries will be recorded as activities.",
-            )
 
         # Initialize Analytics Integration
         self.analytics_integration = None
@@ -581,9 +570,6 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 self,
                 self.db_config,
                 debug=hasattr(self.args, "debug") and self.args.debug,
-            )
-            print(
-                "Analytics Integration enabled. Use /analytics to access file statistics commands.",
             )
 
         while True:
@@ -602,7 +588,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 return
 
             # Special processing for interactive mode
-            if user_query == "!status" or user_query == "!help":
+            if user_query in {"!status", "!help"}:
                 # Reuse the last query if this is just a status check or help request
                 if hasattr(self, "current_refined_query"):
                     user_query = self.current_refined_query
@@ -664,23 +650,12 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                         ):
                             continue
 
-                    elif user_query.startswith(
-                        (
-                            "/optimize",
-                            "/analyze",
-                            "/index",
-                            "/view",
-                            "/query",
-                            "/impact",
-                        ),
-                    ):
-                        optimizer_integration = self.archivist_components.get(
-                            "optimizer_integration",
-                        )
-                        if optimizer_integration and optimizer_integration.handle_command(user_query):
-                            continue
+                elif user_query.startswith(("/optimize", "/analyze", "/index", "/view", "/query", "/impact")):
+                    optimizer_integration = self.archivist_components.get("optimizer_integration")
+                    if optimizer_integration and optimizer_integration.handle_command(user_query):
+                        continue
 
-                    elif user_query.startswith(
+                    if user_query.startswith(
                         (
                             "/proactive",
                             "/suggest",
@@ -728,7 +703,6 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                                 args,
                             )
                             if result:
-                                print(result.message)
                                 continue
 
                     # Handle Fire Circle commands
@@ -752,12 +726,8 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                                 # Show the most recent query path
                                 limit = 5  # Default to 5 recent queries
                                 if len(args.split()) > 1:
-                                    try:
+                                    with contextlib.suppress(ValueError):
                                         limit = int(args.split()[1])
-                                    except ValueError:
-                                        print(
-                                            f"Invalid limit: {args.split()[1]}. Using default of 5.",
-                                        )
 
                                 # Get recent activities from the context provider
                                 recent_activities = self.query_context_integration.get_recent_query_activities(
@@ -765,53 +735,29 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                                 )
                                 if recent_activities:
                                     # Generate visualization
-                                    viz_path = self.query_path_visualizer.generate_path_graph(
+                                    self.query_path_visualizer.generate_path_graph(
                                         query_id=recent_activities[0].query_id,
                                         include_branches=True,
                                         max_depth=limit,
                                     )
-                                    print(
-                                        f"Query path visualization generated: {viz_path}",
-                                    )
                                 else:
-                                    print(
-                                        "No recent query activities found to visualize.",
-                                    )
+                                    pass
 
                             elif args.startswith("type"):
                                 # Show queries by relationship type
                                 relationship_type = args.split()[1] if len(args.split()) > 1 else "refinement"
 
                                 # Generate visualization for the specified relationship type
-                                viz_path = self.query_path_visualizer.generate_relationship_graph(
+                                self.query_path_visualizer.generate_relationship_graph(
                                     relationship_type=relationship_type,
-                                )
-                                print(
-                                    f"Relationship visualization generated: {viz_path}",
                                 )
 
                             elif args.startswith("help") or args == "":
                                 # Show help information
-                                print("\n=== Query Path Visualization Help ===")
-                                print("Commands:")
-                                print(
-                                    "  /query-path recent [N]   - Show the most recent N query paths (default: 5)",
-                                )
-                                print(
-                                    "  /query-path type TYPE    - Show queries with a specific relationship type",
-                                )
-                                print(
-                                    "                            (refinement, broadening, pivot, backtrack)",
-                                )
-                                print(
-                                    "  /query-path help         - Show this help message",
-                                )
-                                print("==================================\n")
+                                pass
 
                             else:
-                                print(
-                                    "Unknown query path command. Use '/query-path help' for available commands.",
-                                )
+                                pass
 
                             continue
 
@@ -825,7 +771,127 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                             result = self.analytics_integration.handle_analytics_command(
                                 args,
                             )
-                            print(result)
+                            continue
+
+                    elif user_query.startswith(
+                        (
+                            "/proactive",
+                            "/suggest",
+                            "/priorities",
+                            "/enable",
+                            "/disable",
+                        ),
+                    ):
+                        if (
+                            hasattr(self, "proactive_integration")
+                            and self.proactive_integration
+                            and self.proactive_integration.handle_command(user_query)
+                        ):
+                            continue
+
+                    # Handle Semantic Performance Monitoring commands
+                    elif user_query.startswith(("/perf", "/experiments", "/report")):
+                        if hasattr(self, "semantic_performance_integration") and self.semantic_performance_integration:
+                            command_parts = user_query.split(maxsplit=1)
+                            command = command_parts[0]
+                            args = command_parts[1] if len(command_parts) > 1 else ""
+
+                            if command == "/perf":
+                                self.semantic_performance_integration.handle_perf_command(
+                                    args.split(),
+                                )
+                                continue
+                            if command == "/experiments":
+                                self.semantic_performance_integration.handle_experiments_command(
+                                    args.split(),
+                                )
+                                continue
+                            if command == "/report":
+                                self.semantic_performance_integration.handle_report_command(
+                                    args.split(),
+                                )
+                                continue
+
+                    # Handle Query Pattern Analysis commands
+                    elif user_query.startswith("/patterns"):
+                        if hasattr(self,
+                                   "query_pattern_integration",
+                                   ) and self.query_pattern_integration:
+                            command_parts = user_query.split(maxsplit=1)
+                            args = command_parts[1].split() if len(command_parts) > 1 else []
+                            result = self.query_pattern_integration.handle_patterns_command(
+                                args,
+                            )
+                            if result:
+                                continue
+
+                    # Handle Fire Circle commands
+                    elif user_query.startswith(("/firecircle", "/fc")):
+                        if hasattr(
+                            self,
+                            "fire_circle_integration") and self.fire_circle_integration:
+                            # The Fire Circle CLI integration handles its own command parsing
+                            self.fire_circle_integration._handle_firecircle_command(
+                                (user_query.split(maxsplit=1)[1]
+                                 if len(user_query.split()) > 1 else ""),
+                            )
+
+                    # Handle Query Context commands
+                    elif user_query.startswith("/query-path"):
+                        if hasattr(self, "query_path_visualizer") and self.query_path_visualizer:
+                            # Parse the command
+                            args = user_query.split(maxsplit=1)[1] if len(user_query.split()) > 1 else ""
+
+                            # Process different visualization options
+                            if args.startswith("recent"):
+                                # Show the most recent query path
+                                limit = 5  # Default to 5 recent queries
+                                if len(args.split()) > 1:
+                                    with contextlib.suppress(ValueError):
+                                        limit = int(args.split()[1])
+
+                                # Get recent activities from the context provider
+                                recent_activities = self.query_context_integration.get_recent_query_activities(
+                                    limit=limit,
+                                )
+                                if recent_activities:
+                                    # Generate visualization
+                                    self.query_path_visualizer.generate_path_graph(
+                                        query_id=recent_activities[0].query_id,
+                                        include_branches=True,
+                                        max_depth=limit,
+                                    )
+                                else:
+                                    pass
+
+                            elif args.startswith("type"):
+                                # Show queries by relationship type
+                                relationship_type = args.split()[1] if len(args.split()) > 1 else "refinement"
+
+                                # Generate visualization for the specified relationship type
+                                self.query_path_visualizer.generate_relationship_graph(
+                                    relationship_type=relationship_type,
+                                )
+
+                            elif args.startswith("help") or args == "":
+                                # Show help information
+                                pass
+
+                            else:
+                                pass
+
+                            continue
+
+                    # Handle Analytics commands
+                    elif user_query.startswith("/analytics"):
+                        if hasattr(self, "analytics_integration") and self.analytics_integration:
+                            # Extract arguments for the analytics command
+                            args = user_query.split(maxsplit=1)[1] if len(user_query.split()) > 1 else ""
+
+                            # Process the analytics command
+                            result = self.analytics_integration.handle_analytics_command(
+                                args,
+                            )
                             continue
 
             # Log the query
@@ -874,7 +940,6 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                     # Use the enhanced query for further processing
                     enhanced_query = kb_enhanced.get("enhanced_query", user_query)
                     # Keep original query for reference
-                    original_query = user_query
                     user_query = enhanced_query
 
             if use_enhanced:
@@ -916,10 +981,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 
                 # Only support search for now.
                 if parsed_query.Intent.intent != "search":
-                    print(
-                        f"Only search queries are supported. Intent inferred is {parsed_query.Intent.intent}",
-                    )
-                    print('Defaulting to "search" for now.')
+                    pass
                 ic(f"Query Type: {parsed_query.Intent.intent}")
 
                 # Map entities to database attributes
@@ -927,7 +989,9 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 
                 # Use the categories to obtain the metadata attributes
                 # of the corresponding collection
-                collection_categories = [entity.collection for entity in parsed_query.Categories.category_map]
+                collection_categories = [
+                    entity.collection for entity in parsed_query.Categories.category_map
+                ]
                 collection_metadata = self.get_collection_metadata(
                     collection_categories,
                 )
@@ -972,12 +1036,14 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 
                 # Standard translation
                 translated_query = self.query_translator.translate(query_data)
-            print(translated_query.model_dump_json(indent=2))
+
+            ic(translated_query.bind_vars)
 
             # Always get the query execution plan first
             explain_results = self.query_executor.explain_query(
                 translated_query.aql_query,
                 self.db_config,
+                bind_vars=translated_query.bind_vars,
                 all_plans=(self.args.all_plans if hasattr(self.args, "all_plans") else False),
                 max_plans=self.args.max_plans if hasattr(self.args, "max_plans") else 5,
             )
@@ -1003,9 +1069,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 # Use the bind variables from the translated query
                 bind_vars = getattr(translated_query, "bind_vars", {})
 
-                # Log the bind variables being used
-                if bind_vars:
-                    print(f"Using bind variables: {bind_vars}")
+                ic("cli", bind_vars)
 
                 raw_results = self.query_executor.execute(
                     translated_query.aql_query,
@@ -1042,8 +1106,28 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 
             # Display results to user
             self.display_results(ranked_results, facets)
+            ic(facets)
 
-            # Update query history
+            # Prepare query history entry, capping result sizes to avoid huge payloads
+            MAX_HISTORY_RESULTS = 10
+            # RawResults may be a list or FormattedResults; truncate to primaries if needed
+            if isinstance(raw_results, FormattedResults):
+                [grp.primary for grp in raw_results.result_groups[:MAX_HISTORY_RESULTS]]
+            else:
+                raw_results[:MAX_HISTORY_RESULTS]
+            # AnalyzedResults is a list of dicts or None; truncate list
+            if isinstance(analyzed_results, list):
+                analyzed_results[:MAX_HISTORY_RESULTS]
+            else:
+                pass
+            # RankedResults should be a list of dicts; truncate or extract primaries
+            if isinstance(ranked_results, FormattedResults):
+                [grp.primary for grp in ranked_results.result_groups[:MAX_HISTORY_RESULTS]]
+            elif isinstance(ranked_results, list):
+                ranked_results[:MAX_HISTORY_RESULTS]
+            else:
+                pass
+            # Build history record
             end_time = datetime.now(UTC)
             time_diference = end_time - start_time
 
@@ -1195,17 +1279,6 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                     entities=entities,
                 )
 
-            # Check if user wants to continue
-            # In batch mode, don't prompt to continue
-            if batch:
-                continue
-
-            # Only in interactive mode, check if user wants to continue
-            if not self.continue_session():
-                break
-
-        # self.logging_service.log_session_end()
-
     def map_entities(
         self,
         entity_list: NamedEntityCollection,
@@ -1319,7 +1392,6 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                                 option["facet"],
                                 option["value"],
                             )
-                            print(f"Refined query: {refined_query}")
                             return refined_query
                 except OSError as e:
                     print(f"Error applying refinement: {e}")
@@ -1332,16 +1404,13 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         if query == "!clear":
             if hasattr(self, "original_query") and self.query_refiner.current_state:
                 original, _ = self.query_refiner.clear_refinements()
-                print(f"Cleared all refinements. Back to: {original}")
                 self.current_refined_query = original
                 return original
 
         # Special command to show active refinements
-        if query == "!status":
-            if self.query_refiner.current_state:
-                print(self.query_refiner.format_active_refinements())
-                if hasattr(self, "current_refined_query"):
-                    return "!status"  # Special marker to reuse last query
+        if query == "!status" and self.query_refiner.current_state:
+            if hasattr(self, "current_refined_query"):
+                return "!status"  # Special marker to reuse last query
 
         # Special command to remove a refinement
         if query.startswith("!remove "):
@@ -1380,19 +1449,8 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 
         return query
 
-    def _print_interactive_help(self):
+    def _print_interactive_help(self) -> None:
         """Print help information for interactive refinement mode."""
-        print("\n=== Interactive Refinement Help ===")
-        print("Commands:")
-        print("  !refine <number> - Apply the numbered facet refinement")
-        print("  !remove <number> - Remove the numbered active refinement")
-        print("  !clear           - Clear all active refinements")
-        print("  !status          - Show currently active refinements")
-        print("  !help            - Show this help message")
-        print()
-        print("Example: !refine 2")
-        print("         !remove 1")
-        print("==================================\n")
 
     def display_results(
         self,
@@ -1407,20 +1465,18 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             facets: Facet suggestions, either as a list of strings or a DynamicFacets object
         """
         if not results:
-            print("No results found.")
             return
 
         # Handle deduplicated results (FormattedResults object)
         if isinstance(results, FormattedResults):
             # Display formatted results using the formatter
             include_duplicates = hasattr(self.args, "show_duplicates") and self.args.show_duplicates
-            formatted_display = format_results_for_display(
+            format_results_for_display(
                 results,
                 include_duplicates=include_duplicates,
                 max_groups=10,
                 include_summary=True,
             )
-            print(formatted_display)
 
             # Display facets after results
             self._display_facets(facets)
@@ -1436,7 +1492,6 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             # This is already displayed by display_execution_plan
             return
 
-        print("\nSearch Results:")
         ic(len(results))
         if len(results) < 10:
             for i, result in enumerate(results, 1):
@@ -1445,21 +1500,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                     ic(f"Result {i}: {doc}")
                 elif isinstance(doc, dict) and "performance" in doc:
                     # Display performance metrics if available
-                    perf = doc["performance"]
-                    print("\nPerformance Metrics:")
-                    print(
-                        f"- Execution time: {perf['execution_time_seconds']:.4f} seconds",
-                    )
-                    print(
-                        f"- CPU usage: User: {perf['cpu']['user_time']:.2f}s, System: {perf['cpu']['system_time']:.2f}s",
-                    )
-                    print(
-                        f"- Memory: RSS: {perf['memory']['rss'] / (1024*1024):.2f} MB",
-                    )
-                    print(
-                        f"- I/O: Reads: {perf['io']['read_count']}, Writes: {perf['io']['write_count']}",
-                    )
-                    print(f"- Threads: {perf['threads']}")
+                    doc["performance"]
                 elif (
                     isinstance(doc, dict)
                     and "Record" in doc
@@ -1493,87 +1534,72 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 
             # Show active refinements if there are any
             if interactive and self.query_refiner.current_state and self.query_refiner.current_state.active_refinements:
-                print("\n" + self.query_refiner.format_active_refinements())
+                pass
 
             if use_dynamic or interactive:
                 # Display enhanced facets
-                print("\n=== Dynamic Facet Explorer ===")
 
                 # Display statistics
                 if facets.facet_statistics:
-                    print("\nResult Statistics:")
                     for key, value in sorted(facets.facet_statistics.items()):
                         # Format the key for display
-                        display_key = key.replace("_", " ").capitalize()
+                        key.replace("_", " ").capitalize()
 
                         # Format values appropriately
                         if isinstance(value, int) and key.endswith("size"):
                             # Format file sizes
                             if value >= 1024 * 1024 * 1024:
-                                display_value = f"{value / (1024 * 1024 * 1024):.2f} GB"
+                                f"{value / (1024 * 1024 * 1024):.2f} GB"
                             elif value >= 1024 * 1024:
-                                display_value = f"{value / (1024 * 1024):.2f} MB"
+                                f"{value / (1024 * 1024):.2f} MB"
                             elif value >= 1024:
-                                display_value = f"{value / 1024:.2f} KB"
+                                f"{value / 1024:.2f} KB"
                             else:
-                                display_value = f"{value} bytes"
+                                pass
                         elif isinstance(value, float) and key.endswith("coverage"):
                             # Format coverage percentages
-                            display_value = f"{value * 100:.1f}%"
+                            f"{value * 100:.1f}%"
                         else:
-                            display_value = str(value)
+                            str(value)
 
-                        print(f"- {display_key}: {display_value}")
 
                 # Display facets with interactive options if enabled
                 option_count = 1
                 for facet in facets.facets:
-                    print(f"\n{facet.name}:")
 
                     # Print facet metadata
-                    coverage_percent = facet.coverage * 100
-                    print(f"Coverage: {coverage_percent:.1f}% of results")
+                    facet.coverage * 100
 
                     # Print facet values
-                    for i, value in enumerate(facet.values[:5], 1):
+                    for _i, value in enumerate(facet.values[:5], 1):
                         if interactive:
                             # Show with numbered options for interactive mode
-                            print(
-                                f"  [{option_count}] {value.value} ({value.count} results)",
-                            )
                             option_count += 1
                         else:
                             # Show regular format for non-interactive mode
-                            print(f"  {i}. {value.value} ({value.count} results)")
-                            print(f"     Refine with: {value.query_refinement}")
+                            pass
 
                     # If there are more values, indicate this
                     if len(facet.values) > 5:
-                        remaining = len(facet.values) - 5
-                        print(f"  ... and {remaining} more values")
+                        len(facet.values) - 5
 
                 # Display conversational hints if enabled
                 if conversational and facets.conversational_hints:
-                    print("\nSuggestions:")
-                    for hint in facets.conversational_hints:
-                        print(f"- {hint}")
+                    for _hint in facets.conversational_hints:
+                        pass
 
                 # Display interactive mode help if enabled
                 if interactive:
-                    print("\nTo refine results, type: !refine <number>")
-                    print("For more commands: !help")
+                    pass
 
-                print("\n" + "=" * 30)
             elif facets.suggestions:
-                print("\nSuggested refinements:")
-                for suggestion in facets.suggestions:
-                    print(f"- {suggestion}")
+                for _suggestion in facets.suggestions:
+                    pass
 
         # Handle legacy string facets
         elif facets:
-            print("\nSuggested refinements:")
             for facet in facets:
-                print(f"- {facet}")
+                pass
 
     def display_execution_plan(self, plan_data: dict, query: str) -> None:
         """
@@ -1591,12 +1617,9 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         verbose = hasattr(self.args, "verbose") and self.args.verbose
 
         # Parse the plan and visualize it as text
-        visualization = self.plan_visualizer.visualize_text(plan_data, verbose=verbose)
+        self.plan_visualizer.visualize_text(plan_data, verbose=verbose)
 
         # Print the visualization
-        print("\n=== QUERY EXECUTION PLAN ===\n")
-        print(visualization)
-        print("\n===============================")
 
     def continue_session(self) -> bool:
         """Check if the user wants to continue the session."""
@@ -1610,12 +1633,10 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             memory_integration = self.archivist_components.get("memory_integration")
             if memory_integration:
                 memory_integration.update_from_session(self.query_history)
-                print("Archivist memory updated with session knowledge.")
 
             # Update proactive archivist if enabled
             if hasattr(self, "proactive_integration") and self.proactive_integration:
                 self.proactive_integration.analyze_session(self.query_history)
-                print("Proactive patterns updated with session knowledge.")
 
         # If ending the session and Fire Circle is enabled, update pattern suggestions
         if not continue_session and hasattr(self, "fire_circle_integration") and self.fire_circle_integration:
@@ -1647,9 +1668,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 
                 # Suggest patterns if we have query history
                 if query_history_data:
-                    print("Analyzing query patterns with Fire Circle...")
                     fc_integration.suggest_knowledge_patterns(query_history_data)
-                    print("Fire Circle pattern analysis complete.")
 
         return continue_session
 
@@ -1666,7 +1685,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         return schema
 
 
-def add_arguments(parser):
+def add_arguments(parser) -> None:
     """Add arguments to the parser."""
     # Global options
     parser.add_argument(
@@ -1823,7 +1842,7 @@ def add_arguments(parser):
     parser.set_defaults(command="interactive")
 
 
-def main():
+def main() -> None:
     """A CLI based query tool for Indaleko."""
     ic("Starting Indaleko Query CLI")
 
@@ -1907,17 +1926,9 @@ def main():
         )
         return
 
-    # Display normal welcome message for interactive use
-    print("\nIndaleko Query CLI")
-    print("=================")
-    print("Type 'exit' or 'quit' to exit the program.")
 
-    # Run the full CLI with all components
-    debug_mode = "--debug" in sys.argv
-
-    try:
-        # Create the CLI instance with better error handling
-        cli = IndalekoQueryCLI()
+    # Create the CLI instance with better error handling
+    cli = IndalekoQueryCLI()
 
         # Run the CLI with better error handling
         cli.run()
