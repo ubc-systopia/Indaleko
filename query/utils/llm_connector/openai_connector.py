@@ -22,7 +22,7 @@ import json
 import os
 import sys
 import time
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 import openai
 import tiktoken
@@ -38,6 +38,14 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from query.query_processing.data_models.query_output import LLMTranslateQueryResponse
 from query.utils.llm_connector.llm_base import IndalekoLLMBase
+from query.utils.prompt_manager import (
+    PromptManager, 
+    PromptOptimizationStrategy, 
+    PromptRegistry,
+    PromptTemplate,
+    create_aql_translation_template,
+    create_nl_parser_template
+)
 
 # pylint: enable=wrong-import-position
 
@@ -47,16 +55,48 @@ class OpenAIConnector(IndalekoLLMBase):
 
     llm_name = "OpenAI"
 
-    def __init__(self, api_key: str, model: str = "gpt-4o"):
+    def __init__(
+        self, 
+        api_key: str, 
+        model: str = "gpt-4o",
+        max_tokens: int = 8000,
+        use_prompt_manager: bool = True,
+        optimization_strategies: Optional[List[PromptOptimizationStrategy]] = None
+    ):
         """
         Initialize the OpenAI connector.
 
         Args:
             api_key (str): The OpenAI API key
             model (str): The name of the OpenAI model to use
+            max_tokens (int): Maximum tokens for prompts
+            use_prompt_manager (bool): Whether to use the prompt manager
+            optimization_strategies (Optional[List[PromptOptimizationStrategy]]): 
+                Optimization strategies to use for prompts
         """
         self.model = model
         self.client = openai.OpenAI(api_key=api_key)
+        
+        # Initialize prompt manager if enabled
+        self.use_prompt_manager = use_prompt_manager
+        if use_prompt_manager:
+            # Create registry and register default templates
+            registry = PromptRegistry()
+            registry.register(create_aql_translation_template())
+            registry.register(create_nl_parser_template())
+            
+            # Create prompt manager
+            self.prompt_manager = PromptManager(
+                max_tokens=max_tokens,
+                registry=registry
+            )
+            
+            # Set default optimization strategies
+            self.optimization_strategies = optimization_strategies or [
+                PromptOptimizationStrategy.WHITESPACE,
+                PromptOptimizationStrategy.SCHEMA_SIMPLIFY,
+                PromptOptimizationStrategy.EXAMPLE_REDUCE
+            ]
 
     def get_llm_name(self) -> str:
         """
@@ -64,16 +104,56 @@ class OpenAIConnector(IndalekoLLMBase):
         """
         return self.llm_name
 
-    def generate_query(self, prompt: str, temperature=0) -> LLMTranslateQueryResponse:
+    def generate_query(self, prompt: Dict[str, str], temperature=0) -> LLMTranslateQueryResponse:
         """
         Generate a query using OpenAI's model.
 
         Args:
-            prompt (str): The prompt to generate the query from
+            prompt (Dict[str, str]): The prompt to generate the query from
+                Should contain 'system' and 'user' keys
+            temperature (float): Temperature parameter for generation
 
         Returns:
-            str: The generated query
+            LLMTranslateQueryResponse: The generated query response
         """
+        # If we have a prompt manager and this looks like a raw prompt dict with query
+        if (self.use_prompt_manager and 
+            isinstance(prompt, dict) and 
+            'query' in prompt and 
+            'template' in prompt):
+            
+            # Use prompt manager to create optimized prompt
+            query = prompt['query']
+            template_name = prompt['template']
+            
+            # Get other parameters if provided
+            params = {k: v for k, v in prompt.items() 
+                     if k not in ['query', 'template', 'system', 'user']}
+            
+            # Add query parameter
+            params['query'] = query
+            
+            try:
+                # Create prompt using manager
+                managed_prompt = self.prompt_manager.create_prompt(
+                    template_name=template_name,
+                    optimize=True,
+                    strategies=self.optimization_strategies,
+                    **params
+                )
+                
+                # Update prompt with managed version
+                prompt = managed_prompt
+                
+                # Log token usage
+                combined = f"{prompt['system']}\n\n{prompt['user']}"
+                tokens = len(self.prompt_manager.tokenizer.encode(combined))
+                ic(f"Optimized prompt token count: {tokens}")
+            except ValueError as e:
+                # If template not found, log warning and continue with original prompt
+                ic(f"Warning: {str(e)}. Using original prompt.")
+        
+        # Log submission details
         ic("Submitting prompt to OpenAI")
         ic(f"Using model: {self.model}")
         ic(f"System prompt length: {len(prompt['system'])}")

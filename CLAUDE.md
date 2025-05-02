@@ -1,8 +1,37 @@
 # CLAUDE.md - Indaleko Development Guidelines
 
-## Current Work: Data Generator Testing
+## Current Work: Prompt Management and Data Generator Enhancements
 
-I'm currently testing the synthetic data generator in the `data_generator` directory to evaluate its functionality with recent codebase changes.
+We're currently working on two main areas:
+
+1. **Prompt Management System**:
+   - Implementing a system to optimize prompts for LLM interactions
+   - Reducing prompt sizes through techniques like whitespace normalization, schema simplification, and example reduction
+   - Detecting and resolving contradictions using both rule-based and LLM-based approaches
+   - Ensuring consistent terminology (e.g., Record.Attributes vs Record.Attribute)
+
+2. **Data Generator Testing**:
+   - Testing the synthetic data generator in the `data_generator` directory
+   - Updating module imports and access patterns to match current codebase structure
+   - Correcting database authentication methods
+
+### Prompt Management System
+
+We've created a comprehensive `PromptManager` class with these capabilities:
+
+- **Template-based prompts** with system and user components
+- **Token counting and optimization** to reduce LLM costs
+- **Contradiction detection** to prevent cognitive dissonance
+- **Usage statistics** to track prompt size improvements
+
+Key optimization strategies include:
+- Whitespace normalization
+- Schema simplification
+- Example reduction
+- Context windowing
+- Contradiction detection via rules and LLM review
+
+The Ayni principle is implemented through LLM-powered review of prompts, positioning one AI as a reviewer of instructions meant for another.
 
 ### Data Generator Overview
 
@@ -14,45 +43,8 @@ The data generator creates synthetic metadata records to test Indaleko's search 
 - Tests precision and recall of search results
 - Validates UPI (Unified Personal Index) effectiveness
 
-### Tool Workflow
-
-1. Configures dataset parameters (using `dg_config.json`)
-   - Target dataset size
-   - Natural language query to test
-   - Number of expected matching records
-2. Generates synthetic metadata matching specific criteria
-3. Stores metadata in Indaleko database collections
-4. Executes the natural language query against the data
-5. Calculates precision and recall metrics
-6. Logs detailed results for analysis
-
-### Current Issues and Required Changes
-
-The data generator requires several modifications to work with the current codebase:
-
-1. **Database Authentication**:
-   - Error: `arango.exceptions.CollectionListError: [HTTP 401][ERR 11] not authorized to execute this request`
-   - Fix: Update ArangoDB credentials in database configuration
-
-2. **Module Import Structure**:
-   - The data generator uses outdated import paths and interfaces
-   - Several modules from the `query` package have different interfaces than expected:
-     - `TranslatorBase` class has a different method signature
-     - `OpenAIConnector` likely has different API usage
-     - `AQLExecutor` may have different method parameters
-
-3. **Configuration Requirements**:
-   - Ensure `config/openai-key.ini` exists with valid API key
-   - Update `data_generator/config/dg_config.json` with proper paths
-
-**Minimal Changes Needed**:
-1. Update import paths in `s4_translate_AQL.py` to use current module structure
-2. Update the database access in `main_pipeline.py` to use current authentication
-3. Fix collection access patterns in `s2_store_test_Indaleko.py`
-4. Create/update necessary configuration files
-
 **Important Notes**:
-- Never mock database connections as this can cause serious issues
+- Never mock database connections
 - Any modifications must be minimal and carefully reviewed
 - The tool was developed with an adversarial evaluation model, so changes require review
 
@@ -125,6 +117,16 @@ Indaleko uses a centralized approach for database collection management:
 - Production uses UUID-based collection names for security
 - Never call `db.create_collection()` directly
 
+### Schema and Data Consistency
+
+To maintain schema consistency:
+
+1. **Record.Attributes vs Record.Attribute**: Always use `Record.Attributes` (plural) for ArangoDB access patterns
+2. **Collection Names**: Use proper names like `Objects`, `Activities`, and `SemanticData`
+3. **Timezone-Aware Dates**: Always use timezone-aware datetime objects for ArangoDB
+
+The prompt management system helps detect and fix these inconsistencies automatically.
+
 ### Cognitive Memory Architecture
 
 Indaleko uses a multi-tier memory architecture:
@@ -189,11 +191,12 @@ source .venv-macos-python3.12/bin/activate
 
 ## Style Guidelines
 - **Imports**: standard library → third-party → local
-- **Types**: Use type hints for all functions and variables
+- **Types**: Use type hints for all functions and variables (Python 3.12+ features encouraged)
 - **Formatting**: 4 spaces, ~100 char line length
 - **Naming**: CamelCase (classes), snake_case (functions/vars), UPPER_CASE (constants)
 - **Interfaces**: Prefix with 'I' (IObject, IRelationship)
 - **Documentation**: Docstrings with Args/Returns sections
+- **Modern Python**: Use match/case and other Python 3.12+ features where appropriate
 
 ### Timezone-Aware Datetime
 Always use timezone-aware datetimes for ArangoDB:
@@ -227,7 +230,7 @@ class MyArangoModel(IndalekoBaseModel):
 ### Testing & Development
 - Run tests: `pytest tests/`
 - Format code: `black .`
-- Lint code: `flake8`
+- Lint code: `flake8` or `ruff`
 
 ### Data Collection
 - NTFS activity: `run_ntfs_activity_v2.py --volumes C: --interval 30`
@@ -247,6 +250,10 @@ class MyArangoModel(IndalekoBaseModel):
 - Run synthetic data generator: `python -m data_generator.main_pipeline`
 - Check results in: `data_generator/results/`
 
+### Prompt Management
+- Test prompt optimization: `python test_prompt_manager.py`
+- The system integrates with the OpenAI connector
+
 ## Best Practices
 
 ### Error Handling
@@ -256,6 +263,16 @@ try:
 except (ValueError, KeyError) as e:
     logger.error(f"Failed to process data: {e}")
     raise IndalekoProcessingError(f"Data processing failed: {str(e)}") from e
+```
+
+### ArangoDB Cursor Handling
+Always fully consume ArangoDB cursors by converting them to lists before serialization:
+```python
+if isinstance(results, Cursor):
+    result_list = [doc for doc in results]  # Convert cursor to list
+    result_data["results"] = result_list
+else:
+    result_data["results"] = results
 ```
 
 ### Entity Lookups
