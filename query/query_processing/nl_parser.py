@@ -24,17 +24,20 @@ import os
 import sys
 import time
 import traceback
+
+from pathlib import Path
 from textwrap import dedent
 from typing import Any
 
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
-        current_path = os.path.dirname(current_path)
-    os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
 from data_models.named_entity import (
@@ -44,7 +47,8 @@ from data_models.named_entity import (
     example_entities,
 )
 from db.db_collection_metadata import IndalekoDBCollectionsMetadata
-from query.query_processing.data_models.query_input import StructuredQuery
+from db.db_collections import IndalekoDBCollections
+from query.query_processing.data_models.parser_data import ParserResults
 from query.query_processing.data_models.query_output import (
     LLMCollectionCategory,
     LLMCollectionCategoryEnum,
@@ -53,6 +57,7 @@ from query.query_processing.data_models.query_output import (
     LLMIntentTypeEnum,
 )
 from query.utils.llm_connector.llm_base import IndalekoLLMBase
+
 
 # pylint: enable=wrong-import-position
 
@@ -99,9 +104,6 @@ class LLMResponseValidator:
             missing_fields = [field for field in required_fields if field not in category]
 
             if missing_fields:
-                logger.warning(
-                    f"Category {i} missing required fields: {missing_fields}",
-                )
                 for field in missing_fields:
                     if field == "confidence":
                         category[field] = 0.8  # Default confidence
@@ -114,9 +116,6 @@ class LLMResponseValidator:
 
             # Add alternatives_considered if missing
             if "alternatives_considered" not in category:
-                logger.warning(
-                    f"Adding missing 'alternatives_considered' to category {i}",
-                )
                 category["alternatives_considered"] = []
 
         return response
@@ -197,7 +196,6 @@ class LLMResponseValidator:
 
             # Add category/type if missing
             if "category" not in entity and "type" not in entity:
-                logger.warning(f"Adding default category 'item' to entity {i}")
                 entity["category"] = "item"
 
             # Normalize between category and type
@@ -208,15 +206,13 @@ class LLMResponseValidator:
 
 
 class NLParser:
-    """
-    Natural Language Parser for processing user queries.
-    """
+    """Natural Language Parser for processing user queries."""
 
     def __init__(
         self,
         collections_metadata: IndalekoDBCollectionsMetadata,
         llm_connector: IndalekoLLMBase | None = None,
-    ):
+    ) -> None:
         """
         Initialize the parser.
 
@@ -252,7 +248,7 @@ class NLParser:
             if not self.collection_data:
                 # If that's also empty, create a minimal default structure with Objects
                 self.collection_data = {
-                    "Objects": {
+                    IndalekoDBCollections.Indaleko_Object_Collection: {
                         "Name": "Objects",
                         "Description": "Storage objects collection",
                         "Indices": [],
@@ -261,7 +257,7 @@ class NLParser:
                     },
                 }
 
-    def parse(self, query: str) -> StructuredQuery:
+    def parse(self, query: str) -> ParserResults:
         """
         Parse the natural language query into a structured format.
 
@@ -271,70 +267,27 @@ class NLParser:
         Returns:
             ParserResults: A structured representation of the query
         """
-        logging.info(f"Parsing query: {query}")
+        return ParserResults(
+            OriginalQuery=query,
+            Intent=self._detect_intent(query),
+            Entities=self._extract_entities(query),
+            Categories=self._extract_categories(query),
+        )
 
-        try:
-            # Extract categories
-            categories = self._extract_categories(query)
-
-            # Detect intent
-            intent = self._detect_intent(query)
-
-            # Extract entities
-            entities = self._extract_entities(query)
-
-            # Create structured query
-            structured_query = StructuredQuery(
-                original_query=query,
-                intent=intent.intent,
-                entities=entities,
-            )
-
-            return structured_query
-
-        except Exception as e:
-            # Log and track the error
-            logger.error(f"Error parsing query: {e}")
-            logger.debug(traceback.format_exc())
-            self.error_count["total"] += 1
-            self.error_log.append(
-                {
-                    "timestamp": time.time(),
-                    "query": query,
-                    "stage": "parse",
-                    "error": str(e),
-                    "traceback": traceback.format_exc(),
-                },
-            )
-
-            # Create a fallback structured query
-            entity = IndalekoNamedEntityDataModel(
-                name=query,
-                category=IndalekoNamedEntityType.keyword,
-                description=query,
-            )
-
-            entity_collection = NamedEntityCollection(entities=[entity])
-
-            return StructuredQuery(
-                original_query=query,
-                intent="search",
-                entities=entity_collection,
-            )
 
     def _detect_intent(self, query: str) -> LLMIntentQueryResponse:
         """
         Detect the primary intent of the query.
 
         Args:
-            query: The user's query
+            query: The query
 
         Returns:
             LLMIntentQueryResponse: The detected intent
         """
         try:
             # Define typical intents
-            typical_intents = [intent for intent in LLMIntentTypeEnum]
+            typical_intents = list(LLMIntentTypeEnum)
 
             # Create query response template
             query_response = LLMIntentQueryResponse(
@@ -342,7 +295,8 @@ class NLParser:
                 rationale="because this is a search tool, the default intent is search",
                 alternatives_considered=[
                     {
-                        "example": "this is an example, so it is static and nothing else was considered",
+                        "example": "this is an example, so it is static and nothing "
+                        "else was considered",
                     },
                 ],
                 suggestion="No suggestions, this is an optimal process in my opinion",
@@ -352,17 +306,26 @@ class NLParser:
 
             # Create a prompt for the LLM
             prompt = dedent(
-                "You are a personal digital archivist collaborating with a human user and a tool called "
-                "Indaleko.  Together your goal is to help the human user find a specific storage object "
-                "(typically a file) that is stored in a storage services.  Indaleko is an index of all this "
-                "human user's storage services, with normalized data.  The human user has submitted a query "
-                "and our first step in our collaboration is to infer the user's intent from the query. "
-                f"The current typical intents are: {typical_intents}, where unknown is used when "
-                "the intent is unclear. Given the nature of our collaboration, search is the most likely intent. "
-                "In returning your response, please provide the intent as a JSON structure with the following "
-                f"schema: {schema}\n"
-                "Since this is a collaboration between us, we value your feedback on this process, "
-                "so that we can work together to improve the quality of the results.",
+                f"""
+                You are a personal digital archivist collaborating with a human user and a
+                tool called "
+                Indaleko.  Together your goal is to help the human user find a specific
+                storage object "
+                (typically a file) that is stored in a storage services.  Indaleko is an
+                index of all this "
+                human user's storage services, with normalized data.  The human user has
+                submitted a query "
+                and our first step in our collaboration is to infer the user's intent
+                from the query. "
+                The current typical intents are: {typical_intents}, where unknown is used when "
+                the intent is unclear. Given the nature of our collaboration, search is the
+                most likely intent. "
+                In returning your response, please provide the intent as a JSON structure
+                with the following "
+                schema: {schema}\n"
+                Since this is a collaboration between us, we value your feedback on this process, "
+                so that we can work together to improve the quality of the results.",
+                """,
             )
 
             # Use the LLM connector to get the intent
@@ -372,8 +335,8 @@ class NLParser:
             # Validate and repair intent response
             try:
                 doc = self.validator.validate_and_repair_intent_response(doc)
-            except LLMResponseValidationError as e:
-                logger.error(f"Intent validation error: {e}")
+            except LLMResponseValidationError:
+                logger.exception("Intent validation error")
                 self.error_count["validation"] += 1
                 self.error_count["intent"] += 1
                 self.error_count["total"] += 1
@@ -382,7 +345,6 @@ class NLParser:
                         "timestamp": time.time(),
                         "query": query,
                         "stage": "intent_validation",
-                        "error": str(e),
                         "response": doc,
                     },
                 )
@@ -399,14 +361,14 @@ class NLParser:
 
             # Validate the intent
             if data.intent not in typical_intents:
-                logger.warning(f"Unrecognized intent: {data.intent}")
+                logger.warning("Unrecognized intent: %s", data.intent)
                 data.intent = "unknown"  # Default to "unknown" if not recognized
 
-            logging.info(ic(f"Detected intent: {data.intent}"))
-            return data
+            logger.info("Detected intent: %s", data.intent)
+            return data  # noqa: TRY300
 
-        except Exception as e:
-            logger.error(f"Error detecting intent: {e}")
+        except OSError:
+            logger.exception("Error detecting intent")
             logger.debug(traceback.format_exc())
             self.error_count["intent"] += 1
             self.error_count["total"] += 1
@@ -415,7 +377,6 @@ class NLParser:
                     "timestamp": time.time(),
                     "query": query,
                     "stage": "intent",
-                    "error": str(e),
                     "traceback": traceback.format_exc(),
                 },
             )
@@ -430,6 +391,8 @@ class NLParser:
 
     def _extract_categories(self, query: str) -> LLMCollectionCategoryQueryResponse:
         """
+        Extract categories from the user's query.
+
         Using the collections in the database, identify which categories of information
         are likely to be useful for the query.
 
@@ -440,7 +403,6 @@ class NLParser:
             LLMCollectionCategoryQueryResponse: A response with category mappings
         """
         try:
-            ic(type(self.collection_data["Objects"]))
 
             # Define existing category types
             typical_categories = [category.value for category in LLMCollectionCategoryEnum]
@@ -467,28 +429,43 @@ class NLParser:
 
             # Create a prompt for the LLM
             prompt = dedent(
-                "You are a personal digital archivist collaborating with a human user and a tool called "
-                "Indaleko.  Together your goal is to help the human user find a specific storage object "
-                "(typically a file) that is stored in a storage services.  Indaleko is an index of all this "
-                "human user's storage services, with normalized data.  The human user has submitted a query "
-                "and our third step in our collaborative process is to identify the ArangoDB collections "
-                "that may be useful for evaluating this query against the schema of the collection. "
-                "Indaleko is a unified personal index of storage services, and the collections include "
-                "normalized metadata about storage objects, which are maintained across multiple "
-                "disparate storage services, "
-                "semantic information, which is derived from those storage objects, and activity information, which is "
-                "derived from the user's experiential data, which we call activity data.  The goal is to weave "
-                "our human user's episodic memories with this rich metadata to augment their ability "
-                "to find specific "
-                "storage objects.  The better we do this, the more efficient our user is, which satisfies "
-                "our mutual utility "
-                "functions. "
-                f"Thus, broadly speaking the categories of collections correspond to {typical_categories}, though "
-                "we suspect that more refined categories might be useful.  "
-                f"The current data for the Indaleko ArangoDB collections is: {self.collection_data}\n"
-                f"The current data schema for the response data is: {category_response.model_json_schema()}\n"
-                "Since this is a collaboration between us, we value your feedback on this process, "
-                "so that we can work together to improve the quality of the results. ",
+                f"""
+                You are a personal digital archivist collaborating with a human
+                user and a tool called
+                Indaleko.  Together your goal is to help the human user find a
+                specific storage object
+                (typically a file) that is stored in a storage services.
+                Indaleko is an index of all this
+                human user's storage services, with normalized data.
+                The human user has submitted a query
+                and our third step in our collaborative process is to identify
+                the ArangoDB collections
+                that may be useful for evaluating this query against the
+                schema of the collection.
+                Indaleko is a unified personal index of storage services,
+                and the collections include
+                normalized metadata about storage objects, which are
+                maintained across multiple
+                disparate storage services,
+                semantic information, which is derived from those storage objects,
+                and activity information, which is
+                derived from the user's experiential data, which we call
+                activity data.  The goal is to weave
+                our human user's episodic memories with this rich metadata
+                to augment their ability to find specific
+                storage objects.  The better we do this, the more efficient
+                our user is, which satisfies our mutual utility functions.
+                Thus, broadly speaking the categories of collections
+                correspond to {typical_categories}, though
+                we suspect that more refined categories might be useful.
+                The current data for the Indaleko ArangoDB
+                collections is: {self.collection_data}.
+                The current data schema for the response data is:
+                {category_response.model_json_schema()}.
+                "Since this is a collaboration between us, we value your
+                feedback on this process,
+                so that we can work together to improve the quality of the results.
+                """,
             )
 
             # Use the LLM connector to get the categories
@@ -498,13 +475,12 @@ class NLParser:
                 category_response.model_json_schema(),
             )
             doc = json.loads(response)
-            ic(doc)
 
             # Validate and repair category response
             try:
                 doc = self.validator.validate_and_repair_category_response(doc)
             except LLMResponseValidationError as e:
-                logger.error(f"Category validation error: {e}")
+                logger.exception("Category validation error")
                 self.error_count["validation"] += 1
                 self.error_count["category"] += 1
                 self.error_count["total"] += 1
@@ -521,11 +497,10 @@ class NLParser:
                 return category_response
 
             # Create category response object
-            data = LLMCollectionCategoryQueryResponse(**doc)
-            return data
+            return LLMCollectionCategoryQueryResponse(**doc)
 
-        except Exception as e:
-            logger.error(f"Error extracting categories: {e}")
+        except OSError:
+            logger.exception("Error extracting categories")
             logger.debug(traceback.format_exc())
             self.error_count["category"] += 1
             self.error_count["total"] += 1
@@ -534,7 +509,6 @@ class NLParser:
                     "timestamp": time.time(),
                     "query": query,
                     "stage": "categories",
-                    "error": str(e),
                     "traceback": traceback.format_exc(),
                 },
             )
@@ -564,28 +538,33 @@ class NLParser:
             NamedEntityCollection: Extracted entities
         """
         try:
-            logging.info(f"Extracting entities from query: {query}")
+            logger.info("Extracting entities from query: %s", query)
 
             # Define typical entity types
             typical_entities = [entity.value for entity in IndalekoNamedEntityType]
 
             # Create a prompt for the LLM
             prompt = dedent(
-                "You are a personal digital archivist collaborating with a human user and a tool called "
-                "Indaleko.  Together your goal is to help the human user find a specific storage object "
-                "(typically a file) that is stored in a storage services.  Indaleko is an index of all this "
-                "human user's storage services, with normalized data.  The human user has submitted a query "
-                "and our second step in our collaboration is to extract possibly named entities from the user's "
-                "query."
-                f"The current typical kinds of entities are: {typical_entities}. "
-                "In returning your response, please provide the entity names in the "
-                "name field of the IndalekoNamedEntityCollection, along with the relevant category. "
-                "The other fields should be left blank, as they will  be retrieved from the database "
-                "if there is a matching named entity.  This can then be used for further processing of"
-                "the user's query.  The schema of the IndalekoNamedEntityCollection is: "
-                f"{example_entities.model_json_schema()}\n "
-                "Since this is a collaboration between us, we value your feedback on this process, "
-                "so that we can work together to improve the quality of the results.",
+                """
+                You are a personal digital archivist collaborating with a human user
+                and a tool called Indaleko.  Together your goal is to help the human
+                user find a specific storage object (typically a file) that is stored
+                in a storage service.  Indaleko is an index of all this human user's
+                storage services, with normalized data.  The human user has submitted
+                a query and our second step in our collaboration is to extract
+                possibly named entities from the user's query."""
+                f"""The current typical kinds of entities are: {typical_entities}.
+                In returning your response, please provide the entity names in the
+                name field of the IndalekoNamedEntityCollection, along with the
+                relevant category.
+                The other fields should be left blank, as they will  be retrieved
+                from the database if there is a matching named entity.  This can then
+                be used for further processing of the user's query.  The schema of
+                the {IndalekoDBCollections.Indaleko_Named_Entity_Collection} is:
+                {example_entities.model_json_schema()}.
+                Since this is a collaboration between us, we value your feedback on this process,
+                so that we can work together to improve the quality of the results.
+                """,
             )
 
             # Use the LLM connector to get the entities
@@ -600,7 +579,7 @@ class NLParser:
             try:
                 doc = self.validator.validate_and_repair_entities_response(doc)
             except LLMResponseValidationError as e:
-                logger.error(f"Entities validation error: {e}")
+                logger.exception("Entities validation error")
                 self.error_count["validation"] += 1
                 self.error_count["entities"] += 1
                 self.error_count["total"] += 1
@@ -622,11 +601,11 @@ class NLParser:
                 return NamedEntityCollection(entities=[entity])
 
             # Create entity collection
-            logging.info(ic(f"Extracted entities: {doc}"))
+            logging.info(ic(f"Extracted entities: {doc}"))  # noqa: LOG015
             return NamedEntityCollection(**doc)
 
-        except Exception as e:
-            logger.error(f"Error extracting entities: {e}")
+        except OSError:
+            logger.exception("Error extracting entities")
             logger.debug(traceback.format_exc())
             self.error_count["entities"] += 1
             self.error_count["total"] += 1
@@ -635,7 +614,6 @@ class NLParser:
                     "timestamp": time.time(),
                     "query": query,
                     "stage": "entities",
-                    "error": str(e),
                     "traceback": traceback.format_exc(),
                 },
             )
@@ -643,7 +621,9 @@ class NLParser:
             # Create default entity
             entity = IndalekoNamedEntityDataModel(
                 name=query,
-                category=IndalekoNamedEntityType.item,  # Using 'item' instead of non-existent 'keyword'
+                name=query,
+
+                category=IndalekoNamedEntityType.item,
                 description=query,
             )
             return NamedEntityCollection(entities=[entity])
@@ -652,7 +632,10 @@ class NLParser:
         """Get statistics about encountered errors."""
         return {
             "error_counts": self.error_count,
-            "error_rate": (self.error_count["total"] / max(1, len(self.error_log)) if self.error_log else 0),
+            "error_rate": (
+                self.error_count["total"] / max(1, len(self.error_log))
+                if self.error_log else 0
+            ),
             "common_errors": self._analyze_common_errors(),
         }
 
@@ -660,6 +643,9 @@ class NLParser:
         """Analyze common error patterns in the error log."""
         if not self.error_log:
             return []
+
+        # Define a constant for the maximum number of samples
+        max_samples = 3
 
         # Group errors by type
         error_types = {}
@@ -676,8 +662,8 @@ class NLParser:
                 error_types[error_type]["stages"][stage] = 0
             error_types[error_type]["stages"][stage] += 1
 
-            # Store sample queries (up to 3 per error type)
-            if len(error_types[error_type]["samples"]) < 3:
+            # Store sample queries (up to MAX_SAMPLES per error type)
+            if len(error_types[error_type]["samples"]) < max_samples:
                 error_types[error_type]["samples"].append(error["query"])
 
         # Convert to a sorted list

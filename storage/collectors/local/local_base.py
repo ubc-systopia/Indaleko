@@ -167,7 +167,7 @@ class BaseLocalStorageCollector(BaseStorageCollector):
 
         def capture_performance(
             task_func: Callable[..., Any],
-            output_file_name: Path | str = None,
+            output_file_name: Path | str | None = None,
         ):
             perf_data = IndalekoPerformanceDataCollector.measure_performance(
                 task_func,

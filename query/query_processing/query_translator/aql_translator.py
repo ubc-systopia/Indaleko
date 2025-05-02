@@ -22,6 +22,7 @@ import json
 import os
 import sys
 
+from datetime import UTC, datetime
 from pathlib import Path
 from textwrap import dedent
 from typing import Any
@@ -36,8 +37,10 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = str(current_path)
     sys.path.insert(0, str(current_path))
 
+
 # pylint: disable=wrong-import-position
 from db.db_collection_metadata import IndalekoDBCollectionsMetadata
+from db.db_collections import IndalekoDBCollections
 from query.query_processing.data_models.translator_input import TranslatorInput
 from query.query_processing.data_models.translator_response import TranslatorOutput
 from query.query_processing.query_translator.translator_base import TranslatorBase
@@ -71,24 +74,14 @@ class AQLTranslator(TranslatorBase):
                 "collections_metadata",
                 {},
             )
-            if not self.collection_data:
-                # If that's also empty, create a minimal default structure with Objects
-                self.collection_data = {
-                    "Objects": {
-                        "Name": "Objects",
-                        "Description": "Storage objects collection",
-                        "Indices": [],
-                        "Schema": {},
-                        "QueryGuidelines": ["Search for files and folders"],
-                    },
-                }
 
     def translate(self, input_data: TranslatorInput) -> TranslatorOutput:
         """
         Translate a parsed query into an AQL query.
 
         Args:
-            input_data: The parsed query data, including the original query and metadata attributes.
+            input_data (TranslatorInput): The input data containing the parsed query
+                and metadata attributes.
 
         Returns:
             TranslatorOutput: The translated AQL query
@@ -103,7 +96,19 @@ class AQLTranslator(TranslatorBase):
         )
         performance_data = json.loads(completion.usage.model_dump_json())
         response_data = json.loads(completion.choices[0].message.content)
-        # > print(json.dumps(response_data, indent=2))
+        if ("aql_query" not in response_data and
+             "example" in response_data and
+             "aql_query" in response_data["example"]
+        ):
+            return TranslatorOutput(
+                aql_query=response_data["example"]["aql_query"],
+                explanation=response_data["example"]["explanation"],
+                confidence=response_data["example"]["confidence"],
+                observations=response_data["example"].get("observations", None),
+                performance_info=performance_data,
+                bind_vars=response_data["example"].get("bind_vars", {}),
+                additional_notes=response_data["example"].get("additional_notes", None),
+            )
         return TranslatorOutput(
             aql_query=response_data["aql_query"],
             explanation=response_data["explanation"],
@@ -183,109 +188,117 @@ class AQLTranslator(TranslatorBase):
             str: The prompt for the LLM.
         """
         # Implement prompt creation logic
-        system_prompt = dedent(
+        system_prompt = (
             """
-            You are an assistant that generates ArangoDB queries for a
-            Unified Personal Index (UPI) system.
+            You are an assistant that generates ArangoDB queries for a Unified
+            Personal Index (UPI) system.
             The UPI stores metadata about digital objects (e.g., files, directories)
             in an ArangoDB database.
             Given a user query and a dictionary called selected_md_attributes, generate
-            the corresponding AQL
+              the corresponding AQL
             query that retrieves matching information. The schema includes two main collections:
 
-            ActivityContext: Stores metadata related to the context of activities. It includes
-            the location field.
-            Objects: Stores information about digital objects, such as files and directories.
-            You should iterate through each context in ActivityContext and access the
-            SemanticAttributes or relevant
-            fields as required. Do not use both collections in a single query. The query should
-            return the entire object
-            from the Objects or ActivityContext collection.
+            {IndalekoDBCollections.Indaleko_ActivityContext_Collection}: Stores
+            metadata related to the context of activities.
+            It includes the location field.
+            {IndalekoDBCollections.Indaleko_Object_Collection}: Stores information about
+            digital objects, such as files and directories.
+            You should iterate through each context in ActivityContext and access
+            the SemanticAttributes
+            or relevant fields as required. Do not use both collections in a
+            single query.
+            The query should return the entire object from the Objects or
+            ActivityContext collection.
 
             Important Instructions:
             If 'Activity' is specified in selected_md_attributes, search within the
-            ActivityContext if not,
-            search within Objects.
+            {IndalekoDBCollection.Indaleko_ActivityContext_Collection} collection.
+            if not, search within Objects.
 
             In selected_md_attributes['Posix']:
                 If "file.name" is specified, include it in the query as Label.
                 If file.size is specified, use Size.
                 If file.directory is specified, use the LocalPath.
-                If "location" is specified in selected_md_attributes, include logic to
-                filter paths based on:
+                If "location" is specified in selected_md_attributes,
+                    include logic to filter paths based on:
                     "google_drive": /file/d/
                     "dropbox": /s/...?dl=0
                     "icloud": /iclouddrive/
                     "local": paths that contain the local_dir_name specified in
                     selected_md_attributes.
+                    "local": paths that contain the local_dir_name specified in
+                    selected_md_attributes.
             Do not include path filters in the query unless they are explicitly specified in the
-            selected_md_attributes dictionary. The timestamp in geo_location is the time when the
-            activity context was collected. The timestamp in the Posix is when the file was
-            modified, changed,
+            selected_md_attributes dictionary. The timestamp in geo_location is
+            the time when the
+            activity context was collected. The timestamp in the Posix is when
+            the file was modified, changed,
             accessed or created; you don't have to convert the timestamps, just use the posix
-            timestamp as is e.g.) when given {'Posix': {'timestamps': {'birthtime':
-            {'starttime': 1736064000.0 ,
+            timestamp as is e.g.) when given {'Posix': {'timestamps': {'birthtime': {
+            'starttime': 1736064000.0 ,
             'endtime': 1736064000.0 , 'command': 'equal'}}}, Activity': {geo_location:
             {'location': 'Victoria',
             'command': 'at', 'timestamp': 'birthtime'}} aql query is:
             FILTER TO_NUMBER(activity.Timestamp) == 1736064000.0
-            To match coordinates, find SemanticAttributes with an Identifier.Label of "Longitude"
-            and ensure
-            the Data matches the given longitude, and similarly for latitude. Make sure to still
-            check the
-            activity.Record.Attributes for posix metadata as well (like name, path, timestamps,
-            size, etc.)
-            When command is "within", check that the coordinates are within the value specified
-            in "km"
+            To match coordinates, find SemanticAttributes with an Identifier.Label
+            of "Longitude" and ensure
+            the Data matches the given longitude, and similarly for latitude. Make
+            sure to still check the
+            activity.Record.Attributes for posix metadata as well
+            (like name, path, timestamps, size, etc.)
+            When command is "within", check that the coordinates are
+            within the value specified in "km"
             relative to the given longitude and latitude coordinates.
             Only get semantic attributes if the 'Semantic' is populated.
-            If the number of truth attributes is greater than one and in the dictionary, the
-            file name command is
-            'exactly' with a local directory specified, make sure to add % in command as
-            there could be files with
-            duplicate names in the same directory: {'Posix': {'file.name': {'pattern': 'photo',
-            'command': 'exactly',
-            'extension': ['.jpg']}, 'file.directory': {'location': 'local', 'local_dir_name':
-            'photo'}}} should
+            If the number of truth attributes is greater than one and in
+             the dictionary, the file name command is
+            'exactly' with a local directory specified, make sure to
+            add % in command as there could be files with
+            duplicate names in the same directory: {'Posix':
+            {'file.name': {'pattern': 'photo', 'command': 'exactly',
+            'extension': ['.jpg']}, 'file.directory': {'location':
+            'local', 'local_dir_name': 'photo'}}} should
             give aql: Label LIKE 'photo%.pdf' OR 'photo(%).pdf'; instead of
             Label LIKE 'photo.pdf'. If number of attributes is one, just use
             Label LIKE 'photo.pdf.
-            When getting semantic attributes, retrieve the attribute via the dictionary
-            attribute specified.
-            All attributes are stored within list of attributes, the labels are the keys
-            of the dictionary like
-            'Text' or 'Type' and ther respective data are the values of the keys e.g.,
-            'cats and dogs' is a datum
-            for the key 'Text' and 'Title' a datum for the key 'Type'. Any text content
-            is specified with 'Text'
+            When getting semantic attributes, retrieve the attribute via the
+            dictionary attribute specified.
+            All attributes are stored within list of attributes, the labels are the
+            keys of the dictionary like
+            'Text' or 'Type' and ther respective data are the values of the keys
+            e.g., 'cats and dogs' is a datum
+            for the key 'Text' and 'Title' a datum for the key 'Type'.
+            Any text content is specified with 'Text'
             and 'Type' emphasizes what kind of text it is: ex.)
-            {'Posix': {'file.name': {'pattern': 'essay', 'command': 'starts', 'extension':
-            ['.txt']},
-            'timestamps': {'modified': {'starttime': 1572505200.0, 'endtime': 1572505200.0,
-            'command': 'equal'}},
-            'file.size': {'target_min': 7516192768, 'target_max': 7516192768, 'command':
-            'less_than'}},
-            'Semantic': {'Content_1': {'Languages': 'str', 'Text': 'advancements in computer
-            science'}}}
+            {'Posix': {'file.name': {'pattern': 'essay',
+            'command': 'starts', 'extension': ['.txt']},
+            'timestamps': {'modified': {'starttime': 1572505200.0,
+            'endtime': 1572505200.0, 'command': 'equal'}},
+            'file.size': {'target_min': 7516192768, 'target_max': 7516192768,
+            'command': 'less_than'}},
+            'Semantic': {'Content_1': {'Languages': 'str',
+            'Text': 'advancements in computer science'}}}
             then the Aql query would be: FOR record IN Objects FILTER record.Label LIKE
             'essay%.txt' AND TO_NUMBER(record.Record.Attributes.st_mtime) >= 1572505200.0 AND
             TO_NUMBER(record.Record.Attributes.st_mtime) <= 1572505200.0 AND
             record.Size < 7516192768
-            LET semanticTitle = FIRST(FOR attr IN record.SemanticAttributes
+            LET semanticTitle = FIRST(FOR attr IN
+            record.SemanticAttributes
             FILTER attr.Identifier.Label == 'Text' RETURN attr.Data)
             FILTER semanticTitle == 'advancements in computer science'
             RETURN record.
-            When comparing timestamps in the Record table, ensure that timestamps with a
-            prefix of
-            st_ are converted to number (use TO_NUMBER) When matching file names, names
-            should have
+            When comparing timestamps in the Record table,
+            ensure that timestamps with a prefix of
+            st_ are converted to number (use TO_NUMBER)
+            When matching file names, names should have
             an extension at the end, so use 'LIKE' command not ==.
-            Make sure to incorporate all attributes from the given dictionary into the
-            aql statement.
-            The query should only include the AQL code, without any additional explanations
-            or  comments.
-            You must return one single code block enclosed in '```'s with only one FOR and
-            RETURN statement.\n"""
+            Make sure to incorporate all attributes from
+            the given dictionary into the aql statement.
+            The query should only include the AQL code,
+            without any additional explanations or  comments.
+            You must return one single code block enclosed
+            in '```'s with only one FOR and RETURN statement.
+            """
             f"""
             Dictionary of attributes: {selected_md_attributes!s}
             Number of truth attributes: {n_truth_md!s}
@@ -293,7 +306,6 @@ class AQLTranslator(TranslatorBase):
             Schema: {parsed_query['schema']!s}
             """,
         )
-
         user_prompt = parsed_query["original_query"]
 
         return {"system": system_prompt, "user": user_prompt}
@@ -309,20 +321,17 @@ class AQLTranslator(TranslatorBase):
             dict[str, str]: A mapping of keywords to their relevant collections.
         """
         # Fetch all collection metadata from CollectionMetadata
-        for data in self.collection_data:
-            ic(dir(data))
 
         return {
-            "file": "Objects",
-            "files": "Objects",
-            "directory": "Objects",
-            "directories": "Objects",
+            "file": IndalekoDBCollections.Indaleko_Object_Collection,
+            "files": IndalekoDBCollections.Indaleko_Object_Collection,
+            "directory": IndalekoDBCollections.Indaleko_Object_Collection,
+            "directories": IndalekoDBCollections.Indaleko_Object_Collection,
         }
 
     def _determine_relevant_collections(
         self,
         parsed_query: dict[str, Any],
-        _selected_md_attributes: dict[str, Any],
     ) -> list[str]:
         """
         Dynamically determine the relevant collections based on the user query.
@@ -364,7 +373,8 @@ class AQLTranslator(TranslatorBase):
         if needs_activity_data:
             # Step 5: Query `ActivityDataProviders` to find available sources
             activity_providers = self.db_config.db.aql.execute(
-                "FOR provider IN ActivityDataProviders RETURN provider.Name",
+                f"FOR provider IN {IndalekoDBCollections.Indaleko_ActivityDataProvider_Collection} "
+                "RETURN provider.Name",
             )
             provider_collections = list(activity_providers)
 
@@ -372,7 +382,7 @@ class AQLTranslator(TranslatorBase):
             relevant_collections.update(provider_collections)
 
             # Step 7: Ensure ActivityContext is included (acts as an index/cursor)
-            relevant_collections.add("ActivityContext")
+            relevant_collections.add(IndalekoDBCollections.Indaleko_ActivityContext_Collection)
 
         return list(relevant_collections)
 
@@ -380,22 +390,13 @@ class AQLTranslator(TranslatorBase):
         """Constructs a structured prompt for the LLM to generate an AQL query."""
         user_prompt = input_data.Query.original_query
         # Get available collections directly from ArangoDB
+        available_collections = []
         available_collections = list(self.collection_data)
 
         # Get available views if db_config is available
         available_views = []
-        try:
-            if hasattr(self.db_config, "db"):
-                available_views = list(self.db_config.db.views())
-        except (TypeError, AttributeError):
-            # Default views from db_collections.py if we can't access the database
-            available_views = [
-                "ObjectsTextView",
-                "NamedEntityTextView",
-                "ActivityTextView",
-                "EntityEquivalenceTextView",
-                "KnowledgeTextView",
-            ]
+        if hasattr(self.db_config, "db"):
+            available_views = list(self.db_config.db.views())
 
         # Determine if this is a text search query
         is_text_search = False
@@ -406,9 +407,10 @@ class AQLTranslator(TranslatorBase):
 
         # Look for entities that suggest text search
         if hasattr(input_data.Query, "entities") and len(input_data.Query.entities.entities) > 0:
-                is_text_search = True
+            is_text_search = True
 
-        system_prompt = f"""
+        system_prompt = dedent(f"""
+        Hello. The curren time is {datetime.now(UTC).isoformat()}.
         You are **Archivist**, an expert at working with Indaleko to find pertinent
         digital objects (e.g., files).
         **Indaleko** implements a unified personal index (UPI) system
@@ -424,10 +426,14 @@ class AQLTranslator(TranslatorBase):
         {available_collections}
 
         The most important collections are:
-        - Objects: Contains file and directory information (Label is the filename field)
-        - SemanticData: Contains semantic information extracted from objects
-        - ActivityContext: Contains activity information related to objects
-        - NamedEntities: Contains named entities referenced in objects
+        - {IndalekoDBCollections.Indaleko_Object_Collection}:
+        Contains file and directory information (Label is the filename field)
+        - {IndalekoDBCollections.Indaleko_SemanticData_Collection}:
+        Contains semantic information extracted from objects
+        - {IndalekoDBCollections.Indaleko_ActivityContext_Collection}:
+        Contains activity information related to objects
+        - {IndalekoDBCollections.Indaleko_Named_Entity_Collection}:
+        Contains named entities referenced in objects
 
         CRITICAL: The database has the following ArangoSearch views available for text search:
         {available_views}
@@ -435,13 +441,18 @@ class AQLTranslator(TranslatorBase):
         For ANY text search operations (searching for file names, descriptions, content, etc.),
         you MUST use the appropriate view instead of filtering directly on a collection:
 
-        - Use ObjectsTextView instead of Objects when searching file names or text
-        - Use NamedEntityTextView instead of NamedEntities when searching entity names
-        - Use ActivityTextView instead of ActivityContext when searching activity descriptions
+        - Use {IndalekoDBCollections.Indaleko_Objects_Text_View} instead of
+        {IndalekoDBCollections.Indaleko_Object_Collection} when searching file names or text
+        - Use {IndalekoDBCollections.Indaleko_Named_Entity_Text_View} instead of
+        {IndalekoDBCollections.Indaleko_Named_Entity_Collection} when searching entity names
+        - Use {IndalekoDBCollections.Indaleko_Activity_Text_View} instead of
+        {IndalekoDBCollections.Indaleko_ActivityContext_Collection} when searching
+        activity descriptions
 
         When using views, follow this pattern:
         ```aql
-        FOR doc IN ObjectsTextView  // Use the view, not the collection
+        FOR doc IN
+        {IndalekoDBCollections.Indaleko_Objects_Text_View}  // Use the view, not the collection
         SEARCH ANALYZER(            // Use SEARCH ANALYZER instead of FILTER
             LIKE(doc.Label, @searchTerm),  // Use LIKE for text matching
             "text_en"               // Specify the analyzer
@@ -454,7 +465,7 @@ class AQLTranslator(TranslatorBase):
         DO NOT use queries like these for text search (they are inefficient):
         ```aql
         // WRONG - Do NOT use this pattern
-        FOR obj IN Objects
+        FOR obj IN {IndalekoDBCollections.Indaleko_Object_Collection}
         FILTER CONTAINS(obj.Label, @searchTerm)  // FILTER with CONTAINS is inefficient
         RETURN obj
         ```
@@ -468,21 +479,27 @@ class AQLTranslator(TranslatorBase):
 
         The structured data that follows provides information about the database.
         {input_data}
-        """
-
+        """,
+    )
         # Add specific recommendation for text search
         if is_text_search:
-            system_prompt += """
+            system_prompt += dedent(
+                """
+                IMPORTANT RECOMMENDATION: The user's query appears to be a TEXT SEARCH.
+                THIS QUERY SHOULD USE AN ARANGOSEARCH VIEW RATHER THAN FILTERING A COLLECTION.
 
-            IMPORTANT RECOMMENDATION: The user's query appears to be a TEXT SEARCH.
-            THIS QUERY SHOULD USE AN ARANGOSEARCH VIEW RATHER THAN FILTERING A COLLECTION.
-
-            Collection → View mapping for text search:
-            - Objects → ObjectsTextView
-            - NamedEntities → NamedEntityTextView
-            - ActivityContext → ActivityTextView
-            - EntityEquivalenceNodes → EntityEquivalenceTextView
-            - LearningEvents → KnowledgeTextView
-            """
+                Collection → View mapping for text search:
+                - {IndalekoDBCollections.Indaleko_Object_Collection} →
+                {IndalekoDBCollections.Indaleko_Objects_Text_View}
+                - {IndalekoDBCollections.Indaleko_Named_Entity_Collection} →
+                {IndalekoDBCollections.Indaleko_Named_Entity_Text_View}
+                - {IndalekoDBCollections.Indaleko_ActivityContext_Collection}
+                → {IndalekoDBCollections.Indaleko_Activity_Text_View}
+                - {IndalekoDBCollections.Indaleko_Entity_Equivalence_Node_Collection}
+                → {IndalekoDBCollections.Indaleko_Entity_Equivalence_Text_View}
+                - {IndalekoDBCollections.Indaleko_Learning_Event_Collection}
+                → {IndalekoDBCollections.Indaleko_Knowledge_Text_View}
+                """,
+            )
 
         return {"system": system_prompt, "user": user_prompt}

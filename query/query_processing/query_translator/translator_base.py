@@ -1,6 +1,5 @@
 """
-This module defines the translator framework for queries
-to use with an LLM.
+Define translator base class for query processing.
 
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason
@@ -21,26 +20,29 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from abc import ABC, abstractmethod
+from pathlib import Path
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
-        current_path = os.path.dirname(current_path)
-    os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
+
 
 # pylint: disable=wrong-import-position
 from query.query_processing.data_models.translator_input import TranslatorInput
 from query.query_processing.data_models.translator_response import TranslatorOutput
 
+
 # pylint: enable=wrong-import-position
 
 
 class TranslatorBase(ABC):
-    """
-    Abstract base class for query translators.
-    """
+    """Abstract base class for query translators."""
 
     @abstractmethod
     def translate(
@@ -51,8 +53,8 @@ class TranslatorBase(ABC):
         Translate a parsed query into a specific query language.
 
         Args:
-            parsed_query (Dict[str, Any]): The parsed query from NLParser
-            llm_connector (Any): Connector to the LLM service
+            input_data (TranslatorInput): The input data containing the parsed query
+                and any additional parameters.
 
         Returns:
             str: The translated query string

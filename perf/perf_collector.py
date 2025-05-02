@@ -18,26 +18,26 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 """
-
 import json
 import os
 import sys
 import time
 import uuid
+
 from collections.abc import Callable
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import psutil
 from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
-        current_path = os.path.dirname(current_path)
-    os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
-
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
 from data_models import (
@@ -69,11 +69,11 @@ class IndalekoPerformanceDataCollector:
         task_func: Callable[..., Any],
         source: IndalekoSourceIdentifierDataModel,
         description: str,
-        MachineIdentifier: uuid.UUID | None,
+        MachineIdentifier: uuid.UUID | None,  # noqa: N803
         process_results_func: Callable[..., dict[str, int | float | str]] = None,
         input_file_name: str | None = None,
         output_file_name: str | None = None,
-        *args: Any | None,
+        *args: object | None,
         **kwargs: dict[str, Any] | None,
     ) -> "IndalekoPerformanceDataCollector":
         """Measure the performance of a function."""
@@ -81,15 +81,13 @@ class IndalekoPerformanceDataCollector:
         start_time = datetime.now(UTC).isoformat()
         start_user_time = process.cpu_times().user
         start_system_time = process.cpu_times().system
-        if hasattr(process, "io_counters"):
-            start_io_counters = process.io_counters()
-        else:
-            start_io_counters = None
+        start_io_counters = process.io_counters() if hasattr(process, "io_counters") else None
         start_memory = process.memory_info().rss  # Resident Set Size (RSS) memory
         start_thread_count = process.num_threads()
-        input_file_size = None
-        if input_file_name is not None and os.path.exists(input_file_name):
-            input_file_size = os.stat(input_file_name).st_size
+        if input_file_name is not None and Path(input_file_name).exists():
+            input_file_size = Path(input_file_name).stat().st_size
+        else:
+            input_file_size = None
         results_data = {}
         try:
             """Run the task."""
@@ -194,6 +192,13 @@ class IndalekoPerformanceDataCollector:
             ThreadCount=data["thread_count"],
             AdditionalData=data["additional_data"],
         )
+
+    def start(self) -> None:
+        """Start the performance data collection."""
+
+
+    def stop(self) -> None:
+        """Stop the performance data collection."""
 
     @staticmethod
     def deserialize(data: dict) -> "IndalekoPerformanceDataCollector":

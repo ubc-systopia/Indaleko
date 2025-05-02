@@ -1,4 +1,6 @@
 """
+This is the database setup script for Indaleko.
+
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason
 
@@ -22,27 +24,27 @@ import logging
 import os
 import sys
 
+from pathlib import Path
+
+
 if os.environ.get("INDALEKO_ROOT") is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
-        current_path = os.path.dirname(current_path)
-    os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
-import utils.misc.file_name_management
+
 from db import IndalekoCollections, IndalekoDBConfig
 from utils import IndalekoDocker, IndalekoLogging
 from utils.misc.directory_management import (
     indaleko_create_secure_directories,
     indaleko_default_log_dir,
 )
+from utils.misc.file_name_management import generate_file_name
 
-# from Indaleko import Indaleko
-# from IndalekoDBConfig import IndalekoDBConfig
-# from IndalekoCollections import IndalekoCollections
-# from IndalekoLogging import IndalekoLogging
-# from IndalekoDocker import IndalekoDocker
+
 # pylint: enable=wrong-import-position
 
 
@@ -236,7 +238,7 @@ def main():
 
     args = parser.parse_args()
     if args.log is None:
-        args.log = utils.misc.file_name_management.generate_file_name(
+        args.log = generate_file_name(
             suffix="log",
             service="dbsetup",
             timestamp=timestamp,

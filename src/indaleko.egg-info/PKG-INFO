@@ -17,6 +17,7 @@ Requires-Dist: gitpython==3.1.44
 Requires-Dist: google_api_python_client==2.165.0
 Requires-Dist: google_auth_oauthlib==1.2.1
 Requires-Dist: icecream==2.1.4
+Requires-Dist: pyyaml>=6.0
 Requires-Dist: jsonlines==4.0.0
 Requires-Dist: jsonschema==4.23.0
 Requires-Dist: keyring==25.6.0
@@ -34,7 +35,7 @@ Requires-Dist: pydantic-core==2.27.2
 Requires-Dist: pytile==2024.12.0
 Requires-Dist: spotipy==2.25.0
 Requires-Dist: pyecobee==1.3.11
-Requires-Dist: tiktoken==0.7.0
+Requires-Dist: tiktoken==0.9.0
 Requires-Dist: regex==2024.5.15
 Requires-Dist: winsdk==1.0.0b10; platform_system == "Windows"
 Requires-Dist: win32more==0.5.10; platform_system == "Windows"
@@ -49,6 +50,8 @@ Requires-Dist: pandas>=2.0.0
 Requires-Dist: pytest>=6.0
 Requires-Dist: lazy_import>=0.2.2
 Requires-Dist: ruff>=0.6.9
+Requires-Dist: graphviz>=0.20.1
+Requires-Dist: pyreadline3>=3.5.4
 Provides-Extra: test
 Requires-Dist: pytest>=6.0; extra == "test"
 Provides-Extra: dev

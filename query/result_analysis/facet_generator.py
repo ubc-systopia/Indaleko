@@ -81,10 +81,9 @@ class FacetGenerator:
             analyzed_results (List[Dict[str, Any]]): The analyzed search results
 
         Returns:
-            Union[List[str], DynamicFacets]: Either a list of string facets (legacy mode)
-                                            or a DynamicFacets object (enhanced mode)
+            DynamicFacets: A list of DynamicFacets object
         """
-        if not analyzed_results:
+        if not analyzed_results or len(analyzed_results) == 0:
             return DynamicFacets(
                 original_count=0,
                 suggestions=["No results found"],
@@ -155,9 +154,6 @@ class FacetGenerator:
             facet_statistics=facet_statistics,
             conversational_hints=conversational_hints,
         )
-
-        # For legacy compatibility, also generate string facets
-        legacy_facets = [suggestion for suggestion in suggestions]
 
         return dynamic_facets
 
@@ -603,7 +599,11 @@ class FacetGenerator:
             else:  # Very Large
                 refinement = "size:>10MB"
 
-            value = FacetValue(value=bin_name, count=count, query_refinement=refinement)
+            value = FacetValue(
+                value=bin_name,
+                count=count,
+                query_refinement=refinement
+            )
             values.append(value)
 
         # Calculate entropy

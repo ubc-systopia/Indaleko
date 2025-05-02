@@ -101,7 +101,7 @@ class EnhancedAQLTranslator(AQLTranslator):
                     for index in indices:
                         if index["type"] != "primary":
                             collection_indices[category].append(index)
-            except Exception as e:
+            except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
                 logging.warning(
                     f"Error retrieving indices for collection {category}: {e}",
                 )
@@ -214,7 +214,7 @@ class EnhancedAQLTranslator(AQLTranslator):
                     view_info.append(
                         "- KnowledgeTextView: Text search for LearningEvents collection fields (content, source, metadata)",
                     )
-        except Exception as e:
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             logging.warning(f"Error getting views: {e}")
 
         view_info_text = "\n".join(view_info) if view_info else "No views available"
@@ -427,7 +427,7 @@ class EnhancedAQLTranslator(AQLTranslator):
                 db_views = self.db_config.db.views()
                 for view in db_views:
                     available_views[view] = True
-        except Exception:
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ):
             # Default views if we can't access the database
             available_views = {
                 "ObjectsTextView": True,

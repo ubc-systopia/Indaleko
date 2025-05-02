@@ -85,13 +85,13 @@ class IndalekoBaseModel(BaseModel):
         return data
 
     @classmethod
-    def get_json_schema(cls) -> dict:
+    def get_json_schema(cls: Self) -> dict:
         """Returns the JSON schema for the data model in Python dictionary format."""
-        return cls.get_example().model_json_schema()
+        return cls.model_json_schema()
 
     @classmethod
-    def get_arangodb_schema(cls: type[T]) -> dict:
-        """Returns the JSON schema for the data model in the format required by ArangoDB"""
+    def get_arangodb_schema(cls: Self) -> dict:
+        """Returns the JSON schema for the data model in the format required by ArangoDB."""
         return {
             "message": "Unfortunately, your data did not conform to the schema.",
             "level": "strict",
@@ -100,7 +100,7 @@ class IndalekoBaseModel(BaseModel):
         }
 
     @classmethod
-    def test_model_main(cls: type[T]) -> None:
+    def test_model_main(cls: Self) -> None:
         """This function can be used to do basic testing of the data model."""
         data = cls.get_example()
         ic(data)
@@ -112,7 +112,7 @@ class IndalekoBaseModel(BaseModel):
         ic(cls.get_arangodb_schema())
 
 
-def main():
+def main() -> None:
     """This allows testing the data model."""
     ic("Currently no test code for IndalekoBaseModel")
 

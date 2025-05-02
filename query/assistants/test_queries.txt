@@ -1,0 +1,19 @@
+# Test queries for Indaleko Assistants CLI
+# Lines starting with # are comments
+
+# Simple queries
+What files did I access yesterday?
+Show me all PDF documents created last week
+Which images are larger than 5MB?
+
+# Location-based queries
+What files did I download while at work?
+Show me documents I edited while traveling
+
+# Advanced queries
+Which files contain the text "machine learning"?
+Find Excel spreadsheets created in the last month that have been modified at least twice
+Show me the largest video files in my collection
+
+# Tool listing
+tools

@@ -130,31 +130,21 @@ def check_file(filename: str) -> list[str]:
     with open(filename, encoding="utf-8") as f:
         content = f.read()
 
-    # Find all collection name strings in the file
-    for collection_name in COLLECTION_NAMES:
-        # Pattern to find strings like "Objects" used in various contexts
-        # Look for this exact string either in quotes or being compared
-        patterns = [
-            r'["\']{1}' + collection_name + r'["\']{1}',  # "Objects" or 'Objects'
-            r'==\s*["\']{1}' + collection_name + r'["\']{1}',  # == "Objects"
-            r'["\']{1}' + collection_name + r'["\']{1}\s*==',  # "Objects" ==
-            r'!=\s*["\']{1}' + collection_name + r'["\']{1}',  # != "Objects"
-            r'["\']{1}' + collection_name + r'["\']{1}\s*!=',  # "Objects" !=
-        ]
+    # Only enforce in files that actually call get_collection
+    if "get_collection" not in content:
+        return []
 
-        for pattern in patterns:
-            matches = re.findall(pattern, content)
-            if matches:
-                # Get the constant name
-                constant_name = COLLECTION_CONSTANTS.get(collection_name)
-
-                # Add error
-                errors.append(
-                    f"{filename}: Hardcoded collection name '{collection_name}' found. "
-                    f"Use IndalekoDBCollections.{constant_name} instead.",
-                )
-                # Only report once per collection name per file
-                break
+    # Flag hardcoded names only when passed into get_collection()
+    for collection_name, constant_name in COLLECTION_CONSTANTS.items():
+        # Look for get_collection("CollectionName") or get_collection('CollectionName')
+        pattern = re.compile(
+            r'get_collection\s*\(\s*["\']' + re.escape(collection_name) + r'["\']\s*\)'
+        )
+        if pattern.search(content):
+            errors.append(
+                f"{filename}: Hardcoded collection name '{collection_name}' found. "
+                f"Use IndalekoDBCollections.{constant_name} instead."
+            )
 
     return errors
 

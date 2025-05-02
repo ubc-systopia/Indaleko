@@ -40,7 +40,10 @@ from data_models.base import IndalekoBaseModel  # noqa: E402
 from data_models.record import IndalekoRecordDataModel  # noqa: E402
 from query.query_processing.data_models.parser_data import ParserResults  # noqa: E402
 from query.query_processing.data_models.query_input import StructuredQuery  # noqa: E402
-from query.query_processing.data_models.translator_response import TranslatorOutput
+from query.query_processing.data_models.translator_response import (    # noqa: E402
+    TranslatorOutput,
+)
+from query.result_analysis.data_models.facet_data_model import DynamicFacets  # noqa: E402
 
 # pylint: enable=wrong-import-position
 

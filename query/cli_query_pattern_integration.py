@@ -113,7 +113,7 @@ class QueryPatternCLIIntegration:
                         return True
                     else:
                         return False
-                except Exception as e:
+                except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
                     self.logger.error(f"Failed to initialize database connection: {e}")
                     return False
             else:
@@ -246,7 +246,7 @@ class QueryPatternCLIIntegration:
 
             return CommandResult(success=True, message=message)
 
-        except Exception as e:
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             self.logger.error(f"Error in analyze command: {e}")
             self.logger.error(traceback.format_exc())
             return CommandResult(
@@ -313,7 +313,7 @@ Timing:
 
             return CommandResult(success=True, message=message)
 
-        except Exception as e:
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             self.logger.error(f"Error in metrics command: {e}")
             self.logger.error(traceback.format_exc())
             return CommandResult(
@@ -388,7 +388,7 @@ Timing:
 
             return CommandResult(success=True, message=message)
 
-        except Exception as e:
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             self.logger.error(f"Error in chains command: {e}")
             self.logger.error(traceback.format_exc())
             return CommandResult(
@@ -534,7 +534,7 @@ Timing:
 
             return CommandResult(success=True, message=message)
 
-        except Exception as e:
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             self.logger.error(f"Error in entities command: {e}")
             self.logger.error(traceback.format_exc())
             return CommandResult(
@@ -606,7 +606,7 @@ Timing:
 
             return CommandResult(success=True, message=message)
 
-        except Exception as e:
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             self.logger.error(f"Error in suggestions command: {e}")
             self.logger.error(traceback.format_exc())
             return CommandResult(
@@ -654,7 +654,7 @@ Detected Patterns:
 
             return CommandResult(success=True, message=message)
 
-        except Exception as e:
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             self.logger.error(f"Error in test command: {e}")
             self.logger.error(traceback.format_exc())
             return CommandResult(success=False, message=f"Error running test: {e!s}")
@@ -722,7 +722,7 @@ Detected Patterns:
                 message=f"Analysis results saved to {parsed_args.file}",
             )
 
-        except Exception as e:
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             self.logger.error(f"Error in save command: {e}")
             self.logger.error(traceback.format_exc())
             return CommandResult(
@@ -773,7 +773,7 @@ def main():
         else:
             print("Failed to connect to database. Running in mock mode.")
             integration = register_query_pattern_commands(cli)
-    except Exception as e:
+    except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
         print(f"Database connection error: {e}")
         print("Running in mock mode.")
         integration = register_query_pattern_commands(cli)

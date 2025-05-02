@@ -18,15 +18,17 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import json
 import os
 import sys
+
 from collections.abc import Sequence
 from typing import Any
 
 import arango
 import arango.collection
+
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -40,20 +42,17 @@ from db.collection_index import IndalekoCollectionIndex
 from db.db_config import IndalekoDBConfig
 from utils.decorators import type_check
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoCollection:
-    """
-    An IndalekoCollection object is used to manage a collection of documents in the
-    Indaleko database.
+    """IndalekoCollection wraps an ArangoDB collection."""
 
-    """
-
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: dict) -> None:
         if "ExistingCollection" in kwargs:
             self._arangodb_collection = kwargs["ExistingCollection"]
-            assert isinstance(
+            assert isinstance(  # noqa: S101
                 self._arangodb_collection,
                 arango.collection.StandardCollection,
             ), f"self.collection is unexpected type {type(self._arangodb_collection)}"
@@ -66,8 +65,8 @@ class IndalekoCollection:
         if "name" not in kwargs:
             raise ValueError("name is a required parameter")
         self.name = kwargs["name"]
-        self.definition = kwargs.get("definition", None)
-        self.db_config = kwargs.get("db", None)
+        self.definition = kwargs.get("definition")
+        self.db_config = kwargs.get("db")
         self.db_config.start()
         self.reset = kwargs.get("reset", False)
         self.max_chunk_size = kwargs.get("max_chunk_size", 1000)
@@ -112,17 +111,18 @@ class IndalekoCollection:
             )
             if "schema" in config:
                 try:
+                    ic(config["schema"])
                     self._arangodb_collection.configure(schema=config["schema"])
                 except arango.exceptions.CollectionConfigureError as error:  # pylint: disable=no-member
-                    print(f"Failed to configure collection {name}")
-                    print(error)
-                    print("Schema:")
-                    print(json.dumps(config["schema"], indent=2))
-                    raise error
+                    print(f"Failed to configure collection {name}")  # noqa: T201
+                    print(error)    # noqa: T201
+                    print("Schema:")    # noqa: T201
+                    print(json.dumps(config["schema"], indent=2))    # noqa: T201
+                    raise
             if "indices" in config:
                 for index in config["indices"]:
                     self.create_index(index, **config["indices"][index])
-        assert isinstance(
+        assert isinstance(  # noqa: S101
             self._arangodb_collection,
             arango.collection.StandardCollection,
         ), f"self.collection is unexpected type {type(self._arangodb_collection)}"
@@ -143,17 +143,15 @@ class IndalekoCollection:
                 **index_data,
             )
             indices.append(index)
-        exit(0)
+        sys.exit(0)
         return []
 
     @type_check
     def delete_collection(self, name: str) -> bool:
         """Delete the collection with the given name."""
         if not self.db_config.db.has_collection(name):
-            print(f"Collection {name} does not exist **")
             return False
         self.db_config.db.delete_collection(name)
-        print(f"Collection {name} does exists, requesting deletion **")
         return True
 
     def create_index(self, name, **kwargs: dict[str, Any]) -> "IndalekoCollection":
@@ -166,7 +164,7 @@ class IndalekoCollection:
 
     def find_entries(self, **kwargs):
         """Given a list of keyword arguments, return a list of documents that match the criteria."""
-        return [document for document in self._arangodb_collection.find(kwargs)]
+        return list(self._arangodb_collection.find(kwargs))
 
     def insert(self, document: dict, overwrite: bool = False) -> dict | bool:
         """
@@ -189,7 +187,6 @@ class IndalekoCollection:
         except arango.exceptions.DocumentInsertError as e:
             ic(f"Insert failure for document into collection {self.name}")
             ic(document)
-            print(json.dumps(document, indent=2))
             ic(e)
             return None
 
@@ -209,9 +206,8 @@ class IndalekoCollection:
             except arango.exceptions.DocumentInsertError as e:
                 ic(f"Bulk insert failure for documents into collection {self.name}")
                 ic(batch)
-                print(json.dumps(batch, indent=2))
                 ic(e)
-                raise e
+                raise
         return errors if errors else None
 
     def add_schema(self, schema: dict) -> "IndalekoCollection":
@@ -234,7 +230,6 @@ class IndalekoCollection:
 
 def main() -> None:
     """Test the IndalekoCollection class."""
-    print("IndalekoCollection: called.  No tests yet.")
 
 
 if __name__ == "__main__":
