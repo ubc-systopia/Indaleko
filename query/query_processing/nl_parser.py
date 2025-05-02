@@ -595,7 +595,8 @@ class NLParser:
                 # Create default entity
                 entity = IndalekoNamedEntityDataModel(
                     name=query,
-                    category=IndalekoNamedEntityType.item,  # Using 'item' instead of non-existent 'keyword'
+                    # Using 'item' instead of non-existent 'keyword'
+                    category=IndalekoNamedEntityType.item,
                     description=query,
                 )
                 return NamedEntityCollection(entities=[entity])
@@ -621,8 +622,7 @@ class NLParser:
             # Create default entity
             entity = IndalekoNamedEntityDataModel(
                 name=query,
-                name=query,
-
+                # Using 'item' instead of non-existent 'keyword'
                 category=IndalekoNamedEntityType.item,
                 description=query,
             )
