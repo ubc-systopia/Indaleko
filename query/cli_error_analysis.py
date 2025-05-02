@@ -207,7 +207,7 @@ def run_queries(
                 {"query": query, "success": True, "time": elapsed_time},
             )
 
-        except Exception as e:
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             logger.error(f"Error processing query '{query}': {e}")
             results["error_queries"] += 1
             results["queries"].append(
@@ -435,7 +435,7 @@ def run_specific_query(query: str) -> None:
         print(f"Entities: {[entity.name for entity in result.entities.entities]}")
         print("Recorded in QueryHistory: Yes")
 
-    except Exception as e:
+    except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
         # Display error details
         print(f"\n=== Query: {query} ===")
         print("Status: Failed")

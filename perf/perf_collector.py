@@ -86,6 +86,8 @@ class IndalekoPerformanceDataCollector:
         start_thread_count = process.num_threads()
         if input_file_name is not None and Path(input_file_name).exists():
             input_file_size = Path(input_file_name).stat().st_size
+        else:
+            input_file_size = None
         results_data = {}
         try:
             """Run the task."""

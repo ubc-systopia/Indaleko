@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import json
 import os
 import sys
+import time
 from typing import Any
 
 import openai
@@ -74,27 +75,68 @@ class OpenAIConnector(IndalekoLLMBase):
             str: The generated query
         """
         ic("Submitting prompt to OpenAI")
-        response_schema = LLMTranslateQueryResponse.model_json_schema()
-        completion = self.client.beta.chat.completions.parse(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": prompt["system"]},
-                {"role": "user", "content": prompt["user"]},
-            ],
-            temperature=temperature,
-            # response_format=OpenAIQueryResponse
-            response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "OpenAIQueryResponse",
-                    "schema": response_schema,
+        ic(f"Using model: {self.model}")
+        ic(f"System prompt length: {len(prompt['system'])}")
+        ic(f"User prompt length: {len(prompt['user'])}")
+
+        try:
+            # Get response schema
+            response_schema = LLMTranslateQueryResponse.model_json_schema()
+
+            # Make API call with timeout
+            import time
+            start_time = time.time()
+
+            # More verbose logging for debugging
+            ic("Starting OpenAI API call")
+            completion = self.client.beta.chat.completions.parse(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": prompt["system"]},
+                    {"role": "user", "content": prompt["user"]},
+                ],
+                temperature=temperature,
+                timeout=60,  # 60-second timeout
+                # response_format=OpenAIQueryResponse
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "OpenAIQueryResponse",
+                        "schema": response_schema,
+                    },
                 },
-            },
-        )
-        ic("Received response from OpenAI")
-        doc = json.loads(completion.choices[0].message.content)
-        response = LLMTranslateQueryResponse(**doc)
-        return response
+            )
+
+            elapsed_time = time.time() - start_time
+            ic(f"OpenAI API call completed in {elapsed_time:.2f} seconds")
+            ic("Received response from OpenAI")
+
+            # Process response
+            doc = json.loads(completion.choices[0].message.content)
+            response = LLMTranslateQueryResponse(**doc)
+            return response
+
+        except openai.APITimeoutError as e:
+            ic(f"OpenAI API timeout: {e}")
+            ic(f"API timeout details: {str(e)}")
+            raise TimeoutError(f"OpenAI API timeout: {str(e)}")
+        except openai.APIError as e:
+            ic(f"OpenAI API error: {e}")
+            ic(f"API error details: {str(e)}")
+            raise ValueError(f"OpenAI API error: {str(e)}")
+        except openai.AuthenticationError as e:
+            ic(f"OpenAI authentication error: {e}")
+            ic(f"Auth error details: {str(e)}")
+            raise ValueError(f"OpenAI authentication error: Check your API key")
+        except openai.RateLimitError as e:
+            ic(f"OpenAI rate limit exceeded: {e}")
+            raise ValueError(f"OpenAI rate limit exceeded: {str(e)}")
+        except openai.APIConnectionError as e:
+            ic(f"OpenAI API connection error: {e}")
+            raise ConnectionError(f"OpenAI API connection error: Check your network connection")
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
+            ic(f"Unexpected error generating query: {type(e).__name__}: {e}")
+            raise ValueError(f"Unexpected error: {type(e).__name__}: {str(e)}")
 
     def summarize_text(self, text: str, max_length: int = 100) -> str:
         """
@@ -202,19 +244,39 @@ class OpenAIConnector(IndalekoLLMBase):
                 total += len(enc.encode(value))
         if total > 4096:
             ic(f"Total length of messages {total} exceeds 4096 characters")
-        completion = self.client.beta.chat.completions.parse(
-            model=self.model,
-            messages=messages,
-            temperature=0,
-            response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "OpenAIAnswerResponse",
-                    "schema": schema,
+
+        try:
+            ic("Starting answer_question call to OpenAI")
+            start_time = time.time()
+
+            completion = self.client.beta.chat.completions.parse(
+                model=self.model,
+                messages=messages,
+                temperature=0,
+                timeout=60,  # 60-second timeout
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "OpenAIAnswerResponse",
+                        "schema": schema,
+                    },
                 },
-            },
-        )
-        return completion.choices[0].message.content
+            )
+
+            elapsed_time = time.time() - start_time
+            ic(f"answer_question API call completed in {elapsed_time:.2f} seconds")
+
+            return completion.choices[0].message.content
+
+        except openai.APITimeoutError as e:
+            ic(f"OpenAI API timeout in answer_question: {e}")
+            raise TimeoutError(f"OpenAI API timeout: {str(e)}")
+        except openai.APIError as e:
+            ic(f"OpenAI API error in answer_question: {e}")
+            raise ValueError(f"OpenAI API error: {str(e)}")
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
+            ic(f"Error in answer_question: {type(e).__name__}: {e}")
+            raise ValueError(f"Error in answer_question: {type(e).__name__}: {str(e)}")
 
     def get_completion(
         self,
@@ -359,7 +421,7 @@ Text to analyze:
             # Filter to only include requested attribute types
             return {k: v for k, v in attributes.items() if k in attr_types}
 
-        except Exception as e:
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             ic(f"Error extracting semantic attributes: {e}")
             # Return a minimal valid response
             return {attr: [] for attr in attr_types}

@@ -21,7 +21,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 
+from arango.cursor import Cursor
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -44,7 +46,7 @@ from query.tools.base import (
 class QueryExecutorTool(BaseTool):
     """Tool for executing AQL queries with optional EXPLAIN analysis."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the query executor tool."""
         super().__init__()
         self._db_config = None
@@ -120,7 +122,7 @@ class QueryExecutorTool(BaseTool):
             examples=[
                 {
                     "parameters": {
-                        "query": "FOR doc IN Objects FILTER doc.Record.Attributes.Path LIKE '%pdf' RETURN doc",
+                        "query": "FOR doc IN Objects FILTER doc.Label LIKE '%pdf' RETURN doc",
                         "include_plan": True,
                         "collect_performance": True,
                     },
@@ -206,8 +208,17 @@ class QueryExecutorTool(BaseTool):
 
             # Return the result
             result_data = {}
+
+            # Make sure results is JSON serializable
             if results is not None:
-                result_data["results"] = results
+                # Convert ArangoDB Cursor to list if needed
+                if isinstance(results, Cursor):
+                    # Convert cursor to list of documents
+                    result_list = list(results)
+                    result_data["results"] = result_list
+                else:
+                    result_data["results"] = results
+
             if execution_plan is not None:
                 result_data["execution_plan"] = execution_plan
             if performance is not None:
@@ -220,7 +231,7 @@ class QueryExecutorTool(BaseTool):
                 elapsed_time=0.0,  # Will be filled by wrapper
             )
 
-        except Exception as e:
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             ic(f"Error executing query: {e}")
             return ToolOutput(
                 tool_name=self.definition.name,

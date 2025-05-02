@@ -166,7 +166,7 @@ class EnhancedNLParser(NLParser):
                     for name, metadata in self.collection_data.items()
                 },
             }
-        except Exception as e:
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             # Fallback to simpler representation if serialization fails
             logging.warning(f"Error dumping model data: {e}")
             context_data = {
@@ -264,7 +264,7 @@ class EnhancedNLParser(NLParser):
                 indent=2,
                 default=_json_serializable,
             )
-        except Exception as e:
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             logging.warning(f"Error serializing context data: {e}")
             # Fallback to simpler representation
             context_json = json.dumps(

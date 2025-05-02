@@ -81,7 +81,7 @@ class AnalyticsIntegration:
                     "  /analytics           - Run analytics commands (stats, files, types, ages)",
                 )
                 logger.info("Added analytics help text")
-        except Exception as e:
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             logger.error(
                 f"Error registering analytics commands: {e!s}",
                 exc_info=self.debug,
@@ -150,7 +150,7 @@ class AnalyticsIntegration:
             else:
                 return f"Unknown analytics command: {command}. Type '/analytics help' for available commands."
 
-        except Exception as e:
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             error_msg = f"Error processing analytics command: {e!s}"
             logger.error(error_msg, exc_info=self.debug)
             return error_msg
@@ -202,7 +202,7 @@ Examples:
 
             return result
 
-        except Exception as e:
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             error_msg = f"Error running summary statistics: {e!s}"
             logger.error(error_msg, exc_info=self.debug)
             return error_msg
@@ -251,7 +251,7 @@ Examples:
 
             return result
 
-        except Exception as e:
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             error_msg = f"Error running file analysis: {e!s}"
             logger.error(error_msg, exc_info=self.debug)
             return error_msg
@@ -298,7 +298,7 @@ Examples:
 
             return result
 
-        except Exception as e:
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             error_msg = f"Error running file type analysis: {e!s}"
             logger.error(error_msg, exc_info=self.debug)
             return error_msg
@@ -360,7 +360,7 @@ Examples:
 
             return result
 
-        except Exception as e:
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             error_msg = f"Error running file age analysis: {e!s}"
             logger.error(error_msg, exc_info=self.debug)
             return error_msg
@@ -400,7 +400,7 @@ Examples:
 
             return result
 
-        except Exception as e:
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             error_msg = f"Error generating full report: {e!s}"
             logger.error(error_msg, exc_info=self.debug)
             return error_msg

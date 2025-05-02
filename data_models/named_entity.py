@@ -21,25 +21,30 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import json
 import os
 import sys
+
 from datetime import UTC, datetime
 from enum import Enum
+from pathlib import Path
 from uuid import UUID, uuid4
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
-        current_path = os.path.dirname(current_path)
-    os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
 from data_models.base import IndalekoBaseModel
 from data_models.location_data_model import LocationDataModel
 
+
 # pylint: enable=wrong-import-position
 
 
 class IndalekoNamedEntityType(str, Enum):
+    """Named entity types."""
     person = "person"
     organization = "organization"
     location = "location"
@@ -51,6 +56,7 @@ class IndalekoNamedEntityType(str, Enum):
 
 
 class IndalekoNamedEntityDataModel(IndalekoBaseModel):
+    """Data model for named entities."""
     name: str
     uuid: UUID = uuid4()
     category: IndalekoNamedEntityType
@@ -61,7 +67,7 @@ class IndalekoNamedEntityDataModel(IndalekoBaseModel):
     class Config:
         """Sample configuration data for the data model."""
 
-        json_schema_extra = {
+        json_schema_extra = {  # noqa: RUF012
             "example": {
                 "name": "Tony",
                 "uuid": "981a3522-c394-40b0-a82c-a9d7fa1f7e01",
@@ -72,12 +78,13 @@ class IndalekoNamedEntityDataModel(IndalekoBaseModel):
 
 
 class NamedEntityCollection(IndalekoBaseModel):
+    """Collection of named entities."""
     entities: list[IndalekoNamedEntityDataModel]
 
     class Config:
         """Sample configuration data for the data model."""
 
-        json_schema_extra = {
+        json_schema_extra = {  # noqa: RUF012
             "example": {
                 "entities": [
                     IndalekoNamedEntityDataModel.Config.json_schema_extra["example"],
@@ -116,9 +123,9 @@ example_entities = NamedEntityCollection(
 )
 
 
-def main():
-    """Test code"""
-    print(json.dumps(example_entities.model_json_schema(), indent=2))
+def main() -> None:
+    """Test code."""
+    print(json.dumps(example_entities.model_json_schema(), indent=2))  # noqa: T201
 
 
 if __name__ == "__main__":

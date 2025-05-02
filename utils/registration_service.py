@@ -191,7 +191,7 @@ class IndalekoRegistrationService(IndalekoSingleton):
                 FOR provider IN {self.collection_name}
                 RETURN provider
             """
-            cursor = IndalekoDBConfig().get_arangodb().execute(aql_query)
+            cursor = IndalekoDBConfig().get_arangodb().aql.execute(aql_query)
             return list(cursor)
         except OSError:
             self.logger.exception("Error getting provider list")

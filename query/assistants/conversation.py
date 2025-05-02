@@ -43,9 +43,11 @@ class ConversationManager:
     """Manager for conversations with the Indaleko assistant."""
 
     # Enhanced system message template with context awareness and memory capabilities
-    SYSTEM_MESSAGE = """You are Indaleko Assistant, a helpful AI that helps users find and understand their personal data.
+    SYSTEM_MESSAGE = """You are Indaleko Assistant, a helpful AI
+    that helps users find and understand their personal data.
 
-Indaleko is a unified personal index system that helps users find, understand, and manage their data across multiple storage services and devices.
+Indaleko is a unified personal index system that helps users find,
+understand, and manage their data across multiple storage services and devices.
 
 Your role is to:
 1. Help users formulate queries to find their data
@@ -64,7 +66,9 @@ You have access to tools that can:
 - Access information from previous sessions
 - Store important insights for future reference
 
-Always maintain a helpful, conversational tone while being concise and direct. You can refer to previous topics in the conversation and leverage insights stored in the archivist memory system.
+Always maintain a helpful, conversational tone while being concise and direct.
+You can refer to previous topics in the conversation and leverage insights stored
+in the archivist memory system.
 """
 
     def __init__(
@@ -229,13 +233,46 @@ Always maintain a helpful, conversational tone while being concise and direct. Y
             invocation_id=str(uuid.uuid4()),
         )
 
-        # Execute the tool
-        result = self.tool_registry.execute_tool(tool_input)
+        try:
+            # Execute the tool
+            result = self.tool_registry.execute_tool_input(tool_input)
 
-        # Update conversation with tool result if appropriate
-        # This can be expanded based on tool-specific logic
+            # Ensure cursor objects are fully consumed
+            # This prevents JSON serialization errors
+            if result and hasattr(result, 'result') and isinstance(result.result, dict):
+                for key, value in result.result.items():
+                    from arango.cursor import Cursor
+                    # Check if any values are ArangoDB cursor objects
+                    if isinstance(value, Cursor):
+                        # Convert Cursor to list
+                        result.result[key] = list(value)
+                    # Also check nested dictionaries/lists for cursor objects
+                    elif isinstance(value, list):
+                        for i, item in enumerate(value):
+                            if isinstance(item, Cursor):
+                                value[i] = list(item)
+                    elif isinstance(value, dict):
+                        for k, v in value.items():
+                            if isinstance(v, Cursor):
+                                value[k] = list(v)
 
-        return result
+            # Update conversation with tool result if appropriate
+            # This can be expanded based on tool-specific logic
+
+            return result
+
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
+            ic(f"Error executing tool {tool_name}: {str(e)}")
+            import traceback
+            ic(traceback.format_exc())
+            # Return error result
+            from query.tools.base import ToolOutput
+            return ToolOutput(
+                tool_name=tool_name,
+                success=False,
+                error=f"Tool execution failed: {str(e)}",
+                elapsed_time=0.0,
+            )
 
     def process_message(
         self,

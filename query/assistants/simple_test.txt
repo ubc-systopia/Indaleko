@@ -1,0 +1,3 @@
+# Simple test query file
+tools
+help

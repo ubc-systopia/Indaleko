@@ -26,6 +26,7 @@ from typing import Any
 
 from arango.exceptions import AQLQueryExecuteError
 from arango.cursor import Cursor
+from arango.result import Result
 from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -103,19 +104,34 @@ class AQLExecutor(ExecutorBase):
             # Execute the AQL query
             class LocalExecutor:
                 """A local executor class to handle query execution."""
-                def __init__(self, query: str, bind_vars: dict[str, Any] | None = None):
+                def __init__(self, query: str, bind_vars: dict[str, Any] | None = None) -> None:
                     self.query = query
                     self.bind_vars = bind_vars or {}
+                    self.retry_query = False
 
-                def execute_query(self, **_kwargs: dict | None) -> Cursor:
+                def execute_query(self, **_kwargs: dict | None) -> Result[Cursor]:
                     """Execute the AQL query."""
-                    revised_query = self.query
-                    for key, value in self.bind_vars.items():
-                        bind_key = f"@{key}"
-                        bind_value = f'"{value}"'
-                        revised_query = revised_query.replace(bind_key, bind_value)
-                    ic(self.query, " -> ", revised_query)
-                    return data_connector.db.aql.execute(revised_query)
+                    result = data_connector.db.aql.execute(
+                        self.query,
+                        bind_vars=self.bind_vars,
+                    )
+                    _result = [doc for doc in result if "ERR 1551" in str(doc)]
+                    if len(_result) > 0:
+                        ic(f"**** Query result: {_result}")
+                    if not self.retry_query:
+                        return result
+                    if (
+                        result["original"].get("result") is not None and
+                        "ERR 1551" in result["original"]["result"]
+                    ):
+                        ic('Rewriting query to avoid "ERR 1551" error')
+                        revised_query = self.query
+                        for key, value in self.bind_vars.items():
+                            bind_key = f"@{key}"
+                            bind_value = f'"{value}"'
+                            revised_query = revised_query.replace(bind_key, bind_value)
+                        result = data_connector.db.aql.execute(revised_query)
+                    return result
 
             executor = LocalExecutor(query, bind_vars)
 

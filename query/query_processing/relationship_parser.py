@@ -448,7 +448,7 @@ class RelationshipParser:
                 indent=2,
                 default=_json_serializable,
             )
-        except Exception as e:
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             logging.warning(f"Error serializing context data: {e}")
             context_json = json.dumps(
                 {
@@ -497,7 +497,7 @@ class RelationshipParser:
             response_data = json.loads(response.choices[0].message.content)
             relationship_query = RelationshipQuery(**response_data)
             return relationship_query
-        except Exception as e:
+        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
             logging.exception(f"Error parsing LLM response: {e}")
             # Fall back to a default relationship query
             return RelationshipQuery(
