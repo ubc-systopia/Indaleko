@@ -54,24 +54,32 @@ class PosixMetadata(Metadata):
 
     def __init__(
             self,
-            **kwargs: dict[str, Any],
+            selected_posix_md,
+            default_lower_filesize=1,
+            default_upper_filesize=10737418240,
+            default_lower_timestamp=None,
+            default_upper_timestamp=None,
     ) -> None:
         """Initialize the object."""
-        selected_posix_md = kwargs["selected_posix_md"]
-        default_lower_filesize = kwargs["default_lower_filesize"]
-        default_upper_filesize = kwargs["default_upper_filesize"]
-        default_lower_timestamp = kwargs["default_lower_timestamp"]
-        default_upper_timestamp = kwargs["default_upper_timestamp"]
         super().__init__(selected_posix_md)
         self.earliest_endtime = []
         self.earliest_starttime = []
         selected_posix_md = self.preprocess_dictionary_timestamps(False)  # noqa: FBT003
         self.default_lower_filesize = default_lower_filesize
         self.default_upper_filesize = default_upper_filesize
-        self.default_upper_timestamp = default_upper_timestamp
-        self.default_lower_timestamp = default_lower_timestamp
-
-
+        
+        # Set default timestamp values if none provided
+        if default_lower_timestamp is None:
+            self.default_lower_timestamp = datetime(2000, 10, 25, tzinfo=UTC)
+        else:
+            self.default_lower_timestamp = default_lower_timestamp
+            
+        if default_upper_timestamp is None:
+            self.default_upper_timestamp = datetime.now(UTC)
+        else:
+            self.default_upper_timestamp = default_upper_timestamp
+            
+        # Initialize the directory path
         self.saved_directory_path = self.initialize_local_dir()
 
     def generate_metadata(self, **kwargs: dict) -> IndalekoObjectDataModel:
@@ -486,9 +494,10 @@ class PosixMetadata(Metadata):
         random_location = random.choice(list(file_locations.keys()))   # noqa: S311
         if random_location == "local":
             file_counter = self.saved_directory_path["filler.directory"]["files"]
-            path = random.choice(  # noqa: S311
+            chosen_path = random.choice(  # noqa: S311
                 self.saved_directory_path["filler.directory"]["path"],
-            ) + "/"
+            )
+            path = str(chosen_path) + "/"
             counter_key = path + file_name
             if counter_key in file_counter:
                 file_counter[counter_key] += 1

@@ -8,8 +8,14 @@ from typing import NamedTuple
 
 
 Results = NamedTuple(
-    "Results",
-    ("truth_number", "filler_number", "original_number", "precision", "recall", "returned_uuid"),
+    "Results", [
+        ("truth_number", int),
+        ("filler_number", int),
+        ("original_number", int),
+        ("precision", float),
+        ("recall", float),
+        ("returned_uuid", list),
+    ]
 )
 
 class ResultCalculator:
@@ -41,16 +47,27 @@ class ResultCalculator:
         selected_uuid = []
 
         for result in raw_results:
-            uuid = result["result"]["Record"]["SourceIdentifier"]["Identifier"]
-            selected_uuid.append(uuid)
+            # Handle the case where the result is a string (error message)
+            if isinstance(result, str):
+                self.logger.log_process(f"Skipping non-dict result: {result[:100]}...")
+                continue
+                
+            # Handle the case where result doesn't have expected structure
+            try:
+                uuid = result["result"]["Record"]["SourceIdentifier"]["Identifier"]
+                selected_uuid.append(uuid)
 
-            assert uuid not in truth_set, "Search result contains duplicate objects."
-            assert uuid not in filler_set, "Search result contains duplicate objects."
+                assert uuid not in truth_set, "Search result contains duplicate objects."
+                assert uuid not in filler_set, "Search result contains duplicate objects."
 
-            if uuid in list_truth:
-                truth_set.add(uuid)
-            elif uuid in list_filler:
-                filler_set.add(uuid)
+                if uuid in list_truth:
+                    truth_set.add(uuid)
+                elif uuid in list_filler:
+                    filler_set.add(uuid)
+            except (KeyError, TypeError) as e:
+                self.logger.log_process(f"Error processing result: {str(e)}")
+                # If we can't extract a UUID, we can't count this result
+                continue
         return len(truth_set), len(filler_set), selected_uuid
 
     def calculate_precision(self, total_n_truth: int, total_n_results: int) -> float:

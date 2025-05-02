@@ -37,7 +37,9 @@ from data_generator.scripts.s6_log_result import ResultLogger
 from db.db_collection_metadata import IndalekoDBCollectionsMetadata
 from db.db_config import IndalekoDBConfig
 from db.i_collections import IndalekoCollections
-from query import AQLExecutor, NLParser, OpenAIConnector
+from query.search_execution.query_executor.aql_executor import AQLExecutor
+from query.query_processing.nl_parser import NLParser
+from query.utils.llm_connector.openai_connector import OpenAIConnector
 from query.cli import IndalekoQueryCLI
 
 
@@ -65,7 +67,17 @@ class DataGenerator:
         # Read config files
         self.config = self.get_config_file(self.config_path / "dg_config.json")
         self.logger = ResultLogger(result_path=self.file_path)
+        
+        # Initialize the database config with proper connection
         self.db_config = IndalekoDBConfig()
+        
+        # Make sure the database is accessible before proceeding
+        self.db_config.start()
+        
+        # Check if database is properly connected
+        assert self.db_config._arangodb is not None, "Database connection failed"
+        
+        # Setup the database if needed
         self.db_config.setup_database(self.db_config.config["database"]["database"])
 
         # Initialize different modules required
@@ -143,8 +155,18 @@ class DataGenerator:
         """
         self.result_dictionary[key] = value
 
-    def run(self) -> None:
-        """Run function for the validator tool."""
+    def run(self, non_interactive=False, create_dictionary=False, use_existing_dictionary=False, 
+             generate_query=False, use_existing_query=False) -> None:
+        """
+        Run function for the validator tool.
+        
+        Args:
+            non_interactive: Whether to run in non-interactive mode
+            create_dictionary: Create a new dictionary in non-interactive mode
+            use_existing_dictionary: Use existing dictionary in non-interactive mode
+            generate_query: Generate a new AQL query in non-interactive mode
+            use_existing_query: Use existing AQL query in non-interactive mode
+        """
         self.process_config()
 
         query = self.config["query"]
@@ -154,12 +176,25 @@ class DataGenerator:
         self.add_result_to_dict("db_number", original_data_number)
 
         # GENERATE DICTIONARY FOR GENERATOR:
-        intial_selection = click.prompt("Type (1) to create a new dictionary or (0) to use existing", type=int)
+        if non_interactive:
+            if create_dictionary:
+                intial_selection = 1
+            elif use_existing_dictionary:
+                intial_selection = 0
+            else:
+                # Default to creating a new dictionary in non-interactive mode
+                intial_selection = 1
+        else:
+            intial_selection = click.prompt("Type (1) to create a new dictionary or (0) to use existing", type=int)
+        
         if intial_selection == 1:
-            selected_md_attributes = self.generate_dictionary(query)
-
+            selected_md_attributes = self.generate_dictionary(query, non_interactive)
         elif intial_selection == 0:
-            selected_md_attributes = self.read_json(self.config_path / "dictionary.json")
+            try:
+                selected_md_attributes = self.read_json(self.config_path / "dictionary.json")
+            except FileNotFoundError:
+                self.logger.log_process("Dictionary file not found. Creating a new one.")
+                selected_md_attributes = self.generate_dictionary(query, non_interactive)
         else:
             sys.exit()
 
@@ -180,9 +215,23 @@ class DataGenerator:
         aql_text = "AQL_query.aql"
         self.query_translator = AQLQueryConverter(self.collections_md)
 
-        translate_query = click.prompt("Ready for AQL generation. Type (1) to generate a new AQL or (0) to use existing.", type=int)
+        if non_interactive:
+            if generate_query:
+                translate_query = 1
+            elif use_existing_query:
+                translate_query = 0
+            else:
+                # Default to generating a new query in non-interactive mode
+                translate_query = 1
+        else:
+            translate_query = click.prompt("Ready for AQL generation. Type (1) to generate a new AQL or (0) to use existing.", type=int)
+        
         if translate_query == 0:
-            aql = self.read_aql(self.config_path / aql_text)
+            try:
+                aql = self.read_aql(self.config_path / aql_text)
+            except FileNotFoundError:
+                self.logger.log_process("AQL file not found. Generating a new one.")
+                aql = self.generate_query(translated_query)
         elif translate_query == 1:
             aql = self.generate_query(translated_query)
         else:
@@ -197,10 +246,13 @@ class DataGenerator:
         while(not is_valid_query):
             try:
                 # ASK FOR AQL QUERY REVIEW:
-                aql_selection = click.prompt(
-                    "Please review the AQL_query.aql file and query_info.json and make any necessary changes. \
-                    \n Type (1) to continue, or any number to exit",
-                    type=int)
+                if non_interactive:
+                    aql_selection = 1  # Auto-continue in non-interactive mode
+                else:
+                    aql_selection = click.prompt(
+                        "Please review the AQL_query.aql file and query_info.json and make any necessary changes. \
+                        \n Type (1) to continue, or any number to exit",
+                        type=int)
 
                 if aql_selection != 1:
                     sys.exit()
@@ -213,6 +265,10 @@ class DataGenerator:
                 self.add_result_to_dict("aql_query", final_query)
 
             except Exception as e:
+                if non_interactive:
+                    # In non-interactive mode, log the error and exit
+                    self.logger.log_process(f"Error executing query: {e}")
+                    return
                 self.logger.log_process(e)
 
         self.add_result_to_dict("metadata_number", len(raw_results))
@@ -226,21 +282,32 @@ class DataGenerator:
 
     def generate_query(self, query_attributes: dict[str, Any]) -> str:
         """Generate the AQL query:"""
+        # Create a dictionary with the parameters instead of passing them individually
+        translate_input = {
+            "selected_md_attributes": query_attributes["converted_selected_md_attributes"],
+            "collections": query_attributes["providers"],
+            "geo_coordinates": query_attributes["geo_coords"],
+            "n_truth": self.expected_truth_number,
+            "llm_connector": self.llm_connector
+        }
+        
         translate_query_time, translated_query = self.time_operation(
             self.query_translator.translate,
-            selected_md_attributes=query_attributes["converted_selected_md_attributes"],
-            collections=query_attributes["providers"],
-            geo_coordinates=query_attributes["geo_coords"],
-            n_truth = self.expected_truth_number,
-            llm_connector=self.llm_connector)
+            input_data=translate_input)
         self.logger.log_process_result("translated_aql", translate_query_time, translated_query)
         return translated_query
 
-    def generate_dictionary(self, query:str):
-        """Generate the dictionary from scratch."""
+    def generate_dictionary(self, query:str, non_interactive=False):
+        """
+        Generate the dictionary from scratch.
+        
+        Args:
+            query: The natural language query to process
+            non_interactive: Whether to run in non-interactive mode
+        """
         json_name = "dictionary.json"
         self.logger.log_process("building dictionary...")
-        self.nl_parser = NLParser(self.llm_connector, self.collections_md)
+        self.nl_parser = NLParser(self.collections_md, self.llm_connector)
 
         # Get relevant NER data for geolocation:
         ner_metadata = self.nl_parser._extract_entities(query)
@@ -254,7 +321,12 @@ class DataGenerator:
         self.logger.log_process_result("translated_query", dictionary_generation_time, selected_md_attributes)
         self.write_as_json(self.config_path, json_name, selected_md_attributes)
 
-        dictionary_selection = click.prompt("Dictionary ready for evaluation, please type 1 to continue, otherwise type 0 to exit", type=int)
+        if non_interactive:
+            # Automatically continue in non-interactive mode
+            dictionary_selection = 1
+        else:
+            dictionary_selection = click.prompt("Dictionary ready for evaluation, please type 1 to continue, otherwise type 0 to exit", type=int)
+        
         if dictionary_selection != 1:
             sys.exit()
         return self.read_json(self.config_path / json_name)
@@ -282,7 +354,8 @@ class DataGenerator:
     def _store_activity_metadata(self, collection_name, data) -> None:
         """Helper function to store activity metadata like for music, temperature and geographical location."""
         registrator, collection = self.data_storer.register_activity_provider(collection_name + " Collector")
-        self.dynamic_activity_providers[collection_name]=registrator.get_activity_collection_name()
+        # Use the collection name directly instead of calling get_activity_collection_name
+        self.dynamic_activity_providers[collection_name] = collection.name
 
         storage_time = self.time_operation(self.data_storer.add_records_with_activity_provider, collection=collection, activity_contexts=data)
         self.logger.log_process(f"storing {collection_name} activity context...")
@@ -396,8 +469,31 @@ class DataGenerator:
 
 def main() -> None:
     """Main function for the validator tool."""
+    import argparse
+    
+    # Create command-line argument parser
+    parser = argparse.ArgumentParser(description="Indaleko Data Generator for Testing")
+    parser.add_argument("--non-interactive", action="store_true", help="Run in non-interactive mode")
+    parser.add_argument("--create-dictionary", action="store_true", help="Create a new dictionary in non-interactive mode")
+    parser.add_argument("--use-existing-dictionary", action="store_true", help="Use existing dictionary in non-interactive mode")
+    parser.add_argument("--generate-query", action="store_true", help="Generate a new AQL query in non-interactive mode")
+    parser.add_argument("--use-existing-query", action="store_true", help="Use existing AQL query in non-interactive mode")
+    
+    args = parser.parse_args()
+    
+    # Initialize the data generator
     validator_tool = DataGenerator()
-    total_epoch = validator_tool.time_operation(validator_tool.run)
+    
+    # Pass the command-line arguments to the run method
+    total_epoch = validator_tool.time_operation(
+        validator_tool.run,
+        non_interactive=args.non_interactive,
+        create_dictionary=args.create_dictionary,
+        use_existing_dictionary=args.use_existing_dictionary,
+        generate_query=args.generate_query,
+        use_existing_query=args.use_existing_query
+    )
+    
     validator_tool.logger.log_final_result(total_epoch[0], validator_tool.result_dictionary)
 
 

@@ -58,11 +58,24 @@ class AQLQueryConverter(TranslatorBase):
             n_truth,
         )
         aql_query = llm_connector.generate_query(dynamic_prompt)
-        aql_statement = aql_query.aql_query
+        
+        # Handle the new OpenAIConnector response format
+        if hasattr(aql_query, 'aql_query'):
+            aql_statement = aql_query.aql_query
+        else:
+            # For newer versions, the response might be different
+            if hasattr(aql_query, 'query'):
+                aql_statement = aql_query.query
+            else:
+                # Fallback to string representation if needed
+                aql_statement = str(aql_query)
+        
         assert self.validate_query(aql_statement), "Generated AQL query is invalid"
-        return aql_statement[
-            aql_statement.index("FOR"):
-        ] # trim preamble
+        
+        # Handle case where FOR is not found in the query (which would be unusual but possible)
+        if "FOR" in aql_statement:
+            return aql_statement[aql_statement.index("FOR"):] # trim preamble
+        return aql_statement
 
     def validate_query(self, query: str) -> bool:
         """

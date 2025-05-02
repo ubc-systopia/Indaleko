@@ -67,7 +67,19 @@ class MetadataStorer:
             key_required (bool): whether to add a key to the record or not.
         """
         for record in records:
-            if key_required:
+            # Convert record to dictionary if it's not already
+            if not isinstance(record, dict):
+                if hasattr(record, 'dict'):
+                    record = record.dict()
+                elif hasattr(record, 'model_dump'):
+                    record = record.model_dump()
+                else:
+                    # Try to convert to dict using Metadata helper
+                    from data_generator.scripts.metadata.metadata import Metadata
+                    record = Metadata.return_JSON(record)
+                    
+            # Ensure record is a dictionary before adding _key
+            if isinstance(record, dict) and key_required:
                 record["_key"] = str(uuid.uuid4())
             collections.get_collection(collection_name).insert(record)
 

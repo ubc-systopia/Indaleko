@@ -70,6 +70,42 @@ class Metadata(ABC):
         contained in the truthlike attribute list.
         """
         return truth_file or (truthlike_file and attribute in truth_attributes)
+        
+    @staticmethod
+    def return_JSON(obj):
+        """Convert an object to its dictionary representation for JSON serialization."""
+        if hasattr(obj, "dict"):
+            data = obj.dict()
+            # Process the dictionary to make it JSON serializable
+            data = Metadata._make_json_serializable(data)
+            return data
+        if hasattr(obj, "model_dump"):
+            data = obj.model_dump()
+            return Metadata._make_json_serializable(data)
+        if hasattr(obj, 'hex'):  # UUID object
+            return str(obj)
+        if hasattr(obj, 'isoformat'):  # datetime object
+            return obj.isoformat()
+        return obj
+        
+    @staticmethod
+    def _make_json_serializable(data):
+        """Helper method to convert objects in a dictionary to JSON serializable format."""
+        import datetime
+        
+        if isinstance(data, dict):
+            result = {}
+            for key, value in data.items():
+                result[key] = Metadata._make_json_serializable(value)
+            return result
+        elif isinstance(data, list):
+            return [Metadata._make_json_serializable(item) for item in data]
+        elif hasattr(data, 'hex'):  # UUID objects have a hex attribute
+            return str(data)
+        elif isinstance(data, (datetime.datetime, datetime.date)):
+            return data.isoformat()
+        else:
+            return data
 
     def _generate_number(self,
                          is_truth_file:bool,  # noqa: FBT001

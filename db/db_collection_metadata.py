@@ -183,8 +183,10 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
         """Handle the activity data provider collection."""
         collection_data = {}
         collections_metadata = IndalekoDBCollectionsMetadata()
-        for provider in IndalekoActivityDataRegistrationService.get_provider_list():
-            collection = IndalekoActivityDataRegistrationService.lookup_activity_provider_collection(
+        # Create an instance of the registration service to access instance methods
+        activity_service = IndalekoActivityDataRegistrationService()
+        for provider in activity_service.get_provider_list():
+            collection = activity_service.lookup_provider_collection(
                 provider["Identifier"],
             )
             collection_metadata = collections_metadata.get_collection_metadata(

@@ -35,13 +35,22 @@ from data_generator.scripts.metadata.temp_activity_metadata import TempActivityD
 
 # Named tuples for fetching results
 DataGeneratorResults = NamedTuple("Results", [
-    "record", "semantics", "geo_activity",
-    "temp_activity", "music_activity", "machine_config",
+    ("record", list),
+    ("semantics", list),
+    ("geo_activity", list),
+    ("temp_activity", list),
+    ("music_activity", list),
+    ("machine_config", list),
 ])
 
 MetadataResults = NamedTuple("MetadataResults", [
-    "all_records_md", "all_geo_activity_md", "all_temp_activity_md",
-    "all_music_activity_md", "all_machine_config_md", "all_semantics_md", "stats",
+    ("all_records_md", list),
+    ("all_geo_activity_md", list),
+    ("all_temp_activity_md", list),
+    ("all_music_activity_md", list),
+    ("all_machine_config_md", list),
+    ("all_semantics_md", list),
+    ("stats", dict),
 ])
 
 
@@ -252,37 +261,56 @@ class Dataset_Generator:  # noqa: N801
             record_data = self.posix_generator.generate_record_data(IO_UUID, attribute)
 
             i_object = self.posix_generator.generate_metadata(
-                record_data, IO_UUID, timestamps, URI, file_size, None, key_name,
-                current_filenum + file_num, path,
+                record_data=record_data, 
+                IO_UUID=IO_UUID, 
+                timestamps=timestamps, 
+                URI=URI, 
+                file_size=file_size, 
+                semantic_attributes_data=None, 
+                key_name=key_name,
+                local_identifier=current_filenum + file_num, 
+                path=path
             )
 
             name, extension = file_name.split(".")
 
             semantic = self.semantic_generator.generate_metadata(
-                record_data,
-                IO_UUID,
-                extension,
-                timestamps["modified"].strftime("%Y-%m-%dT%H:%M:%S"),
-                name,
-                is_truth_file,
-                truth_like,
-                truthlike_attributes,
-                has_semantic_filler,
+                record_data=record_data,
+                IO_UUID=IO_UUID,
+                extension=extension,
+                last_modified=timestamps["modified"].strftime("%Y-%m-%dT%H:%M:%S"),
+                file_name=name,
+                is_truth_file=is_truth_file,
+                truth_like=truth_like,
+                truthlike_attributes=truthlike_attributes,
+                has_semantic_filler=has_semantic_filler
             )
 
             geo_activity = self.geo_activity_generator.generate_metadata(
-                record_data, timestamps, is_truth_file, truth_like, truthlike_attributes,
+                record_data=record_data, 
+                timestamps=timestamps, 
+                is_truth_file=is_truth_file, 
+                truth_like=truth_like, 
+                truthlike_attributes=truthlike_attributes
             )
 
             temp_activity = self.temp_activity_generator.generate_metadata(
-                record_data, timestamps, is_truth_file, truth_like, truthlike_attributes,
+                record_kwargs=record_data, 
+                timestamps=timestamps, 
+                is_truth_file=is_truth_file, 
+                truth_like=truth_like, 
+                truthlike_attributes=truthlike_attributes
             )
 
             music_activity = self.music_activity_generator.generate_metadata(
-                record_data, timestamps, is_truth_file, truth_like, truthlike_attributes,
+                record_kwargs=record_data, 
+                timestamps=timestamps, 
+                is_truth_file=is_truth_file, 
+                truth_like=truth_like, 
+                truthlike_attributes=truthlike_attributes
             )
 
-            machine_config = self.machine_config_generator.generate_metadata(record_data)
+            machine_config = self.machine_config_generator.generate_metadata(record=record_data)
 
             # Append generated objects to their respective lists
             all_metadata.append(Metadata.return_JSON(i_object))
