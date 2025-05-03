@@ -242,10 +242,8 @@ class AQLTranslator(TranslatorBase):
             FILTER TO_NUMBER(activity.Timestamp) == 1736064000.0
             To match coordinates, find SemanticAttributes with an Identifier.Label
             of "Longitude" and ensure
-            the Data matches the given longitude, and similarly for latitude. Make
-            sure to still check the
-            activity.Record.Attributes for posix metadata as well
-            (like name, path, timestamps, size, etc.)
+            the Data matches the given longitude, and similarly for latitude.
+            Posix metadata is stored in the
             When command is "within", check that the coordinates are
             within the value specified in "km"
             relative to the given longitude and latitude coordinates.

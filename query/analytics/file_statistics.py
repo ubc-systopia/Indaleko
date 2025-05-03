@@ -90,16 +90,19 @@ class FileStatistics:
             if result is None:
                 result = 0
 
-            logger.info(f"Total objects found: {result}")
-            return result
+            logger.info("Total objects found: %s", result)
 
-        except Exception as e:
-            logger.error(f"Error counting objects: {e}")
+        except NotImplementedError:
+            logger.exception("Error counting objects")
             return 0
+
+        return result
+
 
     def count_files(self) -> int:
         """
         Count only files (not directories) in the system.
+
         This query uses SemanticAttributes to identify file objects.
 
         Returns:
@@ -116,27 +119,24 @@ class FileStatistics:
             query = f"""
             RETURN COUNT(
                 FOR obj IN {objects_collection_name}
-                FILTER obj.Record != null
-                AND obj.Record.Attributes != null
-                AND obj.Record.Attributes.Type != null
-                AND obj.Record.Attributes.Type == "file"
+                FILTER S_IFREG in obj.PosixAtPosixFileAttributestributes
                 RETURN 1
             )
             """
 
             logger.info("Counting files in the system")
             cursor = self.db.aql.execute(query)
-            result = list(cursor)[0]
+            result = next(iter(cursor))
 
             # Ensure the result is an integer
             if result is None:
                 result = 0
 
-            logger.info(f"Total files found: {result}")
+            logger.info("Total files found: %s", result)
             return result
 
-        except Exception as e:
-            logger.error(f"Error counting files: {e}")
+        except NotImplementedError:
+            logger.exception("Error counting files")
             return 0
 
     def count_directories(self) -> int:
@@ -154,28 +154,26 @@ class FileStatistics:
             query = f"""
             RETURN COUNT(
                 FOR obj IN {collection_name}
-                FILTER obj.Record != null
-                AND obj.Record.Attributes != null
-                AND obj.Record.Attributes.Type != null
-                AND obj.Record.Attributes.Type == "directory"
+                FILTER S_IFDIR in obj.PosixAtPosixFileAttributestributes
                 RETURN 1
             )
             """
 
             logger.info("Counting directories in the system")
             cursor = self.db.aql.execute(query)
-            result = list(cursor)[0]
+            result = next(iter(cursor))
 
             # Ensure the result is an integer
             if result is None:
                 result = 0
 
-            logger.info(f"Total directories found: {result}")
-            return result
+            logger.info("Total directories found: %s", result)
 
-        except Exception as e:
-            logger.error(f"Error counting directories: {e}")
+        except NotImplementedError:
+            logger.exception("Error counting directories:")
             return 0
+
+        return result
 
     def get_file_type_distribution(self) -> dict[str, int]:
         """
