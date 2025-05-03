@@ -86,6 +86,19 @@ try:
 except ImportError:
     HAS_KNOWLEDGE_BASE = False
 
+# Import the Prompt Management models if available
+try:
+    from query.utils.prompt_management.data_models.base import (
+        PromptTemplate, 
+        PromptCacheEntry,
+        PromptArchiveEntry,
+        StabilityMetric,
+    )
+
+    HAS_PROMPT_MANAGEMENT = True
+except ImportError:
+    HAS_PROMPT_MANAGEMENT = False
+
 # pylint: enable=wrong-import-position
 
 
@@ -121,12 +134,19 @@ class IndalekoDBCollections:
     Indaleko_Knowledge_Pattern_Collection = "KnowledgePatterns"
     Indaleko_Feedback_Record_Collection = "FeedbackRecords"
 
+    # Prompt Management collections
+    Indaleko_Prompt_Templates_Collection = "PromptTemplates"
+    Indaleko_Prompt_Cache_Recent_Collection = "PromptCacheRecent"
+    Indaleko_Prompt_Cache_Archive_Collection = "PromptCacheArchive"
+    Indaleko_Prompt_Stability_Metrics_Collection = "PromptStabilityMetrics"
+
     # Define view names
     Indaleko_Objects_Text_View = "ObjectsTextView"
     Indaleko_Named_Entity_Text_View = "NamedEntityTextView"
     Indaleko_Activity_Text_View = "ActivityTextView"
     Indaleko_Entity_Equivalence_Text_View = "EntityEquivalenceTextView"
     Indaleko_Knowledge_Text_View = "KnowledgeTextView"
+    Indaleko_Prompt_Templates_Text_View = "PromptTemplatesTextView"
 
     Collections = {  # noqa: RUF012
         Indaleko_Object_Collection: {
@@ -499,6 +519,92 @@ class IndalekoDBCollections:
                 },
                 "feedback_strength": {
                     "fields": ["feedback_strength"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+            },
+        },
+        Indaleko_Prompt_Templates_Collection: {
+            "internal": False,
+            "schema": (PromptTemplate.get_arangodb_schema() if HAS_PROMPT_MANAGEMENT else {}),
+            "edge": False,
+            "indices": {
+                "template_name": {
+                    "fields": ["name"],
+                    "unique": True,
+                    "type": "persistent",
+                },
+                "template_type": {
+                    "fields": ["template_type"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+            },
+            "views": [
+                {
+                    "name": Indaleko_Prompt_Templates_Text_View,
+                    "fields": ["template_text", "description", "tags"],
+                    "analyzers": ["text_en"],
+                    "stored_values": ["_key", "name", "template_type", "version"],
+                },
+            ],
+        },
+        Indaleko_Prompt_Cache_Recent_Collection: {
+            "internal": True,  # Cache is internal for prompt management only
+            "schema": (PromptCacheEntry.get_arangodb_schema() if HAS_PROMPT_MANAGEMENT else {}),
+            "edge": False,
+            "indices": {
+                "prompt_hash": {
+                    "fields": ["prompt_hash"],
+                    "unique": True,
+                    "type": "persistent",
+                },
+                "created_at": {
+                    "fields": ["created_at"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+                "expires_at": {
+                    "fields": ["expires_at"],
+                    "unique": False, 
+                    "type": "persistent",
+                },
+            },
+        },
+        Indaleko_Prompt_Cache_Archive_Collection: {
+            "internal": True,  # Archive is internal for prompt management only
+            "schema": (PromptArchiveEntry.get_arangodb_schema() if HAS_PROMPT_MANAGEMENT else {}),
+            "edge": False,
+            "indices": {
+                "prompt_hash": {
+                    "fields": ["prompt_hash"],
+                    "unique": True,
+                    "type": "persistent",
+                },
+                "created_at": {
+                    "fields": ["created_at"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+                "archived_at": {
+                    "fields": ["archived_at"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+            },
+        },
+        Indaleko_Prompt_Stability_Metrics_Collection: {
+            "internal": True,  # Metrics are internal for prompt management only
+            "schema": (StabilityMetric.get_arangodb_schema() if HAS_PROMPT_MANAGEMENT else {}),
+            "edge": False,
+            "indices": {
+                "timestamp": {
+                    "fields": ["timestamp"],
+                    "unique": False,
+                    "type": "persistent",
+                },
+                "score": {
+                    "fields": ["score"],
                     "unique": False,
                     "type": "persistent",
                 },
