@@ -24,13 +24,11 @@ import os
 import sys
 import time
 import traceback
-
 from pathlib import Path
 from textwrap import dedent
-from typing import Any, Optional
+from typing import Any
 
 from icecream import ic
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -56,9 +54,8 @@ from query.query_processing.data_models.query_output import (
     LLMIntentQueryResponse,
     LLMIntentTypeEnum,
 )
-from query.utils.llm_connector.llm_base import IndalekoLLMBase
 from query.utils.llm_connector.factory import LLMConnectorFactory
-
+from query.utils.llm_connector.llm_base import IndalekoLLMBase
 
 # pylint: enable=wrong-import-position
 
@@ -212,10 +209,10 @@ class NLParser:
     def __init__(
         self,
         collections_metadata: IndalekoDBCollectionsMetadata,
-        llm_connector: Optional[IndalekoLLMBase] = None,
+        llm_connector: IndalekoLLMBase | None = None,
         llm_provider: str = "openai",
         model: str = "gpt-4o-mini",
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
     ) -> None:
         """
         Initialize the parser.
@@ -230,7 +227,7 @@ class NLParser:
         # Initialize components
         self.collections_metadata = collections_metadata
         self.validator = LLMResponseValidator()
-        
+
         # Use provided connector or create one
         if llm_connector:
             self.llm_connector = llm_connector
@@ -239,7 +236,7 @@ class NLParser:
             self.llm_connector = LLMConnectorFactory.create_connector(
                 connector_type=llm_provider,
                 model=model,
-                api_key=api_key
+                api_key=api_key,
             )
 
         # Error tracking
@@ -289,14 +286,13 @@ class NLParser:
             # Create a default connector using the factory
             self.llm_connector = LLMConnectorFactory.create_connector()
             logger.info("Created default LLM connector for parsing")
-            
+
         return ParserResults(
             OriginalQuery=query,
             Intent=self._detect_intent(query),
             Entities=self._extract_entities(query),
             Categories=self._extract_categories(query),
         )
-
 
     def _detect_intent(self, query: str) -> LLMIntentQueryResponse:
         """
@@ -318,8 +314,7 @@ class NLParser:
                 rationale="because this is a search tool, the default intent is search",
                 alternatives_considered=[
                     {
-                        "example": "this is an example, so it is static and nothing "
-                        "else was considered",
+                        "example": "this is an example, so it is static and nothing else was considered",
                     },
                 ],
                 suggestion="No suggestions, this is an optimal process in my opinion",
@@ -624,7 +619,7 @@ class NLParser:
                 return NamedEntityCollection(entities=[entity])
 
             # Create entity collection
-            logging.info(ic(f"Extracted entities: {doc}"))  # noqa: LOG015
+            logging.info(ic(f"Extracted entities: {doc}"))
             return NamedEntityCollection(**doc)
 
         except OSError:
@@ -653,10 +648,7 @@ class NLParser:
         """Get statistics about encountered errors."""
         return {
             "error_counts": self.error_count,
-            "error_rate": (
-                self.error_count["total"] / max(1, len(self.error_log))
-                if self.error_log else 0
-            ),
+            "error_rate": (self.error_count["total"] / max(1, len(self.error_log)) if self.error_log else 0),
             "common_errors": self._analyze_common_errors(),
         }
 

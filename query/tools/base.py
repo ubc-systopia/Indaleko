@@ -98,14 +98,14 @@ class BaseTool(ABC):
     def __init__(self, **kwargs):
         """
         Initialize the tool.
-        
+
         Args:
             **kwargs: Additional arguments including:
                 - llm_connector: LLM connector to use with this tool
                 - progress_callback: Callback function for progress updates
         """
-        self._progress_callback = kwargs.get('progress_callback', None)
-        self._llm_connector = kwargs.get('llm_connector', None)
+        self._progress_callback = kwargs.get("progress_callback", None)
+        self._llm_connector = kwargs.get("llm_connector", None)
 
     @property
     @abstractmethod

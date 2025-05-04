@@ -274,10 +274,10 @@ for provider in providers:
             connector_type=provider,
             use_guardian=True
         )
-        
+
         # Generate query
         response = connector.generate_query(prompt)
-        
+
         print(f"\n{provider.capitalize()} response:")
         print(response.translated_query)
     except Exception as e:
@@ -342,7 +342,7 @@ prompt = {
     "system": "You are a helpful assistant.",
     "user": """
     Please provide information according to this schema:
-    
+
     {
         "type": "object",
         "properties": {
@@ -368,7 +368,7 @@ prompt = {
             }
         }
     }
-    
+
     Tell me about Indaleko.
     """
 }
@@ -383,13 +383,13 @@ strategies = [
 
 for strat in strategies:
     result = prompt_manager.optimize_prompt(prompt, strategies=strat)
-    
+
     strategy_names = [s.name for s in strat] if strat else ["NONE"]
     print(f"\nOptimization strategies: {', '.join(strategy_names)}")
     print(f"Original tokens: {result.original_token_count}")
     print(f"Optimized tokens: {result.token_count}")
     print(f"Token savings: {result.token_savings} ({result.token_savings / result.original_token_count * 100:.2f}%)")
-    
+
     if len(strat) == 1 and strat[0] == PromptOptimizationStrategy.SCHEMA_SIMPLIFY:
         print("\nOptimized schema:")
         import re
@@ -414,10 +414,10 @@ class CustomOptimizationStrategy(Enum):
 class CustomPromptManager(PromptManager):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
+
         # Register custom optimization functions
         self._optimization_functions[CustomOptimizationStrategy.ACRONYM_EXPANSION] = self._expand_acronyms
-    
+
     def _expand_acronyms(self, prompt):
         """Replace common acronyms with their full forms."""
         acronyms = {
@@ -427,17 +427,17 @@ class CustomPromptManager(PromptManager):
             "AI": "Artificial Intelligence",
             "PMS": "Prompt Management System"
         }
-        
+
         for section in ["system", "user"]:
             if section in prompt and isinstance(prompt[section], str):
                 text = prompt[section]
-                
+
                 # Replace acronyms
                 for acronym, full_form in acronyms.items():
                     text = text.replace(f" {acronym} ", f" {full_form} ({acronym}) ")
-                
+
                 prompt[section] = text
-                
+
         return prompt
 
 # Use the custom prompt manager
@@ -577,17 +577,17 @@ factory = LLMFactory()
 def chat_endpoint():
     # Get request data
     data = request.json
-    
+
     # Validate request
     if not data or 'message' not in data:
         return jsonify({'error': 'Invalid request. Message is required.'}), 400
-    
+
     # Extract parameters
     message = data['message']
     provider = data.get('provider', 'openai')
     model = data.get('model')
     system_prompt = data.get('system_prompt', "You are a helpful assistant.")
-    
+
     try:
         # Get LLM interface
         llm = factory.get_llm(
@@ -597,13 +597,13 @@ def chat_endpoint():
             verification_level="STANDARD",
             request_mode="WARN"
         )
-        
+
         # Get completion
         completion, metadata = llm.get_completion(
             system_prompt=system_prompt,
             user_prompt=message
         )
-        
+
         # Prepare response
         response = {
             'completion': completion,
@@ -618,9 +618,9 @@ def chat_endpoint():
                 }
             }
         }
-        
+
         return jsonify(response)
-        
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -647,13 +647,13 @@ def main():
     parser.add_argument('--mode', default='WARN', help='Request mode')
     parser.add_argument('--no-guardian', action='store_true', help='Disable guardian')
     parser.add_argument('prompt', help='User prompt')
-    
+
     args = parser.parse_args()
-    
+
     try:
         # Create LLM factory
         factory = LLMFactory()
-        
+
         # Get LLM interface
         llm = factory.get_llm(
             provider=args.provider,
@@ -662,16 +662,16 @@ def main():
             verification_level=args.level,
             request_mode=args.mode
         )
-        
+
         # Get completion
         completion, metadata = llm.get_completion(
             system_prompt=args.system,
             user_prompt=args.prompt
         )
-        
+
         # Print completion
         print(completion)
-        
+
         # Print metadata if verbose
         if '--verbose' in sys.argv:
             print("\nMetadata:")
@@ -686,7 +686,7 @@ def main():
                 print(f"Verification: {status}")
                 if not allowed or metadata['verification'].get('warnings'):
                     print(f"Warnings: {metadata['verification'].get('warnings', [])}")
-        
+
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
@@ -712,11 +712,11 @@ class PromptTester:
     def __init__(self, factory=None):
         self.prompt_manager = PromptManager()
         self.factory = factory or LLMFactory()
-        
+
     def test_variants(self, template_variants, test_cases, provider="openai", trials=5):
         """Test different prompt templates and measure performance."""
         results = []
-        
+
         # Register template variants
         variant_ids = []
         for i, variant in enumerate(template_variants):
@@ -728,18 +728,18 @@ class PromptTester:
                 description=f"Test variant {i}"
             )
             variant_ids.append(variant_id)
-            
+
         # Get LLM interface
         llm = self.factory.get_llm(provider=provider, use_guardian=True)
-            
+
         # Run trials
         for variant_id in variant_ids:
             variant_results = []
-            
+
             for test_case in test_cases:
                 case_tokens = []
                 case_times = []
-                
+
                 for _ in range(trials):
                     # Create prompt from template
                     prompt_result = self.prompt_manager.create_prompt(
@@ -747,7 +747,7 @@ class PromptTester:
                         variables=[PromptVariable(name=k, value=v) for k, v in test_case["variables"].items()],
                         optimize=True
                     )
-                    
+
                     # Get completion
                     start_time = time.time()
                     _, metadata = llm.get_completion(
@@ -755,30 +755,30 @@ class PromptTester:
                         user_prompt=prompt_result.user
                     )
                     elapsed_time = time.time() - start_time
-                    
+
                     # Record metrics
                     token_count = metadata.get("token_metrics", {}).get("token_count", 0)
                     case_tokens.append(token_count)
                     case_times.append(elapsed_time)
-                
+
                 # Calculate averages
                 variant_results.append({
                     "test_case": test_case["name"],
                     "avg_tokens": statistics.mean(case_tokens) if case_tokens else 0,
                     "avg_time": statistics.mean(case_times) if case_times else 0
                 })
-            
+
             # Calculate overall metrics
             avg_tokens = statistics.mean([r["avg_tokens"] for r in variant_results])
             avg_time = statistics.mean([r["avg_time"] for r in variant_results])
-            
+
             results.append({
                 "variant_id": variant_id,
                 "avg_tokens": avg_tokens,
                 "avg_time": avg_time,
                 "case_results": variant_results
             })
-            
+
         return results
 
 # Example usage
@@ -816,7 +816,7 @@ for i, result in enumerate(results):
     print(f"\nVariant {i}:")
     print(f"Average tokens: {result['avg_tokens']:.2f}")
     print(f"Average time: {result['avg_time']:.2f} seconds")
-    
+
     print("\nTest case results:")
     for case in result["case_results"]:
         print(f"- {case['test_case']}: {case['avg_tokens']:.2f} tokens, {case['avg_time']:.2f} seconds")
@@ -853,25 +853,25 @@ class CachingLLMClient:
         self.default_ttl = default_ttl
         self.hits = 0
         self.misses = 0
-    
+
     def _hash_prompt(self, system_prompt, user_prompt):
         """Generate a stable hash for a prompt."""
         prompt_str = json.dumps({"system": system_prompt, "user": user_prompt}, sort_keys=True)
         return hashlib.sha256(prompt_str.encode()).hexdigest()
-    
+
     def _clean_cache(self):
         """Remove expired cache entries."""
         now = time.time()
         expired = [k for k, v in self.cache.items() if now - v.timestamp > v.ttl]
         for key in expired:
             del self.cache[key]
-        
+
         # If still too large, remove oldest entries
         if len(self.cache) > self.max_cache_size:
             sorted_keys = sorted(self.cache.keys(), key=lambda k: self.cache[k].timestamp)
             for key in sorted_keys[:len(self.cache) - self.max_cache_size]:
                 del self.cache[key]
-    
+
     def get_completion(
         self,
         system_prompt: str,
@@ -885,15 +885,15 @@ class CachingLLMClient:
         """Get a completion with caching."""
         # Generate cache key
         prompt_hash = self._hash_prompt(system_prompt, user_prompt)
-        
+
         # Check cache if enabled
         if use_cache and prompt_hash in self.cache:
             entry = self.cache[prompt_hash]
-            
+
             # Check if entry is still valid
             if time.time() - entry.timestamp <= entry.ttl:
                 self.hits += 1
-                
+
                 # Return cached result with cache hit metadata
                 metadata = entry.metadata.copy()
                 metadata["cache"] = {
@@ -901,25 +901,25 @@ class CachingLLMClient:
                     "saved_time_ms": metadata.get("total_time_ms", 0),
                     "age_seconds": int(time.time() - entry.timestamp)
                 }
-                
+
                 return entry.completion, metadata
-        
+
         # Cache miss - get from LLM
         self.misses += 1
-        
+
         # Get LLM interface
         llm = self.factory.get_llm(
             provider=provider,
             model=model,
             **kwargs
         )
-        
+
         # Get completion
         completion, metadata = llm.get_completion(
             system_prompt=system_prompt,
             user_prompt=user_prompt
         )
-        
+
         # Cache the result if caching is enabled
         if use_cache:
             self.cache[prompt_hash] = CacheEntry(
@@ -928,23 +928,23 @@ class CachingLLMClient:
                 timestamp=time.time(),
                 ttl=ttl or self.default_ttl
             )
-            
+
             # Add cache miss info to metadata
             metadata["cache"] = {
                 "hit": False,
                 "stored": True
             }
-            
+
             # Clean cache if needed
             self._clean_cache()
-        
+
         return completion, metadata
-    
+
     def get_cache_stats(self):
         """Get cache statistics."""
         total_requests = self.hits + self.misses
         hit_rate = (self.hits / total_requests) * 100 if total_requests > 0 else 0
-        
+
         return {
             "cache_size": len(self.cache),
             "max_cache_size": self.max_cache_size,
@@ -953,7 +953,7 @@ class CachingLLMClient:
             "hit_rate": hit_rate,
             "total_requests": total_requests
         }
-    
+
     def clear_cache(self):
         """Clear the cache."""
         self.cache = {}
@@ -1306,7 +1306,7 @@ prompt_manager.register_template(
     user_prompt="Extract entities from: {text}",
     description="Template for entity extraction",
     examples=[
-        {"text": "John sent an email to Sarah yesterday", 
+        {"text": "John sent an email to Sarah yesterday",
          "output": '{"entities": ["John", "Sarah"], "types": ["person", "person"]}'}
     ]
 )

@@ -22,7 +22,7 @@ import json
 import os
 import sys
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import openai
 import tiktoken
@@ -36,17 +36,18 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # pylint: disable=wrong-import-position
+# ruff: noqa: E402
 from query.query_processing.data_models.query_output import LLMTranslateQueryResponse
 from query.utils.llm_connector.llm_base import IndalekoLLMBase
 from query.utils.prompt_manager import (
-    PromptManager, 
-    PromptOptimizationStrategy, 
+    PromptManager,
+    PromptOptimizationStrategy,
     PromptRegistry,
-    PromptTemplate,
     create_aql_translation_template,
-    create_nl_parser_template
+    create_nl_parser_template,
 )
 
+# ruff: qa: E402
 # pylint: enable=wrong-import-position
 
 
@@ -56,47 +57,45 @@ class OpenAIConnector(IndalekoLLMBase):
     llm_name = "OpenAI"
 
     def __init__(
-        self, 
-        api_key: str, 
-        model: str = "gpt-4o",
-        max_tokens: int = 8000,
-        use_prompt_manager: bool = True,
-        optimization_strategies: Optional[List[PromptOptimizationStrategy]] = None
-    ):
+        self,
+        api_key: str,
+        **kwargs: dict,
+    ) -> None:
         """
         Initialize the OpenAI connector.
 
         Args:
             api_key (str): The OpenAI API key
-            model (str): The name of the OpenAI model to use
-            max_tokens (int): Maximum tokens for prompts
-            use_prompt_manager (bool): Whether to use the prompt manager
-            optimization_strategies (Optional[List[PromptOptimizationStrategy]]): 
-                Optimization strategies to use for prompts
+            kwargs: Additional optional parameters
+                - model (str): The name of the OpenAI model to use (default: "gpt-4o")
+                - max_tokens (int): Maximum tokens for prompts (default: 8000)
+                - use_prompt_manager (bool): Whether to use the prompt manager (default: True)
+                - optimization_strategies (Optional[List[PromptOptimizationStrategy]]):
+                    Optimization strategies to use for prompts
         """
-        self.model = model
+        self.model = kwargs.get("model", "gpt-4o")
+        max_tokens = kwargs.get("max_tokens", 8000)
+        self.use_prompt_manager = kwargs.get("use_prompt_manager", True)
+        self.optimization_strategies = kwargs.get(
+            "optimization_strategies",
+            [
+                PromptOptimizationStrategy.WHITESPACE,
+                PromptOptimizationStrategy.SCHEMA_SIMPLIFY,
+                PromptOptimizationStrategy.EXAMPLE_REDUCE,
+            ],
+        )
+
         self.client = openai.OpenAI(api_key=api_key)
-        
+
         # Initialize prompt manager if enabled
-        self.use_prompt_manager = use_prompt_manager
-        if use_prompt_manager:
+        if self.use_prompt_manager:
             # Create registry and register default templates
             registry = PromptRegistry()
             registry.register(create_aql_translation_template())
             registry.register(create_nl_parser_template())
-            
+
             # Create prompt manager
-            self.prompt_manager = PromptManager(
-                max_tokens=max_tokens,
-                registry=registry
-            )
-            
-            # Set default optimization strategies
-            self.optimization_strategies = optimization_strategies or [
-                PromptOptimizationStrategy.WHITESPACE,
-                PromptOptimizationStrategy.SCHEMA_SIMPLIFY,
-                PromptOptimizationStrategy.EXAMPLE_REDUCE
-            ]
+            self.prompt_manager = PromptManager(max_tokens=max_tokens, registry=registry)
 
     def get_llm_name(self) -> str:
         """
@@ -104,7 +103,7 @@ class OpenAIConnector(IndalekoLLMBase):
         """
         return self.llm_name
 
-    def generate_query(self, prompt: Dict[str, str], temperature=0) -> LLMTranslateQueryResponse:
+    def generate_query(self, prompt: dict[str, str], temperature=0) -> LLMTranslateQueryResponse:
         """
         Generate a query using OpenAI's model.
 
@@ -117,42 +116,38 @@ class OpenAIConnector(IndalekoLLMBase):
             LLMTranslateQueryResponse: The generated query response
         """
         # If we have a prompt manager and this looks like a raw prompt dict with query
-        if (self.use_prompt_manager and 
-            isinstance(prompt, dict) and 
-            'query' in prompt and 
-            'template' in prompt):
-            
+        if self.use_prompt_manager and isinstance(prompt, dict) and "query" in prompt and "template" in prompt:
+
             # Use prompt manager to create optimized prompt
-            query = prompt['query']
-            template_name = prompt['template']
-            
+            query = prompt["query"]
+            template_name = prompt["template"]
+
             # Get other parameters if provided
-            params = {k: v for k, v in prompt.items() 
-                     if k not in ['query', 'template', 'system', 'user']}
-            
+            params = {k: v for k, v in prompt.items() if k not in ["query", "template", "system", "user"]}
+
             # Add query parameter
-            params['query'] = query
-            
+            params["query"] = query
+
             try:
                 # Create prompt using manager
                 managed_prompt = self.prompt_manager.create_prompt(
                     template_name=template_name,
                     optimize=True,
                     strategies=self.optimization_strategies,
-                    **params
+                    **params,
                 )
-                
+
                 # Update prompt with managed version
                 prompt = managed_prompt
-                
+
                 # Log token usage
                 combined = f"{prompt['system']}\n\n{prompt['user']}"
                 tokens = len(self.prompt_manager.tokenizer.encode(combined))
                 ic(f"Optimized prompt token count: {tokens}")
             except ValueError as e:
                 # If template not found, log warning and continue with original prompt
-                ic(f"Warning: {str(e)}. Using original prompt.")
-        
+                ic(f"Warning: {e!s}. Using original prompt.")
+
         # Log submission details
         ic("Submitting prompt to OpenAI")
         ic(f"Using model: {self.model}")
@@ -165,6 +160,7 @@ class OpenAIConnector(IndalekoLLMBase):
 
             # Make API call with timeout
             import time
+
             start_time = time.time()
 
             # More verbose logging for debugging
@@ -198,25 +194,25 @@ class OpenAIConnector(IndalekoLLMBase):
 
         except openai.APITimeoutError as e:
             ic(f"OpenAI API timeout: {e}")
-            ic(f"API timeout details: {str(e)}")
-            raise TimeoutError(f"OpenAI API timeout: {str(e)}")
+            ic(f"API timeout details: {e!s}")
+            raise TimeoutError(f"OpenAI API timeout: {e!s}")
         except openai.APIError as e:
             ic(f"OpenAI API error: {e}")
-            ic(f"API error details: {str(e)}")
-            raise ValueError(f"OpenAI API error: {str(e)}")
+            ic(f"API error details: {e!s}")
+            raise ValueError(f"OpenAI API error: {e!s}")
         except openai.AuthenticationError as e:
             ic(f"OpenAI authentication error: {e}")
-            ic(f"Auth error details: {str(e)}")
-            raise ValueError(f"OpenAI authentication error: Check your API key")
+            ic(f"Auth error details: {e!s}")
+            raise ValueError("OpenAI authentication error: Check your API key")
         except openai.RateLimitError as e:
             ic(f"OpenAI rate limit exceeded: {e}")
-            raise ValueError(f"OpenAI rate limit exceeded: {str(e)}")
+            raise ValueError(f"OpenAI rate limit exceeded: {e!s}")
         except openai.APIConnectionError as e:
             ic(f"OpenAI API connection error: {e}")
-            raise ConnectionError(f"OpenAI API connection error: Check your network connection")
-        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
+            raise ConnectionError("OpenAI API connection error: Check your network connection")
+        except (GeneratorExit, RecursionError, MemoryError, NotImplementedError) as e:
             ic(f"Unexpected error generating query: {type(e).__name__}: {e}")
-            raise ValueError(f"Unexpected error: {type(e).__name__}: {str(e)}")
+            raise ValueError(f"Unexpected error: {type(e).__name__}: {e!s}")
 
     def summarize_text(self, text: str, max_length: int = 100) -> str:
         """
@@ -350,13 +346,13 @@ class OpenAIConnector(IndalekoLLMBase):
 
         except openai.APITimeoutError as e:
             ic(f"OpenAI API timeout in answer_question: {e}")
-            raise TimeoutError(f"OpenAI API timeout: {str(e)}")
+            raise TimeoutError(f"OpenAI API timeout: {e!s}")
         except openai.APIError as e:
             ic(f"OpenAI API error in answer_question: {e}")
-            raise ValueError(f"OpenAI API error: {str(e)}")
-        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
+            raise ValueError(f"OpenAI API error: {e!s}")
+        except (GeneratorExit, RecursionError, MemoryError, NotImplementedError) as e:
             ic(f"Error in answer_question: {type(e).__name__}: {e}")
-            raise ValueError(f"Error in answer_question: {type(e).__name__}: {str(e)}")
+            raise ValueError(f"Error in answer_question: {type(e).__name__}: {e!s}")
 
     def get_completion(
         self,
@@ -501,7 +497,7 @@ Text to analyze:
             # Filter to only include requested attribute types
             return {k: v for k, v in attributes.items() if k in attr_types}
 
-        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
+        except (GeneratorExit, RecursionError, MemoryError, NotImplementedError) as e:
             ic(f"Error extracting semantic attributes: {e}")
             # Return a minimal valid response
             return {attr: [] for attr in attr_types}

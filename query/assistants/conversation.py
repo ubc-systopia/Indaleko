@@ -17,14 +17,14 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+
 import json
 import os
 import sys
 import uuid
-
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from icecream import ic
 
@@ -44,9 +44,9 @@ from query.tools.registry import get_registry
 from query.utils.llm_connector.factory import LLMConnectorFactory
 from query.utils.llm_connector.llm_base import IndalekoLLMBase
 
-
 # ruff: qa: E402
 # pylint: enable=wrong-import-position
+
 
 class ConversationManager:
     """Manager for conversations with the Indaleko assistant."""
@@ -82,13 +82,13 @@ in the archivist memory system.
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         model: str = "gpt-4o",
         llm_provider: str = "openai",
-        llm_connector: Optional[IndalekoLLMBase] = None,
+        llm_connector: IndalekoLLMBase | None = None,
         archivist_memory=None,
-        db_config: Optional[IndalekoDBConfig] = None,
-        **kwargs
+        db_config: IndalekoDBConfig | None = None,
+        **kwargs,
     ) -> None:
         """
         Initialize the conversation manager.
@@ -129,7 +129,7 @@ in the archivist memory system.
                 connector_type=llm_provider,
                 api_key=self.api_key,
                 model=model,
-                **kwargs  # Pass through additional arguments like api_base
+                **kwargs,  # Pass through additional arguments like api_base
             )
 
         ic(f"Conversation Manager using LLM connector: {self.llm_connector.get_llm_name()}")
@@ -149,17 +149,18 @@ in the archivist memory system.
             str: The API key.
         """
         config_dir = os.path.join(os.environ.get("INDALEKO_ROOT"), "config")
-        
+
         # First try the unified keys file
         api_key_file = os.path.join(config_dir, "llm-keys.ini")
         if not os.path.exists(api_key_file):
             # Fall back to legacy openai-key.ini
             api_key_file = os.path.join(config_dir, "openai-key.ini")
-            
+
         import configparser
+
         config = configparser.ConfigParser()
         config.read(api_key_file, encoding="utf-8-sig")
-        
+
         # Try to get the key for the specified provider
         if os.path.basename(api_key_file) == "llm-keys.ini" and self.llm_provider in config:
             api_key = config[self.llm_provider]["api_key"]
@@ -282,9 +283,10 @@ in the archivist memory system.
 
             # Ensure cursor objects are fully consumed
             # This prevents JSON serialization errors
-            if result and hasattr(result, 'result') and isinstance(result.result, dict):
+            if result and hasattr(result, "result") and isinstance(result.result, dict):
                 for key, value in result.result.items():
                     from arango.cursor import Cursor
+
                     # Check if any values are ArangoDB cursor objects
                     if isinstance(value, Cursor):
                         # Convert Cursor to list
@@ -304,16 +306,18 @@ in the archivist memory system.
 
             return result
 
-        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
-            ic(f"Error executing tool {tool_name}: {str(e)}")
+        except (GeneratorExit, RecursionError, MemoryError, NotImplementedError) as e:
+            ic(f"Error executing tool {tool_name}: {e!s}")
             import traceback
+
             ic(traceback.format_exc())
             # Return error result
             from query.tools.base import ToolOutput
+
             return ToolOutput(
                 tool_name=tool_name,
                 success=False,
-                error=f"Tool execution failed: {str(e)}",
+                error=f"Tool execution failed: {e!s}",
                 elapsed_time=0.0,
             )
 

@@ -24,7 +24,6 @@ import os
 import sys
 import uuid
 from textwrap import dedent
-from typing import Optional, Any
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -49,7 +48,6 @@ from query.query_processing.data_models.query_language_enhancer import (
 )
 from query.query_processing.nl_parser import NLParser
 from query.result_analysis.data_models.facet_data_model import DynamicFacets
-from query.utils.llm_connector.factory import LLMConnectorFactory
 from query.utils.llm_connector.llm_base import IndalekoLLMBase
 
 # pylint: enable=wrong-import-position
@@ -72,10 +70,10 @@ class EnhancedNLParser(NLParser):
     def __init__(
         self,
         collections_metadata: IndalekoDBCollectionsMetadata,
-        llm_connector: Optional[IndalekoLLMBase] = None,
+        llm_connector: IndalekoLLMBase | None = None,
         llm_provider: str = "openai",
         model: str = "gpt-4o-mini",
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
     ):
         """
         Initialize the enhanced parser.
@@ -92,7 +90,7 @@ class EnhancedNLParser(NLParser):
             llm_connector=llm_connector,
             llm_provider=llm_provider,
             model=model,
-            api_key=api_key
+            api_key=api_key,
         )
         self.query_history = []  # Store recent queries for context
         self.max_history_length = 5
@@ -180,7 +178,7 @@ class EnhancedNLParser(NLParser):
                     for name, metadata in self.collection_data.items()
                 },
             }
-        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
+        except (GeneratorExit, RecursionError, MemoryError, NotImplementedError) as e:
             # Fallback to simpler representation if serialization fails
             logging.warning(f"Error dumping model data: {e}")
             context_data = {
@@ -278,7 +276,7 @@ class EnhancedNLParser(NLParser):
                 indent=2,
                 default=_json_serializable,
             )
-        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
+        except (GeneratorExit, RecursionError, MemoryError, NotImplementedError) as e:
             logging.warning(f"Error serializing context data: {e}")
             # Fallback to simpler representation
             context_json = json.dumps(

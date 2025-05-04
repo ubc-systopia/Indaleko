@@ -22,7 +22,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-
 from query.utils.prompt_management.data_models.contradiction import (
     ContradictionPattern,
     ContradictionType,

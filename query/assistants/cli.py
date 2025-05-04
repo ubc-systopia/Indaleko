@@ -25,16 +25,15 @@ import os
 import readline
 import sys
 import time
-
 from pathlib import Path
 from typing import Any
 
 from arango.cursor import Cursor
 from icecream import ic
 
-
 # Global verbose mode flag
 VERBOSE_MODE = False
+
 
 def verbose_ic(_message: str, *, timestamp: bool = True) -> None:
     """Print a message if verbose mode is enabled.
@@ -65,10 +64,8 @@ from query.tools.translation import aql_translator, nl_parser
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 
-
 # ruff: qa: E402
 # pylint: enable=wrong-import-position
-
 
 
 class IndalekoAssistantCLI(IndalekoBaseCLI):
@@ -112,6 +109,7 @@ class IndalekoAssistantCLI(IndalekoBaseCLI):
         # Try to get the list of available providers
         try:
             from query.utils.llm_connector.factory import LLMConnectorFactory
+
             available_providers = LLMConnectorFactory.get_available_connectors()
             ic(f"Available LLM providers: {available_providers}")
 
@@ -123,7 +121,7 @@ class IndalekoAssistantCLI(IndalekoBaseCLI):
             ic(f"Error getting available providers: {e}")
 
         # Initialize conversation manager with LLM provider
-        ic('***Calling ConversationManager***')
+        ic("***Calling ConversationManager***")
         self.conversation_manager = ConversationManager(
             api_key=api_key,  # Let ConversationManager handle API key loading
             model=model,
@@ -133,10 +131,9 @@ class IndalekoAssistantCLI(IndalekoBaseCLI):
         self.current_conversation = None
         self.registry = get_registry()
 
-
         # Set global verbose mode flag
         global VERBOSE_MODE
-        VERBOSE_MODE = self.args.verbose if hasattr(self.args, 'verbose') else False
+        VERBOSE_MODE = self.args.verbose if hasattr(self.args, "verbose") else False
 
         # Register tools
         self._register_tools()
@@ -152,23 +149,26 @@ class IndalekoAssistantCLI(IndalekoBaseCLI):
 
         @staticmethod
         def get_pre_parser() -> argparse.ArgumentParser | None:
-            """"Build base parser."""
+            """ "Build base parser."""
             parser = argparse.ArgumentParser(description="Indaleko Assistant CLI", add_help=False)
             parser.add_argument("--model", default="gpt-4o-mini", help="The model to use")
-            parser.add_argument("--llm", default="openai",
-                              help="The LLM provider to use (e.g., openai, anthropic, gemma, deepseek, grok)")
+            parser.add_argument(
+                "--llm",
+                default="openai",
+                help="The LLM provider to use (e.g., openai, anthropic, gemma, deepseek, grok)",
+            )
             parser.add_argument("--debug", action="store_true", help="Enable debug output")
-            parser.add_argument("--verbose", action="store_true",
-                                help="Show detailed progress information")
+            parser.add_argument("--verbose", action="store_true", help="Show detailed progress information")
             parser.add_argument("--output", help="Output file to write results (in batch mode)")
-            parser.add_argument("--summarize", action="store_true",
-                                help="Show summary of execution results (in batch mode)")
+            parser.add_argument(
+                "--summarize",
+                action="store_true",
+                help="Show summary of execution results (in batch mode)",
+            )
             # now let's check and see if a file name has been provided
             args = parser.parse_known_args()
             ic(args)
-            if (len(args[1]) == 1 and
-                Path(args[1][0]).exists() and
-                Path(args[1][0]).is_file()):
+            if len(args[1]) == 1 and Path(args[1][0]).exists() and Path(args[1][0]).is_file():
                 # If only one argument is passed and it is a file
                 # if it is, this is a batch request.
                 parser.add_argument(
@@ -176,8 +176,7 @@ class IndalekoAssistantCLI(IndalekoBaseCLI):
                     nargs=1,
                     type=Path,
                     default=Path(args[1][0]),
-                    help="Input file containing queries to process (one per line)."
-                    " Runs in batch mode.",
+                    help="Input file containing queries to process (one per line). Runs in batch mode.",
                 )
             else:
                 # Add interactive only options
@@ -237,7 +236,6 @@ class IndalekoAssistantCLI(IndalekoBaseCLI):
             api_key = api_key[1:-1]
 
         return api_key
-
 
     def _register_tools(self) -> None:
         """Register the required tools."""
@@ -335,6 +333,7 @@ class IndalekoAssistantCLI(IndalekoBaseCLI):
             # Ensure cursor objects are fully consumed
             # This is a safeguard in case the cursor wasn't already converted by execute_tool
             from arango.cursor import Cursor
+
             if "results" in executor_output and isinstance(executor_output["results"], Cursor):
                 executor_output["results"] = [doc for doc in executor_output["results"]]
 
@@ -364,11 +363,12 @@ class IndalekoAssistantCLI(IndalekoBaseCLI):
                 "execution_plan": executor_output.get("execution_plan", {}),
                 "performance": executor_output.get("performance", {}),
             }
-        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
+        except (GeneratorExit, RecursionError, MemoryError, NotImplementedError) as e:
             import traceback
-            verbose_ic(f"Error processing query: {str(e)}")
+
+            verbose_ic(f"Error processing query: {e!s}")
             verbose_ic(traceback.format_exc())
-            return {"error": f"Error processing query: {str(e)}"}
+            return {"error": f"Error processing query: {e!s}"}
 
     def process_command(self, command: str) -> bool:
         """
@@ -512,7 +512,7 @@ class IndalekoAssistantCLI(IndalekoBaseCLI):
                 memory.get("rss", 0) / (1024 * 1024)
 
     def run(self) -> None:
-        """"Run the CLI."""
+        """ "Run the CLI."""
         if not self.args:
             self.args = self.pre_parser.parse_args()
 
@@ -537,7 +537,6 @@ class IndalekoAssistantCLI(IndalekoBaseCLI):
                 if output_file:
                     verbose_ic(f"Writing results to {self.args.output}")
 
-
             # Process queries one by one
             while True:
                 if batch_file:
@@ -559,8 +558,9 @@ class IndalekoAssistantCLI(IndalekoBaseCLI):
                 verbose_ic(f"Processing query: {query}")
                 self.process_query(query)
 
-        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
+        except (GeneratorExit, RecursionError, MemoryError, NotImplementedError) as e:
             import traceback
+
             verbose_ic(f"Error in batch processing: {e!s}")
             verbose_ic(traceback.format_exc())
 
@@ -572,7 +572,6 @@ class IndalekoAssistantCLI(IndalekoBaseCLI):
 
     def _make_serializable(self, obj: object) -> object:
         """Convert an object to a JSON-serializable format. Now with 100% more MATCH."""
-
         match obj:
             case dict():  # Handle dicts
                 return {k: self._make_serializable(v) for k, v in obj.items()}
@@ -610,9 +609,10 @@ class IndalekoAssistantCLI(IndalekoBaseCLI):
                 verbose_ic(f"Error: {result['error']}")
                 return result
 
-        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
+        except (GeneratorExit, RecursionError, MemoryError, NotImplementedError) as e:
             import traceback
-            error_msg = f"Error processing query: {str(e)}"
+
+            error_msg = f"Error processing query: {e!s}"
             verbose_ic(error_msg)
             verbose_ic(traceback.format_exc())
             return {"error": error_msg, "query": query}
@@ -622,7 +622,6 @@ def main() -> None:
     """Main function."""
     # Create and run CLI with specified model and LLM connector
     IndalekoAssistantCLI().run()
-
 
 
 if __name__ == "__main__":

@@ -21,14 +21,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import json
 import os
 import sys
-
 from datetime import UTC, datetime
 from pathlib import Path
 from textwrap import dedent
-from typing import Any, Optional
+from typing import Any
 
 from icecream import ic
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -47,7 +45,6 @@ from query.query_processing.query_translator.translator_base import TranslatorBa
 from query.utils.llm_connector.factory import LLMConnectorFactory
 from query.utils.llm_connector.llm_base import IndalekoLLMBase
 
-
 # pylint: enable=wrong-import-position
 
 # ruff: noqa: S101,S311,FBT001,FBT002,G004
@@ -57,12 +54,12 @@ class AQLTranslator(TranslatorBase):
     """Translator for converting parsed queries to AQL (ArangoDB Query Language)."""
 
     def __init__(
-        self, 
+        self,
         collections_metadata: IndalekoDBCollectionsMetadata,
-        llm_connector: Optional[IndalekoLLMBase] = None,
+        llm_connector: IndalekoLLMBase | None = None,
         llm_provider: str = "openai",
         model: str = "gpt-4o-mini",
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
     ) -> None:
         """
         Initialize the AQL translator.
@@ -84,7 +81,7 @@ class AQLTranslator(TranslatorBase):
             self.llm_connector = LLMConnectorFactory.create_connector(
                 connector_type=llm_provider,
                 model=model,
-                api_key=api_key
+                api_key=api_key,
             )
 
         # Handle collection metadata correctly
@@ -112,16 +109,16 @@ class AQLTranslator(TranslatorBase):
         # Use the LLM to help generate the AQL query
         assert isinstance(input_data, TranslatorInput)
         prompt = self._create_translation_prompt2(input_data)
-        
+
         # Use the connector provided in the input data if available, otherwise use our own
         llm_connector = input_data.Connector if input_data.Connector else self.llm_connector
-        
+
         # Ensure we have a connector
         if llm_connector is None:
             # Create a default connector as a last resort
             llm_connector = LLMConnectorFactory.create_connector()
             ic("Created default LLM connector for translation")
-            
+
         completion = llm_connector.get_completion(
             context=prompt["system"],
             question=prompt["user"],
@@ -129,10 +126,7 @@ class AQLTranslator(TranslatorBase):
         )
         performance_data = json.loads(completion.usage.model_dump_json())
         response_data = json.loads(completion.choices[0].message.content)
-        if ("aql_query" not in response_data and
-             "example" in response_data and
-             "aql_query" in response_data["example"]
-        ):
+        if "aql_query" not in response_data and "example" in response_data and "aql_query" in response_data["example"]:
             return TranslatorOutput(
                 aql_query=response_data["example"]["aql_query"],
                 explanation=response_data["example"]["explanation"],
@@ -152,7 +146,7 @@ class AQLTranslator(TranslatorBase):
             additional_notes=response_data.get("additional_notes", None),
         )
 
-    def validate_query(self, query: str, explain: bool=False) -> bool:
+    def validate_query(self, query: str, explain: bool = False) -> bool:
         """
         Validate the translated AQL query.
 
@@ -170,9 +164,7 @@ class AQLTranslator(TranslatorBase):
             ".Timestamp",
             ".SemanticAttributes",
         ]
-        result = "FOR" in query and "RETURN" in query and any(
-            field in query for field in required_fields
-        )
+        result = "FOR" in query and "RETURN" in query and any(field in query for field in required_fields)
 
         if explain and not result:
             explanation = []
@@ -442,7 +434,8 @@ class AQLTranslator(TranslatorBase):
         if hasattr(input_data.Query, "entities") and len(input_data.Query.entities.entities) > 0:
             is_text_search = True
 
-        system_prompt = dedent(f"""
+        system_prompt = dedent(
+            f"""
         Hello. The curren time is {datetime.now(UTC).isoformat()}.
         You are **Archivist**, an expert at working with Indaleko to find pertinent
         digital objects (e.g., files).
@@ -513,7 +506,7 @@ class AQLTranslator(TranslatorBase):
         The structured data that follows provides information about the database.
         {input_data}
         """,
-    )
+        )
         # Add specific recommendation for text search
         if is_text_search:
             system_prompt += dedent(

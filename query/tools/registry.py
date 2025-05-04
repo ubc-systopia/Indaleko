@@ -163,17 +163,17 @@ class ToolRegistry:
         tool_class = self._tools.get(input_data.tool_name)
         if tool_class is None:
             raise ValueError(f"Tool not found: {input_data.tool_name}")
-        
+
         # Create a new instance with LLM connector if provided
         kwargs = {}
-        
+
         # Pass LLM connector if provided in the input
-        if hasattr(input_data, 'llm_connector') and input_data.llm_connector is not None:
-            kwargs['llm_connector'] = input_data.llm_connector
-            
+        if hasattr(input_data, "llm_connector") and input_data.llm_connector is not None:
+            kwargs["llm_connector"] = input_data.llm_connector
+
         # Create tool instance with appropriate parameters
         tool = tool_class(**kwargs)
-        
+
         # Set the callback for this execution if provided
         if progress_callback is not None:
             original_callback = tool._progress_callback

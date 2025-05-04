@@ -22,7 +22,7 @@ import json
 import logging
 import os
 import sys
-from typing import Any, Optional
+from typing import Any
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -63,12 +63,12 @@ class EnhancedAQLTranslator(AQLTranslator):
     """
 
     def __init__(
-        self, 
+        self,
         collections_metadata: IndalekoDBCollectionsMetadata,
-        llm_connector: Optional[IndalekoLLMBase] = None,
+        llm_connector: IndalekoLLMBase | None = None,
         llm_provider: str = "openai",
         model: str = "gpt-4o-mini",
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
     ):
         """
         Initialize the enhanced AQL translator.
@@ -85,7 +85,7 @@ class EnhancedAQLTranslator(AQLTranslator):
             llm_connector=llm_connector,
             llm_provider=llm_provider,
             model=model,
-            api_key=api_key
+            api_key=api_key,
         )
         self.performance_hints = []
 
@@ -120,7 +120,7 @@ class EnhancedAQLTranslator(AQLTranslator):
                     for index in indices:
                         if index["type"] != "primary":
                             collection_indices[category].append(index)
-            except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
+            except (GeneratorExit, RecursionError, MemoryError, NotImplementedError) as e:
                 logging.warning(
                     f"Error retrieving indices for collection {category}: {e}",
                 )
@@ -143,13 +143,13 @@ class EnhancedAQLTranslator(AQLTranslator):
 
         # Use the connector provided in the input data if available, otherwise use our own
         llm_connector = input_data.Connector if input_data.Connector else self.llm_connector
-        
+
         # Ensure we have a connector
         if llm_connector is None:
             # Create a default connector as a last resort
             llm_connector = LLMConnectorFactory.create_connector()
             logging.info("Created default LLM connector for enhanced AQL translation")
-            
+
         # Use the LLM to generate the AQL query
         completion = llm_connector.get_completion(
             context=system_prompt,
@@ -242,7 +242,7 @@ class EnhancedAQLTranslator(AQLTranslator):
                     view_info.append(
                         "- KnowledgeTextView: Text search for LearningEvents collection fields (content, source, metadata)",
                     )
-        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
+        except (GeneratorExit, RecursionError, MemoryError, NotImplementedError) as e:
             logging.warning(f"Error getting views: {e}")
 
         view_info_text = "\n".join(view_info) if view_info else "No views available"
@@ -455,7 +455,7 @@ class EnhancedAQLTranslator(AQLTranslator):
                 db_views = self.db_config.db.views()
                 for view in db_views:
                     available_views[view] = True
-        except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ):
+        except (GeneratorExit, RecursionError, MemoryError, NotImplementedError):
             # Default views if we can't access the database
             available_views = {
                 "ObjectsTextView": True,

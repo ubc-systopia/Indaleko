@@ -26,7 +26,7 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from data_models.base import IndalekoBaseModel
@@ -66,8 +66,8 @@ class AyniGuard:
     """
 
     def __init__(
-        self, 
-        db_instance: IndalekoCollection | None = None, 
+        self,
+        db_instance: IndalekoCollection | None = None,
         llm_factory: LLMFactory | None = None,
     ) -> None:
         """
@@ -148,20 +148,8 @@ class AyniGuard:
                     "severity": 0.5,
                 },
             ],
-            "structural": [
-                {
-                    "name": "context_constraint_conflict", 
-                    "pattern": {"cross_layer": True}, 
-                    "severity": 0.7
-                }
-            ],
-            "temporal": [
-                {
-                    "name": "time_inconsistency", 
-                    "pattern": {"temporal_refs": True}, 
-                    "severity": 0.4
-                }
-            ],
+            "structural": [{"name": "context_constraint_conflict", "pattern": {"cross_layer": True}, "severity": 0.7}],
+            "temporal": [{"name": "time_inconsistency", "pattern": {"temporal_refs": True}, "severity": 0.4}],
         }
 
     def compute_prompt_hash(self, prompt: dict[str, Any]) -> str:
@@ -190,7 +178,7 @@ class AyniGuard:
         # Check recent cache first (hot tier)
         recent_collection = IndalekoDBCollections.Indaleko_Prompt_Cache_Recent_Collection
         # Recent cache is obtained but not used directly - just using the collection name
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         aql = """
             FOR doc IN @@collection
@@ -216,11 +204,11 @@ class AyniGuard:
         return None
 
     def store_cache(
-        self, 
-        prompt_hash: str, 
-        result: AyniResult, 
-        prompt: dict[str, Any], 
-        user_id: str | None = None
+        self,
+        prompt_hash: str,
+        result: AyniResult,
+        prompt: dict[str, Any],
+        user_id: str | None = None,
     ) -> None:
         """
         Store evaluation result in cache.
@@ -232,13 +220,13 @@ class AyniGuard:
             user_id: Optional identifier of the prompt creator
         """
         # Store in recent cache (hot tier) with timezone-aware datetime
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expires_at = now + timedelta(days=30)
 
         # Get collection names
         recent_col = IndalekoDBCollections.Indaleko_Prompt_Cache_Recent_Collection
         metrics_col = IndalekoDBCollections.Indaleko_Prompt_Stability_Metrics_Collection
-        
+
         # Store in recent cache
         recent_cache = self.db.collection(recent_col)
         prompt_doc = PromptModel(
@@ -271,9 +259,9 @@ class AyniGuard:
         Args:
             age_days: Minimum age in days to archive
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         cutoff_date = now - timedelta(days=age_days)
-        
+
         # Get collection names
         recent_col = IndalekoDBCollections.Indaleko_Prompt_Cache_Recent_Collection
         archive_col = IndalekoDBCollections.Indaleko_Prompt_Cache_Archive_Collection
@@ -403,7 +391,9 @@ class AyniGuard:
 
         try:
             response = reviewer.get_completion(
-                system_prompt=review_prompt["system"], user_prompt=review_prompt["user"], json_mode=True,
+                system_prompt=review_prompt["system"],
+                user_prompt=review_prompt["user"],
+                json_mode=True,
             )
 
             # Parse response (assuming JSON)
@@ -455,7 +445,8 @@ class AyniGuard:
 
                 try:
                     response = reviewer.get_completion(
-                        system_prompt=trust_prompt["system"], user_prompt=trust_prompt["user"],
+                        system_prompt=trust_prompt["system"],
+                        user_prompt=trust_prompt["user"],
                     )
                     # Extract score from response
                     score_match = re.search(r"(\d+\.\d+)", response)
@@ -555,7 +546,7 @@ class AyniGuard:
         """
         # Get collection name
         recent_col = IndalekoDBCollections.Indaleko_Prompt_Cache_Recent_Collection
-        
+
         aql = """
             FOR doc IN @@collection
                 FILTER
@@ -591,11 +582,12 @@ if __name__ == "__main__":
     }
 
     result = guard.evaluate(sample_prompt, user_id="test_user")
-    
+
     # Use logging instead of print statements in production code
     import logging
+
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
-    
+
     logger.info("AyniScore: %.2f", result.composite_score)
     logger.info("Action: %s", result.action)

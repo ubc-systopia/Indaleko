@@ -121,21 +121,21 @@ class IndalekoAssistant:
         self.api_key = api_key if api_key else self._load_api_key()
         self.model = model
         self.llm_connector_type = llm_connector
-        
+
         # Create OpenAI client for the assistant API
         # Note: This is separate from the LLM connector and will always be OpenAI
         # since we're using OpenAI's Assistant API
         self.client = openai.OpenAI(api_key=self.api_key)
-        
+
         # Create the LLM connector
         self.llm_connector = LLMConnectorFactory.create_connector(
             connector_type=llm_connector,
             api_key=self.api_key,
             model=model,
         )
-        
+
         ic(f"Using LLM connector: {self.llm_connector.get_llm_name()}")
-        
+
         self.tool_registry = get_registry()
         self.assistant_id = None
         self.conversations = {}

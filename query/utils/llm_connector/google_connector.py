@@ -809,7 +809,9 @@ class GoogleConnector(IndalekoLLMBase):
 
             # Call the model
             response = self.client.models.generate_content(
-                model=self.model, contents=contents, config=generation_config,
+                model=self.model,
+                contents=contents,
+                config=generation_config,
             )
 
             # Calculate time taken

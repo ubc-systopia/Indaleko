@@ -40,8 +40,6 @@ from query.tools.base import (
     ToolOutput,
     ToolParameter,
 )
-from query.utils.llm_connector.factory import LLMConnectorFactory
-from query.utils.llm_connector.llm_base import IndalekoLLMBase
 
 
 class NLParserTool(BaseTool):
@@ -50,7 +48,7 @@ class NLParserTool(BaseTool):
     def __init__(self, **kwargs):
         """
         Initialize the NL parser tool.
-        
+
         Args:
             **kwargs: Additional arguments including:
                 - llm_connector: LLM connector to use with this tool
@@ -154,20 +152,20 @@ class NLParserTool(BaseTool):
         if self._llm_connector is None:
             # Initialize OpenAI connector if no connector provided
             from query.utils.llm_connector.factory import LLMConnectorFactory
-            
+
             # Get API key if needed
             api_key = None
-            if not hasattr(self, '_api_key') or self._api_key is None:
+            if not hasattr(self, "_api_key") or self._api_key is None:
                 api_key = self._get_api_key(api_key_path)
                 self._api_key = api_key
             else:
                 api_key = self._api_key
-                
+
             # Create connector using factory
             self._llm_connector = LLMConnectorFactory.create_connector(
-                connector_type=llm_provider,  # Use the provided LLM provider
+                connector_type=llm_provider,
                 api_key=api_key,
-                model=model
+                model=model,  # Use the provided LLM provider
             )
 
         # Initialize NL parser
@@ -246,9 +244,9 @@ class NLParserTool(BaseTool):
         api_key_path = input_data.parameters.get("api_key_path")
         model = input_data.parameters.get("model", "gpt-4o-mini")
         llm_provider = input_data.parameters.get("llm_provider")
-        
+
         # Use the LLM connector from the input if available
-        if hasattr(input_data, 'llm_connector') and input_data.llm_connector is not None:
+        if hasattr(input_data, "llm_connector") and input_data.llm_connector is not None:
             self._llm_connector = input_data.llm_connector
 
         # Report initial progress
