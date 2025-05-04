@@ -26,6 +26,16 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
+# Check if MCP Arango tools are available
+HAS_MCP_ARANGO = False
+try:
+    from mcp__arango_mcp__arango_query import mcp__arango_mcp__arango_query as arango_query
+    from mcp__arango_mcp__arango_insert import mcp__arango_mcp__arango_insert as arango_insert
+    from mcp__arango_mcp__arango_list_collections import mcp__arango_mcp__arango_list_collections as list_collections
+    HAS_MCP_ARANGO = True
+except ImportError:
+    pass
+
 # Import Indaleko database modules
 from db.db_config import IndalekoDBConfig
 from db.db_collections import IndalekoDBCollections
@@ -88,11 +98,11 @@ class DBIntegrationTest:
             self.logger.info("Setting up database connection...")
 
             # Initialize database config
-            self.db_config = IndalekoDBConfig()
-            self.db = self.db_config.get_db_instance()
+            self.db_config = IndalekoDBConfig(start=True)
+            self.db = self.db_config.get_arangodb()
 
             # Verify connection
-            self.logger.info(f"Connected to ArangoDB: {self.db.version()}")
+            self.logger.info(f"Connected to ArangoDB: {self.db.properties()}")
             return True
 
         except Exception as e:
@@ -198,7 +208,8 @@ class DBIntegrationTest:
             self.logger.info(f"Using collection: {object_collection_name}")
 
             # Get the Activity collection for activity records
-            activity_collection_name = IndalekoDBCollections.Indaleko_Activity_Collection
+            # Using the MusicActivityData collection since we don't have a general Activities collection
+            activity_collection_name = IndalekoDBCollections.Indaleko_MusicActivityData_Collection
             activity_collection = self.db_config.get_collection(activity_collection_name)
             self.logger.info(f"Using collection: {activity_collection_name}")
 
@@ -318,7 +329,7 @@ class DBIntegrationTest:
             else:
                 # Execute AQL query to find activities related to objects
                 aql_query = f"""
-                FOR activity IN {IndalekoDBCollections.Indaleko_Activity_Collection}
+                FOR activity IN {IndalekoDBCollections.Indaleko_MusicActivityData_Collection}
                     FOR attr IN activity.SemanticAttributes
                         FILTER attr.Identifier == @obj_id_attr AND attr.Value == @obj_id
                         RETURN activity
@@ -382,7 +393,7 @@ class DBIntegrationTest:
             else:
                 # Execute AQL query with multiple criteria
                 aql_query = f"""
-                FOR activity IN {IndalekoDBCollections.Indaleko_Activity_Collection}
+                FOR activity IN {IndalekoDBCollections.Indaleko_MusicActivityData_Collection}
                     LET platform_attr = (
                         FOR attr IN activity.SemanticAttributes
                             FILTER attr.Identifier == @platform_attr_id
@@ -458,7 +469,7 @@ class DBIntegrationTest:
                 self.logger.info(f"Truncating collection: {object_collection_name}")
                 self.db.collection(object_collection_name).truncate()
 
-            activity_collection_name = IndalekoDBCollections.Indaleko_Activity_Collection
+            activity_collection_name = IndalekoDBCollections.Indaleko_MusicActivityData_Collection
             if self.db.has_collection(activity_collection_name):
                 self.logger.info(f"Truncating collection: {activity_collection_name}")
                 self.db.collection(activity_collection_name).truncate()
