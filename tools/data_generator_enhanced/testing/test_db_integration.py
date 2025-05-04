@@ -28,7 +28,6 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # Import Indaleko database modules
 from db.db_config import IndalekoDBConfig
-from db.collection import IndalekoDBCollection
 from db.db_collections import IndalekoDBCollections
 
 # Import data generator components
@@ -195,20 +194,12 @@ class DBIntegrationTest:
 
             # Get the Object collection for storage objects
             object_collection_name = IndalekoDBCollections.Indaleko_Object_Collection
-            object_collection = IndalekoDBCollection.get_collection(
-                self.db,
-                object_collection_name,
-                create_if_missing=True
-            )
+            object_collection = self.db_config.get_collection(object_collection_name)
             self.logger.info(f"Using collection: {object_collection_name}")
 
             # Get the Activity collection for activity records
             activity_collection_name = IndalekoDBCollections.Indaleko_Activity_Collection
-            activity_collection = IndalekoDBCollection.get_collection(
-                self.db,
-                activity_collection_name,
-                create_if_missing=True
-            )
+            activity_collection = self.db_config.get_collection(activity_collection_name)
             self.logger.info(f"Using collection: {activity_collection_name}")
 
             # Upload storage objects
