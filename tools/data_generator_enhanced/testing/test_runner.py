@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from .metrics import SearchMetrics, RankedSearchMetrics
 from .query_generator import QueryGenerator
+from .enhanced_query_generator import ModelBasedQueryGenerator
 
 try:
     from query.query_processing.nl_parser import NLParser
@@ -48,7 +49,8 @@ class ModelBasedTestRunner:
 
         # Initialize components
         self.db_config = IndalekoDBConfig() if IndalekoDBConfig else None
-        self.query_generator = QueryGenerator()
+        # Use model-based query generator by default
+        self.query_generator = ModelBasedQueryGenerator(use_model_templates=True)
 
         if NLParser and AQLTranslator:
             self.nl_parser = NLParser()
