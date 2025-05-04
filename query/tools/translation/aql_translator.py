@@ -42,18 +42,27 @@ from query.tools.base import (
     ToolOutput,
     ToolParameter,
 )
-from query.utils.llm_connector.openai_connector import OpenAIConnector
+from query.utils.llm_connector.factory import LLMConnectorFactory
+from query.utils.llm_connector.llm_base import IndalekoLLMBase
 
 
 class AQLTranslatorTool(BaseTool):
     """Tool for translating structured queries to AQL."""
 
-    def __init__(self):
-        """Initialize the AQL translator tool."""
-        super().__init__()
+    def __init__(self, **kwargs):
+        """
+        Initialize the AQL translator tool.
+        
+        Args:
+            **kwargs: Additional arguments including:
+                - llm_connector: LLM connector to use with this tool
+        """
+        super().__init__(**kwargs)
         self._translator = None
-        self._llm_connector = None
         self._collections_metadata = None
+        
+        # Store LLM connector if provided
+        self._llm_connector = kwargs.get('llm_connector')
 
     @property
     def definition(self) -> ToolDefinition:
@@ -76,16 +85,22 @@ class AQLTranslatorTool(BaseTool):
                 ),
                 ToolParameter(
                     name="api_key_path",
-                    description="Path to the OpenAI API key file",
+                    description="Path to the LLM API key file",
                     type="string",
                     required=False,
                 ),
                 ToolParameter(
                     name="model",
-                    description="The OpenAI model to use",
+                    description="The LLM model to use",
                     type="string",
                     required=False,
                     default="gpt-4o-mini",
+                ),
+                ToolParameter(
+                    name="llm_provider",
+                    description="The LLM provider to use (openai, gemma, anthropic, etc.)",
+                    type="string",
+                    required=False,
                 ),
             ],
             returns={
@@ -160,24 +175,29 @@ class AQLTranslatorTool(BaseTool):
         db_config_path: str | None = None,
         api_key_path: str | None = None,
         model: str = "gpt-4o-mini",
+        llm_provider: str = "openai",
     ) -> None:
         """
         Initialize the AQL translator and related components.
 
         Args:
             db_config_path (Optional[str]): Path to the database configuration file.
-            api_key_path (Optional[str]): Path to the OpenAI API key file.
-            model (str): The OpenAI model to use.
+            api_key_path (Optional[str]): Path to the LLM API key file.
+            model (str): The LLM model to use.
+            llm_provider (str): The LLM provider to use (openai, gemma, anthropic, etc.)
         """
         # Load database configuration
         if db_config_path is None:
             config_dir = os.path.join(os.environ.get("INDALEKO_ROOT"), "config")
             db_config_path = os.path.join(config_dir, "indaleko-db-config.ini")
 
-        # Load OpenAI API key
+        # Load API key
         if api_key_path is None:
             config_dir = os.path.join(os.environ.get("INDALEKO_ROOT"), "config")
-            api_key_path = os.path.join(config_dir, "openai-key.ini")
+            api_key_path = os.path.join(config_dir, "llm-keys.ini")
+            # Fall back to legacy openai-key.ini if llm-keys.ini doesn't exist
+            if not os.path.exists(api_key_path):
+                api_key_path = os.path.join(config_dir, "openai-key.ini")
 
         # Initialize DB config
         self._db_config = IndalekoDBConfig(config_file=db_config_path)
@@ -185,9 +205,22 @@ class AQLTranslatorTool(BaseTool):
         # Initialize collections metadata
         self._collections_metadata = IndalekoDBCollectionsMetadata(self._db_config)
 
-        # Initialize OpenAI connector
-        openai_key = self._get_api_key(api_key_path)
-        self._llm_connector = OpenAIConnector(api_key=openai_key, model=model)
+        # Use existing LLM connector if provided, otherwise create a new one
+        if self._llm_connector is None:
+            # Get API key if needed
+            api_key = None
+            if not hasattr(self, '_api_key') or self._api_key is None:
+                api_key = self._get_api_key(api_key_path)
+                self._api_key = api_key
+            else:
+                api_key = self._api_key
+                
+            # Create connector using factory
+            self._llm_connector = LLMConnectorFactory.create_connector(
+                connector_type=llm_provider,  # Use the provided LLM provider
+                api_key=api_key,
+                model=model
+            )
 
         # Initialize AQL translator
         self._translator = AQLTranslator(self._collections_metadata)
@@ -213,16 +246,32 @@ class AQLTranslatorTool(BaseTool):
         config = configparser.ConfigParser()
         config.read(api_key_file, encoding="utf-8-sig")
 
+        # First check for new llm-keys.ini format
+        if "llm" in config and "default_provider" in config["llm"]:
+            # Get the default provider
+            provider = config.get("llm", "default_provider", fallback="openai")
+            
+            # Check if provider section and API key exist
+            if provider in config and "api_key" in config[provider]:
+                api_key = config[provider]["api_key"]
+                
+                # Clean up the key if it has quotes
+                if api_key[0] in ["'", '"'] and api_key[-1] in ["'", '"']:
+                    api_key = api_key[1:-1]
+                    
+                return api_key
+        
+        # Fallback to legacy format (openai-key.ini)
         if "openai" not in config or "api_key" not in config["openai"]:
-            raise ValueError("OpenAI API key not found in config file")
+            raise ValueError("API key not found in config file")
 
-        openai_key = config["openai"]["api_key"]
+        api_key = config["openai"]["api_key"]
 
         # Clean up the key if it has quotes
-        if openai_key[0] in ["'", '"'] and openai_key[-1] in ["'", '"']:
-            openai_key = openai_key[1:-1]
+        if api_key[0] in ["'", '"'] and api_key[-1] in ["'", '"']:
+            api_key = api_key[1:-1]
 
-        return openai_key
+        return api_key
 
     def execute(self, input_data: ToolInput) -> ToolOutput:
         """
@@ -239,6 +288,11 @@ class AQLTranslatorTool(BaseTool):
         db_config_path = input_data.parameters.get("db_config_path")
         api_key_path = input_data.parameters.get("api_key_path")
         model = input_data.parameters.get("model", "gpt-4o-mini")
+        llm_provider = input_data.parameters.get("llm_provider", "openai")
+        
+        # Use the LLM connector from the input if available
+        if hasattr(input_data, 'llm_connector') and input_data.llm_connector is not None:
+            self._llm_connector = input_data.llm_connector
 
         # Report initial progress
         self.report_progress(
@@ -254,7 +308,7 @@ class AQLTranslatorTool(BaseTool):
                 message="Creating new translator instance",
                 progress=0.2,
             )
-            self._initialize_translator(db_config_path, api_key_path, model)
+            self._initialize_translator(db_config_path, api_key_path, model, llm_provider)
 
         try:
             # Report query processing progress

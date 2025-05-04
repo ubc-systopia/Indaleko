@@ -40,16 +40,22 @@ from query.tools.base import (
     ToolOutput,
     ToolParameter,
 )
-from query.utils.llm_connector.openai_connector import OpenAIConnector
+from query.utils.llm_connector.factory import LLMConnectorFactory
+from query.utils.llm_connector.llm_base import IndalekoLLMBase
 
 
 class NLParserTool(BaseTool):
     """Tool for parsing natural language queries into structured formats."""
 
-    def __init__(self):
-        """Initialize the NL parser tool."""
-        super().__init__()
-        self._llm_connector = None
+    def __init__(self, **kwargs):
+        """
+        Initialize the NL parser tool.
+        
+        Args:
+            **kwargs: Additional arguments including:
+                - llm_connector: LLM connector to use with this tool
+        """
+        super().__init__(**kwargs)
         self._nl_parser = None
         self._collections_metadata = None
 
@@ -74,16 +80,22 @@ class NLParserTool(BaseTool):
                 ),
                 ToolParameter(
                     name="api_key_path",
-                    description="Path to the OpenAI API key file",
+                    description="Path to the LLM API key file",
                     type="string",
                     required=False,
                 ),
                 ToolParameter(
                     name="model",
-                    description="The OpenAI model to use",
+                    description="The LLM model to use",
                     type="string",
                     required=False,
                     default="gpt-4o-mini",
+                ),
+                ToolParameter(
+                    name="llm_provider",
+                    description="The LLM provider to use (openai, gemma, etc.)",
+                    type="string",
+                    required=False,
                 ),
             ],
             returns={
@@ -111,14 +123,16 @@ class NLParserTool(BaseTool):
         db_config_path: str | None = None,
         api_key_path: str | None = None,
         model: str = "gpt-4o-mini",
+        llm_provider: str = "openai",
     ) -> None:
         """
         Initialize the NL parser and related components.
 
         Args:
             db_config_path (Optional[str]): Path to the database configuration file.
-            api_key_path (Optional[str]): Path to the OpenAI API key file.
-            model (str): The OpenAI model to use.
+            api_key_path (Optional[str]): Path to the LLM API key file.
+            model (str): The LLM model to use.
+            llm_provider (str): The LLM provider to use (openai, gemma, etc.)
         """
         # Load database configuration
         if db_config_path is None:
@@ -136,9 +150,25 @@ class NLParserTool(BaseTool):
         # Initialize collections metadata
         self._collections_metadata = IndalekoDBCollectionsMetadata(self._db_config)
 
-        # Initialize OpenAI connector
-        openai_key = self._get_api_key(api_key_path)
-        self._llm_connector = OpenAIConnector(api_key=openai_key, model=model)
+        # Use existing LLM connector if provided, otherwise create a new one
+        if self._llm_connector is None:
+            # Initialize OpenAI connector if no connector provided
+            from query.utils.llm_connector.factory import LLMConnectorFactory
+            
+            # Get API key if needed
+            api_key = None
+            if not hasattr(self, '_api_key') or self._api_key is None:
+                api_key = self._get_api_key(api_key_path)
+                self._api_key = api_key
+            else:
+                api_key = self._api_key
+                
+            # Create connector using factory
+            self._llm_connector = LLMConnectorFactory.create_connector(
+                connector_type=llm_provider,  # Use the provided LLM provider
+                api_key=api_key,
+                model=model
+            )
 
         # Initialize NL parser
         self._nl_parser = NLParser(
@@ -215,6 +245,11 @@ class NLParserTool(BaseTool):
         db_config_path = input_data.parameters.get("db_config_path")
         api_key_path = input_data.parameters.get("api_key_path")
         model = input_data.parameters.get("model", "gpt-4o-mini")
+        llm_provider = input_data.parameters.get("llm_provider")
+        
+        # Use the LLM connector from the input if available
+        if hasattr(input_data, 'llm_connector') and input_data.llm_connector is not None:
+            self._llm_connector = input_data.llm_connector
 
         # Report initial progress
         self.report_progress(
@@ -230,7 +265,7 @@ class NLParserTool(BaseTool):
                 message="Creating new parser instance",
                 progress=0.2,
             )
-            self._initialize_parser(db_config_path, api_key_path, model)
+            self._initialize_parser(db_config_path, api_key_path, model, llm_provider)
 
         ic(f"Parsing query: {query}")
         self.report_progress(

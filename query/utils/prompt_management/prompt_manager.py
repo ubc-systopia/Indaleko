@@ -22,6 +22,7 @@ import json
 import logging
 import re
 from datetime import datetime, timezone
+from functools import lru_cache
 from string import Template
 from typing import Any, Dict, List, Optional, Union
 
@@ -132,6 +133,7 @@ class PromptManager:
         self.ayni_guard = ayni_guard or AyniGuard(db_instance=self.db)
         self.schema_manager = schema_manager or SchemaManager()
         self._token_estimator = token_estimator or self._default_token_estimator
+        self._template_cache = {}  # Cache for compiled templates
         self._ensure_collections()
 
     def _ensure_collections(self) -> None:
@@ -163,9 +165,10 @@ class PromptManager:
         words = text.split()
         return len(words) + int(len(words) * 0.3)
 
+    @lru_cache(maxsize=1024)
     def _normalize_whitespace(self, text: str) -> str:
         """
-        Normalize whitespace in text.
+        Normalize whitespace in text with LRU caching for performance.
         
         Args:
             text: Text to normalize
@@ -173,25 +176,51 @@ class PromptManager:
         Returns:
             Normalized text
         """
-        # Replace multiple spaces with single space
+        # Replace multiple spaces with single space - collapse all whitespace sequences
         normalized = re.sub(r'\s+', ' ', text)
         
         # Remove spaces at start of lines
         normalized = re.sub(r'^ +', '', normalized, flags=re.MULTILINE)
         
-        # Replace multiple newlines with single newline
+        # Replace multiple newlines with single newline - more aggressive
         normalized = re.sub(r'\n\s*\n+', '\n\n', normalized)
         
-        # Remove trailing whitespace
+        # Apply more aggressive whitespace optimization
+        normalized = re.sub(r'[\t ]+', ' ', normalized)
+        
+        # Remove trailing whitespace and leading/trailing spaces
         normalized = normalized.strip()
         
         return normalized
+
+    def _compile_template(self, template_str: str) -> Template:
+        """
+        Compile and cache a template for reuse.
+        
+        Args:
+            template_str: Template string to compile
+            
+        Returns:
+            Compiled Template object
+        """
+        # Check if template is already in cache
+        if template_str in self._template_cache:
+            return self._template_cache[template_str]
+            
+        # Compile template
+        compiled = Template(template_str)
+        
+        # Cache for future use (up to a reasonable size)
+        if len(self._template_cache) < 1000:  # Prevent unbounded growth
+            self._template_cache[template_str] = compiled
+            
+        return compiled
 
     def _bind_variables(
         self, template: str, variables: List[PromptVariable]
     ) -> str:
         """
-        Bind variables to template.
+        Bind variables to template with optimized approach.
         
         Args:
             template: Template string with $var placeholders
@@ -203,28 +232,61 @@ class PromptManager:
         Raises:
             ValueError: If required variables are missing
         """
-        # Create dictionary of variable values
+        # Create dictionary of variable values - convert values to string at binding time
         var_dict = {var.name: str(var.value) for var in variables}
         
-        # Check for required variables
-        template_vars = re.findall(r'\$([a-zA-Z_][a-zA-Z0-9_]*)', template)
+        # Fast path: if there are no variables, return template as is
+        if not var_dict:
+            return template
         
-        missing_vars = []
-        for var_name in template_vars:
-            if var_name not in var_dict:
-                required_vars = [v for v in variables if v.required and v.name == var_name]
-                if required_vars:
-                    missing_vars.append(var_name)
+        # Fast check: if no variables in template, return as is
+        if '$' not in template:
+            return template
+        
+        # Optimized variable detection - match only once
+        template_vars = set(re.findall(r'\$([a-zA-Z_][a-zA-Z0-9_]*)', template))
+        
+        # Fast check for missing variables
+        missing_vars = [
+            var_name for var_name in template_vars 
+            if var_name not in var_dict and any(v.required and v.name == var_name for v in variables)
+        ]
         
         if missing_vars:
             raise ValueError(f"Missing required variables: {', '.join(missing_vars)}")
         
-        # Apply substitution
-        return Template(template).safe_substitute(var_dict)
+        # Get or compile template
+        compiled_template = self._compile_template(template)
+        
+        # Apply substitution with the compiled template
+        return compiled_template.safe_substitute(var_dict)
+
+    @lru_cache(maxsize=128)
+    def _compose_layer_header(self, layer_type: str, content: str) -> str:
+        """
+        Compose a layer header with content - cached for reuse.
+        
+        Args:
+            layer_type: Type of layer
+            content: Layer content
+            
+        Returns:
+            Formatted layer with header
+        """
+        if layer_type == "immutable_context":
+            return f"# Context\n{content}"
+        elif layer_type == "hard_constraints":
+            return f"# Requirements\n{content}"
+        elif layer_type == "soft_preferences":
+            return f"# Preferences\n{content}"
+        elif layer_type == "trust_contract":
+            return f"# Agreement\n{content}"
+        else:
+            return f"# {layer_type.replace('_', ' ').title()}\n{content}"
 
     def _compose_layered_prompt(self, layers: List[PromptLayer]) -> str:
         """
-        Compose a prompt from ordered layers.
+        Compose a prompt from ordered layers with optimized processing.
         
         Args:
             layers: List of prompt layers
@@ -232,26 +294,50 @@ class PromptManager:
         Returns:
             Composed prompt
         """
+        # Fast path for single layer
+        if len(layers) == 1:
+            layer = layers[0]
+            return self._compose_layer_header(layer.layer_type, layer.content)
+            
         # Sort layers by order
         sorted_layers = sorted(layers, key=lambda layer: layer.order)
         
-        # Compose prompt
+        # Pre-allocate the required capacity for better performance
         composed_parts = []
-        for layer in sorted_layers:
-            if layer.layer_type == "immutable_context":
-                composed_parts.append(f"# Context\n{layer.content}")
-            elif layer.layer_type == "hard_constraints":
-                composed_parts.append(f"# Requirements\n{layer.content}")
-            elif layer.layer_type == "soft_preferences":
-                composed_parts.append(f"# Preferences\n{layer.content}")
-            elif layer.layer_type == "trust_contract":
-                composed_parts.append(f"# Agreement\n{layer.content}")
+        composed_parts.extend(
+            self._compose_layer_header(layer.layer_type, layer.content)
+            for layer in sorted_layers
+        )
         
         return "\n\n".join(composed_parts)
 
+    @lru_cache(maxsize=128)
+    def _optimize_schema(self, schema_str: str) -> str:
+        """
+        Optimize a JSON schema string with caching.
+        
+        Args:
+            schema_str: JSON schema string
+            
+        Returns:
+            Optimized schema string or original if invalid
+        """
+        try:
+            schema = json.loads(schema_str)
+            
+            # Skip optimization if it doesn't look like a schema
+            if "type" not in schema and "properties" not in schema:
+                return schema_str
+            
+            optimized = self.schema_manager.optimize_schema(schema)
+            return json.dumps(optimized, indent=2)
+        except (json.JSONDecodeError, Exception):
+            # If we can't parse it, return the original
+            return schema_str
+
     def _optimize_schema_objects(self, text: str) -> str:
         """
-        Find and optimize JSON schema objects in text.
+        Find and optimize JSON schema objects in text with cached processing.
         
         Args:
             text: Text that may contain JSON schemas
@@ -259,22 +345,21 @@ class PromptManager:
         Returns:
             Text with optimized JSON schemas
         """
+        # Fast path for non-schema content
+        if "```json" not in text and "```\n{" not in text:
+            return text
+            
         # Look for JSON schema pattern
         schema_pattern = r'```(?:json)?\s*(\{[\s\S]*?\})\s*```'
         
         def replace_schema(match):
-            try:
-                schema_str = match.group(1)
-                schema = json.loads(schema_str)
-                
-                # Skip optimization if it doesn't look like a schema
-                if "type" not in schema and "properties" not in schema:
-                    return match.group(0)
-                
-                optimized = self.schema_manager.optimize_schema(schema)
-                return f"```json\n{json.dumps(optimized, indent=2)}\n```"
-            except (json.JSONDecodeError, Exception):
-                # If we can't parse it, leave it unchanged
+            schema_str = match.group(1)
+            optimized = self._optimize_schema(schema_str)
+            
+            # Only format if it was actually optimized
+            if optimized != schema_str:
+                return f"```json\n{optimized}\n```"
+            else:
                 return match.group(0)
         
         return re.sub(schema_pattern, replace_schema, text)

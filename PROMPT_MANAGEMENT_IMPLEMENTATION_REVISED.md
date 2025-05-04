@@ -80,7 +80,7 @@
   - Structural contradictions (cross-layer conflicts)
   - Temporal contradictions (timeline inconsistencies)
   - Identity/role contradictions (agent confusion)
-  
+
 - Add extendable framework for pattern contributions
   - Community pattern submission mechanism
   - Multi-LLM review of candidate patterns

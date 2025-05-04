@@ -24,6 +24,7 @@ import os
 import sys
 import uuid
 from textwrap import dedent
+from typing import Optional, Any
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -48,7 +49,8 @@ from query.query_processing.data_models.query_language_enhancer import (
 )
 from query.query_processing.nl_parser import NLParser
 from query.result_analysis.data_models.facet_data_model import DynamicFacets
-from query.utils.llm_connector.openai_connector import OpenAIConnector
+from query.utils.llm_connector.factory import LLMConnectorFactory
+from query.utils.llm_connector.llm_base import IndalekoLLMBase
 
 # pylint: enable=wrong-import-position
 
@@ -69,17 +71,29 @@ class EnhancedNLParser(NLParser):
 
     def __init__(
         self,
-        llm_connector: OpenAIConnector,
         collections_metadata: IndalekoDBCollectionsMetadata,
+        llm_connector: Optional[IndalekoLLMBase] = None,
+        llm_provider: str = "openai",
+        model: str = "gpt-4o-mini",
+        api_key: Optional[str] = None,
     ):
         """
         Initialize the enhanced parser.
 
         Args:
-            llm_connector (OpenAIConnector): The connector to the language model
             collections_metadata (IndalekoDBCollectionsMetadata): Metadata for database collections
+            llm_connector (Optional[IndalekoLLMBase]): The connector to the language model
+            llm_provider (str): The LLM provider to use if no connector is provided
+            model (str): The model to use if creating a new connector
+            api_key (Optional[str]): API key to use if creating a new connector
         """
-        super().__init__(llm_connector, collections_metadata)
+        super().__init__(
+            collections_metadata=collections_metadata,
+            llm_connector=llm_connector,
+            llm_provider=llm_provider,
+            model=model,
+            api_key=api_key
+        )
         self.query_history = []  # Store recent queries for context
         self.max_history_length = 5
         self.facet_context = None  # Store recent facet data for context

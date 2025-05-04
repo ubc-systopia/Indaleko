@@ -140,10 +140,9 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
         db_collection = self.db_config.get_arangodb().collection(
             IndalekoDBCollections.Indaleko_Collection_Metadata,
         )
-        assert (
+        assert (  # noqa: S101
             db_collection is not None
         ), f"Failed to get collection {IndalekoDBCollections.Indaleko_Collection_Metadata}"
-        ic(collection_name)
         entry = db_collection.get(collection_name)
         if not entry:
             return self.generate_new_collection_metadata(collection_name)

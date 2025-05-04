@@ -17,27 +17,36 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-
 import json
 import os
 import sys
 import uuid
+
 from datetime import datetime
-from typing import Any
+from pathlib import Path
+from typing import Any, Optional
 
 from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
-        current_path = os.path.dirname(current_path)
-    os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
 
+# pylint: disable=wrong-import-position
+# ruff: noqa: E402
+from db.db_config import IndalekoDBConfig
 from query.assistants.state import ConversationState, Message
 from query.tools.base import ToolInput, ToolOutput
 from query.tools.registry import get_registry
+from query.utils.llm_connector.factory import LLMConnectorFactory
+from query.utils.llm_connector.llm_base import IndalekoLLMBase
 
+
+# ruff: qa: E402
+# pylint: enable=wrong-import-position
 
 class ConversationManager:
     """Manager for conversations with the Indaleko assistant."""
@@ -73,24 +82,32 @@ in the archivist memory system.
 
     def __init__(
         self,
-        api_key: str | None = None,
+        api_key: Optional[str] = None,
         model: str = "gpt-4o",
+        llm_provider: str = "openai",
+        llm_connector: Optional[IndalekoLLMBase] = None,
         archivist_memory=None,
-        db_config=None,
-    ):
+        db_config: Optional[IndalekoDBConfig] = None,
+        **kwargs
+    ) -> None:
         """
         Initialize the conversation manager.
 
         Args:
-            api_key (Optional[str]): The OpenAI API key.
+            api_key (Optional[str]): The API key for the chosen LLM provider.
             model (str): The model to use.
+            llm_provider (str): The LLM provider to use (openai, anthropic, gemma, etc).
+            llm_connector (Optional[IndalekoLLMBase]): A pre-initialized LLM connector instance.
             archivist_memory: Optional pre-initialized archivist memory.
             db_config: Optional database configuration.
+            **kwargs: Additional arguments to pass to the LLM connector
+                      (such as api_base for Gemma when using LM Studio).
         """
         self.conversations = {}
         self.tool_registry = get_registry()
         self.api_key = api_key
         self.model = model
+        self.llm_provider = llm_provider
         self.db_config = db_config
 
         # Initialize archivist memory for long-term storage
@@ -99,9 +116,23 @@ in the archivist memory system.
         # For tracking active conversations
         self.active_conversation_id = None
 
-        # Load API key if not provided
-        if self.api_key is None:
-            self.api_key = self._load_api_key()
+        # Use the provided connector if available, otherwise create one
+        if llm_connector is not None:
+            self.llm_connector = llm_connector
+        else:
+            # Load API key if not provided
+            if self.api_key is None:
+                self.api_key = self._load_api_key()
+
+            # Create the LLM connector using the factory
+            self.llm_connector = LLMConnectorFactory.create_connector(
+                connector_type=llm_provider,
+                api_key=self.api_key,
+                model=model,
+                **kwargs  # Pass through additional arguments like api_base
+            )
+
+        ic(f"Conversation Manager using LLM connector: {self.llm_connector.get_llm_name()}")
 
         # Initialize archivist memory if not provided
         if self.archivist_memory is None and self.db_config is not None:
@@ -112,20 +143,31 @@ in the archivist memory system.
 
     def _load_api_key(self) -> str:
         """
-        Load the OpenAI API key from the config file.
+        Load the API key for the selected LLM provider from the config file.
 
         Returns:
             str: The API key.
         """
         config_dir = os.path.join(os.environ.get("INDALEKO_ROOT"), "config")
-        api_key_file = os.path.join(config_dir, "openai-key.ini")
-
+        
+        # First try the unified keys file
+        api_key_file = os.path.join(config_dir, "llm-keys.ini")
+        if not os.path.exists(api_key_file):
+            # Fall back to legacy openai-key.ini
+            api_key_file = os.path.join(config_dir, "openai-key.ini")
+            
         import configparser
-
         config = configparser.ConfigParser()
         config.read(api_key_file, encoding="utf-8-sig")
-
-        api_key = config["openai"]["api_key"]
+        
+        # Try to get the key for the specified provider
+        if os.path.basename(api_key_file) == "llm-keys.ini" and self.llm_provider in config:
+            api_key = config[self.llm_provider]["api_key"]
+        # Fall back to OpenAI if using legacy file or if provider section not found
+        elif "openai" in config and "api_key" in config["openai"]:
+            api_key = config["openai"]["api_key"]
+        else:
+            raise ValueError(f"API key for provider '{self.llm_provider}' not found in config file")
 
         # Clean up quotes if present
         if api_key[0] in ["'", '"'] and api_key[-1] in ["'", '"']:
@@ -225,12 +267,13 @@ in the archivist memory system.
         if conversation is None:
             raise ValueError(f"Conversation not found: {conversation_id}")
 
-        # Create tool input
+        # Create tool input with LLM connector
         tool_input = ToolInput(
             tool_name=tool_name,
             parameters=parameters,
             conversation_id=conversation_id,
             invocation_id=str(uuid.uuid4()),
+            llm_connector=self.llm_connector,  # Pass the conversation's LLM connector
         )
 
         try:

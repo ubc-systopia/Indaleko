@@ -56,6 +56,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
+# ruff: noqa: E402
 from db.db_config import IndalekoDBConfig
 from query.assistants.conversation import ConversationManager
 from query.tools.database import executor
@@ -65,6 +66,7 @@ from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 
 
+# ruff: qa: E402
 # pylint: enable=wrong-import-position
 
 
@@ -74,14 +76,8 @@ class IndalekoAssistantCLI(IndalekoBaseCLI):
 
     PROMPT = "Indaleko Assistant> "
 
-    def __init__(self, model: str = "gpt-4o-mini") -> None:
-        """
-        Initialize the CLI.
-
-        Args:
-            api_key (Optional[str]): The OpenAI API key.
-            model (str): The model to use.
-        """
+    def __init__(self) -> None:
+        """Initialize the CLI."""
         self.cli_data = IndalekoBaseCliDataModel(
             RegistrationServiceName="Indaleko Assistant CLI",
             FileServiceName="Indaleko Assistant CLI",
@@ -101,15 +97,46 @@ class IndalekoAssistantCLI(IndalekoBaseCLI):
             features=self.features,
         )
         self.args = self.get_args()
+
+        # Get model and LLM provider from args
+        model = self.args.model
+        llm_provider = self.args.llm
+
         config_data = self.get_config_data()
         config_file_path = Path(config_data["ConfigDirectory"]) / config_data["DBConfigFile"]
         self.db_config = IndalekoDBConfig(config_file=str(config_file_path))
-        self.openai_key = self._get_api_key()
-        self.conversation_manager = ConversationManager(self.openai_key, model)
+
+        # We'll let the ConversationManager handle API key loading based on the provider
+        api_key = None
+
+        # Try to get the list of available providers
+        try:
+            from query.utils.llm_connector.factory import LLMConnectorFactory
+            available_providers = LLMConnectorFactory.get_available_connectors()
+            ic(f"Available LLM providers: {available_providers}")
+
+            # Validate the selected provider
+            if llm_provider not in available_providers:
+                ic(f"Warning: Selected provider '{llm_provider}' not in available providers. Using openai as fallback.")
+                llm_provider = "openai"
+        except NotImplementedError as e:
+            ic(f"Error getting available providers: {e}")
+
+        # Initialize conversation manager with LLM provider
+        ic('***Calling ConversationManager***')
+        self.conversation_manager = ConversationManager(
+            api_key=api_key,  # Let ConversationManager handle API key loading
+            model=model,
+            llm_provider=llm_provider,
+        )
+
         self.current_conversation = None
         self.registry = get_registry()
-        self.args = None
-        self.llm_connector = None
+
+
+        # Set global verbose mode flag
+        global VERBOSE_MODE
+        VERBOSE_MODE = self.args.verbose if hasattr(self.args, 'verbose') else False
 
         # Register tools
         self._register_tools()
@@ -128,6 +155,8 @@ class IndalekoAssistantCLI(IndalekoBaseCLI):
             """"Build base parser."""
             parser = argparse.ArgumentParser(description="Indaleko Assistant CLI", add_help=False)
             parser.add_argument("--model", default="gpt-4o-mini", help="The model to use")
+            parser.add_argument("--llm", default="openai",
+                              help="The LLM provider to use (e.g., openai, anthropic, gemma, deepseek, grok)")
             parser.add_argument("--debug", action="store_true", help="Enable debug output")
             parser.add_argument("--verbose", action="store_true",
                                 help="Show detailed progress information")
@@ -161,24 +190,53 @@ class IndalekoAssistantCLI(IndalekoBaseCLI):
 
     query_cli_handler_mixin = QueryAssistantMixin
 
-    def _get_api_key(self, api_key_file: str | None = None) -> str:
-        """Get the API key from the config file."""
+    def _get_api_key(self, api_key_file: str | None = None, provider: str = "openai") -> str:
+        """
+        Get the API key for the specified provider from config.
+
+        Args:
+            api_key_file (Optional[str]): Path to the API key file. If None, uses default location.
+            provider (str): The LLM provider to get the key for.
+
+        Returns:
+            str: The API key.
+
+        Raises:
+            FileNotFoundError: If the API key file is not found.
+            ValueError: If the API key is not found in the config file.
+        """
         if api_key_file is None:
-            api_key_file = Path(self.config_data["ConfigDirectory"]) / "openai-key.ini"
+            # First try the unified llm-keys.ini
+            unified_key_file = Path(self.config_data["ConfigDirectory"]) / "llm-keys.ini"
+            if unified_key_file.exists() and unified_key_file.is_file():
+                api_key_file = unified_key_file
+            else:
+                # Fall back to legacy openai-key.ini
+                api_key_file = Path(self.config_data["ConfigDirectory"]) / "openai-key.ini"
+
         if not api_key_file.exists():
             raise FileNotFoundError(f"API key file ({api_key_file}) not found")
         if not api_key_file.is_file():
             raise FileNotFoundError(f"API key file ({api_key_file}) is not a file")
+
         config = configparser.ConfigParser()
         config.read(api_key_file, encoding="utf-8-sig")
-        openai_key = config["openai"]["api_key"]
-        if openai_key is None:
-            raise ValueError("OpenAI API key not found in config file")
-        if openai_key[0] == '"' or openai_key[0] == "'":
-            openai_key = openai_key[1:]
-        if openai_key[-1] == '"' or openai_key[-1] == "'":
-            openai_key = openai_key[:-1]
-        return openai_key
+
+        # Try to get key for specified provider
+        if api_key_file.name == "llm-keys.ini" and provider in config and "api_key" in config[provider]:
+            api_key = config[provider]["api_key"]
+        # Fall back to OpenAI for legacy or if provider not found
+        elif "openai" in config and "api_key" in config["openai"]:
+            api_key = config["openai"]["api_key"]
+            ic(f"Key for provider '{provider}' not found, using OpenAI key as fallback")
+        else:
+            raise ValueError(f"API key for '{provider}' not found in config file")
+
+        # Clean up quotes if present
+        if api_key[0] in ['"', "'"] and api_key[-1] in ['"', "'"]:
+            api_key = api_key[1:-1]
+
+        return api_key
 
 
     def _register_tools(self) -> None:
@@ -479,24 +537,6 @@ class IndalekoAssistantCLI(IndalekoBaseCLI):
                 if output_file:
                     verbose_ic(f"Writing results to {self.args.output}")
 
-                # Set up a timeout for batch processing
-                import signal
-
-                def timeout_handler(signum, frame):
-                    raise TimeoutError("Query execution timed out")
-
-                # Only set timeout handler on platforms that support SIGALRM
-                if hasattr(signal, 'SIGALRM'):
-                    signal.signal(signal.SIGALRM, timeout_handler)
-
-            # First, let's dump out the batch file contents if we have one
-            if batch_file:
-                # Reset file pointer to beginning
-                batch_file.seek(0)
-                file_contents = batch_file.read()
-                verbose_ic(f"Batch file contents:\n{file_contents}")
-                # Reset file pointer to beginning again
-                batch_file.seek(0)
 
             # Process queries one by one
             while True:
@@ -580,8 +620,9 @@ class IndalekoAssistantCLI(IndalekoBaseCLI):
 
 def main() -> None:
     """Main function."""
-    # Create and run CLI
+    # Create and run CLI with specified model and LLM connector
     IndalekoAssistantCLI().run()
+
 
 
 if __name__ == "__main__":

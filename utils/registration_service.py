@@ -287,7 +287,7 @@ class IndalekoRegistrationService(IndalekoSingleton):
         # Create the collection
         return IndalekoCollections.get_collection(
             self.collection_name,
-        ).create_collection(name=provider_collection_name, config=config, reset=reset)
+        ).get_or_create_collection(name=provider_collection_name, config=config, reset=reset)
 
     def delete_provider_collection(
         self,

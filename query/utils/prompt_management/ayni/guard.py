@@ -32,7 +32,7 @@ from typing import Any
 from data_models.base import IndalekoBaseModel
 from db.collection import IndalekoCollection
 from db.db_collections import IndalekoDBCollections
-from query.utils.llm_connector.factory import LLMFactory
+from query.utils.llm_connector.factory_updated import LLMFactory
 
 
 @dataclass

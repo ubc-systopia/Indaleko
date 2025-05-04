@@ -48,7 +48,7 @@ This design addresses critical challenges in Indaleko's prompt handling: prompt 
 
 ### Cache Architecture (Two-Tier)
 
-- **Recent Tier**: 
+- **Recent Tier**:
   - Rapid access for frequently used prompts (30-day retention)
   - Full metadata and scoring history
   - High-performance indices
@@ -119,7 +119,7 @@ To ensure robust contradiction detection, we'll build an extensive pattern libra
 
 2. **Semantic Contradictions**:
    - Entity relationship conflicts
-   - Role definition inconsistencies 
+   - Role definition inconsistencies
    - Conflicting metaphors or mental models
 
 3. **Structural Contradictions**:

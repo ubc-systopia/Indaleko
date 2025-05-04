@@ -18,19 +18,19 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import os
-import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Union
+from typing import Any
+
+from pydantic import Field
 
 from data_models.base import IndalekoBaseModel
 from db.db_collections import IndalekoDBCollections
-from pydantic import Field
 
 
 class PromptTemplateType(str, Enum):
     """Types of prompt templates."""
+
     SYSTEM = "system"
     USER = "user"
     FUNCTION = "function"
@@ -41,25 +41,27 @@ class PromptTemplateType(str, Enum):
 
 class TemplateVariable(IndalekoBaseModel):
     """A variable that can be used in a prompt template."""
+
     name: str
     description: str
-    default_value: Optional[Any] = None
+    default_value: Any | None = None
     required: bool = True
     type_hint: str = "str"
 
 
 class PromptTemplate(IndalekoBaseModel):
     """A template for creating prompts."""
+
     name: str
     template_type: PromptTemplateType
     template_text: str
     description: str
-    variables: List[TemplateVariable] = Field(default_factory=list)
-    tags: List[str] = Field(default_factory=list)
+    variables: list[TemplateVariable] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
     version: str = "1.0.0"
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: Optional[datetime] = None
-    
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime | None = None
+
     @classmethod
     def get_collection_name(cls) -> str:
         """Get the ArangoDB collection name for this model."""
@@ -68,37 +70,41 @@ class PromptTemplate(IndalekoBaseModel):
 
 class LayeredPrompt(IndalekoBaseModel):
     """A structured prompt with layers for different content types."""
+
     immutable_context: str = ""
-    hard_constraints: Dict[str, Any] = Field(default_factory=dict)
-    soft_preferences: Dict[str, Any] = Field(default_factory=dict)
-    trust_contract: Optional[Dict[str, Any]] = None
+    hard_constraints: dict[str, Any] = Field(default_factory=dict)
+    soft_preferences: dict[str, Any] = Field(default_factory=dict)
+    trust_contract: dict[str, Any] | None = None
 
 
 class PromptIssue(IndalekoBaseModel):
     """An issue detected in a prompt."""
+
     issue_type: str  # contradiction, ambiguity, etc.
     description: str
     severity: float  # 0.0 to 1.0
     confidence: float  # Reviewer's confidence in this issue
-    location: Optional[str] = None  # Which part of the prompt has the issue
+    location: str | None = None  # Which part of the prompt has the issue
 
 
 class AyniResult(IndalekoBaseModel):
     """Result of an AyniGuard prompt evaluation."""
+
     composite_score: float
-    details: Dict[str, Any]
-    issues: List[str]
+    details: dict[str, Any]
+    issues: list[str]
     action: str  # 'block', 'warn', 'proceed'
 
 
 class PromptCacheEntry(IndalekoBaseModel):
     """A cached prompt evaluation entry."""
+
     prompt_hash: str
-    prompt_data: Dict[str, Any]
-    result: Dict[str, Any]
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    expires_at: Optional[datetime] = None
-    user_id: Optional[str] = None
+    prompt_data: dict[str, Any]
+    result: dict[str, Any]
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    expires_at: datetime | None = None
+    user_id: str | None = None
 
     @classmethod
     def get_collection_name(cls) -> str:
@@ -108,12 +114,13 @@ class PromptCacheEntry(IndalekoBaseModel):
 
 class PromptArchiveEntry(IndalekoBaseModel):
     """An archived prompt evaluation entry."""
+
     prompt_hash: str
-    prompt_data: Dict[str, Any]
-    result: Dict[str, Any]
+    prompt_data: dict[str, Any]
+    result: dict[str, Any]
     created_at: datetime
-    archived_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    user_id: Optional[str] = None
+    archived_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    user_id: str | None = None
 
     @classmethod
     def get_collection_name(cls) -> str:
@@ -123,12 +130,13 @@ class PromptArchiveEntry(IndalekoBaseModel):
 
 class StabilityMetric(IndalekoBaseModel):
     """A metric tracking prompt stability."""
+
     prompt_hash: str
     score: float
     issue_count: int
     action: str  # 'block', 'warn', 'proceed'
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
     @classmethod
     def get_collection_name(cls) -> str:
         """Get the ArangoDB collection name for this model."""
@@ -137,7 +145,8 @@ class StabilityMetric(IndalekoBaseModel):
 
 class ConflictPair:
     """A pair of terms that conflict with each other."""
+
     term1: str
     term2: str
     severity: float  # 0.0 to 1.0
-    context: Optional[str] = None  # Additional context about why they conflict
+    context: str | None = None  # Additional context about why they conflict

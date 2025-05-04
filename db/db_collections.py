@@ -89,7 +89,7 @@ except ImportError:
 # Import the Prompt Management models if available
 try:
     from query.utils.prompt_management.data_models.base import (
-        PromptTemplate, 
+        PromptTemplate,
         PromptCacheEntry,
         PromptArchiveEntry,
         StabilityMetric,
@@ -147,6 +147,9 @@ class IndalekoDBCollections:
     Indaleko_Entity_Equivalence_Text_View = "EntityEquivalenceTextView"
     Indaleko_Knowledge_Text_View = "KnowledgeTextView"
     Indaleko_Prompt_Templates_Text_View = "PromptTemplatesTextView"
+    Indaleko_Prompt_Cache_Text_View = "PromptCacheTextView"
+    Indaleko_Prompt_Archive_Text_View = "PromptArchiveTextView"
+    Indaleko_Prompt_Metrics_Text_View = "PromptMetricsTextView"
 
     Collections = {  # noqa: RUF012
         Indaleko_Object_Collection: {
@@ -566,10 +569,18 @@ class IndalekoDBCollections:
                 },
                 "expires_at": {
                     "fields": ["expires_at"],
-                    "unique": False, 
+                    "unique": False,
                     "type": "persistent",
                 },
             },
+            "views": [
+                {
+                    "name": Indaleko_Prompt_Cache_Text_View,
+                    "fields": ["prompt_data", "result.issues", "result.details"],
+                    "analyzers": ["text_en"],
+                    "stored_values": ["_key", "prompt_hash", "created_at", "expires_at"],
+                },
+            ],
         },
         Indaleko_Prompt_Cache_Archive_Collection: {
             "internal": True,  # Archive is internal for prompt management only
@@ -592,6 +603,14 @@ class IndalekoDBCollections:
                     "type": "persistent",
                 },
             },
+            "views": [
+                {
+                    "name": Indaleko_Prompt_Archive_Text_View,
+                    "fields": ["prompt_data", "result.issues", "result.details"],
+                    "analyzers": ["text_en"],
+                    "stored_values": ["_key", "prompt_hash", "created_at", "archived_at"],
+                },
+            ],
         },
         Indaleko_Prompt_Stability_Metrics_Collection: {
             "internal": True,  # Metrics are internal for prompt management only
@@ -609,6 +628,14 @@ class IndalekoDBCollections:
                     "type": "persistent",
                 },
             },
+            "views": [
+                {
+                    "name": Indaleko_Prompt_Metrics_Text_View,
+                    "fields": ["prompt_hash", "action", "issue_count"],
+                    "analyzers": ["text_en"],
+                    "stored_values": ["_key", "prompt_hash", "score", "timestamp"],
+                },
+            ],
         },
     }
 

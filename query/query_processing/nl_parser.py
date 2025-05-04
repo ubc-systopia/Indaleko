@@ -27,7 +27,7 @@ import traceback
 
 from pathlib import Path
 from textwrap import dedent
-from typing import Any
+from typing import Any, Optional
 
 from icecream import ic
 
@@ -57,6 +57,7 @@ from query.query_processing.data_models.query_output import (
     LLMIntentTypeEnum,
 )
 from query.utils.llm_connector.llm_base import IndalekoLLMBase
+from query.utils.llm_connector.factory import LLMConnectorFactory
 
 
 # pylint: enable=wrong-import-position
@@ -211,7 +212,10 @@ class NLParser:
     def __init__(
         self,
         collections_metadata: IndalekoDBCollectionsMetadata,
-        llm_connector: IndalekoLLMBase | None = None,
+        llm_connector: Optional[IndalekoLLMBase] = None,
+        llm_provider: str = "openai",
+        model: str = "gpt-4o-mini",
+        api_key: Optional[str] = None,
     ) -> None:
         """
         Initialize the parser.
@@ -219,11 +223,24 @@ class NLParser:
         Args:
             collections_metadata: Metadata for the database collections.
             llm_connector: An optional connector to the LLM service.
+            llm_provider: The LLM provider to use if no connector is provided.
+            model: The model to use with the provider.
+            api_key: Optional API key to use with the provider.
         """
         # Initialize components
-        self.llm_connector = llm_connector
         self.collections_metadata = collections_metadata
         self.validator = LLMResponseValidator()
+        
+        # Use provided connector or create one
+        if llm_connector:
+            self.llm_connector = llm_connector
+        else:
+            # Create a connector using the factory
+            self.llm_connector = LLMConnectorFactory.create_connector(
+                connector_type=llm_provider,
+                model=model,
+                api_key=api_key
+            )
 
         # Error tracking
         self.error_log = []
@@ -267,6 +284,12 @@ class NLParser:
         Returns:
             ParserResults: A structured representation of the query
         """
+        # Ensure we have an LLM connector
+        if not self.llm_connector:
+            # Create a default connector using the factory
+            self.llm_connector = LLMConnectorFactory.create_connector()
+            logger.info("Created default LLM connector for parsing")
+            
         return ParserResults(
             OriginalQuery=query,
             Intent=self._detect_intent(query),

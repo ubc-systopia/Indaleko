@@ -22,7 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 from query.utils.prompt_management.patterns.contradiction_patterns import (
+    INJECTION_PHRASES,
     create_default_pattern_library,
     detect_injection_attempts,
-    INJECTION_PHRASES,
 )

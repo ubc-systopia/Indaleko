@@ -1,5 +1,5 @@
 """
-OpenAI Assistant API implementation for Indaleko.
+Assistant API implementation for Indaleko.
 
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason
@@ -39,6 +39,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 from query.assistants.state import ConversationState
 from query.tools.base import ToolInput
 from query.tools.registry import get_registry
+from query.utils.llm_connector.factory import LLMConnectorFactory
 
 # Import Query Context Integration components if available
 try:
@@ -97,6 +98,7 @@ class IndalekoAssistant:
         self,
         api_key: str | None = None,
         model: str = "gpt-4o",
+        llm_connector: str = "openai",
         enable_query_context: bool = True,
         enable_recommendations: bool = True,
         archivist_memory=None,
@@ -109,6 +111,7 @@ class IndalekoAssistant:
         Args:
             api_key (Optional[str]): The OpenAI API key. If None, will be loaded from config.
             model (str): The model to use for the assistant.
+            llm_connector (str): The LLM connector to use (openai, gemma, random).
             enable_query_context (bool): Whether to enable Query Context Integration.
             enable_recommendations (bool): Whether to enable Recommendation Integration.
             archivist_memory: Optional existing ArchivistMemory instance.
@@ -117,7 +120,22 @@ class IndalekoAssistant:
         """
         self.api_key = api_key if api_key else self._load_api_key()
         self.model = model
+        self.llm_connector_type = llm_connector
+        
+        # Create OpenAI client for the assistant API
+        # Note: This is separate from the LLM connector and will always be OpenAI
+        # since we're using OpenAI's Assistant API
         self.client = openai.OpenAI(api_key=self.api_key)
+        
+        # Create the LLM connector
+        self.llm_connector = LLMConnectorFactory.create_connector(
+            connector_type=llm_connector,
+            api_key=self.api_key,
+            model=model,
+        )
+        
+        ic(f"Using LLM connector: {self.llm_connector.get_llm_name()}")
+        
         self.tool_registry = get_registry()
         self.assistant_id = None
         self.conversations = {}

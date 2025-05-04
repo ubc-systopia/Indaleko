@@ -18,103 +18,105 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import os
-import sys
 from enum import Enum
-from typing import Dict, List, Optional, Set, Tuple, Union
+
+from pydantic import Field
 
 from data_models.base import IndalekoBaseModel
-from pydantic import Field
 
 
 class ContradictionType(str, Enum):
     """Types of contradictions that can be detected in prompts."""
-    LOGICAL = "logical"           # e.g., A and not A
-    SEMANTIC = "semantic"         # e.g., conceptual clashes
-    STRUCTURAL = "structural"     # e.g., cross-layer conflicts
-    TEMPORAL = "temporal"         # e.g., time-based contradictions
-    IDENTITY = "identity"         # e.g., role confusion
-    NUMERICAL = "numerical"       # e.g., range conflicts
-    FORMAT = "format"             # e.g., response format conflicts
-    GUIDANCE = "guidance"         # e.g., contradictory guidance
+
+    LOGICAL = "logical"  # e.g., A and not A
+    SEMANTIC = "semantic"  # e.g., conceptual clashes
+    STRUCTURAL = "structural"  # e.g., cross-layer conflicts
+    TEMPORAL = "temporal"  # e.g., time-based contradictions
+    IDENTITY = "identity"  # e.g., role confusion
+    NUMERICAL = "numerical"  # e.g., range conflicts
+    FORMAT = "format"  # e.g., response format conflicts
+    GUIDANCE = "guidance"  # e.g., contradictory guidance
 
 
 class ContradictionPattern(IndalekoBaseModel):
     """A pattern for detecting contradictions in prompts."""
+
     name: str
     description: str
     pattern_type: ContradictionType
     severity: float  # 0.0 to 1.0, how severe the contradiction is
-    
+
     # Detection components vary by pattern type
     # For example:
-    positive_terms: Optional[List[str]] = None  # Terms that conflict with negative terms
-    negative_terms: Optional[List[str]] = None  # Terms that conflict with positive terms
-    mutually_exclusive: Optional[List[str]] = None  # Set of terms where only one can be true
-    regex_patterns: Optional[Dict[str, str]] = None  # Named regex patterns
-    
+    positive_terms: list[str] | None = None  # Terms that conflict with negative terms
+    negative_terms: list[str] | None = None  # Terms that conflict with positive terms
+    mutually_exclusive: list[str] | None = None  # Set of terms where only one can be true
+    regex_patterns: dict[str, str] | None = None  # Named regex patterns
+
     # Metadata for pattern management
-    author: Optional[str] = None
+    author: str | None = None
     created_by_llm: bool = False
     verified: bool = False
-    examples: List[str] = Field(default_factory=list)
-    
+    examples: list[str] = Field(default_factory=list)
+
     def matches(self, text: str) -> bool:
         """
         Check if the contradiction pattern matches the given text.
-        
+
         This is a basic implementation that should be extended with
         more sophisticated matching logic.
-        
+
         Args:
             text: The text to check for contradictions
-            
+
         Returns:
             True if the pattern matches, False otherwise
         """
         if not self.positive_terms or not self.negative_terms:
             return False
-            
+
         # Check if any positive term AND any negative term are present
         positive_present = any(term.lower() in text.lower() for term in self.positive_terms)
         negative_present = any(term.lower() in text.lower() for term in self.negative_terms)
-        
+
         return positive_present and negative_present
 
 
 class DetectedContradiction(IndalekoBaseModel):
     """A contradiction detected in a prompt."""
+
     pattern_name: str
     contradiction_type: ContradictionType
     severity: float
     confidence: float  # 0.0 to 1.0, how confident the detection is
-    evidence: Dict[str, str]  # Map of term to context snippet where found
-    location: Optional[str] = None  # Where in the prompt the contradiction was found
-    explanation: Optional[str] = None  # Human-readable explanation
+    evidence: dict[str, str]  # Map of term to context snippet where found
+    location: str | None = None  # Where in the prompt the contradiction was found
+    explanation: str | None = None  # Human-readable explanation
 
 
 class PatternLibrary(IndalekoBaseModel):
     """A collection of contradiction patterns."""
-    patterns: Dict[ContradictionType, List[ContradictionPattern]] = Field(default_factory=dict)
-    
+
+    patterns: dict[ContradictionType, list[ContradictionPattern]] = Field(default_factory=dict)
+
     def add_pattern(self, pattern: ContradictionPattern) -> None:
         """
         Add a pattern to the library.
-        
+
         Args:
             pattern: The pattern to add
         """
         if pattern.pattern_type not in self.patterns:
             self.patterns[pattern.pattern_type] = []
         self.patterns[pattern.pattern_type].append(pattern)
-        
-    def detect_contradictions(self, text: str) -> List[DetectedContradiction]:
+
+    def detect_contradictions(self, text: str) -> list[DetectedContradiction]:
         """
         Detect contradictions in the given text using all patterns.
-        
+
         Args:
             text: The text to check for contradictions
-            
+
         Returns:
             List of detected contradictions
         """
@@ -129,6 +131,6 @@ class PatternLibrary(IndalekoBaseModel):
                             severity=pattern.severity,
                             confidence=0.8,  # TODO: Implement confidence calculation
                             evidence={},  # TODO: Extract evidence from text
-                        )
+                        ),
                     )
         return results

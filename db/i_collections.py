@@ -109,10 +109,8 @@ class IndalekoCollections(IndalekoSingleton):
 
         # Create or update views (unless skipped)
         if not self.skip_views:
-            ic("creating views")
             self._create_views()
         else:
-            ic("Skipping view creation (skip_views=True)")
             logging.debug("Skipping view creation (skip_views=True)")
 
     def _ensure_custom_analyzers(self) -> None:
@@ -164,7 +162,6 @@ class IndalekoCollections(IndalekoSingleton):
         ) in IndalekoDBCollections.Collections.items():
             # Skip collections without view definitions
             if "views" not in collection_def:
-                ic("skipping collection (no views)", collection_name)
                 continue
 
             # Process each view definition for this collection
@@ -179,7 +176,6 @@ class IndalekoCollections(IndalekoSingleton):
 
                 # Skip if already processed
                 if view_name in created_views:
-                    ic("skipping view (already processed)", view_name)
                     continue
 
                 # Create the view definition
@@ -213,12 +209,8 @@ class IndalekoCollections(IndalekoSingleton):
                     stored_values=view_def.get("stored_values"),
                 )
 
-                ic(view_definition)
-
                 # Create or update the view
                 if view_manager.view_exists(view_name):
-                    ic(view_name)
-
                     result = view_manager.update_view(view_definition)
                     logger = logging.getLogger(__name__)
                     logger.debug("Updated view %s: %s", view_name, result)
@@ -226,7 +218,6 @@ class IndalekoCollections(IndalekoSingleton):
                     result = view_manager.create_view(view_definition)
                     logging.debug("Result: %s", result)
                     logging.debug("Created view %s: %s", view_name, result)
-                    ic(result)
 
                 # Add to processed list
                 created_views.append(view_name)

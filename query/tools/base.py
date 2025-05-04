@@ -65,6 +65,7 @@ class ToolInput(BaseModel):
     conversation_id: str | None = None
     invocation_id: str | None = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
+    llm_connector: Any = None  # LLM connector instance to use for the tool
 
 
 class ToolOutput(BaseModel):
@@ -94,9 +95,17 @@ class ProgressCallback(BaseModel):
 class BaseTool(ABC):
     """Base class for all Indaleko tools."""
 
-    def __init__(self):
-        """Initialize the tool."""
-        self._progress_callback = None
+    def __init__(self, **kwargs):
+        """
+        Initialize the tool.
+        
+        Args:
+            **kwargs: Additional arguments including:
+                - llm_connector: LLM connector to use with this tool
+                - progress_callback: Callback function for progress updates
+        """
+        self._progress_callback = kwargs.get('progress_callback', None)
+        self._llm_connector = kwargs.get('llm_connector', None)
 
     @property
     @abstractmethod

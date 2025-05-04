@@ -25,7 +25,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from textwrap import dedent
-from typing import Any
+from typing import Any, Optional
 
 from icecream import ic
 
@@ -44,6 +44,8 @@ from db.db_collections import IndalekoDBCollections
 from query.query_processing.data_models.translator_input import TranslatorInput
 from query.query_processing.data_models.translator_response import TranslatorOutput
 from query.query_processing.query_translator.translator_base import TranslatorBase
+from query.utils.llm_connector.factory import LLMConnectorFactory
+from query.utils.llm_connector.llm_base import IndalekoLLMBase
 
 
 # pylint: enable=wrong-import-position
@@ -54,15 +56,36 @@ from query.query_processing.query_translator.translator_base import TranslatorBa
 class AQLTranslator(TranslatorBase):
     """Translator for converting parsed queries to AQL (ArangoDB Query Language)."""
 
-    def __init__(self, collections_metadata: IndalekoDBCollectionsMetadata) -> None:
+    def __init__(
+        self, 
+        collections_metadata: IndalekoDBCollectionsMetadata,
+        llm_connector: Optional[IndalekoLLMBase] = None,
+        llm_provider: str = "openai",
+        model: str = "gpt-4o-mini",
+        api_key: Optional[str] = None,
+    ) -> None:
         """
         Initialize the AQL translator.
 
         Args:
             collections_metadata: Metadata for the collections in the database.
+            llm_connector: Optional LLM connector instance to use for translation.
+            llm_provider: The LLM provider to use if no connector is provided.
+            model: The model to use with the provider.
+            api_key: Optional API key to use with the provider.
         """
         self.db_collections_metadata = collections_metadata
         self.db_config = getattr(self.db_collections_metadata, "db_config", None)
+
+        # Set up the LLM connector
+        self.llm_connector = llm_connector
+        if self.llm_connector is None:
+            # Create a connector using the factory
+            self.llm_connector = LLMConnectorFactory.create_connector(
+                connector_type=llm_provider,
+                model=model,
+                api_key=api_key
+            )
 
         # Handle collection metadata correctly
         if hasattr(self.db_collections_metadata, "get_all_collections_metadata"):
@@ -89,7 +112,17 @@ class AQLTranslator(TranslatorBase):
         # Use the LLM to help generate the AQL query
         assert isinstance(input_data, TranslatorInput)
         prompt = self._create_translation_prompt2(input_data)
-        completion = input_data.Connector.get_completion(
+        
+        # Use the connector provided in the input data if available, otherwise use our own
+        llm_connector = input_data.Connector if input_data.Connector else self.llm_connector
+        
+        # Ensure we have a connector
+        if llm_connector is None:
+            # Create a default connector as a last resort
+            llm_connector = LLMConnectorFactory.create_connector()
+            ic("Created default LLM connector for translation")
+            
+        completion = llm_connector.get_completion(
             context=prompt["system"],
             question=prompt["user"],
             schema=TranslatorOutput.model_json_schema(),

@@ -22,7 +22,7 @@ import json
 import logging
 import os
 import sys
-from typing import Any
+from typing import Any, Optional
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -42,6 +42,8 @@ from query.query_processing.data_models.translator_input import TranslatorInput
 from query.query_processing.data_models.translator_response import TranslatorOutput
 from query.query_processing.query_translator.aql_translator import AQLTranslator
 from query.search_execution.data_models.query_execution_plan import QueryPerformanceHint
+from query.utils.llm_connector.factory import LLMConnectorFactory
+from query.utils.llm_connector.llm_base import IndalekoLLMBase
 
 # pylint: enable=wrong-import-position
 
@@ -60,14 +62,31 @@ class EnhancedAQLTranslator(AQLTranslator):
     7. Improved bind variable handling
     """
 
-    def __init__(self, collections_metadata: IndalekoDBCollectionsMetadata):
+    def __init__(
+        self, 
+        collections_metadata: IndalekoDBCollectionsMetadata,
+        llm_connector: Optional[IndalekoLLMBase] = None,
+        llm_provider: str = "openai",
+        model: str = "gpt-4o-mini",
+        api_key: Optional[str] = None,
+    ):
         """
         Initialize the enhanced AQL translator.
 
         Args:
             collections_metadata: Metadata for collections in the database.
+            llm_connector: Optional LLM connector instance to use for translation.
+            llm_provider: The LLM provider to use if no connector is provided.
+            model: The model to use with the provider.
+            api_key: Optional API key to use with the provider.
         """
-        super().__init__(collections_metadata)
+        super().__init__(
+            collections_metadata=collections_metadata,
+            llm_connector=llm_connector,
+            llm_provider=llm_provider,
+            model=model,
+            api_key=api_key
+        )
         self.performance_hints = []
 
     def translate_enhanced(
@@ -122,8 +141,17 @@ class EnhancedAQLTranslator(AQLTranslator):
 
         user_prompt = f"Generate an optimized AQL query for: '{enhanced_understanding.original_query}'"
 
+        # Use the connector provided in the input data if available, otherwise use our own
+        llm_connector = input_data.Connector if input_data.Connector else self.llm_connector
+        
+        # Ensure we have a connector
+        if llm_connector is None:
+            # Create a default connector as a last resort
+            llm_connector = LLMConnectorFactory.create_connector()
+            logging.info("Created default LLM connector for enhanced AQL translation")
+            
         # Use the LLM to generate the AQL query
-        completion = input_data.Connector.get_completion(
+        completion = llm_connector.get_completion(
             context=system_prompt,
             question=user_prompt,
             schema=TranslatorOutput.model_json_schema(),

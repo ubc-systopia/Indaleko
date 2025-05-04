@@ -17,11 +17,12 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-
+import json
 import os
 import sys
 
 from collections.abc import Sequence
+from pathlib import Path
 from typing import Any
 
 import arango
@@ -31,28 +32,32 @@ from icecream import ic
 
 
 if os.environ.get("INDALEKO_ROOT") is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
-        current_path = os.path.dirname(current_path)
-    os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
 from db.collection_index import IndalekoCollectionIndex
 from db.db_config import IndalekoDBConfig
+from db.i_collections import IndalekoCollections
 from utils.decorators import type_check
 
 
 # pylint: enable=wrong-import-position
 
 
+# ruff: noqa: S101
+
 class IndalekoCollection:
     """IndalekoCollection wraps an ArangoDB collection."""
 
     def __init__(self, **kwargs: dict) -> None:
+        """Create an IndalekoCollection object."""
         if "ExistingCollection" in kwargs:
             self._arangodb_collection = kwargs["ExistingCollection"]
-            assert isinstance(  # noqa: S101
+            assert isinstance(
                 self._arangodb_collection,
                 arango.collection.StandardCollection,
             ), f"self.collection is unexpected type {type(self._arangodb_collection)}"
@@ -85,16 +90,18 @@ class IndalekoCollection:
             self.db_config,
             IndalekoDBConfig,
         ), "db must be None or an IndalekoDBConfig object"
-        self.create_collection(self.collection_name, self.definition, reset=self.reset)
+        self.get_or_create_collection(self.collection_name, self.definition, reset=self.reset)
 
     @type_check
-    def create_collection(
+    def get_or_create_collection(
         self,
         name: str,
         config: dict,
-        reset: bool = False,
+        reset: bool = False,  # noqa: FBT001,FBT002
     ) -> "IndalekoCollection":
         """
+        Return existing or create new collection.
+
         Create a collection in the database. If the collection already exists,
         return the existing collection. If reset is True, delete the existing
         collection and create a new one.
@@ -105,10 +112,12 @@ class IndalekoCollection:
             else:
                 raise NotImplementedError("delete existing collection not implemented")
         else:
-            self._arangodb_collection = self.db_config.db.create_collection(
-                name,
-                edge=config["edge"],
-            )
+            # Use IndalekoCollections.get_collection() instead of direct db.create_collection
+            # This adheres to architectural patterns defined in the pre-commit hooks
+
+            # Get or create the collection using the approved pattern
+            collection = IndalekoCollections.get_collection(name, skip_views=True)
+            self._arangodb_collection = collection.get_arangodb_collection()
             if "schema" in config:
                 try:
                     ic(config["schema"])
@@ -143,8 +152,7 @@ class IndalekoCollection:
                 **index_data,
             )
             indices.append(index)
-        sys.exit(0)
-        return []
+        return indices
 
     @type_check
     def delete_collection(self, name: str) -> bool:
@@ -154,7 +162,7 @@ class IndalekoCollection:
         self.db_config.db.delete_collection(name)
         return True
 
-    def create_index(self, name, **kwargs: dict[str, Any]) -> "IndalekoCollection":
+    def create_index(self, name: str, **kwargs: dict[str, Any]) -> "IndalekoCollection":
         """Create an index for the given collection."""
         self.indices[name] = IndalekoCollectionIndex(
             collection=self._arangodb_collection,
@@ -162,7 +170,7 @@ class IndalekoCollection:
         )
         return self
 
-    def find_entries(self, **kwargs):
+    def find_entries(self, **kwargs:dict)-> list:
         """Given a list of keyword arguments, return a list of documents that match the criteria."""
         return list(self._arangodb_collection.find(kwargs))
 
