@@ -26,7 +26,7 @@ SCENARIOS: Dict[str, Dict[str, Any]] = {
             }
         }
     },
-    
+
     # Medium-sized realistic dataset
     "realistic": {
         "description": "Medium-sized realistic dataset with balanced distribution",
@@ -48,7 +48,7 @@ SCENARIOS: Dict[str, Dict[str, Any]] = {
             }
         }
     },
-    
+
     # Large dataset for performance testing
     "large": {
         "description": "Large dataset for performance testing",
@@ -61,7 +61,7 @@ SCENARIOS: Dict[str, Dict[str, Any]] = {
             "batch_size": 100  # Process in larger batches
         }
     },
-    
+
     # Dataset focused on document search testing
     "document_focused": {
         "description": "Dataset focused on document formats for content search testing",
@@ -86,7 +86,7 @@ SCENARIOS: Dict[str, Dict[str, Any]] = {
             "count": 15
         }
     },
-    
+
     # Dataset focused on activity and relationship testing
     "activity_focused": {
         "description": "Dataset focused on activity patterns for temporal query testing",
@@ -110,7 +110,7 @@ SCENARIOS: Dict[str, Dict[str, Any]] = {
             "count": 15
         }
     },
-    
+
     # Dataset simulating a multi-device user environment
     "multi_device": {
         "description": "Dataset simulating usage across multiple devices (desktop, laptop, mobile)",
@@ -125,7 +125,7 @@ SCENARIOS: Dict[str, Dict[str, Any]] = {
             "count": 10
         }
     },
-    
+
     # Dataset for testing cross-object relationships
     "relationship_focused": {
         "description": "Dataset with complex object relationships for graph query testing",
@@ -151,7 +151,7 @@ SCENARIOS: Dict[str, Dict[str, Any]] = {
             "count": 15
         }
     },
-    
+
     # Minimal dataset for quick development testing
     "minimal": {
         "description": "Minimal dataset for quick development testing",

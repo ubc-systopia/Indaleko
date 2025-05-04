@@ -20,11 +20,11 @@ def run_tests():
     # Discover and run all test files in the current directory
     loader = unittest.TestLoader()
     test_suite = loader.discover(os.path.dirname(__file__), pattern="test_*.py")
-    
+
     # Run the tests
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(test_suite)
-    
+
     # Return appropriate exit code
     return 0 if result.wasSuccessful() else 1
 

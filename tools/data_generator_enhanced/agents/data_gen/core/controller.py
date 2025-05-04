@@ -86,7 +86,7 @@ class GenerationController:
 
         # Statistical tools
         self.tool_registry.register_tool(StatisticalDistributionTool())
-        
+
         # Import all our model-based generator tools
         from ..tools.stats import (
             FileMetadataGeneratorTool,
@@ -95,7 +95,7 @@ class GenerationController:
             SemanticMetadataGeneratorTool,
             MachineConfigGeneratorTool
         )
-        
+
         # Register model-based generator tools
         self.tool_registry.register_tool(FileMetadataGeneratorTool())
         self.tool_registry.register_tool(ActivityGeneratorTool())
@@ -431,7 +431,7 @@ class GenerationController:
                 criteria["storage_objects"] = selected_objects
             else:
                 criteria["storage_objects"] = storage_objects
-                
+
         # Add additional semantic-specific criteria
         if "mime_type_distribution" not in criteria:
             # Default MIME type distribution
@@ -448,7 +448,7 @@ class GenerationController:
                 "application/json": 0.05,
                 "text/html": 0.05
             }
-            
+
         # Add content extraction options if not specified
         if "content_extraction" not in criteria:
             criteria["content_extraction"] = {
@@ -460,34 +460,34 @@ class GenerationController:
             }
 
         self.logger.info(f"Generating {count} semantic objects with criteria: {criteria}")
-        
+
         try:
             semantic_objects = agent.generate(count, criteria)
             self.logger.info(f"Generated {len(semantic_objects)} semantic objects")
         except Exception as e:
             self.logger.error(f"Error generating semantic objects: {str(e)}")
             semantic_objects = []
-            
+
         return semantic_objects
-        
+
     def _select_diverse_storage_objects(self, storage_objects: List[Dict[str, Any]], count: int) -> List[Dict[str, Any]]:
         """Select a diverse subset of storage objects for semantic analysis.
-        
+
         This ensures we have a good mix of file types and sizes for semantic metadata generation.
-        
+
         Args:
             storage_objects: Complete list of storage objects
             count: Number of objects to select
-            
+
         Returns:
             Selected diverse storage objects
         """
         if count >= len(storage_objects):
             return storage_objects
-            
+
         # Group storage objects by their extension
         extension_groups = {}
-        
+
         for obj in storage_objects:
             # Extract extension from filename or attributes
             extension = ""
@@ -499,52 +499,52 @@ class GenerationController:
                 extension = obj["Record"]["Attributes"].get("Extension", "").lower()
                 if extension.startswith("."):
                     extension = extension[1:]
-                    
+
             # Group by extension
             if extension:
                 if extension not in extension_groups:
                     extension_groups[extension] = []
                 extension_groups[extension].append(obj)
-        
+
         # Calculate how many objects to select from each group
         total_extensions = len(extension_groups)
         if total_extensions == 0:
             # No extensions found, return random selection
             import random
             return random.sample(storage_objects, count)
-            
+
         # Distribute selection across extensions
         selected = []
-        
+
         # First, ensure we have at least one from each extension group
         for ext, objects in extension_groups.items():
             if objects and len(selected) < count:
                 selected.append(objects[0])
-        
+
         # Fill the remaining slots proportionally
         remaining = count - len(selected)
         if remaining > 0:
             # Calculate proportions
             extension_counts = {ext: len(objects) for ext, objects in extension_groups.items()}
             total_objects = sum(extension_counts.values())
-            
+
             # Allocate remaining slots proportionally
             allocated = 0
             for ext, objects in extension_groups.items():
                 # Skip extensions we've already taken from
                 if not objects[1:]:
                     continue
-                    
+
                 # Calculate allocation (proportional to group size)
                 allocation = int((extension_counts[ext] / total_objects) * remaining)
                 # Ensure we don't exceed available objects or remaining slots
                 allocation = min(allocation, len(objects) - 1, remaining - allocated)
-                
+
                 # Add allocated objects
                 if allocation > 0:
                     selected.extend(objects[1:allocation+1])
                     allocated += allocation
-            
+
             # If we still have slots, fill them randomly
             if allocated < remaining:
                 # Create a pool of unused objects
@@ -554,7 +554,7 @@ class GenerationController:
                 if unused:
                     additional = random.sample(unused, min(remaining - allocated, len(unused)))
                     selected.extend(additional)
-        
+
         return selected
 
     def _generate_activity_objects(self, count: int, scenario_config: Dict[str, Any],
@@ -607,7 +607,7 @@ class GenerationController:
         sequence_config = scenario_config.get("activity_sequence_config", {})
         if sequence_config or scenario_config.get("activity_sequences", False):
             criteria["create_sequences"] = True
-            
+
             # If explicit sequence config is provided, use it
             if sequence_config:
                 criteria.update(sequence_config)
@@ -616,7 +616,7 @@ class GenerationController:
                 criteria["sequence_count"] = scenario_config.get(
                     "activity_sequence_count", max(1, count // 10)
                 )
-                
+
                 # Default sequence types if not specified
                 if "sequence_types" not in criteria:
                     criteria["sequence_types"] = {
@@ -627,18 +627,18 @@ class GenerationController:
                         "location_movement": 0.05,  # 5% location movements
                         "media_consumption": 0.05   # 5% media consumption patterns
                     }
-        
+
         # Configure activity time distribution
         if "time_distribution" not in criteria:
             criteria["time_distribution"] = {
                 "workday_hours": {
                     # Hour of day -> probability weight
                     "8": 0.05,   # 8 AM - start of day
-                    "9": 0.08, 
+                    "9": 0.08,
                     "10": 0.1,
                     "11": 0.15,  # Morning productivity peak
                     "12": 0.05,  # Lunch dip
-                    "13": 0.07, 
+                    "13": 0.07,
                     "14": 0.15,  # Early afternoon peak
                     "15": 0.15,  # Mid-afternoon peak
                     "16": 0.1,   # Late afternoon
@@ -658,7 +658,7 @@ class GenerationController:
                     "6": 0.01    # Sunday
                 }
             }
-            
+
         # Add activity type distribution if not specified
         if "activity_type_distribution" not in criteria:
             criteria["activity_type_distribution"] = {
@@ -673,117 +673,117 @@ class GenerationController:
             }
 
         self.logger.info(f"Generating {count} activity objects with criteria: {criteria}")
-        
+
         try:
             activity_objects = agent.generate(count, criteria)
             self.logger.info(f"Generated {len(activity_objects)} activity objects")
         except Exception as e:
             self.logger.error(f"Error generating activity objects: {str(e)}")
             activity_objects = []
-            
+
         return activity_objects
-        
-    def _select_activity_focus_objects(self, storage_objects: List[Dict[str, Any]], count: int, 
+
+    def _select_activity_focus_objects(self, storage_objects: List[Dict[str, Any]], count: int,
                                     focus: str) -> List[Dict[str, Any]]:
         """Select storage objects based on activity focus.
-        
+
         Different focus strategies:
         - recent: Focus on recently modified objects
         - popular: Focus on objects that would be frequently accessed
         - diverse: Even distribution across different file types
         - balanced: Mixed approach (default)
-        
+
         Args:
             storage_objects: Storage objects to select from
             count: Maximum number of objects to select
             focus: Activity focus strategy
-            
+
         Returns:
             Selected storage objects for activity generation
         """
         if count >= len(storage_objects):
             return storage_objects
-            
+
         import random
         sample_size = min(count, len(storage_objects))
-        
+
         if focus == "recent":
             # Sort by modification time (most recent first)
             sorted_objects = sorted(
-                storage_objects, 
+                storage_objects,
                 key=lambda obj: self._extract_timestamp(obj, "Modified"),
                 reverse=True
             )
             # Take the most recent objects
             return sorted_objects[:sample_size]
-            
+
         elif focus == "popular":
             # Select objects based on weighted probabilities favoring:
             # - Documents and spreadsheets (work files)
             # - Moderate sizes (not too large or small)
             # - Files with descriptive names (longer names)
             weighted_objects = []
-            
+
             for obj in storage_objects:
                 weight = 1.0  # Base weight
-                
+
                 # Check extension/file type
                 extension = ""
                 if "Record" in obj and "Attributes" in obj["Record"]:
                     extension = obj["Record"]["Attributes"].get("Extension", "").lower()
-                    
+
                 # Favor work document types
                 if extension in [".docx", ".xlsx", ".pptx", ".pdf", ".txt"]:
                     weight *= 2.0
-                    
+
                 # Check file size
                 size = 0
                 if "Record" in obj and "Attributes" in obj["Record"]:
                     size = obj["Record"]["Attributes"].get("Size", 0)
-                    
+
                 # Favor moderate file sizes
                 if 100_000 <= size <= 5_000_000:  # Between 100KB and 5MB
                     weight *= 1.5
-                    
+
                 # Check name length (more descriptive names)
                 name = obj.get("Label", "")
                 if len(name) > 10:
                     weight *= 1.2
-                    
+
                 weighted_objects.append((obj, weight))
-                
+
             # Select based on weights
             total_weight = sum(w for _, w in weighted_objects)
             probabilities = [w / total_weight for _, w in weighted_objects]
             selected_indices = random.choices(
-                range(len(weighted_objects)), 
-                weights=probabilities, 
+                range(len(weighted_objects)),
+                weights=probabilities,
                 k=sample_size
             )
-            
+
             return [weighted_objects[i][0] for i in selected_indices]
-            
+
         elif focus == "diverse":
             # Group by file types/extensions and select evenly
             extension_groups = {}
-            
+
             for obj in storage_objects:
                 # Extract extension
                 extension = ""
                 if "Record" in obj and "Attributes" in obj["Record"]:
                     extension = obj["Record"]["Attributes"].get("Extension", "").lower()
-                
+
                 if not extension:
                     extension = "unknown"
-                    
+
                 if extension not in extension_groups:
                     extension_groups[extension] = []
                 extension_groups[extension].append(obj)
-                
+
             # Distribute selection evenly across extensions
             selected = []
             extensions = list(extension_groups.keys())
-            
+
             # Round-robin selection from each extension group
             while len(selected) < sample_size and extensions:
                 for ext in extensions[:]:
@@ -793,25 +793,25 @@ class GenerationController:
                             break
                     else:
                         extensions.remove(ext)
-                        
+
             return selected
-            
+
         else:  # "balanced" or anything else
             # Use random selection
             return random.sample(storage_objects, sample_size)
-            
+
     def _extract_timestamp(self, obj: Dict[str, Any], label: str) -> datetime:
         """Extract a timestamp from an object.
-        
+
         Args:
             obj: Object to extract timestamp from
             label: Timestamp label to extract
-            
+
         Returns:
             Extracted timestamp or current time if not found
         """
         from datetime import datetime, timezone
-        
+
         # Check if there are timestamps in the object
         if "Timestamps" in obj:
             for ts in obj["Timestamps"]:
@@ -820,7 +820,7 @@ class GenerationController:
                         return datetime.fromisoformat(ts["Value"])
                     except (ValueError, TypeError):
                         pass
-                        
+
         # Default to current time
         return datetime.now(timezone.utc)
 
@@ -850,16 +850,16 @@ class GenerationController:
         # Add objects to criteria
         if storage_objects:
             criteria["storage_objects"] = storage_objects
-            
+
         if semantic_objects:
             criteria["semantic_objects"] = semantic_objects
-            
+
         if activity_objects:
             criteria["activity_objects"] = activity_objects
 
         # Generate strategic relationships if specified in config
         relationship_strategy = scenario_config.get("relationship_strategy", "balanced")
-        
+
         # Apply different relationship patterns based on strategy
         if relationship_strategy == "storage_semantic_focused":
             # Prioritize storage-semantic relationships
@@ -874,7 +874,7 @@ class GenerationController:
                     "ACTIVITY_SEMANTIC": 0.1,  # 10% activity-semantic
                     "GENERAL": 0.1  # 10% other relationships
                 }
-                
+
         elif relationship_strategy == "activity_focused":
             # Prioritize activity-related relationships
             if activity_objects:
@@ -885,7 +885,7 @@ class GenerationController:
                     "STORAGE_SEMANTIC": 0.1,  # 10% storage-semantic
                     "GENERAL": 0.1  # 10% other relationships
                 }
-                
+
         elif relationship_strategy == "balanced":
             # Distribute relationships evenly
             self.logger.info("Applying balanced relationship strategy")
@@ -895,7 +895,7 @@ class GenerationController:
                 "ACTIVITY_SEMANTIC": 0.24,  # ~24% activity-semantic
                 "GENERAL": 0.1  # 10% other relationships
             }
-            
+
         # Add relationship types with probabilities if not specified
         if "relationship_types" not in criteria:
             criteria["relationship_types"] = {
@@ -910,45 +910,45 @@ class GenerationController:
             }
 
         self.logger.info(f"Generating {count} relationships with criteria: {criteria}")
-        
+
         try:
             relationships = agent.generate(count, criteria)
             self.logger.info(f"Generated {len(relationships)} relationships")
         except Exception as e:
             self.logger.error(f"Error generating relationships: {str(e)}")
             relationships = []
-            
+
         return relationships
-        
-    def _map_storage_to_semantic(self, storage_objects: List[Dict[str, Any]], 
+
+    def _map_storage_to_semantic(self, storage_objects: List[Dict[str, Any]],
                                semantic_objects: List[Dict[str, Any]]) -> Dict[str, str]:
         """Create a mapping from storage object IDs to semantic object IDs.
-        
+
         This helps create more accurate and meaningful relationships between
         storage and semantic objects.
-        
+
         Args:
             storage_objects: List of storage objects
             semantic_objects: List of semantic objects
-            
+
         Returns:
             Dictionary mapping storage IDs to semantic IDs
         """
         mapping = {}
-        
+
         # Create a dictionary of semantic objects by their ObjectIdentifier
         semantic_dict = {}
         for semantic in semantic_objects:
             obj_id = semantic.get("ObjectIdentifier")
             if obj_id:
                 semantic_dict[obj_id] = semantic
-        
+
         # For each storage object, find matching semantic objects
         for storage in storage_objects:
             storage_id = storage.get("ObjectIdentifier")
             if not storage_id:
                 continue
-                
+
             # Check if there's a direct match in semantic objects
             if storage_id in semantic_dict:
                 mapping[storage_id] = storage_id  # Same ID used in both domains
@@ -959,30 +959,30 @@ class GenerationController:
                     if self._objects_might_be_related(storage, semantic):
                         mapping[storage_id] = semantic_id
                         break
-        
+
         self.logger.info(f"Created {len(mapping)} storage-to-semantic mappings")
         return mapping
-    
+
     def _objects_might_be_related(self, storage: Dict[str, Any], semantic: Dict[str, Any]) -> bool:
         """Check if a storage object and semantic object might be related.
-        
+
         Args:
             storage: Storage object
             semantic: Semantic object
-            
+
         Returns:
             True if objects might be related, False otherwise
         """
         # If ObjectIdentifier matches, they're definitely related
         if storage.get("ObjectIdentifier") == semantic.get("ObjectIdentifier"):
             return True
-            
+
         # Check filenames/paths
         storage_name = storage.get("Label", "")
         storage_path = ""
         if "Record" in storage and "Attributes" in storage["Record"]:
             storage_path = storage["Record"]["Attributes"].get("Path", "")
-            
+
         # Look for name in semantic content
         if "Content" in semantic:
             content = semantic["Content"]
@@ -991,7 +991,7 @@ class GenerationController:
                 # Check if storage name appears in the extract
                 if storage_name and storage_name in extract:
                     return True
-                    
+
         # Default: return False if no connection found
         return False
 

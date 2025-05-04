@@ -55,7 +55,7 @@ class TestStorageGeneratorAgent(unittest.TestCase):
             llm_provider=self.llm_provider,
             config={"store_directly": True, "direct_generation": True}
         )
-        
+
         # Mock the _transform_to_db_format method to pass through records unchanged
         self.agent._transform_to_db_format = lambda record: record
 

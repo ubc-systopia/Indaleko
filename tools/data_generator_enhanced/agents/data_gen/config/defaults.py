@@ -21,7 +21,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
             "machine_config": "MachineConfigurations"
         }
     },
-    
+
     # LLM provider settings
     "llm": {
         "provider": "openai",  # openai, anthropic, mock
@@ -37,7 +37,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
             "anthropic": ""
         }
     },
-    
+
     # Generation settings
     "generation": {
         "storage_count": 100,
@@ -53,7 +53,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
             "max_filename_length": 255,  # Common filesystem limit
         }
     },
-    
+
     # Truth dataset generation
     "truth": {
         "enabled": False,  # Generate truth records for testing
@@ -65,7 +65,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
             "export_results": True  # Export verification results
         }
     },
-    
+
     # Execution settings
     "execution": {
         "dry_run": False,  # Don't actually write to database
@@ -73,7 +73,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "store_artifacts": True,  # Save generation artifacts
         "artifact_path": "./artifacts"
     },
-    
+
     # Data distributions
     "distributions": {
         "file_types": {

@@ -1,60 +1,77 @@
 # CLAUDE.md - Indaleko Development Guidelines
 
-## Current Work: Data Generator Testing
+## Current Work: Enhanced Data Generator
 
-I'm currently testing the synthetic data generator in the `data_generator` directory to evaluate its functionality with recent codebase changes.
+I've implemented an enhanced data generator in `tools/data_generator_enhanced/` to create synthetic metadata records for testing Indaleko's search capabilities with direct database integration.
 
-### Data Generator Overview
+### Enhanced Data Generator Overview
 
-The data generator creates synthetic metadata records to test Indaleko's search capabilities:
+The enhanced data generator provides robust capabilities for testing:
 
-- Generates realistic file metadata records
-- Creates various metadata types (storage, semantic, activity context)
-- Builds an "oracular set" with known query matches
-- Tests precision and recall of search results
-- Validates UPI (Unified Personal Index) effectiveness
+- Generates realistic file metadata records (storage, semantic, activity)
+- Creates "truth sets" with known characteristics for query evaluation
+- Uses direct database integration with proper schema validation
+- Supports statistical distributions for realistic data patterns
+- Implements the CLI template pattern for consistent command-line handling
 
-### Tool Workflow
+### Implementation Status
 
-1. Configures dataset parameters (using `dg_config.json`)
-   - Target dataset size
-   - Natural language query to test
-   - Number of expected matching records
-2. Generates synthetic metadata matching specific criteria
-3. Stores metadata in Indaleko database collections
-4. Executes the natural language query against the data
-5. Calculates precision and recall metrics
-6. Logs detailed results for analysis
+The enhanced data generator now has these working components:
 
-### Current Issues and Required Changes
+1. **Storage Metadata Generator**:
+   - Creates realistic file paths, names, sizes, and timestamps
+   - Generates directory hierarchies and file extensions
+   - Supports truth record generation with specific criteria
 
-The data generator requires several modifications to work with the current codebase:
+2. **Semantic Metadata Generator**:
+   - Generates MIME types, content types, and checksums
+   - Creates keywords, topics, and content summaries
+   - Links directly to storage records in the database
 
-1. **Database Authentication**:
-   - Error: `arango.exceptions.CollectionListError: [HTTP 401][ERR 11] not authorized to execute this request`
-   - Fix: Update ArangoDB credentials in database configuration
+3. **Activity Metadata Generator**:
+   - Generates location data with city and geographic coordinates
+   - Creates music activity records with artists, tracks, and genres
+   - Produces temperature/environmental data for context
+   - Links activity data to appropriate storage objects
 
-2. **Module Import Structure**:
-   - The data generator uses outdated import paths and interfaces
-   - Several modules from the `query` package have different interfaces than expected:
-     - `TranslatorBase` class has a different method signature
-     - `OpenAIConnector` likely has different API usage
-     - `AQLExecutor` may have different method parameters
+4. **Relationship Metadata Generator**:
+   - Creates connections between files, semantic data, and activity context
+   - Supports multiple relationship types (CONTAINS, DERIVED_FROM, etc.)
+   - Establishes proper graph edges in the database
+   - Generates truth relationships for testing complex queries
 
-3. **Configuration Requirements**:
-   - Ensure `config/openai-key.ini` exists with valid API key
-   - Update `data_generator/config/dg_config.json` with proper paths
+5. **Machine Configuration Generator**:
+   - Creates realistic device profiles (desktop, laptop, mobile)
+   - Supports multiple operating systems (Windows, macOS, Linux, iOS, Android)
+   - Generates appropriate hardware specifications for each device type
+   - Enables cross-device activity testing scenarios
 
-**Minimal Changes Needed**:
-1. Update import paths in `s4_translate_AQL.py` to use current module structure
-2. Update the database access in `main_pipeline.py` to use current authentication
-3. Fix collection access patterns in `s2_store_test_Indaleko.py`
-4. Create/update necessary configuration files
+3. **Activity Metadata Generator**:
+   - Implemented location activity (geographic coordinates, city data)
+   - Added music activity context (artists, tracks, genres)
+   - Created temperature/environmental context
+   - Ensures proper linking between activity and storage records
 
-**Important Notes**:
-- Never mock database connections as this can cause serious issues
-- Any modifications must be minimal and carefully reviewed
-- The tool was developed with an adversarial evaluation model, so changes require review
+### Usage
+
+```bash
+# Run quick test data generation
+python tools/data_generator_enhanced/generate_test_data.py
+
+# Run with CLI template
+python -m tools.data_generator_enhanced --config default
+```
+
+### Code Structure
+
+- `generators/`: Contains metadata generators for each type
+- `utils/`: Statistical distributions and dataset utilities
+- `testing/`: Query analysis and metrics tools
+- `config/`: JSON configuration files
+
+### Current Focus
+
+Working on implementing relationship generators to create connections between entities and improving the test query framework to validate search accuracy.
 
 ## Architectural Principles
 

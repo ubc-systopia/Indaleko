@@ -195,12 +195,12 @@ class SemanticGeneratorAgent(DomainAgent):
                 "storage_objects": storage_objects,
                 "criteria": criteria or {}
             })
-            
+
             semantic_records = result.get("records", [])
-            
+
             # Transform the records into the format expected by the database
             transformed_records = [self._transform_to_db_format(record) for record in semantic_records]
-            
+
             # Store the records if needed
             if self.config.get("store_directly", False):
                 bulk_tool = self.tools.get_tool("database_bulk_insert")
@@ -209,12 +209,12 @@ class SemanticGeneratorAgent(DomainAgent):
                         "collection": self.collection_name,
                         "documents": transformed_records
                     })
-            
+
             return transformed_records
-        
+
         # Fall back to legacy generation if tool is not available
         self.logger.warning("Semantic metadata generator tool not available, using legacy generation")
-        
+
         semantic_records = []
 
         for storage_obj in storage_objects:
@@ -648,7 +648,7 @@ class SemanticGeneratorAgent(DomainAgent):
             tags.extend(["data", "spreadsheet"])
 
         return tags
-        
+
     def _transform_to_db_format(self, record: Dict[str, Any]) -> Dict[str, Any]:
         """Transform a generated record to the database format.
 
@@ -659,24 +659,24 @@ class SemanticGeneratorAgent(DomainAgent):
             Transformed record in database format
         """
         # Check if this is already in BaseSemanticDataModel format
-        if (isinstance(record, dict) and "ObjectIdentifier" in record and "MIMEType" in record 
+        if (isinstance(record, dict) and "ObjectIdentifier" in record and "MIMEType" in record
                 and "Content" in record and "RecordType" in record and record.get("RecordType") == "SemanticData"):
             # Record is already in correct format, return as is
             self.logger.debug("Record is already in database format")
             return record
-            
+
         # For other formats, convert to the expected database format
         # Get object identifier
         object_id = record.get("ObjectIdentifier", str(uuid.uuid4()))
-        
+
         # Get timestamp, ensure ISO format with timezone
         timestamp = record.get("Timestamp", datetime.now(timezone.utc).isoformat())
         if isinstance(timestamp, str) and 'Z' not in timestamp and '+' not in timestamp:
             timestamp = f"{timestamp}Z"
-            
+
         # Get MIME type or use default
         mime_type = record.get("MIMEType", "application/octet-stream")
-        
+
         # Generate checksums if not provided
         checksums = record.get("Checksum", {})
         if not checksums:
@@ -687,7 +687,7 @@ class SemanticGeneratorAgent(DomainAgent):
                 "SHA1": hashlib.sha1(data).hexdigest(),
                 "SHA256": hashlib.sha256(data).hexdigest()
             }
-            
+
         # Get or create content metadata
         content = record.get("Content", {})
         if not content:
@@ -696,12 +696,12 @@ class SemanticGeneratorAgent(DomainAgent):
                 "Format": mime_type,
                 "Language": "en"
             }
-            
+
         # Get or generate tags
         tags = record.get("Tags", [])
         if not tags:
             tags = self._generate_tags(mime_type, content)
-            
+
         # Create the record in the database format
         db_record = {
             "ObjectIdentifier": object_id,
@@ -712,7 +712,7 @@ class SemanticGeneratorAgent(DomainAgent):
             "RecordType": "SemanticData",
             "Tags": tags
         }
-        
+
         return db_record
 
     def generate_truth(self, count: int, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:

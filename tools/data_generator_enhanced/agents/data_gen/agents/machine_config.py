@@ -295,7 +295,7 @@ class MachineConfigGeneratorAgent(DomainAgent):
             List of generated records
         """
         self.logger.info(f"Direct generation of {count} machine configuration records")
-        
+
         # Try to use the model-based MachineConfigGeneratorTool
         tool = self.tools.get_tool("machine_config_generator")
         if tool:
@@ -304,12 +304,12 @@ class MachineConfigGeneratorAgent(DomainAgent):
                 "count": count,
                 "criteria": criteria or {}
             })
-            
+
             configs = result.get("records", [])
-            
+
             # Transform the records into the format expected by the database
             transformed_records = [self._transform_to_db_format(record) for record in configs]
-            
+
             # Store the records if needed
             if self.config.get("store_directly", False):
                 bulk_tool = self.tools.get_tool("database_bulk_insert")
@@ -318,9 +318,9 @@ class MachineConfigGeneratorAgent(DomainAgent):
                         "collection": self.collection_name,
                         "documents": transformed_records
                     })
-            
+
             return transformed_records
-        
+
         # Fall back to legacy generation if tool is not available
         self.logger.warning("Machine config generator tool not available, using legacy generation")
 
@@ -585,7 +585,7 @@ class MachineConfigGeneratorAgent(DomainAgent):
         """
         # Generate a 15-digit IMEI
         return "".join([str(random.randint(0, 9)) for _ in range(15)])
-        
+
     def _transform_to_db_format(self, record: Dict[str, Any]) -> Dict[str, Any]:
         """Transform a generated record to the database format.
 
@@ -600,11 +600,11 @@ class MachineConfigGeneratorAgent(DomainAgent):
             # Record is already in proper format, return as is
             self.logger.debug("Record is already in database format")
             return record
-            
+
         # For other formats, convert to the expected database format
         # We'll need to extract or generate relevant fields
         machine_id = record.get("MachineID", str(uuid.uuid4()))
-        
+
         # Create a basic structure if we need to handle other formats
         # This is mostly a placeholder as we expect the tool to generate properly formatted data
         db_record = {
@@ -616,7 +616,7 @@ class MachineConfigGeneratorAgent(DomainAgent):
             "Hardware": record.get("Hardware", {}),
             "Software": record.get("Software", {})
         }
-        
+
         # Add network information for non-mobile devices if missing
         if "Network" not in db_record and db_record["DeviceType"] in ["desktop", "laptop"]:
             db_record["Network"] = {
@@ -624,19 +624,19 @@ class MachineConfigGeneratorAgent(DomainAgent):
                 "MACAddress": self._generate_mac_address(),
                 "Hostname": db_record["Hostname"]
             }
-            
+
         # Add mobile-specific information if missing
         if "Mobile" not in db_record and db_record["DeviceType"] in ["mobile", "tablet"]:
             mobile_info = {
-                "Carrier": random.choice(["Verizon", "AT&T", "T-Mobile", "Sprint", "Vodafone"]) 
+                "Carrier": random.choice(["Verizon", "AT&T", "T-Mobile", "Sprint", "Vodafone"])
             }
-            
+
             if db_record["DeviceType"] == "mobile":
                 mobile_info["PhoneNumber"] = self._generate_phone_number()
                 mobile_info["IMEI"] = self._generate_imei()
-                
+
             db_record["Mobile"] = mobile_info
-            
+
         return db_record
 
     def generate_truth(self, count: int, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:

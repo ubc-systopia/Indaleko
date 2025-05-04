@@ -297,22 +297,22 @@ class RelationshipGeneratorAgent(DomainAgent):
             List of generated records
         """
         self.logger.info(f"Direct generation of {count} relationship records")
-        
+
         # Try to use the model-based RelationshipGeneratorTool
         tool = self.tools.get_tool("relationship_generator")
         if tool:
             self.logger.info("Using model-based relationship generator tool")
-            
+
             # First, we need to get or generate objects to relate
             objects = self._get_or_generate_objects(count * 2, criteria)
-            
+
             if len(objects) < 2:
                 self.logger.warning("Not enough objects to create relationships")
                 return []
-                
+
             # Split objects into source and target lists
             source_objects, target_objects = objects[:len(objects)//2], objects[len(objects)//2:]
-            
+
             # Generate relationship records using the tool
             result = tool.execute({
                 "count": count,
@@ -320,12 +320,12 @@ class RelationshipGeneratorAgent(DomainAgent):
                 "source_objects": source_objects,
                 "target_objects": target_objects
             })
-            
+
             relationships = result.get("records", [])
-            
+
             # Transform the records into the format expected by the database
             transformed_records = [self._transform_to_db_format(record) for record in relationships]
-            
+
             # Store the records if needed
             if self.config.get("store_directly", False):
                 bulk_tool = self.tools.get_tool("database_bulk_insert")
@@ -335,9 +335,9 @@ class RelationshipGeneratorAgent(DomainAgent):
                         "documents": transformed_records,
                         "edge": True
                     })
-            
+
             return transformed_records
-            
+
         # Fall back to legacy generation if tool is not available
         self.logger.warning("Relationship generator tool not available, using legacy generation")
 
@@ -506,7 +506,7 @@ class RelationshipGeneratorAgent(DomainAgent):
         }
 
         return relationship
-        
+
     def _transform_to_db_format(self, record: Dict[str, Any]) -> Dict[str, Any]:
         """Transform a generated record to the database format.
 
@@ -521,7 +521,7 @@ class RelationshipGeneratorAgent(DomainAgent):
             # Record is already in IndalekoRelationshipDataModel format,
             # but we need to convert it to ArangoDB edge collection format
             self.logger.debug("Record is from model-based generator, converting to edge format")
-            
+
             # Extract the object identifiers
             object_ids = record.get("Objects", [])
             if isinstance(object_ids, tuple) and len(object_ids) >= 2:
@@ -534,19 +534,19 @@ class RelationshipGeneratorAgent(DomainAgent):
                 # If we don't have proper object IDs, generate random ones
                 source_id = f"{IndalekoDBCollections.Indaleko_Object_Collection}/{str(uuid.uuid4())}"
                 target_id = f"{IndalekoDBCollections.Indaleko_Object_Collection}/{str(uuid.uuid4())}"
-                
+
             # Ensure source and target IDs are fully qualified document IDs
             if "/" not in source_id:
                 source_id = f"{IndalekoDBCollections.Indaleko_Object_Collection}/{source_id}"
             if "/" not in target_id:
                 target_id = f"{IndalekoDBCollections.Indaleko_Object_Collection}/{target_id}"
-                
+
             # Create a relationship UUID
             relationship_id = record.get("Record", {}).get("RecordIdentifier", str(uuid.uuid4()))
             if "/" in relationship_id:
                 # Extract just the key portion if it's a full document ID
                 relationship_id = relationship_id.split("/")[-1]
-                
+
             # Create the relationship record in ArangoDB edge format
             db_record = {
                 "_key": relationship_id,
@@ -556,14 +556,14 @@ class RelationshipGeneratorAgent(DomainAgent):
                 "relationships": record.get("Relationships", []),
                 "Record": record.get("Record", {})
             }
-            
+
             return db_record
-            
+
         # Check if it's already in ArangoDB edge format
         if "_key" in record and "_from" in record and "_to" in record:
             # Already in edge format, return as is
             return record
-            
+
         # For other formats, we need more information to convert
         self.logger.warning("Record format not recognized, unable to convert to database format")
         return record

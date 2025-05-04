@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""CLI entrypoint for the Enhanced Data Generator.
+"""CLI entrypoint for the Enhanced Data Generator tool.
 
-This file wires the DataGeneratorHandlerMixin into the shared Indaleko CLI runner framework.
+This module provides a command-line interface for generating synthetic
+metadata records to test Indaleko's search capabilities.
 """
 
 import os
@@ -12,12 +13,12 @@ from pathlib import Path
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
     # Walk up until we find the project entry point
-    while not (current_path / "Indaleko.py").exists() and current_path != current_path.parent:
+    while not (current_path / "Indaleko.py").exists():
         current_path = current_path.parent
     os.environ["INDALEKO_ROOT"] = str(current_path)
     sys.path.insert(0, str(current_path))
 
-from handler_mixin import DataGeneratorHandlerMixin
+from tools.data_generator_enhanced.handler_mixin import DataGeneratorHandlerMixin
 
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
@@ -31,12 +32,12 @@ def run_data_generator(kwargs: dict) -> None:
 
 
 def main() -> None:
-    """Main entrypoint for the Enhanced Data Generator CLI."""
+    """Main entrypoint for the Enhanced Data Generator."""
     # Configure logging (console + file with rotation) before running
     setup_logging()
     cli_data = IndalekoBaseCliDataModel(
         RegistrationServiceName="DataGeneratorService",
-        FileServiceName="data_generator_service",
+        FileServiceName="data_generator_enhanced",
     )
     runner = IndalekoCLIRunner(
         cli_data=cli_data,

@@ -125,15 +125,15 @@ class DomainAgent:
     def initialize(self, config: dict) -> bool:
         """Initialize the agent with configuration."""
         pass
-        
+
     def generate(self, count: int, criteria: dict = None) -> list:
         """Generate metadata records."""
         pass
-    
+
     def generate_truth(self, count: int, criteria: dict) -> list:
         """Generate truth records meeting specific criteria."""
         pass
-    
+
     def insert(self, records: list) -> dict:
         """Insert records into the database."""
         pass
@@ -146,7 +146,7 @@ class Tool:
     def execute(self, parameters: dict) -> dict:
         """Execute the tool with provided parameters."""
         pass
-    
+
     def get_capabilities(self) -> list:
         """Return a list of capabilities this tool provides."""
         pass
@@ -159,7 +159,7 @@ class LLMProvider:
     def generate(self, prompt: str, tools: list = None) -> dict:
         """Generate a response or tool call based on the prompt."""
         pass
-    
+
     def stream_generate(self, prompt: str, tools: list = None) -> Iterator:
         """Stream a response or tool calls based on the prompt."""
         pass

@@ -54,6 +54,7 @@ dependencies = [
     "lazy_import>=0.2.2",
     "ruff>=0.6.9",
     "graphviz>=0.20.1",
+    "openai-agents-mcp>=0.0.8",
 ]
 
 requires-python = ">=3.12"

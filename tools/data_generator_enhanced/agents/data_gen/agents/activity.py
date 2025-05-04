@@ -205,12 +205,12 @@ class ActivityGeneratorAgent(DomainAgent):
                 "count": count,
                 "criteria": criteria or {}
             })
-            
+
             activity_records = result.get("records", [])
-            
+
             # Transform the records into the format expected by the database
             transformed_records = [self._transform_to_db_format(record) for record in activity_records]
-            
+
             # Store the records if needed
             if self.config.get("store_directly", False):
                 bulk_tool = self.tools.get_tool("database_bulk_insert")
@@ -219,12 +219,12 @@ class ActivityGeneratorAgent(DomainAgent):
                         "collection": self.collection_name,
                         "documents": transformed_records
                     })
-            
+
             return transformed_records
-            
+
         # Fall back to legacy generation if tool is not available
         self.logger.warning("Activity generator tool not available, using legacy generation")
-        
+
         # Create sequences of related activities if requested
         if criteria and criteria.get("create_sequences", False):
             return self._generate_activity_sequences(count, criteria)
@@ -1260,7 +1260,7 @@ class ActivityGeneratorAgent(DomainAgent):
             activity["SequenceID"] = sequence_id
 
         return activity
-        
+
     def _transform_to_db_format(self, record: Dict[str, Any]) -> Dict[str, Any]:
         """Transform a generated record to the database format.
 
@@ -1275,16 +1275,16 @@ class ActivityGeneratorAgent(DomainAgent):
             # Record is already in IndalekoActivityDataModel format, return as is
             self.logger.debug("Record is already in database format")
             return record
-            
+
         # For legacy format, convert to the expected database format
         # Generate a handle if not provided
         handle = record.get("Handle", f"activity_{uuid.uuid4().hex[:8]}")
-        
+
         # Get timestamp, ensure ISO format with timezone
         timestamp = record.get("Timestamp")
         if isinstance(timestamp, str) and 'Z' not in timestamp and '+' not in timestamp:
             timestamp = f"{timestamp}Z"
-            
+
         # Create semantic attributes from data fields
         semantic_attributes = []
         if "Data" in record:
@@ -1294,7 +1294,7 @@ class ActivityGeneratorAgent(DomainAgent):
                     "AttributeName": f"ACTIVITY_DATA_{key.upper()}",
                     "AttributeValue": str(value)
                 })
-                
+
         # Add standard attributes
         activity_type = record.get("ActivityType", "unknown")
         semantic_attributes.append({
@@ -1302,7 +1302,7 @@ class ActivityGeneratorAgent(DomainAgent):
             "AttributeName": "ACTIVITY_DATA_TYPE",
             "AttributeValue": activity_type.upper()
         })
-        
+
         user_id = record.get("UserID")
         if user_id:
             semantic_attributes.append({
@@ -1310,7 +1310,7 @@ class ActivityGeneratorAgent(DomainAgent):
                 "AttributeName": "ACTIVITY_DATA_USER",
                 "AttributeValue": user_id
             })
-            
+
         entity_id = record.get("EntityID")
         if entity_id:
             semantic_attributes.append({
@@ -1318,14 +1318,14 @@ class ActivityGeneratorAgent(DomainAgent):
                 "AttributeName": "ACTIVITY_DATA_OBJECT_ID",
                 "AttributeValue": entity_id
             })
-            
+
         # Create source identifier
         source_identifier = {
             "Source": "activity_generator",
             "CreationTime": timestamp,
             "LastUpdateTime": timestamp
         }
-        
+
         # Create the record in database format
         db_record = {
             "Handle": handle,
@@ -1335,17 +1335,18 @@ class ActivityGeneratorAgent(DomainAgent):
                 "RecordIdentifier": str(uuid.uuid4()),
                 "SourceIdentifier": source_identifier
             },
-            "SemanticAttributes": semantic_attributes
+            "SemanticAttributes": semantic_attributes,
+            "ActivityType": activity_type  # Preserve ActivityType for test compatibility
         }
-        
+
         # Add any tags
         if "Tags" in record:
             db_record["Tags"] = record["Tags"]
-            
+
         # Add sequence ID if present
         if "SequenceID" in record:
             db_record["SequenceID"] = record["SequenceID"]
-            
+
         return db_record
 
     def generate_truth(self, count: int, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:

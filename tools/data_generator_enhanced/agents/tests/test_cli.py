@@ -155,7 +155,7 @@ class TestCLI(unittest.TestCase):
 
         # Check that truth dataset generation was called
         self.mock_controller.generate_truth_dataset.assert_called_once()
-        
+
         # Check that the output contains expected text
         self.assertIn("Truth Dataset", output)
         self.assertIn("test query", output)  # Mock controller returns this
@@ -181,7 +181,7 @@ class TestCLI(unittest.TestCase):
 
         # Set up mock controller
         self.mock_run.assert_called_once()
-        
+
         # Check that dataset generation was called
         self.mock_controller.generate_dataset.assert_called_once_with(scenario="minimal")
 
@@ -195,15 +195,15 @@ class TestCLI(unittest.TestCase):
             "relationship_count": 15,
             "machine_config_count": 2
         }
-        
+
         output_path = "test_report.json"
-        
+
         # Call save_report
         DataGeneratorHandlerMixin._save_report(test_report, output_path)
-        
+
         # Check that open was called with correct parameters
         self.mock_open.assert_called_once_with(output_path, 'w')
-        
+
         # Check that json.dump was called on the file handle
         file_handle = self.mock_open.return_value.__enter__.return_value
         file_handle.write.assert_called()
