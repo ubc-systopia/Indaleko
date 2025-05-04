@@ -13,6 +13,8 @@ import sys
 from pathlib import Path
 from typing import Any, Dict
 
+from utils.cli.handlermixin import IndalekoHandlermixin
+
 
 class DataGeneratorHandlerMixin(IndalekoHandlermixin):
     """Handler mixin for the Enhanced Data Generator CLI tool."""
@@ -164,9 +166,9 @@ class DataGeneratorHandlerMixin(IndalekoHandlermixin):
         testing_group.add_argument(
             "--report-format",
             type=str,
-            choices=["json", "csv", "md"],
+            choices=["json", "csv", "md", "html", "pdf"],
             help="Format for test reports",
-            default="json",
+            default="md",
         )
 
         # Advanced options
@@ -335,6 +337,45 @@ class DataGeneratorHandlerMixin(IndalekoHandlermixin):
             # Export truth dataset if requested
             if args.export_truth:
                 controller.export_truth_dataset(args.export_truth)
+
+            # Run tests on the generated data
+            logging.info("Running tests on generated data")
+            try:
+                from testing.test_runner import ModelBasedTestRunner
+
+                # Create report directory
+                report_path = Path(args.report_path)
+                os.makedirs(report_path, exist_ok=True)
+
+                # Initialize test runner
+                test_runner = ModelBasedTestRunner(config, controller.truth_records)
+
+                # Run tests
+                test_results = test_runner.run_tests()
+
+                # Generate report
+                report_file = report_path / f"test_report.{args.report_format}"
+                test_runner.save_results(report_path / "test_results.json")
+                test_runner.generate_report(report_file, args.report_format)
+
+                # Log summary
+                summary = test_results.get("summary", {})
+                if summary:
+                    logging.info("Test Results Summary:")
+                    logging.info(f"  Total Tests: {summary.get('total_tests', 0)}")
+                    logging.info(f"  Passed Tests: {summary.get('passed_tests', 0)}")
+                    logging.info(f"  Failed Tests: {summary.get('failed_tests', 0)}")
+                    logging.info(f"  Average Precision: {summary.get('avg_precision', 0)}%")
+                    logging.info(f"  Average Recall: {summary.get('avg_recall', 0)}%")
+                    logging.info(f"  Average F1 Score: {summary.get('avg_f1_score', 0)}%")
+
+                logging.info(f"Test report saved to {report_file}")
+
+            except ImportError as e:
+                logging.error(f"Error importing test runner: {e}")
+                logging.error("Tests cannot be run")
+            except Exception as e:
+                logging.error(f"Error running tests: {e}", exc_info=True)
 
         # Export statistics if requested
         if args.export_statistics:
