@@ -54,6 +54,30 @@ class CustomJSONEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
+def convert_to_json_serializable(obj):
+    """Convert an object with UUIDs and datetimes to JSON serializable format.
+
+    Args:
+        obj: Object to convert
+
+    Returns:
+        JSON serializable object
+    """
+    if isinstance(obj, dict):
+        result = {}
+        for k, v in obj.items():
+            result[k] = convert_to_json_serializable(v)
+        return result
+    elif isinstance(obj, list):
+        return [convert_to_json_serializable(item) for item in obj]
+    elif isinstance(obj, uuid.UUID):
+        return str(obj)
+    elif isinstance(obj, datetime.datetime):
+        return obj.isoformat()
+    else:
+        return obj
+
+
 class DBIntegrationTest:
     """Test database integration with semantic attributes."""
 
@@ -216,15 +240,29 @@ class DBIntegrationTest:
             # Upload storage objects
             self.logger.info(f"Uploading {len(self.storage_objects)} storage objects...")
             object_batch_size = 100
-            for i in range(0, len(self.storage_objects), object_batch_size):
-                batch = self.storage_objects[i:i+object_batch_size]
+
+            # Process objects to make sure they're JSON serializable
+            serializable_objects = []
+            for obj in self.storage_objects:
+                serializable_objects.append(convert_to_json_serializable(obj))
+
+            # Upload in batches
+            for i in range(0, len(serializable_objects), object_batch_size):
+                batch = serializable_objects[i:i+object_batch_size]
                 object_collection.import_bulk(batch)
 
             # Upload activity records
             self.logger.info(f"Uploading {len(self.activities)} activity records...")
             activity_batch_size = 100
-            for i in range(0, len(self.activities), activity_batch_size):
-                batch = self.activities[i:i+activity_batch_size]
+
+            # Process activities to make sure they're JSON serializable
+            serializable_activities = []
+            for activity in self.activities:
+                serializable_activities.append(convert_to_json_serializable(activity))
+
+            # Upload in batches
+            for i in range(0, len(serializable_activities), activity_batch_size):
+                batch = serializable_activities[i:i+activity_batch_size]
                 activity_collection.import_bulk(batch)
 
             upload_time = time.time() - start_time
@@ -494,8 +532,11 @@ class DBIntegrationTest:
             # Create directory if needed
             os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
 
+            # Convert results to JSON serializable format
+            serializable_results = convert_to_json_serializable(self.results)
+
             with open(output_path, 'w') as f:
-                json.dump(self.results, f, indent=2, cls=CustomJSONEncoder)
+                json.dump(serializable_results, f, indent=2)
 
             self.logger.info(f"Results saved to {output_path}")
             return True
