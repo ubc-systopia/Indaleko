@@ -26,7 +26,7 @@ import sys
 
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List
 
 from icecream import ic
 
@@ -1842,6 +1842,67 @@ def add_arguments(parser) -> None:
     parser.set_defaults(command="interactive")
 
 
+def execute_query(query_text: str, capture_aql: bool = False) -> List[Dict[str, Any]]:
+    """
+    Execute a single query and return the results.
+
+    This function is designed to be imported and used by other modules.
+
+    Args:
+        query_text: The natural language query text to execute
+        capture_aql: If True, include the AQL in the results
+
+    Returns:
+        List of result objects from the query
+    """
+    # Initialize components
+    db_config = IndalekoDBConfig()
+    use_enhanced_nl = True  # Default to enhanced NL parsing
+
+    # Choose NL parser
+    if use_enhanced_nl:
+        nl_parser = EnhancedNLParser()
+    else:
+        nl_parser = NLParser()
+
+    # Create translator
+    if use_enhanced_nl:
+        translator = EnhancedAQLTranslator()
+    else:
+        translator = AQLTranslator()
+
+    # Create executor
+    executor = AQLExecutor()
+
+    # Parse query
+    parser_results = nl_parser.parse_query(query_text)
+
+    # Create translator input
+    translator_input = TranslatorInput(
+        query=parser_results.structured_query,
+        collection_metadata={},  # Will be populated by translator
+    )
+
+    # Translate to AQL
+    translation_result = translator.translate(translator_input)
+
+    # Execute query
+    results = executor.execute(translation_result.query_text)
+
+    # If capturing AQL, attach it to the results
+    if capture_aql and results:
+        for result in results:
+            if not isinstance(result, dict):
+                continue
+
+            if "_debug" not in result:
+                result["_debug"] = {}
+
+            result["_debug"]["aql"] = translation_result.query_text
+
+    return results
+
+
 def main() -> None:
     """A CLI based query tool for Indaleko."""
     ic("Starting Indaleko Query CLI")
@@ -1930,6 +1991,7 @@ def main() -> None:
     # Create the CLI instance with better error handling
     cli = IndalekoQueryCLI()
 
+    try:
         # Run the CLI with better error handling
         cli.run()
         print("Thank you for using Indaleko Query CLI")

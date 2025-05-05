@@ -1,77 +1,103 @@
 # CLAUDE.md - Indaleko Development Guidelines
 
-## Current Work: Enhanced Data Generator
+## Current Work: Collection Ablation Framework
 
-I've implemented an enhanced data generator in `tools/data_generator_enhanced/` to create synthetic metadata records for testing Indaleko's search capabilities with direct database integration.
+We've completed implementing and testing a collection ablation framework for measuring how different metadata types affect query precision and recall. The framework provides controlled testing of how the absence of specific collections impacts search effectiveness without requiring architectural changes.
 
-### Enhanced Data Generator Overview
+### Collection Ablation Framework
 
-The enhanced data generator provides robust capabilities for testing:
+The ablation mechanism allows us to:
 
-- Generates realistic file metadata records (storage, semantic, activity)
-- Creates "truth sets" with known characteristics for query evaluation
-- Uses direct database integration with proper schema validation
-- Supports statistical distributions for realistic data patterns
-- Implements the CLI template pattern for consistent command-line handling
+1. **Hide specific collections** from queries to measure their impact
+2. **Quantify the contribution** of each metadata type to search effectiveness
+3. **Identify critical collections** for different query types
+4. **Generate metrics** showing relative importance of metadata sources
 
-### Implementation Status
+The framework has been successfully tested with both mock data and real database integration:
 
-The enhanced data generator now has these working components:
-
-1. **Storage Metadata Generator**:
-   - Creates realistic file paths, names, sizes, and timestamps
-   - Generates directory hierarchies and file extensions
-   - Supports truth record generation with specific criteria
-
-2. **Semantic Metadata Generator**:
-   - Generates MIME types, content types, and checksums
-   - Creates keywords, topics, and content summaries
-   - Links directly to storage records in the database
-
-3. **Activity Metadata Generator**:
-   - Generates location data with city and geographic coordinates
-   - Creates music activity records with artists, tracks, and genres
-   - Produces temperature/environmental data for context
-   - Links activity data to appropriate storage objects
-
-4. **Relationship Metadata Generator**:
-   - Creates connections between files, semantic data, and activity context
-   - Supports multiple relationship types (CONTAINS, DERIVED_FROM, etc.)
-   - Establishes proper graph edges in the database
-   - Generates truth relationships for testing complex queries
-
-5. **Machine Configuration Generator**:
-   - Creates realistic device profiles (desktop, laptop, mobile)
-   - Supports multiple operating systems (Windows, macOS, Linux, iOS, Android)
-   - Generates appropriate hardware specifications for each device type
-   - Enables cross-device activity testing scenarios
-
-3. **Activity Metadata Generator**:
-   - Implemented location activity (geographic coordinates, city data)
-   - Added music activity context (artists, tracks, genres)
-   - Created temperature/environmental context
-   - Ensures proper linking between activity and storage records
-
-### Usage
-
-```bash
-# Run quick test data generation
-python tools/data_generator_enhanced/generate_test_data.py
-
-# Run with CLI template
-python -m tools.data_generator_enhanced --config default
+```
+python -m tools.data_generator_enhanced.testing.test_db_integration --dataset-size 100
+python -m tools.data_generator_enhanced.testing.test_ablation --generate-data
 ```
 
-### Code Structure
+### Implementation Components:
 
-- `generators/`: Contains metadata generators for each type
-- `utils/`: Statistical distributions and dataset utilities
-- `testing/`: Query analysis and metrics tools
-- `config/`: JSON configuration files
+- **`IndalekoDBCollectionsMetadata`**: Enhanced with ablation tracking and filtering
+- **`AblationTester`**: Test harness for measuring ablation impact on query results
+- **`AQLAnalyzer`**: Component that examines how AQL queries change when collections are ablated
+- **`test_ablation.py`**: Automated tests for the ablation mechanism
+- **Database Integration Scripts**: `run_db_integration_test.sh/bat` for running comprehensive tests
 
-### Current Focus
+### Critical Database Access Patterns
 
-Working on implementing relationship generators to create connections between entities and improving the test query framework to validate search accuracy.
+- **SECURITY ISSUE**: Always use `db.aql.execute()` instead of `db.execute()` for non-admin database access
+- **Correct Pattern**:
+  ```python
+  db_config = IndalekoDBConfig()
+  db = db_config.get_arangodb()
+  cursor = db.aql.execute(query, bind_vars=params)
+  ```
+- **Dictionary Access**: Always use dictionary syntax for database objects: `obj["field"]` instead of `obj.field`
+- **Registration Service Access**: Use `aql.execute()` in custom registration service implementations
+
+### Database Integration Test Results
+
+Our comprehensive database integration tests verified that:
+
+1. **Generated Data Successfully Uploads**: All 10 generator types successfully upload to ArangoDB
+2. **Schema Compatibility**: Generated data conforms to ArangoDB schema requirements
+3. **Query Effectiveness**: Queries for generated data return correct results
+4. **Collection Consistency**: Database operations maintain collection integrity
+
+The integration test includes three levels of query complexity:
+1. **Basic Attribute Query**: Single attribute, single collection
+2. **Cross-Collection Query**: Single attribute, multiple collections
+3. **Complex Query**: Multiple attributes with conditional filtering
+
+To run the database integration tests:
+```bash
+./run_db_integration_test.sh --dataset-size 100
+# Or on Windows:
+run_db_integration_test.bat --dataset-size 100
+```
+
+### Query-Driven Framework Future Directions
+
+We're extending the ablation framework into a query-driven generation system that:
+
+1. **Analyzes Natural Language Queries**:
+   - Extracts entities, actions, relationships, and context from NL queries
+   - Determines which data generators are needed for each query
+   - Identifies required data patterns and distributions for realistic testing
+
+2. **Calculates Metadata Impact Scores**:
+   - Measures precision/recall changes when collections are ablated
+   - Generates impact scores for each metadata type
+   - Identifies which combinations of metadata types provide optimal results
+   - Creates visualizations of metadata contribution to search quality
+
+### Implementation Principles
+
+1. **Real Database Integration**:
+   - Use actual database connections, not mocks
+   - Test against real ArangoDB schema constraints
+   - Handle database errors and constraints gracefully
+   - Always use `aql.execute()` instead of `execute()` for queries
+
+2. **Rich Semantic Attributes**:
+   - Generate complete set of attributes for each entity type
+   - Use proper UUIDs from semantic attribute registries
+   - Ensure all attributes are queryable
+
+3. **Consistent Data Access**:
+   - Use dictionary access (obj["field"]) over attribute access (obj.field)
+   - Never assume database objects expose attributes directly
+   - Properly handle None/null values in query results
+
+4. **Cross-Entity Relationships**:
+   - Create proper links between related entities
+   - Use consistent identifiers across entity types
+   - Support complex relationship queries
 
 ## Architectural Principles
 
@@ -261,10 +287,42 @@ class MyArangoModel(IndalekoBaseModel):
 - Run GUI: `run_gui.bat` (or `./run_gui.sh`)
 
 ### Data Generator
-- Run synthetic data generator: `python -m data_generator.main_pipeline`
-- Check results in: `data_generator/results/`
+- Run all data generator tests: `./tools/data_generator_enhanced/run_all_tests.sh`
+- Run individual generator tests: `./tools/data_generator_enhanced/run_*_tests.sh`
+- Run specific generator: `python -m tools.data_generator_enhanced.generate_data`
+- Run database integration tests: `python -m tools.data_generator_enhanced.testing.test_*_db_integration`
+- Check test status: `tools/data_generator_enhanced/TEST_STATUS.md`
+- Check implementation status: `tools/data_generator_enhanced/IMPLEMENTATION_STATUS.md`
 
 ## Best Practices
+
+### Database Integration
+```python
+# Always test with real database connections
+def setup_db_connection(self):
+    try:
+        self.db_config = IndalekoDBConfig()
+        self.db = self.db_config.get_arangodb()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to connect to database: {e}")
+        return False
+
+# Use dictionary-style access for ArangoDB compatibility
+# CORRECT
+checksum_value = document["MD5"]
+# INCORRECT - will fail with dictionaries
+checksum_value = document.MD5
+
+# Create proper semantic attributes as dictionaries
+attribute = {
+    "Identifier": {
+        "Identifier": SEMANTIC_ATTRIBUTE_ID,
+        "Label": "Attribute Label"
+    },
+    "Value": attribute_value
+}
+```
 
 ### Error Handling
 ```python

@@ -77,6 +77,7 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
         self.collections = self.db_config.get_arangodb().collections()
         self.collections_metadata = {}
         self.collections_additional_data = {}
+        self._ablated_collections = set()  # Collections to exclude from queries
         self._initialized = True
         for collection in self.collections:
             if "name" not in collection:
@@ -151,6 +152,52 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
             entry["Schema"] = {}
         return IndalekoCollectionMetadataDataModel.deserialize(entry)
 
+    def ablate_collection(self, collection_name: str) -> str:
+        """Add a collection to the ablation list.
+
+        Args:
+            collection_name: The name of the collection to ablate
+
+        Returns:
+            The collection name that was ablated
+        """
+        self._ablated_collections.add(collection_name)
+        return collection_name
+
+    def restore_collection(self, collection_name: str) -> bool:
+        """Remove a collection from the ablation list.
+
+        Args:
+            collection_name: The name of the collection to restore
+
+        Returns:
+            True if the collection was in the ablation list and was removed,
+            False otherwise
+        """
+        if collection_name in self._ablated_collections:
+            self._ablated_collections.remove(collection_name)
+            return True
+        return False
+
+    def is_ablated(self, collection_name: str) -> bool:
+        """Check if a collection is currently ablated.
+
+        Args:
+            collection_name: The name of the collection to check
+
+        Returns:
+            True if the collection is ablated, False otherwise
+        """
+        return collection_name in self._ablated_collections
+
+    def get_ablated_collections(self) -> set[str]:
+        """Get the set of ablated collections.
+
+        Returns:
+            The set of ablated collections
+        """
+        return self._ablated_collections.copy()
+
     def get_all_collections_metadata(
         self,
     ) -> dict[str, CollectionInfo]:
@@ -161,6 +208,10 @@ class IndalekoDBCollectionsMetadata(IndalekoSingleton):
         """
         collection_data = {}
         for name, data in self.collections_metadata.items():
+            # Skip ablated collections
+            if name in self._ablated_collections:
+                continue
+
             collection = self.db_config.get_arangodb().collection(name)
             if collection is None:
                 ic(f"Failed to get collection {name}")
