@@ -16,6 +16,7 @@ import logging
 import argparse
 import datetime
 import time
+import random
 from typing import Dict, List, Any, Tuple
 
 # Setup path for imports
@@ -151,9 +152,14 @@ class DBIntegrationTest:
             })
             self.storage_objects = storage_result["records"]
 
+            # No need to add semantic attributes anymore; FileMetadataGeneratorTool now adds them
+            # self._add_semantic_attributes_to_objects()
+            # Just log the semantic attribute count for debugging
+            self._analyze_attribute_presence()
+
             # Generate activities for a subset of storage objects
             activity_objects = self.storage_objects[:min(len(self.storage_objects),
-                                                       int(dataset_size * 0.8))]
+                                                   int(dataset_size * 0.8))]
 
             activity_result = self.activity_generator.execute({
                 "count": dataset_size // 2,
@@ -163,11 +169,20 @@ class DBIntegrationTest:
             })
             self.activities = activity_result["records"]
 
+            # Add semantic attributes to activities as well
+            self._add_semantic_attributes_to_activities()
+
             generation_time = time.time() - start_time
             self.results["metrics"]["generation_time"] = generation_time
 
             self.logger.info(f"Generated {len(self.storage_objects)} storage objects and "
                            f"{len(self.activities)} activity records in {generation_time:.2f} seconds")
+            
+            # Log semantic attribute count for debugging
+            total_storage_attrs = sum(len(obj.get("SemanticAttributes", [])) for obj in self.storage_objects)
+            total_activity_attrs = sum(len(act.get("SemanticAttributes", [])) for act in self.activities)
+            self.logger.info(f"Added {total_storage_attrs} semantic attributes to storage objects")
+            self.logger.info(f"Added {total_activity_attrs} semantic attributes to activities")
 
             # Analyze attribute usage
             self._analyze_attribute_usage()
@@ -176,6 +191,193 @@ class DBIntegrationTest:
         except Exception as e:
             self.logger.error(f"Failed to generate test data: {e}")
             return False
+            
+    def _analyze_attribute_presence(self) -> None:
+        """Analyze the presence of semantic attributes in the generated data."""
+        # Count objects with semantic attributes
+        objects_with_attrs = 0
+        total_storage_attrs = 0
+        
+        for obj in self.storage_objects:
+            if "SemanticAttributes" in obj and obj["SemanticAttributes"]:
+                objects_with_attrs += 1
+                total_storage_attrs += len(obj["SemanticAttributes"])
+                
+        self.logger.info(f"{objects_with_attrs}/{len(self.storage_objects)} objects have semantic attributes")
+        if objects_with_attrs > 0:
+            self.logger.info(f"Average {total_storage_attrs / objects_with_attrs:.1f} attributes per object")
+            
+            # Print first 3 attributes of first object with attributes for debugging
+            for obj in self.storage_objects:
+                if "SemanticAttributes" in obj and obj["SemanticAttributes"]:
+                    sample = obj["SemanticAttributes"][:3]
+                    self.logger.info(f"Sample attributes: {sample}")
+                    break
+            
+    def _add_semantic_attributes_to_objects(self) -> None:
+        """Add semantic attributes to storage objects.
+        
+        This fixes the issue where FileMetadataGeneratorTool doesn't add semantic attributes.
+        """
+        from tools.data_generator_enhanced.agents.data_gen.core.semantic_attributes import SemanticAttributeRegistry
+        
+        self.logger.info("Adding semantic attributes to storage objects...")
+        
+        # Add semantic attributes to each storage object
+        for obj in self.storage_objects:
+            # Make sure SemanticAttributes exists and is a list
+            if "SemanticAttributes" not in obj or not isinstance(obj["SemanticAttributes"], list):
+                obj["SemanticAttributes"] = []
+                
+            # Add file name attribute
+            if "Label" in obj:
+                file_name_attr = {
+                    "Identifier": SemanticAttributeRegistry.get_attribute_id(
+                        SemanticAttributeRegistry.DOMAIN_STORAGE, "FILE_NAME"),
+                    "Value": obj["Label"]
+                }
+                obj["SemanticAttributes"].append(file_name_attr)
+                
+            # Add file path attribute
+            if "LocalPath" in obj:
+                file_path_attr = {
+                    "Identifier": SemanticAttributeRegistry.get_attribute_id(
+                        SemanticAttributeRegistry.DOMAIN_STORAGE, "FILE_PATH"),
+                    "Value": obj["LocalPath"]
+                }
+                obj["SemanticAttributes"].append(file_path_attr)
+                
+            # Add file size attribute
+            if "Size" in obj:
+                file_size_attr = {
+                    "Identifier": SemanticAttributeRegistry.get_attribute_id(
+                        SemanticAttributeRegistry.DOMAIN_STORAGE, "FILE_SIZE"),
+                    "Value": obj["Size"]
+                }
+                obj["SemanticAttributes"].append(file_size_attr)
+                
+            # Add file extension attribute if available
+            if "Label" in obj and "." in obj["Label"]:
+                extension = obj["Label"].split(".")[-1]
+                file_ext_attr = {
+                    "Identifier": SemanticAttributeRegistry.get_attribute_id(
+                        SemanticAttributeRegistry.DOMAIN_STORAGE, "FILE_EXTENSION"),
+                    "Value": extension
+                }
+                obj["SemanticAttributes"].append(file_ext_attr)
+                
+            # Add MIME type as a semantic attribute
+            mime_types = {
+                "txt": "text/plain",
+                "pdf": "application/pdf",
+                "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                "jpg": "image/jpeg",
+                "png": "image/png",
+                "mp4": "video/mp4",
+                "mp3": "audio/mpeg",
+                "zip": "application/zip",
+                "html": "text/html",
+                "css": "text/css",
+                "js": "application/javascript",
+                "json": "application/json",
+                "xml": "application/xml",
+                "md": "text/markdown",
+                "csv": "text/csv"
+            }
+            
+            if "Label" in obj and "." in obj["Label"]:
+                extension = obj["Label"].split(".")[-1].lower()
+                if extension in mime_types:
+                    mime_attr = {
+                        "Identifier": SemanticAttributeRegistry.get_attribute_id(
+                            SemanticAttributeRegistry.DOMAIN_SEMANTIC, "MIME_TYPE"),
+                        "Value": mime_types[extension]
+                    }
+                    obj["SemanticAttributes"].append(mime_attr)
+            
+    def _add_semantic_attributes_to_activities(self) -> None:
+        """Add semantic attributes to activity records."""
+        from tools.data_generator_enhanced.agents.data_gen.core.semantic_attributes import SemanticAttributeRegistry
+        
+        self.logger.info("Adding semantic attributes to activity records...")
+        
+        # Common applications for different activities
+        applications = ["Microsoft Word", "Adobe Reader", "Microsoft Excel", 
+                       "Google Chrome", "Firefox", "Visual Studio Code", 
+                       "Outlook", "Spotify", "VLC Media Player"]
+        
+        # Common platforms
+        platforms = ["Windows", "macOS", "Linux", "iOS", "Android"]
+        
+        # Ensure the first activity has the specific attributes we'll look for in the complex query
+        if len(self.activities) > 0:
+            first_activity = self.activities[0]
+            
+            # Make sure SemanticAttributes exists and is a list
+            if "SemanticAttributes" not in first_activity or not isinstance(first_activity["SemanticAttributes"], list):
+                first_activity["SemanticAttributes"] = []
+                
+            # Add specific application attribute for test query
+            app_attr = {
+                "Identifier": SemanticAttributeRegistry.get_attribute_id(
+                    SemanticAttributeRegistry.DOMAIN_ACTIVITY, "DATA_APPLICATION"),
+                "Value": "Microsoft Word"
+            }
+            first_activity["SemanticAttributes"].append(app_attr)
+            
+            # Add specific platform attribute for test query
+            platform_attr = {
+                "Identifier": SemanticAttributeRegistry.get_attribute_id(
+                    SemanticAttributeRegistry.DOMAIN_ACTIVITY, "DATA_PLATFORM"),
+                "Value": "Windows"
+            }
+            first_activity["SemanticAttributes"].append(platform_attr)
+            
+            # Add activity type attribute
+            type_attr = {
+                "Identifier": SemanticAttributeRegistry.get_attribute_id(
+                    SemanticAttributeRegistry.DOMAIN_ACTIVITY, "ACTIVITY_TYPE"),
+                "Value": "CREATE"
+            }
+            first_activity["SemanticAttributes"].append(type_attr)
+            
+            # Add remaining activities with random attributes
+            for i, activity in enumerate(self.activities):
+                if i == 0:  # Skip the first one since we already processed it
+                    continue
+                    
+                # Make sure SemanticAttributes exists and is a list
+                if "SemanticAttributes" not in activity or not isinstance(activity["SemanticAttributes"], list):
+                    activity["SemanticAttributes"] = []
+                    
+                # Add application attribute
+                app_attr = {
+                    "Identifier": SemanticAttributeRegistry.get_attribute_id(
+                        SemanticAttributeRegistry.DOMAIN_ACTIVITY, "DATA_APPLICATION"),
+                    "Value": random.choice(applications)
+                }
+                activity["SemanticAttributes"].append(app_attr)
+                
+                # Add platform attribute
+                platform_attr = {
+                    "Identifier": SemanticAttributeRegistry.get_attribute_id(
+                        SemanticAttributeRegistry.DOMAIN_ACTIVITY, "DATA_PLATFORM"),
+                    "Value": random.choice(platforms)
+                }
+                activity["SemanticAttributes"].append(platform_attr)
+                
+                # Add activity type attribute
+                activity_types = ["CREATE", "READ", "MODIFY", "DELETE", "SHARE"]
+                type_attr = {
+                    "Identifier": SemanticAttributeRegistry.get_attribute_id(
+                        SemanticAttributeRegistry.DOMAIN_ACTIVITY, "ACTIVITY_TYPE"),
+                    "Value": random.choice(activity_types)
+                }
+                activity["SemanticAttributes"].append(type_attr)
+        else:
+            self.logger.warning("No activities to add semantic attributes to")
 
     def _analyze_attribute_usage(self) -> None:
         """Analyze semantic attribute usage across the dataset."""
@@ -389,8 +591,8 @@ class DBIntegrationTest:
                     "success": len(results) >= 1
                 })
 
-            # 3. Skip complex query for now - focus on basic functionality
-            self.logger.info("Skipping complex query (focusing on basic semantic attribute tests)...")
+            # 3. Run complex query with fixed values that we set in _add_semantic_attributes_to_activities
+            self.logger.info("Running complex query with multiple attributes...")
 
             # Find attributes for platform and application
             platform_attr_id = SemanticAttributeRegistry.get_attribute_id(
@@ -400,45 +602,37 @@ class DBIntegrationTest:
                 SemanticAttributeRegistry.DOMAIN_ACTIVITY, "DATA_APPLICATION"
             )
 
-            # Find a test activity with both
-            test_activity = None
-            test_platform = None
-            test_application = None
-
-            for activity in self.activities:
-                if "SemanticAttributes" in activity:
-                    has_platform = False
-                    has_application = False
-
-                    for attr in activity["SemanticAttributes"]:
+            # We know the first activity has been set with specific values in _add_semantic_attributes_to_activities
+            if len(self.activities) > 0:
+                # Fixed values from _add_semantic_attributes_to_activities
+                test_platform = "Windows"
+                test_application = "Microsoft Word"
+                
+                self.logger.info(f"Testing with platform: {test_platform}, application: {test_application}")
+                
+                # Verify they're set correctly (for debugging)
+                if len(self.activities) > 0 and "SemanticAttributes" in self.activities[0]:
+                    for attr in self.activities[0]["SemanticAttributes"]:
                         if attr.get("Identifier") == platform_attr_id:
-                            test_platform = attr.get("Value")
-                            has_platform = True
+                            self.logger.info(f"Platform value in activity: {attr.get('Value')}")
                         elif attr.get("Identifier") == application_attr_id:
-                            test_application = attr.get("Value")
-                            has_application = True
-
-                    if has_platform and has_application:
-                        test_activity = activity
-                        break
-
-            if not test_activity or not test_platform or not test_application:
-                self.logger.warning("Couldn't find test activity with platform and application")
-            else:
+                            self.logger.info(f"Application value in activity: {attr.get('Value')}")
+                
                 # Execute AQL query with multiple criteria
+                # Simplified query that doesn't depend on array access
                 aql_query = f"""
                 FOR activity IN {IndalekoDBCollections.Indaleko_MusicActivityData_Collection}
-                    LET platform_attr = (
+                    FILTER (
                         FOR attr IN activity.SemanticAttributes
-                            FILTER attr.Identifier == @platform_attr_id
-                            RETURN attr.Value
-                    )
-                    LET app_attr = (
+                            FILTER attr.Identifier == @platform_attr_id AND attr.Value == @platform
+                            RETURN 1
+                    )[0] == 1
+                    AND
+                    (
                         FOR attr IN activity.SemanticAttributes
-                            FILTER attr.Identifier == @app_attr_id
-                            RETURN attr.Value
-                    )
-                    FILTER platform_attr[0] == @platform AND app_attr[0] == @application
+                            FILTER attr.Identifier == @app_attr_id AND attr.Value == @application
+                            RETURN 1
+                    )[0] == 1
                     RETURN activity
                 """
 
@@ -453,6 +647,40 @@ class DBIntegrationTest:
                 )
                 results = list(cursor)
 
+                # Show actual results for debugging
+                self.logger.info(f"Found {len(results)} matching activities")
+                if len(results) == 0:
+                    # Fallback query to check if the attributes exist at all
+                    self.logger.info("No matches found, running diagnostic query...")
+                    diag_query = f"""
+                    FOR activity IN {IndalekoDBCollections.Indaleko_MusicActivityData_Collection}
+                        LET platform_attrs = (
+                            FOR attr IN activity.SemanticAttributes
+                                FILTER attr.Identifier == @platform_attr_id
+                                RETURN attr.Value
+                        )
+                        LET app_attrs = (
+                            FOR attr IN activity.SemanticAttributes
+                                FILTER attr.Identifier == @app_attr_id
+                                RETURN attr.Value
+                        )
+                        RETURN {{ 
+                            _key: activity._key,
+                            platforms: platform_attrs,
+                            applications: app_attrs
+                        }}
+                    """
+                    
+                    diag_cursor = self.db.aql.execute(
+                        diag_query,
+                        bind_vars={
+                            "platform_attr_id": platform_attr_id,
+                            "app_attr_id": application_attr_id
+                        }
+                    )
+                    diag_results = list(diag_cursor)
+                    self.logger.info(f"Diagnostic results: {diag_results}")
+
                 query_results.append({
                     "query_id": 3,
                     "description": "Complex query with multiple attributes",
@@ -464,6 +692,8 @@ class DBIntegrationTest:
                     "actual_matches": len(results),
                     "success": len(results) >= 1
                 })
+            else:
+                self.logger.warning("No activities available for complex query test")
 
             query_time = time.time() - start_time
             self.results["metrics"]["query_time"] = query_time
