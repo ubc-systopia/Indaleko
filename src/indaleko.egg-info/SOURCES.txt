@@ -14,3 +14,5 @@ src/indaleko.egg-info/SOURCES.txt
 src/indaleko.egg-info/dependency_links.txt
 src/indaleko.egg-info/requires.txt
 src/indaleko.egg-info/top_level.txt
+tests/test_anthropic_connector_refactored.py
+tests/test_openai_connector_refactored.py

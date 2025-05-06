@@ -52,6 +52,7 @@ Requires-Dist: lazy_import>=0.2.2
 Requires-Dist: ruff>=0.6.9
 Requires-Dist: graphviz>=0.20.1
 Requires-Dist: pyreadline3>=3.5.4
+Requires-Dist: openai-agents-mcp>=0.0.8
 Provides-Extra: test
 Requires-Dist: pytest>=6.0; extra == "test"
 Provides-Extra: dev
