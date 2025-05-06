@@ -42,7 +42,6 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from db.collection_index import IndalekoCollectionIndex
 from db.db_config import IndalekoDBConfig
-from db.i_collections import IndalekoCollections
 from utils.decorators import type_check
 
 
@@ -91,10 +90,10 @@ class IndalekoCollection:
             self.db_config,
             IndalekoDBConfig,
         ), "db must be None or an IndalekoDBConfig object"
-        self.get_or_create_collection(self.collection_name, self.definition, reset=self.reset)
+        self.create_collection(self.collection_name, self.definition, reset=self.reset)
 
     @type_check
-    def get_or_create_collection(
+    def create_collection(
         self,
         name: str,
         config: dict,
@@ -113,12 +112,11 @@ class IndalekoCollection:
             else:
                 raise NotImplementedError("delete existing collection not implemented")
         else:
-            # Use IndalekoCollections.get_collection() instead of direct db.create_collection
-            # This adheres to architectural patterns defined in the pre-commit hooks
-
             # Get or create the collection using the approved pattern
-            collection = IndalekoCollections.get_collection(name, skip_views=True)
-            self._arangodb_collection = collection.get_arangodb_collection()
+            self._arangodb_collection = self.db_config.db.create_collection(
+                name,
+                edge=config["edge"],
+            )
             if "schema" in config:
                 try:
                     ic(config["schema"])

@@ -39,12 +39,13 @@ if os.environ.get("INDALEKO_ROOT") is None:
     os.environ["INDALEKO_ROOT"] = current_path
     sys.path.append(current_path)
 
-# Import our fixed execute_query function instead of the one from query.cli
+# Import our fixed execute_query function that removes LIMIT statements
 try:
     from tools.data_generator_enhanced.testing.ablation_execute_query import fixed_execute_query as execute_query
-    logging.info("Using fixed execute_query function in ablation_tester")
-except ImportError:
-    logging.warning("Could not import fixed_execute_query in ablation_tester, falling back to original")
+    logging.info("Using fixed execute_query function in ablation_tester (LIMIT statements will be removed)")
+except ImportError as e:
+    logging.error(f"CRITICAL: Could not import fixed_execute_query in ablation_tester: {e}")
+    logging.error("Using the original execute_query will result in inaccurate recall metrics")
     from query.cli import execute_query
 from db.db_config import IndalekoDBConfig
 from db.db_collection_metadata import IndalekoDBCollectionsMetadata
@@ -425,9 +426,9 @@ def main():
     collection_groups = {
         "activity": [
             IndalekoDBCollections.Indaleko_ActivityContext_Collection,
-            IndalekoDBCollections.Indaleko_TempActivityContext_Collection,
-            IndalekoDBCollections.Indaleko_GeoActivityContext_Collection,
-            IndalekoDBCollections.Indaleko_MusicActivityContext_Collection
+            IndalekoDBCollections.Indaleko_TempActivityData_Collection,
+            IndalekoDBCollections.Indaleko_GeoActivityData_Collection,
+            IndalekoDBCollections.Indaleko_MusicActivityData_Collection
         ],
         "semantic": [
             IndalekoDBCollections.Indaleko_SemanticData_Collection

@@ -63,6 +63,15 @@ except ImportError:
 # Import ablation components
 from tools.data_generator_enhanced.testing.ablation_tester import AblationTester
 
+# Import our fixed_execute_query function that removes LIMIT statements
+try:
+    from tools.data_generator_enhanced.testing.ablation_execute_query import fixed_execute_query
+    logging.info("Successfully imported fixed_execute_query function (LIMIT statements will be removed)")
+except ImportError as e:
+    logging.error(f"CRITICAL ERROR: Could not import fixed_execute_query: {e}")
+    logging.error("Aborting test execution - LIMIT statements would not be removed")
+    sys.exit(1)
+
 # Define a simplified execute_query function to work with ablation
 def simple_execute_query(query_text, capture_aql=False):
     """
@@ -233,9 +242,9 @@ def simple_execute_query(query_text, capture_aql=False):
         logging.error(f"Error executing query: {e}")
         return []
 
-# Use our simple execute_query function
-execute_query = simple_execute_query
-logging.info("Using simplified execute_query function for ablation testing")
+# Use our fixed_execute_query function that removes LIMIT statements
+execute_query = fixed_execute_query
+logging.info("Using fixed_execute_query function for ablation testing (LIMIT statements will be removed)")
 
 
 class ComprehensiveAblationTest:

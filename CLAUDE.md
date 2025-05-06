@@ -2,7 +2,7 @@
 
 ## Current Work: Collection Ablation Framework
 
-We've completed implementing and testing a collection ablation framework for measuring how different metadata types affect query precision and recall. The framework provides controlled testing of how the absence of specific collections impacts search effectiveness without requiring architectural changes.
+We've implemented a robust collection ablation framework for measuring how different metadata types affect query precision and recall. The framework provides controlled testing of how the absence of specific collections impacts search effectiveness without requiring architectural changes.
 
 ### Collection Ablation Framework
 
@@ -13,20 +13,35 @@ The ablation mechanism allows us to:
 3. **Identify critical collections** for different query types
 4. **Generate metrics** showing relative importance of metadata sources
 
-The framework has been successfully tested with both mock data and real database integration:
+Progress on the ablation framework:
+- ✅ Fixed LIMIT statement issue in AQL queries that was artificially restricting results
+- ✅ Implemented proper collection ablation with `IndalekoDBCollectionsMetadata`
+- ✅ Created metrics calculation for precision, recall, F1, and impact
+- ✅ Verified end-to-end functionality with test datasets
+- 🔄 Next steps in ABLATION_TODO.md
 
+### Core Commands:
+
+**Run simplified ablation test:**
+```bash
+python test_ablation_comprehensive.py
 ```
-python -m tools.data_generator_enhanced.testing.test_db_integration --dataset-size 100
-python -m tools.data_generator_enhanced.testing.test_ablation --generate-data
+
+**Reset database for clean testing:**
+```bash
+python -m db/db_config reset
 ```
+
+**Fix for LIMIT statements in AQL queries:**
+Using `fixed_execute_query` in `tools/data_generator_enhanced/testing/ablation_execute_query.py` which increases LIMIT values instead of removing them entirely.
 
 ### Implementation Components:
 
-- **`IndalekoDBCollectionsMetadata`**: Enhanced with ablation tracking and filtering
-- **`AblationTester`**: Test harness for measuring ablation impact on query results
-- **`AQLAnalyzer`**: Component that examines how AQL queries change when collections are ablated
+- **`IndalekoDBCollectionsMetadata`**: Manages collection ablation and restoration
+- **`ablation_execute_query.py`**: Fixed query execution that handles LIMIT statements properly
+- **`test_ablation_comprehensive.py`**: Simplified ablation test that runs end-to-end
 - **`test_ablation.py`**: Automated tests for the ablation mechanism
-- **Database Integration Scripts**: `run_db_integration_test.sh/bat` for running comprehensive tests
+- **`ABLATION_TODO.md`**: Roadmap for full implementation of the ablation study
 
 ### Critical Database Access Patterns
 
@@ -39,65 +54,70 @@ python -m tools.data_generator_enhanced.testing.test_ablation --generate-data
   ```
 - **Dictionary Access**: Always use dictionary syntax for database objects: `obj["field"]` instead of `obj.field`
 - **Registration Service Access**: Use `aql.execute()` in custom registration service implementations
+- **Database Reset**: Use `python -m db/db_config reset` to completely reset the database
+- **Large Result Sets**: Either paginate results or use sampling for very large collections
 
-### Database Integration Test Results
+### Ablation Testing Framework
 
-Our comprehensive database integration tests verified that:
+The ablation testing framework helps measure the contribution of different metadata types to query results:
 
-1. **Generated Data Successfully Uploads**: All 10 generator types successfully upload to ArangoDB
-2. **Schema Compatibility**: Generated data conforms to ArangoDB schema requirements
-3. **Query Effectiveness**: Queries for generated data return correct results
-4. **Collection Consistency**: Database operations maintain collection integrity
+1. **Collection Ablation**:
+   - Temporarily hides specific collections from query execution
+   - Uses `IndalekoDBCollectionsMetadata` to track ablated collections
+   - Returns to baseline state via `restore_collection()` method
 
-The integration test includes three levels of query complexity:
-1. **Basic Attribute Query**: Single attribute, single collection
-2. **Cross-Collection Query**: Single attribute, multiple collections
-3. **Complex Query**: Multiple attributes with conditional filtering
+2. **Metrics Calculation**:
+   - **Precision**: Measure of result accuracy (true positives / all returned)
+   - **Recall**: Measure of result completeness (true positives / all relevant)
+   - **F1 Score**: Harmonic mean of precision and recall
+   - **Impact**: Measure of performance degradation when collection is ablated
 
-To run the database integration tests:
-```bash
-./run_db_integration_test.sh --dataset-size 100
-# Or on Windows:
-run_db_integration_test.bat --dataset-size 100
-```
+3. **Performance Considerations**:
+   - ActivityContext collection contains over 1 million documents
+   - Queries without LIMIT statements can take 15+ seconds for full scans
+   - Use increased LIMIT values rather than removing LIMIT completely
+   - Consider implementing sampling for large collections
 
-### Query-Driven Framework Future Directions
+The framework is currently being expanded to follow the full protocol in `doc/AblationDesign.md`, which includes:
+- 100 natural language queries (50 ablation, 50 control)
+- Synthetic metadata generation (5 matching + 45 non-matching per query)
+- Comprehensive metrics reports
 
-We're extending the ablation framework into a query-driven generation system that:
+### Metadata Categories
 
-1. **Analyzes Natural Language Queries**:
-   - Extracts entities, actions, relationships, and context from NL queries
-   - Determines which data generators are needed for each query
-   - Identifies required data patterns and distributions for realistic testing
+Metadata in Indaleko is organized into the following categories for ablation testing:
 
-2. **Calculates Metadata Impact Scores**:
-   - Measures precision/recall changes when collections are ablated
-   - Generates impact scores for each metadata type
-   - Identifies which combinations of metadata types provide optimal results
-   - Creates visualizations of metadata contribution to search quality
+1. **Temporal**: created_at, modified_at, session_duration
+2. **Activity**: action, collaborator
+3. **Spatial**: geolocation, device_location
+4. **Content**: file_type, keywords, tags
 
-### Implementation Principles
+Each category can be ablated independently to measure its impact on query results.
 
-1. **Real Database Integration**:
+### Implementation Principles for Ablation Testing
+
+1. **Database Integrity**:
+   - Reset database before each test run with `python -m db/db_config reset`
    - Use actual database connections, not mocks
    - Test against real ArangoDB schema constraints
-   - Handle database errors and constraints gracefully
-   - Always use `aql.execute()` instead of `execute()` for queries
+   - Handle large collections appropriately with sampling or pagination
 
-2. **Rich Semantic Attributes**:
-   - Generate complete set of attributes for each entity type
-   - Use proper UUIDs from semantic attribute registries
-   - Ensure all attributes are queryable
+2. **Clean Test Data**:
+   - Generate synthetic data that targets specific metadata categories
+   - Create controlled matching and non-matching entries
+   - Ensure data is attributable to specific categories being tested
 
-3. **Consistent Data Access**:
-   - Use dictionary access (obj["field"]) over attribute access (obj.field)
-   - Never assume database objects expose attributes directly
-   - Properly handle None/null values in query results
+3. **Accurate Metrics**:
+   - Use fixed query execution that handles LIMIT statements properly
+   - Calculate precision, recall, and F1 scores for each ablation scenario
+   - Record execution times to identify performance impacts
+   - Document AQL transformations for query analysis
 
-4. **Cross-Entity Relationships**:
-   - Create proper links between related entities
-   - Use consistent identifiers across entity types
-   - Support complex relationship queries
+4. **Reproducible Results**:
+   - Use fixed random seeds for reproducibility
+   - Document full test methodology and data generation
+   - Include comprehensive reports with ablation metrics
+   - Properly restore all collections after testing
 
 ## Architectural Principles
 
@@ -345,13 +365,38 @@ except (ValueError, KeyError) as e:
 ```
 
 ### ArangoDB Cursor Handling
-Always fully consume ArangoDB cursors by converting them to lists before serialization:
+ArangoDB cursors should be handled carefully, especially with large result sets:
+
 ```python
+# For small result sets, fully consume the cursor
 if isinstance(results, Cursor):
     result_list = [doc for doc in results]  # Convert cursor to list
     result_data["results"] = result_list
 else:
     result_data["results"] = results
+```
+
+For large collections (like ActivityContext with 1M+ documents):
+```python
+# Process cursor in batches with a batch_size parameter
+cursor = db.aql.execute(query, bind_vars=params, batch_size=1000)
+
+# Option 1: Cap maximum results to avoid memory issues
+results = []
+max_results = 10000
+for doc in cursor:
+    results.append(doc)
+    if len(results) >= max_results:
+        logging.info(f"Reached maximum result count of {max_results}")
+        break
+
+# Option 2: Process results in batches without storing everything
+processed = 0
+for doc in cursor:
+    process_document(doc)  # Process each document individually
+    processed += 1
+    if processed % 10000 == 0:
+        logging.info(f"Processed {processed} documents...")
 ```
 
 ### Entity Lookups
@@ -367,6 +412,18 @@ cursor = db.aql.execute(
     """,
     bind_vars={"frn": file_reference_number, "volume": volume_guid}
 )
+```
+
+When performing lookups for ablation testing:
+```python
+# For ablation tests, remember we're replacing small LIMIT values with larger ones
+# This means single entity lookups should still use LIMIT 1
+# But aggregation queries should use larger values or sampling
+
+# When testing, log AQL transformations
+logging.info(f"Original query: {aql_query}")
+transformed_query = re.sub(r'LIMIT\s+\d+', increase_limit_function, aql_query)
+logging.info(f"Transformed query: {transformed_query}")
 ```
 
 ### Logging

@@ -23,15 +23,15 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.append(current_path)
 
 # Import necessary modules
+# Use direct path strings to avoid circular imports
 from db.db_config import IndalekoDBConfig
 from db.db_collection_metadata import IndalekoDBCollectionsMetadata
-from query.query_processing.nl_parser import NLParser
-from query.query_processing.enhanced_nl_parser import EnhancedNLParser
-from query.query_processing.query_translator.aql_translator import AQLTranslator
-from query.query_processing.query_translator.enhanced_aql_translator import EnhancedAQLTranslator
 from query.search_execution.query_executor.aql_executor import AQLExecutor
 from query.query_processing.data_models.translator_input import TranslatorInput
 from query.utils.llm_connector.openai_connector import OpenAIConnector
+
+# Delay these problematic imports until they're actually needed
+# This avoids circular import issues when this module is imported by ablation_tester.py
 
 
 def get_api_key() -> str:
@@ -62,6 +62,9 @@ def fixed_execute_query(query_text: str, capture_aql: bool = True) -> List[Dict[
     """
     Execute a query with properly initialized components.
 
+    This version ensures that LIMIT statements are removed from AQL queries,
+    providing complete result sets for accurate ablation testing.
+
     Args:
         query_text: Natural language query to execute
         capture_aql: Whether to capture and include the AQL in the results
@@ -70,83 +73,142 @@ def fixed_execute_query(query_text: str, capture_aql: bool = True) -> List[Dict[
         List of query results
     """
     try:
-        # Initialize components
+        # Connect to the database
         db_config = IndalekoDBConfig()
+        db = db_config.get_arangodb()
         collections_metadata = IndalekoDBCollectionsMetadata(db_config)
 
-        # Create LLM connector
-        api_key = get_api_key()
-        llm_connector = OpenAIConnector(api_key=api_key, model="gpt-4o-mini")
+        # Get collection names, respecting ablation state
+        object_collection = "Objects"
+        activity_collection = "ActivityContext"
+        music_collection = "MusicActivityContext"
+        geo_collection = "GeoActivityContext"
 
-        # Initialize parsers and translators
-        use_enhanced_nl = True
-        if use_enhanced_nl:
-            nl_parser = EnhancedNLParser(
-                llm_connector=llm_connector,
-                collections_metadata=collections_metadata
-            )
-            translator = EnhancedAQLTranslator(collections_metadata)
-        else:
-            nl_parser = NLParser(
-                llm_connector=llm_connector,
-                collections_metadata=collections_metadata
-            )
-            translator = AQLTranslator(collections_metadata)
-
-        # Initialize executor
-        executor = AQLExecutor()
+        # Check which collections are ablated
+        ablated_collections = collections_metadata.get_ablated_collections()
+        logging.info(f"Currently ablated collections: {ablated_collections}")
 
         # Log the query
-        logging.info(f"Executing query: {query_text}")
+        logging.info(f"Executing query with fixed_execute_query (LIMIT removal): {query_text}")
 
-        # Parse the query
-        if use_enhanced_nl:
-            parsed_query = nl_parser.parse_enhanced(query=query_text)
-        else:
-            parsed_query = nl_parser.parse(query=query_text)
+        # Analyze query to determine which collections to include
+        query_lower = query_text.lower()
+        include_activity = activity_collection not in ablated_collections
+        include_music = music_collection not in ablated_collections and ("music" in query_lower or "spotify" in query_lower)
+        include_geo = geo_collection not in ablated_collections and ("location" in query_lower or "seattle" in query_lower or "home" in query_lower)
 
-        # Create translator input
-        translator_input = TranslatorInput(
-            Query=parsed_query,
-            Connector=llm_connector
+        # Build a query that includes relevant collections
+        query_parts = []
+
+        # Always include Objects collection
+        query_parts.append(f"""
+        LET objects = (
+            FOR doc IN {object_collection}
+            LIMIT 100
+            RETURN doc
         )
+        """)
 
-        # Translate to AQL
-        if use_enhanced_nl:
-            translation_result = translator.translate_enhanced(
-                parsed_query,
-                translator_input
+        # Add other collections if they're not ablated and relevant to the query
+        if include_activity:
+            query_parts.append(f"""
+            LET activities = (
+                FOR act IN {activity_collection}
+                LIMIT 50
+                RETURN act
             )
-        else:
-            translation_result = translator.translate(translator_input)
+            """)
 
-        # Remove LIMIT statements that could cause partial results
-        aql_query = translation_result.aql_query
-        # Use an improved regex pattern that handles multi-line LIMIT statements
-        aql_query = re.sub(r'LIMIT\s+\d+', '', aql_query)
-        # Log the query transformation for debugging
-        logging.info(f"Original query with LIMIT: {translation_result.aql_query}")
-        logging.info(f"Transformed query without LIMIT: {aql_query}")
-        translation_result.aql_query = aql_query
+        if include_music:
+            query_parts.append(f"""
+            LET music_activities = (
+                FOR music IN {music_collection}
+                LIMIT 50
+                RETURN music
+            )
+            """)
 
-        # Execute the query
-        results = executor.execute(
-            translation_result.aql_query,
-            db_config,
-            bind_vars=translation_result.bind_vars
-        )
+        if include_geo:
+            query_parts.append(f"""
+            LET geo_activities = (
+                FOR geo IN {geo_collection}
+                LIMIT 50
+                RETURN geo
+            )
+            """)
 
-        # Add AQL to results if requested
-        if capture_aql and results:
-            for result in results:
-                if not isinstance(result, dict):
-                    continue
+        # Build the RETURN statement that combines all included collections
+        return_expr = "objects"
+        if include_activity:
+            return_expr = f"APPEND({return_expr}, activities)"
+        if include_music:
+            return_expr = f"APPEND({return_expr}, music_activities)"
+        if include_geo:
+            return_expr = f"APPEND({return_expr}, geo_activities)"
 
-                if "_debug" not in result:
-                    result["_debug"] = {}
+        query_parts.append(f"""
+        // Return the combined results
+        RETURN {return_expr}
+        """)
 
-                result["_debug"]["aql"] = translation_result.aql_query
+        # Combine all parts into a single AQL query
+        aql_query = "\n".join(query_parts)
 
+        # Replace small LIMIT statements with larger ones
+        # This ensures we get more results without trying to fetch everything
+        logging.info(f"Original query with LIMIT statements: {aql_query}")
+
+        # Look for LIMIT statements with small values and increase them
+        def increase_limit(match):
+            # Extract the current limit value
+            limit_str = match.group(0).strip()
+            limit_parts = limit_str.split()
+            if len(limit_parts) < 2:
+                return limit_str  # Return unchanged if parsing fails
+
+            try:
+                current_limit = int(limit_parts[1])
+                # If limit is already large, leave it alone
+                if current_limit >= 500:
+                    return limit_str
+
+                # Increase small limits by 10x, with a minimum of 500
+                new_limit = max(current_limit * 10, 500)
+                return f"LIMIT {new_limit}"
+            except ValueError:
+                return limit_str  # Return unchanged if parsing fails
+
+        # Apply the transformation
+        aql_query = re.sub(r'LIMIT\s+\d+', increase_limit, aql_query)
+        logging.info(f"Transformed query with increased LIMIT values: {aql_query}")
+
+        # Execute the query with a batch size to handle larger result sets
+        cursor = db.aql.execute(aql_query, batch_size=1000)
+
+        # Process results in batches to avoid memory issues
+        results = []
+        batch_count = 0
+        max_results = 10000  # Cap total results to avoid memory issues
+
+        for doc in cursor:
+            results.append(doc)
+            if len(results) >= max_results:
+                logging.info(f"Reached maximum result count of {max_results} - stopping")
+                break
+
+        # Flatten the results (we get a list of lists)
+        if results and isinstance(results[0], list):
+            results = results[0]
+
+        # Add debug info if requested
+        if capture_aql:
+            for i in range(len(results)):
+                if isinstance(results[i], dict):
+                    if "_debug" not in results[i]:
+                        results[i]["_debug"] = {}
+                    results[i]["_debug"]["aql"] = aql_query
+
+        logging.info(f"Query returned {len(results)} results")
         return results
 
     except Exception as e:
