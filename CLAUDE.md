@@ -33,20 +33,74 @@ Key optimization strategies include:
 
 The Ayni principle is implemented through LLM-powered review of prompts, positioning one AI as a reviewer of instructions meant for another.
 
-### Data Generator Overview
+### Enhanced Data Generator Overview
 
-The data generator creates synthetic metadata records to test Indaleko's search capabilities:
+The enhanced data generator provides robust capabilities for testing:
 
-- Generates realistic file metadata records
-- Creates various metadata types (storage, semantic, activity context)
-- Builds an "oracular set" with known query matches
-- Tests precision and recall of search results
-- Validates UPI (Unified Personal Index) effectiveness
+- Generates realistic file metadata records (storage, semantic, activity)
+- Creates "truth sets" with known characteristics for query evaluation
+- Uses direct database integration with proper schema validation
+- Supports statistical distributions for realistic data patterns
+- Implements the CLI template pattern for consistent command-line handling
 
-**Important Notes**:
-- Never mock database connections
-- Any modifications must be minimal and carefully reviewed
-- The tool was developed with an adversarial evaluation model, so changes require review
+### Implementation Status
+
+The enhanced data generator now has these working components:
+
+1. **Storage Metadata Generator**:
+   - Creates realistic file paths, names, sizes, and timestamps
+   - Generates directory hierarchies and file extensions
+   - Supports truth record generation with specific criteria
+
+2. **Semantic Metadata Generator**:
+   - Generates MIME types, content types, and checksums
+   - Creates keywords, topics, and content summaries
+   - Links directly to storage records in the database
+
+3. **Activity Metadata Generator**:
+   - Generates location data with city and geographic coordinates
+   - Creates music activity records with artists, tracks, and genres
+   - Produces temperature/environmental data for context
+   - Links activity data to appropriate storage objects
+
+4. **Relationship Metadata Generator**:
+   - Creates connections between files, semantic data, and activity context
+   - Supports multiple relationship types (CONTAINS, DERIVED_FROM, etc.)
+   - Establishes proper graph edges in the database
+   - Generates truth relationships for testing complex queries
+
+5. **Machine Configuration Generator**:
+   - Creates realistic device profiles (desktop, laptop, mobile)
+   - Supports multiple operating systems (Windows, macOS, Linux, iOS, Android)
+   - Generates appropriate hardware specifications for each device type
+   - Enables cross-device activity testing scenarios
+
+3. **Activity Metadata Generator**:
+   - Implemented location activity (geographic coordinates, city data)
+   - Added music activity context (artists, tracks, genres)
+   - Created temperature/environmental context
+   - Ensures proper linking between activity and storage records
+
+### Usage
+
+```bash
+# Run quick test data generation
+python tools/data_generator_enhanced/generate_test_data.py
+
+# Run with CLI template
+python -m tools.data_generator_enhanced --config default
+```
+
+### Code Structure
+
+- `generators/`: Contains metadata generators for each type
+- `utils/`: Statistical distributions and dataset utilities
+- `testing/`: Query analysis and metrics tools
+- `config/`: JSON configuration files
+
+### Current Focus
+
+Working on implementing relationship generators to create connections between entities and improving the test query framework to validate search accuracy.
 
 ## Architectural Principles
 

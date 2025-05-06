@@ -1,0 +1,166 @@
+{
+  "metadata": {
+    "total_records": 1000,
+    "truth_records": 50,
+    "description": "Configuration for model-based data generation"
+  },
+  "default_scenario": {
+    "relationship_strategy": "balanced",
+    "activity_focus": "diverse",
+    "activity_sequences": true,
+    "activity_sequence_count": 15,
+
+    "storage_criteria": {
+      "extension_distribution": {
+        "pdf": 0.15,
+        "docx": 0.15,
+        "xlsx": 0.1,
+        "txt": 0.1,
+        "jpg": 0.15,
+        "png": 0.1,
+        "mp4": 0.05,
+        "mp3": 0.05,
+        "zip": 0.05,
+        "json": 0.05,
+        "html": 0.05
+      },
+      "path_prefixes": [
+        "/Documents/",
+        "/Desktop/",
+        "/Downloads/",
+        "/Pictures/",
+        "/Videos/",
+        "/Music/",
+        "/Work/"
+      ],
+      "size_range": {
+        "min": 1024,
+        "max": 10485760,
+        "distribution": "log_normal"
+      }
+    },
+
+    "semantic_criteria": {
+      "mime_type_distribution": {
+        "application/pdf": 0.15,
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": 0.15,
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": 0.1,
+        "text/plain": 0.1,
+        "image/jpeg": 0.15,
+        "image/png": 0.1,
+        "video/mp4": 0.05,
+        "audio/mpeg": 0.05,
+        "application/zip": 0.05,
+        "application/json": 0.05,
+        "text/html": 0.05
+      },
+      "content_extraction": {
+        "extract_percentage": 0.7,
+        "extract_length": {
+          "min": 50,
+          "max": 500
+        }
+      }
+    },
+
+    "activity_criteria": {
+      "create_sequences": true,
+      "sequence_count": 15,
+      "sequence_types": {
+        "file_workflow": 0.4,
+        "meeting_sequence": 0.2,
+        "application_session": 0.2,
+        "multi_device": 0.1,
+        "location_movement": 0.05,
+        "media_consumption": 0.05
+      },
+      "time_distribution": {
+        "workday_hours": {
+          "8": 0.05,
+          "9": 0.08,
+          "10": 0.1,
+          "11": 0.15,
+          "12": 0.05,
+          "13": 0.07,
+          "14": 0.15,
+          "15": 0.15,
+          "16": 0.1,
+          "17": 0.05,
+          "18": 0.02,
+          "19": 0.02,
+          "20": 0.01
+        },
+        "weekday_weights": {
+          "0": 0.2,
+          "1": 0.25,
+          "2": 0.25,
+          "3": 0.2,
+          "4": 0.08,
+          "5": 0.01,
+          "6": 0.01
+        }
+      },
+      "activity_type_distribution": {
+        "FileAccess": 0.25,
+        "FileEdit": 0.2,
+        "FileCreation": 0.1,
+        "FileShare": 0.05,
+        "ApplicationUse": 0.2,
+        "WebBrowsing": 0.1,
+        "EmailSend": 0.05,
+        "EmailReceive": 0.05
+      }
+    },
+
+    "relationship_criteria": {
+      "relationship_distribution": {
+        "STORAGE_SEMANTIC": 0.33,
+        "STORAGE_ACTIVITY": 0.33,
+        "ACTIVITY_SEMANTIC": 0.24,
+        "GENERAL": 0.1
+      },
+      "relationship_types": {
+        "CONTAINS": 0.2,
+        "DERIVED_FROM": 0.15,
+        "RELATED_TO": 0.2,
+        "MODIFIED_BY": 0.15,
+        "ACCESSED_BY": 0.1,
+        "CREATED_BY": 0.1,
+        "OWNED_BY": 0.05,
+        "HAS_SEMANTIC_DATA": 0.05
+      }
+    },
+
+    "machine_config_criteria": {
+      "os_distribution": {
+        "Windows": 0.6,
+        "macOS": 0.3,
+        "Linux": 0.1
+      },
+      "device_type_distribution": {
+        "laptop": 0.6,
+        "desktop": 0.3,
+        "tablet": 0.1
+      }
+    },
+
+    "truth_criteria": {
+      "storage": {
+        "extension": "pdf",
+        "name_pattern": "Report%"
+      },
+      "semantic": {
+        "mime_type": "application/pdf",
+        "content_category": "document"
+      },
+      "activity": {
+        "activity_type": "FileAccess",
+        "days_ago": 5
+      },
+      "machine_config": {
+        "device_type": "laptop",
+        "os_name": "Windows"
+      }
+    }
+  }
+}
