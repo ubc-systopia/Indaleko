@@ -119,7 +119,6 @@ class IndalekoCollection:
             )
             if "schema" in config:
                 try:
-                    ic(config["schema"])
                     self._arangodb_collection.configure(schema=config["schema"])
                 except arango.exceptions.CollectionConfigureError as error:  # pylint: disable=no-member
                     print(f"Failed to configure collection {name}")  # noqa: T201

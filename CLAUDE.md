@@ -13,18 +13,38 @@ The ablation mechanism allows us to:
 3. **Identify critical collections** for different query types
 4. **Generate metrics** showing relative importance of metadata sources
 
-Progress on the ablation framework:
+The framework is now feature-complete with:
 - ✅ Fixed LIMIT statement issue in AQL queries that was artificially restricting results
 - ✅ Implemented proper collection ablation with `IndalekoDBCollectionsMetadata`
+- ✅ Integrated LLM-based query generation and synthetic metadata generation
 - ✅ Created metrics calculation for precision, recall, F1, and impact
-- ✅ Verified end-to-end functionality with test datasets
-- 🔄 Next steps in ABLATION_TODO.md
+- ✅ Added comprehensive reporting with JSON, CSV, and Markdown outputs
+- ✅ Developed a unified run script with multiple testing modes
+- 🔄 Remaining work outlined in ABLATION_TODO.md
+
+### Ablation Testing Options:
+
+The framework provides three testing modes:
+
+1. **Simple Mode**: Test a single query with specific ablated collections
+2. **Integration Mode**: Full end-to-end test with query generation and synthetic data
+3. **Comprehensive Mode**: Large-scale ablation study with multiple clusters
 
 ### Core Commands:
 
-**Run simplified ablation test:**
+**Run a simple ablation test:**
 ```bash
-python test_ablation_comprehensive.py
+python run_ablation_test.py --mode simple --query "Find PDF documents I edited yesterday" --collection ActivityContext MusicActivityContext
+```
+
+**Run an integration test:**
+```bash
+python run_ablation_test.py --mode integration --dataset-size 100 --num-queries 10 --reset-db
+```
+
+**Run a comprehensive ablation study:**
+```bash
+python run_ablation_test.py --mode comprehensive --dataset-size 500 --output-dir ablation_results/study_2025_05_06
 ```
 
 **Reset database for clean testing:**
@@ -32,16 +52,17 @@ python test_ablation_comprehensive.py
 python -m db/db_config reset
 ```
 
-**Fix for LIMIT statements in AQL queries:**
-Using `fixed_execute_query` in `tools/data_generator_enhanced/testing/ablation_execute_query.py` which increases LIMIT values instead of removing them entirely.
-
 ### Implementation Components:
 
+- **`run_ablation_test.py`**: Unified script for running different ablation test modes
 - **`IndalekoDBCollectionsMetadata`**: Manages collection ablation and restoration
 - **`ablation_execute_query.py`**: Fixed query execution that handles LIMIT statements properly
-- **`test_ablation_comprehensive.py`**: Simplified ablation test that runs end-to-end
-- **`test_ablation.py`**: Automated tests for the ablation mechanism
-- **`ABLATION_TODO.md`**: Roadmap for full implementation of the ablation study
+- **`ablation_integration_test.py`**: End-to-end test with synthetic data generation
+- **`synthetic_metadata_generator.py`**: Generates metadata objects for controlled testing
+- **`query_generator_enhanced.py`**: Generates natural language queries targeting specific metadata
+- **`truth_data_tracker.py`**: SQLite-based system for tracking test data and results
+- **`ablation_tester.py`**: Core metrics calculation and result analysis
+- **`ABLATION_TODO.md`**: Roadmap for the implementation of the ablation study
 
 ### Critical Database Access Patterns
 
