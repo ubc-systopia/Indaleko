@@ -189,6 +189,7 @@ class AnthropicConnector(IndalekoLLMBase):
                 ],
                 temperature=temperature,
                 max_tokens=self.max_tokens_to_sample,
+                stream=False,  # Explicitly disable streaming to avoid the warning
             )
 
             elapsed_time = time.time() - start_time
@@ -261,6 +262,7 @@ class AnthropicConnector(IndalekoLLMBase):
                 system="You are a helpful assistant that provides concise summaries.",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=max_length * 5,  # Rough estimate for token count
+                stream=False,  # Explicitly disable streaming to avoid the warning
             )
             return message.content[0].text.strip()
         except Exception as e:
@@ -285,6 +287,7 @@ class AnthropicConnector(IndalekoLLMBase):
                 system="You are a helpful assistant that extracts keywords from text.",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=100,
+                stream=False,  # Explicitly disable streaming to avoid the warning
             )
             content = message.content[0].text.strip()
 
@@ -314,6 +317,7 @@ class AnthropicConnector(IndalekoLLMBase):
                 system="You are a helpful assistant that classifies text.",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=50,
+                stream=False,  # Explicitly disable streaming to avoid the warning
             )
             return message.content[0].text.strip()
         except Exception as e:
@@ -348,6 +352,7 @@ class AnthropicConnector(IndalekoLLMBase):
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0,
                 max_tokens=self.max_tokens_to_sample,
+                stream=False,  # Explicitly disable streaming to avoid the warning
             )
 
             elapsed_time = time.time() - start_time
@@ -392,19 +397,14 @@ class AnthropicConnector(IndalekoLLMBase):
             Any: The raw completion result
         """
         prompt = f"Context: {context}\n\nUser query: {question}\n\nRespond with a valid JSON following this schema:\n{json.dumps(schema, indent=2)}"
-        try:
-            message = self.client.messages.create(
-                model=self.model,
-                system="You are a helpful assistant that always responds with valid JSON.",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0,
-                max_tokens=self.max_tokens_to_sample,
-            )
-            return message
-        except Exception as e:
-            ic(f"Error in get_completion: {e!s}")
-            # Create a mock response
-            return {"error": str(e)}
+        message = self.client.messages.create(
+            model=self.model,
+            system="You are a helpful assistant that always responds with valid JSON.",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            max_tokens=self.max_tokens_to_sample,
+        )
+        return message
 
     def generate_text(
         self,

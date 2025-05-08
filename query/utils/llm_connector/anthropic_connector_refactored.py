@@ -29,7 +29,10 @@ import time
 from pathlib import Path
 from typing import Any
 
+from anthropic import Anthropic, AsyncAnthropic
 from icecream import ic
+import tiktoken
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -41,19 +44,6 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from query.query_processing.data_models.query_output import LLMTranslateQueryResponse
 from query.utils.llm_connector.llm_base import IndalekoLLMBase
-
-# Import the prompt management components
-from query.utils.prompt_management.guardian.llm_guardian import (
-    LLMGuardian,
-    RequestMode,
-    VerificationLevel,
-)
-from query.utils.prompt_management.prompt_manager import PromptVariable
-
-try:
-    from anthropic import Anthropic, AsyncAnthropic
-except ImportError:
-    ic("Warning: Anthropic Python SDK not installed. Please run: pip install anthropic")
 
 # Create logger
 logger = logging.getLogger(__name__)
@@ -90,52 +80,15 @@ class AnthropicConnector(IndalekoLLMBase):
         self.use_guardian = kwargs.get("use_guardian", True)
 
         # Initialize client
-        try:
-            self.client = Anthropic(api_key=self.api_key)
-        except NameError:
-            ic("Anthropic Python SDK not installed. Some functionality won't work.")
-            logger.error("Anthropic Python SDK not installed. Please run: pip install anthropic")
-            self.client = None
+        self.client = Anthropic(api_key=self.api_key)
 
         # Initialize tokenizer (Claude uses cl100k_base)
-        try:
-            import tiktoken
 
             self.tokenizer = tiktoken.get_encoding("cl100k_base")
         except (ImportError, ValueError):
             logger.warning("tiktoken not installed or cl100k_base not found. Token estimation will be approximate.")
             self.tokenizer = None
 
-        # Initialize LLMGuardian if enabled
-        if self.use_guardian:
-            # Convert string verification level to enum if needed
-            verification_level_str = kwargs.get("verification_level", "STANDARD")
-            if isinstance(verification_level_str, str):
-                verification_level = getattr(VerificationLevel, verification_level_str)
-            else:
-                verification_level = verification_level_str
-
-            # Convert string request mode to enum if needed
-            request_mode_str = kwargs.get("request_mode", "WARN")
-            if isinstance(request_mode_str, str):
-                request_mode = getattr(RequestMode, request_mode_str)
-            else:
-                request_mode = request_mode_str
-
-            # Create LLMGuardian instance
-            self.guardian = LLMGuardian(
-                default_verification_level=verification_level,
-                default_request_mode=request_mode,
-            )
-
-            # Log initialization
-            logger.info(
-                f"Initialized Anthropic connector with LLMGuardian (verification: {verification_level.name}, "
-                f"mode: {request_mode.name}, model: {self.model})",
-            )
-        else:
-            self.guardian = None
-            logger.info(f"Initialized Anthropic connector without LLMGuardian (model: {self.model})")
 
     def get_llm_name(self) -> str:
         """
@@ -220,132 +173,6 @@ class AnthropicConnector(IndalekoLLMBase):
         # Generate a unique request ID
         request_id = f"claude_{int(time.time() * 1000)}_{hash(str(prompt)) % 10000}"
 
-        # If using guardian, process through it
-        if self.use_guardian and self.guardian:
-            # Combine system and user prompts into a format for the guardian
-            combined_prompt = {
-                "system": prompt["system"],
-                "user": prompt["user"],
-            }
-
-            # Get response schema
-            response_schema = LLMTranslateQueryResponse.model_json_schema()
-
-            # Get completion from the guardian
-            try:
-                # Add JSON schema instruction to the prompt
-                combined_prompt[
-                    "user"
-                ] += f"\n\nPlease respond with a valid JSON according to the following schema:\n{json.dumps(response_schema, indent=2)}"
-
-                # Process through guardian
-                completion_text, metadata = self.guardian.get_completion_from_prompt(
-                    prompt=json.dumps(combined_prompt),
-                    provider="anthropic",
-                    model=self.model,
-                    optimize=True,
-                    options={
-                        "temperature": temperature,
-                        "max_tokens": self.max_tokens_to_sample,
-                    },
-                )
-
-                # Check if the request was blocked
-                if completion_text is None:
-                    ic(f"Request blocked by guardian: {metadata.get('block_reason', 'Unknown reason')}")
-                    return LLMTranslateQueryResponse(
-                        query=prompt.get("query", ""),
-                        translated_query="",
-                        explanation=f"Request blocked by LLMGuardian: {metadata.get('block_reason', 'Unknown reason')}",
-                        error=True,
-                        error_message=metadata.get("block_reason", "Unknown reason"),
-                    )
-
-                # Try to extract JSON from the response content
-                json_data = self._extract_json_from_content(completion_text)
-
-                # Check if there was an error
-                if json_data.get("error", False):
-                    return LLMTranslateQueryResponse(
-                        query=prompt.get("query", ""),
-                        translated_query="",
-                        explanation=f"Error processing response: {json_data.get('error_message', 'Unknown error')}",
-                        error=True,
-                        error_message=json_data.get("error_message", "Unknown error"),
-                    )
-
-                # Parse response and return
-                return LLMTranslateQueryResponse(**json_data)
-
-            except Exception as e:
-                ic(f"Error generating query with guardian: {e}")
-                return LLMTranslateQueryResponse(
-                    query=prompt.get("query", ""),
-                    translated_query="",
-                    explanation=f"Error: {e!s}",
-                    error=True,
-                    error_message=str(e),
-                )
-
-        # If not using guardian, use the original implementation
-        try:
-            if not self.client:
-                raise ValueError("Anthropic client not initialized. Check API key and SDK installation.")
-
-            # Get response schema
-            response_schema = LLMTranslateQueryResponse.model_json_schema()
-
-            # Make API call with timeout
-            start_time = time.time()
-            ic("Starting Claude API call")
-
-            # Create the message for Claude
-            message = self.client.messages.create(
-                model=self.model,
-                system=prompt["system"],
-                messages=[
-                    {
-                        "role": "user",
-                        "content": f"{prompt['user']}\n\nPlease respond with a valid JSON according to the following schema:\n{json.dumps(response_schema, indent=2)}",
-                    },
-                ],
-                temperature=temperature,
-                max_tokens=self.max_tokens_to_sample,
-            )
-
-            elapsed_time = time.time() - start_time
-            ic(f"Claude API call completed in {elapsed_time:.2f} seconds")
-            ic("Received response from Claude")
-
-            # Extract content from response
-            content = message.content[0].text
-
-            # Extract JSON from the response
-            json_data = self._extract_json_from_content(content)
-
-            # Check if there was an error
-            if json_data.get("error", False):
-                return LLMTranslateQueryResponse(
-                    query=prompt.get("query", ""),
-                    translated_query="",
-                    explanation=f"Error processing response: {json_data.get('error_message', 'Unknown error')}",
-                    error=True,
-                    error_message=json_data.get("error_message", "Unknown error"),
-                )
-
-            # Create and return the response object
-            return LLMTranslateQueryResponse(**json_data)
-
-        except Exception as e:
-            ic(f"Claude API error: {e!s}")
-            # Return an error response
-            return LLMTranslateQueryResponse(
-                query=prompt.get("query", ""),
-                translated_query="",
-                explanation=f"Error: {e!s}",
-                error=True,
-                error_message=str(e),
-            )
 
     def summarize_text(self, text: str, max_length: int = 100) -> str:
         """
@@ -358,44 +185,26 @@ class AnthropicConnector(IndalekoLLMBase):
         Returns:
             str: The summarized text
         """
-        if self.use_guardian and self.guardian:
-            # Create a template-based prompt for the guardian
-            template = f"Summarize the following text in no more than {max_length} words:\n\n{{text}}"
-
-            # Create the variable list
-            variables = [
-                PromptVariable(name="text", value=text),
-            ]
-
-            # Get completion from the guardian
-            completion_text, _ = self.guardian.get_completion_from_prompt(
-                prompt=template,
-                provider="anthropic",
-                model=self.model,
-                system_prompt="You are a helpful assistant that provides concise summaries.",
-                options={
-                    "max_tokens": max_length * 5,  # Rough estimate for token count
-                },
-            )
-
-            return completion_text or "Error generating summary with guardian"
-
         # Fall back to original implementation if guardian not enabled or not available
         prompt = f"Summarize the following text in no more than {max_length} words:\n\n{text}"
-        try:
-            if not self.client:
-                raise ValueError("Anthropic client not initialized. Check API key and SDK installation.")
+        if not self.client:
+            raise ValueError("Anthropic client not initialized. Check API key and SDK installation.")
 
-            message = self.client.messages.create(
-                model=self.model,
-                system="You are a helpful assistant that provides concise summaries.",
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=max_length * 5,  # Rough estimate for token count
-            )
-            return message.content[0].text.strip()
-        except Exception as e:
-            ic(f"Error in summarize_text: {e}")
-            return f"Error generating summary: {e!s}"
+        message = self.client.messages.create(
+            model=self.model,
+            system="You are a helpful assistant that provides concise summaries.",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=max_length * 5,  # Rough estimate for token count
+        )
+        if (not message or
+            not hasattr(message, "content") or
+            not message.content or
+            len(message.content) == 0 or
+            not isinstance(message.content[0], str)
+        ):
+            logger.critical("Unexpected content returned from Claude (prompt = %s, message = %s).", prompt, message)
+            return "Error: No content returned from Claude."
+        return message.content[0].text.strip()
 
     def extract_keywords(self, text: str, num_keywords: int = 5) -> list[str]:
         """
@@ -408,32 +217,6 @@ class AnthropicConnector(IndalekoLLMBase):
         Returns:
             list[str]: The extracted keywords
         """
-        if self.use_guardian and self.guardian:
-            # Create a template-based prompt for the guardian
-            template = f"Extract exactly {num_keywords} keywords from the following text. Respond with just a comma-separated list of keywords, nothing else:\n\n{{text}}"
-
-            # Create the variable list
-            variables = [
-                PromptVariable(name="text", value=text),
-            ]
-
-            # Get completion from the guardian
-            completion_text, _ = self.guardian.get_completion_from_prompt(
-                prompt=template,
-                provider="anthropic",
-                model=self.model,
-                system_prompt="You are a helpful assistant that extracts keywords from text.",
-                options={
-                    "max_tokens": 100,
-                },
-            )
-
-            if completion_text:
-                # Parse the comma-separated list
-                keywords = [k.strip() for k in completion_text.split(",")]
-                return keywords[:num_keywords]  # Ensure we don't exceed requested number
-            return ["Error extracting keywords with guardian"]
-
         # Fall back to original implementation if guardian not enabled or not available
         prompt = f"Extract exactly {num_keywords} keywords from the following text. Respond with just a comma-separated list of keywords, nothing else:\n\n{text}"
         try:
@@ -466,29 +249,6 @@ class AnthropicConnector(IndalekoLLMBase):
         Returns:
             str: The predicted category
         """
-        if self.use_guardian and self.guardian:
-            # Create a template-based prompt for the guardian
-            categories_str = ", ".join(categories)
-            template = f"Classify the following text into exactly one of these categories: {categories_str}\n\nRespond with only the category name, nothing else.\n\nText: {{text}}"
-
-            # Create the variable list
-            variables = [
-                PromptVariable(name="text", value=text),
-            ]
-
-            # Get completion from the guardian
-            completion_text, _ = self.guardian.get_completion_from_prompt(
-                prompt=template,
-                provider="anthropic",
-                model=self.model,
-                system_prompt="You are a helpful assistant that classifies text.",
-                options={
-                    "max_tokens": 50,
-                },
-            )
-
-            return completion_text or "Error classifying text with guardian"
-
         # Fall back to original implementation if guardian not enabled or not available
         categories_str = ", ".join(categories)
         prompt = f"Classify the following text into exactly one of these categories: {categories_str}\n\nRespond with only the category name, nothing else.\n\nText: {text}"
@@ -524,64 +284,28 @@ class AnthropicConnector(IndalekoLLMBase):
         Returns:
             dict[str, Any]: The answer to the question in structured format
         """
-        if self.use_guardian and self.guardian:
-            # Convert the question and context into a template format
-            template = "Context: {context}\n\nUser query: {question}\n\nRespond with a valid JSON following this schema:\n{schema}"
-
-            # Create the variable list
-            variables = [
-                PromptVariable(name="context", value=context),
-                PromptVariable(name="question", value=question),
-                PromptVariable(name="schema", value=json.dumps(schema, indent=2)),
-            ]
-
-            # Get completion from the guardian
-            completion_text, _ = self.guardian.get_completion_from_prompt(
-                prompt=template,
-                provider="anthropic",
-                model=self.model,
-                system_prompt="You are a helpful assistant that always responds with valid JSON.",
-                options={
-                    "temperature": 0,
-                    "max_tokens": self.max_tokens_to_sample,
-                },
-            )
-
-            if completion_text:
-                # Extract JSON from the response
-                json_data = self._extract_json_from_content(completion_text)
-                return json_data
-
-            return {"error": "No response from guardian", "answer": None}
-
-        # Fall back to original implementation if guardian not enabled or not available
         prompt = f"Context: {context}\n\nUser query: {question}\n\nRespond with a valid JSON following this schema:\n{json.dumps(schema, indent=2)}"
-        try:
-            if not self.client:
-                raise ValueError("Anthropic client not initialized. Check API key and SDK installation.")
+        if not self.client:
+            raise ValueError("Anthropic client not initialized. Check API key and SDK installation.")
 
-            ic("Starting answer_question call to Claude")
-            start_time = time.time()
+        ic("Starting answer_question call to Claude")
+        start_time = time.time()
 
-            message = self.client.messages.create(
-                model=self.model,
-                system="You are a helpful assistant that always responds with valid JSON.",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0,
-                max_tokens=self.max_tokens_to_sample,
-            )
+        message = self.client.messages.create(
+            model=self.model,
+            system="You are a helpful assistant that always responds with valid JSON.",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            max_tokens=self.max_tokens_to_sample,
+        )
 
-            elapsed_time = time.time() - start_time
-            ic(f"answer_question API call completed in {elapsed_time:.2f} seconds")
+        elapsed_time = time.time() - start_time
+        ic(f"answer_question API call completed in {elapsed_time:.2f} seconds")
 
-            content = message.content[0].text.strip()
+        content = message.content[0].text.strip()
 
-            # Extract JSON from the response
-            return self._extract_json_from_content(content)
-
-        except Exception as e:
-            ic(f"Error in answer_question: {type(e).__name__}: {e}")
-            return {"error": f"Error in answer_question: {type(e).__name__}: {e!s}"}
+        # Extract JSON from the response
+        return self._extract_json_from_content(content)
 
     def get_completion(
         self,
@@ -618,100 +342,54 @@ class AnthropicConnector(IndalekoLLMBase):
             "tokens": {"prompt": None, "completion": None, "total": None},
         }
 
-        # Process through guardian if enabled
-        if self.use_guardian and self.guardian:
-            # Set up the prompt structure
-            if system_prompt:
-                prompt_text = {
-                    "system": system_prompt,
-                    "user": user_prompt,
-                }
-                prompt_str = json.dumps(prompt_text)
-            else:
-                # For simple prompts without system prompt
-                prompt_str = user_prompt
+        if not self.client:
+            raise ValueError("Anthropic client not initialized. Check API key and SDK installation.")
 
-            # Get options
-            options = {
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-            }
-            options.update({k: v for k, v in kwargs.items() if k not in ["temperature", "max_tokens"]})
+        start_time = time.time()
 
-            # Get completion through guardian
-            completion_text, guardian_metadata = self.guardian.get_completion_from_prompt(
-                prompt=prompt_str,
-                provider="anthropic",
+        # Create message content
+        if system_prompt:
+            message = self.client.messages.create(
                 model=self.model,
-                optimize=True,
-                options=options,
+                system=system_prompt,
+                messages=[{"role": "user", "content": user_prompt}],
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=False,  # Explicitly disable streaming to avoid the warning
+            )
+        else:
+            # For models that don't support system prompts
+            message = self.client.messages.create(
+                model=self.model,
+                messages=[{"role": "user", "content": user_prompt}],
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=False,  # Explicitly disable streaming to avoid the warning
             )
 
-            # Update metadata with guardian info
-            metadata.update(
-                {
-                    "verification": guardian_metadata.get("verification", {}),
-                    "token_metrics": guardian_metadata.get("token_metrics", {}),
-                    "total_time_ms": guardian_metadata.get("total_time_ms"),
-                    "guardian_used": True,
-                },
-            )
+        # Calculate time taken
+        elapsed_time_ms = int((time.time() - start_time) * 1000)
 
-            return completion_text or "", metadata
+        # Extract the response content
+        completion_text = message.content[0].text.strip()
 
-        # Direct completion without guardian
-        try:
-            if not self.client:
-                raise ValueError("Anthropic client not initialized. Check API key and SDK installation.")
+        # Update metadata
+        metadata.update(
+            {
+                "total_time_ms": elapsed_time_ms,
+                "guardian_used": False,
+            },
+        )
 
-            start_time = time.time()
+        # Add token usage if available
+        if hasattr(message, "usage") and message.usage:
+            metadata["tokens"] = {
+                "prompt": message.usage.input_tokens,
+                "completion": message.usage.output_tokens,
+                "total": message.usage.input_tokens + message.usage.output_tokens,
+            }
 
-            # Create message content
-            if system_prompt:
-                message = self.client.messages.create(
-                    model=self.model,
-                    system=system_prompt,
-                    messages=[{"role": "user", "content": user_prompt}],
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                )
-            else:
-                # For models that don't support system prompts
-                message = self.client.messages.create(
-                    model=self.model,
-                    messages=[{"role": "user", "content": user_prompt}],
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                )
-
-            # Calculate time taken
-            elapsed_time_ms = int((time.time() - start_time) * 1000)
-
-            # Extract the response content
-            completion_text = message.content[0].text.strip()
-
-            # Update metadata
-            metadata.update(
-                {
-                    "total_time_ms": elapsed_time_ms,
-                    "guardian_used": False,
-                },
-            )
-
-            # Add token usage if available
-            if hasattr(message, "usage") and message.usage:
-                metadata["tokens"] = {
-                    "prompt": message.usage.input_tokens,
-                    "completion": message.usage.output_tokens,
-                    "total": message.usage.input_tokens + message.usage.output_tokens,
-                }
-
-            return completion_text, metadata
-
-        except Exception as e:
-            ic(f"Error in get_completion: {e!s}")
-            metadata["error"] = str(e)
-            return f"Error: {e!s}", metadata
+        return completion_text, metadata
 
     def generate_text(
         self,
@@ -730,37 +408,18 @@ class AnthropicConnector(IndalekoLLMBase):
         Returns:
             str: The generated text
         """
-        if self.use_guardian and self.guardian:
-            # Use the guardian for the completion
-            completion_text, _ = self.guardian.get_completion_from_prompt(
-                prompt=prompt,
-                provider="anthropic",
-                model=self.model,
-                system_prompt="You are a helpful assistant.",
-                options={
-                    "temperature": temperature,
-                    "max_tokens": max_tokens,
-                },
-            )
+        if not self.client:
+            raise ValueError("Anthropic client not initialized. Check API key and SDK installation.")
 
-            return completion_text or "Error generating text with guardian"
-
-        # Fall back to original implementation if guardian not enabled or not available
-        try:
-            if not self.client:
-                raise ValueError("Anthropic client not initialized. Check API key and SDK installation.")
-
-            message = self.client.messages.create(
-                model=self.model,
-                system="You are a helpful assistant.",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
-            return message.content[0].text.strip()
-        except Exception as e:
-            ic(f"Error in generate_text: {e!s}")
-            return f"Error generating text: {e!s}"
+        message = self.client.messages.create(
+            model=self.model,
+            system="You are a helpful assistant.",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=temperature,
+            max_tokens=max_tokens,
+            stream=False,  # Explicitly disable streaming to avoid the warning
+        )
+        return message.content[0].text.strip()
 
     def extract_semantic_attributes(
         self,
@@ -782,79 +441,6 @@ class AnthropicConnector(IndalekoLLMBase):
         if attr_types is None:
             attr_types = ["entities", "keywords", "sentiment", "topics"]
 
-        if self.use_guardian and self.guardian:
-            # Create a template-based prompt for the guardian
-            attr_types_str = ", ".join(attr_types)
-            template = f"""Extract the following semantic attributes from the text: {attr_types_str}
-
-For each attribute type, provide relevant information found in the text.
-Format your response as a JSON object with keys matching the requested attribute types.
-
-Text to analyze:
-{{text}}
-            """
-
-            # Create the variable list
-            variables = [
-                PromptVariable(name="text", value=text),
-            ]
-
-            # Define schema for expected output
-            schema = {
-                "type": "object",
-                "properties": {
-                    "entities": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Named entities found in the text",
-                    },
-                    "keywords": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Important keywords from the text",
-                    },
-                    "sentiment": {
-                        "type": "object",
-                        "properties": {
-                            "label": {"type": "string"},
-                            "score": {"type": "number"},
-                        },
-                        "description": "Sentiment analysis of the text",
-                    },
-                    "topics": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Main topics discussed in the text",
-                    },
-                },
-            }
-
-            # Get completion from the guardian
-            completion_text, _ = self.guardian.get_completion_from_prompt(
-                prompt=template,
-                provider="anthropic",
-                model=self.model,
-                system_prompt="You are a semantic analysis assistant. Always respond with valid JSON.",
-                options={
-                    "temperature": 0,
-                    "max_tokens": 1000,
-                },
-            )
-
-            if completion_text:
-                # Extract JSON from the response
-                json_data = self._extract_json_from_content(completion_text)
-
-                # Check if there was an error
-                if json_data.get("error", False):
-                    return {attr: [] for attr in attr_types}
-
-                # Filter to only include requested attribute types
-                return {k: v for k, v in json_data.items() if k in attr_types}
-
-            return {attr: [] for attr in attr_types}
-
-        # Fall back to original implementation if guardian not enabled or not available
         attr_types_str = ", ".join(attr_types)
         prompt = f"""Extract the following semantic attributes from the text: {attr_types_str}
 
@@ -865,31 +451,26 @@ Text to analyze:
 {text}
         """
 
-        try:
-            if not self.client:
-                raise ValueError("Anthropic client not initialized. Check API key and SDK installation.")
+        if not self.client:
+            raise ValueError("Anthropic client not initialized. Check API key and SDK installation.")
 
-            message = self.client.messages.create(
-                model=self.model,
-                system="You are a semantic analysis assistant. Always respond with valid JSON.",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0,
-                max_tokens=1000,
-            )
+        message = self.client.messages.create(
+            model=self.model,
+            system="You are a semantic analysis assistant. Always respond with valid JSON.",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            max_tokens=1000,
+            stream=False,  # Explicitly disable streaming to avoid the warning
+        )
 
-            content = message.content[0].text.strip()
+        content = message.content[0].text.strip()
 
-            # Extract JSON from the response
-            json_data = self._extract_json_from_content(content)
+        # Extract JSON from the response
+        json_data = self._extract_json_from_content(content)
 
-            # Check if there was an error
-            if json_data.get("error", False):
-                return {attr: [] for attr in attr_types}
-
-            # Filter to only include requested attribute types
-            return {k: v for k, v in json_data.items() if k in attr_types}
-
-        except Exception as e:
-            ic(f"Error extracting semantic attributes: {e}")
-            # Return a minimal valid response
+        # Check if there was an error
+        if json_data.get("error", False):
             return {attr: [] for attr in attr_types}
+
+        # Filter to only include requested attribute types
+        return {k: v for k, v in json_data.items() if k in attr_types}
