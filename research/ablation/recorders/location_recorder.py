@@ -145,6 +145,15 @@ class LocationActivityRecorder(ISyntheticRecorder):
                     elif isinstance(value, datetime):
                         # Convert datetime to ISO format
                         activity_dict[key] = value.isoformat()
+                
+                # Set _key to match the entity ID if it exists
+                if "id" in data:
+                    # Use the ID as the document key for direct matching
+                    activity_dict["_key"] = str(data["id"])
+                elif "id" in activity_dict:
+                    # Use the ID as the document key for direct matching
+                    activity_dict["_key"] = activity_dict["id"]
+                    
                 validated_data.append(activity_dict)
 
             # Insert the documents

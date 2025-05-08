@@ -171,49 +171,24 @@ class LocationActivityCollector(ISyntheticCollector):
         Returns:
             Set[UUID]: The set of UUIDs that should match the query.
         """
+        # Generate matching data with the exact same IDs to ensure consistency
+        matching_data = self.generate_matching_data(query, count=10)
         matching_entities = set()
-        query_lower = query.lower()
-
-        # Check for location mentions
-        for location in self.locations:
-            if location.lower() in query_lower:
-                # Generate deterministic UUIDs for activities at this location
-                for i in range(5):  # Generate 5 matching activities
-                    entity_id = generate_deterministic_uuid(f"location_activity:{location}:{i}")
-                    matching_entities.add(entity_id)
-
-        # Check for location type mentions
-        for location, location_type in self.location_types.items():
-            if location_type.lower() in query_lower:
-                # Generate deterministic UUIDs for activities with this location type
-                for i in range(3):  # Generate 3 matching activities per type
-                    entity_id = generate_deterministic_uuid(f"location_activity:{location_type}:{i}")
-                    matching_entities.add(entity_id)
-
-        # Check for device mentions
-        for device in self.devices:
-            if device.lower() in query_lower:
-                # Generate deterministic UUIDs for activities with this device
-                for i in range(2):  # Generate 2 matching activities per device
-                    entity_id = generate_deterministic_uuid(f"location_activity:{device}:{i}")
-                    matching_entities.add(entity_id)
-
-        # Check for WiFi network mentions
-        for location, networks in self.wifi_networks.items():
-            for network in networks:
-                if network.lower() in query_lower:
-                    # Generate a deterministic UUID for this WiFi network
-                    entity_id = generate_deterministic_uuid(f"location_activity:{location}:{network}")
-                    matching_entities.add(entity_id)
-
-        # Check for source mentions
-        for source in self.sources:
-            if source.lower() in query_lower:
-                # Generate deterministic UUIDs for activities with this source
-                for i in range(2):  # Generate 2 matching activities per source
-                    entity_id = generate_deterministic_uuid(f"location_activity:{source}:{i}")
-                    matching_entities.add(entity_id)
-
+        
+        # Extract IDs from the generated matching data
+        for data in matching_data:
+            if "id" in data:
+                if isinstance(data["id"], UUID):
+                    matching_entities.add(data["id"])
+                else:
+                    matching_entities.add(UUID(data["id"]) if isinstance(data["id"], str) else data["id"])
+        
+        # If there's no query terms that match anything, create at least 5 matching entities
+        # This ensures we have data to measure recall against
+        if not matching_entities:
+            for i in range(5):
+                matching_entities.add(generate_deterministic_uuid(f"location_activity:generic:{query}:{i}"))
+        
         return matching_entities
 
     def generate_matching_data(self, query: str, count: int = 1) -> list[dict[str, Any]]:
@@ -235,7 +210,7 @@ class LocationActivityCollector(ISyntheticCollector):
         devices_in_query = [device for device in self.devices if device.lower() in query_lower]
         sources_in_query = [source for source in self.sources if source.lower() in query_lower]
 
-        for _ in range(count):
+        for i in range(count):
             # Start with a base activity that we'll modify to match the query
             base_activity = self.collect()
             activity_dict = base_activity.copy()
@@ -259,6 +234,9 @@ class LocationActivityCollector(ISyntheticCollector):
                 if random.random() > 0.3:  # 70% chance to have WiFi
                     activity_dict["wifi_ssid"] = random.choice(self.wifi_networks[location_name])
 
+                # Generate a deterministic UUID for this location activity
+                activity_dict["id"] = generate_deterministic_uuid(f"location_activity:{location_name}:{i}")
+
             # If query mentions location types, ensure we match
             elif types_in_query:
                 loc_type = random.choice(types_in_query)
@@ -275,14 +253,32 @@ class LocationActivityCollector(ISyntheticCollector):
                         "longitude": lon + random.uniform(-0.0005, 0.0005),
                         "accuracy_meters": accuracy,
                     }
+                    
+                    # Generate a deterministic UUID for this location type activity
+                    activity_dict["id"] = generate_deterministic_uuid(f"location_activity:{loc_type}:{i}")
 
             # If query mentions devices, ensure we match
             if devices_in_query:
-                activity_dict["device_name"] = random.choice(devices_in_query)
+                device_name = random.choice(devices_in_query)
+                activity_dict["device_name"] = device_name
+                
+                # Update ID to include device if no location was matched
+                if "id" not in activity_dict:
+                    activity_dict["id"] = generate_deterministic_uuid(f"location_activity:{device_name}:{i}")
 
             # If query mentions sources, ensure we match
             if sources_in_query:
-                activity_dict["source"] = random.choice(sources_in_query)
+                source = random.choice(sources_in_query)
+                activity_dict["source"] = source
+                
+                # Update ID to include source if no other entity was matched
+                if "id" not in activity_dict:
+                    activity_dict["id"] = generate_deterministic_uuid(f"location_activity:{source}:{i}")
+                    
+            # Ensure every activity has an ID
+            if "id" not in activity_dict:
+                # Fallback UUID if no specific entity was matched
+                activity_dict["id"] = generate_deterministic_uuid(f"location_activity:generic:{i}")
 
             matching_data.append(activity_dict)
 

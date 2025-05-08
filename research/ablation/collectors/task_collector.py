@@ -251,45 +251,24 @@ class TaskActivityCollector(ISyntheticCollector):
         Returns:
             Set[UUID]: The set of UUIDs that should match the query.
         """
+        # Generate matching data with the exact same IDs to ensure consistency
+        matching_data = self.generate_matching_data(query, count=10)
         matching_entities = set()
-        query_lower = query.lower()
-
-        # Check for application mentions
-        for application in self.applications:
-            if application.lower() in query_lower:
-                # Generate deterministic UUIDs for activities with this application
-                for i in range(5):  # Generate 5 matching activities
-                    entity_id = generate_deterministic_uuid(f"task_activity:{application}:{i}")
-                    matching_entities.add(entity_id)
-
-        # Check for task name mentions
-        for application, tasks in self.tasks_by_application.items():
-            for task in tasks:
-                if task.lower() in query_lower:
-                    # Generate a deterministic UUID for this task
-                    entity_id = generate_deterministic_uuid(f"task_activity:{application}:{task}")
-                    matching_entities.add(entity_id)
-
-        # Check for window title mentions
-        for application, titles in self.window_titles_by_application.items():
-            for title in titles:
-                # Use more flexible matching for window titles
-                title_parts = title.lower().split()
-                for part in title_parts:
-                    if len(part) > 3 and part in query_lower:  # Only match significant words
-                        # Generate a deterministic UUID for this window title
-                        entity_id = generate_deterministic_uuid(f"task_activity:{application}:{title}")
-                        matching_entities.add(entity_id)
-                        break  # Match once per title
-
-        # Check for user mentions
-        for user in self.users:
-            if user.lower() in query_lower:
-                # Generate deterministic UUIDs for activities with this user
-                for i in range(3):  # Generate 3 matching activities per user
-                    entity_id = generate_deterministic_uuid(f"task_activity:user:{user}:{i}")
-                    matching_entities.add(entity_id)
-
+        
+        # Extract IDs from the generated matching data
+        for data in matching_data:
+            if "id" in data:
+                if isinstance(data["id"], UUID):
+                    matching_entities.add(data["id"])
+                else:
+                    matching_entities.add(UUID(data["id"]) if isinstance(data["id"], str) else data["id"])
+        
+        # If there's no query terms that match anything, create at least 5 matching entities
+        # This ensures we have data to measure recall against
+        if not matching_entities:
+            for i in range(5):
+                matching_entities.add(generate_deterministic_uuid(f"task_activity:generic:{query}:{i}"))
+        
         return matching_entities
 
     def generate_matching_data(self, query: str, count: int = 1) -> list[dict[str, Any]]:
@@ -325,7 +304,7 @@ class TaskActivityCollector(ISyntheticCollector):
                         window_titles_in_query.append((app, title))
                         break  # Match once per title
 
-        for _ in range(count):
+        for i in range(count):
             # Start with a base activity that we'll modify to match the query
             base_activity = self.collect()
             activity_dict = base_activity.copy()
@@ -340,6 +319,9 @@ class TaskActivityCollector(ISyntheticCollector):
 
                 # Update window title to match the application
                 activity_dict["window_title"] = random.choice(self.window_titles_by_application[application])
+                
+                # Generate a deterministic UUID for this application activity
+                activity_dict["id"] = generate_deterministic_uuid(f"task_activity:{application}:{i}")
 
             # If query mentions specific tasks, ensure we match
             elif tasks_in_query:
@@ -347,6 +329,9 @@ class TaskActivityCollector(ISyntheticCollector):
                 activity_dict["application"] = app
                 activity_dict["task_name"] = task
                 activity_dict["window_title"] = random.choice(self.window_titles_by_application[app])
+                
+                # Generate a deterministic UUID for this task activity
+                activity_dict["id"] = generate_deterministic_uuid(f"task_activity:{app}:{task}:{i}")
 
             # If query mentions window titles, ensure we match
             elif window_titles_in_query:
@@ -354,13 +339,26 @@ class TaskActivityCollector(ISyntheticCollector):
                 activity_dict["application"] = app
                 activity_dict["window_title"] = title
                 activity_dict["task_name"] = random.choice(self.tasks_by_application[app])
+                
+                # Generate a deterministic UUID for this window title activity
+                activity_dict["id"] = generate_deterministic_uuid(f"task_activity:{app}:{title}:{i}")
 
             # If query mentions users, ensure we match
             if users_in_query:
-                activity_dict["user"] = random.choice(users_in_query)
+                user = random.choice(users_in_query)
+                activity_dict["user"] = user
+                
+                # Update ID to include user if no application/task was matched
+                if "id" not in activity_dict:
+                    activity_dict["id"] = generate_deterministic_uuid(f"task_activity:user:{user}:{i}")
 
             # Make sure created time is recent (within last 24 hours)
             activity_dict["created_at"] = (datetime.now(UTC) - timedelta(hours=random.randint(1, 24))).isoformat()
+            
+            # Ensure every activity has an ID
+            if "id" not in activity_dict:
+                # Fallback UUID if no specific entity was matched
+                activity_dict["id"] = generate_deterministic_uuid(f"task_activity:generic:{i}")
 
             matching_data.append(activity_dict)
 
