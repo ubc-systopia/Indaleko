@@ -12,9 +12,9 @@ import logging
 import os
 import sys
 import uuid
-
 from datetime import datetime
 from pathlib import Path
+
 from pydantic import BaseModel
 
 # Making sure we keep a global reference for debugging
@@ -39,23 +39,22 @@ from research.ablation.ablation_tester import AblationConfig, AblationTester
 from research.ablation.base import ISyntheticCollector, ISyntheticRecorder
 from research.ablation.collectors.location_collector import LocationActivityCollector
 from research.ablation.collectors.music_collector import MusicActivityCollector
-from research.ablation.collectors.task_collector import TaskActivityCollector
 from research.ablation.data_sanity_checker import DataSanityChecker
-from research.ablation.models.activity import ActivityType
 from research.ablation.ner.entity_manager import NamedEntityManager
-from research.ablation.query.llm_query_generator import LLMQueryGenerator
+from research.ablation.query.enhanced.enhanced_query_generator import (
+    EnhancedQueryGenerator,
+)
 from research.ablation.recorders.location_recorder import LocationActivityRecorder
 from research.ablation.recorders.music_recorder import MusicActivityRecorder
-from research.ablation.recorders.task_recorder import TaskActivityRecorder
 from research.ablation.utils.uuid_utils import generate_deterministic_uuid
 
-
-def setup_logging():
+def setup_logging(verbose=False):
     """Set up logging for the ablation test runner."""
     logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(levelname)s - %(message)s",
+        level=logging.DEBUG if verbose else logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
     )
+
 
 class TestDataComponents(BaseModel):
     """Components for test data generation.
@@ -63,6 +62,7 @@ class TestDataComponents(BaseModel):
     This class holds the components needed to generate test data for different
     activity types, including the collector and recorder classes.
     """
+
     collector: type[ISyntheticCollector]
     recorder: type[ISyntheticRecorder]
     name: str
@@ -73,10 +73,9 @@ class TestDataComponents(BaseModel):
         "arbitrary_types_allowed": True,
     }
 
+
 def generate_test_data(
-        entity_manager: NamedEntityManager,
-        activity_data_providers: list[TestDataComponents],
-        count: int = 100
+    entity_manager: NamedEntityManager, activity_data_providers: list[TestDataComponents], count: int = 100,
 ) -> dict:
     """Generate synthetic test data for all activity types.
 
@@ -105,7 +104,7 @@ def generate_test_data(
             else:
                 logging.warning(f"Debug: Collection {collection_name} does not exist")
     except Exception as e:
-        logging.error(f"Error checking collections: {e}")
+        logging.exception(f"Error checking collections: {e}")
 
     for activity_data_provider in activity_data_providers:
         collector = activity_data_provider.collector(entity_manager=entity_manager, seed_value=42)
@@ -113,7 +112,7 @@ def generate_test_data(
 
         # Debug: Print recorder class details
         logging.info(f"Debug: Using recorder: {recorder.__class__.__name__}")
-        collection_name = getattr(recorder, 'get_collection_name', lambda: 'Unknown')()
+        collection_name = getattr(recorder, "get_collection_name", lambda: "Unknown")()
         logging.info(f"Debug: Collection name from recorder: {collection_name}")
 
         data = collector.generate_batch(count)
@@ -152,10 +151,7 @@ def generate_test_data(
         if batch_success:
             collections_loaded.append(activity_data_provider.name)
             test_data[activity_data_provider.name] = data
-            logging.info("Successfully loaded %s %s activity records",
-                         len(data),
-                         activity_data_provider.name
-            )
+            logging.info("Successfully loaded %s %s activity records", len(data), activity_data_provider.name)
 
             # Debug: Verify what was loaded in the database
             try:
@@ -167,7 +163,7 @@ def generate_test_data(
                 sample_doc = db.aql.execute(f"FOR doc IN {collection_name} LIMIT 1 RETURN doc").next()
                 logging.info(f"Debug: Sample document keys: {list(sample_doc.keys())}")
             except Exception as e:
-                logging.error(f"Error verifying loaded data: {e}")
+                logging.exception(f"Error verifying loaded data: {e}")
         else:
             logging.warning("Failed to record %s data", activity_data_provider.name)
 
@@ -176,9 +172,7 @@ def generate_test_data(
 
 
 def generate_cross_collection_queries(
-        entity_manager: NamedEntityManager,
-        ablation_tester: AblationTester,
-        count: int = 5
+    entity_manager: NamedEntityManager, ablation_tester: AblationTester, count: int = 5,
 ) -> list[dict[str, object]]:
     """Generate test queries that depend on multiple activity types.
 
@@ -190,23 +184,25 @@ def generate_cross_collection_queries(
     Returns:
         list: List of generated queries with metadata
     """
-    logging.info(f"Generating cross-collection test queries...")
+    logging.info("Generating cross-collection test queries...")
 
     queries = []
 
     # Debug: Initial truth data check
     debug_truth_counts = {}
     for collection_name in ["AblationLocationActivity", "AblationMusicActivity"]:
-        query_count = ablation_tester.db.aql.execute(
-            f"RETURN LENGTH({ablation_tester.TRUTH_COLLECTION})").next()
-        collection_truth_count = len(ablation_tester.db.aql.execute(
-            f"""FOR doc IN {ablation_tester.TRUTH_COLLECTION}
+        query_count = ablation_tester.db.aql.execute(f"RETURN LENGTH({ablation_tester.TRUTH_COLLECTION})").next()
+        collection_truth_count = len(
+            ablation_tester.db.aql.execute(
+                f"""FOR doc IN {ablation_tester.TRUTH_COLLECTION}
                 FILTER doc.collection == '{collection_name}'
-                RETURN doc""").batch())
+                RETURN doc""",
+            ).batch(),
+        )
 
         debug_truth_counts[collection_name] = {
             "total_truth_records": query_count,
-            f"{collection_name}_records": collection_truth_count
+            f"{collection_name}_records": collection_truth_count,
         }
         logging.info(f"Debug: Collection {collection_name} has {collection_truth_count} truth records")
 
@@ -231,80 +227,76 @@ def generate_cross_collection_queries(
             "Show me music I played while working at {location}",
             "What was I listening to when I was at {location} last week?",
             "Find tracks by {artist} from my {location} playlist",
-            "Show me songs I added to my library while at {location}"
+            "Show me songs I added to my library while at {location}",
         ]
-        
+
         task_location_templates = [
             "Find documents related to {task} that I worked on at {location}",
             "Show me files for the {task} project I edited at {location}",
             "What files did I work on for {task} while at {location}?",
             "Find presentations for {task} I prepared at {location}",
-            "Show me spreadsheets related to {task} that I worked on at {location}"
+            "Show me spreadsheets related to {task} that I worked on at {location}",
         ]
-        
-        # Try to use the LLM query generator from our scratch experiments
-        try:
-            from scratch.llm_query_generation.enhanced_query_generator import EnhancedQueryGenerator
-            llm_query_generator_available = True
-            logging.info("Successfully imported enhanced query generator from scratch directory")
-        except ImportError:
-            logging.error("CRITICAL: Enhanced query generator not available in scratch/llm_query_generation directory")
-            logging.error("This component is required for proper ablation testing with diverse queries")
-            sys.exit(1)  # Fail-stop immediately instead of continuing with fallbacks
 
-        # Use the LLM query generator if available
+        # Use the new integrated LLM query generator for diverse queries
         diverse_queries = []
-        if llm_query_generator_available:
+        try:
+            # Map collection names to activity types
+            collection_to_activity_type = {
+                "AblationMusicActivity": "music",
+                "AblationLocationActivity": "location",
+                "AblationTaskActivity": "task",
+                "AblationCollaborationActivity": "collaboration",
+                "AblationStorageActivity": "storage",
+                "AblationMediaActivity": "media",
+            }
+
+            # Determine activity types from collections
+            activity_types = [
+                collection_to_activity_type.get(c, "location")
+                for c in collection_pair
+                if c in collection_to_activity_type
+            ]
+            activity_type = activity_types[0] if activity_types else "location"
+
+            # Generate diverse queries using LLM through the EnhancedQueryGenerator
+            generator = EnhancedQueryGenerator()
+            logging.info(f"Generating enhanced queries for activity type: {activity_type}")
+
+            # Generate queries with proper fail-stop approach - NO fallbacks
             try:
-                # Map collection names to activity types
-                collection_to_activity_type = {
-                    "AblationMusicActivity": "music",
-                    "AblationLocationActivity": "location",
-                    "AblationTaskActivity": "task",
-                    "AblationCollaborationActivity": "collaboration",
-                    "AblationStorageActivity": "storage",
-                    "AblationMediaActivity": "media",
-                }
-                
-                # Determine activity types from collections
-                activity_types = [collection_to_activity_type.get(c, "location") for c in collection_pair if c in collection_to_activity_type]
-                activity_type = activity_types[0] if activity_types else "location"
-                
-                # Generate diverse queries using LLM
-                # Try to load Anthropic API key from environment or config
-                import os
-                from scratch.llm_query_generation.simple_llm_connector import load_api_key
-                
-                try:
-                    api_key = load_api_key("anthropic")
-                    generator = EnhancedQueryGenerator(api_key=api_key)
-                    logging.info("Successfully loaded API key for EnhancedQueryGenerator")
-                except ValueError as e:
-                    logging.error(f"CRITICAL: Failed to load Anthropic API key: {e}")
-                    logging.error("API key is required for LLM query generation")
-                    sys.exit(1)
-                    
                 diverse_queries = generator.generate_enhanced_queries(activity_type, count=count)
                 logging.info(f"Successfully generated {len(diverse_queries)} diverse queries using LLM")
-                
-                # Fail immediately if LLM queries failed
-                if not diverse_queries:
-                    logging.error("CRITICAL: Failed to generate diverse queries using EnhancedQueryGenerator")
-                    logging.error("This is required for proper ablation testing - fix the query generator")
-                    sys.exit(1)  # Fail-stop immediately
-            except Exception as e:
-                logging.error(f"CRITICAL: Error generating LLM queries: {e}")
-                logging.error("The LLM query generator is required for proper ablation testing")
-                sys.exit(1)  # Fail-stop immediately
-        
+            except Exception as query_gen_error:
+                logging.error(f"CRITICAL: Failed to generate diverse queries using EnhancedQueryGenerator: {query_gen_error}")
+                logging.error("This is required for proper ablation testing - fix the query generator")
+                sys.exit(1)  # Fail-stop immediately - no fallbacks
+
+            # Ensure we have queries to work with - fail-stop approach
+            if not diverse_queries:
+                logging.error("CRITICAL: EnhancedQueryGenerator returned empty results")
+                logging.error("This is required for proper ablation testing - fix the query generator")
+                sys.exit(1)  # Fail-stop immediately - no fallbacks
+
+            # Final verification that we have queries to work with
+            if not diverse_queries:
+                logging.error("CRITICAL: No queries available from query generator")
+                logging.error("This is required for proper ablation testing - fix the query generator")
+                sys.exit(1)  # Fail-stop immediately - no fallbacks
+
+        except Exception as e:
+            logging.error(f"CRITICAL: Unexpected error in query generation setup: {e}")
+            logging.error("This is required for proper ablation testing - fix the query generator infrastructure")
+            sys.exit(1)  # Fail-stop immediately - no fallbacks
+
         # Since we're using fail-stop approach, any LLM generation failure would have already terminated execution
         # But we'll keep these parameters available for reference if they're needed later
-        
+
         # Parameters for query generation and entity reference
         locations = ["Home", "Office", "Coffee Shop", "Library", "Airport"]
         artists = ["Taylor Swift", "The Beatles", "Beyoncé", "Ed Sheeran", "Drake"]
         tasks = ["Quarterly Report", "Project Proposal", "Marketing Plan", "Budget Analysis", "Research Paper"]
-        
+
         # Register consistent entities
         entity_manager.register_entity("location", "Home")
         entity_manager.register_entity("task", "Quarterly Report")
@@ -313,14 +305,16 @@ def generate_cross_collection_queries(
 
         # Generate queries for this combination
         for i in range(count):
-            # Since we've implemented fail-stop for LLM query generation, 
+            # Since we've implemented fail-stop for LLM query generation,
             # we can be confident that diverse_queries has enough entries
             if i < len(diverse_queries):
                 query_text = diverse_queries[i]
             else:
                 # This should never happen with our fail-stop approach, but just in case,
                 # log an error and exit instead of falling back to a template-based approach
-                logging.error(f"CRITICAL: Not enough diverse queries generated. Expected {count}, got {len(diverse_queries)}")
+                logging.error(
+                    f"CRITICAL: Not enough diverse queries generated. Expected {count}, got {len(diverse_queries)}",
+                )
                 sys.exit(1)
 
             # Debug: Check for actual Taylor Swift music data in the collection
@@ -332,7 +326,7 @@ def generate_cross_collection_queries(
                         FOR doc IN {music_collection}
                         FILTER doc.artist == 'Taylor Swift'
                         RETURN doc
-                        """
+                        """,
                     )
                     music_count = len(music_data.batch())
                     logging.info(f"Debug: Found {music_count} actual Taylor Swift music activity records")
@@ -340,7 +334,7 @@ def generate_cross_collection_queries(
                         sample = music_data.next()
                         logging.info(f"Debug: Sample Taylor Swift music activity: {sample.get('_key', 'unknown')}")
                 except Exception as e:
-                    logging.error(f"Error checking music data: {e}")
+                    logging.exception(f"Error checking music data: {e}")
 
             # Generate deterministic query ID
             query_id = generate_deterministic_uuid(f"query:{collection1}:{collection2}:{i}")
@@ -358,7 +352,7 @@ def generate_cross_collection_queries(
                         FOR doc IN {collection}
                         LIMIT 5
                         RETURN doc._key
-                        """
+                        """,
                     )
 
                     # Extract the document keys
@@ -377,7 +371,7 @@ def generate_cross_collection_queries(
                     # Store truth data with composite key
                     store_success = ablation_tester.store_truth_data(query_id, collection, entity_ids)
                 except Exception as e:
-                    logging.error(f"Error querying collection {collection}: {e}")
+                    logging.exception(f"Error querying collection {collection}: {e}")
                     store_success = False
                 if not store_success:
                     logging.error(f"Failed to store truth data for query {query_id} in collection {collection}")
@@ -389,20 +383,24 @@ def generate_cross_collection_queries(
                         retrieved_truth = ablation_tester.get_truth_data(query_id, collection)
                         logging.info(f"Debug: Retrieved {len(retrieved_truth)} truth entities for {collection}")
                         if len(retrieved_truth) != len(entity_ids):
-                            logging.error(f"Truth data mismatch: stored {len(entity_ids)}, retrieved {len(retrieved_truth)}")
+                            logging.error(
+                                f"Truth data mismatch: stored {len(entity_ids)}, retrieved {len(retrieved_truth)}",
+                            )
                     except Exception as e:
-                        logging.error(f"Error verifying truth data: {e}")
+                        logging.exception(f"Error verifying truth data: {e}")
 
                 matching_entities[collection] = entity_ids
 
             # Add query to the list
-            queries.append({
-                "id": str(query_id),
-                "text": query_text,
-                "type": "cross_collection",
-                "collections": collection_pair,
-                "matching_entities": matching_entities
-            })
+            queries.append(
+                {
+                    "id": str(query_id),
+                    "text": query_text,
+                    "type": "cross_collection",
+                    "collections": collection_pair,
+                    "matching_entities": matching_entities,
+                },
+            )
 
             logging.info(f"Generated query {i+1}/{count} for {collection1} + {collection2}: '{query_text}'")
 
@@ -436,7 +434,7 @@ def test_ablation_impact(ablation_tester: AblationTester, queries: list[dict[str
             query_limit=100,
             include_metrics=True,
             include_execution_time=True,
-            verbose=True
+            verbose=True,
         )
 
         # Run the ablation test
@@ -445,7 +443,7 @@ def test_ablation_impact(ablation_tester: AblationTester, queries: list[dict[str
         # Store the results - Fix for Pydantic V2 deprecation warning
         impact_metrics[str(query_id)] = {
             "query_text": query_text,
-            "results": {k: r.model_dump() for k, r in results.items()}
+            "results": {k: r.model_dump() for k, r in results.items()},
         }
 
         logging.info(f"Completed ablation test for query {query_id}")
@@ -489,16 +487,18 @@ def visualize_results(impact_metrics: dict[str, object], output_dir: str):
                 collections.add(dst)
 
                 # Extract metrics
-                impact_data.append({
-                    "query_id": query_id,
-                    "query_text": query_text,
-                    "source_collection": src,
-                    "target_collection": dst,
-                    "precision": metrics["precision"],
-                    "recall": metrics["recall"],
-                    "f1_score": metrics["f1_score"],
-                    "impact": 1.0 - metrics["f1_score"]
-                })
+                impact_data.append(
+                    {
+                        "query_id": query_id,
+                        "query_text": query_text,
+                        "source_collection": src,
+                        "target_collection": dst,
+                        "precision": metrics["precision"],
+                        "recall": metrics["recall"],
+                        "f1_score": metrics["f1_score"],
+                        "impact": 1.0 - metrics["f1_score"],
+                    },
+                )
 
     if not impact_data:
         logging.warning("No impact data available for visualization")
@@ -509,12 +509,7 @@ def visualize_results(impact_metrics: dict[str, object], output_dir: str):
 
     # 1. Impact Heatmap
     plt.figure(figsize=(10, 8))
-    pivot_df = df.pivot_table(
-        index="source_collection",
-        columns="target_collection",
-        values="impact",
-        aggfunc="mean"
-    )
+    pivot_df = df.pivot_table(index="source_collection", columns="target_collection", values="impact", aggfunc="mean")
 
     sns.heatmap(pivot_df, annot=True, cmap="YlOrRd", vmin=0, vmax=1, fmt=".2f")
     plt.title("Impact of Ablating Source Collection on Target Collection")
@@ -527,14 +522,7 @@ def visualize_results(impact_metrics: dict[str, object], output_dir: str):
 
     # 2. Precision/Recall Scatter Plot
     plt.figure(figsize=(10, 8))
-    sns.scatterplot(
-        x="precision",
-        y="recall",
-        hue="source_collection",
-        size="impact",
-        sizes=(50, 200),
-        data=df
-    )
+    sns.scatterplot(x="precision", y="recall", hue="source_collection", size="impact", sizes=(50, 200), data=df)
     plt.title("Precision vs. Recall by Collection")
     plt.xlim(0, 1)
     plt.ylim(0, 1)
@@ -610,19 +598,21 @@ def generate_summary_report(impact_metrics: dict[str, object], output_dir: str):
                 collections.add(dst)
 
                 # Extract metrics
-                impact_data.append({
-                    "query_id": query_id,
-                    "query_text": query_text,
-                    "source_collection": src,
-                    "target_collection": dst,
-                    "precision": metrics["precision"],
-                    "recall": metrics["recall"],
-                    "f1_score": metrics["f1_score"],
-                    "impact": 1.0 - metrics["f1_score"],
-                    "true_positives": metrics["true_positives"],
-                    "false_positives": metrics["false_positives"],
-                    "false_negatives": metrics["false_negatives"]
-                })
+                impact_data.append(
+                    {
+                        "query_id": query_id,
+                        "query_text": query_text,
+                        "source_collection": src,
+                        "target_collection": dst,
+                        "precision": metrics["precision"],
+                        "recall": metrics["recall"],
+                        "f1_score": metrics["f1_score"],
+                        "impact": 1.0 - metrics["f1_score"],
+                        "true_positives": metrics["true_positives"],
+                        "false_positives": metrics["false_positives"],
+                        "false_negatives": metrics["false_negatives"],
+                    },
+                )
 
     if not impact_data:
         logging.warning("No impact data available for report")
@@ -652,27 +642,23 @@ def generate_summary_report(impact_metrics: dict[str, object], output_dir: str):
     report.append("| Collection | Average Impact | Precision | Recall | F1 Score |\n")
     report.append("|------------|---------------|-----------|--------|----------|\n")
 
-    collection_impacts = df.groupby("source_collection").agg({
-        "impact": "mean",
-        "precision": "mean",
-        "recall": "mean",
-        "f1_score": "mean"
-    }).reset_index()
+    collection_impacts = (
+        df.groupby("source_collection")
+        .agg({"impact": "mean", "precision": "mean", "recall": "mean", "f1_score": "mean"})
+        .reset_index()
+    )
 
     for _, row in collection_impacts.sort_values("impact", ascending=False).iterrows():
         report.append(f"| {row['source_collection']} | {row['impact']:.3f} | {row['precision']:.3f} | ")
         report.append(f"{row['recall']:.3f} | {row['f1_score']:.3f} |\n")
 
     report.append("\n## Cross-Collection Dependencies\n")
-    report.append("This table shows how ablating each collection (rows) affects queries targeting other collections (columns).\n\n")
+    report.append(
+        "This table shows how ablating each collection (rows) affects queries targeting other collections (columns).\n\n",
+    )
 
     # Create a pivot table for cross-collection impact
-    pivot_df = df.pivot_table(
-        index="source_collection",
-        columns="target_collection",
-        values="impact",
-        aggfunc="mean"
-    )
+    pivot_df = df.pivot_table(index="source_collection", columns="target_collection", values="impact", aggfunc="mean")
 
     # Generate the table
     header = "| Source \\ Target | " + " | ".join(sorted(pivot_df.columns)) + " |\n"
@@ -708,17 +694,23 @@ def generate_summary_report(impact_metrics: dict[str, object], output_dir: str):
         report.append("Based on the ablation results, the following collections have high impact scores ")
         report.append("and should be prioritized in the search infrastructure:\n\n")
         for coll in high_impact_collections:
-            report.append(f"- **{coll}**: Impact score {collection_impacts[collection_impacts['source_collection'] == coll]['impact'].values[0]:.3f}\n")
+            report.append(
+                f"- **{coll}**: Impact score {collection_impacts[collection_impacts['source_collection'] == coll]['impact'].values[0]:.3f}\n",
+            )
     else:
         report.append("No collections showed particularly high impact scores (>0.5). ")
         report.append("This suggests that no single activity type is critical for overall search performance.\n")
 
     # Strongest cross-collection dependencies
-    top_dependencies = df[df["source_collection"] != df["target_collection"]].sort_values("impact", ascending=False).head(3)
+    top_dependencies = (
+        df[df["source_collection"] != df["target_collection"]].sort_values("impact", ascending=False).head(3)
+    )
     if not top_dependencies.empty:
         report.append("\nThe strongest cross-collection dependencies were found between:\n\n")
         for _, row in top_dependencies.iterrows():
-            report.append(f"- **{row['source_collection']}** → **{row['target_collection']}**: Impact {row['impact']:.3f}\n")
+            report.append(
+                f"- **{row['source_collection']}** → **{row['target_collection']}**: Impact {row['impact']:.3f}\n",
+            )
 
         report.append("\nThese dependencies suggest that optimizing collection relationships could ")
         report.append("improve search performance by leveraging cross-collection information.\n")
@@ -737,12 +729,7 @@ def clear_existing_data():
     """Clear existing data from all activity collections."""
     logging.info("Clearing existing data...")
 
-    collections = [
-        "AblationLocationActivity",
-        "AblationTaskActivity",
-        "AblationMusicActivity",
-        "AblationTruthData"
-    ]
+    collections = ["AblationLocationActivity", "AblationTaskActivity", "AblationMusicActivity", "AblationTruthData"]
 
     # Following fail-stop model - let exceptions propagate
     db_config = IndalekoDBConfig()
@@ -765,10 +752,11 @@ def main():
     parser.add_argument("--clear", action="store_true", help="Clear existing data before running tests")
     parser.add_argument("--visualize", action="store_true", help="Generate visualizations")
     parser.add_argument("--output-dir", type=str, help="Output directory for results")
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
     args = parser.parse_args()
 
     # Set up logging
-    setup_logging()
+    setup_logging(verbose=args.verbose)
     logger = logging.getLogger(__name__)
 
     # Create output directory with timestamp if not specified
@@ -809,13 +797,15 @@ def main():
             collector=LocationActivityCollector,
             recorder=LocationActivityRecorder,
             hash_name="location",
-            hash_property_name="location_name"),
+            hash_property_name="location_name",
+        ),
         TestDataComponents(
             name="Music",
             collector=MusicActivityCollector,
             recorder=MusicActivityRecorder,
             hash_name="music",
-            hash_property_name="artist"),
+            hash_property_name="artist",
+        ),
         # Uncomment to enable Task activity testing:
         # TestDataComponents(
         #     name="Task",
@@ -826,11 +816,7 @@ def main():
     ]
 
     # Generate test data using the providers
-    test_data = generate_test_data(
-        entity_manager,
-        activity_data_providers,
-        count=args.count
-    )
+    test_data = generate_test_data(entity_manager, activity_data_providers, count=args.count)
 
     if not test_data:
         logger.error("Failed to generate test data")
@@ -859,7 +845,7 @@ def main():
     with open(metrics_path, "w") as f:
         # Convert UUID objects to strings to prevent JSON serialization errors
         serializable_metrics = json.loads(
-            json.dumps(impact_metrics, default=lambda o: str(o) if isinstance(o, uuid.UUID) else o)
+            json.dumps(impact_metrics, default=lambda o: str(o) if isinstance(o, uuid.UUID) else o),
         )
 
         # Add truth data to help with debugging

@@ -1,5 +1,18 @@
 # CLAUDE.md - Indaleko Development Guidelines
 
+## CRITICAL: FAIL-STOP IS THE PRIMARY DESIGN PRINCIPLE
+
+Indaleko follows a strict FAIL-STOP model as its primary design principle:
+
+1. NEVER implement fallbacks or paper over errors
+2. ALWAYS fail immediately and visibly when issues occur
+3. NEVER substitute mock/fake data when real data is unavailable
+4. ALWAYS exit with a clear error message (sys.exit(1)) rather than continuing with degraded functionality
+
+This is ESPECIALLY important for scientific experiments like the ablation framework, where data integrity is critical. Silently substituting template-based data when LLM generation fails would invalidate experimental results and is strictly prohibited.
+
+Remember: It is better to fail loudly and immediately than to continue with compromised functionality.
+
 ## Available Tools
 
 ### MCP ArangoDB Access
@@ -16,17 +29,21 @@ Use these tools to verify database state, diagnose issues, and confirm that code
 
 ## Current Work: Comprehensive Ablation Study Framework
 
-We are designing and implementing a complete ablation study framework for scientifically measuring how different activity data types affect query precision and recall. This framework provides controlled testing across all six activity data categories to produce publication-quality research results.
+We are implementing and refining our comprehensive ablation study framework for scientifically measuring how different activity data types affect query precision and recall. This framework provides controlled testing across all six activity data categories to produce publication-quality research results.
 
-### Ablation Study Design Progress
+### Ablation Framework Implementation Status
 
-Our detailed design document (`research/DESIGN 2025-05-07.md`) outlines a comprehensive approach that:
-
-1. **Systematically measures** the impact of each activity data type on search effectiveness
-2. **Generates synthetic data** for controlled experiments across all six activity types
-3. **Uses LLM-driven query generation** to create realistic search scenarios
-4. **Produces accurate metrics** for statistical analysis of search effectiveness
-5. **Follows Indaleko's architectural patterns** for proper database integration
+- ✅ Completed BaseActivityRecorder for standardized database interactions
+- ✅ Implemented all three activity type collectors and recorders with proper inheritance
+- ✅ Enhanced AblationTester with proper truth data validation
+- ✅ Added semantic search queries instead of direct key lookups
+- ✅ Integrated LLM-driven query generator for realistic user queries
+- ✅ Fixed validation timing issues in test workflow
+- ✅ Implemented proper fail-stop behavior with immediate feedback
+- ✅ Added diverse query templates as fallback
+- ✅ Fixed Pydantic V2 compatibility issues
+- 🔄 Adding integration with experimental LLM query generator from scratch/
+- 🔄 Implementing more activity types (Collaboration, Storage, Media)
 
 ### Activity Data Types Being Studied
 
@@ -39,97 +56,100 @@ The ablation study focuses on these six activity data types:
 5. **Storage Activity** - File system operations and access patterns
 6. **Media Activity** - Video/content consumption activities
 
-### Current Implementation Status
+### Improved Error Handling Model
 
-- ✅ Created comprehensive synthetic data collector designs for all activity types
-- ✅ Developed recorder interfaces following proper database integration patterns
-- ✅ Designed Named Entity Recognition component for consistent entity representation
-- ✅ Implemented query generation mechanism using existing LLM infrastructure
-- ✅ Created truth data tracking system for accuracy measurements
-- ✅ Designed collection integration with proper collection naming in `IndalekoDBCollections`
-- ✅ Implemented query-truth integration with expected match generation
-- ✅ Integrated PromptManager for cognitive protection in query generation
-- ✅ Designed depth-first implementation approach starting with Location activity
-- ✅ Implemented LocationActivityCollector with data generation capabilities
-- ✅ Implemented LocationActivityRecorder with database integration
-- ✅ Created unit and integration tests for Location activity components
-- ✅ Developed demo script showing end-to-end Location activity workflow
-- ✅ Implemented TaskActivityCollector with application-aware data generation
-- ✅ Implemented TaskActivityRecorder with database integration
-- ✅ Created comprehensive tests for Task activity components
-- ✅ Developed end-to-end demo for Task activity workflow
-- ✅ Implemented AblationTester with collection ablation mechanism
-- ✅ Created metrics calculation for precision, recall, and F1 score
-- ✅ Developed AblationTestRunner for experiment coordination
-- ✅ Added reporting and visualization capabilities
-- ✅ Created an end-to-end ablation demo script
-- 🔄 Working on Collaboration Activity implementation (next activity type)
-- 🔄 Preparing to implement the remaining activity types
-
-### Key Framework Components
-
-- **Synthetic Data Generators** - Each activity type has a dedicated collector and recorder
-- **Query Generation System** - Uses LLM to create realistic search queries
-- **NER Component** - Manages named entities like "home" and "work" for consistency
-- **Truth Data Tracker** - Records which files should match each query
-- **Ablation Testing Framework** - Measures precision, recall and F1 score impacts
-- **ArangoDB Integration** - Proper collection management and database access patterns
-
-### Database Access Patterns for Ablation
-
-All database operations follow Indaleko's established patterns:
+Indaleko uses a strict fail-stop model for error handling:
 
 ```python
-# Correct database access pattern
-db_config = IndalekoDBConfig()
-db = db_config.get_arangodb()
-cursor = db.aql.execute(query, bind_vars=params)
+# CORRECT: Use sys.exit(1) for immediate termination
+def validate_critical_data(data):
+    """Validate critical data integrity."""
+    if not data:
+        logging.error("CRITICAL: Missing required data")
+        sys.exit(1)  # Immediate termination
+    
+    if not all(required_fields.issubset(item.keys()) for item in data):
+        logging.error("CRITICAL: Data missing required fields")
+        sys.exit(1)  # Immediate termination
+    
+    return True
 
-# Using collection constants instead of hardcoded strings
-collection_name = IndalekoDBCollections.Indaleko_Ablation_Music_Activity_Collection
-db.collection(collection_name)
-
-# Collection ablation with proper management
-ablation_tester = AblationTester()
-ablation_tester.ablate_collection("AblationMusicActivity")
-# ... run tests ...
-ablation_tester.restore_collection("AblationMusicActivity")
+# INCORRECT: Never continue after validation failure
+def bad_validation(data):
+    """BAD validation function that continues after critical error."""
+    valid = True
+    if not data:
+        logging.error("Data is empty")  # Logs but continues!
+        valid = False
+    
+    return valid  # Will allow potentially corrupted execution to continue
 ```
 
-### Synthetic Data Generation Flow
+### LLM Query Generation
 
-The synthetic data generation follows these steps:
+We've implemented two approaches for query generation:
 
-1. Generate natural language queries targeting specific activity types
-2. Extract file references, named entities, and activity references
-3. Create matching metadata based on query components
-4. Create non-matching metadata (temporally distant or semantically different)
-5. Record both matching and non-matching data in the database
-6. Track "ground truth" about which files should match which queries
+1. **Direct Integration** - Using LLMQueryGenerator from the research framework
+2. **Experimental Integration** - Using EnhancedQueryGenerator from scratch/ experiments
 
-### Collector/Recorder Pattern Implementation
+Both implementations ensure:
+- High query diversity (different structures, lengths, entities)
+- Realistic user patterns (questions, commands, keywords)
+- Activity-specific semantics (location, task, music terminology)
+- Improved search evaluation through realistic scenarios
 
-Following Indaleko's architectural principles, our design separates:
+### Semantic Search Implementation
 
-- **Collectors** - Generate raw synthetic data but never interact with the database
-- **Recorders** - Process collector data and handle database interactions
-- **Controller** - Coordinates the collector-recorder workflow maintaining separation of concerns
+Recent improvements to our search implementation:
 
-Our implementation uses a direct integration approach for synthetic data where:
-- Collectors generate data in-memory
-- Controller passes data directly to recorders
-- Recorders handle database insertion
-- Errors are handled with a fail-fast approach for immediate debugging
+```python
+# OLD: Direct ID lookup - doesn't test search capabilities
+def bad_search(query_id, collection):
+    """Direct key lookup doesn't test search."""
+    truth_data = get_truth_data(query_id, collection)
+    aql = f"""
+    FOR doc IN {collection}
+    FILTER doc._key IN @entity_ids
+    RETURN doc
+    """
+    return db.aql.execute(aql, bind_vars={"entity_ids": truth_data})
 
-### Metrics Collection and Analysis
+# NEW: Semantic attribute search - properly tests search
+def better_search(query_text, collection):
+    """Attribute-based search tests real capabilities."""
+    if "MusicActivity" in collection:
+        aql = f"""
+        FOR doc IN {collection}
+        FILTER doc.artist == @artist OR doc.track == @track
+        LIMIT 10
+        RETURN doc
+        """
+        return db.aql.execute(aql, {"artist": "Taylor Swift", "track": "Blank Space"})
+    elif "LocationActivity" in collection:
+        # Location-specific search...
+```
 
-For each activity type, the framework will measure:
+### AblationTester Architecture
 
-- **Precision** - How many returned results are relevant
-- **Recall** - How many relevant items are found
-- **F1 Score** - Harmonic mean of precision and recall
-- **Impact** - Performance degradation when the activity collection is ablated
-- **Relative Contribution** - Comparative importance of each activity type
+The AblationTester now follows this improved workflow:
+
+1. **Setup** - Connect to database and prepare collections
+2. **Generate Data** - Create synthetic activity data across multiple types
+3. **Generate Queries** - Use LLM/templates to create diverse test queries
+4. **Create Truth Data** - Record which entities should match which queries
+5. **Validate** - Verify truth data integrity AFTER creation
+6. **Execute Tests** - For each collection, measure baseline then ablate
+7. **Calculate Metrics** - Measure precision, recall, F1 for each condition
+8. **Generate Reports** - Create visualizations and markdown summaries
+9. **Cleanup** - Restore all collections to their original state
+
+### Key Improvements
+
+- **Proper Collection Order** - Validation now runs after truth data creation
+- **Real Search Tests** - Uses semantic search not ID lookups
+- **Query Diversity** - Each query uses different template, parameters, or LLM generation
+- **Improved Error Detection** - Fail-stop with clear error messages
+- **Truth Data Integrity** - Uses actual database keys for expected matches
 
 ## Architectural Principles
 
@@ -298,7 +318,8 @@ class MyModel(IndalekoBaseModel):
         return v
 ```
 
-### Data Models
+### Data Models and Pydantic Handling
+
 Always extend IndalekoBaseModel for database models:
 ```python
 from data_models.base import IndalekoBaseModel
@@ -306,6 +327,51 @@ from data_models.base import IndalekoBaseModel
 class MyArangoModel(IndalekoBaseModel):
     name: str
     value: int
+```
+
+#### Pydantic V2 Best Practices
+
+Indaleko uses Pydantic V2 for data validation and serialization. Follow these practices:
+
+1. **Never use the deprecated .dict() method**
+```python
+# INCORRECT - Deprecated in Pydantic V2, will be removed in V3
+serialized_data = pydantic_object.dict()  # Will generate warnings
+
+# CORRECT - Use model_dump() for dict conversion
+serialized_data = pydantic_object.model_dump()
+
+# CORRECT - For JSON serialization in one step
+json_string = pydantic_object.model_dump_json()
+
+# CORRECT - If you need a dictionary from JSON string
+doc = json.loads(pydantic_object.model_dump_json())
+```
+
+2. **Use model_config instead of Config class**
+```python
+# INCORRECT - Old style Config class
+class OldModel(BaseModel):
+    name: str
+    
+    class Config:
+        arbitrary_types_allowed = True
+
+# CORRECT - New style model_config
+class NewModel(BaseModel):
+    name: str
+    
+    model_config = {"arbitrary_types_allowed": True}
+```
+
+3. **Prefer Field over field for defaults**
+```python
+from pydantic import BaseModel, Field
+
+class UserModel(BaseModel):
+    # Use Field with proper type annotation
+    name: str = Field(default="Anonymous")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 ```
 
 ## Common Commands
@@ -411,14 +477,45 @@ attribute = {
 }
 ```
 
-### Error Handling
+### Error Handling and Fail-Stop Approach
+
+Indaleko uses a strict fail-stop approach for critical errors:
+
 ```python
+import sys
+
+# CRITICAL ERRORS: Use sys.exit(1) for immediate termination
+def critical_operation():
+    """Operation that must succeed or the program cannot continue."""
+    try:
+        result = risky_but_essential_operation()
+        if not result:
+            logger.error("CRITICAL: Essential operation failed")
+            sys.exit(1)  # Exit immediately with error status
+        return result
+    except Exception as e:
+        logger.error(f"CRITICAL: Fatal error in essential operation: {e}")
+        sys.exit(1)  # Exit immediately with error status
+
+# NON-CRITICAL ERRORS: Use exceptions for recoverable issues
 try:
     result = risky_operation()
 except (ValueError, KeyError) as e:
     logger.error(f"Failed to process data: {e}")
     raise IndalekoProcessingError(f"Data processing failed: {str(e)}") from e
 ```
+
+#### When to Use Fail-Stop
+- For validation errors that would lead to corrupted data
+- For essential infrastructure components (database connection, file system)
+- When continuing would produce meaningless or incorrect results
+- When the same error will occur repeatedly in a loop
+
+#### When Not to Use Fail-Stop
+- For recoverable errors where alternate flows exist
+- For expected error conditions that can be handled
+- In library code called by other components
+- During data import where partial success is acceptable
 
 ### ArangoDB Cursor Handling
 ArangoDB cursors should be handled carefully, especially with large result sets:
@@ -506,3 +603,44 @@ def main() -> None:
 ```
 
 See `NTFS_ACTIVITY_CLI_README.md` for details.
+
+## Experimental Code
+
+Indaleko uses the `scratch/` directory for experimental code and prototypes. This provides a safe space to try new approaches without affecting the main codebase.
+
+### Using the Scratch Directory
+
+1. **Purpose**: Use `scratch/` for rapid prototyping and experimentation
+2. **Integration**: Move stable code from `scratch/` to main codebase when ready
+3. **Independence**: Design experiments to run standalone first
+
+```python
+# Good pattern for experimental code
+if __name__ == "__main__":
+    # Setup standalone test environment
+    setup_test_data()
+    
+    # Run the experiment
+    result = experimental_function()
+    
+    # Report results
+    print(f"Experiment results: {result}")
+```
+
+### Current Experimental Projects
+
+1. **LLM Query Generation** (`scratch/llm_query_generation/`)
+   - Enhanced query diversity experiments
+   - Direct LLM connectors without full infrastructure
+   - Jaro-Winkler analysis for query diversity
+   - Semantic matching algorithms
+   
+2. **Query Matching Results** (`scratch/query_matching_results/`)
+   - Experimental matching algorithms
+   - Performance testing for different query strategies
+   - Analysis of query precision/recall with minimal infrastructure
+   
+3. **Adapting Experimental Code**
+   - Get experimental code working in isolation first
+   - Use imports/try-except to integrate with main code
+   - Clearly comment experimental status

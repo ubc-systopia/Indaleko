@@ -23,11 +23,19 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.insert(0, str(current_path))
 
 from query.utils.llm_connector.factory import LLMConnectorFactory
-from query.utils.prompt_management.data_models.base import (
-    PromptTemplate,
-    PromptTemplateType,
-)
-from query.utils.prompt_management.prompt_manager import PromptManager, PromptVariable
+
+try:
+    from query.utils.prompt_management.prompt_manager import PromptManager
+    from query.utils.prompt_management.schema_manager import (
+        PromptTemplate,
+        PromptTemplateType,
+        PromptVariable,
+    )
+
+    PROMPT_MANAGER_AVAILABLE = True
+except ImportError:
+    PROMPT_MANAGER_AVAILABLE = False
+
 from research.ablation.models.activity import ActivityType
 from research.ablation.query.generator import TestQuery
 
@@ -44,7 +52,12 @@ class LLMQueryGenerator:
     QUERY_TEMPLATE_ID = "ablation_query_generator"
 
     def __init__(
-        self, llm_provider: str = "anthropic", model: str | None = None, use_prompt_manager: bool = True, **kwargs,
+        self,
+        llm_provider: str = "anthropic",
+        model: str | None = None,
+        use_prompt_manager: bool = True,
+        api_key: str | None = None,
+        **kwargs,
     ):
         """Initialize the LLM query generator.
 
@@ -57,18 +70,35 @@ class LLMQueryGenerator:
         self.logger = logging.getLogger(__name__)
         self.logger.info(f"Initializing LLM query generator with provider: {llm_provider}")
 
+        # Store the provider type for later use
+        self.llm_provider = llm_provider
+
         # Initialize LLM connector
         try:
-            self.llm = LLMConnectorFactory.create_connector(connector_type=llm_provider, model=model, **kwargs)
+            # Pass API key if provided
+            if api_key:
+                self.llm = LLMConnectorFactory.create_connector(
+                    connector_type=llm_provider, model=model, api_key=api_key, **kwargs,
+                )
+            else:
+                self.llm = LLMConnectorFactory.create_connector(connector_type=llm_provider, model=model, **kwargs)
             self.logger.info(f"Successfully initialized {llm_provider} connector")
+
+            # Store connector class name for later parameter adaptation
+            if self.llm:
+                self.connector_class_name = self.llm.__class__.__name__
+                self.logger.info(f"Using connector class: {self.connector_class_name}")
+            else:
+                self.connector_class_name = "Unknown"
         except Exception as e:
             self.logger.error(f"Failed to initialize LLM connector: {e}")
             self.llm = None
+            self.connector_class_name = "Unknown"
             raise RuntimeError(f"Failed to initialize LLM connector: {e}")
 
-        # Initialize PromptManager if requested
-        self.use_prompt_manager = use_prompt_manager
-        if use_prompt_manager:
+        # Initialize PromptManager if requested and available
+        self.use_prompt_manager = use_prompt_manager and PROMPT_MANAGER_AVAILABLE
+        if self.use_prompt_manager:
             try:
                 self.prompt_manager = PromptManager()
                 self._ensure_query_template_exists()
@@ -173,10 +203,11 @@ class LLMQueryGenerator:
             # Generate query using LLM
             query_text, metadata = self._generate_query_with_llm(act_type, difficulty, temperature)
 
-            # If query generation failed, use a fallback approach
+            # If query generation failed, fail immediately (fail-stop approach)
             if not query_text:
-                self.logger.warning(f"LLM query generation failed, using fallback for query {i+1}")
-                query_text, metadata = self._generate_fallback_query(act_type, difficulty)
+                self.logger.error(f"CRITICAL: LLM query generation failed for query {i+1}")
+                self.logger.error("This is required for proper ablation testing - fix the query generator")
+                sys.exit(1)  # Fail-stop immediately - no fallbacks
 
             # Generate synthetic matching document IDs
             match_count = self._get_match_count_for_difficulty(difficulty)
@@ -196,7 +227,10 @@ class LLMQueryGenerator:
         return queries
 
     def _generate_query_with_llm(
-        self, activity_type: ActivityType, difficulty: str, temperature: float = 0.7,
+        self,
+        activity_type: ActivityType,
+        difficulty: str,
+        temperature: float = 0.7,
     ) -> tuple[str, dict[str, Any]]:
         """Generate a single query using the LLM.
 
@@ -218,7 +252,10 @@ class LLMQueryGenerator:
             return self._generate_query_with_direct_prompt(activity_type, difficulty, temperature)
 
     def _generate_query_with_prompt_manager(
-        self, activity_type: ActivityType, difficulty: str, temperature: float = 0.7,
+        self,
+        activity_type: ActivityType,
+        difficulty: str,
+        temperature: float = 0.7,
     ) -> tuple[str, dict[str, Any]]:
         """Generate a query using the PromptManager.
 
@@ -254,12 +291,25 @@ class LLMQueryGenerator:
                 + f"(saved {prompt_result.token_savings} tokens)",
             )
 
-            # Get LLM completion
-            response_text, _ = self.llm.get_completion(user_prompt=prompt_result.prompt, temperature=temperature)
+            # Use our enhanced get_completion method (empty system prompt)
+            response_text = self.get_completion(
+                user_prompt=prompt_result.prompt, system_prompt=None, temperature=temperature,
+            )
 
             # Parse JSON response
             try:
-                response = json.loads(response_text)
+                # Extract JSON from the response (in case there's additional text)
+                import re
+
+                json_match = re.search(r"({.*})", response_text, re.DOTALL)
+                if json_match:
+                    json_text = json_match.group(1)
+                    self.logger.debug(f"Extracted JSON: {json_text[:100]}...")
+                    response = json.loads(json_text)
+                else:
+                    # Try parsing the whole response
+                    response = json.loads(response_text)
+
                 query_text = response.get("query", "")
 
                 # Clean up the query if needed
@@ -288,7 +338,10 @@ class LLMQueryGenerator:
             return "", {}
 
     def _generate_query_with_direct_prompt(
-        self, activity_type: ActivityType, difficulty: str, temperature: float = 0.7,
+        self,
+        activity_type: ActivityType,
+        difficulty: str,
+        temperature: float = 0.7,
     ) -> tuple[str, dict[str, Any]]:
         """Generate a query using direct prompts (no PromptManager).
 
@@ -328,14 +381,25 @@ Do not include any other text in your response.
 """
 
         try:
-            # Get completion from LLM
-            response_text, _ = self.llm.get_completion(
+            # Use our enhanced get_completion method that handles different connector types
+            response_text = self.get_completion(
                 system_prompt=system_prompt, user_prompt=user_prompt, temperature=temperature,
             )
 
             # Parse JSON response
             try:
-                response = json.loads(response_text)
+                # Extract JSON from the response (in case there's additional text)
+                import re
+
+                json_match = re.search(r"({.*})", response_text, re.DOTALL)
+                if json_match:
+                    json_text = json_match.group(1)
+                    self.logger.debug(f"Extracted JSON: {json_text[:100]}...")
+                    response = json.loads(json_text)
+                else:
+                    # Try parsing the whole response
+                    response = json.loads(response_text)
+
                 query_text = response.get("query", "")
 
                 # Clean up the query if needed
@@ -362,101 +426,8 @@ Do not include any other text in your response.
             self.logger.error(f"Error generating query with direct prompt: {e}")
             return "", {}
 
-    def _generate_fallback_query(self, activity_type: ActivityType, difficulty: str) -> tuple[str, dict[str, Any]]:
-        """Generate a fallback query when LLM generation fails.
-
-        Args:
-            activity_type: The activity type to target
-            difficulty: The difficulty level (easy, medium, hard)
-
-        Returns:
-            Tuple[str, Dict[str, Any]]: The generated query and its metadata
-        """
-        # Templates for each activity type
-        templates = {
-            ActivityType.MUSIC: [
-                "Find documents I worked on while listening to {artist}",
-                "Show me files I edited while listening to {genre} music",
-                "What documents did I work on while {song} was playing?",
-            ],
-            ActivityType.LOCATION: [
-                "Show files I accessed at {location}",
-                "Find documents I worked on while at {location}",
-                "What files did I edit when I was at {location}?",
-            ],
-            ActivityType.TASK: [
-                "Find documents related to my {task_name} task",
-                "Show me files associated with the {task_name} project",
-                "What documents are part of my {task_name} work?",
-            ],
-            ActivityType.COLLABORATION: [
-                "Show me files I shared during the {meeting_name} meeting",
-                "Find documents we discussed in the {meeting_name} call",
-                "What files did I present at the {meeting_name} meeting?",
-            ],
-            ActivityType.STORAGE: [
-                "Find documents I saved in my {folder_name} folder",
-                "Show me files I moved to the {folder_name} directory",
-                "What documents did I download to {folder_name}?",
-            ],
-            ActivityType.MEDIA: [
-                "Show me files I worked on while watching {video_name}",
-                "Find documents I edited while streaming on {platform}",
-                "What files did I access while watching {video_name}?",
-            ],
-        }
-
-        # Parameters for each activity type
-        parameters = {
-            ActivityType.MUSIC: {
-                "artist": ["Taylor Swift", "The Beatles", "Beyoncé", "Ed Sheeran", "Drake"],
-                "genre": ["pop", "rock", "classical", "jazz", "hip hop"],
-                "song": ["Heat Waves", "Blinding Lights", "Bad Habits", "Stay", "Good 4 U"],
-            },
-            ActivityType.LOCATION: {"location": ["home", "work", "coffee shop", "library", "airport", "hotel"]},
-            ActivityType.TASK: {"task_name": ["coding", "writing", "research", "design", "presentation", "budget"]},
-            ActivityType.COLLABORATION: {
-                "meeting_name": ["team", "client", "strategy", "project", "weekly", "planning"],
-            },
-            ActivityType.STORAGE: {"folder_name": ["downloads", "documents", "projects", "work", "personal", "shared"]},
-            ActivityType.MEDIA: {
-                "video_name": ["YouTube videos", "Netflix", "tutorials", "lectures", "documentaries"],
-                "platform": ["YouTube", "Netflix", "Hulu", "Disney+", "Prime Video"],
-            },
-        }
-
-        # Select template and fill in parameters
-        template = random.choice(templates[activity_type])
-        param_values = {}
-
-        # Extract parameter names from template
-        import re
-
-        param_names = re.findall(r"\{(\w+)\}", template)
-
-        # Fill in parameters
-        for param_name in param_names:
-            if param_name in parameters[activity_type]:
-                param_values[param_name] = random.choice(parameters[activity_type][param_name])
-            else:
-                param_values[param_name] = f"unknown-{param_name}"
-
-        # Fill in template
-        query_text = template
-        for param_name, param_value in param_values.items():
-            query_text = query_text.replace(f"{{{param_name}}}", param_value)
-
-        # Create metadata
-        metadata = {
-            "template": template,
-            "parameters": param_values,
-            "entities": {"relevant_entities": list(param_values.values())},
-            "activity_type": activity_type.name,
-            "llm_generated": False,
-            "fallback_used": True,
-        }
-
-        return query_text, metadata
+    # Fallback query generation has been removed to enforce fail-stop approach
+    # This follows scientific rigor where failures must be visible and addressed directly
 
     def _get_match_count_for_difficulty(self, difficulty: str) -> int:
         """Get the number of expected matches based on difficulty level.
@@ -476,7 +447,10 @@ Do not include any other text in your response.
         return difficulty_map.get(difficulty, 5)  # Default to 5 matches
 
     def _generate_expected_matches(
-        self, activity_type: ActivityType, count: int, entity_data: dict[str, Any],
+        self,
+        activity_type: ActivityType,
+        count: int,
+        entity_data: dict[str, Any],
     ) -> list[str]:
         """Generate synthetic document IDs that should match a query.
 
@@ -512,3 +486,204 @@ Do not include any other text in your response.
             matches.append(doc_id)
 
         return matches
+
+    def get_completion(self, user_prompt: str, system_prompt: str | None = None, temperature: float = 0.7) -> str:
+        """Get a completion from the LLM.
+
+        This method is used by the EnhancedQueryGenerator to generate
+        diverse queries and evaluate diversity.
+
+        Args:
+            user_prompt: The user prompt to send to the LLM
+            system_prompt: Optional system prompt to provide context
+            temperature: Temperature for generation (higher = more creative)
+
+        Returns:
+            str: The LLM's response text
+        """
+        # Skip if LLM is not available
+        if not self.llm:
+            self.logger.error("Cannot get completion: LLM not available")
+            return ""
+
+        try:
+            # Log which connector we're using to help debug parameter issues
+            self.logger.info(f"Getting completion using connector: {self.connector_class_name}")
+
+            # Different connectors expect different parameter formats and return values
+            # We need to adapt our call based on the specific connector
+            if self.connector_class_name == "AnthropicConnector":
+                # Check the parameters by directly inspecting the method signature
+                import inspect
+
+                signature = inspect.signature(self.llm.get_completion)
+                param_names = list(signature.parameters.keys())
+                self.logger.info(f"AnthropicConnector.get_completion params: {param_names}")
+
+                # Check return annotation to see if we should expect a tuple or single value
+                return_tuple = False
+                if hasattr(signature, "return_annotation"):
+                    return_tuple = str(signature.return_annotation).startswith("tuple")
+                    self.logger.info(f"Return annotation: {signature.return_annotation}, is tuple: {return_tuple}")
+
+                try:
+                    # For the original connector, params are (context, question, schema)
+                    if "context" in param_names and "question" in param_names and "schema" in param_names:
+                        self.logger.info("Using original AnthropicConnector format (context, question, schema)")
+                        result = self.llm.get_completion(
+                            context=system_prompt or "You are a helpful assistant.",
+                            question=user_prompt,
+                            schema={"type": "string"},
+                        )
+                    # For the refactored connector, params are (system_prompt, user_prompt)
+                    elif "system_prompt" in param_names and "user_prompt" in param_names:
+                        self.logger.info("Using refactored AnthropicConnector format (system_prompt, user_prompt)")
+                        result = self.llm.get_completion(
+                            system_prompt=system_prompt, user_prompt=user_prompt, temperature=temperature,
+                        )
+                    else:
+                        # Fall back to a generic format as last resort
+                        self.logger.warning(f"Unknown AnthropicConnector parameter format: {param_names}")
+                        direct_prompt = f"{system_prompt}\n\n{user_prompt}" if system_prompt else user_prompt
+                        result = self.llm.get_completion(prompt=direct_prompt, temperature=temperature)
+
+                    # Handle different return types (single value or tuple)
+                    if isinstance(result, tuple) and len(result) >= 1:
+                        self.logger.info("Result is a tuple, extracting first element")
+                        response_text = result[0]
+                    else:
+                        self.logger.info("Result is not a tuple, using as is")
+                        response_text = result
+
+                    return response_text
+
+                except Exception as inner_e:
+                    self.logger.error(f"Error calling Anthropic connector: {inner_e}")
+                    # Fallback to a simpler method
+                    try:
+                        # Last resort: Use the generate_text method which is more standard
+                        self.logger.warning("Falling back to generate_text method")
+                        if hasattr(self.llm, "generate_text"):
+                            combined_prompt = f"{system_prompt or ''}\n\n{user_prompt}"
+                            response_text = self.llm.generate_text(prompt=combined_prompt, temperature=temperature)
+                            return response_text
+                        else:
+                            raise RuntimeError("No usable completion method found")
+                    except Exception as fallback_e:
+                        self.logger.error(f"Fallback also failed: {fallback_e}")
+                        return ""
+
+            else:
+                # For other connectors, use a standard format
+                self.logger.info(f"Using standard format for {self.connector_class_name}")
+                direct_prompt = f"{system_prompt}\n\n{user_prompt}" if system_prompt else user_prompt
+
+                # Try get_completion first
+                try:
+                    result = self.llm.get_completion(prompt=direct_prompt, temperature=temperature)
+
+                    # Handle different return types (single value or tuple)
+                    if isinstance(result, tuple) and len(result) >= 1:
+                        self.logger.info("Result is a tuple, extracting first element")
+                        response_text = result[0]
+                    else:
+                        self.logger.info("Result is not a tuple, using as is")
+                        response_text = result
+
+                    return response_text
+                except Exception as e:
+                    self.logger.error(f"Error with get_completion: {e}")
+                    # Fail immediately - no fallbacks (fail-stop approach)
+                    self.logger.error(f"CRITICAL: Error calling LLM get_completion: {e}")
+                    self.logger.error("This is required for proper ablation testing - fix the LLM connector")
+                    sys.exit(1)  # Fail-stop immediately - no fallbacks
+
+        except Exception as e:
+            self.logger.error(f"CRITICAL: Unexpected error in get_completion: {e}")
+            self.logger.error("This is required for proper ablation testing - fix the LLM connector infrastructure")
+            sys.exit(1)  # Fail-stop immediately - no fallbacks
+
+    def generate_queries_for_activity_type(
+        self,
+        activity_type: str,
+        count: int = 5,
+        difficulty_levels: list[str] | None = None,
+        temperature: float = 0.7,
+    ) -> list[str]:
+        """Generate queries for a specific activity type string.
+
+        This is a convenience method used by the EnhancedQueryGenerator to
+        generate simple text queries without the full TestQuery objects.
+
+        Args:
+            activity_type: String name of the activity type (e.g., "music", "location")
+            count: Number of queries to generate
+            difficulty_levels: Optional list of difficulty levels to include
+            temperature: Temperature for generation (higher = more creative)
+
+        Returns:
+            List[str]: List of query strings for the activity type
+        """
+        self.logger.info(f"Generating {count} queries for activity type: {activity_type}")
+
+        # Map string activity type to ActivityType enum
+        activity_type_map = {
+            "music": ActivityType.MUSIC,
+            "location": ActivityType.LOCATION,
+            "task": ActivityType.TASK,
+            "collaboration": ActivityType.COLLABORATION,
+            "storage": ActivityType.STORAGE,
+            "media": ActivityType.MEDIA,
+        }
+
+        # Get the ActivityType enum value, defaulting to LOCATION if not found
+        activity_enum = activity_type_map.get(activity_type.lower(), ActivityType.LOCATION)
+
+        # Default to all difficulty levels if not specified
+        if difficulty_levels is None:
+            difficulty_levels = ["easy", "medium", "hard"]
+
+        # Set up system and user prompts
+        activity_description = self.activity_descriptions[activity_enum]
+        system_prompt = f"""You are an expert at generating realistic search queries for {activity_description}.
+Your queries should capture how real users would search for files based on their {activity_type} activities.
+Make the queries diverse in structure, length, and complexity.
+"""
+
+        user_prompt = f"""Generate {count} realistic search queries related to {activity_description}.
+
+Each query should be something a person might type to find files or documents related to their {activity_type} activities.
+Make the queries diverse in format, structure, and complexity.
+Some should be questions, some commands, some just keywords.
+Vary the length from very short (2-3 words) to longer complex queries.
+
+Just list {count} different search queries, numbered from 1 to {count}.
+"""
+
+        # Generate queries using our enhanced get_completion method
+        response = self.get_completion(system_prompt=system_prompt, user_prompt=user_prompt, temperature=temperature)
+
+        self.logger.info(f"Got response of length {len(response)} for {activity_type} queries")
+
+        # Parse the response
+        queries = []
+        for line in response.strip().split("\n"):
+            line = line.strip()
+            if line and (line[0].isdigit() or line.startswith("-")):
+                # Remove the number/bullet and any trailing punctuation
+                query = line.split(".", 1)[-1].strip() if "." in line else line
+                query = query.split(")", 1)[-1].strip() if ")" in line else query
+                query = query.lstrip("- ").strip()
+                if query:
+                    queries.append(query)
+
+        # If parsing failed or returned no queries, fail immediately (fail-stop approach)
+        if not queries:
+            self.logger.error("CRITICAL: Failed to parse queries from LLM response")
+            self.logger.error("This is required for proper ablation testing - fix the query generator")
+            sys.exit(1)  # Fail-stop immediately - no fallbacks
+
+        self.logger.info(f"Generated {len(queries)} queries for {activity_type}")
+
+        # Limit to requested count
+        return queries[:count]

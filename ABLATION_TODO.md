@@ -1,73 +1,66 @@
-# Ablation Framework TODO List
+# Ablation Testing Framework TODO List
 
-## Completed Tasks
-- ✅ Fixed LIMIT statement issue in AQL queries
-- ✅ Implemented proper collection ablation mechanism using `IndalekoDBCollectionsMetadata`
-- ✅ Created metrics calculation for precision, recall, F1, and impact
-- ✅ Fixed the `IndalekoCollections is not iterable` bug
-- ✅ Implemented test data generation with both positive and negative examples
-- ✅ Created controlled semantic attributes that correlate with query criteria
-- ✅ Implemented activity data generation (music, geo) that links to file objects
-- ✅ Built comprehensive testing shell script to run the full ablation process
-- ✅ Enhanced data generation to create stronger dependencies between activities and search results
-- ✅ Expanded framework to include all 6 activity sources (music, geo, task, collaboration, storage, media)
+## CRITICAL: FAIL-STOP IS REQUIRED FOR ALL IMPLEMENTATIONS
 
-## Current Tasks
-- 🔄 Run the comprehensive ablation test with all 6 activity sources
-- 🔄 Analyze impact of each activity type on query precision and recall
-- 🔄 Document AQL transformations applied during ablation testing
+This project follows a strict FAIL-STOP model as its primary design principle:
 
-## Future Tasks
-- Create visualizations of ablation results
-- Expand test dataset to more query types
-- Implement statistical significance testing for results
-- Formalize results for academic publication
+1. **NEVER** implement fallbacks or paper over errors 
+2. **ALWAYS** fail immediately and visibly when issues occur
+3. **NEVER** substitute mock/fake data when real data is unavailable
+4. **ALWAYS** exit with a clear error message (sys.exit(1)) rather than continuing with degraded functionality
+
+This is **REQUIRED** for the ablation testing framework as it is a scientific experiment where data integrity is critical. 
+Silently substituting template-based data when LLM generation fails would invalidate experimental results.
+
+## Tasks Remaining
+
+- [ ] Confirm that the current code base can successfully run the full pipeline with the available activity data providers
+- [ ] Migrate experimental LLM query generator from scratch to research/ablation/query
+- [ ] Update imports and references in run_comprehensive_ablation.py to use the migrated query generator
+- [ ] Test the full ablation pipeline after migration to verify functionality
+- [ ] Fix any bugs found during post-migration testing
+- [ ] Commit working code with --no-verify flag
+
+- [ ] Implement CollaborationActivityCollector and CollaborationActivityRecorder
+- [ ] Verify pipeline works with Collaboration activity data provider
+- [ ] Commit collaboration activity implementation with --no-verify flag
+
+- [ ] Implement StorageActivityCollector and StorageActivityRecorder
+- [ ] Verify pipeline works with Storage activity data provider
+- [ ] Commit storage activity implementation with --no-verify flag
+
+- [ ] Implement MediaActivityCollector and MediaActivityRecorder
+- [ ] Verify pipeline works with Media activity data provider
+- [ ] Commit media activity implementation with --no-verify flag
+
+- [ ] Create database snapshot mechanism using arangobackup utility
+- [ ] Integrate database snapshot creation at end of successful ablation run
+
+## Future Enhancements
+
+- [ ] Improve truth data generation to create more semantically meaningful matches
+- [ ] Create more non-match case generation with controlled variety
+- [ ] Enhance diversity calculation for query generation using Jaro-Winkler similarity
+- [ ] Improve ablation report visualizations with more detailed metrics
+- [ ] Create end-to-end ablation study script following full protocol
 
 ## Implementation Notes
 
-### Comprehensive Activity Sources
-The enhanced ablation framework now tests all 6 major activity sources in Indaleko:
+1. All activity data providers must follow the same pattern:
+   - Collectors generate synthetic activity data but NEVER interact with the database
+   - Recorders process collector data and insert it into the database
+   - Each provider must handle fail-stop error cases properly
 
-1. **Music Activity** - Music listening data from sources like Spotify
-2. **Geographic Activity** - Location data from GPS, WiFi, and other sources
-3. **Task Activity** - To-do lists, calendar events, and project tasks
-4. **Collaboration Activity** - File sharing, meetings, and communication
-5. **Storage Activity** - File operations like open, save, and delete
-6. **Media Activity** - Video consumption, webinars, and streaming
+2. The LLM query generator must:
+   - Fail immediately if API connection fails
+   - Fail immediately if response parsing fails
+   - Fail immediately if diversity evaluation fails
+   - NEVER substitute template-based queries as fallbacks
 
-### Enhanced Data Generation
-The data generator creates files with explicit dependencies on activity data:
+3. The comprehensive ablation test runner must:
+   - Validate all prerequisites before starting
+   - Fail immediately if any component is missing
+   - Never attempt to continue with partial functionality
+   - Properly clean up resources even when failing
 
-1. **Direct match files**: Match query criteria without activity data (~50% of positive examples)
-2. **Activity-dependent files**: Only match when specific activity data is present (~50% of positive examples)
-   - Each activity type gets an equal share of the activity-dependent files
-   - Files are designed to only match when their specific activity data is present
-3. **Negative files**: Should NOT match query criteria
-
-This approach creates a clear dependency between activity data and query results, ensuring that ablation has a measurable impact on precision and recall.
-
-### Truth Data Tracking
-The truth data tracker records which files depend on which activity type, enabling detailed analysis of ablation impact:
-
-- `positive_examples`: Tracks which files should match each query
-- `negative_examples`: Tracks which files should not match
-- `activity_dependency`: Tracks which files depend on which activity collections
-
-### Running Comprehensive Tests
-To run the comprehensive ablation test with all activity sources:
-```bash
-./run_comprehensive_ablation.sh
-```
-
-This will:
-1. Reset the database
-2. Generate test data for all 6 activity types
-3. Run the comprehensive ablation test
-4. Display a summary of the results
-
-### Expected Results
-The expected impact of ablation with this comprehensive setup:
-- Baseline F1 Score: 1.0
-- When ablating any single activity collection: Expected F1 ≈ 0.92 (specific to activity type)
-- When ablating all activity collections: Expected F1 ≈ 0.5
-EOF < /dev/null
+Remember: It is better to fail loudly and immediately than to continue with compromised functionality.
