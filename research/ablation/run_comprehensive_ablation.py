@@ -41,7 +41,9 @@ from research.ablation.collectors.location_collector import LocationActivityColl
 from research.ablation.collectors.music_collector import MusicActivityCollector
 from research.ablation.collectors.task_collector import TaskActivityCollector
 from research.ablation.data_sanity_checker import DataSanityChecker
+from research.ablation.models.activity import ActivityType
 from research.ablation.ner.entity_manager import NamedEntityManager
+from research.ablation.query.llm_query_generator import LLMQueryGenerator
 from research.ablation.recorders.location_recorder import LocationActivityRecorder
 from research.ablation.recorders.music_recorder import MusicActivityRecorder
 from research.ablation.recorders.task_recorder import TaskActivityRecorder
@@ -90,7 +92,7 @@ def generate_test_data(
 
     test_data = {}
     collections_loaded = []
-    
+
     # Debug: check if collections exist before starting
     try:
         db_config = IndalekoDBConfig()
@@ -108,14 +110,14 @@ def generate_test_data(
     for activity_data_provider in activity_data_providers:
         collector = activity_data_provider.collector(entity_manager=entity_manager, seed_value=42)
         recorder = activity_data_provider.recorder()
-        
+
         # Debug: Print recorder class details
         logging.info(f"Debug: Using recorder: {recorder.__class__.__name__}")
         collection_name = getattr(recorder, 'get_collection_name', lambda: 'Unknown')()
         logging.info(f"Debug: Collection name from recorder: {collection_name}")
 
         data = collector.generate_batch(count)
-        
+
         # Debug: Log sample data
         if data:
             sample = data[0]
@@ -128,18 +130,18 @@ def generate_test_data(
                 # Create a content hash based on common fields or activity-specific fields
                 content_hash = f"{activity_data_provider.hash_name}:{item.get(activity_data_provider.hash_property_name, 'unknown')}"
                 item["id"] = generate_deterministic_uuid(content_hash)
-            
+
             # Ensure _key field is set for ArangoDB
             if "_key" not in item and "id" in item:
                 item["_key"] = str(item["id"])
-        
+
         # Debug: Generate query with matching data to test query generation
         test_query = f"Find {activity_data_provider.name.lower()} activity"
         if activity_data_provider.name == "Music":
             test_query = "Find songs by Taylor Swift that I listened to at Home"
         elif activity_data_provider.name == "Location":
             test_query = "Find activities at Home"
-        
+
         matching_data = collector.generate_matching_data(test_query, 3)
         logging.info(f"Debug: Generated {len(matching_data)} matching records for test query: '{test_query}'")
         if matching_data:
@@ -154,13 +156,13 @@ def generate_test_data(
                          len(data),
                          activity_data_provider.name
             )
-            
+
             # Debug: Verify what was loaded in the database
             try:
                 collection_name = f"Ablation{activity_data_provider.name}Activity"
                 doc_count = db.aql.execute(f"RETURN LENGTH({collection_name})").next()
                 logging.info(f"Debug: After loading, collection {collection_name} has {doc_count} documents")
-                
+
                 # Check a sample document
                 sample_doc = db.aql.execute(f"FOR doc IN {collection_name} LIMIT 1 RETURN doc").next()
                 logging.info(f"Debug: Sample document keys: {list(sample_doc.keys())}")
@@ -195,21 +197,18 @@ def generate_cross_collection_queries(
     # Debug: Initial truth data check
     debug_truth_counts = {}
     for collection_name in ["AblationLocationActivity", "AblationMusicActivity"]:
-        try:
-            query_count = len(ablation_tester.db.aql.execute(
-                f"RETURN LENGTH({ablation_tester.TRUTH_COLLECTION})").next())
-            collection_truth_count = len(ablation_tester.db.aql.execute(
-                f"""FOR doc IN {ablation_tester.TRUTH_COLLECTION}
-                    FILTER doc.collection == '{collection_name}'
-                    RETURN doc""").batch())
-            
-            debug_truth_counts[collection_name] = {
-                "total_truth_records": query_count,
-                f"{collection_name}_records": collection_truth_count
-            }
-            logger.info(f"Debug: Collection {collection_name} has {collection_truth_count} truth records")
-        except Exception as e:
-            logger.error(f"Error checking truth data: {e}")
+        query_count = ablation_tester.db.aql.execute(
+            f"RETURN LENGTH({ablation_tester.TRUTH_COLLECTION})").next()
+        collection_truth_count = len(ablation_tester.db.aql.execute(
+            f"""FOR doc IN {ablation_tester.TRUTH_COLLECTION}
+                FILTER doc.collection == '{collection_name}'
+                RETURN doc""").batch())
+
+        debug_truth_counts[collection_name] = {
+            "total_truth_records": query_count,
+            f"{collection_name}_records": collection_truth_count
+        }
+        logging.info(f"Debug: Collection {collection_name} has {collection_truth_count} truth records")
 
     # Collection combinations to test
     combinations = [
@@ -226,13 +225,86 @@ def generate_cross_collection_queries(
         collection1, collection2 = collection_pair
         logging.info(f"Generating queries for {collection1} and {collection2} pair")
 
-        # Create a query template that spans both collections
-        template = f"Find documents I worked on at {{location}} while listening to {{music}}"
-        if "MusicActivity" in collection1 or "MusicActivity" in collection2:
-            template = f"Find songs by {{artist}} that I listened to at {{location}}"
-        if "TaskActivity" in collection1 or "TaskActivity" in collection2:
-            template = f"Find documents related to {{task}} that I worked on at {{location}}"
+        # Templates for different collection combinations
+        music_location_templates = [
+            "Find songs by {artist} that I listened to at {location}",
+            "Show me music I played while working at {location}",
+            "What was I listening to when I was at {location} last week?",
+            "Find tracks by {artist} from my {location} playlist",
+            "Show me songs I added to my library while at {location}"
+        ]
+        
+        task_location_templates = [
+            "Find documents related to {task} that I worked on at {location}",
+            "Show me files for the {task} project I edited at {location}",
+            "What files did I work on for {task} while at {location}?",
+            "Find presentations for {task} I prepared at {location}",
+            "Show me spreadsheets related to {task} that I worked on at {location}"
+        ]
+        
+        # Try to use the LLM query generator from our scratch experiments
+        try:
+            from scratch.llm_query_generation.enhanced_query_generator import EnhancedQueryGenerator
+            llm_query_generator_available = True
+            logging.info("Successfully imported enhanced query generator from scratch directory")
+        except ImportError:
+            logging.error("CRITICAL: Enhanced query generator not available in scratch/llm_query_generation directory")
+            logging.error("This component is required for proper ablation testing with diverse queries")
+            sys.exit(1)  # Fail-stop immediately instead of continuing with fallbacks
 
+        # Use the LLM query generator if available
+        diverse_queries = []
+        if llm_query_generator_available:
+            try:
+                # Map collection names to activity types
+                collection_to_activity_type = {
+                    "AblationMusicActivity": "music",
+                    "AblationLocationActivity": "location",
+                    "AblationTaskActivity": "task",
+                    "AblationCollaborationActivity": "collaboration",
+                    "AblationStorageActivity": "storage",
+                    "AblationMediaActivity": "media",
+                }
+                
+                # Determine activity types from collections
+                activity_types = [collection_to_activity_type.get(c, "location") for c in collection_pair if c in collection_to_activity_type]
+                activity_type = activity_types[0] if activity_types else "location"
+                
+                # Generate diverse queries using LLM
+                # Try to load Anthropic API key from environment or config
+                import os
+                from scratch.llm_query_generation.simple_llm_connector import load_api_key
+                
+                try:
+                    api_key = load_api_key("anthropic")
+                    generator = EnhancedQueryGenerator(api_key=api_key)
+                    logging.info("Successfully loaded API key for EnhancedQueryGenerator")
+                except ValueError as e:
+                    logging.error(f"CRITICAL: Failed to load Anthropic API key: {e}")
+                    logging.error("API key is required for LLM query generation")
+                    sys.exit(1)
+                    
+                diverse_queries = generator.generate_enhanced_queries(activity_type, count=count)
+                logging.info(f"Successfully generated {len(diverse_queries)} diverse queries using LLM")
+                
+                # Fail immediately if LLM queries failed
+                if not diverse_queries:
+                    logging.error("CRITICAL: Failed to generate diverse queries using EnhancedQueryGenerator")
+                    logging.error("This is required for proper ablation testing - fix the query generator")
+                    sys.exit(1)  # Fail-stop immediately
+            except Exception as e:
+                logging.error(f"CRITICAL: Error generating LLM queries: {e}")
+                logging.error("The LLM query generator is required for proper ablation testing")
+                sys.exit(1)  # Fail-stop immediately
+        
+        # Since we're using fail-stop approach, any LLM generation failure would have already terminated execution
+        # But we'll keep these parameters available for reference if they're needed later
+        
+        # Parameters for query generation and entity reference
+        locations = ["Home", "Office", "Coffee Shop", "Library", "Airport"]
+        artists = ["Taylor Swift", "The Beatles", "Beyoncé", "Ed Sheeran", "Drake"]
+        tasks = ["Quarterly Report", "Project Proposal", "Marketing Plan", "Budget Analysis", "Research Paper"]
+        
         # Register consistent entities
         entity_manager.register_entity("location", "Home")
         entity_manager.register_entity("task", "Quarterly Report")
@@ -241,12 +313,15 @@ def generate_cross_collection_queries(
 
         # Generate queries for this combination
         for i in range(count):
-            query_text = template.format(
-                location="Home",
-                task="Quarterly Report",
-                music="Classical Piano",
-                artist="Taylor Swift"
-            )
+            # Since we've implemented fail-stop for LLM query generation, 
+            # we can be confident that diverse_queries has enough entries
+            if i < len(diverse_queries):
+                query_text = diverse_queries[i]
+            else:
+                # This should never happen with our fail-stop approach, but just in case,
+                # log an error and exit instead of falling back to a template-based approach
+                logging.error(f"CRITICAL: Not enough diverse queries generated. Expected {count}, got {len(diverse_queries)}")
+                sys.exit(1)
 
             # Debug: Check for actual Taylor Swift music data in the collection
             if "MusicActivity" in collection1 or "MusicActivity" in collection2:
@@ -274,24 +349,41 @@ def generate_cross_collection_queries(
             matching_entities = {}
 
             for collection in collection_pair:
-                # Generate 5 matching entities per collection
-                entity_ids = []
-                for j in range(5):
-                    entity_id = str(generate_deterministic_uuid(f"{collection}:match:{query_text}:{j}"))
-                    entity_ids.append(entity_id)
+                # Query the database for real document keys instead of generating random ones
+                try:
+                    # Get 5 actual document keys from the collection
+                    entity_ids = []
+                    cursor = ablation_tester.db.aql.execute(
+                        f"""
+                        FOR doc IN {collection}
+                        LIMIT 5
+                        RETURN doc._key
+                        """
+                    )
 
-                # Debug: Log entity IDs before storing
-                logging.info(f"Debug: Generated {len(entity_ids)} matching entities for {collection}")
-                if entity_ids:
-                    logging.info(f"Debug: Sample entity ID: {entity_ids[0]}")
-                
-                # Store truth data with composite key
-                store_success = ablation_tester.store_truth_data(query_id, collection, entity_ids)
+                    # Extract the document keys
+                    for doc_key in cursor:
+                        entity_ids.append(doc_key)
+
+                    # If we didn't get enough documents, log an error
+                    if len(entity_ids) < 5:
+                        logging.warning(f"Only found {len(entity_ids)} documents in {collection}")
+
+                    # Debug: Log entity IDs before storing
+                    logging.info(f"Debug: Found {len(entity_ids)} actual document keys for {collection}")
+                    if entity_ids:
+                        logging.info(f"Debug: Sample entity ID: {entity_ids[0]}")
+
+                    # Store truth data with composite key
+                    store_success = ablation_tester.store_truth_data(query_id, collection, entity_ids)
+                except Exception as e:
+                    logging.error(f"Error querying collection {collection}: {e}")
+                    store_success = False
                 if not store_success:
                     logging.error(f"Failed to store truth data for query {query_id} in collection {collection}")
                 else:
                     logging.info(f"Debug: Successfully stored {len(entity_ids)} truth records for {collection}")
-                    
+
                     # Verify truth data was stored correctly
                     try:
                         retrieved_truth = ablation_tester.get_truth_data(query_id, collection)
@@ -300,7 +392,7 @@ def generate_cross_collection_queries(
                             logging.error(f"Truth data mismatch: stored {len(entity_ids)}, retrieved {len(retrieved_truth)}")
                     except Exception as e:
                         logging.error(f"Error verifying truth data: {e}")
-                    
+
                 matching_entities[collection] = entity_ids
 
             # Add query to the list
@@ -350,10 +442,10 @@ def test_ablation_impact(ablation_tester: AblationTester, queries: list[dict[str
         # Run the ablation test
         results = ablation_tester.run_ablation_test(config, query_id, query_text)
 
-        # Store the results
+        # Store the results - Fix for Pydantic V2 deprecation warning
         impact_metrics[str(query_id)] = {
             "query_text": query_text,
-            "results": {k: r.dict() for k, r in results.items()}
+            "results": {k: r.model_dump() for k, r in results.items()}
         }
 
         logging.info(f"Completed ablation test for query {query_id}")
@@ -704,7 +796,7 @@ def main():
 
     # Initialize ablation tester
     ablation_tester = AblationTester()
-    
+
     # Initialize global db config for debugging
     global db_config
     db_config = IndalekoDBConfig()
@@ -744,15 +836,19 @@ def main():
         logger.error("Failed to generate test data")
         sys.exit(1)
 
-    # Run data sanity check
-    logger.info("Running data sanity check...")
-    checker = DataSanityChecker(fail_fast=True)  # Changed to fail_fast=True for fail-stop model
-    sanity_check_passed = checker.run_all_checks()
-
     # Generate cross-collection test queries
+    # This must happen BEFORE data sanity check, since it creates the truth data
     queries = generate_cross_collection_queries(entity_manager, ablation_tester, count=args.queries)
     if not queries:
         logger.error("Failed to generate test queries")
+        sys.exit(1)
+
+    # Run data sanity check AFTER truth data has been generated
+    logger.info("Running data sanity check...")
+    checker = DataSanityChecker(fail_fast=True)  # Using fail_fast=True for fail-stop model
+    sanity_check_passed = checker.run_all_checks()
+    if not sanity_check_passed:
+        logger.error("Data sanity check failed")
         sys.exit(1)
 
     # Test ablation impact
@@ -765,7 +861,7 @@ def main():
         serializable_metrics = json.loads(
             json.dumps(impact_metrics, default=lambda o: str(o) if isinstance(o, uuid.UUID) else o)
         )
-        
+
         # Add truth data to help with debugging
         for query_id, query_data in serializable_metrics.items():
             # Add debug info to each result
@@ -774,11 +870,11 @@ def main():
                 if "aql_query" in result:
                     # Remove whitespace for cleaner output
                     result["aql_query"] = result["aql_query"].strip()
-                
+
                 # Extract collection from impact key
                 if "_impact_on_" in impact_key:
                     _, target_collection = impact_key.split("_impact_on_")
-                    
+
                     # Add truth data info
                     try:
                         truth_data = ablation_tester.get_truth_data(uuid.UUID(query_id), target_collection)
@@ -786,7 +882,7 @@ def main():
                         result["truth_data_count"] = len(truth_data)
                     except Exception as e:
                         logger.error(f"Error getting truth data for query {query_id}: {e}")
-        
+
         json.dump(serializable_metrics, f, indent=2)
 
     logger.info(f"Saved raw metrics to {metrics_path}")
