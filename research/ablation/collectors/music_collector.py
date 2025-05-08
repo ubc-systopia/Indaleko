@@ -2,7 +2,7 @@
 
 import random
 from datetime import UTC, datetime, timedelta
-from typing import Any, List, Set
+from typing import Any
 from uuid import UUID
 
 from ..base import ISyntheticCollector
@@ -144,7 +144,7 @@ class MusicActivityCollector(ISyntheticCollector):
         self.entity_manager.register_entity("artist", artist)
 
         # Return the activity as a dictionary
-        return activity.dict()
+        return activity.model_dump()
 
     def generate_truth_data(self, query: str) -> set[UUID]:
         """Generate truth data for a music-related query.
@@ -190,8 +190,8 @@ class MusicActivityCollector(ISyntheticCollector):
                         matching_entities.add(entity_id)
 
         return matching_entities
-        
-    def generate_batch(self, count: int) -> List[dict[str, Any]]:
+
+    def generate_batch(self, count: int) -> list[dict[str, Any]]:
         """Generate a batch of synthetic music activity data.
 
         Args:
@@ -201,8 +201,8 @@ class MusicActivityCollector(ISyntheticCollector):
             List[Dict]: List of generated music activity data.
         """
         return [self.collect() for _ in range(count)]
-        
-    def generate_matching_data(self, query: str, count: int = 1) -> List[dict[str, Any]]:
+
+    def generate_matching_data(self, query: str, count: int = 1) -> list[dict[str, Any]]:
         """Generate music activity data that should match a specific query.
 
         Args:
@@ -214,7 +214,7 @@ class MusicActivityCollector(ISyntheticCollector):
         """
         query_lower = query.lower()
         matching_data = []
-        
+
         # Extract key terms from the query
         for artist in self.artists:
             if artist.lower() in query_lower:
@@ -223,7 +223,7 @@ class MusicActivityCollector(ISyntheticCollector):
                     track = random.choice(self.tracks_by_artist[artist])
                     album = random.choice(self.albums_by_artist[artist])
                     genre = random.choice(self.genres_by_artist[artist])
-                    
+
                     activity = MusicActivity(
                         artist=artist,
                         track=track,
@@ -233,28 +233,28 @@ class MusicActivityCollector(ISyntheticCollector):
                         platform=random.choice(self.platforms),
                         created_at=datetime.now(UTC) - timedelta(hours=random.randint(0, 24)),
                     )
-                    
+
                     # Generate a deterministic ID
-                    activity_dict = activity.dict()
+                    activity_dict = activity.model_dump()
                     activity_dict["id"] = generate_deterministic_uuid(
-                        f"music_activity:{artist}:{track}:{len(matching_data)}"
+                        f"music_activity:{artist}:{track}:{len(matching_data)}",
                     )
-                    
+
                     matching_data.append(activity_dict)
-                    
+
                     # If we have enough matching data, return it
                     if len(matching_data) >= count:
                         return matching_data
-        
+
         # If we didn't find any matching artists, generate generic matching data
         while len(matching_data) < count:
             data = self.collect()
             data["id"] = generate_deterministic_uuid(f"music_activity:generic_match:{len(matching_data)}")
             matching_data.append(data)
-            
+
         return matching_data
-        
-    def generate_non_matching_data(self, query: str, count: int = 1) -> List[dict[str, Any]]:
+
+    def generate_non_matching_data(self, query: str, count: int = 1) -> list[dict[str, Any]]:
         """Generate music activity data that should NOT match a specific query.
 
         Args:
@@ -266,24 +266,21 @@ class MusicActivityCollector(ISyntheticCollector):
         """
         query_lower = query.lower()
         non_matching_data = []
-        
+
         # Find artists NOT mentioned in the query
-        non_matching_artists = [
-            artist for artist in self.artists 
-            if artist.lower() not in query_lower
-        ]
-        
+        non_matching_artists = [artist for artist in self.artists if artist.lower() not in query_lower]
+
         if not non_matching_artists:
             # Fallback if all artists are mentioned
             non_matching_artists = self.artists
-        
+
         # Generate data for non-matching artists
         for _ in range(count):
             artist = random.choice(non_matching_artists)
             track = random.choice(self.tracks_by_artist[artist])
             album = random.choice(self.albums_by_artist[artist])
             genre = random.choice(self.genres_by_artist[artist])
-            
+
             activity = MusicActivity(
                 artist=artist,
                 track=track,
@@ -294,17 +291,17 @@ class MusicActivityCollector(ISyntheticCollector):
                 # Make non-matching data from longer ago for temporal difference
                 created_at=datetime.now(UTC) - timedelta(days=random.randint(10, 30)),
             )
-            
+
             # Generate a deterministic ID
-            activity_dict = activity.dict()
+            activity_dict = activity.model_dump()
             activity_dict["id"] = generate_deterministic_uuid(
-                f"music_activity:non_match:{artist}:{track}:{len(non_matching_data)}"
+                f"music_activity:non_match:{artist}:{track}:{len(non_matching_data)}",
             )
-            
+
             non_matching_data.append(activity_dict)
-        
+
         return non_matching_data
-    
+
     def seed(self, seed_value: int) -> None:
         """Set the random seed for deterministic data generation.
 
