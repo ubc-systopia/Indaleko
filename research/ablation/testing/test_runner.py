@@ -147,8 +147,9 @@ class AblationTestRunner:
         """
         self.logger.info(f"Generating {num_queries} test queries")
 
-        # Generate queries using the query generator
-        queries = self.query_generator.generate_queries(
+        # Generate diverse queries using the query generator
+        # Using diverse queries helps ensure more meaningful ablation tests
+        queries = self.query_generator.generate_diverse_queries(
             count=num_queries,
             activity_types=activity_types,
             difficulty_levels=difficulty_levels,
@@ -163,10 +164,13 @@ class AblationTestRunner:
             # If no matching IDs were found, we need to generate synthetic truth data
             if not matching_ids:
                 self.logger.info(f"No existing truth data found for query: {query.query_text}")
-                # In a real implementation, this would use a more sophisticated
-                # approach to generate matching IDs based on the query semantics
-                # For now, use the ones provided by the query generator
-                matching_ids = query.expected_matches if hasattr(query, "expected_matches") else []
+
+                # Use the expected_matches from our enhanced query generator
+                # This field is now populated during query generation
+                matching_ids = query.expected_matches
+
+                # Log the number of expected matches for debugging
+                self.logger.info(f"Query has {len(matching_ids)} expected matches")
 
                 # Record the ground truth data for future use
                 self.truth_tracker.record_query_truth(
@@ -191,6 +195,9 @@ class AblationTestRunner:
 
             # Add to list of truth queries
             truth_queries.append(truth)
+
+            # Log the created truth object
+            self.logger.info(f"Created truth object with {len(truth.matching_ids)} matching documents")
 
         return truth_queries
 

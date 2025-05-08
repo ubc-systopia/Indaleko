@@ -1,16 +1,17 @@
 """Base activity data models for ablation testing."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum, auto
-from typing import Dict, List, Optional, Set, Union
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
 
+from data_models.base import IndalekoBaseModel
+
 
 class ActivityType(Enum):
     """Enumeration of activity types for the ablation framework."""
-    
+
     MUSIC = auto()
     LOCATION = auto()
     TASK = auto()
@@ -19,16 +20,16 @@ class ActivityType(Enum):
     MEDIA = auto()
 
 
-class ActivityData(BaseModel):
+class ActivityData(IndalekoBaseModel):
     """Base model for all activity data."""
-    
+
     id: UUID = Field(default_factory=uuid4)
     activity_type: ActivityType
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    modified_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    modified_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     source: str
-    semantic_attributes: Dict[str, Dict] = Field(default_factory=dict)
-    
+    semantic_attributes: dict[str, dict] = Field(default_factory=dict)
+
     class Config:
         frozen = False
         arbitrary_types_allowed = True
@@ -36,13 +37,13 @@ class ActivityData(BaseModel):
 
 class TruthData(BaseModel):
     """Model for tracking ground truth data for ablation testing."""
-    
+
     query_id: UUID
     query_text: str
-    matching_entities: List[UUID]
-    activity_types: List[ActivityType]
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    
+    matching_entities: list[UUID]
+    activity_types: list[ActivityType]
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
     class Config:
         frozen = False
         arbitrary_types_allowed = True

@@ -1,9 +1,8 @@
 """Music activity collector for ablation testing."""
 
 import random
-from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Optional, Set, Tuple, Union
-from uuid import UUID, uuid4
+from datetime import UTC, datetime, timedelta
+from uuid import UUID
 
 from ..base import ISyntheticCollector
 from ..models.music_activity import MusicActivity
@@ -13,22 +12,30 @@ from ..utils.uuid_utils import generate_deterministic_uuid
 
 class MusicActivityCollector(ISyntheticCollector):
     """Synthetic collector for music listening activity."""
-    
-    def __init__(self, entity_manager: Optional[NamedEntityManager] = None):
+
+    def __init__(self, entity_manager: NamedEntityManager | None = None):
         """Initialize the music activity collector.
-        
+
         Args:
             entity_manager: Optional entity manager for consistent entity identifiers.
                            If not provided, a new one will be created.
         """
         self.entity_manager = entity_manager or NamedEntityManager()
-        
+
         # Sample music data
         self.artists = [
-            "Taylor Swift", "The Beatles", "Beyoncé", "Drake", "Ed Sheeran",
-            "Adele", "Kendrick Lamar", "Billie Eilish", "Queen", "Ariana Grande"
+            "Taylor Swift",
+            "The Beatles",
+            "Beyoncé",
+            "Drake",
+            "Ed Sheeran",
+            "Adele",
+            "Kendrick Lamar",
+            "Billie Eilish",
+            "Queen",
+            "Ariana Grande",
         ]
-        
+
         self.tracks_by_artist = {
             "Taylor Swift": ["Blank Space", "Shake It Off", "Love Story", "You Belong With Me", "All Too Well"],
             "The Beatles": ["Hey Jude", "Let It Be", "Yesterday", "Come Together", "Here Comes The Sun"],
@@ -38,23 +45,47 @@ class MusicActivityCollector(ISyntheticCollector):
             "Adele": ["Hello", "Rolling in the Deep", "Someone Like You", "Set Fire to the Rain", "Easy On Me"],
             "Kendrick Lamar": ["HUMBLE.", "DNA.", "Alright", "Swimming Pools", "King Kunta"],
             "Billie Eilish": ["bad guy", "Happier Than Ever", "when the party's over", "Ocean Eyes", "Therefore I Am"],
-            "Queen": ["Bohemian Rhapsody", "We Will Rock You", "Don't Stop Me Now", "Another One Bites the Dust", "We Are The Champions"],
-            "Ariana Grande": ["Thank U, Next", "7 Rings", "Into You", "Side To Side", "No Tears Left To Cry"]
+            "Queen": [
+                "Bohemian Rhapsody",
+                "We Will Rock You",
+                "Don't Stop Me Now",
+                "Another One Bites the Dust",
+                "We Are The Champions",
+            ],
+            "Ariana Grande": ["Thank U, Next", "7 Rings", "Into You", "Side To Side", "No Tears Left To Cry"],
         }
-        
+
         self.albums_by_artist = {
             "Taylor Swift": ["1989", "Red", "Fearless", "Lover", "Folklore"],
-            "The Beatles": ["Abbey Road", "Sgt. Pepper's Lonely Hearts Club Band", "The White Album", "Revolver", "Let It Be"],
+            "The Beatles": [
+                "Abbey Road",
+                "Sgt. Pepper's Lonely Hearts Club Band",
+                "The White Album",
+                "Revolver",
+                "Let It Be",
+            ],
             "Beyoncé": ["Lemonade", "Beyoncé", "I Am... Sasha Fierce", "B'Day", "Renaissance"],
             "Drake": ["Scorpion", "Views", "Take Care", "Nothing Was the Same", "Certified Lover Boy"],
             "Ed Sheeran": ["÷ (Divide)", "× (Multiply)", "+ (Plus)", "= (Equals)", "No.6 Collaborations Project"],
             "Adele": ["25", "21", "19", "30", "Adele Live at the Royal Albert Hall"],
-            "Kendrick Lamar": ["DAMN.", "To Pimp a Butterfly", "good kid, m.A.A.d city", "Section.80", "Mr. Morale & the Big Steppers"],
-            "Billie Eilish": ["When We All Fall Asleep, Where Do We Go?", "Happier Than Ever", "Don't Smile at Me", "Live at Third Man Records", "Guitar Songs"],
+            "Kendrick Lamar": [
+                "DAMN.",
+                "To Pimp a Butterfly",
+                "good kid, m.A.A.d city",
+                "Section.80",
+                "Mr. Morale & the Big Steppers",
+            ],
+            "Billie Eilish": [
+                "When We All Fall Asleep, Where Do We Go?",
+                "Happier Than Ever",
+                "Don't Smile at Me",
+                "Live at Third Man Records",
+                "Guitar Songs",
+            ],
             "Queen": ["A Night at the Opera", "News of the World", "The Game", "A Kind of Magic", "Innuendo"],
-            "Ariana Grande": ["Thank U, Next", "Sweetener", "Dangerous Woman", "My Everything", "Positions"]
+            "Ariana Grande": ["Thank U, Next", "Sweetener", "Dangerous Woman", "My Everything", "Positions"],
         }
-        
+
         self.genres_by_artist = {
             "Taylor Swift": ["Pop", "Country", "Folk", "Alternative"],
             "The Beatles": ["Rock", "Pop Rock", "Psychedelic Rock", "Experimental"],
@@ -65,35 +96,35 @@ class MusicActivityCollector(ISyntheticCollector):
             "Kendrick Lamar": ["Hip Hop", "Rap", "West Coast Hip Hop", "Conscious Hip Hop"],
             "Billie Eilish": ["Pop", "Electropop", "Alternative", "Indie Pop"],
             "Queen": ["Rock", "Hard Rock", "Glam Rock", "Progressive Rock"],
-            "Ariana Grande": ["Pop", "R&B", "Dance Pop", "Trap Pop"]
+            "Ariana Grande": ["Pop", "R&B", "Dance Pop", "Trap Pop"],
         }
-        
+
         self.platforms = ["Spotify", "Apple Music", "YouTube Music", "Amazon Music", "Tidal"]
-    
-    def collect(self) -> Dict:
+
+    def collect(self) -> dict:
         """Generate synthetic music activity data.
-        
+
         Returns:
             Dict: The generated music activity data.
         """
         # Select a random artist
         artist = random.choice(self.artists)
-        
+
         # Select a random track by the artist
         track = random.choice(self.tracks_by_artist[artist])
-        
+
         # Select a random album by the artist
         album = random.choice(self.albums_by_artist[artist])
-        
+
         # Select a random genre for the artist
         genre = random.choice(self.genres_by_artist[artist])
-        
+
         # Generate a random duration between 2 and 5 minutes
         duration_seconds = random.randint(120, 300)
-        
+
         # Select a random platform
         platform = random.choice(self.platforms)
-        
+
         # Create a music activity
         activity = MusicActivity(
             artist=artist,
@@ -103,33 +134,33 @@ class MusicActivityCollector(ISyntheticCollector):
             duration_seconds=duration_seconds,
             platform=platform,
             # Add a created_at timestamp within the last 24 hours
-            created_at=datetime.now(timezone.utc) - timedelta(hours=random.randint(0, 24))
+            created_at=datetime.now(UTC) - timedelta(hours=random.randint(0, 24)),
         )
-        
+
         # Register entities with the entity manager
         self.entity_manager.register_entity("artist", artist)
-        
+
         # Return the activity as a dictionary
         return activity.dict()
-    
-    def generate_truth_data(self, query: str) -> Set[UUID]:
+
+    def generate_truth_data(self, query: str) -> set[UUID]:
         """Generate truth data for a music-related query.
-        
+
         This method identifies which music activities should match the query.
-        
+
         Args:
             query: The natural language query to generate truth data for.
-            
+
         Returns:
             Set[UUID]: The set of UUIDs that should match the query.
         """
         # This is a placeholder implementation
         # In a real implementation, this would analyze the query and identify matching entities
         matching_entities = set()
-        
+
         # Simple keyword matching for demonstration purposes
         query_lower = query.lower()
-        
+
         # Check for artist mentions
         for artist in self.artists:
             if artist.lower() in query_lower:
@@ -137,7 +168,7 @@ class MusicActivityCollector(ISyntheticCollector):
                 for i in range(5):  # Generate 5 matching activities
                     entity_id = generate_deterministic_uuid(f"music_activity:{artist}:{i}")
                     matching_entities.add(entity_id)
-        
+
         # Check for track mentions
         for artist, tracks in self.tracks_by_artist.items():
             for track in tracks:
@@ -145,7 +176,7 @@ class MusicActivityCollector(ISyntheticCollector):
                     # Generate a deterministic UUID for this track
                     entity_id = generate_deterministic_uuid(f"music_activity:{artist}:{track}")
                     matching_entities.add(entity_id)
-        
+
         # Check for genre mentions
         for artist, genres in self.genres_by_artist.items():
             for genre in genres:
@@ -154,5 +185,5 @@ class MusicActivityCollector(ISyntheticCollector):
                     for i in range(3):  # Generate 3 matching activities per genre
                         entity_id = generate_deterministic_uuid(f"music_activity:{genre}:{i}")
                         matching_entities.add(entity_id)
-        
+
         return matching_entities

@@ -173,7 +173,8 @@ All database collections are defined as static collections. The collections for 
 | Indaleko_Ablation_Storage_Activity_Collection | AblationStorageActivity | Synthetic storage operation activity data |
 | Indaleko_Ablation_Media_Activity_Collection | AblationMediaActivity | Synthetic media consumption activity data |
 | Indaleko_Ablation_Query_Truth_Collection | AblationQueryTruth | Truth data for query evaluation |
-| Indaleko_Ablation_Named_Entity_Collection | AblationNamedEntities | Named entity storage |
+
+Note that NER should use the existing collection (Indaleko_Named_Entity_Collection) because this is directly used as part of query resolution.  This eliminates the need to change that code flow.
 
 ## Named Entity Recognition
 
@@ -272,15 +273,15 @@ Each synthetic data generator follows this pattern:
 ```python
 def generate_activity(parameters):
     """Generate synthetic activity data."""
-    
+
     # Generate data based on parameters
-    
+
     # Create semantic attributes
     semantic_attributes = [
         {"Identifier": ACTIVITY_ATTRIBUTE_ID, "Value": attribute_value},
         # Additional attributes
     ]
-    
+
     # Create and return the activity record
     return ActivityDataModel(
         Record=create_record(),
@@ -453,6 +454,183 @@ The ablation study leverages Indaleko's existing query infrastructure:
    - Use the full query pipeline with parser → translator → executor
    - Track query execution plans for analysis
    - Capture performance metrics
+
+### Query Diversity Analysis
+
+To ensure the scientific rigor of the ablation study, the framework analyzes query diversity using Indaleko's existing Jaro-Winkler implementation:
+
+```python
+from utils.misc.string_similarity import jaro_winkler_similarity
+
+def analyze_query_diversity(queries, similarity_threshold=0.85):
+    """Analyze the diversity of a set of queries using Jaro-Winkler similarity."""
+    # Extract query texts
+    query_texts = [q["text"] for q in queries]
+
+    # Calculate similarity matrix
+    similarity_matrix = []
+    for q1 in query_texts:
+        row = []
+        for q2 in query_texts:
+            row.append(jaro_winkler_similarity(q1, q2))
+        similarity_matrix.append(row)
+
+    # Calculate diversity metrics
+    n_queries = len(query_texts)
+
+    # Count similar query pairs (excluding self-comparisons)
+    similar_pairs = 0
+    total_pairs = 0
+
+    for i in range(n_queries):
+        for j in range(i+1, n_queries):
+            similarity = similarity_matrix[i][j]
+            total_pairs += 1
+
+            if similarity >= similarity_threshold:
+                similar_pairs += 1
+
+    # Calculate average similarity (ignoring self-comparisons)
+    total_similarity = sum(similarity_matrix[i][j]
+                         for i in range(n_queries)
+                         for j in range(i+1, n_queries))
+    avg_similarity = total_similarity / total_pairs if total_pairs > 0 else 0
+
+    # Calculate diversity score (1 - avg_similarity)
+    diversity_score = 1 - avg_similarity
+
+    return {
+        "diversity_score": diversity_score,
+        "similar_query_pairs": similar_pairs,
+        "total_query_pairs": total_pairs,
+        "similar_pair_percent": (similar_pairs / total_pairs * 100) if total_pairs > 0 else 0,
+        "average_similarity": avg_similarity
+    }
+```
+
+The query generation system also implements diversity-driven query generation:
+
+```python
+def generate_diverse_queries(activity_type, count, similarity_threshold=0.85):
+    """Generate a diverse set of queries, ensuring minimal redundancy."""
+    diverse_queries = []
+    attempts = 0
+    max_attempts = count * 3  # Allow multiple attempts to find diverse queries
+
+    while len(diverse_queries) < count and attempts < max_attempts:
+        # Generate a candidate query
+        candidate = generate_query(activity_type)
+        candidate_text = candidate["text"]
+
+        # Check similarity with existing queries
+        is_diverse = True
+        for existing_query in diverse_queries:
+            existing_text = existing_query["text"]
+            similarity = jaro_winkler_similarity(candidate_text, existing_text)
+
+            if similarity >= similarity_threshold:
+                is_diverse = False
+                break
+
+        # Add to diverse set if sufficiently different
+        if is_diverse:
+            diverse_queries.append(candidate)
+
+        attempts += 1
+
+    return diverse_queries
+```
+
+This approach ensures that:
+1. The ablation study uses a diverse set of test queries
+2. The diversity of the query set can be quantified with meaningful metrics
+3. Redundant queries that could skew test results are filtered out
+
+### Query-Truth Integration
+
+The ablation framework includes a sophisticated integration between query generation and ground truth tracking, ensuring accurate performance measurement:
+
+```python
+class TestQuery:
+    """Data class for a test query."""
+
+    query_id: uuid.UUID
+    query_text: str
+    activity_types: List[ActivityType]
+    difficulty: str  # easy, medium, hard
+    expected_matches: List[str]  # List of document IDs that should match this query
+    metadata: Dict[str, object]
+```
+
+The query generator produces TestQuery objects with expected_matches populated based on query characteristics:
+
+```python
+def generate_queries(count, activity_types=None, difficulty_levels=None):
+    """Generate test queries with expected matches."""
+    queries = []
+    for i in range(count):
+        # Select an activity type and difficulty level
+        act_type = activity_types[i % len(activity_types)]
+        difficulty = difficulty_levels[i % len(difficulty_levels)]
+
+        # Generate query text from appropriate template
+        query_text = generate_query_text(act_type, i)
+
+        # Generate synthetic matching document IDs
+        match_count = get_match_count_for_difficulty(difficulty)
+        expected_matches = generate_expected_matches(act_type, match_count)
+
+        # Create query object with expected matches
+        query = TestQuery(
+            query_text=query_text,
+            activity_types=[act_type],
+            difficulty=difficulty,
+            expected_matches=expected_matches,
+        )
+        queries.append(query)
+
+    return queries
+```
+
+The TruthTracker component records and retrieves truth data for performance measurement:
+
+```python
+class TruthTracker:
+    """Tracker for query truth data."""
+
+    def record_query_truth(self, query_id, matching_ids, query_text, activity_types):
+        """Record truth data for a query."""
+        doc = {
+            "query_id": str(query_id),
+            "query_text": query_text,
+            "matching_ids": matching_ids,
+            "activity_types": activity_types,
+        }
+        collection = self.db.collection(
+            IndalekoDBCollections.Indaleko_Ablation_Query_Truth_Collection
+        )
+        return collection.insert(doc)
+
+    def get_matching_ids(self, query_text, activity_types=None):
+        """Get the document IDs that should match a query."""
+        # Query the database to find matching IDs for this query
+        # Implementation details omitted for brevity
+        return matching_ids
+```
+
+The integration produces the following workflow:
+
+1. Generate test queries with expected matches
+2. Record truth data in the Indaleko_Ablation_Query_Truth_Collection
+3. Execute queries against the database
+4. Compare actual results with expected matches
+5. Calculate precision, recall, and F1 score
+
+This approach ensures that:
+1. Ground truth is consistently maintained
+2. Performance metrics are based on known expected results
+3. Truth data can be persisted and reused for reproducibility
+4. The impact of ablating collections can be precisely measured
 
 ## Metrics and Analysis
 
