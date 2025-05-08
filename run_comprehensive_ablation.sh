@@ -27,12 +27,27 @@ if [ ${#missing_packages[@]} -gt 0 ]; then
   echo "Continuing without visualization..."
 fi
 
-# Reset the database to ensure clean test data
-echo "Resetting database..."
-python -m db.db_config reset
+# Truncate collections instead of full database reset (faster)
+echo "Clearing collections..."
+collections=("AblationLocationActivity" "AblationTaskActivity" "AblationMusicActivity" "AblationTruthData")
 
-# Initialize the database structure properly
-echo "Initializing database structure..."
+for collection in "${collections[@]}"; do
+  echo "Clearing collection: $collection"
+  python -c "
+import sys
+from db.db_config import IndalekoDBConfig
+db_config = IndalekoDBConfig()
+db = db_config.get_arangodb()
+if db.has_collection('$collection'):
+    db.aql.execute('FOR doc IN $collection REMOVE doc IN $collection')
+    print(f'Successfully cleared collection $collection')
+else:
+    print(f'Collection $collection does not exist')
+"
+done
+
+# Make sure the database structure is ready
+echo "Checking database structure..."
 python -m db.db_setup check
 
 # Make sure output directory exists
@@ -77,7 +92,6 @@ echo "Running comprehensive ablation test..."
 python "$SCRIPT_DIR/research/ablation/run_comprehensive_ablation.py" \
   --count "$count" \
   --queries "$queries" \
-  --clear \
   --output-dir "$output_dir" \
   $visualize
 
