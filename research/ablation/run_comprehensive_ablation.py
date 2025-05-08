@@ -80,6 +80,7 @@ def generate_test_data(
         data = collector.generate_batch(count)
 
         # Ensure all data has an ID field
+        # This is broken: need to pass in this information, not hard code it here.
         for item in data:
             if "id" not in item:
                 # Create a content hash based on common fields or activity-specific fields
@@ -92,7 +93,7 @@ def generate_test_data(
                 else:
                     # Generic fallback if the activity type is unknown
                     content_hash = f"{activity_data_provider_name}:item-{hash(str(item))}"
-                
+
                 item["id"] = generate_deterministic_uuid(content_hash)
 
         batch_success = recorder.record_batch(data)
@@ -132,13 +133,14 @@ def generate_cross_collection_queries(
 
     # Collection combinations to test
     combinations = [
-        ["AblationLocationActivity", "AblationTaskActivity"],
         ["AblationLocationActivity", "AblationMusicActivity"],
-        ["AblationTaskActivity", "AblationMusicActivity"],
     ]
-
-    # Simplified version that just tests location and task for now
-    combinations = [["AblationLocationActivity", "AblationTaskActivity"]]
+    
+    # If you want to test task activity as well, uncomment these:
+    # combinations.extend([
+    #     ["AblationLocationActivity", "AblationTaskActivity"],
+    #     ["AblationTaskActivity", "AblationMusicActivity"],
+    # ])
 
     for collection_pair in combinations:
         collection1, collection2 = collection_pair
@@ -146,6 +148,8 @@ def generate_cross_collection_queries(
 
         # Create a query template that spans both collections
         template = f"Find documents I worked on at {{location}} while listening to {{music}}"
+        if "MusicActivity" in collection1 or "MusicActivity" in collection2:
+            template = f"Find songs by {{artist}} that I listened to at {{location}}"
         if "TaskActivity" in collection1 or "TaskActivity" in collection2:
             template = f"Find documents related to {{task}} that I worked on at {{location}}"
 
@@ -153,13 +157,15 @@ def generate_cross_collection_queries(
         entity_manager.register_entity("location", "Home")
         entity_manager.register_entity("task", "Quarterly Report")
         entity_manager.register_entity("music", "Classical Piano")
+        entity_manager.register_entity("artist", "Taylor Swift")
 
         # Generate queries for this combination
         for i in range(count):
             query_text = template.format(
                 location="Home",
                 task="Quarterly Report",
-                music="Classical Piano"
+                music="Classical Piano",
+                artist="Taylor Swift"
             )
 
             # Generate deterministic query ID
@@ -540,7 +546,7 @@ def clear_existing_data():
         if db.has_collection(collection_name):
             db.aql.execute(f"FOR doc IN {collection_name} REMOVE doc IN {collection_name}")
             logging.info(f"Cleared collection {collection_name}")
-            
+
     logging.info("Data cleared successfully")
 
 
@@ -589,18 +595,19 @@ def main():
     # Each provider is a tuple: (name, collector_class, recorder_class)
     activity_data_providers = [
         ("Location", LocationActivityCollector, LocationActivityRecorder),
+        # Now that MusicActivityCollector is fully implemented, we can enable it:
+        ("Music", MusicActivityCollector, MusicActivityRecorder),
         # Only use the following if they're fully implemented:
         # ("Task", TaskActivityCollector, TaskActivityRecorder),
-        # ("Music", MusicActivityCollector, MusicActivityRecorder),
     ]
-    
+
     # Generate test data using the providers
     test_data = generate_test_data(
-        entity_manager, 
+        entity_manager,
         activity_data_providers,
         count=args.count
     )
-    
+
     if not test_data:
         logger.error("Failed to generate test data")
         sys.exit(1)
@@ -641,7 +648,7 @@ def main():
         logger.info(f"Test completed successfully, see {report_path} for summary")
     else:
         logger.warning("Test completed but no report was generated")
-        
+
     # Ensure cleanup is run regardless of success/failure
     if ablation_tester:
         ablation_tester.cleanup()
