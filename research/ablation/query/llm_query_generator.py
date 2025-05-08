@@ -24,18 +24,6 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 from query.utils.llm_connector.factory import LLMConnectorFactory
 
-try:
-    from query.utils.prompt_management.prompt_manager import PromptManager
-    from query.utils.prompt_management.schema_manager import (
-        PromptTemplate,
-        PromptTemplateType,
-        PromptVariable,
-    )
-
-    PROMPT_MANAGER_AVAILABLE = True
-except ImportError:
-    PROMPT_MANAGER_AVAILABLE = False
-
 from research.ablation.models.activity import ActivityType
 from research.ablation.query.generator import TestQuery
 
@@ -74,38 +62,23 @@ class LLMQueryGenerator:
         self.llm_provider = llm_provider
 
         # Initialize LLM connector
-        try:
-            # Pass API key if provided
-            if api_key:
-                self.llm = LLMConnectorFactory.create_connector(
-                    connector_type=llm_provider, model=model, api_key=api_key, **kwargs,
-                )
-            else:
-                self.llm = LLMConnectorFactory.create_connector(connector_type=llm_provider, model=model, **kwargs)
-            self.logger.info(f"Successfully initialized {llm_provider} connector")
+        # Pass API key if provided
+        if api_key:
+            self.llm = LLMConnectorFactory.create_connector(
+                connector_type=llm_provider, model=model, api_key=api_key, **kwargs,
+            )
+        else:
+            self.llm = LLMConnectorFactory.create_connector(connector_type=llm_provider, model=model, **kwargs)
+        self.logger.info(f"Successfully initialized {llm_provider} connector")
 
-            # Store connector class name for later parameter adaptation
-            if self.llm:
-                self.connector_class_name = self.llm.__class__.__name__
-                self.logger.info(f"Using connector class: {self.connector_class_name}")
-            else:
-                self.connector_class_name = "Unknown"
-        except Exception as e:
-            self.logger.error(f"Failed to initialize LLM connector: {e}")
-            self.llm = None
-            self.connector_class_name = "Unknown"
-            raise RuntimeError(f"Failed to initialize LLM connector: {e}")
+        # Store connector class name for later parameter adaptation
+        if self.llm:
+            self.connector_class_name = self.llm.__class__.__name__
+            self.logger.info(f"Using connector class: {self.connector_class_name}")
+        else:
+            self.logger.critical("Failed to initialize LLM connector")
 
         # Initialize PromptManager if requested and available
-        self.use_prompt_manager = use_prompt_manager and PROMPT_MANAGER_AVAILABLE
-        if self.use_prompt_manager:
-            try:
-                self.prompt_manager = PromptManager()
-                self._ensure_query_template_exists()
-                self.logger.info("Successfully initialized PromptManager")
-            except Exception as e:
-                self.logger.warning(f"Failed to initialize PromptManager, falling back to direct prompts: {e}")
-                self.use_prompt_manager = False
 
         # Activity type descriptions for prompting
         self.activity_descriptions = {
@@ -246,96 +219,7 @@ class LLMQueryGenerator:
         if not self.llm:
             return "", {}
 
-        if self.use_prompt_manager:
-            return self._generate_query_with_prompt_manager(activity_type, difficulty, temperature)
-        else:
-            return self._generate_query_with_direct_prompt(activity_type, difficulty, temperature)
-
-    def _generate_query_with_prompt_manager(
-        self,
-        activity_type: ActivityType,
-        difficulty: str,
-        temperature: float = 0.7,
-    ) -> tuple[str, dict[str, Any]]:
-        """Generate a query using the PromptManager.
-
-        Args:
-            activity_type: The activity type to target
-            difficulty: The difficulty level (easy, medium, hard)
-            temperature: Temperature for generation
-
-        Returns:
-            Tuple[str, Dict[str, Any]]: The generated query and its metadata
-        """
-        try:
-            # Create variables for the template
-            variables = [
-                PromptVariable(name="activity_description", value=self.activity_descriptions[activity_type]),
-                PromptVariable(name="difficulty_level", value=difficulty),
-                PromptVariable(name="difficulty_description", value=self.difficulty_descriptions[difficulty]),
-                PromptVariable(name="difficulty", value=difficulty),
-                PromptVariable(name="activity_type", value=activity_type.name),
-            ]
-
-            # Generate prompt using PromptManager
-            prompt_result = self.prompt_manager.create_prompt(
-                template_id=self.QUERY_TEMPLATE_ID,
-                variables=variables,
-                optimize=True,
-                evaluate_stability=True,
-            )
-
-            # Log token usage
-            self.logger.debug(
-                f"Generated prompt with {prompt_result.token_count} tokens "
-                + f"(saved {prompt_result.token_savings} tokens)",
-            )
-
-            # Use our enhanced get_completion method (empty system prompt)
-            response_text = self.get_completion(
-                user_prompt=prompt_result.prompt, system_prompt=None, temperature=temperature,
-            )
-
-            # Parse JSON response
-            try:
-                # Extract JSON from the response (in case there's additional text)
-                import re
-
-                json_match = re.search(r"({.*})", response_text, re.DOTALL)
-                if json_match:
-                    json_text = json_match.group(1)
-                    self.logger.debug(f"Extracted JSON: {json_text[:100]}...")
-                    response = json.loads(json_text)
-                else:
-                    # Try parsing the whole response
-                    response = json.loads(response_text)
-
-                query_text = response.get("query", "")
-
-                # Clean up the query if needed
-                if query_text.startswith('"') and query_text.endswith('"'):
-                    query_text = query_text[1:-1]
-
-                # Extract metadata
-                metadata = {
-                    "entities": response.get("entities", {}),
-                    "reasoning": response.get("reasoning", ""),
-                    "activity_type": response.get("activity_type", activity_type.name),
-                    "llm_generated": True,
-                    "prompt_manager_used": True,
-                    "prompt_stability_score": prompt_result.stability_score,
-                }
-
-                return query_text, metadata
-
-            except json.JSONDecodeError as e:
-                self.logger.error(f"Error parsing LLM response: {e}")
-                self.logger.debug(f"Raw response: {response_text}")
-                return "", {}
-
-        except Exception as e:
-            self.logger.error(f"Error generating query with PromptManager: {e}")
-            return "", {}
+        return self._generate_query_with_direct_prompt(activity_type, difficulty, temperature)
 
     def _generate_query_with_direct_prompt(
         self,
@@ -386,45 +270,40 @@ Do not include any other text in your response.
                 system_prompt=system_prompt, user_prompt=user_prompt, temperature=temperature,
             )
 
-            # Parse JSON response
-            try:
-                # Extract JSON from the response (in case there's additional text)
-                import re
+            # Extract JSON from the response (in case there's additional text)
+            import re
 
-                json_match = re.search(r"({.*})", response_text, re.DOTALL)
-                if json_match:
-                    json_text = json_match.group(1)
-                    self.logger.debug(f"Extracted JSON: {json_text[:100]}...")
-                    response = json.loads(json_text)
-                else:
-                    # Try parsing the whole response
-                    response = json.loads(response_text)
+            json_match = re.search(r"({.*})", response_text, re.DOTALL)
+            if json_match:
+                json_text = json_match.group(1)
+                self.logger.debug(f"Extracted JSON: {json_text[:100]}...")
+                response = json.loads(json_text)
+            else:
+                # Try parsing the whole response
+                response = json.loads(response_text)
 
-                query_text = response.get("query", "")
+            query_text = response.get("query", "")
 
-                # Clean up the query if needed
-                if query_text.startswith('"') and query_text.endswith('"'):
-                    query_text = query_text[1:-1]
+            # Clean up the query if needed
+            if query_text.startswith('"') and query_text.endswith('"'):
+                query_text = query_text[1:-1]
 
-                # Extract metadata
-                metadata = {
-                    "entities": response.get("entities", {}),
-                    "reasoning": response.get("reasoning", ""),
-                    "activity_type": response.get("activity_type", activity_type.name),
-                    "llm_generated": True,
-                    "prompt_manager_used": False,
-                }
+            # Extract metadata
+            metadata = {
+                "entities": response.get("entities", {}),
+                "reasoning": response.get("reasoning", ""),
+                "activity_type": response.get("activity_type", activity_type.name),
+                "llm_generated": True,
+                "prompt_manager_used": False,
+            }
 
-                return query_text, metadata
+            return query_text, metadata
 
-            except json.JSONDecodeError as e:
-                self.logger.error(f"Error parsing LLM response: {e}")
-                self.logger.debug(f"Raw response: {response_text}")
-                return "", {}
-
-        except Exception as e:
-            self.logger.error(f"Error generating query with direct prompt: {e}")
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Error parsing LLM response: {e}")
+            self.logger.debug(f"Raw response: {response_text}")
             return "", {}
+
 
     # Fallback query generation has been removed to enforce fail-stop approach
     # This follows scientific rigor where failures must be visible and addressed directly
@@ -504,7 +383,7 @@ Do not include any other text in your response.
         # Skip if LLM is not available
         if not self.llm:
             self.logger.error("Cannot get completion: LLM not available")
-            return ""
+            sys.exit(1)  # Fail-stop immediately - no fallbacks
 
         try:
             # Log which connector we're using to help debug parameter issues
@@ -526,52 +405,64 @@ Do not include any other text in your response.
                     return_tuple = str(signature.return_annotation).startswith("tuple")
                     self.logger.info(f"Return annotation: {signature.return_annotation}, is tuple: {return_tuple}")
 
-                try:
-                    # For the original connector, params are (context, question, schema)
-                    if "context" in param_names and "question" in param_names and "schema" in param_names:
-                        self.logger.info("Using original AnthropicConnector format (context, question, schema)")
-                        result = self.llm.get_completion(
-                            context=system_prompt or "You are a helpful assistant.",
-                            question=user_prompt,
-                            schema={"type": "string"},
-                        )
-                    # For the refactored connector, params are (system_prompt, user_prompt)
-                    elif "system_prompt" in param_names and "user_prompt" in param_names:
-                        self.logger.info("Using refactored AnthropicConnector format (system_prompt, user_prompt)")
-                        result = self.llm.get_completion(
-                            system_prompt=system_prompt, user_prompt=user_prompt, temperature=temperature,
-                        )
+                # For the original connector, params are (context, question, schema)
+                if "context" in param_names and "question" in param_names and "schema" in param_names:
+                    self.logger.info("Using original AnthropicConnector format (context, question, schema)")
+                    result = self.llm.get_completion(
+                        context=system_prompt or "You are a helpful assistant.",
+                        question=user_prompt,
+                        schema={"type": "string"},
+                    )
+                # For the refactored connector, params are (system_prompt, user_prompt)
+                elif "system_prompt" in param_names and "user_prompt" in param_names:
+                    self.logger.info("Using refactored AnthropicConnector format (system_prompt, user_prompt)")
+                    # Adding max_tokens parameter to avoid the streaming warning
+                    result = self.llm.get_completion(
+                        system_prompt=system_prompt, 
+                        user_prompt=user_prompt, 
+                        temperature=temperature,
+                        max_tokens=1000  # Limiting token output to avoid streaming warning
+                    )
+                else:
+                    # Fall back to a generic format as last resort
+                    self.logger.warning(f"Unknown AnthropicConnector parameter format: {param_names}")
+                    direct_prompt = f"{system_prompt}\n\n{user_prompt}" if system_prompt else user_prompt
+                    result = self.llm.get_completion(prompt=direct_prompt, temperature=temperature)
+
+                # Handle different return types (single value or tuple)
+                if isinstance(result, tuple) and len(result) >= 1:
+                    self.logger.info("Result is a tuple, extracting first element")
+                    response_text = result[0]
+                elif isinstance(result, dict):
+                    self.logger.warning("Result is a dictionary, not a tuple or string as expected")
+                    # Handle dict response, which shouldn't happen but is causing errors
+                    if "text" in result:
+                        self.logger.info("Found 'text' key in dictionary response, using that")
+                        response_text = result["text"]
+                    elif "content" in result:
+                        self.logger.info("Found 'content' key in dictionary response, using that")
+                        response_text = result["content"]
+                    elif "message" in result:
+                        self.logger.info("Found 'message' key in dictionary response, using that")
+                        response_text = result["message"]
+                    elif "answer" in result:
+                        self.logger.info("Found 'answer' key in dictionary response, using that")
+                        response_text = result["answer"]
                     else:
-                        # Fall back to a generic format as last resort
-                        self.logger.warning(f"Unknown AnthropicConnector parameter format: {param_names}")
-                        direct_prompt = f"{system_prompt}\n\n{user_prompt}" if system_prompt else user_prompt
-                        result = self.llm.get_completion(prompt=direct_prompt, temperature=temperature)
+                        self.logger.error(f"CRITICAL: Dictionary response with no usable text field: {result}")
+                        self.logger.error("This is required for proper ablation testing - fix the LLM connector")
+                        sys.exit(1)  # Fail-stop immediately - no fallbacks
+                else:
+                    self.logger.info("Result is not a tuple or dict, using as is")
+                    response_text = result
 
-                    # Handle different return types (single value or tuple)
-                    if isinstance(result, tuple) and len(result) >= 1:
-                        self.logger.info("Result is a tuple, extracting first element")
-                        response_text = result[0]
-                    else:
-                        self.logger.info("Result is not a tuple, using as is")
-                        response_text = result
+                # Final check that we have a string response
+                if not isinstance(response_text, str):
+                    self.logger.error(f"CRITICAL: Final response is not a string: {type(response_text)}")
+                    self.logger.error("This is required for proper ablation testing - fix the LLM connector")
+                    sys.exit(1)  # Fail-stop immediately - no fallbacks
 
-                    return response_text
-
-                except Exception as inner_e:
-                    self.logger.error(f"Error calling Anthropic connector: {inner_e}")
-                    # Fallback to a simpler method
-                    try:
-                        # Last resort: Use the generate_text method which is more standard
-                        self.logger.warning("Falling back to generate_text method")
-                        if hasattr(self.llm, "generate_text"):
-                            combined_prompt = f"{system_prompt or ''}\n\n{user_prompt}"
-                            response_text = self.llm.generate_text(prompt=combined_prompt, temperature=temperature)
-                            return response_text
-                        else:
-                            raise RuntimeError("No usable completion method found")
-                    except Exception as fallback_e:
-                        self.logger.error(f"Fallback also failed: {fallback_e}")
-                        return ""
+                return response_text
 
             else:
                 # For other connectors, use a standard format
@@ -579,24 +470,42 @@ Do not include any other text in your response.
                 direct_prompt = f"{system_prompt}\n\n{user_prompt}" if system_prompt else user_prompt
 
                 # Try get_completion first
-                try:
-                    result = self.llm.get_completion(prompt=direct_prompt, temperature=temperature)
+                result = self.llm.get_completion(prompt=direct_prompt, temperature=temperature)
 
-                    # Handle different return types (single value or tuple)
-                    if isinstance(result, tuple) and len(result) >= 1:
-                        self.logger.info("Result is a tuple, extracting first element")
-                        response_text = result[0]
+                # Handle different return types (single value or tuple)
+                if isinstance(result, tuple) and len(result) >= 1:
+                    self.logger.info("Result is a tuple, extracting first element")
+                    response_text = result[0]
+                elif isinstance(result, dict):
+                    self.logger.warning("Result is a dictionary, not a tuple or string as expected")
+                    # Handle dict response, which shouldn't happen but is causing errors
+                    if "text" in result:
+                        self.logger.info("Found 'text' key in dictionary response, using that")
+                        response_text = result["text"]
+                    elif "content" in result:
+                        self.logger.info("Found 'content' key in dictionary response, using that")
+                        response_text = result["content"]
+                    elif "message" in result:
+                        self.logger.info("Found 'message' key in dictionary response, using that")
+                        response_text = result["message"]
+                    elif "answer" in result:
+                        self.logger.info("Found 'answer' key in dictionary response, using that")
+                        response_text = result["answer"]
                     else:
-                        self.logger.info("Result is not a tuple, using as is")
-                        response_text = result
+                        self.logger.error(f"CRITICAL: Dictionary response with no usable text field: {result}")
+                        self.logger.error("This is required for proper ablation testing - fix the LLM connector")
+                        sys.exit(1)  # Fail-stop immediately - no fallbacks
+                else:
+                    self.logger.info("Result is not a tuple or dict, using as is")
+                    response_text = result
 
-                    return response_text
-                except Exception as e:
-                    self.logger.error(f"Error with get_completion: {e}")
-                    # Fail immediately - no fallbacks (fail-stop approach)
-                    self.logger.error(f"CRITICAL: Error calling LLM get_completion: {e}")
+                # Final check that we have a string response
+                if not isinstance(response_text, str):
+                    self.logger.error(f"CRITICAL: Final response is not a string: {type(response_text)}")
                     self.logger.error("This is required for proper ablation testing - fix the LLM connector")
                     sys.exit(1)  # Fail-stop immediately - no fallbacks
+
+                return response_text
 
         except Exception as e:
             self.logger.error(f"CRITICAL: Unexpected error in get_completion: {e}")
