@@ -43,7 +43,7 @@ class AblationTester:
         self.ablated_collections: dict[str, bool] = {}
 
         # Truth collection name
-        self.TRUTH_COLLECTION = "AblationQueryTruth"
+        self.TRUTH_COLLECTION = "AblationTruthData"
 
     def _setup_db_connection(self) -> bool:
         """Set up the database connection.
