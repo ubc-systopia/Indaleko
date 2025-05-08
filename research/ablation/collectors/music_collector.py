@@ -2,6 +2,7 @@
 
 import random
 from datetime import UTC, datetime, timedelta
+from typing import Any, List, Set
 from uuid import UUID
 
 from ..base import ISyntheticCollector
@@ -13,14 +14,16 @@ from ..utils.uuid_utils import generate_deterministic_uuid
 class MusicActivityCollector(ISyntheticCollector):
     """Synthetic collector for music listening activity."""
 
-    def __init__(self, entity_manager: NamedEntityManager | None = None):
+    def __init__(self, entity_manager: NamedEntityManager | None = None, seed_value: int = 42):
         """Initialize the music activity collector.
 
         Args:
             entity_manager: Optional entity manager for consistent entity identifiers.
                            If not provided, a new one will be created.
+            seed_value: Random seed for deterministic data generation.
         """
         self.entity_manager = entity_manager or NamedEntityManager()
+        self.seed(seed_value)
 
         # Sample music data
         self.artists = [
@@ -187,3 +190,125 @@ class MusicActivityCollector(ISyntheticCollector):
                         matching_entities.add(entity_id)
 
         return matching_entities
+        
+    def generate_batch(self, count: int) -> List[dict[str, Any]]:
+        """Generate a batch of synthetic music activity data.
+
+        Args:
+            count: Number of music activity records to generate.
+
+        Returns:
+            List[Dict]: List of generated music activity data.
+        """
+        return [self.collect() for _ in range(count)]
+        
+    def generate_matching_data(self, query: str, count: int = 1) -> List[dict[str, Any]]:
+        """Generate music activity data that should match a specific query.
+
+        Args:
+            query: The natural language query to generate matching data for.
+            count: Number of matching records to generate.
+
+        Returns:
+            List[Dict]: List of generated music activity data that should match the query.
+        """
+        query_lower = query.lower()
+        matching_data = []
+        
+        # Extract key terms from the query
+        for artist in self.artists:
+            if artist.lower() in query_lower:
+                # Generate data for this artist
+                for _ in range(count):
+                    track = random.choice(self.tracks_by_artist[artist])
+                    album = random.choice(self.albums_by_artist[artist])
+                    genre = random.choice(self.genres_by_artist[artist])
+                    
+                    activity = MusicActivity(
+                        artist=artist,
+                        track=track,
+                        album=album,
+                        genre=genre,
+                        duration_seconds=random.randint(120, 300),
+                        platform=random.choice(self.platforms),
+                        created_at=datetime.now(UTC) - timedelta(hours=random.randint(0, 24)),
+                    )
+                    
+                    # Generate a deterministic ID
+                    activity_dict = activity.dict()
+                    activity_dict["id"] = generate_deterministic_uuid(
+                        f"music_activity:{artist}:{track}:{len(matching_data)}"
+                    )
+                    
+                    matching_data.append(activity_dict)
+                    
+                    # If we have enough matching data, return it
+                    if len(matching_data) >= count:
+                        return matching_data
+        
+        # If we didn't find any matching artists, generate generic matching data
+        while len(matching_data) < count:
+            data = self.collect()
+            data["id"] = generate_deterministic_uuid(f"music_activity:generic_match:{len(matching_data)}")
+            matching_data.append(data)
+            
+        return matching_data
+        
+    def generate_non_matching_data(self, query: str, count: int = 1) -> List[dict[str, Any]]:
+        """Generate music activity data that should NOT match a specific query.
+
+        Args:
+            query: The natural language query to generate non-matching data for.
+            count: Number of non-matching records to generate.
+
+        Returns:
+            List[Dict]: List of generated music activity data that should NOT match the query.
+        """
+        query_lower = query.lower()
+        non_matching_data = []
+        
+        # Find artists NOT mentioned in the query
+        non_matching_artists = [
+            artist for artist in self.artists 
+            if artist.lower() not in query_lower
+        ]
+        
+        if not non_matching_artists:
+            # Fallback if all artists are mentioned
+            non_matching_artists = self.artists
+        
+        # Generate data for non-matching artists
+        for _ in range(count):
+            artist = random.choice(non_matching_artists)
+            track = random.choice(self.tracks_by_artist[artist])
+            album = random.choice(self.albums_by_artist[artist])
+            genre = random.choice(self.genres_by_artist[artist])
+            
+            activity = MusicActivity(
+                artist=artist,
+                track=track,
+                album=album,
+                genre=genre,
+                duration_seconds=random.randint(120, 300),
+                platform=random.choice(self.platforms),
+                # Make non-matching data from longer ago for temporal difference
+                created_at=datetime.now(UTC) - timedelta(days=random.randint(10, 30)),
+            )
+            
+            # Generate a deterministic ID
+            activity_dict = activity.dict()
+            activity_dict["id"] = generate_deterministic_uuid(
+                f"music_activity:non_match:{artist}:{track}:{len(non_matching_data)}"
+            )
+            
+            non_matching_data.append(activity_dict)
+        
+        return non_matching_data
+    
+    def seed(self, seed_value: int) -> None:
+        """Set the random seed for deterministic data generation.
+
+        Args:
+            seed_value: The seed value to use.
+        """
+        random.seed(seed_value)
