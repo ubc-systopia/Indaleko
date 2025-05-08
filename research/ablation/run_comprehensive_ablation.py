@@ -10,12 +10,15 @@ import argparse
 import json
 import logging
 import os
-import random
 import sys
-import time
 import uuid
+
 from datetime import datetime
 from pathlib import Path
+from pydantic import BaseModel
+
+# Making sure we keep a global reference for debugging
+db_config = None
 
 # Set up environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -52,10 +55,25 @@ def setup_logging():
         format="%(asctime)s - %(levelname)s - %(message)s",
     )
 
+class TestDataComponents(BaseModel):
+    """Components for test data generation.
+
+    This class holds the components needed to generate test data for different
+    activity types, including the collector and recorder classes.
+    """
+    collector: type[ISyntheticCollector]
+    recorder: type[ISyntheticRecorder]
+    name: str
+    hash_name: str
+    hash_property_name: str
+
+    model_config = {
+        "arbitrary_types_allowed": True,
+    }
 
 def generate_test_data(
         entity_manager: NamedEntityManager,
-        activity_data_providers: list[tuple[str, ISyntheticCollector, ISyntheticRecorder]],
+        activity_data_providers: list[TestDataComponents],
         count: int = 100
 ) -> dict:
     """Generate synthetic test data for all activity types.
@@ -72,41 +90,84 @@ def generate_test_data(
 
     test_data = {}
     collections_loaded = []
+    
+    # Debug: check if collections exist before starting
+    try:
+        db_config = IndalekoDBConfig()
+        db = db_config.get_arangodb()
+        for provider in activity_data_providers:
+            collection_name = f"Ablation{provider.name}Activity"
+            if db.has_collection(collection_name):
+                doc_count = db.aql.execute(f"RETURN LENGTH({collection_name})").next()
+                logging.info(f"Debug: Collection {collection_name} exists with {doc_count} documents")
+            else:
+                logging.warning(f"Debug: Collection {collection_name} does not exist")
+    except Exception as e:
+        logging.error(f"Error checking collections: {e}")
 
-    for activity_data_provider_name, collector, recorder in activity_data_providers:
-        collector = collector(entity_manager=entity_manager, seed_value=42)
-        recorder = recorder()
+    for activity_data_provider in activity_data_providers:
+        collector = activity_data_provider.collector(entity_manager=entity_manager, seed_value=42)
+        recorder = activity_data_provider.recorder()
+        
+        # Debug: Print recorder class details
+        logging.info(f"Debug: Using recorder: {recorder.__class__.__name__}")
+        collection_name = getattr(recorder, 'get_collection_name', lambda: 'Unknown')()
+        logging.info(f"Debug: Collection name from recorder: {collection_name}")
 
         data = collector.generate_batch(count)
+        
+        # Debug: Log sample data
+        if data:
+            sample = data[0]
+            logging.info(f"Debug: Sample data for {activity_data_provider.name}: {sample.get('id', 'no-id')}")
+            logging.info(f"Debug: Sample keys: {list(sample.keys())}")
 
-        # Ensure all data has an ID field
-        # This is broken: need to pass in this information, not hard code it here.
+        # Ensure all data has an ID field and _key field for ArangoDB
         for item in data:
             if "id" not in item:
                 # Create a content hash based on common fields or activity-specific fields
-                if activity_data_provider_name == "Location":
-                    content_hash = f"location:{item.get('location_name', 'unknown')}:{item.get('device_name', 'unknown')}"
-                elif activity_data_provider_name == "Task":
-                    content_hash = f"task:{item.get('task_name', 'unknown')}:{item.get('application', 'unknown')}"
-                elif activity_data_provider_name == "Music":
-                    content_hash = f"music:{item.get('track_name', 'unknown')}:{item.get('artist', 'unknown')}"
-                else:
-                    # Generic fallback if the activity type is unknown
-                    content_hash = f"{activity_data_provider_name}:item-{hash(str(item))}"
-
+                content_hash = f"{activity_data_provider.hash_name}:{item.get(activity_data_provider.hash_property_name, 'unknown')}"
                 item["id"] = generate_deterministic_uuid(content_hash)
+            
+            # Ensure _key field is set for ArangoDB
+            if "_key" not in item and "id" in item:
+                item["_key"] = str(item["id"])
+        
+        # Debug: Generate query with matching data to test query generation
+        test_query = f"Find {activity_data_provider.name.lower()} activity"
+        if activity_data_provider.name == "Music":
+            test_query = "Find songs by Taylor Swift that I listened to at Home"
+        elif activity_data_provider.name == "Location":
+            test_query = "Find activities at Home"
+        
+        matching_data = collector.generate_matching_data(test_query, 3)
+        logging.info(f"Debug: Generated {len(matching_data)} matching records for test query: '{test_query}'")
+        if matching_data:
+            logging.info(f"Debug: Matching data sample: {matching_data[0].get('id', 'no-id')}")
 
         batch_success = recorder.record_batch(data)
 
         if batch_success:
-            collections_loaded.append(activity_data_provider_name)
-            test_data[activity_data_provider_name] = data
+            collections_loaded.append(activity_data_provider.name)
+            test_data[activity_data_provider.name] = data
             logging.info("Successfully loaded %s %s activity records",
                          len(data),
-                         activity_data_provider_name
+                         activity_data_provider.name
             )
+            
+            # Debug: Verify what was loaded in the database
+            try:
+                collection_name = f"Ablation{activity_data_provider.name}Activity"
+                doc_count = db.aql.execute(f"RETURN LENGTH({collection_name})").next()
+                logging.info(f"Debug: After loading, collection {collection_name} has {doc_count} documents")
+                
+                # Check a sample document
+                sample_doc = db.aql.execute(f"FOR doc IN {collection_name} LIMIT 1 RETURN doc").next()
+                logging.info(f"Debug: Sample document keys: {list(sample_doc.keys())}")
+            except Exception as e:
+                logging.error(f"Error verifying loaded data: {e}")
         else:
-            logging.warning("Failed to record %s data", activity_data_provider_name)
+            logging.warning("Failed to record %s data", activity_data_provider.name)
 
     logging.info(f"Successfully loaded data for {len(collections_loaded)} collections: {', '.join(collections_loaded)}")
     return test_data
@@ -131,11 +192,30 @@ def generate_cross_collection_queries(
 
     queries = []
 
+    # Debug: Initial truth data check
+    debug_truth_counts = {}
+    for collection_name in ["AblationLocationActivity", "AblationMusicActivity"]:
+        try:
+            query_count = len(ablation_tester.db.aql.execute(
+                f"RETURN LENGTH({ablation_tester.TRUTH_COLLECTION})").next())
+            collection_truth_count = len(ablation_tester.db.aql.execute(
+                f"""FOR doc IN {ablation_tester.TRUTH_COLLECTION}
+                    FILTER doc.collection == '{collection_name}'
+                    RETURN doc""").batch())
+            
+            debug_truth_counts[collection_name] = {
+                "total_truth_records": query_count,
+                f"{collection_name}_records": collection_truth_count
+            }
+            logger.info(f"Debug: Collection {collection_name} has {collection_truth_count} truth records")
+        except Exception as e:
+            logger.error(f"Error checking truth data: {e}")
+
     # Collection combinations to test
     combinations = [
         ["AblationLocationActivity", "AblationMusicActivity"],
     ]
-    
+
     # If you want to test task activity as well, uncomment these:
     # combinations.extend([
     #     ["AblationLocationActivity", "AblationTaskActivity"],
@@ -168,6 +248,25 @@ def generate_cross_collection_queries(
                 artist="Taylor Swift"
             )
 
+            # Debug: Check for actual Taylor Swift music data in the collection
+            if "MusicActivity" in collection1 or "MusicActivity" in collection2:
+                try:
+                    music_collection = "AblationMusicActivity"
+                    music_data = db_config.get_arangodb().aql.execute(
+                        f"""
+                        FOR doc IN {music_collection}
+                        FILTER doc.artist == 'Taylor Swift'
+                        RETURN doc
+                        """
+                    )
+                    music_count = len(music_data.batch())
+                    logging.info(f"Debug: Found {music_count} actual Taylor Swift music activity records")
+                    if music_count > 0:
+                        sample = music_data.next()
+                        logging.info(f"Debug: Sample Taylor Swift music activity: {sample.get('_key', 'unknown')}")
+                except Exception as e:
+                    logging.error(f"Error checking music data: {e}")
+
             # Generate deterministic query ID
             query_id = generate_deterministic_uuid(f"query:{collection1}:{collection2}:{i}")
 
@@ -181,8 +280,27 @@ def generate_cross_collection_queries(
                     entity_id = str(generate_deterministic_uuid(f"{collection}:match:{query_text}:{j}"))
                     entity_ids.append(entity_id)
 
+                # Debug: Log entity IDs before storing
+                logging.info(f"Debug: Generated {len(entity_ids)} matching entities for {collection}")
+                if entity_ids:
+                    logging.info(f"Debug: Sample entity ID: {entity_ids[0]}")
+                
                 # Store truth data with composite key
-                ablation_tester.store_truth_data(query_id, collection, entity_ids)
+                store_success = ablation_tester.store_truth_data(query_id, collection, entity_ids)
+                if not store_success:
+                    logging.error(f"Failed to store truth data for query {query_id} in collection {collection}")
+                else:
+                    logging.info(f"Debug: Successfully stored {len(entity_ids)} truth records for {collection}")
+                    
+                    # Verify truth data was stored correctly
+                    try:
+                        retrieved_truth = ablation_tester.get_truth_data(query_id, collection)
+                        logging.info(f"Debug: Retrieved {len(retrieved_truth)} truth entities for {collection}")
+                        if len(retrieved_truth) != len(entity_ids):
+                            logging.error(f"Truth data mismatch: stored {len(entity_ids)}, retrieved {len(retrieved_truth)}")
+                    except Exception as e:
+                        logging.error(f"Error verifying truth data: {e}")
+                    
                 matching_entities[collection] = entity_ids
 
             # Add query to the list
@@ -253,10 +371,6 @@ def visualize_results(impact_metrics: dict[str, object], output_dir: str):
     Returns:
         list: List of saved visualization file paths
     """
-    if not VISUALIZATION_AVAILABLE:
-        logging.warning("Visualization dependencies not installed, skipping visualizations")
-        return []
-
     logging.info("Generating visualizations...")
 
     # Create output directory if it doesn't exist
@@ -590,15 +704,33 @@ def main():
 
     # Initialize ablation tester
     ablation_tester = AblationTester()
+    
+    # Initialize global db config for debugging
+    global db_config
+    db_config = IndalekoDBConfig()
 
     # Set up activity data providers
     # Each provider is a tuple: (name, collector_class, recorder_class)
     activity_data_providers = [
-        ("Location", LocationActivityCollector, LocationActivityRecorder),
-        # Now that MusicActivityCollector is fully implemented, we can enable it:
-        ("Music", MusicActivityCollector, MusicActivityRecorder),
-        # Only use the following if they're fully implemented:
-        # ("Task", TaskActivityCollector, TaskActivityRecorder),
+        TestDataComponents(
+            name="Location",
+            collector=LocationActivityCollector,
+            recorder=LocationActivityRecorder,
+            hash_name="location",
+            hash_property_name="location_name"),
+        TestDataComponents(
+            name="Music",
+            collector=MusicActivityCollector,
+            recorder=MusicActivityRecorder,
+            hash_name="music",
+            hash_property_name="artist"),
+        # Uncomment to enable Task activity testing:
+        # TestDataComponents(
+        #     name="Task",
+        #     collector=TaskActivityCollector,
+        #     recorder=TaskActivityRecorder,
+        #     hash_name="task_name",
+        #     hash_property_name="application"),
     ]
 
     # Generate test data using the providers
@@ -626,13 +758,35 @@ def main():
     # Test ablation impact
     impact_metrics = test_ablation_impact(ablation_tester, queries)
 
-    # Save raw metrics
+    # Save raw metrics with additional debugging info
     metrics_path = os.path.join(output_dir, "impact_metrics.json")
     with open(metrics_path, "w") as f:
         # Convert UUID objects to strings to prevent JSON serialization errors
         serializable_metrics = json.loads(
             json.dumps(impact_metrics, default=lambda o: str(o) if isinstance(o, uuid.UUID) else o)
         )
+        
+        # Add truth data to help with debugging
+        for query_id, query_data in serializable_metrics.items():
+            # Add debug info to each result
+            for impact_key, result in query_data["results"].items():
+                # If AQL query exists, make sure it's in the output
+                if "aql_query" in result:
+                    # Remove whitespace for cleaner output
+                    result["aql_query"] = result["aql_query"].strip()
+                
+                # Extract collection from impact key
+                if "_impact_on_" in impact_key:
+                    _, target_collection = impact_key.split("_impact_on_")
+                    
+                    # Add truth data info
+                    try:
+                        truth_data = ablation_tester.get_truth_data(uuid.UUID(query_id), target_collection)
+                        result["truth_data"] = list(truth_data)
+                        result["truth_data_count"] = len(truth_data)
+                    except Exception as e:
+                        logger.error(f"Error getting truth data for query {query_id}: {e}")
+        
         json.dump(serializable_metrics, f, indent=2)
 
     logger.info(f"Saved raw metrics to {metrics_path}")

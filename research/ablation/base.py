@@ -158,6 +158,7 @@ class AblationResult(BaseModel):
     true_positives: int
     false_positives: int
     false_negatives: int
+    aql_query: str = ""  # The AQL query used for testing
 
     @property
     def impact(self) -> float:

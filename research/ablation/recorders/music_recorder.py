@@ -21,8 +21,8 @@ except ImportError:
             return None
 
     class IndalekoDBCollections:
-        Indaleko_Activities_Collection = "Activities"
-        Indaleko_Truth_Data_Collection = "TruthData"
+        Indaleko_Ablation_Music_Activity_Collection = "AblationMusicActivity"
+        Indaleko_Ablation_Truth_Data_Collection = "AblationTruthData"
 
 
 class MusicActivityRecorder(ISyntheticRecorder):
@@ -33,8 +33,8 @@ class MusicActivityRecorder(ISyntheticRecorder):
         try:
             self.db_config = IndalekoDBConfig()
             self.db = self.db_config.get_arangodb()
-            self.collection = self.db.collection(IndalekoDBCollections.Indaleko_Activities_Collection)
-            self.truth_collection = self.db.collection(IndalekoDBCollections.Indaleko_Truth_Data_Collection)
+            self.collection = self.db.collection(IndalekoDBCollections.Indaleko_Ablation_Music_Activity_Collection)
+            self.truth_collection = self.db.collection(IndalekoDBCollections.Indaleko_Ablation_Truth_Data_Collection)
         except Exception as e:
             logging.exception(f"Failed to connect to database: {e}")
             self.db = None
@@ -89,7 +89,7 @@ class MusicActivityRecorder(ISyntheticRecorder):
                 "_key": str(query_id),
                 "query_id": str(query_id),
                 "entity_ids": entity_ids_str,
-                "collection": IndalekoDBCollections.Indaleko_Activities_Collection,
+                "collection": IndalekoDBCollections.Indaleko_Ablation_Music_Activity_Collection,
                 "activity_type": "music",
             }
 

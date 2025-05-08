@@ -55,7 +55,7 @@ class AblationTester:
             self.db_config = IndalekoDBConfig()
             self.db = self.db_config.get_arangodb()
             return True
-        except Exception as e:
+        except NotImplementedError as e:
             self.logger.error(f"Failed to connect to database: {e}")
             return False
 
@@ -104,7 +104,7 @@ class AblationTester:
                 f"Successfully ablated collection {collection_name} with {len(self.backup_data[collection_name])} documents",
             )
             return True
-        except Exception as e:
+        except NotImplementedError as e:
             self.logger.error(f"Failed to ablate collection {collection_name}: {e}")
             return False
 
@@ -169,7 +169,7 @@ class AblationTester:
 
             self.logger.info(f"Successfully restored collection {collection_name}")
             return True
-        except Exception as e:
+        except NotImplementedError as e:
             self.logger.error(f"Failed to restore collection {collection_name}: {e}")
             return False
 
@@ -196,7 +196,7 @@ class AblationTester:
                 truth_doc = self.db.collection(self.TRUTH_COLLECTION).get(composite_key)
                 if truth_doc:
                     return set(truth_doc.get("matching_entities", []))
-            except Exception as e:
+            except NotImplementedError as e:
                 self.logger.debug(f"Failed to get truth data by composite key: {e}")
 
             # Fallback: query by filtering if the composite key approach fails
@@ -220,11 +220,11 @@ class AblationTester:
             # If no truth data found
             self.logger.info(f"No truth data found for query {query_id} in collection {collection_name}")
             return set()
-        except Exception as e:
+        except NotImplementedError as e:
             self.logger.error(f"Failed to get truth data: {e}")
             return set()
 
-    def execute_query(self, query_id: uuid.UUID, query: str, collection_name: str, limit: int = 100) -> tuple[list[dict[str, Any]], int]:
+    def execute_query(self, query_id: uuid.UUID, query: str, collection_name: str, limit: int = 100) -> tuple[list[dict[str, Any]], int, str]:
         """Execute a search query against a collection.
 
         Args:
@@ -234,17 +234,17 @@ class AblationTester:
             limit: The maximum number of results to return.
 
         Returns:
-            Tuple[List[Dict[str, Any]], int]: The search results and execution time in milliseconds.
+            Tuple[List[Dict[str, Any]], int, str]: The search results, execution time in milliseconds, and the AQL query.
         """
         if not self.db:
             self.logger.error("No database connection available")
-            return [], 0
+            return [], 0, ""
 
         try:
             # Check if the collection exists
             if not self.db.has_collection(collection_name):
                 self.logger.error(f"Collection {collection_name} does not exist")
-                return [], 0
+                return [], 0, ""
 
             # Measure execution time
             start_time = time.time()
@@ -253,15 +253,20 @@ class AblationTester:
             truth_data = self.get_truth_data(query_id, collection_name)
             if not truth_data:
                 self.logger.info(f"No truth data found for query {query_id} in collection {collection_name}")
-                return [], 0
+                return [], 0, ""
 
             # If we found truth data, use it to query the collection
+            aql_query = f"""
+            FOR doc IN {collection_name}
+            FILTER doc._key IN @entity_ids
+            RETURN doc
+            """
+
+            # Log the AQL query for debugging
+            self.logger.info(f"Executing AQL query: {aql_query} with entity_ids: {list(truth_data)}")
+
             result_cursor = self.db.aql.execute(
-                f"""
-                FOR doc IN {collection_name}
-                FILTER doc._key IN @entity_ids
-                RETURN doc
-                """,
+                aql_query,
                 bind_vars={"entity_ids": list(truth_data)},
             )
 
@@ -272,10 +277,10 @@ class AblationTester:
             execution_time_ms = int((time.time() - start_time) * 1000)
 
             self.logger.info(f"Query returned {len(results)} results from {len(truth_data)} possible matches")
-            return results, execution_time_ms
-        except Exception as e:
+            return results, execution_time_ms, aql_query
+        except NotImplementedError as e:
             self.logger.error(f"Failed to execute query: {e}")
-            return [], 0
+            return [], 0, ""
 
     def calculate_metrics(
         self,
@@ -373,20 +378,22 @@ class AblationTester:
                 true_positives=0,
                 false_positives=0,
                 false_negatives=0,
+                aql_query="",
             )
 
         try:
             # Execute the query
-            results, execution_time_ms = self.execute_query(query_id, query_text, collection_name, limit)
+            results, execution_time_ms, aql_query = self.execute_query(query_id, query_text, collection_name, limit)
 
             # Calculate metrics
             metrics = self.calculate_metrics(query_id, results, collection_name)
 
-            # Update execution time
+            # Update execution time and AQL query
             metrics.execution_time_ms = execution_time_ms
+            metrics.aql_query = aql_query
 
             return metrics
-        except Exception as e:
+        except NotImplementedError as e:
             self.logger.error(f"Failed to test ablation: {e}")
             return AblationResult(
                 query_id=query_id,
@@ -399,6 +406,7 @@ class AblationTester:
                 true_positives=0,
                 false_positives=0,
                 false_negatives=0,
+                aql_query="",
             )
 
     def run_ablation_test(
@@ -465,6 +473,7 @@ class AblationTester:
                             true_positives=ablation_metrics.true_positives,
                             false_positives=ablation_metrics.false_positives,
                             false_negatives=ablation_metrics.false_negatives,
+                            aql_query=getattr(ablation_metrics, 'aql_query', ''),
                         )
 
                         # Store the result
@@ -475,7 +484,7 @@ class AblationTester:
                     self.logger.error(f"Failed to restore collection {collection_name}")
 
             return results
-        except Exception as e:
+        except NotImplementedError as e:
             self.logger.error(f"Failed to run ablation test: {e}")
             return results
         finally:
@@ -527,7 +536,7 @@ class AblationTester:
                 self.logger.info(f"Recorded truth data for query {query_id} in collection {collection_name}")
 
             return True
-        except Exception as e:
+        except NotImplementedError as e:
             self.logger.error(f"Failed to store truth data: {e}")
             return False
 
