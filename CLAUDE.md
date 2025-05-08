@@ -339,6 +339,50 @@ class MyArangoModel(IndalekoBaseModel):
 
 ## Best Practices
 
+### Code Verification and Testing
+
+**CRITICAL: Always test your code before committing**
+
+1. **Verify All Implementations**: Never claim that code works until you have tested it yourself
+   - Run every script you create at least once
+   - Test all code paths, not just the happy path
+   - Handle potential errors gracefully
+
+2. **Test Complex Systems End-to-End**:
+   - For multi-component systems like the ablation framework, test the entire flow
+   - Verify data is correctly generated, stored, and retrieved
+   - Confirm metrics are calculated correctly
+   - Check visualization and reporting functionality
+
+3. **Handle Large Codebase Challenges**:
+   - Run focused tests on components you're modifying
+   - Use small-scale test cases first before full-scale tests
+   - Create dedicated test scripts for complex functionality
+
+```python
+# Example test harness pattern
+def test_component():
+    # Setup test data
+    test_data = generate_test_data()
+    
+    # Run the component under test
+    result = component_function(test_data)
+    
+    # Verify results
+    assert result.status == "success"
+    assert len(result.items) == len(test_data)
+    
+    # Log verification
+    logger.info(f"Verified component with {len(test_data)} items")
+    
+    return result
+
+# Always run your tests!
+if __name__ == "__main__":
+    test_result = test_component()
+    print(f"Test {'passed' if test_result else 'failed'}")
+```
+
 ### Database Integration
 ```python
 # Always test with real database connections
