@@ -1,144 +1,135 @@
 # CLAUDE.md - Indaleko Development Guidelines
 
-## Current Work: Collection Ablation Framework
+## Available Tools
 
-We've implemented a robust collection ablation framework for measuring how different metadata types affect query precision and recall. The framework provides controlled testing of how the absence of specific collections impacts search effectiveness without requiring architectural changes.
+### MCP ArangoDB Access
+Direct database access is available through MCP tools:
+- `mcp__arango-mcp__arango_query` - Execute AQL queries directly against the database
+- `mcp__arango-mcp__arango_insert` - Insert documents into collections
+- `mcp__arango-mcp__arango_update` - Update existing documents
+- `mcp__arango-mcp__arango_remove` - Remove documents from collections
+- `mcp__arango-mcp__arango_backup` - Create backups of collections
+- `mcp__arango-mcp__arango_list_collections` - List all collections in the database
+- `mcp__arango-mcp__arango_create_collection` - Create new collections
 
-### Collection Ablation Framework
+Use these tools to verify database state, diagnose issues, and confirm that code problems aren't actually database connectivity issues. Following the fail-stop model for database operations, any genuine database connectivity issue requires immediate attention.
 
-The ablation mechanism allows us to:
+## Current Work: Comprehensive Ablation Study Framework
 
-1. **Hide specific collections** from queries to measure their impact
-2. **Quantify the contribution** of each metadata type to search effectiveness
-3. **Identify critical collections** for different query types
-4. **Generate metrics** showing relative importance of metadata sources
+We are designing and implementing a complete ablation study framework for scientifically measuring how different activity data types affect query precision and recall. This framework provides controlled testing across all six activity data categories to produce publication-quality research results.
 
-The framework is now feature-complete with:
-- ✅ Fixed LIMIT statement issue in AQL queries that was artificially restricting results
-- ✅ Implemented proper collection ablation with `IndalekoDBCollectionsMetadata`
-- ✅ Integrated LLM-based query generation and synthetic metadata generation
-- ✅ Created metrics calculation for precision, recall, F1, and impact
-- ✅ Added comprehensive reporting with JSON, CSV, and Markdown outputs
-- ✅ Developed a unified run script with multiple testing modes
-- 🔄 Remaining work outlined in ABLATION_TODO.md
+### Ablation Study Design Progress
 
-### Ablation Testing Options:
+Our detailed design document (`research/DESIGN 2025-05-07.md`) outlines a comprehensive approach that:
 
-The framework provides three testing modes:
+1. **Systematically measures** the impact of each activity data type on search effectiveness
+2. **Generates synthetic data** for controlled experiments across all six activity types
+3. **Uses LLM-driven query generation** to create realistic search scenarios
+4. **Produces accurate metrics** for statistical analysis of search effectiveness
+5. **Follows Indaleko's architectural patterns** for proper database integration
 
-1. **Simple Mode**: Test a single query with specific ablated collections
-2. **Integration Mode**: Full end-to-end test with query generation and synthetic data
-3. **Comprehensive Mode**: Large-scale ablation study with multiple clusters
+### Activity Data Types Being Studied
 
-### Core Commands:
+The ablation study focuses on these six activity data types:
 
-**Run a simple ablation test:**
-```bash
-python run_ablation_test.py --mode simple --query "Find PDF documents I edited yesterday" --collection ActivityContext MusicActivityContext
+1. **Music Activity** - Music listening patterns from streaming services
+2. **Location Activity** - Geographic position data from various sources
+3. **Task Activity** - User task management and completion
+4. **Collaboration Activity** - Calendar events and file sharing
+5. **Storage Activity** - File system operations and access patterns
+6. **Media Activity** - Video/content consumption activities
+
+### Current Implementation Status
+
+- ✅ Created comprehensive synthetic data collector designs for all activity types
+- ✅ Developed recorder interfaces following proper database integration patterns
+- ✅ Designed Named Entity Recognition component for consistent entity representation
+- ✅ Implemented query generation mechanism using existing LLM infrastructure
+- ✅ Created truth data tracking system for accuracy measurements
+- ✅ Designed collection integration with proper collection naming in `IndalekoDBCollections`
+- ✅ Implemented query-truth integration with expected match generation
+- ✅ Integrated PromptManager for cognitive protection in query generation
+- ✅ Designed depth-first implementation approach starting with Location activity
+- ✅ Implemented LocationActivityCollector with data generation capabilities
+- ✅ Implemented LocationActivityRecorder with database integration
+- ✅ Created unit and integration tests for Location activity components
+- ✅ Developed demo script showing end-to-end Location activity workflow
+- ✅ Implemented TaskActivityCollector with application-aware data generation
+- ✅ Implemented TaskActivityRecorder with database integration
+- ✅ Created comprehensive tests for Task activity components
+- ✅ Developed end-to-end demo for Task activity workflow
+- ✅ Implemented AblationTester with collection ablation mechanism
+- ✅ Created metrics calculation for precision, recall, and F1 score
+- ✅ Developed AblationTestRunner for experiment coordination
+- ✅ Added reporting and visualization capabilities
+- ✅ Created an end-to-end ablation demo script
+- 🔄 Working on Collaboration Activity implementation (next activity type)
+- 🔄 Preparing to implement the remaining activity types
+
+### Key Framework Components
+
+- **Synthetic Data Generators** - Each activity type has a dedicated collector and recorder
+- **Query Generation System** - Uses LLM to create realistic search queries
+- **NER Component** - Manages named entities like "home" and "work" for consistency
+- **Truth Data Tracker** - Records which files should match each query
+- **Ablation Testing Framework** - Measures precision, recall and F1 score impacts
+- **ArangoDB Integration** - Proper collection management and database access patterns
+
+### Database Access Patterns for Ablation
+
+All database operations follow Indaleko's established patterns:
+
+```python
+# Correct database access pattern
+db_config = IndalekoDBConfig()
+db = db_config.get_arangodb()
+cursor = db.aql.execute(query, bind_vars=params)
+
+# Using collection constants instead of hardcoded strings
+collection_name = IndalekoDBCollections.Indaleko_Ablation_Music_Activity_Collection
+db.collection(collection_name)
+
+# Collection ablation with proper management
+ablation_tester = AblationTester()
+ablation_tester.ablate_collection("AblationMusicActivity")
+# ... run tests ...
+ablation_tester.restore_collection("AblationMusicActivity")
 ```
 
-**Run an integration test:**
-```bash
-python run_ablation_test.py --mode integration --dataset-size 100 --num-queries 10 --reset-db
-```
+### Synthetic Data Generation Flow
 
-**Run a comprehensive ablation study:**
-```bash
-python run_ablation_test.py --mode comprehensive --dataset-size 500 --output-dir ablation_results/study_2025_05_06
-```
+The synthetic data generation follows these steps:
 
-**Reset database for clean testing:**
-```bash
-python -m db/db_config reset
-```
+1. Generate natural language queries targeting specific activity types
+2. Extract file references, named entities, and activity references
+3. Create matching metadata based on query components
+4. Create non-matching metadata (temporally distant or semantically different)
+5. Record both matching and non-matching data in the database
+6. Track "ground truth" about which files should match which queries
 
-### Implementation Components:
+### Collector/Recorder Pattern Implementation
 
-- **`run_ablation_test.py`**: Unified script for running different ablation test modes
-- **`IndalekoDBCollectionsMetadata`**: Manages collection ablation and restoration
-- **`ablation_execute_query.py`**: Fixed query execution that handles LIMIT statements properly
-- **`ablation_integration_test.py`**: End-to-end test with synthetic data generation
-- **`synthetic_metadata_generator.py`**: Generates metadata objects for controlled testing
-- **`query_generator_enhanced.py`**: Generates natural language queries targeting specific metadata
-- **`truth_data_tracker.py`**: SQLite-based system for tracking test data and results
-- **`ablation_tester.py`**: Core metrics calculation and result analysis
-- **`ABLATION_TODO.md`**: Roadmap for the implementation of the ablation study
+Following Indaleko's architectural principles, our design separates:
 
-### Critical Database Access Patterns
+- **Collectors** - Generate raw synthetic data but never interact with the database
+- **Recorders** - Process collector data and handle database interactions
+- **Controller** - Coordinates the collector-recorder workflow maintaining separation of concerns
 
-- **SECURITY ISSUE**: Always use `db.aql.execute()` instead of `db.execute()` for non-admin database access
-- **Correct Pattern**:
-  ```python
-  db_config = IndalekoDBConfig()
-  db = db_config.get_arangodb()
-  cursor = db.aql.execute(query, bind_vars=params)
-  ```
-- **Dictionary Access**: Always use dictionary syntax for database objects: `obj["field"]` instead of `obj.field`
-- **Registration Service Access**: Use `aql.execute()` in custom registration service implementations
-- **Database Reset**: Use `python -m db/db_config reset` to completely reset the database
-- **Large Result Sets**: Either paginate results or use sampling for very large collections
+Our implementation uses a direct integration approach for synthetic data where:
+- Collectors generate data in-memory
+- Controller passes data directly to recorders
+- Recorders handle database insertion
+- Errors are handled with a fail-fast approach for immediate debugging
 
-### Ablation Testing Framework
+### Metrics Collection and Analysis
 
-The ablation testing framework helps measure the contribution of different metadata types to query results:
+For each activity type, the framework will measure:
 
-1. **Collection Ablation**:
-   - Temporarily hides specific collections from query execution
-   - Uses `IndalekoDBCollectionsMetadata` to track ablated collections
-   - Returns to baseline state via `restore_collection()` method
-
-2. **Metrics Calculation**:
-   - **Precision**: Measure of result accuracy (true positives / all returned)
-   - **Recall**: Measure of result completeness (true positives / all relevant)
-   - **F1 Score**: Harmonic mean of precision and recall
-   - **Impact**: Measure of performance degradation when collection is ablated
-
-3. **Performance Considerations**:
-   - ActivityContext collection contains over 1 million documents
-   - Queries without LIMIT statements can take 15+ seconds for full scans
-   - Use increased LIMIT values rather than removing LIMIT completely
-   - Consider implementing sampling for large collections
-
-The framework is currently being expanded to follow the full protocol in `doc/AblationDesign.md`, which includes:
-- 100 natural language queries (50 ablation, 50 control)
-- Synthetic metadata generation (5 matching + 45 non-matching per query)
-- Comprehensive metrics reports
-
-### Metadata Categories
-
-Metadata in Indaleko is organized into the following categories for ablation testing:
-
-1. **Temporal**: created_at, modified_at, session_duration
-2. **Activity**: action, collaborator
-3. **Spatial**: geolocation, device_location
-4. **Content**: file_type, keywords, tags
-
-Each category can be ablated independently to measure its impact on query results.
-
-### Implementation Principles for Ablation Testing
-
-1. **Database Integrity**:
-   - Reset database before each test run with `python -m db/db_config reset`
-   - Use actual database connections, not mocks
-   - Test against real ArangoDB schema constraints
-   - Handle large collections appropriately with sampling or pagination
-
-2. **Clean Test Data**:
-   - Generate synthetic data that targets specific metadata categories
-   - Create controlled matching and non-matching entries
-   - Ensure data is attributable to specific categories being tested
-
-3. **Accurate Metrics**:
-   - Use fixed query execution that handles LIMIT statements properly
-   - Calculate precision, recall, and F1 scores for each ablation scenario
-   - Record execution times to identify performance impacts
-   - Document AQL transformations for query analysis
-
-4. **Reproducible Results**:
-   - Use fixed random seeds for reproducibility
-   - Document full test methodology and data generation
-   - Include comprehensive reports with ablation metrics
-   - Properly restore all collections after testing
+- **Precision** - How many returned results are relevant
+- **Recall** - How many relevant items are found
+- **F1 Score** - Harmonic mean of precision and recall
+- **Impact** - Performance degradation when the activity collection is ablated
+- **Relative Contribution** - Comparative importance of each activity type
 
 ## Architectural Principles
 

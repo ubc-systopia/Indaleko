@@ -10,67 +10,64 @@
 - ✅ Implemented activity data generation (music, geo) that links to file objects
 - ✅ Built comprehensive testing shell script to run the full ablation process
 - ✅ Enhanced data generation to create stronger dependencies between activities and search results
+- ✅ Expanded framework to include all 6 activity sources (music, geo, task, collaboration, storage, media)
 
 ## Current Tasks
-- 🔄 Run the enhanced ablation test and validate metrics
-- 🔄 Analyze impact of activity data on query precision and recall
+- 🔄 Run the comprehensive ablation test with all 6 activity sources
+- 🔄 Analyze impact of each activity type on query precision and recall
 - 🔄 Document AQL transformations applied during ablation testing
 
 ## Future Tasks
 - Create visualizations of ablation results
 - Expand test dataset to more query types
-- Add more activity data types (temperature, task, collaboration)
 - Implement statistical significance testing for results
 - Formalize results for academic publication
 
 ## Implementation Notes
 
-### Enhanced Data Generation
-The enhanced data generator now creates three distinct classes of data:
+### Comprehensive Activity Sources
+The enhanced ablation framework now tests all 6 major activity sources in Indaleko:
 
-1. **Direct match files**: Match query criteria without activity data (~40% of positive examples)
-2. **Activity-dependent files**: Only match when specific activity data is present (~60% of positive examples)
-   - Music-dependent files: Require music activity data to match
-   - Geo-dependent files: Require geo activity data to match
+1. **Music Activity** - Music listening data from sources like Spotify
+2. **Geographic Activity** - Location data from GPS, WiFi, and other sources
+3. **Task Activity** - To-do lists, calendar events, and project tasks
+4. **Collaboration Activity** - File sharing, meetings, and communication
+5. **Storage Activity** - File operations like open, save, and delete
+6. **Media Activity** - Video consumption, webinars, and streaming
+
+### Enhanced Data Generation
+The data generator creates files with explicit dependencies on activity data:
+
+1. **Direct match files**: Match query criteria without activity data (~50% of positive examples)
+2. **Activity-dependent files**: Only match when specific activity data is present (~50% of positive examples)
+   - Each activity type gets an equal share of the activity-dependent files
+   - Files are designed to only match when their specific activity data is present
 3. **Negative files**: Should NOT match query criteria
 
 This approach creates a clear dependency between activity data and query results, ensuring that ablation has a measurable impact on precision and recall.
 
-### Key Dependencies
-- Files dependent on music activity only match when music activity is present
-- Files dependent on geo activity only match when geo activity is present
-- When both music and geo are ablated, only direct match files should match
-
 ### Truth Data Tracking
-The truth data tracker now records which files depend on which activity type, enabling detailed analysis of ablation impact:
+The truth data tracker records which files depend on which activity type, enabling detailed analysis of ablation impact:
 
 - `positive_examples`: Tracks which files should match each query
 - `negative_examples`: Tracks which files should not match
 - `activity_dependency`: Tracks which files depend on which activity collections
 
-### Dependency Percentages
-The default configuration creates:
-- 40% direct match files (match without activity data)
-- 30% music-dependent files (require music activity to match)
-- 30% geo-dependent files (require geo activity to match)
-
-This distribution ensures that ablation of any collection has a measurable impact on results.
-
-### Running Enhanced Tests
-To run the comprehensive ablation test with enhanced data generation:
+### Running Comprehensive Tests
+To run the comprehensive ablation test with all activity sources:
 ```bash
-./run_ablation_enhanced.sh
+./run_comprehensive_ablation.sh
 ```
 
 This will:
 1. Reset the database
-2. Generate test data with strong activity dependencies
+2. Generate test data for all 6 activity types
 3. Run the comprehensive ablation test
 4. Display a summary of the results
 
 ### Expected Results
-The expected impact of ablation with this enhanced setup:
+The expected impact of ablation with this comprehensive setup:
 - Baseline F1 Score: 1.0
-- When ablating music collection: Expected F1 ≈ 0.7
-- When ablating geo collection: Expected F1 ≈ 0.7
-- When ablating both collections: Expected F1 ≈ 0.4
+- When ablating any single activity collection: Expected F1 ≈ 0.92 (specific to activity type)
+- When ablating all activity collections: Expected F1 ≈ 0.5
+EOF < /dev/null
