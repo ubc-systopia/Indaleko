@@ -173,11 +173,12 @@ class AblationTester:
             self.logger.error(f"Failed to restore collection {collection_name}: {e}")
             return False
 
-    def get_truth_data(self, query_id: uuid.UUID) -> set[str]:
-        """Get the ground truth data for a query.
+    def get_truth_data(self, query_id: uuid.UUID, collection_name: str) -> set[str]:
+        """Get the ground truth data for a query specific to a collection.
 
         Args:
             query_id: The UUID of the query.
+            collection_name: The collection name to filter truth data for.
 
         Returns:
             Set[str]: The set of entity IDs that should match the query.
@@ -187,15 +188,29 @@ class AblationTester:
             return set()
 
         try:
-            # Get the truth document
+            # Create a composite key based on query_id and collection type
+            composite_key = f"{query_id}_{collection_name.lower().replace('ablation', '').replace('activity', '')}"
+            
+            # Try to get the document by its composite key first (most efficient)
+            try:
+                truth_doc = self.db.collection(self.TRUTH_COLLECTION).get(composite_key)
+                if truth_doc:
+                    return set(truth_doc.get("matching_entities", []))
+            except Exception as e:
+                self.logger.debug(f"Failed to get truth data by composite key: {e}")
+                
+            # Fallback: query by filtering if the composite key approach fails
             result = self.db.aql.execute(
                 f"""
                 FOR doc IN {self.TRUTH_COLLECTION}
-                FILTER doc.query_id == @query_id
+                FILTER doc.query_id == @query_id AND doc.collection == @collection_name
                 LIMIT 1
                 RETURN doc
                 """,
-                bind_vars={"query_id": str(query_id)},
+                bind_vars={
+                    "query_id": str(query_id),
+                    "collection_name": collection_name
+                },
             )
 
             # Extract matching entities
@@ -203,7 +218,7 @@ class AblationTester:
                 return set(doc.get("matching_entities", []))
 
             # If no truth data found
-            self.logger.warning(f"No truth data found for query {query_id}")
+            self.logger.info(f"No truth data found for query {query_id} in collection {collection_name}")
             return set()
         except Exception as e:
             self.logger.error(f"Failed to get truth data: {e}")
@@ -234,10 +249,10 @@ class AblationTester:
             # Measure execution time
             start_time = time.time()
 
-            # Get truth data for the query ID
-            truth_data = self.get_truth_data(query_id)
+            # Get truth data for the query ID and specific collection
+            truth_data = self.get_truth_data(query_id, collection_name)
             if not truth_data:
-                self.logger.info(f"No truth data found for query {query_id}")
+                self.logger.info(f"No truth data found for query {query_id} in collection {collection_name}")
                 return [], 0
                 
             # If we found truth data, use it to query the collection
@@ -278,8 +293,8 @@ class AblationTester:
         Returns:
             AblationResult: The calculated metrics.
         """
-        # Get ground truth data
-        truth_data = self.get_truth_data(query_id)
+        # Get ground truth data for the specific collection
+        truth_data = self.get_truth_data(query_id, collection_name)
 
         # If no truth data, return default metrics
         if not truth_data:
@@ -469,6 +484,53 @@ class AblationTester:
                 if self.ablated_collections.get(collection_name):
                     self.restore_collection(collection_name)
 
+    def store_truth_data(self, query_id: uuid.UUID, collection_name: str, matching_entities: list[str]) -> bool:
+        """Store truth data with a composite key based on query_id and collection.
+        
+        Args:
+            query_id: The UUID of the query.
+            collection_name: The collection name to associate the truth data with.
+            matching_entities: List of entity IDs that should match the query.
+            
+        Returns:
+            bool: True if storing succeeded, False otherwise.
+        """
+        if not self.db:
+            self.logger.error("No database connection available")
+            return False
+            
+        try:
+            # Create a composite key based on query ID and collection
+            collection_type = collection_name.lower().replace('ablation', '').replace('activity', '')
+            composite_key = f"{query_id}_{collection_type}"
+            
+            # Create the truth document
+            truth_doc = {
+                "_key": composite_key,
+                "query_id": str(query_id),
+                "matching_entities": matching_entities,
+                "collection": collection_name
+            }
+            
+            # Get the truth collection
+            collection = self.db.collection(self.TRUTH_COLLECTION)
+            
+            # Check if document with this composite key already exists
+            existing = collection.get(composite_key)
+            if existing:
+                # Update existing document
+                collection.update(truth_doc)
+                self.logger.info(f"Updated truth data for query {query_id} in collection {collection_name}")
+            else:
+                # Insert new document
+                collection.insert(truth_doc)
+                self.logger.info(f"Recorded truth data for query {query_id} in collection {collection_name}")
+                
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to store truth data: {e}")
+            return False
+    
     def cleanup(self) -> None:
         """Clean up resources used by the ablation tester."""
         # Restore any ablated collections

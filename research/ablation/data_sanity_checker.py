@@ -364,7 +364,7 @@ class DataSanityChecker:
             return False
 
     def verify_truth_query_ids(self) -> bool:
-        """Verify that truth data query IDs are unique and valid UUIDs.
+        """Verify that truth data query IDs are valid UUIDs and composite keys are unique.
 
         Returns:
             bool: True if all query IDs are valid, False otherwise.
@@ -376,26 +376,63 @@ class DataSanityChecker:
             return False
             
         try:
-            # Get all query IDs from truth data
+            # Get all truth documents with their keys
             result = self.db.aql.execute(
                 f"""
                 FOR doc IN {self.truth_collection}
-                RETURN doc.query_id
+                RETURN {{
+                    _key: doc._key, 
+                    query_id: doc.query_id,
+                    collection: doc.collection
+                }}
                 """,
             )
             
-            query_ids = list(result)
-            unique_query_ids = set(query_ids)
+            documents = list(result)
             
-            # Check for duplicate query IDs
+            # Check composite keys (must be unique by design)
+            # Check that each query_id + collection combination is unique (composite uniqueness)
+            query_collection_combinations = {}
+            duplicate_combinations = []
+            
+            for doc in documents:
+                query_id = doc.get("query_id")
+                collection = doc.get("collection")
+                key = doc.get("_key")
+                
+                if not query_id or not collection:
+                    continue
+                
+                # Create a tuple key for uniqueness check
+                combo_key = (query_id, collection)
+                
+                if combo_key in query_collection_combinations:
+                    duplicate_combinations.append((query_id, collection))
+                else:
+                    query_collection_combinations[combo_key] = key
+            
+            if duplicate_combinations:
+                self.logger.warning(
+                    f"Found {len(duplicate_combinations)} duplicate query_id + collection combinations in truth data. "
+                    f"This could indicate duplicate truth data entries."
+                )
+            
+            # Extract just the query IDs for UUID validation
+            query_ids = [doc.get("query_id") for doc in documents if "query_id" in doc]
+            
+            # Duplicate query IDs may be normal due to composite keys 
+            # (one query can have multiple truth docs for different collections)
+            unique_query_ids = set(query_ids)
             if len(query_ids) != len(unique_query_ids):
                 duplicate_count = len(query_ids) - len(unique_query_ids)
-                self._fail(f"Found {duplicate_count} duplicate query IDs in truth data")
-                return False
+                self.logger.info(
+                    f"Found {duplicate_count} duplicate query IDs in truth data. "
+                    f"This is expected if you're using composite keys for cross-collection truth data."
+                )
             
             # Check that all query IDs are valid UUIDs
             invalid_ids = []
-            for query_id in query_ids:
+            for query_id in unique_query_ids:
                 try:
                     uuid.UUID(query_id)
                 except (ValueError, TypeError, AttributeError):
