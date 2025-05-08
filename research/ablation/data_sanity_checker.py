@@ -43,7 +43,7 @@ class DataSanityChecker:
             "AblationStorageActivity",
             "AblationMediaActivity",
         ]
-        
+
         # Define truth collection name
         self.truth_collection = "AblationTruthData"
 
@@ -81,27 +81,27 @@ class DataSanityChecker:
             bool: True if all collections exist, False otherwise.
         """
         self.logger.info("Verifying collection existence...")
-        
+
         if not self.db:
             self._fail("No database connection available")
             return False
-        
+
         all_collections_exist = True
-        
+
         # Check activity collections
         for collection_name in self.activity_collections:
             if not self.db.has_collection(collection_name):
                 self.logger.warning(f"Collection {collection_name} does not exist")
                 all_collections_exist = False
-        
+
         # Check truth collection
         if not self.db.has_collection(self.truth_collection):
             self._fail(f"Truth collection {self.truth_collection} does not exist")
             return False
-        
+
         if not all_collections_exist:
             self.logger.warning("Some activity collections don't exist. This may be expected if those activities aren't being tested.")
-        
+
         return True
 
     def verify_truth_data_integrity(self) -> bool:
@@ -113,11 +113,11 @@ class DataSanityChecker:
             bool: True if truth data is valid, False otherwise.
         """
         self.logger.info("Verifying truth data integrity...")
-        
+
         if not self.db:
             self._fail("No database connection available")
             return False
-            
+
         try:
             # Get all truth data documents
             result = self.db.aql.execute(
@@ -126,41 +126,41 @@ class DataSanityChecker:
                 RETURN doc
                 """,
             )
-            
+
             truth_docs = list(result)
-            
+
             if not truth_docs:
                 self._fail(f"No truth data found in {self.truth_collection}")
                 return False
-                
+
             for doc in truth_docs:
                 # Check required fields
                 if "query_id" not in doc:
                     self._fail(f"Missing 'query_id' in truth document {doc['_key']}")
                     continue
-                    
+
                 if "matching_entities" not in doc:
                     self._fail(f"Missing 'matching_entities' in truth document {doc['_key']}")
                     continue
-                    
+
                 if "collection" not in doc:
                     self._fail(f"Missing 'collection' field in truth document {doc['_key']}")
                     continue
-                    
+
                 # Check if collection field has valid value
                 collection = doc["collection"]
                 if collection not in self.activity_collections:
                     self.logger.warning(f"Truth document {doc['_key']} references unknown collection '{collection}'")
-                
+
                 # Check if matching_entities is a list
                 if not isinstance(doc["matching_entities"], list):
                     self._fail(f"'matching_entities' is not a list in truth document {doc['_key']}")
                     continue
-                    
+
                 # Check that matching_entities are not empty
                 if not doc["matching_entities"]:
                     self.logger.warning(f"Empty 'matching_entities' list in truth document {doc['_key']}")
-            
+
             return True
         except Exception as e:
             self._fail(f"Failed to verify truth data integrity: {e}")
@@ -173,11 +173,11 @@ class DataSanityChecker:
             bool: True if all referenced entities exist, False otherwise.
         """
         self.logger.info("Verifying truth entities existence...")
-        
+
         if not self.db:
             self._fail("No database connection available")
             return False
-            
+
         try:
             # Get all truth data documents
             result = self.db.aql.execute(
@@ -186,21 +186,21 @@ class DataSanityChecker:
                 RETURN doc
                 """,
             )
-            
+
             all_entities_exist = True
-            
+
             for doc in result:
                 collection = doc.get("collection")
                 if not collection:
                     continue
-                
+
                 # Skip collections that don't exist
                 if not self.db.has_collection(collection):
                     self.logger.warning(f"Collection {collection} referenced in truth data doesn't exist")
                     continue
-                
+
                 matching_entities = doc.get("matching_entities", [])
-                
+
                 # Check each entity
                 for entity_id in matching_entities:
                     entity_exists = False
@@ -211,15 +211,15 @@ class DataSanityChecker:
                             entity_exists = True
                     except Exception as e:
                         self.logger.debug(f"Error checking entity {entity_id}: {e}")
-                    
+
                     if not entity_exists:
                         self.logger.warning(f"Entity {entity_id} referenced in truth data doesn't exist in collection {collection}")
                         all_entities_exist = False
-            
+
             if not all_entities_exist:
                 self._fail("Some entities referenced in truth data don't exist in their respective collections")
                 return False
-                
+
             return True
         except Exception as e:
             self._fail(f"Failed to verify truth entities existence: {e}")
@@ -235,17 +235,17 @@ class DataSanityChecker:
             bool: True if query execution is valid, False otherwise.
         """
         self.logger.info("Verifying query execution...")
-        
+
         if not self.db:
             self._fail("No database connection available")
             return False
-            
+
         try:
             # Get truth data documents for specified queries or all queries
             query = f"""
             FOR doc IN {self.truth_collection}
             """
-            
+
             if query_ids:
                 query += """
                 FILTER doc.query_id IN @query_ids
@@ -253,45 +253,45 @@ class DataSanityChecker:
                 bind_vars = {"query_ids": query_ids}
             else:
                 bind_vars = {}
-                
+
             query += """
             RETURN doc
             """
-            
+
             result = self.db.aql.execute(query, bind_vars=bind_vars)
             truth_docs = list(result)
-            
+
             if not truth_docs:
                 if query_ids:
                     self._fail(f"No truth data found for query IDs: {query_ids}")
                 else:
                     self._fail(f"No truth data found in {self.truth_collection}")
                 return False
-            
+
             all_queries_valid = True
-            
+
             for doc in truth_docs:
                 query_id = doc.get("query_id")
                 collection = doc.get("collection")
                 matching_entities = doc.get("matching_entities", [])
-                
+
                 if not query_id or not collection or not matching_entities:
                     continue
-                
+
                 # Execute a query to get entities by their IDs
                 entity_query = f"""
                 FOR doc IN {collection}
                 FILTER doc._key IN @entity_ids
                 RETURN doc
                 """
-                
+
                 entity_result = self.db.aql.execute(
                     entity_query,
                     bind_vars={"entity_ids": matching_entities}
                 )
-                
+
                 entity_docs = list(entity_result)
-                
+
                 # Check if all expected entities were found
                 if len(entity_docs) != len(matching_entities):
                     self.logger.warning(
@@ -299,11 +299,11 @@ class DataSanityChecker:
                         f"from collection {collection}"
                     )
                     all_queries_valid = False
-            
+
             if not all_queries_valid:
                 self._fail("Some queries do not return the expected results")
                 return False
-                
+
             return True
         except Exception as e:
             self._fail(f"Failed to verify query execution: {e}")
@@ -316,48 +316,48 @@ class DataSanityChecker:
             bool: True if no ID overlaps exist, False otherwise.
         """
         self.logger.info("Verifying cross-collection ID uniqueness...")
-        
+
         if not self.db:
             self._fail("No database connection available")
             return False
-            
+
         try:
             collection_entities: Dict[str, Set[str]] = {}
-            
+
             # Collect entity IDs from each collection
             for collection_name in self.activity_collections:
                 if not self.db.has_collection(collection_name):
                     continue
-                    
+
                 result = self.db.aql.execute(
                     f"""
                     FOR doc IN {collection_name}
                     RETURN doc._key
                     """,
                 )
-                
+
                 collection_entities[collection_name] = set(result)
-            
+
             # Check for overlaps
             overlaps_found = False
-            
+
             for collection1 in collection_entities:
                 for collection2 in collection_entities:
                     if collection1 >= collection2:
                         continue
-                        
+
                     # Find overlapping IDs
                     overlap = collection_entities[collection1].intersection(collection_entities[collection2])
-                    
+
                     if overlap:
                         self.logger.warning(
                             f"Found {len(overlap)} overlapping entity IDs between {collection1} and {collection2}"
                         )
                         overlaps_found = True
-            
+
             if overlaps_found:
                 self.logger.warning("Entity ID overlaps found across collections. This may be normal but can cause cross-collection contamination.")
-                
+
             return True
         except Exception as e:
             self._fail(f"Failed to verify cross-collection IDs: {e}")
@@ -370,57 +370,57 @@ class DataSanityChecker:
             bool: True if all query IDs are valid, False otherwise.
         """
         self.logger.info("Verifying truth query IDs...")
-        
+
         if not self.db:
             self._fail("No database connection available")
             return False
-            
+
         try:
             # Get all truth documents with their keys
             result = self.db.aql.execute(
                 f"""
                 FOR doc IN {self.truth_collection}
                 RETURN {{
-                    _key: doc._key, 
+                    _key: doc._key,
                     query_id: doc.query_id,
                     collection: doc.collection
                 }}
                 """,
             )
-            
+
             documents = list(result)
-            
+
             # Check composite keys (must be unique by design)
             # Check that each query_id + collection combination is unique (composite uniqueness)
             query_collection_combinations = {}
             duplicate_combinations = []
-            
+
             for doc in documents:
                 query_id = doc.get("query_id")
                 collection = doc.get("collection")
                 key = doc.get("_key")
-                
+
                 if not query_id or not collection:
                     continue
-                
+
                 # Create a tuple key for uniqueness check
                 combo_key = (query_id, collection)
-                
+
                 if combo_key in query_collection_combinations:
                     duplicate_combinations.append((query_id, collection))
                 else:
                     query_collection_combinations[combo_key] = key
-            
+
             if duplicate_combinations:
                 self.logger.warning(
                     f"Found {len(duplicate_combinations)} duplicate query_id + collection combinations in truth data. "
                     f"This could indicate duplicate truth data entries."
                 )
-            
+
             # Extract just the query IDs for UUID validation
             query_ids = [doc.get("query_id") for doc in documents if "query_id" in doc]
-            
-            # Duplicate query IDs may be normal due to composite keys 
+
+            # Duplicate query IDs may be normal due to composite keys
             # (one query can have multiple truth docs for different collections)
             unique_query_ids = set(query_ids)
             if len(query_ids) != len(unique_query_ids):
@@ -429,7 +429,7 @@ class DataSanityChecker:
                     f"Found {duplicate_count} duplicate query IDs in truth data. "
                     f"This is expected if you're using composite keys for cross-collection truth data."
                 )
-            
+
             # Check that all query IDs are valid UUIDs
             invalid_ids = []
             for query_id in unique_query_ids:
@@ -437,11 +437,11 @@ class DataSanityChecker:
                     uuid.UUID(query_id)
                 except (ValueError, TypeError, AttributeError):
                     invalid_ids.append(query_id)
-            
+
             if invalid_ids:
                 self._fail(f"Found {len(invalid_ids)} invalid UUID query IDs in truth data")
                 return False
-                
+
             return True
         except Exception as e:
             self._fail(f"Failed to verify truth query IDs: {e}")
@@ -454,7 +454,7 @@ class DataSanityChecker:
             bool: True if all checks pass, False otherwise.
         """
         self.logger.info("Running all sanity checks...")
-        
+
         checks = [
             self.verify_collections_exist,
             self.verify_truth_data_integrity,
@@ -463,9 +463,9 @@ class DataSanityChecker:
             self.verify_cross_collection_ids,
             self.verify_truth_query_ids,
         ]
-        
+
         all_passed = True
-        
+
         for check in checks:
             try:
                 if not check():
@@ -477,14 +477,14 @@ class DataSanityChecker:
                 all_passed = False
                 if self.fail_fast:
                     break
-        
+
         if all_passed:
             self.logger.info("All sanity checks passed!")
         else:
             self.logger.error(f"Sanity checks failed with {len(self.validation_errors)} errors")
             for i, error in enumerate(self.validation_errors, 1):
                 self.logger.error(f"Error {i}: {error}")
-        
+
         return all_passed
 
 
@@ -500,25 +500,25 @@ def main():
     """Run the data sanity checker from the command line."""
     setup_logging()
     logger = logging.getLogger(__name__)
-    
+
     logger.info("Starting data sanity checks for ablation framework")
-    
+
     # Parse command line arguments
     import argparse
     parser = argparse.ArgumentParser(description="Run data sanity checks for ablation framework")
     parser.add_argument("--no-fail-fast", action="store_true", help="Continue checks after first failure")
     parser.add_argument("--query-id", action="append", help="Verify specific query IDs")
     args = parser.parse_args()
-    
+
     try:
         # Create checker and run checks
         checker = DataSanityChecker(fail_fast=not args.no_fail_fast)
         result = checker.run_all_checks()
-        
+
         if args.query_id:
             logger.info(f"Verifying specific query IDs: {args.query_id}")
             checker.verify_query_execution(args.query_id)
-        
+
         # Set exit code based on check results
         if not result:
             logger.error("Data sanity checks failed!")

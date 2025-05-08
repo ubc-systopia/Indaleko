@@ -190,7 +190,7 @@ class AblationTester:
         try:
             # Create a composite key based on query_id and collection type
             composite_key = f"{query_id}_{collection_name.lower().replace('ablation', '').replace('activity', '')}"
-            
+
             # Try to get the document by its composite key first (most efficient)
             try:
                 truth_doc = self.db.collection(self.TRUTH_COLLECTION).get(composite_key)
@@ -198,7 +198,7 @@ class AblationTester:
                     return set(truth_doc.get("matching_entities", []))
             except Exception as e:
                 self.logger.debug(f"Failed to get truth data by composite key: {e}")
-                
+
             # Fallback: query by filtering if the composite key approach fails
             result = self.db.aql.execute(
                 f"""
@@ -254,7 +254,7 @@ class AblationTester:
             if not truth_data:
                 self.logger.info(f"No truth data found for query {query_id} in collection {collection_name}")
                 return [], 0
-                
+
             # If we found truth data, use it to query the collection
             result_cursor = self.db.aql.execute(
                 f"""
@@ -486,24 +486,24 @@ class AblationTester:
 
     def store_truth_data(self, query_id: uuid.UUID, collection_name: str, matching_entities: list[str]) -> bool:
         """Store truth data with a composite key based on query_id and collection.
-        
+
         Args:
             query_id: The UUID of the query.
             collection_name: The collection name to associate the truth data with.
             matching_entities: List of entity IDs that should match the query.
-            
+
         Returns:
             bool: True if storing succeeded, False otherwise.
         """
         if not self.db:
             self.logger.error("No database connection available")
             return False
-            
+
         try:
             # Create a composite key based on query ID and collection
             collection_type = collection_name.lower().replace('ablation', '').replace('activity', '')
             composite_key = f"{query_id}_{collection_type}"
-            
+
             # Create the truth document
             truth_doc = {
                 "_key": composite_key,
@@ -511,10 +511,10 @@ class AblationTester:
                 "matching_entities": matching_entities,
                 "collection": collection_name
             }
-            
+
             # Get the truth collection
             collection = self.db.collection(self.TRUTH_COLLECTION)
-            
+
             # Check if document with this composite key already exists
             existing = collection.get(composite_key)
             if existing:
@@ -525,12 +525,12 @@ class AblationTester:
                 # Insert new document
                 collection.insert(truth_doc)
                 self.logger.info(f"Recorded truth data for query {query_id} in collection {collection_name}")
-                
+
             return True
         except Exception as e:
             self.logger.error(f"Failed to store truth data: {e}")
             return False
-    
+
     def cleanup(self) -> None:
         """Clean up resources used by the ablation tester."""
         # Restore any ablated collections
