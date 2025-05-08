@@ -10,7 +10,18 @@ import os
 import sys
 import uuid
 from datetime import datetime
+from pathlib import Path
 from typing import Any
+
+from icecream import ic
+
+if os.environ.get("INDALEKO_ROOT") is None:
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
+
 
 # Check for required dependencies
 try:
@@ -20,33 +31,21 @@ try:
 
     VISUALIZATION_AVAILABLE = True
 except ImportError:
-    print("Warning: pandas, matplotlib, or seaborn not installed")
-    print("Visualizations will not be generated.")
-    print("Install dependencies with: pip install -r requirements.txt")
-    VISUALIZATION_AVAILABLE = False
+    # remember - fail fast, get someone to fix it
+    ic("Missing visualization dependencies")
+    sys.exit(1)
 
 # Handle relative imports
-if __name__ == "__main__":
-    # Add parent directory to sys.path for absolute imports
-    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-    from research.ablation.ablation_test_runner import AblationTestRunner
-    from research.ablation.ablation_tester import AblationConfig
-    from research.ablation.collectors.location_collector import (
-        LocationActivityCollector,
-    )
-    from research.ablation.collectors.task_collector import TaskActivityCollector
-    from research.ablation.ner.entity_manager import NamedEntityManager
-    from research.ablation.recorders.location_recorder import LocationActivityRecorder
-    from research.ablation.recorders.task_recorder import TaskActivityRecorder
-else:
-    # For relative imports when imported as a module
-    from .ablation_test_runner import AblationTestRunner
-    from .ablation_tester import AblationConfig
-    from .collectors.location_collector import LocationActivityCollector
-    from .collectors.task_collector import TaskActivityCollector
-    from .ner.entity_manager import NamedEntityManager
-    from .recorders.location_recorder import LocationActivityRecorder
-    from .recorders.task_recorder import TaskActivityRecorder
+from research.ablation.ablation_test_runner import AblationTestRunner
+from research.ablation.ablation_tester import AblationConfig
+from research.ablation.collectors.location_collector import (
+    LocationActivityCollector,
+)
+from research.ablation.collectors.task_collector import TaskActivityCollector
+from research.ablation.data_sanity_checker import DataSanityChecker
+from research.ablation.ner.entity_manager import NamedEntityManager
+from research.ablation.recorders.location_recorder import LocationActivityRecorder
+from research.ablation.recorders.task_recorder import TaskActivityRecorder
 
 
 def setup_logging():
@@ -227,6 +226,14 @@ def run_ablation_test(queries: list[dict[str, Any]]):
         queries: List of query dictionaries.
     """
     logging.info("Running ablation test")
+
+    # Perform data sanity check before running tests
+    logging.info("Performing data sanity check before running ablation tests")
+    checker = DataSanityChecker(fail_fast=True)
+    if not checker.run_all_checks():
+        logging.error("Data sanity check failed! Aborting ablation tests.")
+        sys.exit(1)
+    logging.info("Data sanity check passed. Proceeding with ablation tests.")
 
     # Create ablation test runner
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

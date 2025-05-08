@@ -87,6 +87,20 @@ class AblationTestRunner:
         """
         self.logger.info(f"Running batch ablation tests for {len(queries)} queries")
 
+        # Verify we have query data
+        if not queries:
+            self.logger.error("No queries provided for ablation testing")
+            raise ValueError("No queries provided for ablation testing")
+            
+        # Make sure all queries have required fields
+        for i, query in enumerate(queries):
+            if "id" not in query:
+                self.logger.error(f"Query {i} missing 'id' field")
+                raise ValueError(f"Query {i} missing 'id' field")
+            if "text" not in query:
+                self.logger.error(f"Query {i} missing 'text' field")
+                raise ValueError(f"Query {i} missing 'text' field")
+
         # Limit the number of queries to test
         queries_to_test = queries[:max_queries]
 
