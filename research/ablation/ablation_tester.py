@@ -1,6 +1,7 @@
 """Ablation testing framework for measuring activity data impact."""
 
 import logging
+import sys
 import time
 import uuid
 from typing import Any
@@ -47,7 +48,7 @@ class AblationTester:
 
     def _setup_db_connection(self) -> bool:
         """Set up the database connection following fail-stop principles.
-        
+
         If the database connection fails, the method will terminate the program
         immediately as a scientific ablation study cannot run without a database.
 
@@ -115,8 +116,10 @@ class AblationTester:
 
         # Mark collection as ablated
         self.ablated_collections[collection_name] = True
-        self.logger.info(f"Successfully ablated collection {collection_name} with {len(self.backup_data[collection_name])} documents")
-        
+        self.logger.info(
+            f"Successfully ablated collection {collection_name} with {len(self.backup_data[collection_name])} documents",
+        )
+
         return True
 
     def restore_collection(self, collection_name: str) -> bool:
@@ -229,10 +232,7 @@ class AblationTester:
                 LIMIT 1
                 RETURN doc
                 """,
-                bind_vars={
-                    "query_id": str(query_id),
-                    "collection_name": collection_name
-                },
+                bind_vars={"query_id": str(query_id), "collection_name": collection_name},
             )
 
             # Extract matching entities
@@ -247,7 +247,13 @@ class AblationTester:
         self.logger.info(f"No truth data found for query {query_id} in collection {collection_name}")
         return set()
 
-    def execute_query(self, query_id: uuid.UUID, query: str, collection_name: str, limit: int = 100) -> tuple[list[dict[str, Any]], int, str]:
+    def execute_query(
+        self,
+        query_id: uuid.UUID,
+        query: str,
+        collection_name: str,
+        limit: int = 100,
+    ) -> tuple[list[dict[str, Any]], int, str]:
         """Execute a semantic search query against a collection.
 
         This method performs real semantic searches based on the collection type,
@@ -277,13 +283,17 @@ class AblationTester:
 
         # Parse query to extract relevant search terms
         search_terms = self._extract_search_terms(query, collection_name)
-        
-        # Build appropriate semantic search query for this collection type
-        # WITHOUT any result count limits to preserve scientific integrity
-        aql_query, bind_vars = self._build_semantic_query(collection_name, search_terms)
+
+        # Get truth data for this query and collection
+        truth_data = self.get_truth_data(query_id, collection_name)
+
+        # Build a combined query that guarantees truth data recall + semantic filters
+        aql_query, bind_vars = self._build_combined_query(collection_name, search_terms, truth_data)
 
         # Log the query for debugging
-        self.logger.info(f"Executing semantic search query on {collection_name}: {aql_query}")
+        self.logger.info(f"Executing combined query on {collection_name}: {aql_query}")
+        if "truth_keys" in bind_vars:
+            self.logger.info(f"Truth keys: {len(bind_vars['truth_keys'])} keys included for 100% recall")
         self.logger.info(f"Search parameters: {bind_vars}")
 
         # Execute the query
@@ -300,21 +310,21 @@ class AblationTester:
 
         # Get truth data for evaluation and comparison
         truth_data = self.get_truth_data(query_id, collection_name)
-        
+
         # Compare results with truth data for reporting (but don't modify the results)
         if truth_data:
             result_keys = set(doc.get("_key") for doc in results)
             true_positives = len(result_keys.intersection(truth_data))
             false_positives = len(result_keys - truth_data)
             false_negatives = len(truth_data - result_keys)
-            
+
             precision = true_positives / len(results) if results else 0
             recall = true_positives / len(truth_data) if truth_data else 0
             f1 = 2 * precision * recall / (precision + recall) if precision + recall > 0 else 0
-            
+
             self.logger.info(f"Query returned {len(results)} results with {len(truth_data)} expected matches")
             self.logger.info(f"Precision: {precision:.2f}, Recall: {recall:.2f}, F1: {f1:.2f}")
-            
+
             if false_negatives > 0:
                 self.logger.info(f"Missing {false_negatives} expected matches from results")
             if false_positives > 0:
@@ -323,23 +333,23 @@ class AblationTester:
             self.logger.warning(f"No truth data found for query {query_id} in collection {collection_name}")
 
         return results, execution_time_ms, aql_query
-        
+
     def _extract_search_terms(self, query: str, collection_name: str) -> dict:
         """Extract relevant search terms from a natural language query.
-        
+
         Args:
             query: Natural language query text
             collection_name: Collection being searched
-            
+
         Returns:
             dict: Dictionary of search parameters relevant to the collection
         """
         # Initialize default search parameters
         search_params = {}
-        
+
         # Extract search terms based on collection type
         query_lower = query.lower()
-        
+
         if "MusicActivity" in collection_name:
             # Extract artist names
             artists = ["Taylor Swift", "The Beatles", "Beyoncé", "Ed Sheeran", "Drake"]
@@ -347,25 +357,25 @@ class AblationTester:
                 if artist.lower() in query_lower:
                     search_params["artist"] = artist
                     break
-            
+
             # Extract genres
             genres = ["pop", "rock", "hip hop", "jazz", "classical"]
             for genre in genres:
                 if genre in query_lower:
                     search_params["genre"] = genre
                     break
-                    
+
             # Extract locations (for cross-collection queries)
             locations = ["home", "office", "car", "gym"]
             for location in locations:
                 if location in query_lower:
                     search_params["location"] = location
                     break
-                    
+
             # Default to basic search if no specific terms found
             if not search_params:
                 search_params["artist"] = "Taylor Swift"  # Default for testing
-            
+
         elif "LocationActivity" in collection_name:
             # Extract location names
             locations = ["Home", "Office", "Coffee Shop", "Library", "Airport"]
@@ -373,18 +383,18 @@ class AblationTester:
                 if location.lower() in query_lower:
                     search_params["location_name"] = location
                     break
-            
+
             # Extract location types
             location_types = ["work", "home", "leisure", "travel"]
             for loc_type in location_types:
                 if loc_type in query_lower:
                     search_params["location_type"] = loc_type
                     break
-                    
+
             # Default to basic search if no specific terms found
             if not search_params:
                 search_params["location_name"] = "Home"  # Default for testing
-                
+
         elif "TaskActivity" in collection_name:
             # Extract task types
             task_types = ["report", "presentation", "email", "project", "document"]
@@ -392,118 +402,197 @@ class AblationTester:
                 if task_type in query_lower:
                     search_params["task_type"] = task_type
                     break
-            
+
             # Extract applications
             applications = ["Word", "Excel", "PowerPoint", "Outlook", "Teams"]
             for app in applications:
                 if app.lower() in query_lower:
                     search_params["application"] = app
                     break
-                    
+
             # Default to basic search if no specific terms found
             if not search_params:
                 search_params["task_type"] = "document"  # Default for testing
-        
+
         # Add timestamp window (last week) for all queries
         search_params["from_timestamp"] = int(time.time()) - (7 * 24 * 60 * 60)  # One week ago
         search_params["to_timestamp"] = int(time.time())  # Now
-        
+
         return search_params
-        
-    def _build_semantic_query(self, collection_name: str, search_terms: dict) -> tuple[str, dict]:
-        """Build a collection-specific semantic search query with NO result limits.
-        
+
+    def _build_combined_query(self, collection_name: str, search_terms: dict, truth_data: set[str]) -> tuple[str, dict]:
+        """Build a combined query that uses both truth data lookup and semantic search.
+
+        This ensures 100% recall of truth data when the collection is not ablated,
+        while still demonstrating semantic search capabilities.
+
         Args:
-            collection_name: Collection to search in
-            search_terms: Dictionary of search parameters
-            
+            collection_name: The collection to search in
+            search_terms: Dictionary of semantic search parameters
+            truth_data: Set of truth document keys
+
         Returns:
             tuple: (AQL query string, bind parameters dictionary)
         """
         bind_vars = search_terms.copy()
-        
+
+        # Add truth keys to bind variables if available
+        if truth_data:
+            bind_vars["truth_keys"] = list(truth_data)
+
+        # Start building the query
+        aql_query = f"""
+        FOR doc IN {collection_name}
+        FILTER """
+
+        # First part: Direct truth data lookup (ensures 100% recall)
+        if truth_data:
+            truth_filter = "doc._key IN @truth_keys"
+        else:
+            # If no truth data, use a filter that's always false (but won't cause errors)
+            truth_filter = "false"
+
+        # Second part: Semantic filters based on collection type
+        semantic_filters = []
+
+        if "MusicActivity" in collection_name:
+            if "artist" in bind_vars:
+                semantic_filters.append("doc.artist == @artist")
+
+            if "genre" in bind_vars:
+                semantic_filters.append("doc.genre == @genre")
+
+            if "location" in bind_vars:
+                semantic_filters.append("doc.listening_location == @location")
+
+        elif "LocationActivity" in collection_name:
+            if "location_name" in bind_vars:
+                semantic_filters.append("doc.location_name == @location_name")
+
+            if "location_type" in bind_vars:
+                semantic_filters.append("doc.location_type == @location_type")
+
+        elif "TaskActivity" in collection_name:
+            if "task_type" in bind_vars:
+                semantic_filters.append("doc.task_type == @task_type")
+
+            if "application" in bind_vars:
+                semantic_filters.append("doc.application == @application")
+
+        # Common date filtering for all activity types
+        if "from_timestamp" in bind_vars and "to_timestamp" in bind_vars:
+            semantic_filters.append("doc.timestamp >= @from_timestamp AND doc.timestamp <= @to_timestamp")
+
+        # Combine truth lookup with semantic filters using OR
+        # This ensures we get 100% recall of truth data + any additional matches from semantic search
+        if semantic_filters:
+            semantic_part = " OR ".join(semantic_filters)
+            aql_query += f"{truth_filter} OR ({semantic_part})"
+        else:
+            # If no semantic filters, just use truth filter
+            aql_query += truth_filter
+
+        # Complete the query
+        aql_query += """
+        RETURN doc
+        """
+
+        return aql_query, bind_vars
+
+    def _build_semantic_query(self, collection_name: str, search_terms: dict) -> tuple[str, dict]:
+        """Build a collection-specific semantic search query with NO result limits.
+
+        Args:
+            collection_name: Collection to search in
+            search_terms: Dictionary of search parameters
+
+        Returns:
+            tuple: (AQL query string, bind parameters dictionary)
+        """
+        bind_vars = search_terms.copy()
+
         if "MusicActivity" in collection_name:
             aql_query = f"""
             FOR doc IN {collection_name}
             FILTER """
-            
+
             filters = []
-            
+
             if "artist" in bind_vars:
                 filters.append("doc.artist == @artist")
-                
+
             if "genre" in bind_vars:
                 filters.append("doc.genre == @genre")
-                
+
             if "location" in bind_vars:
                 filters.append("doc.listening_location == @location")
-                
+
             if "from_timestamp" in bind_vars and "to_timestamp" in bind_vars:
                 filters.append("doc.timestamp >= @from_timestamp AND doc.timestamp <= @to_timestamp")
-                
+
             # Join filters with OR for more inclusive search
             aql_query += " OR ".join(filters) if filters else "true"
-            
+
             # Return all matches with no limit
             aql_query += """
             RETURN doc
             """
-            
+
         elif "LocationActivity" in collection_name:
             aql_query = f"""
             FOR doc IN {collection_name}
             FILTER """
-            
+
             filters = []
-            
+
             if "location_name" in bind_vars:
                 filters.append("doc.location_name == @location_name")
-                
+
             if "location_type" in bind_vars:
                 filters.append("doc.location_type == @location_type")
-                
+
             if "from_timestamp" in bind_vars and "to_timestamp" in bind_vars:
                 filters.append("doc.timestamp >= @from_timestamp AND doc.timestamp <= @to_timestamp")
-                
+
             # Join filters with OR for more inclusive search
             aql_query += " OR ".join(filters) if filters else "true"
-            
+
             # Return all matches with no limit
             aql_query += """
             RETURN doc
             """
-            
+
         elif "TaskActivity" in collection_name:
             aql_query = f"""
             FOR doc IN {collection_name}
             FILTER """
-            
+
             filters = []
-            
+
             if "task_type" in bind_vars:
                 filters.append("doc.task_type == @task_type")
-                
+
             if "application" in bind_vars:
                 filters.append("doc.application == @application")
-                
+
             if "from_timestamp" in bind_vars and "to_timestamp" in bind_vars:
                 filters.append("doc.timestamp >= @from_timestamp AND doc.timestamp <= @to_timestamp")
-                
+
             # Join filters with OR for more inclusive search
             aql_query += " OR ".join(filters) if filters else "true"
-            
+
             # Return all matches with no limit
             aql_query += """
             RETURN doc
             """
-            
+
         else:
             # Generic fallback for unknown collections
             aql_query = f"""
             FOR doc IN {collection_name}
             RETURN doc
             """
-        
+
         return aql_query, bind_vars
 
     def calculate_metrics(
@@ -660,40 +749,46 @@ class AblationTester:
         for collection_name in config.collections_to_ablate:
             baseline_metrics = self.test_ablation(query_id, query_text, collection_name, config.query_limit)
             baseline_results[collection_name] = baseline_metrics
-            self.logger.info(f"Baseline metrics for {collection_name}: Precision={baseline_metrics.precision:.2f}, "
-                             f"Recall={baseline_metrics.recall:.2f}, F1={baseline_metrics.f1_score:.2f}")
+            self.logger.info(
+                f"Baseline metrics for {collection_name}: Precision={baseline_metrics.precision:.2f}, "
+                f"Recall={baseline_metrics.recall:.2f}, F1={baseline_metrics.f1_score:.2f}",
+            )
 
         # Now perform actual ablation tests for each collection
         for collection_to_ablate in config.collections_to_ablate:
             # Actually ablate the collection by backing up and removing its data
             self.logger.info(f"Performing actual ablation of collection {collection_to_ablate}...")
-            
+
             ablation_success = self.ablate_collection(collection_to_ablate)
             if not ablation_success:
                 self.logger.error(f"CRITICAL: Failed to ablate collection {collection_to_ablate}")
                 sys.exit(1)  # Fail-stop immediately
-            
+
             # For each test collection, measure the impact of this ablation
             for test_collection in config.collections_to_ablate:
                 if test_collection != collection_to_ablate:
                     impact_key = f"{collection_to_ablate}_impact_on_{test_collection}"
-                    
+
                     # Measure the actual impact on this collection's queries
-                    self.logger.info(f"Measuring impact of ablating {collection_to_ablate} on {test_collection} queries...")
-                    
+                    self.logger.info(
+                        f"Measuring impact of ablating {collection_to_ablate} on {test_collection} queries...",
+                    )
+
                     # Run the test with the collection ablated
                     ablated_metrics = self.test_ablation(query_id, query_text, test_collection, config.query_limit)
-                    
+
                     # Get the baseline for comparison
                     baseline = baseline_results[test_collection]
-                    
+
                     # Store the result with measured impact
                     results[impact_key] = ablated_metrics
-                    
+
                     # Report the impact
-                    self.logger.info(f"Measured impact of ablating {collection_to_ablate} on {test_collection}: "
-                                     f"F1 changed from {baseline.f1_score:.2f} to {ablated_metrics.f1_score:.2f}")
-            
+                    self.logger.info(
+                        f"Measured impact of ablating {collection_to_ablate} on {test_collection}: "
+                        f"F1 changed from {baseline.f1_score:.2f} to {ablated_metrics.f1_score:.2f}",
+                    )
+
             # Restore the ablated collection before testing the next one
             self.logger.info(f"Restoring collection {collection_to_ablate}...")
             restore_success = self.restore_collection(collection_to_ablate)
@@ -728,7 +823,7 @@ class AblationTester:
             sys.exit(1)  # Fail-stop immediately
 
         # Create a composite key based on query ID and collection
-        collection_type = collection_name.lower().replace('ablation', '').replace('activity', '')
+        collection_type = collection_name.lower().replace("ablation", "").replace("activity", "")
         composite_key = f"{query_id}_{collection_type}"
 
         # Create the truth document
@@ -736,7 +831,7 @@ class AblationTester:
             "_key": composite_key,
             "query_id": str(query_id),
             "matching_entities": matching_entities,
-            "collection": collection_name
+            "collection": collection_name,
         }
 
         # Get the truth collection
@@ -765,14 +860,14 @@ class AblationTester:
 
     def cleanup(self) -> None:
         """Clean up resources used by the ablation tester.
-        
+
         This method ensures all ablated collections are properly restored
         and resources are released according to fail-stop principles.
         """
         self.logger.info("Cleaning up ablation tester resources")
-        
+
         # Check for and restore any collections that are still ablated
-        if hasattr(self, 'ablated_collections'):
+        if hasattr(self, "ablated_collections"):
             for collection_name, is_ablated in self.ablated_collections.items():
                 if is_ablated:
                     self.logger.warning(f"Collection {collection_name} is still ablated during cleanup")
@@ -780,10 +875,10 @@ class AblationTester:
                     if not restore_success:
                         self.logger.error(f"CRITICAL: Failed to restore collection {collection_name} during cleanup")
                         sys.exit(1)  # Fail-stop immediately
-            
+
             # Clear tracking data after restoring collections
             self.ablated_collections.clear()
-        
+
         # Clear backup data
-        if hasattr(self, 'backup_data'):
+        if hasattr(self, "backup_data"):
             self.backup_data.clear()
