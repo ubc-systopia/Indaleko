@@ -47,6 +47,39 @@ class RelationshipPatternGenerator:
             str: UUID string
         """
         return str(uuid.uuid4())
+        
+    def prepare_for_arango(self, document: dict[str, Any]) -> dict[str, Any]:
+        """Prepare a document for insertion into ArangoDB.
+        
+        Ensures the document has a valid _key field and references
+        are properly formatted for ArangoDB.
+        
+        Args:
+            document: The document to prepare
+            
+        Returns:
+            Dict: The prepared document
+        """
+        # Make a copy to avoid modifying the original
+        doc = document.copy()
+        
+        # Make sure the document has a _key field (derived from id if available)
+        if "id" in doc and "_key" not in doc:
+            doc["_key"] = doc["id"].replace("-", "")  # Remove dashes for valid ArangoDB keys
+            
+        # Ensure references use proper _id format if needed
+        if "references" in doc:
+            refs = doc["references"]
+            for field, values in refs.items():
+                # Skip empty references
+                if not values:
+                    continue
+                    
+                # Ensure values is a list
+                if not isinstance(values, list):
+                    refs[field] = [values]
+        
+        return doc
 
     def register_entities(self, entities: list[dict[str, Any]], collection_type: str) -> None:
         """Register entities in the shared registry.
@@ -113,8 +146,12 @@ class TaskCollaborationPattern(RelationshipPatternGenerator):
             self.entity_registry.add_relationship(task_id, meeting_id, "created_in")
             # Meeting has task
             self.entity_registry.add_relationship(meeting_id, task_id, "has_tasks")
+            
+        # Prepare documents for ArangoDB
+        meeting = self.prepare_for_arango(meeting)
+        prepared_tasks = [self.prepare_for_arango(task) for task in tasks]
 
-        return meeting, tasks
+        return meeting, prepared_tasks
 
     def generate_task_with_related_meetings(self) -> tuple[dict[str, Any], list[dict[str, Any]]]:
         """Generate a task with related meetings (discussion, follow-up, etc.).
@@ -163,8 +200,12 @@ class TaskCollaborationPattern(RelationshipPatternGenerator):
             self.entity_registry.add_relationship(task_id, meeting_id, "discussed_in")
             # Meeting related to task
             self.entity_registry.add_relationship(meeting_id, task_id, "related_to")
+            
+        # Prepare documents for ArangoDB
+        task = self.prepare_for_arango(task)
+        prepared_meetings = [self.prepare_for_arango(meeting) for meeting in meetings]
 
-        return task, meetings
+        return task, prepared_meetings
 
     def _generate_basic_meeting(self) -> dict[str, Any]:
         """Generate a basic meeting entity.
@@ -284,6 +325,10 @@ class LocationCollaborationPattern(RelationshipPatternGenerator):
         self.entity_registry.add_relationship(meeting_id, location_id, "located_at")
         # Location hosted meeting
         self.entity_registry.add_relationship(location_id, meeting_id, "hosted_meetings")
+        
+        # Prepare documents for ArangoDB
+        location = self.prepare_for_arango(location)
+        meeting = self.prepare_for_arango(meeting)
 
         return location, meeting
 
@@ -387,6 +432,10 @@ class MusicLocationPattern(RelationshipPatternGenerator):
 
         # Location has music activity
         self.entity_registry.add_relationship(location_id, music_id, "music_activities")
+
+        # Prepare documents for ArangoDB
+        location = self.prepare_for_arango(location)
+        music = self.prepare_for_arango(music)
 
         return location, music
 
@@ -506,6 +555,10 @@ class MusicTaskPattern(RelationshipPatternGenerator):
 
         # Task has background music
         self.entity_registry.add_relationship(task_id, music_id, "background_music")
+        
+        # Prepare documents for ArangoDB
+        task = self.prepare_for_arango(task)
+        music = self.prepare_for_arango(music)
 
         return task, music
 
@@ -562,8 +615,12 @@ class MusicTaskPattern(RelationshipPatternGenerator):
 
             # Task has background music
             self.entity_registry.add_relationship(task_id, music_id, "background_music")
+            
+        # Prepare documents for ArangoDB
+        task = self.prepare_for_arango(task)
+        prepared_music_activities = [self.prepare_for_arango(music) for music in music_activities]
 
-        return task, music_activities
+        return task, prepared_music_activities
 
     def _generate_basic_task(self) -> dict[str, Any]:
         """Generate a basic task entity.
