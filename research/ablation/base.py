@@ -159,6 +159,7 @@ class AblationResult(BaseModel):
     false_positives: int
     false_negatives: int
     aql_query: str = ""  # The AQL query used for testing
+    metadata: dict[str, Any] = {}  # Additional metadata for cross-collection queries
 
     @property
     def impact(self) -> float:
@@ -171,3 +172,21 @@ class AblationResult(BaseModel):
             float: The impact score (0.0 to 1.0)
         """
         return 1.0 - self.f1_score
+        
+    @property
+    def is_cross_collection_query(self) -> bool:
+        """Determine if this result was generated using a cross-collection query.
+        
+        Returns:
+            bool: True if this result used cross-collection queries
+        """
+        return self.metadata.get("cross_collection_query", False)
+        
+    @property
+    def related_collections(self) -> list[str]:
+        """Get the list of related collections used in this query.
+        
+        Returns:
+            List[str]: List of related collection names
+        """
+        return self.metadata.get("related_collections", [])

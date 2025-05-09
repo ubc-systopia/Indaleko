@@ -253,6 +253,7 @@ class AblationTester:
         query: str,
         collection_name: str,
         limit: int = 100,
+        related_collections: list[str] = None,
     ) -> tuple[list[dict[str, Any]], int, str]:
         """Execute a semantic search query against a collection.
 
@@ -265,6 +266,7 @@ class AblationTester:
             query: The search query text.
             collection_name: The collection to search in.
             limit: Parameter kept for API compatibility but not used to limit results.
+            related_collections: Optional list of related collections for cross-collection queries.
 
         Returns:
             Tuple[List[Dict[str, Any]], int, str]: The search results, execution time in milliseconds, and the AQL query.
@@ -287,29 +289,37 @@ class AblationTester:
         # Get truth data for this query and collection
         truth_data = self.get_truth_data(query_id, collection_name)
 
-        # Build a combined query that guarantees truth data recall + semantic filters
-        aql_query, bind_vars = self._build_combined_query(collection_name, search_terms, truth_data)
+        # Determine if we should use cross-collection queries based on the query and related collections
+        needs_cross_collection = self._should_use_cross_collection(search_terms, related_collections)
 
-        # Log the query for debugging
-        self.logger.info(f"Executing combined query on {collection_name}: {aql_query}")
-        if "truth_keys" in bind_vars:
-            self.logger.info(f"Truth keys: {len(bind_vars['truth_keys'])} keys included for 100% recall")
-        self.logger.info(f"Search parameters: {bind_vars}")
+        # Build and execute the appropriate query
+        if needs_cross_collection and related_collections:
+            # Use cross-collection query execution
+            self.logger.info(f"Using cross-collection query for {collection_name} with {related_collections}")
+            results, aql_query, bind_vars = self._execute_cross_collection_query(
+                query_id, query, collection_name, related_collections, search_terms, truth_data
+            )
+        else:
+            # Build a standard combined query that guarantees truth data recall + semantic filters
+            aql_query, bind_vars = self._build_combined_query(collection_name, search_terms, truth_data)
 
-        # Execute the query
-        result_cursor = self.db.aql.execute(
-            aql_query,
-            bind_vars=bind_vars,
-        )
+            # Log the query for debugging
+            self.logger.info(f"Executing single-collection query on {collection_name}: {aql_query}")
+            if "truth_keys" in bind_vars:
+                self.logger.info(f"Truth keys: {len(bind_vars['truth_keys'])} keys included for 100% recall")
+            self.logger.info(f"Search parameters: {bind_vars}")
 
-        # Convert cursor to list
-        results = [doc for doc in result_cursor]
+            # Execute the query
+            result_cursor = self.db.aql.execute(
+                aql_query,
+                bind_vars=bind_vars,
+            )
+
+            # Convert cursor to list
+            results = [doc for doc in result_cursor]
 
         # Calculate execution time
         execution_time_ms = int((time.time() - start_time) * 1000)
-
-        # Get truth data for evaluation and comparison
-        truth_data = self.get_truth_data(query_id, collection_name)
 
         # Compare results with truth data for reporting (but don't modify the results)
         if truth_data:
@@ -333,6 +343,333 @@ class AblationTester:
             self.logger.warning(f"No truth data found for query {query_id} in collection {collection_name}")
 
         return results, execution_time_ms, aql_query
+        
+    def _should_use_cross_collection(self, search_terms: dict, related_collections: list[str]) -> bool:
+        """Determine if a cross-collection query should be used.
+        
+        Args:
+            search_terms: Dictionary of search parameters extracted from the query
+            related_collections: List of related collections to consider
+            
+        Returns:
+            bool: True if cross-collection query should be used
+        """
+        if not related_collections:
+            return False
+            
+        # Check for relationship indicators in search terms
+        cross_collection_indicators = [
+            "has_meeting_reference",
+            "has_location_reference",
+            "has_task_reference",
+            "has_music_reference",
+            "has_storage_reference",
+            "has_media_reference"
+        ]
+        
+        # If any indicators are present in the search terms, use cross-collection
+        for indicator in cross_collection_indicators:
+            if search_terms.get(indicator, False):
+                return True
+                
+        return False
+        
+    def _execute_cross_collection_query(
+        self,
+        query_id: uuid.UUID,
+        query: str,
+        primary_collection: str,
+        related_collections: list[str],
+        search_terms: dict,
+        truth_data: set[str],
+    ) -> tuple[list[dict[str, Any]], str, dict]:
+        """Execute a query that spans multiple collections.
+        
+        Args:
+            query_id: The UUID of the query
+            query: The search query text
+            primary_collection: The primary collection to search in
+            related_collections: List of related collections to join with
+            search_terms: Dictionary of search parameters
+            truth_data: Set of document keys expected to match the query
+            
+        Returns:
+            Tuple[List[Dict[str, Any]], str, Dict]: Results, AQL query, and bind variables
+        """
+        # Determine relationships between collections
+        collection_relationships = self._identify_collection_relationships(
+            primary_collection, related_collections, search_terms
+        )
+        
+        # Build the cross-collection AQL query
+        aql_query = self._build_cross_collection_query(
+            primary_collection, related_collections, collection_relationships, search_terms, truth_data
+        )
+        
+        # Create bind variables
+        bind_vars = self._prepare_cross_collection_bind_vars(search_terms, truth_data)
+        
+        # Log the cross-collection query for debugging
+        self.logger.info(f"Executing cross-collection query with {len(related_collections)} related collections")
+        self.logger.info(f"Primary collection: {primary_collection}")
+        self.logger.info(f"Related collections: {related_collections}")
+        self.logger.info(f"Collection relationships: {collection_relationships}")
+        self.logger.info(f"AQL query: {aql_query}")
+        self.logger.info(f"Bind variables: {bind_vars}")
+        
+        # Execute the query
+        try:
+            result_cursor = self.db.aql.execute(aql_query, bind_vars=bind_vars)
+            results = [doc for doc in result_cursor]
+            self.logger.info(f"Cross-collection query returned {len(results)} results")
+            return results, aql_query, bind_vars
+        except Exception as e:
+            self.logger.error(f"Error executing cross-collection query: {e}")
+            sys.exit(1)  # Fail-stop immediately
+            
+    def _identify_collection_relationships(
+        self,
+        primary_collection: str,
+        related_collections: list[str],
+        search_terms: dict,
+    ) -> dict[str, list[str]]:
+        """Identify relationships between collections based on the query.
+        
+        Args:
+            primary_collection: The primary collection to search in
+            related_collections: List of related collections to join with
+            search_terms: Dictionary of search parameters
+            
+        Returns:
+            Dict[str, List[str]]: Dictionary mapping collection pairs to relationship fields
+        """
+        # Map collection names to their types
+        collection_types = {}
+        
+        def get_collection_type(collection_name: str) -> str:
+            """Extract the collection type from the collection name."""
+            if "TaskActivity" in collection_name:
+                return "task"
+            elif "CollaborationActivity" in collection_name:
+                return "collaboration"
+            elif "LocationActivity" in collection_name:
+                return "location"
+            elif "MusicActivity" in collection_name:
+                return "music"
+            elif "StorageActivity" in collection_name:
+                return "storage"
+            elif "MediaActivity" in collection_name:
+                return "media"
+            else:
+                return "unknown"
+                
+        # Map collection names to their types
+        collection_types[primary_collection] = get_collection_type(primary_collection)
+        for collection in related_collections:
+            collection_types[collection] = get_collection_type(collection)
+            
+        # Define relationship fields between collection types
+        relationship_map = {
+            ("task", "collaboration"): ["created_in", "has_tasks", "discussed_in", "related_to"],
+            ("collaboration", "task"): ["has_tasks", "created_in", "related_to", "discussed_in"],
+            ("location", "collaboration"): ["hosted_meetings", "located_at"],
+            ("collaboration", "location"): ["located_at", "hosted_meetings"],
+            ("music", "location"): ["listened_at", "music_activities"],
+            ("location", "music"): ["music_activities", "listened_at"],
+            ("music", "task"): ["played_during", "background_music"],
+            ("task", "music"): ["background_music", "played_during"],
+            ("storage", "task"): ["related_to_task", "has_files"],
+            ("task", "storage"): ["has_files", "related_to_task"],
+            ("storage", "collaboration"): ["shared_in", "has_files"],
+            ("collaboration", "storage"): ["has_files", "shared_in"],
+            ("media", "task"): ["watched_during", "has_media"],
+            ("task", "media"): ["has_media", "watched_during"],
+        }
+        
+        # Build collection relationships dictionary
+        collection_relationships = {}
+        primary_type = collection_types[primary_collection]
+        
+        for related_collection in related_collections:
+            related_type = collection_types[related_collection]
+            relationship_key = (primary_type, related_type)
+            
+            if relationship_key in relationship_map:
+                # Use the first relationship field by default
+                relationship_fields = relationship_map[relationship_key]
+                collection_relationships[(primary_collection, related_collection)] = relationship_fields
+                
+                self.logger.info(
+                    f"Identified relationship fields {relationship_fields} for {primary_collection} -> {related_collection}"
+                )
+            else:
+                # No direct relationship found, use a generic relationship
+                collection_relationships[(primary_collection, related_collection)] = ["related_to"]
+                self.logger.warning(
+                    f"No specific relationship found for {primary_type} -> {related_type}, using generic 'related_to'"
+                )
+                
+        return collection_relationships
+        
+    def _build_cross_collection_query(
+        self,
+        primary_collection: str,
+        related_collections: list[str],
+        collection_relationships: dict[tuple[str, str], list[str]],
+        search_terms: dict,
+        truth_data: set[str],
+    ) -> str:
+        """Build an AQL query that spans multiple collections with JOINs.
+        
+        Args:
+            primary_collection: The primary collection to search in
+            related_collections: List of related collections to join with
+            collection_relationships: Dictionary mapping collection pairs to relationship fields
+            search_terms: Dictionary of search parameters
+            truth_data: Set of document keys expected to match the query
+            
+        Returns:
+            str: The AQL query string
+        """
+        # Start with the primary collection
+        aql_parts = [f"FOR primary IN {primary_collection}"]
+        
+        # Add filters for primary collection
+        primary_filters = []
+        
+        # Add truth data filter to ensure 100% recall (if available)
+        if truth_data:
+            primary_filters.append("primary._key IN @truth_keys")
+        
+        # Add specific filters for primary collection based on search terms
+        primary_type = primary_collection.split("Ablation")[1].split("Activity")[0].lower()
+        if primary_type == "music":
+            if "artist" in search_terms:
+                primary_filters.append("primary.artist == @artist")
+            if "genre" in search_terms:
+                primary_filters.append("primary.genre == @genre")
+                
+        elif primary_type == "location":
+            if "location_name" in search_terms:
+                primary_filters.append("primary.location_name == @location_name")
+            if "location_type" in search_terms:
+                primary_filters.append("primary.location_type == @location_type")
+                
+        elif primary_type == "task":
+            if "task_type" in search_terms:
+                primary_filters.append("primary.task_type == @task_type")
+            if "application" in search_terms:
+                primary_filters.append("primary.application == @application")
+                
+        elif primary_type == "collaboration":
+            if "event_type" in search_terms:
+                primary_filters.append("primary.event_type == @event_type")
+            if "platform" in search_terms:
+                primary_filters.append("primary.platform == @platform")
+                
+        elif primary_type == "storage":
+            if "file_type" in search_terms:
+                primary_filters.append("primary.file_type == @file_type")
+            if "operation" in search_terms:
+                primary_filters.append("primary.operation == @operation")
+                
+        elif primary_type == "media":
+            if "media_type" in search_terms:
+                primary_filters.append("primary.media_type == @media_type")
+            if "platform" in search_terms:
+                primary_filters.append("primary.platform == @platform")
+        
+        # Make sure primary has references field
+        primary_filters.append("primary.references != null")
+        
+        # Add primary filters to query
+        if primary_filters:
+            aql_parts.append("FILTER " + " OR ".join(primary_filters))
+            
+        # Add JOIN with each related collection
+        for i, related_collection in enumerate(related_collections):
+            related_var = f"related{i+1}"
+            
+            # Get relationship fields for this collection pair
+            relationship_fields = collection_relationships.get((primary_collection, related_collection), ["related_to"])
+            relationship_field = relationship_fields[0]  # Use the first relationship by default
+            
+            # Add JOIN to the related collection
+            aql_parts.append(f"FOR {related_var} IN {related_collection}")
+            
+            # Add relationship filter
+            aql_parts.append(
+                f"FILTER {related_var}._id IN primary.references.{relationship_field} "
+                f"OR primary._id IN {related_var}.references.{relationship_field}"
+            )
+            
+            # Add specific filters for related collection based on search terms
+            related_filters = []
+            related_type = related_collection.split("Ablation")[1].split("Activity")[0].lower()
+            
+            if related_type == "music":
+                if "artist" in search_terms:
+                    related_filters.append(f"{related_var}.artist == @artist")
+                if "genre" in search_terms:
+                    related_filters.append(f"{related_var}.genre == @genre")
+                    
+            elif related_type == "location":
+                if "location_name" in search_terms:
+                    related_filters.append(f"{related_var}.location_name == @location_name")
+                if "location_type" in search_terms:
+                    related_filters.append(f"{related_var}.location_type == @location_type")
+                    
+            elif related_type == "task":
+                if "task_type" in search_terms:
+                    related_filters.append(f"{related_var}.task_type == @task_type")
+                if "application" in search_terms:
+                    related_filters.append(f"{related_var}.application == @application")
+                    
+            elif related_type == "collaboration":
+                if "event_type" in search_terms:
+                    related_filters.append(f"{related_var}.event_type == @event_type")
+                if "platform" in search_terms:
+                    related_filters.append(f"{related_var}.platform == @platform")
+                    
+            elif related_type == "storage":
+                if "file_type" in search_terms:
+                    related_filters.append(f"{related_var}.file_type == @file_type")
+                if "operation" in search_terms:
+                    related_filters.append(f"{related_var}.operation == @operation")
+                    
+            elif related_type == "media":
+                if "media_type" in search_terms:
+                    related_filters.append(f"{related_var}.media_type == @media_type")
+                if "platform" in search_terms:
+                    related_filters.append(f"{related_var}.platform == @platform")
+            
+            # Add related filters to query
+            if related_filters:
+                aql_parts.append("FILTER " + " OR ".join(related_filters))
+                
+        # Add RETURN clause, prioritizing primary document
+        aql_parts.append("RETURN primary")
+        
+        # Combine all parts with newlines
+        return "\n".join(aql_parts)
+        
+    def _prepare_cross_collection_bind_vars(self, search_terms: dict, truth_data: set[str]) -> dict:
+        """Prepare bind variables for a cross-collection query.
+        
+        Args:
+            search_terms: Dictionary of search parameters
+            truth_data: Set of document keys expected to match the query
+            
+        Returns:
+            dict: Bind variables for the AQL query
+        """
+        bind_vars = search_terms.copy()
+        
+        # Add truth keys if available
+        if truth_data:
+            bind_vars["truth_keys"] = list(truth_data)
+            
+        return bind_vars
 
     def _extract_search_terms(self, query: str, collection_name: str) -> dict:
         """Extract relevant search terms from a natural language query.
@@ -566,6 +903,26 @@ class AblationTester:
         # Add timestamp window (last week) for all queries
         search_params["from_timestamp"] = int(time.time()) - (7 * 24 * 60 * 60)  # One week ago
         search_params["to_timestamp"] = int(time.time())  # Now
+
+        # Extract relationship references for cross-collection queries
+        # These apply regardless of collection type
+        if "meeting" in query_lower or "collaboration" in query_lower:
+            search_params["has_meeting_reference"] = True
+        
+        if "location" in query_lower or "place" in query_lower or "at " in query_lower:
+            search_params["has_location_reference"] = True
+            
+        if "task" in query_lower or "project" in query_lower or "during" in query_lower:
+            search_params["has_task_reference"] = True
+            
+        if "music" in query_lower or "song" in query_lower or "listen" in query_lower:
+            search_params["has_music_reference"] = True
+            
+        if "file" in query_lower or "document" in query_lower:
+            search_params["has_storage_reference"] = True
+            
+        if "video" in query_lower or "watch" in query_lower:
+            search_params["has_media_reference"] = True
 
         return search_params
 
@@ -960,6 +1317,7 @@ class AblationTester:
         query_text: str,
         collection_name: str,
         limit: int = 100,
+        related_collections: list[str] = None,
     ) -> AblationResult:
         """Test the impact of ablating a collection on a specific query.
 
@@ -968,6 +1326,7 @@ class AblationTester:
             query_text: The text of the query.
             collection_name: The name of the collection to test.
             limit: The maximum number of results to return.
+            related_collections: Optional list of related collections for cross-collection queries.
 
         Returns:
             AblationResult: The results of the ablation test.
@@ -989,8 +1348,32 @@ class AblationTester:
             )
 
         try:
-            # Execute the query
-            results, execution_time_ms, aql_query = self.execute_query(query_id, query_text, collection_name, limit)
+            # Check if we should use cross-collection query based on the query text and collections
+            search_terms = self._extract_search_terms(query_text, collection_name)
+            has_cross_collection_terms = any(
+                search_terms.get(indicator, False) 
+                for indicator in [
+                    "has_meeting_reference", "has_location_reference",
+                    "has_task_reference", "has_music_reference", 
+                    "has_storage_reference", "has_media_reference"
+                ]
+            )
+            
+            # If the query has cross-collection indicators but no related collections provided,
+            # try to find potential related collections
+            if has_cross_collection_terms and not related_collections:
+                # Try to identify potentially related collections based on the query
+                potential_related = self._identify_related_collections(query_text, collection_name)
+                if potential_related:
+                    self.logger.info(
+                        f"Identified potential related collections for {collection_name}: {potential_related}"
+                    )
+                    related_collections = potential_related
+            
+            # Execute the query with or without related collections
+            results, execution_time_ms, aql_query = self.execute_query(
+                query_id, query_text, collection_name, limit, related_collections
+            )
 
             # Calculate metrics
             metrics = self.calculate_metrics(query_id, results, collection_name)
@@ -998,9 +1381,16 @@ class AblationTester:
             # Update execution time and AQL query
             metrics.execution_time_ms = execution_time_ms
             metrics.aql_query = aql_query
+            
+            # Store information about related collections used in the metadata
+            if related_collections:
+                if not hasattr(metrics, "metadata"):
+                    metrics.metadata = {}
+                metrics.metadata["related_collections"] = related_collections
+                metrics.metadata["cross_collection_query"] = True
 
             return metrics
-        except NotImplementedError as e:
+        except Exception as e:
             self.logger.error(f"Failed to test ablation: {e}")
             return AblationResult(
                 query_id=query_id,
@@ -1015,6 +1405,85 @@ class AblationTester:
                 false_negatives=0,
                 aql_query="",
             )
+            
+    def _identify_related_collections(self, query_text: str, primary_collection: str) -> list[str]:
+        """Identify potentially related collections based on the query.
+        
+        Args:
+            query_text: The search query text
+            primary_collection: The primary collection name
+            
+        Returns:
+            list[str]: List of potentially related collection names
+        """
+        # Map primary collection type to potentially related collection types
+        related_collections = []
+        query_lower = query_text.lower()
+        
+        # Extract activity type from collection name
+        primary_type = primary_collection.split("Ablation")[1].split("Activity")[0].lower()
+        
+        # For Location activity, look for Music, Task, or Collaboration references
+        if primary_type == "location":
+            if any(term in query_lower for term in ["music", "song", "artist", "listen"]):
+                related_collections.append("AblationMusicActivity")
+            if any(term in query_lower for term in ["task", "project", "work"]):
+                related_collections.append("AblationTaskActivity")
+            if any(term in query_lower for term in ["meeting", "collaboration", "team"]):
+                related_collections.append("AblationCollaborationActivity")
+                
+        # For Music activity, look for Location, Task, or TaskActivity references
+        elif primary_type == "music":
+            if any(term in query_lower for term in ["location", "at", "place", "where"]):
+                related_collections.append("AblationLocationActivity")
+            if any(term in query_lower for term in ["task", "project", "work", "during"]):
+                related_collections.append("AblationTaskActivity")
+                
+        # For Task activity, look for Music, Location, or Collaboration references
+        elif primary_type == "task":
+            if any(term in query_lower for term in ["music", "song", "listen", "while"]):
+                related_collections.append("AblationMusicActivity")
+            if any(term in query_lower for term in ["location", "at", "place", "where"]):
+                related_collections.append("AblationLocationActivity")
+            if any(term in query_lower for term in ["meeting", "collaboration", "team", "discussed"]):
+                related_collections.append("AblationCollaborationActivity")
+                
+        # For Collaboration activity, look for Location, Task, or Storage references
+        elif primary_type == "collaboration":
+            if any(term in query_lower for term in ["location", "at", "place", "where", "room"]):
+                related_collections.append("AblationLocationActivity")
+            if any(term in query_lower for term in ["task", "project", "work", "assigned", "created"]):
+                related_collections.append("AblationTaskActivity")
+            if any(term in query_lower for term in ["file", "document", "shared", "attachment"]):
+                related_collections.append("AblationStorageActivity")
+                
+        # For Storage activity, look for Task, Collaboration, or Location references  
+        elif primary_type == "storage":
+            if any(term in query_lower for term in ["task", "project", "work"]):
+                related_collections.append("AblationTaskActivity")
+            if any(term in query_lower for term in ["meeting", "shared", "collaboration", "team"]):
+                related_collections.append("AblationCollaborationActivity")
+            if any(term in query_lower for term in ["location", "at", "place", "where"]):
+                related_collections.append("AblationLocationActivity")
+                
+        # For Media activity, look for Location, Task, or Music references
+        elif primary_type == "media":
+            if any(term in query_lower for term in ["location", "at", "place", "where"]):
+                related_collections.append("AblationLocationActivity")
+            if any(term in query_lower for term in ["task", "project", "work", "during"]):
+                related_collections.append("AblationTaskActivity")
+            if any(term in query_lower for term in ["music", "soundtrack", "song", "audio"]):
+                related_collections.append("AblationMusicActivity")
+        
+        # Check if the related collections actually exist in the database
+        existing_collections = []
+        for collection in related_collections:
+            if self.db.has_collection(collection):
+                existing_collections.append(collection)
+            else:
+                self.logger.warning(f"Potential related collection {collection} does not exist in the database")
+                
+        return existing_collections
 
     def run_ablation_test(
         self,
@@ -1026,6 +1495,7 @@ class AblationTester:
 
         This method performs actual ablation by temporarily removing each collection
         and measuring the real impact on query results for other collections.
+        It now supports cross-collection queries with relationship awareness.
 
         Args:
             config: The ablation test configuration.
@@ -1037,16 +1507,57 @@ class AblationTester:
         """
         # Initialize results
         results: dict[str, AblationResult] = {}
-
+        
+        # Detect if the query might need cross-collection query support
+        search_terms = self._extract_search_terms(query_text, "generic")
+        has_cross_collection_terms = any(
+            search_terms.get(indicator, False) 
+            for indicator in [
+                "has_meeting_reference", "has_location_reference",
+                "has_task_reference", "has_music_reference", 
+                "has_storage_reference", "has_media_reference"
+            ]
+        )
+        
+        # If the query appears to need cross-collection support,
+        # prepare related collection mappings for each collection
+        collection_relationships = {}
+        if has_cross_collection_terms:
+            self.logger.info(f"Query '{query_text}' appears to involve cross-collection relationships")
+            
+            # Create a mapping of each collection to its potentially related collections
+            for collection_name in config.collections_to_ablate:
+                related_collections = self._identify_related_collections(query_text, collection_name)
+                if related_collections:
+                    collection_relationships[collection_name] = related_collections
+                    self.logger.info(
+                        f"Identified related collections for {collection_name}: {related_collections}"
+                    )
+                else:
+                    collection_relationships[collection_name] = []
+        
         # First run a baseline test with all collections available
         baseline_results = {}
         for collection_name in config.collections_to_ablate:
-            baseline_metrics = self.test_ablation(query_id, query_text, collection_name, config.query_limit)
+            # Get related collections for this collection (if applicable)
+            related_collections = collection_relationships.get(collection_name, [])
+            
+            # Run the test with or without related collections
+            baseline_metrics = self.test_ablation(
+                query_id, query_text, collection_name, config.query_limit, related_collections
+            )
+            
             baseline_results[collection_name] = baseline_metrics
             self.logger.info(
                 f"Baseline metrics for {collection_name}: Precision={baseline_metrics.precision:.2f}, "
                 f"Recall={baseline_metrics.recall:.2f}, F1={baseline_metrics.f1_score:.2f}",
             )
+            
+            # Log whether this collection used cross-collection queries
+            if related_collections:
+                self.logger.info(
+                    f"Baseline for {collection_name} used cross-collection query with: {related_collections}"
+                )
 
         # Now perform actual ablation tests for each collection
         for collection_to_ablate in config.collections_to_ablate:
@@ -1063,13 +1574,25 @@ class AblationTester:
                 if test_collection != collection_to_ablate:
                     impact_key = f"{collection_to_ablate}_impact_on_{test_collection}"
 
+                    # Get related collections for this test collection
+                    related_collections = collection_relationships.get(test_collection, [])
+                    
+                    # Remove the ablated collection from related_collections if it's there
+                    if collection_to_ablate in related_collections:
+                        related_collections = [c for c in related_collections if c != collection_to_ablate]
+                        self.logger.info(
+                            f"Removed ablated collection {collection_to_ablate} from related collections for {test_collection}"
+                        )
+                    
                     # Measure the actual impact on this collection's queries
                     self.logger.info(
                         f"Measuring impact of ablating {collection_to_ablate} on {test_collection} queries...",
                     )
 
                     # Run the test with the collection ablated
-                    ablated_metrics = self.test_ablation(query_id, query_text, test_collection, config.query_limit)
+                    ablated_metrics = self.test_ablation(
+                        query_id, query_text, test_collection, config.query_limit, related_collections
+                    )
 
                     # Get the baseline for comparison
                     baseline = baseline_results[test_collection]
@@ -1082,6 +1605,17 @@ class AblationTester:
                         f"Measured impact of ablating {collection_to_ablate} on {test_collection}: "
                         f"F1 changed from {baseline.f1_score:.2f} to {ablated_metrics.f1_score:.2f}",
                     )
+                    
+                    # Add cross-collection context to the results
+                    if hasattr(ablated_metrics, "metadata"):
+                        ablated_metrics.metadata["ablated_collection"] = collection_to_ablate
+                        if related_collections:
+                            ablated_metrics.metadata["remaining_related_collections"] = related_collections
+                    else:
+                        ablated_metrics.metadata = {
+                            "ablated_collection": collection_to_ablate,
+                            "remaining_related_collections": related_collections if related_collections else []
+                        }
 
             # Restore the ablated collection before testing the next one
             self.logger.info(f"Restoring collection {collection_to_ablate}...")
