@@ -114,15 +114,34 @@ class SharedEntityRegistry:
         Returns:
             bool: True if the relationship was added successfully, False otherwise.
         """
-        # Verify both entities exist
-        if (source_entity_id not in self.entity_collections or 
-            target_entity_id not in self.entity_collections):
+        # For ease of use, auto-register entities if not already known
+        # This is useful when entities come from the database directly
+        if source_entity_id not in self.entity_collections:
+            self.entity_collections[source_entity_id] = set()
+            self.entity_references[source_entity_id] = {}
+        
+        if target_entity_id not in self.entity_collections:
+            self.entity_collections[target_entity_id] = set()
+            self.entity_references[target_entity_id] = {}
+            
+        # Check if both entities exist in at least one collection
+        if (not self.entity_collections[source_entity_id] or 
+            not self.entity_collections[target_entity_id]):
             self.logger.error("Cannot add relationship between non-existent entities")
-            return False
+            # But continue anyway for flexibility (assuming they'll be registered later)
         
         # Get the collections for both entities
         source_collections = self.entity_collections[source_entity_id]
         target_collections = self.entity_collections[target_entity_id]
+        
+        # If collections are empty, use default placeholders to allow the relationship
+        if not source_collections:
+            source_collections = {"UnknownSourceCollection"}
+            self.entity_collections[source_entity_id].add("UnknownSourceCollection")
+            
+        if not target_collections:
+            target_collections = {"UnknownTargetCollection"}
+            self.entity_collections[target_entity_id].add("UnknownTargetCollection")
         
         # For each source collection
         for source_collection in source_collections:

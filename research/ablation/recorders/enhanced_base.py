@@ -3,6 +3,8 @@
 import json
 import logging
 import sys
+from datetime import datetime
+from enum import Enum
 from typing import Dict, List, Optional, Set, Any
 from uuid import UUID
 
@@ -11,6 +13,31 @@ from db.db_config import IndalekoDBConfig
 from ..base import ISyntheticRecorder
 from ..registry import SharedEntityRegistry
 from .base import BaseActivityRecorder
+
+
+# Enhanced JSON encoder for serializing UUIDs and other complex types
+class EnhancedJSONEncoder(json.JSONEncoder):
+    """JSON encoder that handles UUID objects and other complex types."""
+    
+    def default(self, obj):
+        if isinstance(obj, UUID):
+            # Convert UUID to string
+            return str(obj)
+        elif isinstance(obj, datetime):
+            # Convert datetime to ISO format
+            return obj.isoformat()
+        elif isinstance(obj, Enum):
+            # Convert Enum to string
+            return str(obj.value)
+        elif hasattr(obj, "__dict__"):
+            # Handle custom objects by converting to dict
+            return obj.__dict__
+        try:
+            # Try using string representation
+            return str(obj)
+        except:
+            # Fall back to default handling
+            return super().default(obj)
 
 
 class EnhancedActivityRecorder(BaseActivityRecorder):
@@ -35,6 +62,55 @@ class EnhancedActivityRecorder(BaseActivityRecorder):
         
         # Use provided registry or create a new one
         self.entity_registry = entity_registry or SharedEntityRegistry()
+    
+    def _serialize_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Safely serialize data with special handling for complex types.
+        
+        Args:
+            data: The data to serialize.
+            
+        Returns:
+            Dict[str, Any]: The serialized data.
+        """
+        try:
+            # Serialize with enhanced encoder
+            json_str = json.dumps(data, cls=EnhancedJSONEncoder)
+            return json.loads(json_str)
+        except Exception as e:
+            self.logger.error(f"Error serializing data: {e}")
+            # Manually convert problematic types
+            safe_data = {}
+            for k, v in data.items():
+                if isinstance(v, UUID):
+                    safe_data[k] = str(v)
+                elif isinstance(v, datetime):
+                    safe_data[k] = v.isoformat()
+                elif isinstance(v, Enum):
+                    safe_data[k] = str(v.value)
+                elif isinstance(v, (str, int, float, bool, type(None))):
+                    safe_data[k] = v
+                elif isinstance(v, (list, tuple)):
+                    # Handle lists recursively
+                    safe_list = []
+                    for item in v:
+                        if isinstance(item, (str, int, float, bool, type(None))):
+                            safe_list.append(item)
+                        elif isinstance(item, UUID):
+                            safe_list.append(str(item))
+                        elif isinstance(item, datetime):
+                            safe_list.append(item.isoformat())
+                        elif isinstance(item, Enum):
+                            safe_list.append(str(item.value))
+                        else:
+                            safe_list.append(str(item))
+                    safe_data[k] = safe_list
+                elif isinstance(v, dict):
+                    # Handle dictionaries recursively
+                    safe_data[k] = self._serialize_data(v)
+                else:
+                    # Convert other types to string
+                    safe_data[k] = str(v)
+            return safe_data
     
     def add_entity_reference(self, data: Dict[str, Any], 
                            source_entity_id: UUID, 
@@ -93,11 +169,20 @@ class EnhancedActivityRecorder(BaseActivityRecorder):
             self.logger.critical("No database connection available")
             sys.exit(1)
         
-        # Deep copy to avoid modifying the original data
-        data_copy = json.loads(json.dumps(data))
+        # Deep copy to avoid modifying the original data with safe serialization
+        data_copy = self._serialize_data(data)
         
         # Get or create source entity ID
-        source_id = UUID(data.get("id")) if "id" in data else None
+        source_id = None
+        if "id" in data:
+            id_value = data["id"]
+            if isinstance(id_value, UUID):
+                source_id = id_value
+            else:
+                try:
+                    source_id = UUID(str(id_value))
+                except (ValueError, AttributeError):
+                    self.logger.error(f"Invalid source ID: {id_value}")
         
         # Add references if provided
         if references and source_id:
@@ -139,11 +224,20 @@ class EnhancedActivityRecorder(BaseActivityRecorder):
         # Process each item in the batch
         modified_batch = []
         for i, data in enumerate(data_batch):
-            # Deep copy to avoid modifying the original data
-            data_copy = json.loads(json.dumps(data))
+            # Deep copy to avoid modifying the original data with safe serialization
+            data_copy = self._serialize_data(data)
             
             # Get or create source entity ID
-            source_id = UUID(data.get("id")) if "id" in data else None
+            source_id = None
+            if "id" in data:
+                id_value = data["id"]
+                if isinstance(id_value, UUID):
+                    source_id = id_value
+                else:
+                    try:
+                        source_id = UUID(str(id_value))
+                    except (ValueError, AttributeError):
+                        self.logger.error(f"Invalid source ID: {id_value}")
             
             # Add references if provided
             if references_batch and source_id and i < len(references_batch):
