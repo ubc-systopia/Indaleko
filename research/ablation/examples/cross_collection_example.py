@@ -71,8 +71,23 @@ def run_example():
         meeting = meetings[meeting_idx]
         
         # Extract entity IDs
-        task_id = UUID(task.get("id", ""))
-        meeting_id = UUID(meeting.get("id", ""))
+        # Handle both string and UUID objects for id
+        task_id = task.get("id")
+        meeting_id = meeting.get("id")
+        
+        if not isinstance(task_id, UUID):
+            try:
+                task_id = UUID(str(task_id))
+            except (ValueError, AttributeError):
+                logger.error(f"Invalid task ID: {task_id}")
+                continue
+        
+        if not isinstance(meeting_id, UUID):
+            try:
+                meeting_id = UUID(str(meeting_id))
+            except (ValueError, AttributeError):
+                logger.error(f"Invalid meeting ID: {meeting_id}")
+                continue
         
         # Register entities in the registry (if not already registered)
         registry.register_entity("task", task.get("title", ""), "TaskActivity")
@@ -98,8 +113,27 @@ def run_example():
             assigned_tasks.append(tasks[task_idx])
         
         # Extract entity IDs
-        meeting_id = UUID(meeting.get("id", ""))
-        task_ids = [UUID(task.get("id", "")) for task in assigned_tasks]
+        meeting_id = meeting.get("id")
+        if not isinstance(meeting_id, UUID):
+            try:
+                meeting_id = UUID(str(meeting_id))
+            except (ValueError, AttributeError):
+                logger.error(f"Invalid meeting ID: {meeting_id}")
+                continue
+        
+        # Get task IDs with type checking
+        task_ids = []
+        for task in assigned_tasks:
+            task_id = task.get("id")
+            if not isinstance(task_id, UUID):
+                try:
+                    task_id = UUID(str(task_id))
+                    task_ids.append(task_id)
+                except (ValueError, AttributeError):
+                    logger.error(f"Invalid task ID: {task_id}")
+                    continue
+            else:
+                task_ids.append(task_id)
         
         # Add the relationships
         meeting_data = meeting.copy()
@@ -113,35 +147,50 @@ def run_example():
     
     # Print relationship summary
     logger.info("\nRelationship Summary:")
-    for task in tasks:
-        task_id = UUID(task.get("id", ""))
-        task_title = task.get("title", "")
+    try:
+        for task in tasks:
+            task_id = task.get("id")
+            if not isinstance(task_id, UUID):
+                try:
+                    task_id = UUID(str(task_id))
+                except (ValueError, AttributeError):
+                    continue
+            
+            task_title = task.get("title", "")
+            
+            # Get all meetings this task was created in
+            meeting_refs = registry.get_entity_references(task_id, "created_in")
+            if meeting_refs:
+                logger.info(f"Task '{task_title}' was created in {len(meeting_refs)} meetings:")
+                for ref in meeting_refs:
+                    # Get the meeting document from the database
+                    db = IndalekoDBConfig().get_arangodb()
+                    meeting_doc = db.collection("CollaborationActivity").get(str(ref.entity_id))
+                    if meeting_doc:
+                        logger.info(f"  - Meeting: {meeting_doc.get('title', 'Unknown')}")
         
-        # Get all meetings this task was created in
-        meeting_refs = registry.get_entity_references(task_id, "created_in")
-        if meeting_refs:
-            logger.info(f"Task '{task_title}' was created in {len(meeting_refs)} meetings:")
-            for ref in meeting_refs:
-                # Get the meeting document from the database
-                db = IndalekoDBConfig().get_arangodb()
-                meeting_doc = db.collection("CollaborationActivity").get(str(ref.entity_id))
-                if meeting_doc:
-                    logger.info(f"  - Meeting: {meeting_doc.get('title', 'Unknown')}")
-    
-    for meeting in meetings:
-        meeting_id = UUID(meeting.get("id", ""))
-        meeting_title = meeting.get("title", "")
-        
-        # Get all tasks assigned in this meeting
-        task_refs = registry.get_entity_references(meeting_id, "has_task")
-        if task_refs:
-            logger.info(f"Meeting '{meeting_title}' has {len(task_refs)} tasks:")
-            for ref in task_refs:
-                # Get the task document from the database
-                db = IndalekoDBConfig().get_arangodb()
-                task_doc = db.collection("TaskActivity").get(str(ref.entity_id))
-                if task_doc:
-                    logger.info(f"  - Task: {task_doc.get('title', 'Unknown')}")
+        for meeting in meetings:
+            meeting_id = meeting.get("id")
+            if not isinstance(meeting_id, UUID):
+                try:
+                    meeting_id = UUID(str(meeting_id))
+                except (ValueError, AttributeError):
+                    continue
+            
+            meeting_title = meeting.get("title", "")
+            
+            # Get all tasks assigned in this meeting
+            task_refs = registry.get_entity_references(meeting_id, "has_task")
+            if task_refs:
+                logger.info(f"Meeting '{meeting_title}' has {len(task_refs)} tasks:")
+                for ref in task_refs:
+                    # Get the task document from the database
+                    db = IndalekoDBConfig().get_arangodb()
+                    task_doc = db.collection("TaskActivity").get(str(ref.entity_id))
+                    if task_doc:
+                        logger.info(f"  - Task: {task_doc.get('title', 'Unknown')}")
+    except Exception as e:
+        logger.error(f"Error while generating relationship summary: {e}")
     
     # Generate AQL query that joins tasks and meetings
     logger.info("\nExample AQL Query with JOIN:")
