@@ -257,32 +257,40 @@ def generate_cross_collection_queries(
                 for c in collection_pair
                 if c in collection_to_activity_type
             ]
-            activity_type = activity_types[0] if activity_types else "location"
-
-            # Generate diverse queries using LLM through the EnhancedQueryGenerator
-            generator = EnhancedQueryGenerator()
-            logging.info(f"Generating enhanced queries for activity type: {activity_type}")
-
-            # Generate queries with proper fail-stop approach - NO fallbacks
-            try:
-                diverse_queries = generator.generate_enhanced_queries(activity_type, count=count)
-                logging.info(f"Successfully generated {len(diverse_queries)} diverse queries using LLM")
-            except Exception as query_gen_error:
-                logging.error(f"CRITICAL: Failed to generate diverse queries using EnhancedQueryGenerator: {query_gen_error}")
-                logging.error("This is required for proper ablation testing - fix the query generator")
+            
+            # Make sure we have valid activity types
+            if not activity_types:
+                logging.error(f"CRITICAL: No valid activity types found for collections: {collection_pair}")
+                logging.error("This is required for proper ablation testing - fix the collection mapping")
                 sys.exit(1)  # Fail-stop immediately - no fallbacks
-
+            
+            # Generate queries for EACH activity type in the pair
+            # This ensures we have collection-specific queries for proper evaluation
+            generator = EnhancedQueryGenerator()
+            diverse_queries = []
+            
+            for activity_type in activity_types:
+                logging.info(f"Generating enhanced queries for activity type: {activity_type}")
+                
+                # Generate queries with proper fail-stop approach - NO fallbacks
+                try:
+                    activity_queries = generator.generate_enhanced_queries(activity_type, count=count//len(activity_types) + 1)
+                    logging.info(f"Successfully generated {len(activity_queries)} diverse queries for {activity_type} using LLM")
+                    diverse_queries.extend(activity_queries)
+                except Exception as query_gen_error:
+                    logging.error(f"CRITICAL: Failed to generate diverse queries using EnhancedQueryGenerator: {query_gen_error}")
+                    logging.error("This is required for proper ablation testing - fix the query generator")
+                    sys.exit(1)  # Fail-stop immediately - no fallbacks
+            
             # Ensure we have queries to work with - fail-stop approach
             if not diverse_queries:
                 logging.error("CRITICAL: EnhancedQueryGenerator returned empty results")
                 logging.error("This is required for proper ablation testing - fix the query generator")
                 sys.exit(1)  # Fail-stop immediately - no fallbacks
-
-            # Final verification that we have queries to work with
-            if not diverse_queries:
-                logging.error("CRITICAL: No queries available from query generator")
-                logging.error("This is required for proper ablation testing - fix the query generator")
-                sys.exit(1)  # Fail-stop immediately - no fallbacks
+                
+            # Limit to requested count in case we generated more
+            diverse_queries = diverse_queries[:count]
+            logging.info(f"Final query count: {len(diverse_queries)} queries for combination {collection_pair}")
 
         except Exception as e:
             logging.error(f"CRITICAL: Unexpected error in query generation setup: {e}")

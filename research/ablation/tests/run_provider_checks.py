@@ -287,7 +287,9 @@ def run_compatibility_report():
 
         for collector_name, collector_cls in collectors.items():
             implemented = hasattr(collector_cls, method_name) and not getattr(
-                getattr(collector_cls, method_name), "__isabstractmethod__", False,
+                getattr(collector_cls, method_name),
+                "__isabstractmethod__",
+                False,
             )
             status = "✅" if implemented else "❌"
             row += f"{status:<20} | "
@@ -306,7 +308,9 @@ def run_compatibility_report():
 
         for recorder_name, recorder_cls in recorders.items():
             implemented = hasattr(recorder_cls, method_name) and not getattr(
-                getattr(recorder_cls, method_name), "__isabstractmethod__", False,
+                getattr(recorder_cls, method_name),
+                "__isabstractmethod__",
+                False,
             )
             status = "✅" if implemented else "❌"
             row += f"{status:<20} | "
@@ -318,7 +322,9 @@ def main():
     """Main entry point for the script."""
     parser = argparse.ArgumentParser(description="Run provider implementation checks.")
     parser.add_argument(
-        "--fix", action="store_true", help="Attempt to generate stub implementations for missing methods",
+        "--fix",
+        action="store_true",
+        help="Attempt to generate stub implementations for missing methods",
     )
     parser.add_argument("--check-only", action="store_true", help="Only check for issues, don't run any tests")
     parser.add_argument("--report", action="store_true", help="Generate a compatibility report for all providers")

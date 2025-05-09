@@ -39,24 +39,18 @@ class EnhancedQueryGenerator:
         """
         self.logger = logging.getLogger(__name__)
 
+        # Use the SimpleLLMClient directly as it better handles the Anthropic API responses
         try:
-            # Try to use the built-in LLMQueryGenerator from the Indaleko framework
-            self.generator = LLMQueryGenerator(api_key=api_key)
-            self.logger.info("Using built-in LLMQueryGenerator for query generation")
-        except Exception as e:
-            # If that fails, try to use our custom SimpleLLMClient
-            self.logger.warning(f"Error initializing built-in LLMQueryGenerator: {e}")
-            self.logger.info("Falling back to simplified LLM client")
-            
-            # Import the simplified client
-            try:
-                from research.ablation.query.enhanced.llm_client import SimpleLLMClient
-                self.generator = SimpleLLMClient(api_key=api_key)
-                self.logger.info("Successfully initialized simplified LLM client")
-            except Exception as client_error:
-                self.logger.error(f"CRITICAL: Failed to initialize any LLM client: {client_error}")
-                self.logger.error("This is required for proper ablation testing - fix the query generator")
-                sys.exit(1)  # Fail-stop immediately - no fallbacks
+            from research.ablation.query.enhanced.llm_client import SimpleLLMClient
+            self.generator = SimpleLLMClient(
+                api_key=api_key,
+                model="claude-3-7-sonnet-latest"
+            )
+            self.logger.info("Successfully initialized SimpleLLMClient for query generation")
+        except Exception as client_error:
+            self.logger.error(f"CRITICAL: Failed to initialize LLM client: {client_error}")
+            self.logger.error("This is required for proper ablation testing - fix the query generator")
+            sys.exit(1)  # Fail-stop immediately - no fallbacks
 
         # The last diversity evaluation results
         self.last_evaluation = {}
@@ -157,13 +151,13 @@ Just list {count} different search queries, numbered from 1 to {count}.
         self.logger.info(f"Generating enhanced {activity_type} queries...")
         try:
             # Explicitly catch TypeError and other issues with LLM connector
-            # Use max_tokens parameter to avoid streaming warning
+            # Critical fix: LLMQueryGenerator.get_completion doesn't accept stream parameter directly
+            # We need to modify the relevant AnthropicConnector classes instead
             response = self.generator.get_completion(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 temperature=0.8,  # Slightly higher temperature for more diversity
-                max_tokens=1000,   # Reasonable limit for query generation
-                stream=False       # Critical to avoid the 10-minute streaming warning
+                max_tokens=1000    # Reasonable limit for query generation
             )
             
             # Immediately validate response type for fail-stop approach

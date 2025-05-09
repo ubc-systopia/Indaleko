@@ -75,8 +75,8 @@ class AnthropicConnector(IndalekoLLMBase):
                     Optimization strategies to use for prompts
         """
         self.api_key = kwargs.get("api_key")
-        self.model = kwargs.get("model", "claude-3-sonnet-20240229")
-        max_tokens = int(kwargs.get("max_tokens", 100000))
+        self.model = kwargs.get("model", "claude-3-7-sonnet-latest")
+        max_tokens = int(kwargs.get("max_tokens", 10000))
         self.max_tokens_to_sample = max_tokens
         self.use_prompt_manager = kwargs.get("use_prompt_manager", True)
         self.optimization_strategies = kwargs.get(
@@ -397,12 +397,14 @@ class AnthropicConnector(IndalekoLLMBase):
             Any: The raw completion result
         """
         prompt = f"Context: {context}\n\nUser query: {question}\n\nRespond with a valid JSON following this schema:\n{json.dumps(schema, indent=2)}"
+        ic(prompt)
         message = self.client.messages.create(
             model=self.model,
             system="You are a helpful assistant that always responds with valid JSON.",
             messages=[{"role": "user", "content": prompt}],
             temperature=0,
             max_tokens=self.max_tokens_to_sample,
+            stream=False,  # Explicitly disable streaming to avoid warning
         )
         return message
 
@@ -430,6 +432,7 @@ class AnthropicConnector(IndalekoLLMBase):
                 messages=[{"role": "user", "content": prompt}],
                 temperature=temperature,
                 max_tokens=max_tokens,
+                stream=False,  # Explicitly disable streaming to avoid warning
             )
             return message.content[0].text.strip()
         except Exception as e:
@@ -503,6 +506,7 @@ Text to analyze:
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0,
                 max_tokens=1000,
+                stream=False,  # Explicitly disable streaming to avoid the warning
             )
 
             content = message.content[0].text.strip()

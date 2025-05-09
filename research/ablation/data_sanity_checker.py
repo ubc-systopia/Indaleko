@@ -64,7 +64,7 @@ class DataSanityChecker:
             return False
 
     def _fail(self, message: str) -> None:
-        """Log a validation error and possibly fail fast.
+        """Log a validation error and fail-stop with sys.exit(1).
 
         Args:
             message: The error message to log.
@@ -72,7 +72,8 @@ class DataSanityChecker:
         self.logger.error(f"VALIDATION ERROR: {message}")
         self.validation_errors.append(message)
         if self.fail_fast:
-            raise ValueError(f"Data sanity check failed: {message}")
+            self.logger.error(f"CRITICAL ERROR: {message}")
+            sys.exit(1)  # Use sys.exit(1) for proper fail-stop behavior
 
     def verify_collections_exist(self) -> bool:
         """Verify that all required collections exist in the database.
@@ -188,6 +189,7 @@ class DataSanityChecker:
             )
 
             all_entities_exist = True
+            missing_entities = []
 
             for doc in result:
                 collection = doc.get("collection")
@@ -213,11 +215,14 @@ class DataSanityChecker:
                         self.logger.debug(f"Error checking entity {entity_id}: {e}")
 
                     if not entity_exists:
-                        self.logger.warning(f"Entity {entity_id} referenced in truth data doesn't exist in collection {collection}")
+                        error_msg = f"Entity {entity_id} referenced in truth data doesn't exist in collection {collection}"
+                        self.logger.error(error_msg)
+                        missing_entities.append((entity_id, collection))
                         all_entities_exist = False
 
             if not all_entities_exist:
-                self._fail("Some entities referenced in truth data don't exist in their respective collections")
+                # Use _fail with a detailed error message to enable proper fail-stop
+                self._fail(f"Found {len(missing_entities)} entities referenced in truth data that don't exist in their collections: {missing_entities[:5]}")
                 return False
 
             return True

@@ -177,3 +177,87 @@ class SimpleLLMClient:
         except Exception as e:
             logger.error(f"Error getting completion from Anthropic: {e}")
             return f"Error: {str(e)}"
+    
+    def generate_queries_for_activity_type(
+        self,
+        activity_type: str,
+        count: int = 5,
+        temperature: float = 0.7,
+    ) -> list[str]:
+        """
+        Generate queries for a specific activity type.
+        
+        Args:
+            activity_type: String name of the activity type (e.g., "music", "location")
+            count: Number of queries to generate
+            temperature: Temperature for generation (higher = more creative)
+            
+        Returns:
+            List of query strings for the activity type
+        """
+        # Create activity type description
+        activity_descriptions = {
+            "music": "music listening activities (e.g., songs, artists, albums, playlists)",
+            "location": "location activities (e.g., places, coordinates, visits)",
+            "task": "task management activities (e.g., to-dos, projects, deadlines)",
+            "collaboration": "collaboration activities (e.g., meetings, shared documents, messages)",
+            "storage": "storage activities (e.g., file operations, downloads, folders)",
+            "media": "media consumption activities (e.g., videos, streaming services, content)",
+        }
+        
+        description = activity_descriptions.get(
+            activity_type.lower(), 
+            f"{activity_type} activities"
+        )
+        
+        # Set up system and user prompts
+        system_prompt = f"""You are an expert at generating realistic search queries for {description}.
+Your queries should capture how real users would search for files based on their {activity_type} activities.
+Make the queries diverse in structure, length, and complexity.
+"""
+
+        user_prompt = f"""Generate {count} realistic search queries related to {description}.
+
+Each query should be something a person might type to find files or documents related to their {activity_type} activities.
+Make the queries diverse in format, structure, and complexity.
+Some should be questions, some commands, some just keywords.
+Vary the length from very short (2-3 words) to longer complex queries.
+
+Just list {count} different search queries, numbered from 1 to {count}.
+"""
+
+        # Generate queries using our get_completion method
+        response = self.get_completion(
+            user_prompt=user_prompt, 
+            system_prompt=system_prompt, 
+            temperature=temperature
+        )
+        
+        logger.info(f"Got response of length {len(response)} for {activity_type} queries")
+        
+        # Parse the response
+        queries = []
+        for line in response.strip().split("\n"):
+            line = line.strip()
+            if line and (line[0].isdigit() or line.startswith("-")):
+                # Remove the number/bullet and any trailing punctuation
+                query = line.split(".", 1)[-1].strip() if "." in line else line
+                query = query.split(")", 1)[-1].strip() if ")" in line else query
+                query = query.lstrip("- ").strip()
+                if query:
+                    queries.append(query)
+        
+        # If parsing failed or returned no queries, fail immediately (fail-stop approach)
+        if not queries:
+            logger.error("CRITICAL: Failed to parse queries from LLM response")
+            logger.error("This is required for proper ablation testing - fix the query generator")
+            sys.exit(1)  # Fail-stop immediately - no fallbacks
+        
+        logger.info(f"Generated {len(queries)} queries for {activity_type}")
+        
+        # Limit to requested count
+        return queries[:count]
+        
+    def generate_queries(self, activity_type: str, count: int = 5) -> list[str]:
+        """Alias for generate_queries_for_activity_type for compatibility with the original interface."""
+        return self.generate_queries_for_activity_type(activity_type, count)

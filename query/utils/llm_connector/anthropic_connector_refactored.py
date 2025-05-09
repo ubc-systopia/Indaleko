@@ -71,10 +71,10 @@ class AnthropicConnector(IndalekoLLMBase):
                 - request_mode (str): Request mode for handling verification results (default: "WARN")
         """
         self.api_key = kwargs.get("api_key")
-        self.model = kwargs.get("model", "claude-3-sonnet-20240229")
+        self.model = kwargs.get("model", "claude-3-7-sonnet-latest")
 
         # Configuration for tokens and generation
-        self.max_tokens_to_sample = int(kwargs.get("max_tokens", 100000))
+        self.max_tokens_to_sample = int(kwargs.get("max_tokens", 10000))
 
         # Prompt management configuration
         self.use_guardian = kwargs.get("use_guardian", True)
@@ -83,7 +83,7 @@ class AnthropicConnector(IndalekoLLMBase):
         self.client = Anthropic(api_key=self.api_key)
 
         # Initialize tokenizer (Claude uses cl100k_base)
-
+        try:
             self.tokenizer = tiktoken.get_encoding("cl100k_base")
         except (ImportError, ValueError):
             logger.warning("tiktoken not installed or cl100k_base not found. Token estimation will be approximate.")
@@ -195,6 +195,7 @@ class AnthropicConnector(IndalekoLLMBase):
             system="You are a helpful assistant that provides concise summaries.",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=max_length * 5,  # Rough estimate for token count
+            stream=False,  # Explicitly disable streaming to avoid the warning
         )
         if (not message or
             not hasattr(message, "content") or
@@ -228,6 +229,7 @@ class AnthropicConnector(IndalekoLLMBase):
                 system="You are a helpful assistant that extracts keywords from text.",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=100,
+                stream=False,  # Explicitly disable streaming to avoid the warning
             )
             content = message.content[0].text.strip()
 
@@ -328,6 +330,11 @@ class AnthropicConnector(IndalekoLLMBase):
             Tuple of (completion text, metadata)
         """
         # Extract options from kwargs
+        from icecream import ic
+
+        ic(system_prompt)
+        ic(user_prompt)
+        ic(kwargs)
         temperature = kwargs.get("temperature", 0)
         max_tokens = kwargs.get("max_tokens", self.max_tokens_to_sample)
 
