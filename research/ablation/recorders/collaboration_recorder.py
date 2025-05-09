@@ -1,19 +1,16 @@
 """Collaboration activity recorder for ablation testing."""
 
 import logging
-from datetime import datetime
 from typing import Any
 from uuid import UUID
 
 from db.db_collections import IndalekoDBCollections
-from db.db_config import IndalekoDBConfig
-from db.i_collections import IndalekoCollections
 
-from ..base import ISyntheticRecorder
 from ..models.collaboration_activity import CollaborationActivity
+from .base import BaseActivityRecorder
 
 
-class CollaborationActivityRecorder(ISyntheticRecorder):
+class CollaborationActivityRecorder(BaseActivityRecorder):
     """Synthetic recorder for collaboration activity data.
 
     This recorder writes collaboration activity data to the ArangoDB database
@@ -26,260 +23,13 @@ class CollaborationActivityRecorder(ISyntheticRecorder):
     # Collection name for truth data
     TRUTH_COLLECTION = IndalekoDBCollections.Indaleko_Ablation_Query_Truth_Collection
 
+    # Activity model class
+    ActivityClass = CollaborationActivity
+
     def __init__(self):
         """Initialize the collaboration activity recorder."""
+        super().__init__()
         self.logger = logging.getLogger(__name__)
-        self.db_config = None
-        self.db = None
-        self._setup_db_connection()
-
-    def _setup_db_connection(self) -> bool:
-        """Set up the database connection.
-
-        Returns:
-            bool: True if the connection was successful, False otherwise.
-        """
-        try:
-            self.db_config = IndalekoDBConfig()
-            self.db = self.db_config.get_arangodb()
-
-            # Ensure collections exist
-            self._ensure_collections_exist()
-
-            return True
-        except Exception as e:
-            self.logger.error(f"Failed to connect to database: {e}")
-            return False
-
-    def _ensure_collections_exist(self) -> None:
-        """Ensure that the required collections exist in the database."""
-        if not self.db:
-            self.logger.error("No database connection available")
-            return
-
-        try:
-            # Get the main collection - this uses the proper Indaleko collection management pattern
-            # This will create the collection if it doesn't exist
-            main_collection = IndalekoCollections.get_collection(self.COLLECTION_NAME)
-            self.logger.info(f"Ensured collection {self.COLLECTION_NAME} exists")
-
-            # Get the truth collection - this uses the proper Indaleko collection management pattern
-            truth_collection = IndalekoCollections.get_collection(self.TRUTH_COLLECTION)
-            self.logger.info(f"Ensured collection {self.TRUTH_COLLECTION} exists")
-        except Exception as e:
-            self.logger.error(f"Failed to ensure collections exist: {e}")
-            raise
-
-    def record(self, data: dict) -> bool:
-        """Record collaboration activity data to the database.
-
-        Args:
-            data: The collaboration activity data to record.
-
-        Returns:
-            bool: True if recording was successful, False otherwise.
-        """
-        if not self.db:
-            self.logger.error("No database connection available")
-            return False
-
-        try:
-            # Convert to CollaborationActivity model for validation
-            activity = CollaborationActivity(**data)
-
-            # Convert to dict and ensure UUID objects are converted to strings
-            activity_dict = activity.dict()
-            # Convert any UUIDs, Enums, and datetimes to strings for JSON serialization
-            for key, value in activity_dict.items():
-                if isinstance(value, UUID):
-                    activity_dict[key] = str(value)
-                elif key == "activity_type" and hasattr(value, "name"):
-                    # Handle ActivityType enum serialization
-                    activity_dict[key] = value.name
-                elif isinstance(value, datetime):
-                    # Convert datetime to ISO format
-                    activity_dict[key] = value.isoformat()
-
-            # Get the collection
-            collection = self.db.collection(self.COLLECTION_NAME)
-
-            # Insert the document
-            result = collection.insert(activity_dict)
-
-            self.logger.info(f"Recorded collaboration activity with _key: {result['_key']}")
-            return True
-        except Exception as e:
-            self.logger.error(f"Failed to record collaboration activity: {e}")
-            return False
-
-    def record_batch(self, data_batch: list[dict[str, Any]]) -> bool:
-        """Record a batch of collaboration activity data to the database.
-
-        Args:
-            data_batch: List of collaboration activity data to record.
-
-        Returns:
-            bool: True if recording was successful, False otherwise.
-        """
-        if not self.db:
-            self.logger.error("No database connection available")
-            return False
-
-        try:
-            # Get the collection
-            collection = self.db.collection(self.COLLECTION_NAME)
-
-            # Validate each document and prepare for insertion
-            validated_data = []
-            for data in data_batch:
-                # Convert to CollaborationActivity model for validation
-                activity = CollaborationActivity(**data)
-                # Convert to dict and ensure UUID objects are converted to strings
-                activity_dict = activity.dict()
-                # Convert any UUIDs, Enums, and datetimes to strings for JSON serialization
-                for key, value in activity_dict.items():
-                    if isinstance(value, UUID):
-                        activity_dict[key] = str(value)
-                    elif key == "activity_type" and hasattr(value, "name"):
-                        # Handle ActivityType enum serialization
-                        activity_dict[key] = value.name
-                    elif isinstance(value, datetime):
-                        # Convert datetime to ISO format
-                        activity_dict[key] = value.isoformat()
-                validated_data.append(activity_dict)
-
-            # Insert the documents
-            results = collection.insert_many(validated_data)
-
-            self.logger.info(f"Recorded {len(results)} collaboration activities in batch")
-            return True
-        except Exception as e:
-            self.logger.error(f"Failed to record collaboration activity batch: {e}")
-            return False
-
-    def record_truth_data(self, query_id: UUID, entity_ids: set[UUID]) -> bool:
-        """Record truth data for a specific query.
-
-        Args:
-            query_id: The UUID of the query.
-            entity_ids: The set of entity UUIDs that should match the query.
-
-        Returns:
-            bool: True if recording was successful, False otherwise.
-        """
-        if not self.db:
-            self.logger.error("No database connection available")
-            return False
-
-        try:
-            # Get the truth collection
-            collection = self.db.collection(self.TRUTH_COLLECTION)
-
-            # Create the truth document
-            truth_doc = {
-                "_key": str(query_id),
-                "query_id": str(query_id),
-                "matching_entities": [str(entity_id) for entity_id in entity_ids],
-                "collection": self.COLLECTION_NAME,
-            }
-
-            # Check if a document with this query_id already exists
-            existing = collection.get(str(query_id))
-            if existing:
-                # Update the existing document
-                collection.update(truth_doc)
-                self.logger.info(f"Updated truth data for query {query_id}")
-            else:
-                # Insert a new document
-                collection.insert(truth_doc)
-                self.logger.info(f"Recorded truth data for query {query_id}")
-
-            return True
-        except Exception as e:
-            self.logger.error(f"Failed to record truth data: {e}")
-            return False
-
-    def delete_all(self) -> bool:
-        """Delete all records created by this recorder.
-
-        Returns:
-            bool: True if deletion was successful, False otherwise.
-        """
-        if not self.db:
-            self.logger.error("No database connection available")
-            return False
-
-        try:
-            # Delete all documents in the collection
-            self.db.aql.execute(f"FOR doc IN {self.COLLECTION_NAME} REMOVE doc IN {self.COLLECTION_NAME}")
-
-            # Count the documents to verify deletion
-            count = self.count_records()
-
-            if count == 0:
-                self.logger.info(f"Successfully deleted all records from {self.COLLECTION_NAME}")
-                return True
-            else:
-                self.logger.warning(f"Failed to delete all records: {count} records remain")
-                return False
-        except Exception as e:
-            self.logger.error(f"Failed to delete records: {e}")
-            return False
-
-    def get_collection_name(self) -> str:
-        """Get the name of the collection this recorder writes to.
-
-        Returns:
-            str: The collection name.
-        """
-        return self.COLLECTION_NAME
-
-    def count_records(self) -> int:
-        """Count the number of records in the collection.
-
-        Returns:
-            int: The record count.
-        """
-        if not self.db:
-            self.logger.error("No database connection available")
-            return 0
-
-        try:
-            # Count the documents in the collection
-            result = self.db.aql.execute(f"RETURN LENGTH({self.COLLECTION_NAME})")
-
-            # Extract the count from the cursor
-            count = next(result)
-
-            return count
-        except Exception as e:
-            self.logger.error(f"Failed to count records: {e}")
-            return 0
-
-    def get_record_by_id(self, record_id: UUID) -> dict[str, Any] | None:
-        """Get a collaboration activity record by its ID.
-
-        Args:
-            record_id: The UUID of the record to retrieve.
-
-        Returns:
-            Optional[Dict[str, Any]]: The record if found, None otherwise.
-        """
-        if not self.db:
-            self.logger.error("No database connection available")
-            return None
-
-        try:
-            # Get the collection
-            collection = self.db.collection(self.COLLECTION_NAME)
-
-            # Retrieve the document
-            document = collection.get(str(record_id))
-
-            return document
-        except Exception as e:
-            self.logger.error(f"Failed to get record by ID: {e}")
-            return None
 
     def get_records_by_query(self, query: str, limit: int = 10) -> list[dict[str, Any]]:
         """Get collaboration activity records that match a query.
@@ -295,8 +45,9 @@ class CollaborationActivityRecorder(ISyntheticRecorder):
             List[Dict[str, Any]]: The matching records.
         """
         if not self.db:
-            self.logger.error("No database connection available")
-            return []
+            self.logger.critical("No database connection available")
+            import sys
+            sys.exit(1)
 
         try:
             # Convert query to lowercase for case-insensitive search
@@ -329,4 +80,5 @@ class CollaborationActivityRecorder(ISyntheticRecorder):
             return results
         except Exception as e:
             self.logger.error(f"Failed to get records by query: {e}")
-            return []
+            import sys
+            sys.exit(1)  # Fail-stop approach

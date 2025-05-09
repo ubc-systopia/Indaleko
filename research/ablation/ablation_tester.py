@@ -410,9 +410,158 @@ class AblationTester:
                     search_params["application"] = app
                     break
 
+            # Extract project names
+            projects = ["Quarterly Report", "Annual Budget", "Marketing Campaign", "Product Launch", "Research Paper"]
+            for project in projects:
+                if project.lower() in query_lower:
+                    search_params["project"] = project
+                    break
+
+            # Extract task status
+            statuses = ["completed", "in_progress", "pending", "delayed"]
+            for status in statuses:
+                if status in query_lower:
+                    search_params["status"] = status
+                    break
+
             # Default to basic search if no specific terms found
             if not search_params:
                 search_params["task_type"] = "document"  # Default for testing
+
+        elif "CollaborationActivity" in collection_name:
+            # Extract event types
+            event_types = ["meeting", "call", "chat", "file share", "email", "code review"]
+            for event_type in event_types:
+                if event_type in query_lower:
+                    search_params["event_type"] = event_type
+                    break
+
+            # Extract platforms
+            platforms = ["Microsoft Teams", "Zoom", "Slack", "Discord", "Outlook", "Google Meet"]
+            for platform in platforms:
+                if platform.lower() in query_lower:
+                    search_params["platform"] = platform
+                    break
+
+            # Extract event titles
+            titles = ["Project Status", "Weekly Sync", "Design Review", "Sprint Planning", "Customer Call"]
+            for title in titles:
+                if title.lower() in query_lower:
+                    search_params["event_title"] = title
+                    break
+
+            # Extract participant info
+            participants = ["John", "Mary", "Alex", "Sarah", "Team", "Department"]
+            for participant in participants:
+                if participant.lower() in query_lower:
+                    search_params["participant"] = participant
+                    break
+
+            # Default to basic search if no specific terms found
+            if not search_params:
+                search_params["event_type"] = "meeting"  # Default for testing
+
+        elif "StorageActivity" in collection_name:
+            # Extract file types
+            file_types = ["Document", "Image", "Video", "Audio", "Archive", "Code"]
+            for file_type in file_types:
+                if file_type.lower() in query_lower:
+                    search_params["file_type"] = file_type
+                    break
+
+            # Extract operations
+            operations = ["create", "read", "update", "delete", "move", "copy", "rename"]
+            for operation in operations:
+                if operation in query_lower:
+                    search_params["operation"] = operation
+                    break
+
+            # Extract sources
+            sources = ["ntfs", "posix", "dropbox", "onedrive", "gdrive", "s3"]
+            for source in sources:
+                if source in query_lower:
+                    search_params["source"] = source
+                    break
+
+            # Extract path fragments
+            path_fragments = ["Documents", "Pictures", "Videos", "Music", "Downloads", "shared"]
+            for path in path_fragments:
+                if path.lower() in query_lower:
+                    search_params["path_fragment"] = path
+                    break
+
+            # Default to basic search if no specific terms found
+            if not search_params:
+                search_params["file_type"] = "Document"  # Default for testing
+
+        elif "MediaActivity" in collection_name:
+            # Extract media types
+            media_types = ["video", "audio", "stream", "image", "game"]
+            for media_type in media_types:
+                if media_type in query_lower:
+                    search_params["media_type"] = media_type
+                    break
+
+            # Extract platforms
+            platforms = [
+                "YouTube",
+                "Netflix",
+                "Spotify",
+                "Apple Music",
+                "Twitch",
+                "Instagram",
+                "Flickr",
+                "Disney+",
+                "Prime Video",
+                "TikTok",
+                "PlayStation",
+                "Nintendo Switch",
+                "Xbox",
+            ]
+            for platform in platforms:
+                if platform.lower() in query_lower:
+                    search_params["platform"] = platform
+                    break
+
+            # Extract creators
+            creators = [
+                "Tech Explained",
+                "Netflix",
+                "HBO",
+                "National Geographic",
+                "TechTalk Podcast",
+                "London Philharmonic",
+                "CodeWithMe",
+                "GameMaster",
+                "Nintendo",
+                "FromSoftware",
+            ]
+            for creator in creators:
+                if creator.lower() in query_lower:
+                    search_params["creator"] = creator
+                    break
+
+            # Extract titles (key words)
+            title_keywords = [
+                "Quantum",
+                "Symphony",
+                "Deep Learning",
+                "Jazz",
+                "Gaming",
+                "Marvel",
+                "Psychology",
+                "Cooking",
+                "Photography",
+                "Meditation",
+            ]
+            for keyword in title_keywords:
+                if keyword.lower() in query_lower:
+                    search_params["title_fragment"] = keyword
+                    break
+
+            # Default to basic search if no specific terms found
+            if not search_params:
+                search_params["media_type"] = "video"  # Default for testing
 
         # Add timestamp window (last week) for all queries
         search_params["from_timestamp"] = int(time.time()) - (7 * 24 * 60 * 60)  # One week ago
@@ -478,6 +627,53 @@ class AblationTester:
 
             if "application" in bind_vars:
                 semantic_filters.append("doc.application == @application")
+
+            if "project" in bind_vars:
+                semantic_filters.append("doc.project == @project")
+
+            if "status" in bind_vars:
+                semantic_filters.append("doc.status == @status")
+
+        elif "CollaborationActivity" in collection_name:
+            if "event_type" in bind_vars:
+                semantic_filters.append("doc.event_type == @event_type")
+
+            if "platform" in bind_vars:
+                semantic_filters.append("doc.platform == @platform")
+
+            if "event_title" in bind_vars:
+                semantic_filters.append("doc.event_title == @event_title")
+
+            if "participant" in bind_vars:
+                semantic_filters.append("doc.participants[*].name == @participant")
+
+        elif "StorageActivity" in collection_name:
+            if "file_type" in bind_vars:
+                semantic_filters.append("doc.file_type == @file_type")
+
+            if "operation" in bind_vars:
+                semantic_filters.append("doc.operation == @operation")
+
+            if "source" in bind_vars:
+                semantic_filters.append("doc.source == @source")
+
+            if "path_fragment" in bind_vars:
+                semantic_filters.append("LIKE(doc.path, @path_fragment, true)")
+                bind_vars["path_fragment"] = f"%{bind_vars['path_fragment']}%"
+
+        elif "MediaActivity" in collection_name:
+            if "media_type" in bind_vars:
+                semantic_filters.append("doc.media_type == @media_type")
+
+            if "platform" in bind_vars:
+                semantic_filters.append("doc.platform == @platform")
+
+            if "creator" in bind_vars:
+                semantic_filters.append("doc.creator == @creator")
+
+            if "title_fragment" in bind_vars:
+                semantic_filters.append("LIKE(doc.title, @title_fragment, true)")
+                bind_vars["title_fragment"] = f"%{bind_vars['title_fragment']}%"
 
         # Common date filtering for all activity types
         if "from_timestamp" in bind_vars and "to_timestamp" in bind_vars:
@@ -574,6 +770,104 @@ class AblationTester:
 
             if "application" in bind_vars:
                 filters.append("doc.application == @application")
+
+            if "project" in bind_vars:
+                filters.append("doc.project == @project")
+
+            if "status" in bind_vars:
+                filters.append("doc.status == @status")
+
+            if "from_timestamp" in bind_vars and "to_timestamp" in bind_vars:
+                filters.append("doc.timestamp >= @from_timestamp AND doc.timestamp <= @to_timestamp")
+
+            # Join filters with OR for more inclusive search
+            aql_query += " OR ".join(filters) if filters else "true"
+
+            # Return all matches with no limit
+            aql_query += """
+            RETURN doc
+            """
+
+        elif "CollaborationActivity" in collection_name:
+            aql_query = f"""
+            FOR doc IN {collection_name}
+            FILTER """
+
+            filters = []
+
+            if "event_type" in bind_vars:
+                filters.append("doc.event_type == @event_type")
+
+            if "platform" in bind_vars:
+                filters.append("doc.platform == @platform")
+
+            if "event_title" in bind_vars:
+                filters.append("doc.event_title == @event_title")
+
+            if "participant" in bind_vars:
+                filters.append("doc.participants[*].name == @participant")
+
+            if "from_timestamp" in bind_vars and "to_timestamp" in bind_vars:
+                filters.append("doc.timestamp >= @from_timestamp AND doc.timestamp <= @to_timestamp")
+
+            # Join filters with OR for more inclusive search
+            aql_query += " OR ".join(filters) if filters else "true"
+
+            # Return all matches with no limit
+            aql_query += """
+            RETURN doc
+            """
+
+        elif "StorageActivity" in collection_name:
+            aql_query = f"""
+            FOR doc IN {collection_name}
+            FILTER """
+
+            filters = []
+
+            if "file_type" in bind_vars:
+                filters.append("doc.file_type == @file_type")
+
+            if "operation" in bind_vars:
+                filters.append("doc.operation == @operation")
+
+            if "source" in bind_vars:
+                filters.append("doc.source == @source")
+
+            if "path_fragment" in bind_vars:
+                filters.append("LIKE(doc.path, @path_fragment, true)")
+                bind_vars["path_fragment"] = f"%{bind_vars['path_fragment']}%"
+
+            if "from_timestamp" in bind_vars and "to_timestamp" in bind_vars:
+                filters.append("doc.timestamp >= @from_timestamp AND doc.timestamp <= @to_timestamp")
+
+            # Join filters with OR for more inclusive search
+            aql_query += " OR ".join(filters) if filters else "true"
+
+            # Return all matches with no limit
+            aql_query += """
+            RETURN doc
+            """
+
+        elif "MediaActivity" in collection_name:
+            aql_query = f"""
+            FOR doc IN {collection_name}
+            FILTER """
+
+            filters = []
+
+            if "media_type" in bind_vars:
+                filters.append("doc.media_type == @media_type")
+
+            if "platform" in bind_vars:
+                filters.append("doc.platform == @platform")
+
+            if "creator" in bind_vars:
+                filters.append("doc.creator == @creator")
+
+            if "title_fragment" in bind_vars:
+                filters.append("LIKE(doc.title, @title_fragment, true)")
+                bind_vars["title_fragment"] = f"%{bind_vars['title_fragment']}%"
 
             if "from_timestamp" in bind_vars and "to_timestamp" in bind_vars:
                 filters.append("doc.timestamp >= @from_timestamp AND doc.timestamp <= @to_timestamp")

@@ -755,6 +755,25 @@ class IndalekoDBCollections:
                     "sparse" : False,
                     "type": "persistent",
                 },
+                "platform": {
+                    "fields": ["platform"],
+                    "unique": False,
+                    "type": "hash",
+                },
+                "event_type": {
+                    "fields": ["event_type"],
+                    "unique": False,
+                    "type": "hash",
+                },
+                "source": {
+
+                },
+                "participants": {
+                    "fields": ["participants[*].name"],
+                    "unique": False,
+                    "sparse": True,
+                    "type": "persistent",
+                }
             },
         },
         Indaleko_Ablation_Storage_Activity_Collection : {

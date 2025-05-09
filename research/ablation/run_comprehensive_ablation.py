@@ -37,16 +37,29 @@ import seaborn as sns
 from db.db_config import IndalekoDBConfig
 from research.ablation.ablation_tester import AblationConfig, AblationTester
 from research.ablation.base import ISyntheticCollector, ISyntheticRecorder
+from research.ablation.collectors.collaboration_collector import (
+    CollaborationActivityCollector,
+)
 from research.ablation.collectors.location_collector import LocationActivityCollector
+from research.ablation.collectors.media_collector import MediaActivityCollector
 from research.ablation.collectors.music_collector import MusicActivityCollector
+from research.ablation.collectors.storage_collector import StorageActivityCollector
+from research.ablation.collectors.task_collector import TaskActivityCollector
 from research.ablation.data_sanity_checker import DataSanityChecker
 from research.ablation.ner.entity_manager import NamedEntityManager
 from research.ablation.query.enhanced.enhanced_query_generator import (
     EnhancedQueryGenerator,
 )
+from research.ablation.recorders.collaboration_recorder import (
+    CollaborationActivityRecorder,
+)
 from research.ablation.recorders.location_recorder import LocationActivityRecorder
+from research.ablation.recorders.media_recorder import MediaActivityRecorder
 from research.ablation.recorders.music_recorder import MusicActivityRecorder
+from research.ablation.recorders.storage_recorder import StorageActivityRecorder
+from research.ablation.recorders.task_recorder import TaskActivityRecorder
 from research.ablation.utils.uuid_utils import generate_deterministic_uuid
+
 
 def setup_logging(verbose=False):
     """Set up logging for the ablation test runner."""
@@ -75,7 +88,9 @@ class TestDataComponents(BaseModel):
 
 
 def generate_test_data(
-    entity_manager: NamedEntityManager, activity_data_providers: list[TestDataComponents], count: int = 100,
+    entity_manager: NamedEntityManager,
+    activity_data_providers: list[TestDataComponents],
+    count: int = 100,
 ) -> dict:
     """Generate synthetic test data for all activity types.
 
@@ -172,7 +187,9 @@ def generate_test_data(
 
 
 def generate_cross_collection_queries(
-    entity_manager: NamedEntityManager, ablation_tester: AblationTester, count: int = 5,
+    entity_manager: NamedEntityManager,
+    ablation_tester: AblationTester,
+    count: int = 5,
 ) -> list[dict[str, object]]:
     """Generate test queries that depend on multiple activity types.
 
@@ -211,11 +228,31 @@ def generate_cross_collection_queries(
         ["AblationLocationActivity", "AblationMusicActivity"],
     ]
 
-    # If you want to test task activity as well, uncomment these:
-    # combinations.extend([
-    #     ["AblationLocationActivity", "AblationTaskActivity"],
-    #     ["AblationTaskActivity", "AblationMusicActivity"],
-    # ])
+    # Task and Collaboration activity testing enabled:
+    combinations.extend(
+        [
+            ["AblationLocationActivity", "AblationTaskActivity"],
+            ["AblationTaskActivity", "AblationMusicActivity"],
+            ["AblationLocationActivity", "AblationCollaborationActivity"],
+            ["AblationMusicActivity", "AblationCollaborationActivity"],
+            ["AblationTaskActivity", "AblationCollaborationActivity"],
+        ],
+    )
+
+    # Storage and Media activity testing enabled:
+    combinations.extend(
+        [
+            ["AblationStorageActivity", "AblationLocationActivity"],
+            ["AblationStorageActivity", "AblationMusicActivity"],
+            ["AblationStorageActivity", "AblationTaskActivity"],
+            ["AblationStorageActivity", "AblationCollaborationActivity"],
+            ["AblationMediaActivity", "AblationLocationActivity"],
+            ["AblationMediaActivity", "AblationMusicActivity"],
+            ["AblationMediaActivity", "AblationTaskActivity"],
+            ["AblationMediaActivity", "AblationCollaborationActivity"],
+            ["AblationStorageActivity", "AblationMediaActivity"],
+        ],
+    )
 
     for collection_pair in combinations:
         collection1, collection2 = collection_pair
@@ -238,6 +275,102 @@ def generate_cross_collection_queries(
             "Show me spreadsheets related to {task} that I worked on at {location}",
         ]
 
+        collaboration_location_templates = [
+            "Find meetings that happened at {location}",
+            "Show me all file shares that occurred at {location}",
+            "What events were scheduled at {location} last week?",
+            "Find all collaboration activities from {location}",
+            "Show me all emails sent while at {location}",
+        ]
+
+        collaboration_music_templates = [
+            "Find meeting recordings where we discussed {artist}",
+            "Show me files shared during the {genre} playlist session",
+            "What meetings happened while I was listening to {artist}?",
+            "Find all emails about {genre} music festival",
+            "Show me calendar events related to the {artist} concert",
+        ]
+
+        collaboration_task_templates = [
+            "Find meetings related to the {task} project",
+            "Show me files shared for the {task} task",
+            "What emails were exchanged about {task}?",
+            "Find all calendar events for the {task} deadline",
+            "Show me code reviews for the {task} implementation",
+        ]
+
+        storage_location_templates = [
+            "Find files I created at {location}",
+            "Show me documents I accessed while at {location}",
+            "What files did I modify at {location} last week?",
+            "Find images I copied to my {location} folder",
+            "Show me all files I deleted from my {location} directory",
+        ]
+
+        storage_music_templates = [
+            "Find audio files related to {artist}",
+            "Show me music files I downloaded while listening to {genre}",
+            "What playlists did I create for {artist}?",
+            "Find all mp3 files in my {genre} collection",
+            "Show me album covers I downloaded for {artist}",
+        ]
+
+        storage_task_templates = [
+            "Find files related to the {task} project",
+            "Show me documents I modified for {task}",
+            "What spreadsheets did I create for the {task} presentation?",
+            "Find all backups of the {task} documents",
+            "Show me files I shared as part of the {task}",
+        ]
+
+        storage_collaboration_templates = [
+            "Find files shared during the {event} meeting",
+            "Show me documents attached to emails about {project}",
+            "What files were uploaded during the {team} collaboration session?",
+            "Find all presentations used in the {event} meeting",
+            "Show me files accessed by multiple team members during {project}",
+        ]
+
+        media_location_templates = [
+            "Find videos I watched at {location}",
+            "Show me photos I viewed while at {location}",
+            "What games did I play at {location}?",
+            "Find streaming content I accessed from {location}",
+            "Show me media consumption patterns at {location}",
+        ]
+
+        media_music_templates = [
+            "Find music videos by {artist}",
+            "Show me concerts I watched for {genre} music",
+            "What album documentaries did I watch about {artist}?",
+            "Find all the game soundtracks composed by {artist}",
+            "Show me videos from the {genre} festival",
+        ]
+
+        media_task_templates = [
+            "Find tutorial videos related to my {task}",
+            "Show me educational content I watched for {task} research",
+            "What reference images did I use for the {task} design?",
+            "Find all the screenshots I captured while working on {task}",
+            "Show me videos I bookmarked for the {task} project",
+        ]
+
+        media_collaboration_templates = [
+            "Find recorded meetings with the {team} team",
+            "Show me video calls I had about the {project}",
+            "What screen shares did I view during the {event} meeting?",
+            "Find all the presentation recordings from {team} meetings",
+            "Show me collaborative design sessions for the {project}",
+        ]
+
+        storage_media_templates = [
+            "Find video files I downloaded recently",
+            "Show me images I saved while watching {content}",
+            "What media files were moved to my collection from {platform}?",
+            "Find all screenshots I took while watching {content}",
+            "Show me backups of my media library from {platform}",
+        ]
+
         # Use the new integrated LLM query generator for diverse queries
         diverse_queries = []
         try:
@@ -257,44 +390,50 @@ def generate_cross_collection_queries(
                 for c in collection_pair
                 if c in collection_to_activity_type
             ]
-            
+
             # Make sure we have valid activity types
             if not activity_types:
                 logging.error(f"CRITICAL: No valid activity types found for collections: {collection_pair}")
                 logging.error("This is required for proper ablation testing - fix the collection mapping")
                 sys.exit(1)  # Fail-stop immediately - no fallbacks
-            
+
             # Generate queries for EACH activity type in the pair
             # This ensures we have collection-specific queries for proper evaluation
             generator = EnhancedQueryGenerator()
             diverse_queries = []
-            
+
             for activity_type in activity_types:
                 logging.info(f"Generating enhanced queries for activity type: {activity_type}")
-                
+
                 # Generate queries with proper fail-stop approach - NO fallbacks
                 try:
-                    activity_queries = generator.generate_enhanced_queries(activity_type, count=count//len(activity_types) + 1)
-                    logging.info(f"Successfully generated {len(activity_queries)} diverse queries for {activity_type} using LLM")
+                    activity_queries = generator.generate_enhanced_queries(
+                        activity_type, count=count // len(activity_types) + 1,
+                    )
+                    logging.info(
+                        f"Successfully generated {len(activity_queries)} diverse queries for {activity_type} using LLM",
+                    )
                     diverse_queries.extend(activity_queries)
                 except Exception as query_gen_error:
-                    logging.error(f"CRITICAL: Failed to generate diverse queries using EnhancedQueryGenerator: {query_gen_error}")
-                    logging.error("This is required for proper ablation testing - fix the query generator")
+                    logging.exception(
+                        f"CRITICAL: Failed to generate diverse queries using EnhancedQueryGenerator: {query_gen_error}",
+                    )
+                    logging.exception("This is required for proper ablation testing - fix the query generator")
                     sys.exit(1)  # Fail-stop immediately - no fallbacks
-            
+
             # Ensure we have queries to work with - fail-stop approach
             if not diverse_queries:
                 logging.error("CRITICAL: EnhancedQueryGenerator returned empty results")
                 logging.error("This is required for proper ablation testing - fix the query generator")
                 sys.exit(1)  # Fail-stop immediately - no fallbacks
-                
+
             # Limit to requested count in case we generated more
             diverse_queries = diverse_queries[:count]
             logging.info(f"Final query count: {len(diverse_queries)} queries for combination {collection_pair}")
 
         except Exception as e:
-            logging.error(f"CRITICAL: Unexpected error in query generation setup: {e}")
-            logging.error("This is required for proper ablation testing - fix the query generator infrastructure")
+            logging.exception(f"CRITICAL: Unexpected error in query generation setup: {e}")
+            logging.exception("This is required for proper ablation testing - fix the query generator infrastructure")
             sys.exit(1)  # Fail-stop immediately - no fallbacks
 
         # Since we're using fail-stop approach, any LLM generation failure would have already terminated execution
@@ -737,7 +876,15 @@ def clear_existing_data():
     """Clear existing data from all activity collections."""
     logging.info("Clearing existing data...")
 
-    collections = ["AblationLocationActivity", "AblationTaskActivity", "AblationMusicActivity", "AblationTruthData"]
+    collections = [
+        "AblationLocationActivity",
+        "AblationTaskActivity",
+        "AblationMusicActivity",
+        "AblationCollaborationActivity",
+        "AblationStorageActivity",
+        "AblationMediaActivity",
+        "AblationTruthData",
+    ]
 
     # Following fail-stop model - let exceptions propagate
     db_config = IndalekoDBConfig()
@@ -814,13 +961,34 @@ def main():
             hash_name="music",
             hash_property_name="artist",
         ),
-        # Uncomment to enable Task activity testing:
-        # TestDataComponents(
-        #     name="Task",
-        #     collector=TaskActivityCollector,
-        #     recorder=TaskActivityRecorder,
-        #     hash_name="task_name",
-        #     hash_property_name="application"),
+        TestDataComponents(
+            name="Task",
+            collector=TaskActivityCollector,
+            recorder=TaskActivityRecorder,
+            hash_name="task",
+            hash_property_name="task_type",
+        ),
+        TestDataComponents(
+            name="Collaboration",
+            collector=CollaborationActivityCollector,
+            recorder=CollaborationActivityRecorder,
+            hash_name="collaboration",
+            hash_property_name="event_title",
+        ),
+        TestDataComponents(
+            name="Storage",
+            collector=StorageActivityCollector,
+            recorder=StorageActivityRecorder,
+            hash_name="storage",
+            hash_property_name="file_type",
+        ),
+        TestDataComponents(
+            name="Media",
+            collector=MediaActivityCollector,
+            recorder=MediaActivityRecorder,
+            hash_name="media",
+            hash_property_name="media_type",
+        ),
     ]
 
     # Generate test data using the providers
