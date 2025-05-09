@@ -122,7 +122,14 @@ def generate_test_data(
         logging.exception(f"Error checking collections: {e}")
 
     for activity_data_provider in activity_data_providers:
-        collector = activity_data_provider.collector(entity_manager=entity_manager, seed_value=42)
+        # Initialize collector based on whether it supports entity_manager
+        collector_class = activity_data_provider.collector
+        if activity_data_provider.name in ["Location", "Music", "Task", "Collaboration"]:
+            # These collectors support entity_manager
+            collector = collector_class(entity_manager=entity_manager, seed_value=42)
+        else:
+            # Storage and Media collectors only support seed_value
+            collector = collector_class(seed_value=42)
         recorder = activity_data_provider.recorder()
 
         # Debug: Print recorder class details
