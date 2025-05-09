@@ -100,7 +100,9 @@ def run_minimal_experiment(use_enhanced_generator: bool = True):
 
     # Save experiment configuration
     results_manager.record_experiment_configuration(
-        iteration_id="minimal", control_group=control_group, test_group=test_group,
+        iteration_id="minimal",
+        control_group=control_group,
+        test_group=test_group,
     )
 
     logger.info(f"Control group: {control_group}")
@@ -149,7 +151,10 @@ def run_minimal_experiment(use_enhanced_generator: bool = True):
 
     # Initialize ablation tester
     tester = AblationTester(
-        db_config=db_config, ablation_db=ablation_db, results_manager=results_manager, query_generator=query_generator,
+        db_config=db_config,
+        ablation_db=ablation_db,
+        results_manager=results_manager,
+        query_generator=query_generator,
     )
 
     # Establish baseline performance (no ablation)
@@ -187,7 +192,9 @@ def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="Run minimal ablation experiment")
     parser.add_argument(
-        "--basic-generator", action="store_true", help="Use basic LLM query generator instead of enhanced version",
+        "--basic-generator",
+        action="store_true",
+        help="Use basic LLM query generator instead of enhanced version",
     )
     return parser.parse_args()
 

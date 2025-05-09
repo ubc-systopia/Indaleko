@@ -242,7 +242,9 @@ class ExperimentalAblationRunner:
                 # Generate specified number of queries for each test provider
                 for i in range(self.queries_per_combination):
                     query = self.query_generator.generate_query(
-                        activity_type=provider.name, query_index=i, seed=self.seed_value + i,
+                        activity_type=provider.name,
+                        query_index=i,
+                        seed=self.seed_value + i,
                     )
                     test_queries.append((provider.name, query))
 
@@ -304,10 +306,15 @@ def parse_args():
     parser.add_argument("--queries", type=int, default=5, help="Number of queries per combination (default: 5)")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility (default: 42)")
     parser.add_argument(
-        "--output-dir", type=str, default=None, help="Directory to save results (default: timestamped directory)",
+        "--output-dir",
+        type=str,
+        default=None,
+        help="Directory to save results (default: timestamped directory)",
     )
     parser.add_argument(
-        "--basic-generator", action="store_true", help="Use basic LLM query generator instead of enhanced version",
+        "--basic-generator",
+        action="store_true",
+        help="Use basic LLM query generator instead of enhanced version",
     )
     return parser.parse_args()
 

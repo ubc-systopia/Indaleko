@@ -34,7 +34,7 @@ def setup_logging(verbose=False):
 def create_indices():
     """Create indices for ablation study collections."""
     logger = logging.getLogger(__name__)
-    
+
     # Connect to ArangoDB
     try:
         db_config = IndalekoDBConfig()
@@ -43,7 +43,7 @@ def create_indices():
     except Exception as e:
         logger.error(f"Error connecting to ArangoDB: {e}")
         return False
-    
+
     # Define indices for each ablation collection
     collection_indices = {
         "AblationMusicActivity": [
@@ -90,7 +90,7 @@ def create_indices():
             {"fields": ["matching_entities"], "type": "persistent"},
         ],
     }
-    
+
     # Create indices for each collection
     for collection_name, indices in collection_indices.items():
         # Get collection
@@ -100,24 +100,24 @@ def create_indices():
         except Exception as e:
             logger.error(f"Error getting collection {collection_name}: {e}")
             continue
-        
+
         # Create indices for this collection
         for index_config in indices:
             try:
                 fields = index_config["fields"]
                 index_type = index_config["type"]
-                
+
                 # Check if index already exists
                 existing_indices = collection.indexes()
                 field_names = fields if isinstance(fields, list) else [fields]
-                
+
                 existing = False
                 for idx in existing_indices:
                     if idx["type"] == index_type and set(idx["fields"]) == set(field_names):
                         logger.info(f"Index on {', '.join(field_names)} already exists in {collection_name}")
                         existing = True
                         break
-                
+
                 if not existing:
                     # Create index
                     if index_type == "persistent":
@@ -134,10 +134,10 @@ def create_indices():
                         logger.info(f"Created fulltext index on {', '.join(field_names)} in {collection_name}: {result}")
                     else:
                         logger.warning(f"Unsupported index type: {index_type}")
-                
+
             except Exception as e:
                 logger.error(f"Error creating index on {', '.join(field_names)} in {collection_name}: {e}")
-    
+
     logger.info("Finished creating indices for ablation study collections")
     return True
 
@@ -147,13 +147,13 @@ def main():
     parser = argparse.ArgumentParser(description="Create indices for ablation study collections")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
     args = parser.parse_args()
-    
+
     # Set up logging
     setup_logging(verbose=args.verbose)
-    
+
     # Create indices
     success = create_indices()
-    
+
     return 0 if success else 1
 
 

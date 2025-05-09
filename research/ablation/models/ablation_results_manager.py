@@ -112,7 +112,11 @@ class AblationResultsManager:
         conn.close()
 
     def record_experiment_configuration(
-        self, iteration_id: str, control_group: list[str], test_group: list[str], description: str = "",
+        self,
+        iteration_id: str,
+        control_group: list[str],
+        test_group: list[str],
+        description: str = "",
     ):
         """
         Record the configuration of an experiment.
