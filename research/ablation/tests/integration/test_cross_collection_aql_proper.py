@@ -4,26 +4,17 @@ Test integration between cross-collection queries and AQL translation.
 This module tests that cross-collection queries are properly
 translated into AQL queries that can join across multiple collections.
 
-***************************************************************************
-* DEPRECATED - DO NOT USE - THIS FILE VIOLATES THE FAIL-STOP PRINCIPLE    *
-* This test file uses mocks and patches instead of real connections.       *
-* For scientific experiments like ablation studies, using mocks            *
-* compromises the validity of results and violates the fail-stop principle.*
-*                                                                          *
-* Please use test_cross_collection_aql_proper.py instead,                  *
-* which uses real connections and adheres to the fail-stop principle.      *
-***************************************************************************
+IMPORTANT: These tests follow the fail-stop principle:
+1. No mocking of database connections or LLM services
+2. All connections are real - tests fail immediately if connections cannot be established
+3. No error masking - all exceptions must be allowed to propagate
+4. Never substitute mock/fake data for real data
 """
 
 import logging
 import os
 import sys
 import unittest
-from unittest.mock import MagicMock, patch
-
-# Print a warning message when this module is imported
-print("WARNING: test_cross_collection_aql.py uses mocks and violates the fail-stop principle.")
-print("Please use test_cross_collection_aql_proper.py instead.")
 
 # Set up the environment
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -36,6 +27,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.insert(0, current_path)
 
 # Import required modules
+from db.db_config import IndalekoDBConfig
 from research.ablation.models.activity import ActivityType
 from research.ablation.query.aql_translator import AQLQueryTranslator
 from research.ablation.query.enhanced.cross_collection_query_generator import (
@@ -44,105 +36,83 @@ from research.ablation.query.enhanced.cross_collection_query_generator import (
 from research.ablation.registry.shared_entity_registry import SharedEntityRegistry
 
 
-class TestCrossCollectionAQL(unittest.TestCase):
-    """Test integration between cross-collection queries and AQL translation."""
+class TestCrossCollectionAQLProper(unittest.TestCase):
+    """Test integration between cross-collection queries and AQL translation with real connections."""
 
     @classmethod
     def setUpClass(cls):
-        """Set up test environment for all tests."""
+        """Set up test environment for all tests with real connections."""
         # Set up logging
         logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
         cls.logger = logging.getLogger(__name__)
 
-        # Create a shared entity registry for the test
+        # Create a real database connection
+        try:
+            cls.db_config = IndalekoDBConfig()
+            cls.db = cls.db_config.get_arangodb()
+            if not cls.db:
+                cls.logger.error("CRITICAL: Failed to connect to database")
+                sys.exit(1)  # Fail-stop on database connection failure
+        except Exception as e:
+            cls.logger.error(f"CRITICAL: Error connecting to database: {e!s}")
+            sys.exit(1)  # Fail-stop on exception
+
+        # Create a shared entity registry
         cls.entity_registry = SharedEntityRegistry()
 
-        # Create the query generator
+        # Create the query generator with real connections
         cls.query_generator = CrossCollectionQueryGenerator(entity_registry=cls.entity_registry)
 
         # Create the AQL translator
         cls.aql_translator = AQLQueryTranslator()
 
-        # Generate test queries
+        # Generate test queries using real LLM services
         cls.generate_test_queries()
 
     @classmethod
     def generate_test_queries(cls):
-        """Generate test queries for AQL translation testing."""
-        # Mock the LLM to return predefined responses
-        with patch.object(cls.query_generator.enhanced_generator.generator, "get_completion") as mock_completion:
-            # For task+meeting
-            mock_completion.return_value = """
-            {
-              "query": "Find documents related to tasks created during the quarterly planning meeting",
-              "entities": {
-                "primary_entities": ["progress report", "project goals"],
-                "secondary_entities": ["quarterly planning", "team meeting"]
-              },
-              "relationship": "created_in",
-              "primary_type": "TASK",
-              "secondary_type": "COLLABORATION",
-              "reasoning": "This query looks for tasks that were created during a specific meeting"
-            }
-            """
+        """Generate test queries for AQL translation testing using real LLM services."""
+        cls.logger.info("Generating test queries with real LLM services")
 
-            # Generate task+meeting query
-            cls.task_meeting_query = cls.query_generator.generate_cross_collection_queries(
-                count=1,
-                relationship_types=["created_in"],
-                collection_pairs=[(ActivityType.TASK, ActivityType.COLLABORATION)],
-            )[0]
+        # Generate task+meeting query
+        task_meeting_queries = cls.query_generator.generate_cross_collection_queries(
+            count=1,
+            relationship_types=["created_in"],
+            collection_pairs=[(ActivityType.TASK, ActivityType.COLLABORATION)],
+        )
+        if not task_meeting_queries:
+            cls.logger.error("CRITICAL: Failed to generate task+meeting query")
+            sys.exit(1)  # Fail-stop on query generation failure
+        cls.task_meeting_query = task_meeting_queries[0]
+        cls.logger.info(f"Generated task+meeting query: {cls.task_meeting_query.query_text}")
 
-            # For meeting+location
-            mock_completion.return_value = """
-            {
-              "query": "Show files shared in meetings at the downtown office",
-              "entities": {
-                "primary_entities": ["project update", "budget review"],
-                "secondary_entities": ["downtown office", "conference room A"]
-              },
-              "relationship": "located_at",
-              "primary_type": "COLLABORATION",
-              "secondary_type": "LOCATION",
-              "reasoning": "This query looks for meetings that took place at a specific location"
-            }
-            """
+        # Generate meeting+location query
+        meeting_location_queries = cls.query_generator.generate_cross_collection_queries(
+            count=1,
+            relationship_types=["located_at"],
+            collection_pairs=[(ActivityType.COLLABORATION, ActivityType.LOCATION)],
+        )
+        if not meeting_location_queries:
+            cls.logger.error("CRITICAL: Failed to generate meeting+location query")
+            sys.exit(1)  # Fail-stop on query generation failure
+        cls.meeting_location_query = meeting_location_queries[0]
+        cls.logger.info(f"Generated meeting+location query: {cls.meeting_location_query.query_text}")
 
-            # Generate meeting+location query
-            cls.meeting_location_query = cls.query_generator.generate_cross_collection_queries(
-                count=1,
-                relationship_types=["located_at"],
-                collection_pairs=[(ActivityType.COLLABORATION, ActivityType.LOCATION)],
-            )[0]
-
-            # For task+location (via meeting)
-            mock_completion.return_value = """
-            {
-              "query": "Find tasks discussed during meetings at the coffee shop",
-              "entities": {
-                "primary_entities": ["bug fixes", "feature planning"],
-                "secondary_entities": ["coffee shop", "informal meeting"]
-              },
-              "relationship": "discussed_at",
-              "primary_type": "TASK",
-              "secondary_type": "LOCATION",
-              "reasoning": "This query looks for tasks that were discussed in meetings at a specific location"
-            }
-            """
-
-            # Generate task+location query
-            cls.task_location_query = cls.query_generator.generate_cross_collection_queries(
-                count=1,
-                relationship_types=["discussed_at"],
-                collection_pairs=[(ActivityType.TASK, ActivityType.LOCATION)],
-            )[0]
+        # Generate task+location query (via meeting)
+        task_location_queries = cls.query_generator.generate_cross_collection_queries(
+            count=1,
+            relationship_types=["discussed_at", "at_location"],  # Try multiple types
+            collection_pairs=[(ActivityType.TASK, ActivityType.LOCATION)],
+        )
+        if not task_location_queries:
+            cls.logger.error("CRITICAL: Failed to generate task+location query")
+            sys.exit(1)  # Fail-stop on query generation failure
+        cls.task_location_query = task_location_queries[0]
+        cls.logger.info(f"Generated task+location query: {cls.task_location_query.query_text}")
 
     def test_translate_task_meeting_query(self):
         """Test translating a task+meeting query to AQL."""
-        # Create a mock database response
-        mock_db = MagicMock()
-
-        # Translate the query to AQL
+        # Translate the query to AQL using real translator
         aql, bind_vars = self.aql_translator.translate_to_aql(
             self.task_meeting_query.query_text,
             collection="ablation_task",
@@ -154,7 +124,7 @@ class TestCrossCollectionAQL(unittest.TestCase):
         self.assertIn("ablation_task", aql)
         self.assertIn("ablation_collaboration", aql)
 
-        # Check that the AQL includes a JOIN operation
+        # Check that the AQL includes search operations
         self.assertIn("FOR", aql)
         self.assertIn("FILTER", aql)
 
@@ -168,10 +138,7 @@ class TestCrossCollectionAQL(unittest.TestCase):
 
     def test_translate_meeting_location_query(self):
         """Test translating a meeting+location query to AQL."""
-        # Create a mock database response
-        mock_db = MagicMock()
-
-        # Translate the query to AQL
+        # Translate the query to AQL using real translator
         aql, bind_vars = self.aql_translator.translate_to_aql(
             self.meeting_location_query.query_text,
             collection="ablation_collaboration",
@@ -183,7 +150,7 @@ class TestCrossCollectionAQL(unittest.TestCase):
         self.assertIn("ablation_collaboration", aql)
         self.assertIn("ablation_location", aql)
 
-        # Check that the AQL includes a JOIN operation
+        # Check that the AQL includes search operations
         self.assertIn("FOR", aql)
         self.assertIn("FILTER", aql)
 
@@ -197,22 +164,22 @@ class TestCrossCollectionAQL(unittest.TestCase):
 
     def test_translate_task_location_query(self):
         """Test translating a task+location query to AQL."""
-        # Create a mock database response
-        mock_db = MagicMock()
+        # Get the relationship type from the query metadata
+        relationship_type = self.task_location_query.metadata.get("relationship_type", "at_location")
 
-        # Translate the query to AQL
+        # Translate the query to AQL using real translator
         aql, bind_vars = self.aql_translator.translate_to_aql(
             self.task_location_query.query_text,
             collection="ablation_task",
             activity_types=[ActivityType.TASK, ActivityType.LOCATION],
-            relationship_type="discussed_at",
+            relationship_type=relationship_type,
         )
 
         # Check that the AQL includes both collections
         self.assertIn("ablation_task", aql)
         self.assertIn("ablation_location", aql)
 
-        # Check that the AQL includes a JOIN operation
+        # Check that the AQL includes search operations
         self.assertIn("FOR", aql)
         self.assertIn("FILTER", aql)
 
@@ -224,13 +191,7 @@ class TestCrossCollectionAQL(unittest.TestCase):
         self.assertGreaterEqual(len(bind_vars), 1)
 
     def test_execute_cross_collection_aql(self):
-        """Test executing a cross-collection AQL query."""
-        # Create a mock database and cursor
-        mock_db = MagicMock()
-        mock_cursor = MagicMock()
-        mock_cursor.__iter__ = lambda self: iter([{"_id": "test1"}, {"_id": "test2"}])
-        mock_db.aql.execute.return_value = mock_cursor
-
+        """Test executing a cross-collection AQL query against real database."""
         # Translate the query to AQL
         aql, bind_vars = self.aql_translator.translate_to_aql(
             self.task_meeting_query.query_text,
@@ -239,17 +200,14 @@ class TestCrossCollectionAQL(unittest.TestCase):
             relationship_type="created_in",
         )
 
-        # Execute the query
-        result = mock_db.aql.execute(aql, bind_vars=bind_vars)
+        # Execute the query against the real database
+        cursor = self.db.aql.execute(aql, bind_vars=bind_vars)
 
-        # Verify the query was executed
-        self.assertEqual(mock_db.aql.execute.call_count, 1)
+        # Verify the cursor can be consumed
+        results = list(cursor)
 
-        # Verify the result can be consumed
-        results = list(result)
-        self.assertEqual(len(results), 2)
-        self.assertEqual(results[0]["_id"], "test1")
-        self.assertEqual(results[1]["_id"], "test2")
+        # We don't assume specific results, but verify that execution completes
+        self.logger.info(f"Query executed successfully, returned {len(results)} results")
 
     def test_aql_translator_multi_hop_relationships(self):
         """Test that AQL translator can handle multi-hop relationships."""
@@ -316,6 +274,15 @@ class TestCrossCollectionAQL(unittest.TestCase):
         # Verify the bind vars
         self.assertIn("location_name", bind_vars)
         self.assertEqual(bind_vars["location_name"], "downtown office")
+
+        # Execute the query against the real database to confirm syntax is valid
+        try:
+            cursor = self.db.aql.execute(aql, bind_vars=bind_vars)
+            results = list(cursor)  # Execute and consume to verify AQL is valid
+            self.logger.info(f"Multi-hop query executed successfully, returned {len(results)} results")
+        except Exception as e:
+            self.logger.error(f"Failed to execute multi-hop query: {e!s}")
+            raise  # Let the exception propagate - fail-stop principle
 
 
 if __name__ == "__main__":
