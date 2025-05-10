@@ -44,8 +44,8 @@ class DataSanityChecker:
             "AblationMediaActivity",
         ]
 
-        # Define truth collection name
-        self.truth_collection = "AblationTruthData"
+        # Define truth collection name - use the one defined in IndalekoDBCollections
+        self.truth_collection = "AblationQueryTruth"
 
     def _setup_db_connection(self) -> bool:
         """Set up the database connection.
@@ -140,9 +140,14 @@ class DataSanityChecker:
                     self._fail(f"Missing 'query_id' in truth document {doc['_key']}")
                     continue
 
-                if "matching_entities" not in doc:
-                    self._fail(f"Missing 'matching_entities' in truth document {doc['_key']}")
+                # Check for either matching_entities or entity_ids field
+                if "matching_entities" not in doc and "entity_ids" not in doc:
+                    self._fail(f"Missing 'matching_entities' or 'entity_ids' in truth document {doc['_key']}")
                     continue
+                
+                # For documents with entity_ids, treat them the same as matching_entities
+                if "entity_ids" in doc and "matching_entities" not in doc:
+                    doc["matching_entities"] = doc["entity_ids"]
 
                 if "collection" not in doc:
                     self._fail(f"Missing 'collection' field in truth document {doc['_key']}")
@@ -153,14 +158,17 @@ class DataSanityChecker:
                 if collection not in self.activity_collections:
                     self.logger.warning(f"Truth document {doc['_key']} references unknown collection '{collection}'")
 
-                # Check if matching_entities is a list
-                if not isinstance(doc["matching_entities"], list):
-                    self._fail(f"'matching_entities' is not a list in truth document {doc['_key']}")
+                # Get the entities list (either matching_entities or entity_ids)
+                entities_list = doc.get("matching_entities", doc.get("entity_ids", []))
+                
+                # Check if entities list is a list
+                if not isinstance(entities_list, list):
+                    self._fail(f"Entity list is not a list in truth document {doc['_key']}")
                     continue
 
-                # Check that matching_entities are not empty
-                if not doc["matching_entities"]:
-                    self.logger.warning(f"Empty 'matching_entities' list in truth document {doc['_key']}")
+                # Check that entities list is not empty
+                if not entities_list:
+                    self.logger.warning(f"Empty entity list in truth document {doc['_key']}")
 
             return True
         except Exception as e:
@@ -201,10 +209,11 @@ class DataSanityChecker:
                     self.logger.warning(f"Collection {collection} referenced in truth data doesn't exist")
                     continue
 
-                matching_entities = doc.get("matching_entities", [])
+                # Get entity IDs (either from matching_entities or entity_ids)
+                entities_list = doc.get("matching_entities", doc.get("entity_ids", []))
 
                 # Check each entity
-                for entity_id in matching_entities:
+                for entity_id in entities_list:
                     entity_exists = False
                     try:
                         # Try to get the entity document
@@ -278,7 +287,8 @@ class DataSanityChecker:
             for doc in truth_docs:
                 query_id = doc.get("query_id")
                 collection = doc.get("collection")
-                matching_entities = doc.get("matching_entities", [])
+                # Get entity IDs (either from matching_entities or entity_ids)
+                matching_entities = doc.get("matching_entities", doc.get("entity_ids", []))
 
                 if not query_id or not collection or not matching_entities:
                     continue
