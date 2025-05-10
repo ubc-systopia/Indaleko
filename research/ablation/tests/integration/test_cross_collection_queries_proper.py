@@ -60,14 +60,12 @@ class TestCrossCollectionQueriesIntegrationProper(unittest.TestCase):
         # Create a shared entity registry
         cls.entity_registry = SharedEntityRegistry()
 
-        # Create enhanced recorders with real connections and the registry
-        cls.task_recorder = EnhancedActivityRecorder(entity_registry=cls.entity_registry, db_config=cls.db_config)
-        cls.collaboration_recorder = EnhancedActivityRecorder(
-            entity_registry=cls.entity_registry,
-            db_config=cls.db_config,
-        )
-        cls.location_recorder = EnhancedActivityRecorder(entity_registry=cls.entity_registry, db_config=cls.db_config)
-        cls.music_recorder = EnhancedActivityRecorder(entity_registry=cls.entity_registry, db_config=cls.db_config)
+        # Create enhanced recorders with the registry
+        # Note: EnhancedActivityRecorder creates its own DB connection
+        cls.task_recorder = EnhancedActivityRecorder(entity_registry=cls.entity_registry)
+        cls.collaboration_recorder = EnhancedActivityRecorder(entity_registry=cls.entity_registry)
+        cls.location_recorder = EnhancedActivityRecorder(entity_registry=cls.entity_registry)
+        cls.music_recorder = EnhancedActivityRecorder(entity_registry=cls.entity_registry)
 
         # Set up relationship patterns
         cls.task_collaboration_pattern = TaskCollaborationPattern(entity_registry=cls.entity_registry)

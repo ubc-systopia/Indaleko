@@ -62,11 +62,14 @@ class TestAblationCrossCollectionProper(unittest.TestCase):
         # Create the query generator
         cls.query_generator = CrossCollectionQueryGenerator(entity_registry=cls.entity_registry)
 
-        # Create the ablation database with real connection
-        cls.ablation_db = AblationDatabase(db_config=cls.db_config)
+        # Create the ablation database (it creates its own connection)
+        cls.ablation_db = AblationDatabase()
 
         # Create the ablation tester
-        cls.ablation_tester = AblationTester(db_config=cls.db_config, entity_registry=cls.entity_registry)
+        cls.ablation_tester = AblationTester() 
+        
+        # Set the entity registry as an attribute if needed by the tester
+        cls.ablation_tester.entity_registry = cls.entity_registry
 
         # Generate cross-collection test queries
         cls.generate_test_queries()

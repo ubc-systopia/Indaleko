@@ -98,7 +98,9 @@ class TestMusicRelationshipPatternsIntegration(unittest.TestCase):
         query_text = "productive music played during coding tasks at my home office"
 
         aql, bind_vars = self.aql_translator.translate_multi_hop_query(
-            query_text=query_text, primary_collection="TaskActivity", relationship_paths=relationship_paths,
+            query_text=query_text,
+            primary_collection="TaskActivity",
+            relationship_paths=relationship_paths,
         )
 
         # Verify the multi-hop query contains references to all three collections

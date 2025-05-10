@@ -93,60 +93,65 @@ class TestAblationCrossCollectionImplementation(unittest.TestCase):
         # Create music-location relationships
         for i in range(2):
             location, music = cls.music_location_pattern.generate_music_at_location()
-            
-            # Store location in database
-            cls.db.collection("AblationLocationActivity").insert(location)
-            
-            # Store music in database
-            cls.db.collection("AblationMusicActivity").insert(music)
-            
+            from arango.exceptions import DocumentInsertError
+
+            try:
+                # Store location in database
+                cls.db.collection("AblationLocationActivity").insert(location)
+
+                # Store music in database
+                cls.db.collection("AblationMusicActivity").insert(music)
+            except DocumentInsertError:
+                cls.logger.exception(f"Failed to insert document")
+                sys.exit(1)  # Fail-stop immediately
+
             cls.logger.info(f"Created music-location relationship: {music['artist']} at {location['location_name']}")
 
         # Create music-task relationships
         for i in range(2):
             task, music = cls.music_task_pattern.generate_music_during_task()
-            
+
             # Store task in database
             cls.db.collection("AblationTaskActivity").insert(task)
-            
+
             # Store music in database
             cls.db.collection("AblationMusicActivity").insert(music)
-            
+
             cls.logger.info(f"Created music-task relationship: {music['artist']} during {task['task_name']}")
 
         # Create task with playlist
         task, music_list = cls.music_task_pattern.generate_task_playlist()
-        
+
         # Store task in database
         cls.db.collection("AblationTaskActivity").insert(task)
-        
+
         # Store music in database
         for music in music_list:
             cls.db.collection("AblationMusicActivity").insert(music)
-            
+
         cls.logger.info(f"Created task-playlist relationship: {task['task_name']} with {len(music_list)} tracks")
 
         # Create task-collaboration relationships
         meeting, tasks = cls.task_collaboration_pattern.generate_meeting_with_tasks()
-        
+
         # Store meeting in database
         cls.db.collection("AblationCollaborationActivity").insert(meeting)
-        
+
         # Store tasks in database
         for task in tasks:
             cls.db.collection("AblationTaskActivity").insert(task)
-            
+
         cls.logger.info(f"Created meeting-tasks relationship: {meeting['event_type']} with {len(tasks)} tasks")
 
         # Create location-collaboration relationships
         location, meeting = cls.location_collaboration_pattern.generate_meeting_at_location()
-        
+
         # Store location in database
         cls.db.collection("AblationLocationActivity").insert(location)
-        
+
         # Store meeting in database
         cls.db.collection("AblationCollaborationActivity").insert(meeting)
-        
+
         cls.logger.info(f"Created location-meeting relationship: {meeting['event_type']} at {location['location_name']}")
 
         # Store the IDs for test verification
@@ -154,27 +159,27 @@ class TestAblationCrossCollectionImplementation(unittest.TestCase):
             "location": location["id"],
             "meeting": meeting["id"]
         }
-        
+
         # Create truth data for testing
         cls.tester.store_truth_data(
-            uuid4(), 
-            "AblationMusicActivity", 
+            uuid4(),
+            "AblationMusicActivity",
             [music["_key"] for music in music_list]
         )
-        
+
         cls.logger.info("Test data generation complete")
 
     def test_extract_search_terms_cross_collection(self):
         """Test the _extract_search_terms method with cross-collection query indicators."""
         # A query with multiple collection references
         query = "Find music by Taylor Swift that I listened to at the office during my marketing project"
-        
+
         # Extract terms for MusicActivity
         terms = self.tester._extract_search_terms(query, "AblationMusicActivity")
-        
+
         # Verify basic terms were extracted
         self.assertEqual(terms["artist"], "Taylor Swift")
-        
+
         # Verify cross-collection indicators were detected
         self.assertTrue(terms["has_location_reference"])
         self.assertTrue(terms["has_task_reference"])
@@ -184,10 +189,10 @@ class TestAblationCrossCollectionImplementation(unittest.TestCase):
         """Test the _identify_related_collections method."""
         # A query with multiple collection references
         query = "Find music by Taylor Swift that I listened to at the office during my marketing project"
-        
+
         # Identify related collections for MusicActivity
         related = self.tester._identify_related_collections(query, "AblationMusicActivity")
-        
+
         # Verify related collections were identified
         self.assertIn("AblationLocationActivity", related)
         self.assertIn("AblationTaskActivity", related)
@@ -198,20 +203,20 @@ class TestAblationCrossCollectionImplementation(unittest.TestCase):
         # Define collections
         primary = "AblationMusicActivity"
         related = ["AblationLocationActivity", "AblationTaskActivity"]
-        
+
         # Get search terms
         search_terms = self.tester._extract_search_terms(
             "Find music by Taylor Swift that I listened to at the office during my marketing project",
             primary
         )
-        
+
         # Identify relationships
         relationships = self.tester._identify_collection_relationships(primary, related, search_terms)
-        
+
         # Verify relationship fields were identified
         self.assertIn((primary, "AblationLocationActivity"), relationships)
         self.assertIn((primary, "AblationTaskActivity"), relationships)
-        
+
         # Verify correct relationship fields were used
         self.assertIn("listened_at", relationships[(primary, "AblationLocationActivity")])
         self.assertIn("played_during", relationships[(primary, "AblationTaskActivity")])
@@ -221,27 +226,27 @@ class TestAblationCrossCollectionImplementation(unittest.TestCase):
         # Define collections and relationships
         primary = "AblationMusicActivity"
         related = ["AblationLocationActivity"]
-        
+
         # Get search terms
         search_terms = self.tester._extract_search_terms("Find music by Taylor Swift at the office", primary)
-        
+
         # Identify relationships
         relationships = self.tester._identify_collection_relationships(primary, related, search_terms)
-        
+
         # Build the query
         aql_query = self.tester._build_cross_collection_query(
             primary, related, relationships, search_terms, set()
         )
-        
+
         # Verify the query contains JOIN statements
         self.assertIn("FOR primary IN AblationMusicActivity", aql_query)
         self.assertIn("FOR related", aql_query)
         self.assertIn("FILTER related", aql_query)
         self.assertIn("RETURN primary", aql_query)
-        
+
         # Verify primary filters
         self.assertIn("primary.artist == @artist", aql_query)
-        
+
         # Verify relationship filters
         self.assertIn("references.listened_at", aql_query)
 
@@ -252,23 +257,23 @@ class TestAblationCrossCollectionImplementation(unittest.TestCase):
         query_text = "Find music by Taylor Swift at the office"
         primary_collection = "AblationMusicActivity"
         related_collections = ["AblationLocationActivity"]
-        
+
         # Get search terms
         search_terms = self.tester._extract_search_terms(query_text, primary_collection)
-        
+
         # Get truth data
         truth_data = self.tester.get_truth_data(query_id, primary_collection)
-        
+
         # Execute the cross-collection query
         results, aql_query, bind_vars = self.tester._execute_cross_collection_query(
             query_id, query_text, primary_collection, related_collections, search_terms, truth_data
         )
-        
+
         # Verify the query executed successfully
         self.assertIsNotNone(results)
         self.assertIsNotNone(aql_query)
         self.assertIsNotNone(bind_vars)
-        
+
         # Log the results
         self.logger.info(f"Cross-collection query returned {len(results)} results")
         self.logger.info(f"AQL query: {aql_query}")
@@ -278,7 +283,7 @@ class TestAblationCrossCollectionImplementation(unittest.TestCase):
         # Create a test query
         query_id = uuid4()
         query_text = "Find music I listened to at the office during my marketing project"
-        
+
         # Configure the ablation test
         config = AblationConfig(
             collections_to_ablate=[
@@ -291,14 +296,14 @@ class TestAblationCrossCollectionImplementation(unittest.TestCase):
             include_execution_time=True,
             verbose=True
         )
-        
+
         # Run the ablation test
         results = self.tester.run_ablation_test(config, query_id, query_text)
-        
+
         # Verify we got results
         self.assertIsNotNone(results)
         self.assertGreater(len(results), 0)
-        
+
         # Verify cross-collection metadata is present
         for key, result in results.items():
             if "_impact_on_" in key:

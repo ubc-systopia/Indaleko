@@ -2,8 +2,19 @@
 
 import random
 import uuid
+import datetime
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from enum import IntEnum
+
+# Define the activity type as required by the schema
+class ActivityType(IntEnum):
+    MUSIC = 1
+    LOCATION = 2
+    TASK = 3
+    COLLABORATION = 4
+    STORAGE = 5
+    MEDIA = 6
 
 from ..registry import SharedEntityRegistry
 
@@ -213,11 +224,29 @@ class TaskCollaborationPattern(RelationshipPatternGenerator):
         Returns:
             Dict: Meeting data
         """
+        import datetime
+        from enum import IntEnum
+        
+        # Define the activity type as required by the schema
+        class ActivityType(IntEnum):
+            MUSIC = 1
+            LOCATION = 2
+            TASK = 3
+            COLLABORATION = 4
+            STORAGE = 5
+            MEDIA = 6
+            
         meeting_types = ["standup", "planning", "retrospective", "1on1", "team_meeting", "customer_call"]
         meeting_type = random.choice(meeting_types)
+        
+        # Generate timestamps in ISO format for created_at and modified_at
+        now = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
         return {
             "id": self.generate_uuid(),
+            "activity_type": ActivityType.COLLABORATION,  # Required by schema
+            "created_at": now,  # Required by schema
+            "modified_at": now,  # Required by schema
             "platform": random.choice(["Teams", "Zoom", "Slack", "Meet"]),
             "event_type": meeting_type,
             "participants": self._generate_participants(2, 8),
@@ -445,6 +474,18 @@ class MusicLocationPattern(RelationshipPatternGenerator):
         Returns:
             Dict: Location data
         """
+        import datetime
+        from enum import IntEnum
+        
+        # Define the activity type as required by the schema
+        class ActivityType(IntEnum):
+            MUSIC = 1
+            LOCATION = 2
+            TASK = 3
+            COLLABORATION = 4
+            STORAGE = 5
+            MEDIA = 6
+        
         location_types = ["home", "gym", "cafe", "commute", "office", "park"]
         location_type = random.choice(location_types)
         location_names = {
@@ -457,9 +498,15 @@ class MusicLocationPattern(RelationshipPatternGenerator):
         }
 
         name = random.choice(location_names.get(location_type, ["Unknown Location"]))
+        
+        # Generate timestamps in ISO format for created_at and modified_at
+        now = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
         return {
             "id": self.generate_uuid(),
+            "activity_type": ActivityType.LOCATION,  # Required by schema
+            "created_at": now,  # Required by schema
+            "modified_at": now,  # Required by schema
             "location_name": name,
             "location_type": location_type,
             "coordinates": {"latitude": random.uniform(30.0, 45.0), "longitude": random.uniform(-120.0, -70.0)},
@@ -476,6 +523,18 @@ class MusicLocationPattern(RelationshipPatternGenerator):
         Returns:
             Dict: Music activity data
         """
+        import datetime
+        from enum import IntEnum
+        
+        # Define the activity type as required by the schema
+        class ActivityType(IntEnum):
+            MUSIC = 1
+            LOCATION = 2
+            TASK = 3
+            COLLABORATION = 4
+            STORAGE = 5
+            MEDIA = 6
+            
         # Sample music data with popular artists and tracks
         music_samples = [
             {"artist": "Taylor Swift", "track": "Blank Space", "album": "1989", "genre": "Pop"},
@@ -492,9 +551,15 @@ class MusicLocationPattern(RelationshipPatternGenerator):
 
         # Select a random sample
         music_data = random.choice(music_samples)
+        
+        # Generate timestamps in ISO format for created_at and modified_at
+        now = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
         return {
             "id": self.generate_uuid(),
+            "activity_type": ActivityType.MUSIC,  # Required by schema
+            "created_at": now,  # Required by schema
+            "modified_at": now,  # Required by schema  
             "artist": music_data["artist"],
             "track": music_data["track"],
             "album": music_data["album"],
@@ -628,12 +693,30 @@ class MusicTaskPattern(RelationshipPatternGenerator):
         Returns:
             Dict: Task data
         """
+        import datetime
+        from enum import IntEnum
+        
+        # Define the activity type as required by the schema
+        class ActivityType(IntEnum):
+            MUSIC = 1
+            LOCATION = 2
+            TASK = 3
+            COLLABORATION = 4
+            STORAGE = 5
+            MEDIA = 6
+            
         task_types = ["coding", "writing", "reading", "design", "study", "research"]
         task_type = random.choice(task_types)
         applications = ["VS Code", "Word", "Chrome", "Figma", "PDF Reader", "Excel"]
+        
+        # Generate timestamps in ISO format for created_at and modified_at
+        now = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
         return {
             "id": self.generate_uuid(),
+            "activity_type": ActivityType.TASK,  # Required by schema
+            "created_at": now,  # Required by schema
+            "modified_at": now,  # Required by schema
             "task_name": f"{task_type.title()} task",
             "application": random.choice(applications),
             "window_title": f"{task_type.title()} - Project Work",

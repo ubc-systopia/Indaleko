@@ -106,7 +106,11 @@ class AQLQueryTranslator:
         return aql, bind_vars
 
     def _translate_cross_collection_query(
-        self, query_text: str, primary_collection: str, activity_types: list[Any], relationship_type: str,
+        self,
+        query_text: str,
+        primary_collection: str,
+        activity_types: list[Any],
+        relationship_type: str,
     ) -> tuple[str, dict[str, Any]]:
         """
         Translate a cross-collection query to AQL.
@@ -271,7 +275,10 @@ class AQLQueryTranslator:
         return aql, bind_vars
 
     def translate_multi_hop_query(
-        self, query_text: str, primary_collection: str, relationship_paths: list[tuple[str, str, str]],
+        self,
+        query_text: str,
+        primary_collection: str,
+        relationship_paths: list[tuple[str, str, str]],
     ) -> tuple[str, dict[str, Any]]:
         """
         Translate a query with multi-hop relationships.

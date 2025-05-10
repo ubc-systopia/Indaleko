@@ -53,6 +53,9 @@ Requires-Dist: ruff>=0.6.9
 Requires-Dist: graphviz>=0.20.1
 Requires-Dist: pyreadline3>=3.5.4
 Requires-Dist: openai-agents-mcp>=0.0.8
+Requires-Dist: seaborn>=0.13.2
+Requires-Dist: anthropic>=0.51.0
+Requires-Dist: google-genai>=1.14.0
 Provides-Extra: test
 Requires-Dist: pytest>=6.0; extra == "test"
 Provides-Extra: dev

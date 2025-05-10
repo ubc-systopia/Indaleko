@@ -44,6 +44,9 @@ ruff>=0.6.9
 graphviz>=0.20.1
 pyreadline3>=3.5.4
 openai-agents-mcp>=0.0.8
+seaborn>=0.13.2
+anthropic>=0.51.0
+google-genai>=1.14.0
 
 [:platform_system == "Windows"]
 winsdk==1.0.0b10

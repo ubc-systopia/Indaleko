@@ -8,7 +8,6 @@ before running tests. It implements a fail-fast approach for data validation.
 import logging
 import sys
 import uuid
-from typing import Any, Dict, List, Optional, Set, Tuple
 
 from db.db_config import IndalekoDBConfig
 
@@ -101,7 +100,9 @@ class DataSanityChecker:
             return False
 
         if not all_collections_exist:
-            self.logger.warning("Some activity collections don't exist. This may be expected if those activities aren't being tested.")
+            self.logger.warning(
+                "Some activity collections don't exist. This may be expected if those activities aren't being tested.",
+            )
 
         return True
 
@@ -144,7 +145,7 @@ class DataSanityChecker:
                 if "matching_entities" not in doc and "entity_ids" not in doc:
                     self._fail(f"Missing 'matching_entities' or 'entity_ids' in truth document {doc['_key']}")
                     continue
-                
+
                 # For documents with entity_ids, treat them the same as matching_entities
                 if "entity_ids" in doc and "matching_entities" not in doc:
                     doc["matching_entities"] = doc["entity_ids"]
@@ -160,7 +161,7 @@ class DataSanityChecker:
 
                 # Get the entities list (either matching_entities or entity_ids)
                 entities_list = doc.get("matching_entities", doc.get("entity_ids", []))
-                
+
                 # Check if entities list is a list
                 if not isinstance(entities_list, list):
                     self._fail(f"Entity list is not a list in truth document {doc['_key']}")
@@ -224,14 +225,18 @@ class DataSanityChecker:
                         self.logger.debug(f"Error checking entity {entity_id}: {e}")
 
                     if not entity_exists:
-                        error_msg = f"Entity {entity_id} referenced in truth data doesn't exist in collection {collection}"
+                        error_msg = (
+                            f"Entity {entity_id} referenced in truth data doesn't exist in collection {collection}"
+                        )
                         self.logger.error(error_msg)
                         missing_entities.append((entity_id, collection))
                         all_entities_exist = False
 
             if not all_entities_exist:
                 # Use _fail with a detailed error message to enable proper fail-stop
-                self._fail(f"Found {len(missing_entities)} entities referenced in truth data that don't exist in their collections: {missing_entities[:5]}")
+                self._fail(
+                    f"Found {len(missing_entities)} entities referenced in truth data that don't exist in their collections: {missing_entities[:5]}",
+                )
                 return False
 
             return True
@@ -239,7 +244,7 @@ class DataSanityChecker:
             self._fail(f"Failed to verify truth entities existence: {e}")
             return False
 
-    def verify_query_execution(self, query_ids: Optional[List[str]] = None) -> bool:
+    def verify_query_execution(self, query_ids: list[str] | None = None) -> bool:
         """Verify that queries execute correctly and return expected results.
 
         Args:
@@ -300,10 +305,7 @@ class DataSanityChecker:
                 RETURN doc
                 """
 
-                entity_result = self.db.aql.execute(
-                    entity_query,
-                    bind_vars={"entity_ids": matching_entities}
-                )
+                entity_result = self.db.aql.execute(entity_query, bind_vars={"entity_ids": matching_entities})
 
                 entity_docs = list(entity_result)
 
@@ -311,7 +313,7 @@ class DataSanityChecker:
                 if len(entity_docs) != len(matching_entities):
                     self.logger.warning(
                         f"Query {query_id} expected {len(matching_entities)} results, but got {len(entity_docs)} "
-                        f"from collection {collection}"
+                        f"from collection {collection}",
                     )
                     all_queries_valid = False
 
@@ -337,7 +339,7 @@ class DataSanityChecker:
             return False
 
         try:
-            collection_entities: Dict[str, Set[str]] = {}
+            collection_entities: dict[str, set[str]] = {}
 
             # Collect entity IDs from each collection
             for collection_name in self.activity_collections:
@@ -366,12 +368,14 @@ class DataSanityChecker:
 
                     if overlap:
                         self.logger.warning(
-                            f"Found {len(overlap)} overlapping entity IDs between {collection1} and {collection2}"
+                            f"Found {len(overlap)} overlapping entity IDs between {collection1} and {collection2}",
                         )
                         overlaps_found = True
 
             if overlaps_found:
-                self.logger.warning("Entity ID overlaps found across collections. This may be normal but can cause cross-collection contamination.")
+                self.logger.warning(
+                    "Entity ID overlaps found across collections. This may be normal but can cause cross-collection contamination.",
+                )
 
             return True
         except Exception as e:
@@ -429,7 +433,7 @@ class DataSanityChecker:
             if duplicate_combinations:
                 self.logger.warning(
                     f"Found {len(duplicate_combinations)} duplicate query_id + collection combinations in truth data. "
-                    f"This could indicate duplicate truth data entries."
+                    f"This could indicate duplicate truth data entries.",
                 )
 
             # Extract just the query IDs for UUID validation
@@ -442,7 +446,7 @@ class DataSanityChecker:
                 duplicate_count = len(query_ids) - len(unique_query_ids)
                 self.logger.info(
                     f"Found {duplicate_count} duplicate query IDs in truth data. "
-                    f"This is expected if you're using composite keys for cross-collection truth data."
+                    f"This is expected if you're using composite keys for cross-collection truth data.",
                 )
 
             # Check that all query IDs are valid UUIDs
@@ -520,6 +524,7 @@ def main():
 
     # Parse command line arguments
     import argparse
+
     parser = argparse.ArgumentParser(description="Run data sanity checks for ablation framework")
     parser.add_argument("--no-fail-fast", action="store_true", help="Continue checks after first failure")
     parser.add_argument("--query-id", action="append", help="Verify specific query IDs")

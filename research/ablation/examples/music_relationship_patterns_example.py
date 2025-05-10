@@ -4,14 +4,13 @@ import logging
 import sys
 
 from db.db_config import IndalekoDBConfig
-
-from ..models.location_activity import LocationActivity
-from ..models.music_activity import MusicActivity
-from ..models.relationship_patterns import MusicLocationPattern, MusicTaskPattern
-from ..models.task_activity import TaskActivity
-from ..query.aql_translator import AQLQueryTranslator
-from ..recorders.enhanced_base import EnhancedActivityRecorder
-from ..registry import SharedEntityRegistry
+from research.ablation.models.location_activity import LocationActivity
+from research.ablation.models.music_activity import MusicActivity
+from research.ablation.models.relationship_patterns import MusicLocationPattern, MusicTaskPattern
+from research.ablation.models.task_activity import TaskActivity
+from research.ablation.query.aql_translator import AQLQueryTranslator
+from research.ablation.recorders.enhanced_base import EnhancedActivityRecorder
+from research.ablation.registry import SharedEntityRegistry
 
 
 # Create enhanced recorders for different activity types
@@ -132,7 +131,9 @@ def run_example():
             ("MusicActivity", "listened_at", "LocationActivity"),
         ]
         aql, bind_vars = aql_translator.translate_multi_hop_query(
-            query_text=query3, primary_collection="TaskActivity", relationship_paths=relationship_paths,
+            query_text=query3,
+            primary_collection="TaskActivity",
+            relationship_paths=relationship_paths,
         )
         logger.info(f"Query: {query3}")
         logger.info(f"Translated AQL:\n{aql}")
