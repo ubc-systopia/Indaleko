@@ -21,10 +21,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import uuid
+
 from datetime import UTC, datetime
 from pathlib import Path
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -34,6 +36,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
+from activity.characteristics import ActivityDataCharacteristics
 from activity.collectors.known_semantic_attributes import KnownSemanticAttributes
 from activity.collectors.location.data_models.windows_gps_location_data_model import (
     WindowsGPSLocationDataModel,
@@ -52,6 +55,7 @@ from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from db.db_config import IndalekoDBConfig
 from utils.misc.data_management import decode_binary_data
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -61,12 +65,6 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
     identifier = uuid.UUID("7e85669b-ecc7-4d57-8b51-8d325ea84930")
     version = "1.0.0"
     description = "Windows GPS Location Recorder"
-
-    semantic_attributes_supported = {  # noqa: RUF012
-        KnownSemanticAttributes.ACTIVITY_DATA_LOCATION_LATITUDE: "Latitude",  # pylint: disable=no-member
-        KnownSemanticAttributes.ACTIVITY_DATA_LOCATION_LONGITUDE: "Longitude",  # pylint: disable=no-member
-        KnownSemanticAttributes.ACTIVITY_DATA_LOCATION_ACCURACY: "Accuracy",  # pylint: disable=no-member
-    }
 
     def __init__(self, **kwargs: dict) -> None:
         """Initialize the Windows GPS Location Recorder."""
@@ -95,7 +93,6 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
             "Record": IndalekoRecordDataModel(
                 SourceIdentifier=source_identifier,
                 Timestamp=datetime.now(UTC),
-                Attributes={},
                 Data="",
             ),
         }
@@ -142,7 +139,7 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
     def update_data(self) -> WindowsGPSLocationDataModel | None:
         """Update the data in the database."""
         ksa = KnownSemanticAttributes
-        current_data = WindowsGPSLocation().get_coords()
+        current_data: WindowsGPSLocationDataModel = WindowsGPSLocation().get_coords()
         ic(current_data)
         if not isinstance(current_data, WindowsGPSLocationDataModel):
             raise TypeError(
@@ -162,25 +159,22 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
         semantic_attributes = [
             IndalekoSemanticAttributeDataModel(
                 Identifier=IndalekoUUIDDataModel(
-                    Identifier=ksa.ACTIVITY_DATA_LOCATION_LATITUDE,  # pylint: disable=no-member
-                    Version="1",
-                    Description="Latitude",
+                    Identifier=ksa.ACTIVITY_DATA_LOCATION_LATITUDE,
+                    Label="Latitude",
                 ),
                 Value=current_data.Location.latitude,  # pylint: disable=no-member
             ),
             IndalekoSemanticAttributeDataModel(
                 Identifier=IndalekoUUIDDataModel(
-                    Identifier=ksa.ACTIVITY_DATA_LOCATION_LONGITUDE,  # pylint: disable=no-member
-                    Version="1",
-                    Description="Longitude",
+                    Identifier=ksa.ACTIVITY_DATA_LOCATION_LONGITUDE,
+                    Label="Longitude",
                 ),
                 Value=current_data.Location.longitude,  # pylint: disable=no-member
             ),
             IndalekoSemanticAttributeDataModel(
                 Identifier=IndalekoUUIDDataModel(
                     Identifier=ksa.ACTIVITY_DATA_LOCATION_ACCURACY,  # pylint: disable=no-member
-                    Version="1",
-                    Description="Accuracy",
+                    Label="1",
                 ),
                 Value=current_data.Location.accuracy,  # pylint: disable=no-member
             ),
@@ -191,9 +185,9 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
             semantic_attributes=semantic_attributes,
         )
         self.collection.insert(doc)
-        return ic(current_data)
+        return current_data
 
-    def get_recorder_characteristics(self) -> dict:
+    def get_recorder_characteristics(self) -> list[ActivityDataCharacteristics]:
         """Retrieve the characteristics of the recorder.
 
         Returns:
@@ -223,7 +217,10 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
         """Get the description of the recorder."""
         return self.provider.get_description()
 
-    def store_data(self, data: WindowsGPSLocationDataModel) -> WindowsGPSLocationDataModel:
+    def store_data(
+            self,
+            data: WindowsGPSLocationDataModel | list[WindowsGPSLocationDataModel],
+    ) -> None:
         """Store the processed data."""
         ksa = KnownSemanticAttributes
         if not isinstance(data, WindowsGPSLocationDataModel):
@@ -244,24 +241,21 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
             IndalekoSemanticAttributeDataModel(
                 Identifier=IndalekoUUIDDataModel(
                     Identifier=ksa.ACTIVITY_DATA_LOCATION_LATITUDE,  # pylint: disable=no-member
-                    Version="1",
-                    Description="Latitude",
+                    Label="Latitude",
                 ),
                 Value=data.latitude,
             ),
             IndalekoSemanticAttributeDataModel(
                 Identifier=IndalekoUUIDDataModel(
                     Identifier=ksa.ACTIVITY_DATA_LOCATION_LONGITUDE,  # pylint: disable=no-member
-                    Version="1",
-                    Description="Longitude",
+                    Label="Longitude",
                 ),
                 Value=data.longitude,
             ),
             IndalekoSemanticAttributeDataModel(
                 Identifier=IndalekoUUIDDataModel(
                     Identifier=ksa.ACTIVITY_DATA_LOCATION_ACCURACY,  # pylint: disable=no-member
-                    Version="1",
-                    Description="Accuracy",
+                    Label="Accuracy",
                 ),
                 Value=data.accuracy,
             ),
@@ -273,7 +267,6 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
             semantic_attributes=semantic_attributes,
         )
         self.collection.insert(doc)
-        return ic(data)
 
 
 def main() -> None:

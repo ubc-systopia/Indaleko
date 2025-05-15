@@ -20,28 +20,28 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-
 import os
 import sys
 import uuid
 
+from pathlib import Path
+
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
-        current_path = os.path.dirname(current_path)
-    os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
 # pylint: enable=wrong-import-position
 
 
 class ActivityDataCharacteristics:
-    """
-    Define the provider characteristics available for a data provider.
-    """
+    """Define the provider characteristics available for a data provider."""
 
     ACTIVITY_DATA_TEMPORAL = "521e13be-096e-4068-8f2a-4c162bd6a3fb"
     ACTIVITY_DATA_SPATIAL = "a77d0a02-a716-4d5e-a7e2-cabab87e00e6"
@@ -63,12 +63,12 @@ class ActivityDataCharacteristics:
     ACTIVITY_DATA_CLOUD_STORAGE = "ecf07280-0c05-4755-b674-bfe988fb7710"
 
     # available for use beyond this point
+    uuid_to_label = {}  # noqa: RUF012
 
     _characteristic_prefix = "ACTIVITY_DATA_"
 
-    def __init__(self):
-        """Initialize the provider characteristics"""
-        self.uuid_to_label = {}
+    def __init__(self) -> None:
+        """Initialize the provider characteristics."""
         for label, value in ActivityDataCharacteristics.__dict__.items():
             if label.startswith(ActivityDataCharacteristics._characteristic_prefix):
                 setattr(self, label + "_UUID", uuid.UUID(value))
@@ -76,7 +76,7 @@ class ActivityDataCharacteristics:
 
     @staticmethod
     def get_activity_characteristics() -> dict:
-        """Get the characteristics of the provider"""
+        """Get the characteristics of the provider."""
         return {
             label: value
             for label, value in ActivityDataCharacteristics.__dict__.items()
@@ -84,13 +84,18 @@ class ActivityDataCharacteristics:
         }
 
     @staticmethod
-    def get_activity_label(identifier: uuid.UUID) -> str:
-        """Get the label for the provider"""
-        return ActivityDataCharacteristics().uuid_to_label.get(identifier, None)
+    def get_activity_label(identifier: uuid.UUID) -> str | None:
+        """Get the label for the provider."""
+        return ActivityDataCharacteristics.uuid_to_label.get(identifier, None)
+
+    @staticmethod
+    def get_activity_uuid(label: str) -> uuid.UUID | None:
+        """Get the UUID for the provider."""
+        return getattr(ActivityDataCharacteristics, label + "_UUID", None)
 
 
-def main():
-    """Main entry point for the module"""
+def main() -> None:
+    """Main entry point for the module."""
     ic("ActivityDataCharacteristics module test.")
     for (
         label,

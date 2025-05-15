@@ -22,20 +22,24 @@ import datetime
 import os
 import sys
 import uuid
+
 from abc import ABC, abstractmethod
-from typing import Any
+from pathlib import Path
 
 from icecream import ic
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
-        current_path = os.path.dirname(current_path)
-    os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
 from activity.characteristics import ActivityDataCharacteristics
+from activity.data_model.activity import IndalekoActivityDataModel
+
 
 # pylint: enable=wrong-import-position
 
@@ -51,9 +55,11 @@ class RecorderBase(ABC):
     @abstractmethod
     def get_recorder_characteristics(self) -> list[ActivityDataCharacteristics]:
         """
-        This call returns the characteristics of the data provider.  This is
-        intended to be used to help users understand the data provider and to
-        help the system understand how to interact with the data provider.
+        This call returns the characteristics of the data provider.
+
+        This is intended to be used to help users understand the
+        data provider and to help the system understand how to
+        interact with the data provider.
 
         Returns:
             Dict: A dictionary containing the characteristics of the provider.
@@ -61,7 +67,7 @@ class RecorderBase(ABC):
 
     @abstractmethod
     def get_recorder_name(self) -> str:
-        """Get the name of the recorder"""
+        """Get the name of the recorder."""
 
     @abstractmethod
     def get_collector_class_model(self) -> dict[str, type]:
@@ -69,11 +75,13 @@ class RecorderBase(ABC):
 
     @abstractmethod
     def get_recorder_id(self) -> uuid.UUID:
-        """Get the UUID for the recorder"""
+        """Get the UUID for the recorder."""
 
     @abstractmethod
     def get_cursor(self, activity_context: uuid.UUID) -> uuid.UUID:
-        """Retrieve the current cursor for this data provider
+        """
+        Retrieve the current cursor for this data provider.
+
         Input:
              activity_context: the activity context into which this cursor is
              being used
@@ -84,43 +92,45 @@ class RecorderBase(ABC):
 
     @abstractmethod
     def cache_duration(self) -> datetime.timedelta:
-        """
-        Retrieve the maximum duration that data from this provider may be
-        cached
-        """
+        """Retrieve the maximum duration that data from this provider may be cached."""
 
     @abstractmethod
     def get_description(self) -> str:
         """
-        Retrieve a description of the data provider. Note: this is used for
+        Retrieve a description of the data provider.
+
+        Note: this is used for
         prompt construction, so please be concise and specific in your
         description.
         """
 
     @abstractmethod
     def get_json_schema(self) -> dict:
-        """
-        Retrieve the JSON data schema to use for the database.
-        """
+        """Retrieve the JSON data schema to use for the database."""
 
     @abstractmethod
-    def process_data(self, data: Any) -> dict[str, Any]:
-        """Process the collected data"""
+    def process_data(
+        self,
+        data: object,
+    ) -> IndalekoActivityDataModel | list[IndalekoActivityDataModel] | None:
+        """Process the collected data."""
 
     @abstractmethod
-    def store_data(self, data: dict[str, Any]) -> None:
-        """Store the processed data"""
+    def store_data(self, data: IndalekoActivityDataModel | list[IndalekoActivityDataModel]) -> None:
+        """Store the processed data."""
 
     @abstractmethod
     def update_data(self) -> None:
-        """Update the data in the database"""
+        """Update the data in the database."""
 
     @abstractmethod
-    def get_latest_db_update(self) -> dict[str, Any]:
-        """Get the latest data update from the database"""
+    def get_latest_db_update(
+        self,
+    ) -> IndalekoActivityDataModel | None:
+        """Get the latest data update from the database."""
 
 
-def main():
+def main() -> None:
     """This is a test interface for the recorder base."""
     ic("RecorderBase test interface")
 

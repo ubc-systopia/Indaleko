@@ -1,6 +1,5 @@
 """
-This module defines the data model for the Windows GPS based location
-activity data provider.
+Windows GPS based activity data provider data model.
 
 Project Indaleko
 Copyright (C) 2024-2025 Tony Mason
@@ -21,24 +20,27 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from datetime import UTC, datetime
+from pathlib import Path
+from typing import ClassVar
 
 from pydantic import AwareDatetime, Field, field_validator
 
-# from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
-        current_path = os.path.dirname(current_path)
-    os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
 from activity.collectors.location.data_models.windows_gps_satellite_data import (
     WindowsGPSLocationSatelliteDataModel,
 )
 from data_models.location_data_model import BaseLocationDataModel
+
 
 # pylint: enable=wrong-import-position
 
@@ -80,36 +82,46 @@ class WindowsGPSLocationDataModel(BaseLocationDataModel):
     )
 
     @field_validator("position_source_timestamp", mode="before")
-    def ensure_timezone(cls, value: datetime):
+    @classmethod
+    def ensure_timezone(cls, value: datetime) -> datetime:
+        """Ensure the timestamp is timezone-aware."""
         if isinstance(value, str):
             value = datetime.fromisoformat(value)
-        assert isinstance(value, datetime)
+        if not isinstance(value, datetime):
+            raise TypeError("Invalid timestamp format")
         if value.tzinfo is None:
             value = value.replace(tzinfo=UTC)
         return value
 
-    class Config:
+    class Config: # type: ignore  # noqa: PGH003
+        """Sample configuration for the data model."""
+        frozen = True  # Make the model immutable
+
         @staticmethod
-        def generate_example():
-            """Generate an example for the data model"""
+        def generate_example() -> dict[str, str | float | bool | int | None]:
+            """Generate an example for the data model."""
             example = BaseLocationDataModel.Config.json_schema_extra["example"]
             example["altitude_accuracy"] = 2.0
             example["is_remote_source"] = False
             example["point"] = "POINT(49.2827 -123.1207)"
             example["position_source"] = "GPS"
             example["position_source_timestamp"] = "2023-09-21T10:31:00Z"
-            example["satellite_data"] = WindowsGPSLocationSatelliteDataModel.Config.json_schema_extra["example"]
+            example[
+                "satellite_data"
+                ] = WindowsGPSLocationSatelliteDataModel.Config.json_schema_extra[
+                    "example"
+                ]
             example["civic_address"] = None
             example["venue_data"] = None
             return example
 
-        json_schema_extra = {
+        json_schema_extra: ClassVar[dict] = {
             "example": generate_example(),
         }
 
 
-def main():
-    """This allows testing the data model"""
+def main() -> None:
+    """This allows testing the data model."""
     WindowsGPSLocationDataModel.test_model_main()
 
 
