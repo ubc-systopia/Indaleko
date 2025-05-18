@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import argparse
+import json
 import logging
 import os
 import sys
@@ -277,9 +278,8 @@ def extract_params() -> tuple:
 def main() -> None:
     """Test the IndalekoCollections class."""
     IndalekoCollections()
+    ic('IndalekoCollections initialized')
     common_params, unique_params_by_index = extract_params()
-    ic(common_params)
-    ic(unique_params_by_index)
     pre_parser = argparse.ArgumentParser(add_help=False)
     pre_parser.add_argument(
         "--collection",
@@ -296,7 +296,6 @@ def main() -> None:
     )
     for common_arg in common_params:
         arg_type = IndalekoCollectionIndex.index_args["hash"][common_arg]
-        ic(f"Adding argument {common_arg} with type {arg_type}")
         pre_parser.add_argument(
             f"--{common_arg}",
             type=IndalekoCollectionIndex.index_args["hash"][common_arg],
@@ -327,7 +326,6 @@ def main() -> None:
     args = parser.parse_args()
     if hasattr(args, "fields"):
         args.fields = [field.strip() for field in pre_args.fields.split(",")]
-    ic(args)
     index_args = {"collection": args.collection}
     for index_arg in common_params:
         if getattr(args, index_arg) is not None:
@@ -335,8 +333,6 @@ def main() -> None:
     for index_arg in unique_params_by_index[pre_args.type]:
         if getattr(args, index_arg) is not None:
             index_args[index_arg] = getattr(args, index_arg)
-    ic(index_args)
-    ic("TODO: add tests for the various type of indices")
 
 
 if __name__ == "__main__":

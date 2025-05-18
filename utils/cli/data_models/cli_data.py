@@ -124,12 +124,6 @@ class IndalekoBaseCliDataModel(IndalekoBaseModel):
         description="The selected input file.",
     )
 
-    InputFileKeys: dict[str, str] | None = Field(
-        default_factory=dict,
-        title="InputFileKeys",
-        description="Keys for input files.",
-    )
-
     OutputFile: str | None = Field(
         None,
         title="OutputFile",

@@ -43,9 +43,7 @@ from data_models.semantic_attribute import IndalekoSemanticAttributeDataModel
 
 
 class IndalekoActivityDataModel(IndalekoBaseModel):
-    """
-    This class defines the common model used by activity data providers in the
-    Indaleko Project.
+    """This class defines the common model used by activity data providers in the Indaleko Project.
 
     The goal is to define a common structure that can be used to reason about
     the meaning of the information that the activity data providers are
@@ -54,9 +52,7 @@ class IndalekoActivityDataModel(IndalekoBaseModel):
     By default, the activity data framework will construct an index that
     includes all of the semantic fields that are defined by the activity data
     providers.
-
     """
-
     Record: IndalekoRecordDataModel = Field(
         ...,
         title="Record",
@@ -78,7 +74,7 @@ class IndalekoActivityDataModel(IndalekoBaseModel):
     class Config:
         """Sample configuration data for the data model."""
 
-        json_schema_extra = {
+        json_schema_extra = {  # noqa: RUF012
             "example": {
                 "Record": IndalekoRecordDataModel.get_json_example(),
                 "Timestamp": "2024-01-01T00:00:00Z",
@@ -89,8 +85,8 @@ class IndalekoActivityDataModel(IndalekoBaseModel):
         }
 
 
-def main():
-    """This allows testing the data model"""
+def main() -> None:
+    """This allows testing the data model."""
     IndalekoActivityDataModel.test_model_main()
 
 

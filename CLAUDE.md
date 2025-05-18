@@ -1,106 +1,155 @@
 # CLAUDE.md - Indaleko Development Guidelines
 
-## Current Work: Prompt Management and Data Generator Enhancements
+## CRITICAL: FAIL-STOP IS THE PRIMARY DESIGN PRINCIPLE
 
-We're currently working on two main areas:
+Indaleko follows a strict FAIL-STOP model as its primary design principle:
 
-1. **Prompt Management System**:
-   - Implementing a system to optimize prompts for LLM interactions
-   - Reducing prompt sizes through techniques like whitespace normalization, schema simplification, and example reduction
-   - Detecting and resolving contradictions using both rule-based and LLM-based approaches
-   - Ensuring consistent terminology (e.g., Record.Attributes vs Record.Attribute)
+1. NEVER implement fallbacks or paper over errors
+2. ALWAYS fail immediately and visibly when issues occur
+3. NEVER substitute mock/fake data when real data is unavailable
+4. ALWAYS exit with a clear error message (sys.exit(1)) rather than continuing with degraded functionality
 
-2. **Data Generator Testing**:
-   - Testing the synthetic data generator in the `data_generator` directory
-   - Updating module imports and access patterns to match current codebase structure
-   - Correcting database authentication methods
+This is ESPECIALLY important for scientific experiments like the ablation framework, where data integrity is critical. Silently substituting template-based data when LLM generation fails would invalidate experimental results and is strictly prohibited.
 
-### Prompt Management System
+Remember: It is better to fail loudly and immediately than to continue with compromised functionality.
 
-We've created a comprehensive `PromptManager` class with these capabilities:
+## Available Tools
 
-- **Template-based prompts** with system and user components
-- **Token counting and optimization** to reduce LLM costs
-- **Contradiction detection** to prevent cognitive dissonance
-- **Usage statistics** to track prompt size improvements
+### MCP ArangoDB Access
+Direct database access is available through MCP tools:
+- `mcp__arango-mcp__arango_query` - Execute AQL queries directly against the database
+- `mcp__arango-mcp__arango_insert` - Insert documents into collections
+- `mcp__arango-mcp__arango_update` - Update existing documents
+- `mcp__arango-mcp__arango_remove` - Remove documents from collections
+- `mcp__arango-mcp__arango_backup` - Create backups of collections
+- `mcp__arango-mcp__arango_list_collections` - List all collections in the database
+- `mcp__arango-mcp__arango_create_collection` - Create new collections
 
-Key optimization strategies include:
-- Whitespace normalization
-- Schema simplification
-- Example reduction
-- Context windowing
-- Contradiction detection via rules and LLM review
+Use these tools to verify database state, diagnose issues, and confirm that code problems aren't actually database connectivity issues. Following the fail-stop model for database operations, any genuine database connectivity issue requires immediate attention.
 
-The Ayni principle is implemented through LLM-powered review of prompts, positioning one AI as a reviewer of instructions meant for another.
+## Current Work: Comprehensive Ablation Study Framework
 
-### Enhanced Data Generator Overview
+We are implementing and refining our comprehensive ablation study framework for scientifically measuring how different activity data types affect query precision and recall. This framework provides controlled testing across all six activity data categories to produce publication-quality research results.
 
-The enhanced data generator provides robust capabilities for testing:
+### Ablation Framework Implementation Status
 
-- Generates realistic file metadata records (storage, semantic, activity)
-- Creates "truth sets" with known characteristics for query evaluation
-- Uses direct database integration with proper schema validation
-- Supports statistical distributions for realistic data patterns
-- Implements the CLI template pattern for consistent command-line handling
+- ✅ Completed BaseActivityRecorder for standardized database interactions
+- ✅ Implemented all three activity type collectors and recorders with proper inheritance
+- ✅ Enhanced AblationTester with proper truth data validation
+- ✅ Added semantic search queries instead of direct key lookups
+- ✅ Integrated LLM-driven query generator for realistic user queries
+- ✅ Fixed validation timing issues in test workflow
+- ✅ Implemented proper fail-stop behavior with immediate feedback
+- ✅ Added diverse query templates as fallback
+- ✅ Fixed Pydantic V2 compatibility issues
+- 🔄 Adding integration with experimental LLM query generator from scratch/
+- 🔄 Implementing more activity types (Collaboration, Storage, Media)
 
-### Implementation Status
+### Activity Data Types Being Studied
 
-The enhanced data generator now has these working components:
+The ablation study focuses on these six activity data types:
 
-1. **Storage Metadata Generator**:
-   - Creates realistic file paths, names, sizes, and timestamps
-   - Generates directory hierarchies and file extensions
-   - Supports truth record generation with specific criteria
+1. **Music Activity** - Music listening patterns from streaming services
+2. **Location Activity** - Geographic position data from various sources
+3. **Task Activity** - User task management and completion
+4. **Collaboration Activity** - Calendar events and file sharing
+5. **Storage Activity** - File system operations and access patterns
+6. **Media Activity** - Video/content consumption activities
 
-2. **Semantic Metadata Generator**:
-   - Generates MIME types, content types, and checksums
-   - Creates keywords, topics, and content summaries
-   - Links directly to storage records in the database
+### Improved Error Handling Model
 
-3. **Activity Metadata Generator**:
-   - Generates location data with city and geographic coordinates
-   - Creates music activity records with artists, tracks, and genres
-   - Produces temperature/environmental data for context
-   - Links activity data to appropriate storage objects
+Indaleko uses a strict fail-stop model for error handling:
 
-4. **Relationship Metadata Generator**:
-   - Creates connections between files, semantic data, and activity context
-   - Supports multiple relationship types (CONTAINS, DERIVED_FROM, etc.)
-   - Establishes proper graph edges in the database
-   - Generates truth relationships for testing complex queries
+```python
+# CORRECT: Use sys.exit(1) for immediate termination
+def validate_critical_data(data):
+    """Validate critical data integrity."""
+    if not data:
+        logging.error("CRITICAL: Missing required data")
+        sys.exit(1)  # Immediate termination
 
-5. **Machine Configuration Generator**:
-   - Creates realistic device profiles (desktop, laptop, mobile)
-   - Supports multiple operating systems (Windows, macOS, Linux, iOS, Android)
-   - Generates appropriate hardware specifications for each device type
-   - Enables cross-device activity testing scenarios
+    if not all(required_fields.issubset(item.keys()) for item in data):
+        logging.error("CRITICAL: Data missing required fields")
+        sys.exit(1)  # Immediate termination
 
-3. **Activity Metadata Generator**:
-   - Implemented location activity (geographic coordinates, city data)
-   - Added music activity context (artists, tracks, genres)
-   - Created temperature/environmental context
-   - Ensures proper linking between activity and storage records
+    return True
 
-### Usage
+# INCORRECT: Never continue after validation failure
+def bad_validation(data):
+    """BAD validation function that continues after critical error."""
+    valid = True
+    if not data:
+        logging.error("Data is empty")  # Logs but continues!
+        valid = False
 
-```bash
-# Run quick test data generation
-python tools/data_generator_enhanced/generate_test_data.py
-
-# Run with CLI template
-python -m tools.data_generator_enhanced --config default
+    return valid  # Will allow potentially corrupted execution to continue
 ```
 
-### Code Structure
+### LLM Query Generation
 
-- `generators/`: Contains metadata generators for each type
-- `utils/`: Statistical distributions and dataset utilities
-- `testing/`: Query analysis and metrics tools
-- `config/`: JSON configuration files
+We've implemented two approaches for query generation:
 
-### Current Focus
+1. **Direct Integration** - Using LLMQueryGenerator from the research framework
+2. **Experimental Integration** - Using EnhancedQueryGenerator from scratch/ experiments
 
-Working on implementing relationship generators to create connections between entities and improving the test query framework to validate search accuracy.
+Both implementations ensure:
+- High query diversity (different structures, lengths, entities)
+- Realistic user patterns (questions, commands, keywords)
+- Activity-specific semantics (location, task, music terminology)
+- Improved search evaluation through realistic scenarios
+
+### Semantic Search Implementation
+
+Recent improvements to our search implementation:
+
+```python
+# OLD: Direct ID lookup - doesn't test search capabilities
+def bad_search(query_id, collection):
+    """Direct key lookup doesn't test search."""
+    truth_data = get_truth_data(query_id, collection)
+    aql = f"""
+    FOR doc IN {collection}
+    FILTER doc._key IN @entity_ids
+    RETURN doc
+    """
+    return db.aql.execute(aql, bind_vars={"entity_ids": truth_data})
+
+# NEW: Semantic attribute search - properly tests search
+def better_search(query_text, collection):
+    """Attribute-based search tests real capabilities."""
+    if "MusicActivity" in collection:
+        aql = f"""
+        FOR doc IN {collection}
+        FILTER doc.artist == @artist OR doc.track == @track
+        LIMIT 10
+        RETURN doc
+        """
+        return db.aql.execute(aql, {"artist": "Taylor Swift", "track": "Blank Space"})
+    elif "LocationActivity" in collection:
+        # Location-specific search...
+```
+
+### AblationTester Architecture
+
+The AblationTester now follows this improved workflow:
+
+1. **Setup** - Connect to database and prepare collections
+2. **Generate Data** - Create synthetic activity data across multiple types
+3. **Generate Queries** - Use LLM/templates to create diverse test queries
+4. **Create Truth Data** - Record which entities should match which queries
+5. **Validate** - Verify truth data integrity AFTER creation
+6. **Execute Tests** - For each collection, measure baseline then ablate
+7. **Calculate Metrics** - Measure precision, recall, F1 for each condition
+8. **Generate Reports** - Create visualizations and markdown summaries
+9. **Cleanup** - Restore all collections to their original state
+
+### Key Improvements
+
+- **Proper Collection Order** - Validation now runs after truth data creation
+- **Real Search Tests** - Uses semantic search not ID lookups
+- **Query Diversity** - Each query uses different template, parameters, or LLM generation
+- **Improved Error Detection** - Fail-stop with clear error messages
+- **Truth Data Integrity** - Uses actual database keys for expected matches
 
 ## Architectural Principles
 
@@ -269,7 +318,8 @@ class MyModel(IndalekoBaseModel):
         return v
 ```
 
-### Data Models
+### Data Models and Pydantic Handling
+
 Always extend IndalekoBaseModel for database models:
 ```python
 from data_models.base import IndalekoBaseModel
@@ -277,6 +327,51 @@ from data_models.base import IndalekoBaseModel
 class MyArangoModel(IndalekoBaseModel):
     name: str
     value: int
+```
+
+#### Pydantic V2 Best Practices
+
+Indaleko uses Pydantic V2 for data validation and serialization. Follow these practices:
+
+1. **Never use the deprecated .dict() method**
+```python
+# INCORRECT - Deprecated in Pydantic V2, will be removed in V3
+serialized_data = pydantic_object.dict()  # Will generate warnings
+
+# CORRECT - Use model_dump() for dict conversion
+serialized_data = pydantic_object.model_dump()
+
+# CORRECT - For JSON serialization in one step
+json_string = pydantic_object.model_dump_json()
+
+# CORRECT - If you need a dictionary from JSON string
+doc = json.loads(pydantic_object.model_dump_json())
+```
+
+2. **Use model_config instead of Config class**
+```python
+# INCORRECT - Old style Config class
+class OldModel(BaseModel):
+    name: str
+
+    class Config:
+        arbitrary_types_allowed = True
+
+# CORRECT - New style model_config
+class NewModel(BaseModel):
+    name: str
+
+    model_config = {"arbitrary_types_allowed": True}
+```
+
+3. **Prefer Field over field for defaults**
+```python
+from pydantic import BaseModel, Field
+
+class UserModel(BaseModel):
+    # Use Field with proper type annotation
+    name: str = Field(default="Anonymous")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 ```
 
 ## Common Commands
@@ -301,17 +396,108 @@ class MyArangoModel(IndalekoBaseModel):
 - Run GUI: `run_gui.bat` (or `./run_gui.sh`)
 
 ### Data Generator
-- Run synthetic data generator: `python -m data_generator.main_pipeline`
-- Check results in: `data_generator/results/`
-
-### Prompt Management
-- Test prompt optimization: `python test_prompt_manager.py`
-- The system integrates with the OpenAI connector
+- Run all data generator tests: `./tools/data_generator_enhanced/run_all_tests.sh`
+- Run individual generator tests: `./tools/data_generator_enhanced/run_*_tests.sh`
+- Run specific generator: `python -m tools.data_generator_enhanced.generate_data`
+- Run database integration tests: `python -m tools.data_generator_enhanced.testing.test_*_db_integration`
+- Check test status: `tools/data_generator_enhanced/TEST_STATUS.md`
+- Check implementation status: `tools/data_generator_enhanced/IMPLEMENTATION_STATUS.md`
 
 ## Best Practices
 
-### Error Handling
+### Code Verification and Testing
+
+**CRITICAL: Always test your code before committing**
+
+1. **Verify All Implementations**: Never claim that code works until you have tested it yourself
+   - Run every script you create at least once
+   - Test all code paths, not just the happy path
+   - Handle potential errors gracefully
+
+2. **Test Complex Systems End-to-End**:
+   - For multi-component systems like the ablation framework, test the entire flow
+   - Verify data is correctly generated, stored, and retrieved
+   - Confirm metrics are calculated correctly
+   - Check visualization and reporting functionality
+
+3. **Handle Large Codebase Challenges**:
+   - Run focused tests on components you're modifying
+   - Use small-scale test cases first before full-scale tests
+   - Create dedicated test scripts for complex functionality
+
 ```python
+# Example test harness pattern
+def test_component():
+    # Setup test data
+    test_data = generate_test_data()
+
+    # Run the component under test
+    result = component_function(test_data)
+
+    # Verify results
+    assert result.status == "success"
+    assert len(result.items) == len(test_data)
+
+    # Log verification
+    logger.info(f"Verified component with {len(test_data)} items")
+
+    return result
+
+# Always run your tests!
+if __name__ == "__main__":
+    test_result = test_component()
+    print(f"Test {'passed' if test_result else 'failed'}")
+```
+
+### Database Integration
+```python
+# Always test with real database connections
+def setup_db_connection(self):
+    try:
+        self.db_config = IndalekoDBConfig()
+        self.db = self.db_config.get_arangodb()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to connect to database: {e}")
+        return False
+
+# Use dictionary-style access for ArangoDB compatibility
+# CORRECT
+checksum_value = document["MD5"]
+# INCORRECT - will fail with dictionaries
+checksum_value = document.MD5
+
+# Create proper semantic attributes as dictionaries
+attribute = {
+    "Identifier": {
+        "Identifier": SEMANTIC_ATTRIBUTE_ID,
+        "Label": "Attribute Label"
+    },
+    "Value": attribute_value
+}
+```
+
+### Error Handling and Fail-Stop Approach
+
+Indaleko uses a strict fail-stop approach for critical errors:
+
+```python
+import sys
+
+# CRITICAL ERRORS: Use sys.exit(1) for immediate termination
+def critical_operation():
+    """Operation that must succeed or the program cannot continue."""
+    try:
+        result = risky_but_essential_operation()
+        if not result:
+            logger.error("CRITICAL: Essential operation failed")
+            sys.exit(1)  # Exit immediately with error status
+        return result
+    except Exception as e:
+        logger.error(f"CRITICAL: Fatal error in essential operation: {e}")
+        sys.exit(1)  # Exit immediately with error status
+
+# NON-CRITICAL ERRORS: Use exceptions for recoverable issues
 try:
     result = risky_operation()
 except (ValueError, KeyError) as e:
@@ -319,14 +505,51 @@ except (ValueError, KeyError) as e:
     raise IndalekoProcessingError(f"Data processing failed: {str(e)}") from e
 ```
 
+#### When to Use Fail-Stop
+- For validation errors that would lead to corrupted data
+- For essential infrastructure components (database connection, file system)
+- When continuing would produce meaningless or incorrect results
+- When the same error will occur repeatedly in a loop
+
+#### When Not to Use Fail-Stop
+- For recoverable errors where alternate flows exist
+- For expected error conditions that can be handled
+- In library code called by other components
+- During data import where partial success is acceptable
+
 ### ArangoDB Cursor Handling
-Always fully consume ArangoDB cursors by converting them to lists before serialization:
+ArangoDB cursors should be handled carefully, especially with large result sets:
+
 ```python
+# For small result sets, fully consume the cursor
 if isinstance(results, Cursor):
     result_list = [doc for doc in results]  # Convert cursor to list
     result_data["results"] = result_list
 else:
     result_data["results"] = results
+```
+
+For large collections (like ActivityContext with 1M+ documents):
+```python
+# Process cursor in batches with a batch_size parameter
+cursor = db.aql.execute(query, bind_vars=params, batch_size=1000)
+
+# Option 1: Cap maximum results to avoid memory issues
+results = []
+max_results = 10000
+for doc in cursor:
+    results.append(doc)
+    if len(results) >= max_results:
+        logging.info(f"Reached maximum result count of {max_results}")
+        break
+
+# Option 2: Process results in batches without storing everything
+processed = 0
+for doc in cursor:
+    process_document(doc)  # Process each document individually
+    processed += 1
+    if processed % 10000 == 0:
+        logging.info(f"Processed {processed} documents...")
 ```
 
 ### Entity Lookups
@@ -342,6 +565,18 @@ cursor = db.aql.execute(
     """,
     bind_vars={"frn": file_reference_number, "volume": volume_guid}
 )
+```
+
+When performing lookups for ablation testing:
+```python
+# For ablation tests, remember we're replacing small LIMIT values with larger ones
+# This means single entity lookups should still use LIMIT 1
+# But aggregation queries should use larger values or sampling
+
+# When testing, log AQL transformations
+logging.info(f"Original query: {aql_query}")
+transformed_query = re.sub(r'LIMIT\s+\d+', increase_limit_function, aql_query)
+logging.info(f"Transformed query: {transformed_query}")
 ```
 
 ### Logging
@@ -368,3 +603,44 @@ def main() -> None:
 ```
 
 See `NTFS_ACTIVITY_CLI_README.md` for details.
+
+## Experimental Code
+
+Indaleko uses the `scratch/` directory for experimental code and prototypes. This provides a safe space to try new approaches without affecting the main codebase.
+
+### Using the Scratch Directory
+
+1. **Purpose**: Use `scratch/` for rapid prototyping and experimentation
+2. **Integration**: Move stable code from `scratch/` to main codebase when ready
+3. **Independence**: Design experiments to run standalone first
+
+```python
+# Good pattern for experimental code
+if __name__ == "__main__":
+    # Setup standalone test environment
+    setup_test_data()
+
+    # Run the experiment
+    result = experimental_function()
+
+    # Report results
+    print(f"Experiment results: {result}")
+```
+
+### Current Experimental Projects
+
+1. **LLM Query Generation** (`scratch/llm_query_generation/`)
+   - Enhanced query diversity experiments
+   - Direct LLM connectors without full infrastructure
+   - Jaro-Winkler analysis for query diversity
+   - Semantic matching algorithms
+
+2. **Query Matching Results** (`scratch/query_matching_results/`)
+   - Experimental matching algorithms
+   - Performance testing for different query strategies
+   - Analysis of query precision/recall with minimal infrastructure
+
+3. **Adapting Experimental Code**
+   - Get experimental code working in isolation first
+   - Use imports/try-except to integrate with main code
+   - Clearly comment experimental status

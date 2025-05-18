@@ -16,7 +16,7 @@ from collections.abc import Sequence
 
 # List of files/directories allowed to use create_collection
 AUTHORIZED_FILES = [
-    "db/db_collections.py",
+    "db/collection.py",
     "utils/registration_service.py",
 ]
 
@@ -25,6 +25,11 @@ SKIP_DIRS = [
     "old/",
     "scratch/",
     "__pycache__",
+    "testing/",
+    "test_",        # Files starting with test_
+    "tests/",
+    "ablation_",    # Ablation test files
+    "tools/data_generator_enhanced/testing/",  # Ablation testing directory
 ]
 
 

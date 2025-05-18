@@ -467,6 +467,85 @@ class FileMetadataGeneratorTool(Tool):
             "count": len(records)
         }
 
+    def _generate_semantic_attributes(self, file_path: str, file_name: str, file_size: int) -> List[Any]:
+        """Generate semantic attributes for a file.
+        
+        Args:
+            file_path: File path
+            file_name: File name
+            file_size: File size
+            
+        Returns:
+            List of semantic attributes
+        """
+        semantic_attributes = []
+        
+        # Add file name attribute
+        file_name_attr = self.SemanticAttributeDataModel(
+            Identifier=SemanticAttributeRegistry.get_attribute_id(
+                SemanticAttributeRegistry.DOMAIN_STORAGE, "FILE_NAME"),
+            Value=file_name
+        )
+        semantic_attributes.append(file_name_attr)
+        
+        # Add file path attribute
+        file_path_attr = self.SemanticAttributeDataModel(
+            Identifier=SemanticAttributeRegistry.get_attribute_id(
+                SemanticAttributeRegistry.DOMAIN_STORAGE, "FILE_PATH"),
+            Value=file_path
+        )
+        semantic_attributes.append(file_path_attr)
+        
+        # Add file size attribute
+        file_size_attr = self.SemanticAttributeDataModel(
+            Identifier=SemanticAttributeRegistry.get_attribute_id(
+                SemanticAttributeRegistry.DOMAIN_STORAGE, "FILE_SIZE"),
+            Value=file_size
+        )
+        semantic_attributes.append(file_size_attr)
+        
+        # Add file extension attribute if available
+        if "." in file_name:
+            extension = file_name.split(".")[-1]
+            file_ext_attr = self.SemanticAttributeDataModel(
+                Identifier=SemanticAttributeRegistry.get_attribute_id(
+                    SemanticAttributeRegistry.DOMAIN_STORAGE, "FILE_EXTENSION"),
+                Value=extension
+            )
+            semantic_attributes.append(file_ext_attr)
+            
+            # Add MIME type as a semantic attribute
+            mime_types = {
+                "txt": "text/plain",
+                "pdf": "application/pdf",
+                "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                "jpg": "image/jpeg",
+                "png": "image/png",
+                "mp4": "video/mp4",
+                "mp3": "audio/mpeg",
+                "zip": "application/zip",
+                "html": "text/html",
+                "css": "text/css",
+                "js": "application/javascript",
+                "json": "application/json",
+                "xml": "application/xml",
+                "md": "text/markdown",
+                "csv": "text/csv"
+            }
+            
+            extension_lower = extension.lower()
+            if extension_lower in mime_types:
+                mime_attr = self.SemanticAttributeDataModel(
+                    Identifier=SemanticAttributeRegistry.get_attribute_id(
+                        SemanticAttributeRegistry.DOMAIN_SEMANTIC, "MIME_TYPE"),
+                    Value=mime_types[extension_lower]
+                )
+                semantic_attributes.append(mime_attr)
+        
+        return semantic_attributes
+
     def _generate_file_model(self, extension: str = None, path_prefix: str = "",
                            name_pattern: str = "", size_range: List[int] = None,
                            criteria: Dict[str, Any] = None) -> Any:
@@ -597,7 +676,11 @@ class FileMetadataGeneratorTool(Tool):
         windows_attr = random.choice(self.windows_file_attributes)
 
         # Generate semantic attributes
-        semantic_attributes = []
+        semantic_attributes = self._generate_semantic_attributes(
+            file_path=path,
+            file_name=name,
+            file_size=size
+        )
 
         # Generate local identifier (inode or equivalent)
         local_id = random.randint(10000000, 9999999999)

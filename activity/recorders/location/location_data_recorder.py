@@ -42,8 +42,6 @@ from activity.characteristics import ActivityDataCharacteristics
 from activity.collectors.base import CollectorBase
 from activity.data_model.activity import IndalekoActivityDataModel
 from activity.recorders.base import RecorderBase
-
-# from activity.collectors.location
 from activity.semantic_attributes import KnownSemanticAttributes
 from data_models.location_data_model import BaseLocationDataModel
 from data_models.record import IndalekoRecordDataModel
@@ -52,6 +50,7 @@ from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from db import IndalekoCollection
 from db.utils.query_performance import timed_aql_execute
 from utils.misc.data_management import encode_binary_data
+
 
 # pylint: enable=wrong-import-position
 

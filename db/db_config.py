@@ -107,6 +107,9 @@ class IndalekoDBConfig(IndalekoSingleton):
         self.collections = {}
         if start:
             self.started = self.start()
+        from db.i_collections import IndalekoCollections
+        self.collections = IndalekoCollections()
+
 
     def get_arangodb(self) -> ArangoClient:
         """Get the ArangoDB client."""
@@ -130,13 +133,17 @@ class IndalekoDBConfig(IndalekoSingleton):
             self.collections[collection_name] = collection
         return self.collections[collection_name]
 
-    def start(self, timeout: int = 60) -> bool:
+    def start(self, timeout: int = 60, reset: bool = False) -> bool:
         """
         Start the database connection.
 
         Once the container is running, this method will set up connections to
         the database and configure it if needed
         """
+        if reset:
+            self.started = False
+            self.client.close()
+            ic("closed client connetion")
         if self.started:
             return True
         web_service_name = "http"
@@ -588,13 +595,6 @@ def setup_command(args: argparse.Namespace) -> None:
         return
     logging.info("Database connection successful")
 
-    def __setup_db():
-        from i_collections import IndalekoCollections
-
-        IndalekoCollections()
-
-    __setup_db()
-
 
 def docker_reset() -> None:
     """This resets the docker container and volume"""
@@ -658,7 +658,6 @@ def reset_command(args: argparse.Namespace) -> None:
             IndalekoDBConfig.default_db_config_file,
             IndalekoDBConfig.default_db_config_file + ".bak",
         )
-        config = IndalekoDBConfig()
     setup_command(args)
 
 

@@ -79,7 +79,8 @@ class AQLExecutor(ExecutorBase):
             list[dict[str, Any]], dict[str, Any] | FormattedResults
                 - The query results (when explain=False, deduplicate=False)
                 - The query execution plan (when explain=True)
-                - A FormattedResults object with deduplicated results (when explain=False, deduplicate=True)
+                - A FormattedResults object with deduplicated
+                  results (when explain=False, deduplicate=True)
         """
         assert isinstance(
             data_connector,

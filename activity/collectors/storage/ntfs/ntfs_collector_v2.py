@@ -61,94 +61,45 @@ import sys
 import threading
 import time
 import uuid
+
 from ctypes import wintypes
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from icecream import ic
 
-# Set up environment
+
+# Handle imports for when the module is run directly
 if os.environ.get("INDALEKO_ROOT") is None:
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
-        current_path = os.path.dirname(current_path)
-    os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
 
 # Check Windows availability and import Windows-specific modules if possible
-WINDOWS_AVAILABLE = sys.platform.startswith("win")
+if not sys.platform.startswith("win") and __name__ == "__main__":
+    raise RuntimeError("This module is only supported on Windows platforms")
 
 # pylint: disable=wrong-import-position
 # Import basic modules that are platform-agnostic
 # Import storage activity models
-from activity.collectors.storage.data_models.storage_activity_data_model import (  # noqa: E402
+# Only import Windows-specific base class if on Windows
+from activity.collectors.storage.base import WindowsStorageActivityCollector
+from activity.collectors.storage.data_models.storage_activity_data_model import (
     NtfsStorageActivityData,
     StorageActivityType,
     StorageItemType,
     StorageProviderType,
 )
 
-# No longer needed: from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 # Import machine config for cli handling
-from platforms.machine_config import IndalekoMachineConfig  # noqa: E402
-from utils.cli.base import IndalekoBaseCLI  # noqa: E402
-from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel  # noqa: E402
-from utils.cli.runner import IndalekoCLIRunner  # noqa: E402
-
-# Only import Windows-specific base class if on Windows
-if WINDOWS_AVAILABLE:
-    from activity.collectors.storage.base import WindowsStorageActivityCollector
-
-    # Performance mixin removed to avoid multiple inheritance issues
-else:
-    # Create mock classes for help/argument parsing on non-Windows platforms
-    class WindowsStorageActivityCollector:
-        """Placeholder base class for non-Windows platforms."""
-
-        def __init__(self, **kwargs):
-            # Store kwargs for potential use
-            self._kwargs = kwargs
-
-            # Initialize basic attributes
-            self._activities = []
-            self._logger = logging.getLogger("MockWindowsStorageActivityCollector")
-            self._name = kwargs.get("name", "Mock Windows Storage Activity Collector")
-            self._provider_id = kwargs.get("provider_id", uuid.uuid4())
-            self._description = kwargs.get(
-                "description",
-                "Mock Windows Storage Activity Collector",
-            )
-            self._active = False
-            self._volume_handles = {}
-            self._stop_event = threading.Event()
-
-        def start_monitoring(self):
-            """Mock implementation."""
-            self._active = True
-
-        def stop_monitoring(self):
-            """Mock implementation."""
-            self._active = False
-
-        def get_activities(self):
-            """Return an empty list."""
-            return self._activities
-
-        def add_activity(self, activity):
-            """Add an activity to the collection."""
-            self._activities.append(activity)
-
-        def perf_context(self, context_name):
-            """Mock context manager."""
-
-            class MockContext:
-                def __enter__(self):
-                    return self
-
-                def __exit__(self, exc_type, exc_val, exc_tb):
-                    pass
-
-            return MockContext()
+from platforms.machine_config import IndalekoMachineConfig  # noqa: TC001
+from platforms.windows.machine_config import IndalekoWindowsMachineConfig
+from utils.cli.base import IndalekoBaseCLI
+from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
+from utils.cli.runner import IndalekoCLIRunner
 
 
 # pylint: enable=wrong-import-position
@@ -207,7 +158,8 @@ ATTRIBUTE_FLAGS = {
 
 # Define USN_JOURNAL_DATA structure
 class USN_JOURNAL_DATA(ctypes.Structure):
-    _fields_ = [
+    """Format of the USN Journal Data structure (externally defined)."""
+    _fields_ = [  # noqa: RUF012
         ("UsnJournalID", ctypes.c_ulonglong),  # 64-bit unsigned
         ("FirstUsn", ctypes.c_longlong),  # 64-bit signed
         ("NextUsn", ctypes.c_longlong),
@@ -231,8 +183,9 @@ class READ_USN_JOURNAL_DATA(ctypes.Structure):
 
 
 # Define USN_RECORD structure
-class USN_RECORD(ctypes.Structure):
-    _fields_ = [
+class USN_RECORD(ctypes.Structure):  # noqa: N801
+    """Format of the USN Record structure (externally defined)."""
+    _fields_ = [  # noqa: RUF012
         ("RecordLength", wintypes.DWORD),
         ("MajorVersion", wintypes.WORD),
         ("MinorVersion", wintypes.WORD),
@@ -250,15 +203,12 @@ class USN_RECORD(ctypes.Structure):
     ]
 
 
-def is_admin():
+def is_admin() -> bool:
     """Check if the script is running with administrative privileges."""
-    try:
-        return ctypes.windll.shell32.IsUserAnAdmin() != 0
-    except Exception:
-        return False
+    return ctypes.windll.shell32.IsUserAnAdmin() != 0
 
 
-def filetime_to_datetime(filetime):
+def filetime_to_datetime(filetime: int) -> datetime:
     """Convert Windows FILETIME to Python datetime."""
     epoch_diff = 116444736000000000  # 100ns intervals from 1601 to 1970
     timestamp = (filetime - epoch_diff) / 10000000  # Convert to seconds
@@ -267,7 +217,7 @@ def filetime_to_datetime(filetime):
     return datetime.fromtimestamp(timestamp, tz=UTC)
 
 
-def get_volume_handle(volume_path):
+def get_volume_handle(volume_path: str | Path) -> wintypes.HANDLE:
     """
     Open a handle to the specified volume.
 
@@ -592,8 +542,6 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
         if self._debug:
             ic("\n==== NTFS Collector Debug Information ====")
             ic(f"Platform: {sys.platform}")
-            ic(f"Windows Available: {WINDOWS_AVAILABLE}")
-            ic(f"PyWin32 Available: {PYWIN32_AVAILABLE}")
             ic(f"Is Admin: {is_admin()}")
             ic(f"Using Volume GUIDs: {self._use_volume_guids}")
             ic(f"Volumes to Monitor: {self._volumes}")
@@ -1492,59 +1440,26 @@ class NtfsStorageActivityCollectorV2(WindowsStorageActivityCollector):
         return None
 
 
-def main():
+def main() -> None:
     """The CLI handler for the NTFS storage activity collector."""
-    try:
-        # Don't attempt to import Windows-specific modules if we're just showing help
-        if "--help" in sys.argv or "-h" in sys.argv:
-            # For help command, use a generic machine config
-            from platforms.machine_config import IndalekoMachineConfig
+    # Don't attempt to import Windows-specific modules if we're just showing help
+    # Create the CLI runner
+    cli_runner = IndalekoCLIRunner(
+        cli_data=IndalekoBaseCliDataModel(
+            RegistrationServiceName=NtfsStorageActivityCollectorV2.get_collector_service_registration_name(),
+            FileServiceName=NtfsStorageActivityCollectorV2.get_collector_service_file_name(),
+        ), # type: ignore  # noqa: PGH003
+        handler_mixin=NtfsStorageActivityCollectorV2.get_collector_cli_handler_mixin(), # type: ignore
+        features=IndalekoBaseCLI.cli_features(input=False),
+        Run=NtfsStorageActivityCollectorV2.ntfs_run, # type: ignore  # noqa: PGH003
+        RunParameters={
+            "CollectorClass": NtfsStorageActivityCollectorV2,
+            "MachineConfigClass": IndalekoWindowsMachineConfig,
+        },
+    )
 
-            MachineConfigClass = IndalekoMachineConfig
-        else:
-            # For actual operation, check platform
-            if not WINDOWS_AVAILABLE:
-                ic("USN Journal data collection only works on Windows platforms.")
-                ic(
-                    "This script can show help on any platform, but requires Windows to actually run.",
-                )
-                sys.exit(1)
-
-            # Make sure pywin32 is available
-            if not PYWIN32_AVAILABLE:
-                ic(
-                    "This script requires pywin32. Please install it with 'pip install pywin32'",
-                )
-                sys.exit(1)
-
-            # Now it's safe to import Windows-specific modules
-            from platforms.windows.machine_config import IndalekoWindowsMachineConfig
-
-            MachineConfigClass = IndalekoWindowsMachineConfig
-
-        # Create the CLI runner
-        cli_runner = IndalekoCLIRunner(
-            cli_data=IndalekoBaseCliDataModel(
-                RegistrationServiceName=NtfsStorageActivityCollectorV2.get_collector_service_registration_name(),
-                FileServiceName=NtfsStorageActivityCollectorV2.get_collector_service_file_name(),
-            ),
-            handler_mixin=NtfsStorageActivityCollectorV2.get_collector_cli_handler_mixin(),
-            features=IndalekoBaseCLI.cli_features(input=False),
-            Run=NtfsStorageActivityCollectorV2.ntfs_run,
-            RunParameters={
-                "CollectorClass": NtfsStorageActivityCollectorV2,
-                "MachineConfigClass": MachineConfigClass,
-            },
-        )
-
-        # Run the CLI runner
-        cli_runner.run()
-    except Exception as e:
-        ic(f"Error running NTFS collector: {e}")
-        import traceback
-
-        traceback.print_exc()
-        sys.exit(1)
+    # Run the CLI runner
+    cli_runner.run()
 
 
 if __name__ == "__main__":

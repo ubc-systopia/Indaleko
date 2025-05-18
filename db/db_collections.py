@@ -32,7 +32,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
     while not (Path(current_path) / "Indaleko.py").exists():
         current_path = Path(current_path).parent
     os.environ["INDALEKO_ROOT"] = str(current_path)
-    sys.path.append(str(current_path))
+    sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
 from activity.context.data_models.context_data_model import (
@@ -52,6 +52,12 @@ from data_models import (
     IndalekoUserDataModel,
 )
 from data_models.named_entity import IndalekoNamedEntityDataModel
+from research.ablation.models.collaboration_activity import CollaborationActivity
+from research.ablation.models.location_activity import LocationActivity
+from research.ablation.models.media_activity import MediaActivity
+from research.ablation.models.music_activity import MusicActivity
+from research.ablation.models.storage_activity import StorageActivity
+from research.ablation.models.task_activity import TaskActivity
 from semantic.data_models.base_data_model import BaseSemanticDataModel
 
 # Import the Archivist memory model if available
@@ -150,6 +156,20 @@ class IndalekoDBCollections:
     Indaleko_Prompt_Cache_Text_View = "PromptCacheTextView"
     Indaleko_Prompt_Archive_Text_View = "PromptArchiveTextView"
     Indaleko_Prompt_Metrics_Text_View = "PromptMetricsTextView"
+
+    # Ablation study collections (activity)
+    Indaleko_Ablation_Music_Activity_Collection = "AblationMusicActivity"
+    Indaleko_Ablation_Location_Activity_Collection = "AblationLocationActivity"
+    Indaleko_Ablation_Task_Activity_Collection = "AblationTaskActivity"
+    Indaleko_Ablation_Collaboration_Activity_Collection = "AblationCollaborationActivity"
+    Indaleko_Ablation_Storage_Activity_Collection = "AblationStorageActivity"
+    Indaleko_Ablation_Media_Activity_Collection = "AblationMediaActivity"
+
+    Indaleko_Ablation_Query_Truth_Collection = "AblationQueryTruth"
+    Indaleko_Ablation_Results_Collection = "AblationResults"
+    Indaleko_Ablation_Test_Metadata_Collection = "AblationTestMetadata"
+
+
 
     Collections = {  # noqa: RUF012
         Indaleko_Object_Collection: {
@@ -636,6 +656,244 @@ class IndalekoDBCollections:
                     "stored_values": ["_key", "prompt_hash", "score", "timestamp"],
                 },
             ],
+        },
+        Indaleko_Ablation_Music_Activity_Collection : {
+            "internal": False,
+            "schema": MusicActivity.get_arangodb_schema(),
+            "edge": False,
+            "indices": {
+                "created_at": {
+                    "fields": ["created_at"],
+                    "unique": False,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+                "id": {
+                    "fields": ["id"],
+                    "unique": False,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+                "activity_type": {
+                    "fields": ["activity_type"],
+                    "unique": False,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+            },
+        },
+        Indaleko_Ablation_Location_Activity_Collection : {
+            "internal": False,
+            "schema": LocationActivity.get_arangodb_schema(),
+            "edge": False,
+            "indices": {
+                "created_at": {
+                    "fields": ["created_at"],
+                    "unique": False,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+                "id": {
+                    "fields": ["id"],
+                    "unique": False,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+                "activity_type": {
+                    "fields": ["activity_type"],
+                    "unique": False,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+            },
+        },
+        Indaleko_Ablation_Task_Activity_Collection : {
+            "internal": False,
+            "schema": TaskActivity.get_arangodb_schema(),
+            "edge": False,
+            "indices": {
+                "created_at": {
+                    "fields": ["created_at"],
+                    "unique": False,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+                "id": {
+                    "fields": ["id"],
+                    "unique": False,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+                "activity_type": {
+                    "fields": ["activity_type"],
+                    "unique": False,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+            },
+        },
+        Indaleko_Ablation_Collaboration_Activity_Collection : {
+            "internal": False,
+            "schema": CollaborationActivity.get_arangodb_schema(),
+            "edge": False,
+            "indices": {
+                "created_at": {
+                    "fields": ["created_at"],
+                    "unique": False,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+                "id": {
+                    "fields": ["id"],
+                    "unique": False,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+                "activity_type": {
+                    "fields": ["activity_type"],
+                    "unique": False,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+                "platform": {
+                    "fields": ["platform"],
+                    "unique": False,
+                    "type": "hash",
+                },
+                "event_type": {
+                    "fields": ["event_type"],
+                    "unique": False,
+                    "type": "hash",
+                },
+                "source": {
+
+                },
+                "participants": {
+                    "fields": ["participants[*].name"],
+                    "unique": False,
+                    "sparse": True,
+                    "type": "persistent",
+                }
+            },
+        },
+        Indaleko_Ablation_Storage_Activity_Collection : {
+            "internal": False,
+            "schema": StorageActivity.get_arangodb_schema(),
+            "edge": False,
+            "indices": {
+                "created_at": {
+                    "fields": ["created_at"],
+                    "unique": False,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+                "id": {
+                    "fields": ["id"],
+                    "unique": False,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+                "activity_type": {
+                    "fields": ["activity_type"],
+                    "unique": False,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+            },
+        },
+        Indaleko_Ablation_Media_Activity_Collection : {
+            "internal": False,
+            "schema": MediaActivity.get_arangodb_schema(),
+            "edge": False,
+            "indices": {
+                "created_at": {
+                    "fields": ["created_at"],
+                    "unique": False,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+                "id": {
+                    "fields": ["id"],
+                    "unique": False,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+                "activity_type": {
+                    "fields": ["activity_type"],
+                    "unique": False,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+            },
+        },
+        Indaleko_Ablation_Query_Truth_Collection : {
+            "internal": True,
+            "schema": {},
+            "edge": False,
+            "indices": {
+                "query_id": {
+                    "fields": ["query_id"],
+                    "unique": True,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+                "activity_types": {
+                    "fields": ["activity_types"],
+                    "unique": False,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+            },
+        },
+        Indaleko_Ablation_Results_Collection : {
+            "internal": True,
+            "schema": {},
+            "edge": False,
+            "indices": {
+                "query_id": {
+                    "fields": ["query_id"],
+                    "unique": False,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+                "ablated_collection": {
+                    "fields": ["test_name"],
+                    "unique": False,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+                "combined": {
+                    "fields": ["query_id", "ablated_collection"],
+                    "unique": True,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+            }
+        },
+        Indaleko_Ablation_Test_Metadata_Collection : {
+            "internal": True,
+            "schema": {},
+            "edge": False,
+            "indices": {
+                "test_id": {
+                    "fields": ["test_id"],
+                    "unique": True,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+                "test_name": {
+                    "fields": ["test_name"],
+                    "unique": False,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+                "timestamp": {
+                    "fields": ["timestamp"],
+                    "unique": False,
+                    "sparse" : False,
+                    "type": "persistent",
+                },
+            },
         },
     }
 

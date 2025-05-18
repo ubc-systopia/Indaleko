@@ -22,14 +22,12 @@ import argparse
 import configparser
 import os
 import sys
-
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from arango.aql import AQLQueryExplainError
 from icecream import ic
-
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -79,7 +77,6 @@ from query.utils.llm_connector.openai_connector import OpenAIConnector
 from utils.cli.base import IndalekoBaseCLI
 from utils.cli.data_models.cli_data import IndalekoBaseCliDataModel
 
-
 # Import Query Context Integration components
 try:
     from query.context.activity_provider import QueryActivityProvider
@@ -128,9 +125,7 @@ except ImportError:
 
 # Import analytics integration
 try:
-    from query.analytics_integration import (
-        register_analytics_commands,
-    )
+    from query.analytics_integration import register_analytics_commands
 
     HAS_ANALYTICS = True
 except ImportError:
@@ -391,9 +386,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 help="Enable analytics capabilities for file statistics",
             )
             args = parser.parse_known_args()
-            if (len(args[1]) == 1 and
-                Path(args[1][0]).exists() and
-                Path(args[1][0]).is_file()):
+            if len(args[1]) == 1 and Path(args[1][0]).exists() and Path(args[1][0]).is_file():
                 # If only one argument is passed and it is a file
                 # if it is, this is a batch request.
                 parser.add_argument(
@@ -401,8 +394,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                     nargs=1,
                     type=Path,
                     default=Path(args[1][0]),
-                    help="Input file containing queries to process (one per line)."
-                    " Runs in batch mode.",
+                    help="Input file containing queries to process (one per line). Runs in batch mode.",
                 )
             else:
                 # Add interactive only options
@@ -511,10 +503,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 
         # Initialize Semantic Performance Monitoring
         self.semantic_performance_integration = None
-        if HAS_SEMANTIC_PERFORMANCE and hasattr(
-            self.args,
-            "semantic_performance"
-        ) and self.args.semantic_performance:
+        if HAS_SEMANTIC_PERFORMANCE and hasattr(self.args, "semantic_performance") and self.args.semantic_performance:
             self.semantic_performance_integration = register_semantic_performance_cli(
                 self,
             )
@@ -552,7 +541,6 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 self.query_path_visualizer = QueryPathVisualizer(
                     debug=hasattr(self.args, "debug") and self.args.debug,
                 )
-
 
         # Initialize Analytics Integration
         self.analytics_integration = None
@@ -806,9 +794,13 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 
                     # Handle Query Pattern Analysis commands
                     elif user_query.startswith("/patterns"):
-                        if hasattr(self,
-                                   "query_pattern_integration",
-                                   ) and self.query_pattern_integration:
+                        if (
+                            hasattr(
+                                self,
+                                "query_pattern_integration",
+                            )
+                            and self.query_pattern_integration
+                        ):
                             command_parts = user_query.split(maxsplit=1)
                             args = command_parts[1].split() if len(command_parts) > 1 else []
                             result = self.query_pattern_integration.handle_patterns_command(
@@ -819,13 +811,10 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 
                     # Handle Fire Circle commands
                     elif user_query.startswith(("/firecircle", "/fc")):
-                        if hasattr(
-                            self,
-                            "fire_circle_integration") and self.fire_circle_integration:
+                        if hasattr(self, "fire_circle_integration") and self.fire_circle_integration:
                             # The Fire Circle CLI integration handles its own command parsing
                             self.fire_circle_integration._handle_firecircle_command(
-                                (user_query.split(maxsplit=1)[1]
-                                 if len(user_query.split()) > 1 else ""),
+                                (user_query.split(maxsplit=1)[1] if len(user_query.split()) > 1 else ""),
                             )
 
                     # Handle Query Context commands
@@ -1011,9 +1000,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
 
                 # Use the categories to obtain the metadata attributes
                 # of the corresponding collection
-                collection_categories = [
-                    entity.collection for entity in parsed_query.Categories.category_map
-                ]
+                collection_categories = [entity.collection for entity in parsed_query.Categories.category_map]
                 collection_metadata = self.get_collection_metadata(
                     collection_categories,
                 )
@@ -1021,9 +1008,13 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 # Let's get the index data
                 indices = {}
                 for category in collection_categories:
-                    collection_indices = self.db_config.get_arangodb().collection(
-                        category,
-                    ).indexes()
+                    collection_indices = (
+                        self.db_config.get_arangodb()
+                        .collection(
+                            category,
+                        )
+                        .indexes()
+                    )
                     for index in collection_indices:
                         if category not in indices:
                             indices[category] = []
@@ -1073,8 +1064,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             except AQLQueryExplainError as err:
                 # seen it happen for collections that exist!
                 explain_results = None
-                ic('explain_query failure', err)
-
+                ic("explain_query failure", err)
 
             # Execute the query or only display the execution plan
             if hasattr(self.args, "explain") and self.args.explain:
@@ -1252,8 +1242,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                 )
 
             # Record query results with Knowledge Base if enabled
-            if hasattr(self.args, "kb") and self.args.kb and hasattr(
-                self, "kb_integration") and self.kb_integration:
+            if hasattr(self.args, "kb") and self.args.kb and hasattr(self, "kb_integration") and self.kb_integration:
                 # Prepare result info for KB
                 result_info = {
                     "count": 0,
@@ -1372,9 +1361,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         entity_mappings = self.map_entities(parsed_query.Entities)
 
         # Use the categories to obtain the metadata attributes
-        collection_categories = [
-            entity.collection for entity in parsed_query.Categories.category_map
-        ]
+        collection_categories = [entity.collection for entity in parsed_query.Categories.category_map]
 
         # Get collection metadata
         collection_metadata = self.get_collection_metadata(collection_categories)
@@ -1383,9 +1370,13 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         indices = {}
         for category in collection_categories:
             try:
-                collection_indices = self.db_config.get_arangodb().collection(
-                    category,
-                ).indexes()
+                collection_indices = (
+                    self.db_config.get_arangodb()
+                    .collection(
+                        category,
+                    )
+                    .indexes()
+                )
 
                 for index in collection_indices:
                     if category not in indices:
@@ -1405,8 +1396,8 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                         indices[category].append(
                             IndalekoCollectionIndexDataModel(**kwargs),
                         )
-            except (GeneratorExit , RecursionError , MemoryError , NotImplementedError ) as e:
-                ic(f"Error getting indices for {category}: {str(e)}")
+            except (GeneratorExit, RecursionError, MemoryError, NotImplementedError) as e:
+                ic(f"Error getting indices for {category}: {e!s}")
 
         # Create structured query
         structured_query = StructuredQuery(
@@ -1659,7 +1650,6 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
                         else:
                             str(value)
 
-
                 # Display facets with interactive options if enabled
                 option_count = 1
                 for facet in facets.facets:
@@ -1782,6 +1772,224 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
         return schema
 
 
+def add_arguments(parser) -> None:
+    """Add arguments to the parser."""
+    # Global options
+    parser.add_argument(
+        "--explain",
+        action="store_true",
+        help="Explain query execution plans instead of executing queries",
+    )
+    parser.add_argument(
+        "--show-plan",
+        action="store_true",
+        help="Show query execution plan before executing the query",
+    )
+    parser.add_argument(
+        "--perf",
+        action="store_true",
+        help="Collect and display performance metrics for query execution",
+    )
+    parser.add_argument(
+        "--all-plans",
+        action="store_true",
+        help="Show all possible execution plans when using --explain or --show-plan",
+    )
+    parser.add_argument(
+        "--max-plans",
+        type=int,
+        default=5,
+        help="Maximum number of plans to show when using --all-plans (default: 5)",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Show detailed execution plan information including all plan nodes",
+    )
+    parser.add_argument(
+        "--deduplicate",
+        action="store_true",
+        help="Enable deduplication of similar results using Jaro-Winkler similarity",
+    )
+    parser.add_argument(
+        "--similarity-threshold",
+        type=float,
+        default=0.85,
+        help="Threshold for considering items as duplicates (0.0-1.0, default: 0.85)",
+    )
+    parser.add_argument(
+        "--show-duplicates",
+        action="store_true",
+        help="Show duplicate items in results when using --deduplicate",
+    )
+    parser.add_argument(
+        "--dynamic-facets",
+        action="store_true",
+        help="Enable enhanced dynamic facets for result exploration",
+    )
+    parser.add_argument(
+        "--conversational",
+        action="store_true",
+        help="Enable conversational suggestions for search refinement",
+    )
+    parser.add_argument(
+        "--interactive",
+        action="store_true",
+        help="Enable interactive facet refinement mode",
+    )
+    parser.add_argument(
+        "--no-color",
+        action="store_true",
+        help="Disable colorized output for query plans and other displays",
+    )
+    parser.add_argument(
+        "--enhanced-nl",
+        action="store_true",
+        help="Use enhanced natural language understanding for queries",
+    )
+    parser.add_argument(
+        "--context-aware",
+        action="store_true",
+        help="Enable context-aware queries using query history",
+    )
+    parser.add_argument(
+        "--archivist",
+        action="store_true",
+        help="Enable the Archivist memory system for maintaining context across sessions",
+    )
+    parser.add_argument(
+        "--optimizer",
+        action="store_true",
+        help="Enable the database optimizer for analyzing and improving query performance",
+    )
+    parser.add_argument(
+        "--proactive",
+        action="store_true",
+        help="Enable proactive suggestions based on patterns and context",
+    )
+    parser.add_argument(
+        "--kb",
+        "--knowledge-base",
+        action="store_true",
+        help="Enable Knowledge Base features for learning from interactions",
+    )
+    parser.add_argument(
+        "--fc",
+        "--fire-circle",
+        action="store_true",
+        help="Enable Fire Circle features with specialized entity roles",
+    )
+    parser.add_argument(
+        "--semantic-performance",
+        action="store_true",
+        help="Enable semantic performance monitoring features",
+    )
+    parser.add_argument(
+        "--query-patterns",
+        action="store_true",
+        help="Enable advanced query pattern analysis and suggestions",
+    )
+    parser.add_argument(
+        "--query-context",
+        action="store_true",
+        help="Enable Query Context Integration for recording queries as activities",
+    )
+    parser.add_argument(
+        "--query-visualization",
+        action="store_true",
+        help="Enable visualization of query paths and relationships",
+    )
+    parser.add_argument(
+        "--analytics",
+        action="store_true",
+        help="Enable analytics capabilities for file statistics",
+    )
+
+    # Add direct file input option
+    parser.add_argument(
+        "input_file",
+        nargs="?",
+        help="Optional input file containing queries to process (one per line). If provided, runs in batch mode.",
+    )
+
+    # Add backward compatibility for the batch command
+    subparsers = parser.add_subparsers(
+        dest="command",
+        help="Mode to run the script (batch or interactive)",
+    )
+    subparsers.add_parser("interactive", help="Run the query tool in interactive mode")
+    batch_parser = subparsers.add_parser(
+        "batch",
+        help="Run the query tool in batch mode",
+    )
+    batch_parser.add_argument(
+        "batch_input_file",
+        help="The file containing the batch input queries",
+    )
+    parser.set_defaults(command="interactive")
+
+
+def execute_query(query_text: str, capture_aql: bool = False) -> list[dict[str, Any]]:
+    """
+    Execute a single query and return the results.
+
+    This function is designed to be imported and used by other modules.
+
+    Args:
+        query_text: The natural language query text to execute
+        capture_aql: If True, include the AQL in the results
+
+    Returns:
+        List of result objects from the query
+    """
+    # Initialize components
+    db_config = IndalekoDBConfig()
+    use_enhanced_nl = True  # Default to enhanced NL parsing
+
+    # Choose NL parser
+    if use_enhanced_nl:
+        nl_parser = EnhancedNLParser()
+    else:
+        nl_parser = NLParser()
+
+    # Create translator
+    if use_enhanced_nl:
+        translator = EnhancedAQLTranslator()
+    else:
+        translator = AQLTranslator()
+
+    # Create executor
+    executor = AQLExecutor()
+
+    # Parse query
+    parser_results = nl_parser.parse_query(query_text)
+
+    # Create translator input
+    translator_input = TranslatorInput(
+        query=parser_results.structured_query,
+        collection_metadata={},  # Will be populated by translator
+    )
+
+    # Translate to AQL
+    translation_result = translator.translate(translator_input)
+
+    # Execute query
+    results = executor.execute(translation_result.query_text)
+
+    # If capturing AQL, attach it to the results
+    if capture_aql and results:
+        for result in results:
+            if not isinstance(result, dict):
+                continue
+
+            if "_debug" not in result:
+                result["_debug"] = {}
+
+            result["_debug"]["aql"] = translation_result.query_text
+
+    return results
+
+
 def main() -> None:
     """A CLI based query tool for Indaleko."""
     ic("Starting Indaleko Query CLI")
@@ -1790,10 +1998,9 @@ def main() -> None:
 
     IndalekoQueryCLI().run()
 
-
     # Only show exit message in interactive mode
     print("Thank you for using Indaleko Query CLI")  # noqa: T201
-    print("Have a lovely day!")   # noqa: T201
+    print("Have a lovely day!")  # noqa: T201
 
 
 if __name__ == "__main__":

@@ -55,7 +55,11 @@ dependencies = [
     "ruff>=0.6.9",
     "graphviz>=0.20.1",
     "pyreadline3>=3.5.4",
+    "pyreadline3>=3.5.4",
     "openai-agents-mcp>=0.0.8",
+    "seaborn>=0.13.2",
+    "anthropic>=0.51.0",
+    "google-genai>=1.14.0",
 ]
 
 requires-python = ">=3.12"

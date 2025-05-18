@@ -35,3 +35,5 @@ uv.lock
 ntfs-journal-output.txt
 benchmark_results
 benchmark_results/*
+
+**/CLAUDE.local.md
