@@ -66,7 +66,7 @@ class ActivityDataCharacteristics:
 
     _characteristic_prefix = "ACTIVITY_DATA_"
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the provider characteristics"""
         self.uuid_to_label = {}
         for label, value in ActivityDataCharacteristics.__dict__.items():

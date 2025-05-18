@@ -21,10 +21,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import sys
 import uuid
+
 from datetime import UTC, datetime
 from pathlib import Path
 
 from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -95,8 +97,6 @@ class WindowsGPSLocationRecorder(BaseLocationDataRecorder):
             "Record": IndalekoRecordDataModel(
                 SourceIdentifier=source_identifier,
                 Timestamp=datetime.now(UTC),
-                Attributes={},
-                Data="",
             ),
         }
         self.provider_registrar = IndalekoActivityDataRegistrationService()
