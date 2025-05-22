@@ -20,8 +20,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import sys
+
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -106,10 +108,12 @@ class IndalekoActivityDataRegistrationService(IndalekoRegistrationService):
 
     @staticmethod
     def lookup_provider_by_identifier(
-        identifier: str,
+        identifier: str | UUID,
     ) -> IndalekoActivityDataRegistrationDataModel | None:
         """Return the provider with the given identifier."""
         service = IndalekoActivityDataRegistrationService()
+        if isinstance(identifier, UUID):
+            identifier = str(identifier)
         provider = service.lookup_provider_by_identifier_internal(identifier)
         if provider is None:
             return None
@@ -138,8 +142,10 @@ class IndalekoActivityDataRegistrationService(IndalekoRegistrationService):
         return super().lookup_provider_by_name(name)
 
     @staticmethod
-    def lookup_activity_provider_collection(identifier: str) -> IndalekoCollection:
+    def lookup_activity_provider_collection(identifier: str | UUID) -> IndalekoCollection:
         """Lookup an activity provider collection."""
+        if isinstance(identifier, UUID):
+            identifier = str(identifier)
         return IndalekoActivityDataRegistrationService().lookup_provider_collection(
             identifier,
         )

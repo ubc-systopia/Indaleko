@@ -54,7 +54,6 @@ class IndalekoNamedEntityType(str, Enum):
     item = "item"
     keyword = "keyword"  # Added for query processing
 
-
 class IndalekoNamedEntityDataModel(IndalekoBaseModel):
     """Data model for named entities."""
     name: str
@@ -63,6 +62,7 @@ class IndalekoNamedEntityDataModel(IndalekoBaseModel):
     description: str | None = None
     gis_location: LocationDataModel | None = None  # GIS location for places
     device_id: UUID | None = None  # Device identifier for things
+    timestamp: datetime | None = None  # Timestamp for the entity
     aliases: list[str] | None = None  # Aliases for the entity
 
     class Config:

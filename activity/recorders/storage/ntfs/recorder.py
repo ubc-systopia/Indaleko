@@ -24,6 +24,9 @@ from activity.recorders.base import RecorderBase
 from activity.recorders.registration_service import (
     IndalekoActivityDataRegistrationService,
 )
+from activity.recorders.storage.data_models.storage_activity import (
+    IndalekoStorageActivityDataModel,
+)
 from data_models.record import IndalekoRecordDataModel
 from data_models.source_identifier import IndalekoSourceIdentifierDataModel
 from db.db_config import IndalekoDBConfig
@@ -104,7 +107,7 @@ class NTFSStorageActivityRecorder(RecorderBase):
             ic("Collection does not exist, creating it")
             self._db_config.db.create_collection( # type: ignore  # noqa: PGH003
                 self._collection.collection_name,
-                self._collection.definition,
+                schema=IndalekoStorageActivityDataModel.get_arangodb_schema(),
             )
         else:
             ic(f"Collection {self._collection.collection_name} exists, using it")
