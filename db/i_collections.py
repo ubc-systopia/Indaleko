@@ -196,9 +196,7 @@ class IndalekoCollections(IndalekoSingleton):
                 if collection_name.lower() in ["objects"]:
                     # Add our custom analyzers if not already included
                     custom_analyzers = [
-                        "Indaleko::indaleko_camel_case",
                         "Indaleko::indaleko_snake_case",
-                        "Indaleko::indaleko_filename",
                     ]
                     for analyzer in custom_analyzers:
                         if analyzer not in analyzers:
@@ -216,17 +214,12 @@ class IndalekoCollections(IndalekoSingleton):
                 ic(view_definition)
 
                 # Create or update the view
-                if view_manager.view_exists(view_name):
-                    ic(view_name)
-
-                    result = view_manager.update_view(view_definition)
-                    logger = logging.getLogger(__name__)
-                    logger.debug("Updated view %s: %s", view_name, result)
-                else:
+                if not view_manager.view_exists(view_name):
                     result = view_manager.create_view(view_definition)
                     logging.debug("Result: %s", result)
                     logging.debug("Created view %s: %s", view_name, result)
-                    ic(result)
+                else:
+                    ic('view already exists, skipping', view_name)
 
                 # Add to processed list
                 created_views.append(view_name)

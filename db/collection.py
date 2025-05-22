@@ -35,7 +35,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
     while not os.path.exists(os.path.join(current_path, "Indaleko.py")):
         current_path = os.path.dirname(current_path)
     os.environ["INDALEKO_ROOT"] = current_path
-    sys.path.append(current_path)
+    sys.path.insert(0,current_path)
 
 # pylint: disable=wrong-import-position
 from db.collection_index import IndalekoCollectionIndex

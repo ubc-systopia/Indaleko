@@ -17,9 +17,19 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-
 import argparse
 import logging
+import os
+import sys
+
+from pathlib import Path
+
+if os.environ.get("INDALEKO_ROOT") is None:
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
 
 # Import analyzer manager functionality but not the CLI class
 from db.analyzer_manager import (

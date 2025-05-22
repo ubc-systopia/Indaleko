@@ -63,6 +63,7 @@ class IndalekoNamedEntityDataModel(IndalekoBaseModel):
     description: str | None = None
     gis_location: LocationDataModel | None = None  # GIS location for places
     device_id: UUID | None = None  # Device identifier for things
+    aliases: list[str] | None = None  # Aliases for the entity
 
     class Config:
         """Sample configuration data for the data model."""

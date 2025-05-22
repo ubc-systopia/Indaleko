@@ -11,6 +11,12 @@ import sys
 
 from pathlib import Path
 
+from arango import ArangoClient
+from arango.exceptions import (
+    ViewCreateError,
+)
+from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -43,7 +49,7 @@ def fix_views(verbose:bool = True) -> None:  # noqa: FBT001, FBT002
         pass
     db_config = IndalekoDBConfig()
     db_config.start()
-    db = db_config.get_arangodb()
+    db: ArangoClient = db_config.get_arangodb()
 
 
     # First delete all existing views
@@ -183,16 +189,22 @@ def fix_views(verbose:bool = True) -> None:  # noqa: FBT001, FBT002
         },
     }
 
-    views = [objects_view, activity_view, entity_view, equiv_view, knowledge_view]
+    views = [activity_view, entity_view, equiv_view, knowledge_view, objects_view, ]
 
     for view in views:
         view_name = view["name"]
 
         # Create the view with just the name and type first
-        db.create_arangosearch_view(
-            name=view_name,
-            properties={"type": "arangosearch"},
-        )
+        try:
+            db.create_arangosearch_view(
+                name=view_name,
+                properties={"type": "arangosearch"},
+            )
+        except ViewCreateError as e:
+            if 'ERR 1207' in str(e):
+                # View already exists, ignore
+                ic(f"View {view_name} already exists, ignoring")
+                pass
 
         # Now update the view with proper links
         links = view.get("links", {})

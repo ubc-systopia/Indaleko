@@ -32,7 +32,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
     while not (Path(current_path) / "Indaleko.py").exists():
         current_path = Path(current_path).parent
     os.environ["INDALEKO_ROOT"] = str(current_path)
-    sys.path.append(str(current_path))
+    sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
 from activity.context.data_models.context_data_model import (
@@ -152,10 +152,26 @@ class IndalekoDBCollections:
                     "type": "persistent",
                 },
                 "timestamps": {
-                    "fields": ["Timestamps.Label", "Timestamps.Value"],
+                    "fields": ["Timestamps.Label[*].Value"],
                     "unique": False,
                     "type": "persistent",
                 },
+                "semantic_attributes": {
+                    "field" : ["SemanticAttributes[*]"],
+                    "unqiue": False,
+                    "type": "persistent",
+                },
+                "semantic_attributes_inverted": {
+                    "fields": ["SemanticAttributes[*].Value"],
+                    "unique": False,
+                    "type": "inverted",
+                },
+                "sizes": {
+                    "fields": ["Size"],
+                    "unique": False,
+                    "type": "persistent",
+                    "sparse": True,
+                }
             },
             "views": [
                 {
@@ -332,6 +348,7 @@ class IndalekoDBCollections:
                     "fields": ["device_id"],
                     "unique": True,
                     "type": "persistent",
+                    "sparse": True,
                 },
             },
             "views": [
