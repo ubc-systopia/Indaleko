@@ -3,16 +3,9 @@
 import os
 import sys
 
-from datetime import UTC, datetime
 from pathlib import Path
-from uuid import UUID
-
-from arango.exceptions import DocumentInsertError
-from arango import ArangoClient
-from db.utils.query_performance import timed_aql_execute, TimedAQLExecute
 
 from icecream import ic
-from pydantic import BaseModel
 
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -24,11 +17,13 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from db.db_collections import IndalekoDBCollections
+from db.utils.query_performance import TimedAQLExecute
 from exemplar.exemplar_data_model import ExemplarQuery
+
 
 # pylint: enable=wrong-import-position
 
-class ExemplarQuery1(ExemplarQuery):
+class ExemplarQuery1:
     """Exemplar Query 1."""
     query = 'Show me documents with "report" in their titles.'
     aql_query = """
@@ -54,6 +49,15 @@ class ExemplarQuery1(ExemplarQuery):
         "name": "%report%",
     }
 
+    exemplar_query = ExemplarQuery(
+        query=query,
+        aql_query=aql_query,
+        aql_count_query=aql_count_query,
+        named_entities=named_entities,
+        bind_variables=bind_variables,
+    )
+    """Exemplar query object."""
+
     @staticmethod
     def get_exemplar_query() -> ExemplarQuery:
         """Get the query object."""
@@ -64,3 +68,18 @@ class ExemplarQuery1(ExemplarQuery):
             named_entities=ExemplarQuery1.named_entities,
             bind_variables=ExemplarQuery1.bind_variables,
         )
+
+def main():
+    """Main function for testing functionality."""
+    # Example usage
+    exemplar_query = ExemplarQuery1.get_exemplar_query()
+    ic(exemplar_query)
+    result = TimedAQLExecute(
+        query=exemplar_query.aql_query,
+        count_query=exemplar_query.aql_count_query,
+        bind_vars=exemplar_query.bind_variables,
+    )
+    ic(result.get_data())
+
+if __name__ == "__main__":
+    main()

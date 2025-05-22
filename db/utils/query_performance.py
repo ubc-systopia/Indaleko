@@ -30,6 +30,7 @@ from typing import Any
 
 from arango import ArangoClient
 from arango.cursor import Cursor
+from icecream import ic
 
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -60,6 +61,7 @@ class TimedAQLExecute:
             query: str | None = None,
             count_query: str | None = None,
             bind_vars: dict[str, Any] | None = None,
+            count_bind_vars: dict[str, Any] | None = None,
             threshold: float = 5.0,
             capture_explain: bool = True,
     ) -> None:
@@ -80,6 +82,11 @@ class TimedAQLExecute:
         self._query = query
         self._count_query = count_query
         self._bind_vars = bind_vars
+        self._count_bind_vars = bind_vars
+        if count_bind_vars is not None:
+            ic('Override count_bind_vars', count_bind_vars)
+            self._count_bind_vars = count_bind_vars
+        ic('TimedExecute', self._count_bind_vars, count_bind_vars)
         self._threshold = threshold
         self._capture_explain = capture_explain
         self._log_data = {}
@@ -139,10 +146,10 @@ class TimedAQLExecute:
         if self._count_query:
             # Execute the count query
             count_start_time = time.time()
-            count_cursor = execute_method(self._count_query, bind_vars=self._bind_vars)
+            ic(self._count_bind_vars)
+            count_cursor = execute_method(self._count_query, bind_vars=self._count_bind_vars)
             count_result = list(count_cursor)
             count_time = time.time() - count_start_time
-            from icecream import ic
             ic(count_time)
             # Add count result to log data
             self._log_data["count"] = count_result[0]

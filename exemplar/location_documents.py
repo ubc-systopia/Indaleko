@@ -4,16 +4,10 @@ import os
 import sys
 import time
 
-from datetime import UTC, datetime
 from pathlib import Path
-from uuid import UUID
 
-from arango.exceptions import DocumentInsertError
-from arango import ArangoClient
-
-from icecream import ic
-from pydantic import BaseModel
 from geopy.geocoders import Nominatim
+from icecream import ic
 
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -24,11 +18,8 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
-from activity.recorders.location.windows_gps_location import (
-    WindowsGPSLocationDataModel,
-)
 from db.db_config import IndalekoDBConfig
-from db.utils.query_performance import timed_aql_execute, TimedAQLExecute
+
 
 # pylint: enable=wrong-import-position
 
@@ -42,8 +33,7 @@ def get_location_name_coordinates(location_name: str) -> tuple[float, float]:
     if location:
         # Returns (latitude, longitude, altitude if available)
         return location.latitude, location.longitude, getattr(location, "altitude", None)
-    else:
-        return None, None, None
+    return None, None, None
 
 def lookup_location_in_db(location_name: str) -> dict[str, object] | None:
     db_config = IndalekoDBConfig()

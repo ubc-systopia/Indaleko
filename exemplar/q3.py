@@ -3,16 +3,7 @@
 import os
 import sys
 
-from datetime import UTC, datetime
 from pathlib import Path
-from uuid import UUID
-
-from arango.exceptions import DocumentInsertError
-from arango import ArangoClient
-from db.utils.query_performance import timed_aql_execute, TimedAQLExecute
-
-from icecream import ic
-from pydantic import BaseModel
 
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -23,10 +14,9 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
-from db.db_collections import IndalekoDBCollections
-from data_models.named_entity import IndalekoNamedEntityDataModel, IndalekoNamedEntityType
+from data_models.named_entity import IndalekoNamedEntityType
 from exemplar.exemplar_data_model import ExemplarQuery
-from exemplar.reference_date import reference_date
+
 
 # pylint: enable=wrong-import-position
 

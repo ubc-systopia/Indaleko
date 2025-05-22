@@ -2,18 +2,14 @@
 
 import os
 import sys
-import time
 
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID, uuid4
 
 from arango.exceptions import DocumentInsertError
-from arango import ArangoClient
-
 from icecream import ic
-from pydantic import BaseModel, AwareDatetime
-from geopy.geocoders import Nominatim
+from pydantic import AwareDatetime
 
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -28,8 +24,10 @@ from data_models.location_data_model import LocationDataModel
 from data_models.named_entity import IndalekoNamedEntityDataModel, IndalekoNamedEntityType
 from db.db_config import IndalekoDBConfig
 from db.i_collections import IndalekoDBCollections
-from db.utils.query_performance import timed_aql_execute, TimedAQLExecute
+from db.utils.query_performance import TimedAQLExecute
 from exemplar.location_documents import get_location_name_coordinates
+
+
 # pylint: enable=wrong-import-position
 
 

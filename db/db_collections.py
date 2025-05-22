@@ -123,6 +123,7 @@ class IndalekoDBCollections:
 
     # Define view names
     Indaleko_Objects_Text_View = "ObjectsTextView"
+    Indaleko_Objects_Text_View_Legacy = "ObjectsTextViewLegacy"
     Indaleko_Named_Entity_Text_View = "NamedEntityTextView"
     Indaleko_Activity_Text_View = "ActivityTextView"
     Indaleko_Entity_Equivalence_Text_View = "EntityEquivalenceTextView"
@@ -176,6 +177,28 @@ class IndalekoDBCollections:
             "views": [
                 {
                     "name": Indaleko_Objects_Text_View,
+                    "fields": {
+                        "Label": [
+                            "text_en",
+                            "indaleko_snake_case",
+                        ],
+                        "URI": ["text_en"],
+                        "LocalPath": ["text_en"],
+                        # Timestamps promoted to top-level fields explicitly
+                        "434f7ac1-f71a-4cea-a830-e2ea9a47db5a": [],  # Modified
+                        "6b3f16ec-52d2-4e9b-afd0-e02a875ec6e6": [],  # Created
+                        "581b5332-4d37-49c7-892a-854824f5d66f": [],  # Accessed
+                        "3bdc4130-774f-4e99-914e-0bec9ee47aab": [],  # Changed
+                        # Size for numeric range queries
+                        "Size": [],
+                        # Semantic Attributes (e.g., MIME type, file suffix)
+                        "8aeb9b5a-3d08-4d1f-9921-0795343d9eb3": ["text_en"],  # MIME type
+                        "f980b0c8-3d24-4a77-b985-5e945803991f": ["text_en"],  # File suffix
+                    },
+                    "stored_values": ["_key", "Label", "Size", "LocalPath"],
+                },
+                {
+                    "name": Indaleko_Objects_Text_View_Legacy,
                     "fields": {
                         "Label": [
                             "text_en",

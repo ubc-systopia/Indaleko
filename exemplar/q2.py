@@ -3,16 +3,9 @@
 import os
 import sys
 
-from datetime import UTC, datetime
 from pathlib import Path
-from uuid import UUID
-
-from arango.exceptions import DocumentInsertError
-from arango import ArangoClient
-from db.utils.query_performance import timed_aql_execute, TimedAQLExecute
 
 from icecream import ic
-from pydantic import BaseModel
 
 
 if os.environ.get("INDALEKO_ROOT") is None:
@@ -23,36 +16,38 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
+from data_models.named_entity import IndalekoNamedEntityType
 from db.db_collections import IndalekoDBCollections
-from data_models.named_entity import IndalekoNamedEntityDataModel, IndalekoNamedEntityType
+from db.utils.query_performance import TimedAQLExecute
 from exemplar.exemplar_data_model import ExemplarQuery
 from exemplar.reference_date import reference_date
 
+
 # pylint: enable=wrong-import-position
 
-class ExemplarQuery2(ExemplarQuery):
+class ExemplarQuery2:
     """Exemplar Query 2."""
     query = "Find files I edited on my phone while traveling last month."
     aql_query = """
         // Map the device name to its identity information
         LET device_id = FIRST(
             FOR entity IN @@named_entities
-                FILTER entity.category == @entity_category
-                FILTER LOWER(@entity_name) IN (
+                FILTER entity.category == @device_entity_type
+                FILTER LOWER(@device_name) IN (
                 FOR alias in entity.aliases
                 RETURN LOWER(alias)
                 ) OR
-                LOWER(@entity_name) == LOWER(entity.name)
+                LOWER(@device_name) == LOWER(entity.name)
             RETURN entity
         )
         LET home_coords = FIRST(
             FOR entity IN @@named_entities
             FILTER entity.category == @home_entity_type
-            FILTER LOWER(@entity_name) IN (
+            FILTER LOWER(@device_name) IN (
             FOR alias in entity.aliases
                 RETURN LOWER(alias)
             ) OR
-            LOWER(@entity_name) == LOWER(entity.name)
+            LOWER(@device_name) == LOWER(entity.name)
             RETURN entity
         )
         LET start_date = DATE_TRUNC(DATE_SUBTRACT(@reference_date, 1, "month"), "month")
@@ -78,6 +73,12 @@ class ExemplarQuery2(ExemplarQuery):
                     start: current.timestamp,
                     end: next.timestamp
                 }
+        )
+        LET edited_files = (
+            FOR doc IN @@collection
+                FILTER doc.Timestamps[@change_time] >= start_date AND doc.Timestamps[@change_time] <= end_date
+                FILTER doc.Timestamps[@modify_time] >= start_date AND doc.Timestamps[@modify_time] <= end_date
+                FILTER doc.Timestamps[@create_time] >= start_date AND doc.Timestamps[@create_time] <= end_date
         )
         LET edited_files_while_traveling = (
             FOR file IN edited_files
@@ -105,7 +106,7 @@ class ExemplarQuery2(ExemplarQuery):
     named_entities = [
         {
             "name": "my phone",
-            "category": IndalekoNamedEntityType.item
+            "category": IndalekoNamedEntityType.item,
         },
     ]
     bind_variables = {
@@ -116,8 +117,17 @@ class ExemplarQuery2(ExemplarQuery):
         "home_entity_type": IndalekoNamedEntityType.location,
         "@location_activity_collection": "ActivityProviderData_7e85669b-ecc7-4d57-8b51-8d325ea84930", # windows GPS
         "@collection": IndalekoDBCollections.Indaleko_Object_Collection,
-        "@reference_date": reference_date,
+        "reference_date": reference_date,
     }
+
+    exemplar_query = ExemplarQuery(
+        query=query,
+        aql_query=aql_query,
+        aql_count_query=aql_count_query,
+        named_entities=named_entities,
+        bind_variables=bind_variables,
+    )
+
 
     @staticmethod
     def get_exemplar_query() -> ExemplarQuery:
@@ -129,3 +139,18 @@ class ExemplarQuery2(ExemplarQuery):
             named_entities=ExemplarQuery2.named_entities,
             bind_variables=ExemplarQuery2.bind_variables,
         )
+
+def main():
+    """Main function for testing functionality."""
+    # Example usage
+    exemplar_query = ExemplarQuery2.get_exemplar_query()
+    ic(exemplar_query)
+    result = TimedAQLExecute(
+        query=exemplar_query.aql_query,
+        count_query=exemplar_query.aql_count_query,
+        bind_vars=exemplar_query.bind_variables,
+    )
+    ic(result.get_data())
+
+if __name__ == "__main__":
+    main()

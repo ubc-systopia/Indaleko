@@ -7,6 +7,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
     while not (Path(current_path) / "Indaleko.py").exists():
@@ -17,6 +18,7 @@ if os.environ.get("INDALEKO_ROOT") is None:
 # pylint: disable=wrong-import-position
 from data_models.named_entity import IndalekoNamedEntityDataModel
 
+
 # pylint: enable=wrong-import-position
 
 
@@ -26,4 +28,5 @@ class ExemplarQuery(BaseModel):
     aql_query: str | None = None
     aql_count_query: str | None = None
     named_entities: list[IndalekoNamedEntityDataModel] | None = None
-    bind_variables: dict[str, str] | None = None
+    bind_variables: dict[str, str | int] | None = None
+    count_bind_variables: dict[str, str | int] | None = None
