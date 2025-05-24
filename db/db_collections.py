@@ -124,6 +124,8 @@ class IndalekoDBCollections:
     # Define view names
     Indaleko_Objects_Text_View = "ObjectsTextView"
     Indaleko_Objects_Text_View_Legacy = "ObjectsTextViewLegacy"
+    Indaleko_Objects_MimeType_View = "ObjectsMimeTypeView"
+    Indaleko_Objects_Timestamp_View = "ObjectsTimestampView"
     Indaleko_Named_Entity_Text_View = "NamedEntityTextView"
     Indaleko_Activity_Text_View = "ActivityTextView"
     Indaleko_Entity_Equivalence_Text_View = "EntityEquivalenceTextView"
@@ -152,53 +154,141 @@ class IndalekoDBCollections:
                     "unique": False,
                     "type": "persistent",
                 },
-                "timestamps": {
-                    "fields": ["Timestamps.Label[*].Value"],
-                    "unique": False,
-                    "type": "persistent",
-                },
-                "semantic_attributes": {
-                    "field" : ["SemanticAttributes[*]"],
-                    "unqiue": False,
-                    "type": "persistent",
-                },
-                "semantic_attributes_inverted": {
-                    "fields": ["SemanticAttributes[*].Value"],
-                    "unique": False,
-                    "type": "inverted",
-                },
                 "sizes": {
-                    "fields": ["Size"],
+                    "fields": ["size"],
                     "unique": False,
                     "type": "persistent",
                     "sparse": True,
-                }
+                },
+                "inv_sizes": {
+                    "fields": ["size"],
+                    "unique": False,
+                    "type": "inverted",
+                    "sparse": True,
+                },
+                "persist_6b3f16ec-52d2-4e9b-afd0-e02a875ec6e6": { # Created
+                    "fields": ["6b3f16ec-52d2-4e9b-afd0-e02a875ec6e6"],
+                    "unique": False,
+                    "sparse": True,
+                    "type": "persistent",
+                },
+                "inv_6b3f16ec-52d2-4e9b-afd0-e02a875ec6e6": { # Created
+                    "fields": ["6b3f16ec-52d2-4e9b-afd0-e02a875ec6e6"],
+                    "unique": False,
+                    "sparse": True,
+                    "type": "inverted",
+                },
+                "persist_434f7ac1-f71a-4cea-a830-e2ea9a47db5a": {  # Modified
+                    "fields": ["434f7ac1-f71a-4cea-a830-e2ea9a47db5a"],
+                    "unique": False,
+                    "sparse": True,
+                    "type": "persistent",
+                },
+                "inv_434f7ac1-f71a-4cea-a830-e2ea9a47db5a": {  # Modified
+                    "fields": ["434f7ac1-f71a-4cea-a830-e2ea9a47db5a"],
+                    "unique": False,
+                    "sparse": True,
+                    "type": "inverted",
+                },
+                "persist_581b5332-4d37-49c7-892a-854824f5d66f": { # Accessed
+                    "fields": ["581b5332-4d37-49c7-892a-854824f5d66f"],
+                    "unique": False,
+                    "sparse": True,
+                    "type": "persistent",
+                },
+                "inv_581b5332-4d37-49c7-892a-854824f5d66f": { # Accessed
+                    "fields": ["581b5332-4d37-49c7-892a-854824f5d66f"],
+                    "unique": False,
+                    "sparse": True,
+                    "type": "inverted",
+                },
+                "persist_3bdc4130-774f-4e99-914e-0bec9ee47aab": { # Changed
+                    "fields": ["3bdc4130-774f-4e99-914e-0bec9ee47aab"],
+                    "unique": False,
+                    "sparse": True,
+                    "type": "persistent",
+                },
+                "inv_3bdc4130-774f-4e99-914e-0bec9ee47aab": { # Changed
+                    "fields": ["3bdc4130-774f-4e99-914e-0bec9ee47aab"],
+                    "unique": False,
+                    "sparse": True,
+                    "type": "inverted",
+                },
+                "persist_8aeb9b5a-3d08-4d1f-9921-0795343d9eb3": { # MIME type (suffix)
+                    "fields": ["8aeb9b5a-3d08-4d1f-9921-0795343d9eb3"],
+                    "unique": False,
+                    "sparse": True,
+                    "type": "persistent",
+                },
+                "inv_8aeb9b5a-3d08-4d1f-9921-0795343d9eb3": { # MIME type (suffix)
+                    "fields": ["8aeb9b5a-3d08-4d1f-9921-0795343d9eb3"],
+                    "unique": False,
+                    "sparse": True,
+                    "type": "inverted",
+                },
+                "persist_bce15d05-d4fd-4d37-933f-ff6b4e5dde9d": { # File suffix
+                    "fields": ["bce15d05-d4fd-4d37-933f-ff6b4e5dde9d"],
+                    "unique": False,
+                    "sparse": True,
+                    "type": "persistent",
+                },
+                "inv_bce15d05-d4fd-4d37-933f-ff6b4e5dde9d": { # File suffix
+                    "fields": ["bce15d05-d4fd-4d37-933f-ff6b4e5dde9d"],
+                    "unique": False,
+                    "sparse": True,
+                    "type": "inverted",
+                },
             },
             "views": [
                 {
                     "name": Indaleko_Objects_Text_View,
+                    "type": "arangosearch",
                     "fields": {
                         "Label": [
                             "text_en",
                             "indaleko_snake_case",
                         ],
-                        "URI": ["text_en"],
-                        "LocalPath": ["text_en"],
+                        "URI": [
+                            "text_en",
+                            "indaleko_snake_case",
+                        ],
+                        "LocalPath": [
+                            "text_en",
+                            "indaleko_snake_case",
+                        ],
                         # Timestamps promoted to top-level fields explicitly
-                        "434f7ac1-f71a-4cea-a830-e2ea9a47db5a": [],  # Modified
-                        "6b3f16ec-52d2-4e9b-afd0-e02a875ec6e6": [],  # Created
-                        "581b5332-4d37-49c7-892a-854824f5d66f": [],  # Accessed
-                        "3bdc4130-774f-4e99-914e-0bec9ee47aab": [],  # Changed
+                        "434f7ac1-f71a-4cea-a830-e2ea9a47db5a": [
+                            "identity",
+                        ],  # Modified
+                        "6b3f16ec-52d2-4e9b-afd0-e02a875ec6e6": [
+                            "identity",
+                        ],  # Created
+                        "581b5332-4d37-49c7-892a-854824f5d66f": [
+                            "identity",
+                        ],  # Accessed
+                        "3bdc4130-774f-4e99-914e-0bec9ee47aab": [
+                            "identity",
+                        ],  # Changed
                         # Size for numeric range queries
                         "Size": [],
                         # Semantic Attributes (e.g., MIME type, file suffix)
-                        "8aeb9b5a-3d08-4d1f-9921-0795343d9eb3": ["text_en"],  # MIME type
-                        "f980b0c8-3d24-4a77-b985-5e945803991f": ["text_en"],  # File suffix
+                        "8aeb9b5a-3d08-4d1f-9921-0795343d9eb3": [
+                            "text_en",
+                            "identity",
+                        ],  # MIME type
+                        "f980b0c8-3d24-4a77-b985-5e945803991f": [
+                            "text_en"
+                            "identity",
+                        ],  # File suffix
+                        "MachineUUID" : [
+                            "identity",
+                        ]
                     },
                     "stored_values": ["_key", "Label", "Size", "LocalPath"],
                 },
                 {
                     "name": Indaleko_Objects_Text_View_Legacy,
+                    "type": "arangosearch",
                     "fields": {
                         "Label": [
                             "text_en",
@@ -212,6 +302,46 @@ class IndalekoDBCollections:
                     },
                     "stored_values": ["_key", "Label"],
                 },
+                {
+                    "name": Indaleko_Objects_MimeType_View,
+                    "type": "search-alias",
+                    "properties": {
+                        "indexes": [
+                            {
+                                "collection": Indaleko_Object_Collection,
+                                "index": "inv_8aeb9b5a-3d08-4d1f-9921-0795343d9eb3",
+                            },
+                            {
+                                "collection": Indaleko_Object_Collection,
+                                "index": "inv_bce15d05-d4fd-4d37-933f-ff6b4e5dde9d",
+                            },
+                        ]
+                    }
+                },
+                {
+                    "name": Indaleko_Objects_Timestamp_View,
+                    "type": "search-alias",
+                    "properties": {
+                        "indexes": [
+                            {
+                                "collection": Indaleko_Object_Collection,
+                                "index": "inv_6b3f16ec-52d2-4e9b-afd0-e02a875ec6e6",  # Created
+                            },
+                            {
+                                "collection": Indaleko_Object_Collection,
+                                "index": "inv_434f7ac1-f71a-4cea-a830-e2ea9a47db5a",  # Modified
+                            },
+                            {
+                                "collection": Indaleko_Object_Collection,
+                                "index": "inv_581b5332-4d37-49c7-892a-854824f5d66f",  # Accessed
+                            },
+                            {
+                                "collection": Indaleko_Object_Collection,
+                                "index": "inv_3bdc4130-774f-4e99-914e-0bec9ee47aab",  # Changed
+                            },
+                        ]
+                    }
+                }
             ],
         },
         Indaleko_Relationship_Collection: {

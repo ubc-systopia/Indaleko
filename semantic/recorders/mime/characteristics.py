@@ -17,15 +17,31 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+import os
+import sys
+
+from pathlib import Path
+
+if os.environ.get("INDALEKO_ROOT") is None:
+    current_path = Path(__file__).parent.resolve()
+    while not (Path(current_path) / "Indaleko.py").exists():
+        current_path = Path(current_path).parent
+    os.environ["INDALEKO_ROOT"] = str(current_path)
+    sys.path.insert(0, str(current_path))
+
+# pylint: disable=wrong-import-position
+from data_models.storage_semantic_attributes import StorageSemanticAttributes
+from storage.known_attributes import KnownStorageAttributes
+
 
 # Primary MIME type identifier
-SEMANTIC_MIME_TYPE = "d9c34d8a-bc9e-4e21-b67a-6c5b3958cbf7"
+SEMANTIC_MIME_TYPE = StorageSemanticAttributes.STORAGE_ATTRIBUTES_MIMETYPE_FROM_CONTENT
 
 # Confidence level for the MIME type detection
 SEMANTIC_MIME_CONFIDENCE = "a72f9d32-8eb3-4b0c-aef1-0fc5dfb9173e"
 
 # MIME type based on file extension (for comparison)
-SEMANTIC_MIME_TYPE_FROM_EXTENSION = "16e4cd15-7d2c-4d30-9c72-69482301b59a"
+SEMANTIC_MIME_TYPE_FROM_EXTENSION = StorageSemanticAttributes.STORAGE_ATTRIBUTES_MIMETYPE_FROM_SUFFIX
 
 # Character encoding for text files
 SEMANTIC_MIME_ENCODING = "f4ed5a2b-9f17-4c8e-a6db-1089c9e3d7c1"

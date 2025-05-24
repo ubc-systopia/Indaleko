@@ -119,9 +119,14 @@ class IndalekoCollection:
                     print("Schema:")    # noqa: T201
                     print(json.dumps(config["schema"], indent=2))    # noqa: T201
                     raise
-            if "indices" in config:
-                for index in config["indices"]:
-                    self.create_index(index, **config["indices"][index])
+        if "indices" in config:
+            existing_indices = list(idx.get("name") for idx in self._arangodb_collection.indexes())
+            for index in config["indices"]:
+                if index in existing_indices:
+                    ic(f"Index {index} already exists for collection {name}")
+                    continue
+                ic(f"Creating index {index} for collection {name}")
+                self.create_index(index, **config["indices"][index])
         assert isinstance(  # noqa: S101
             self._arangodb_collection,
             arango.collection.StandardCollection,

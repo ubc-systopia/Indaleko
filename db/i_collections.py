@@ -183,6 +183,25 @@ class IndalekoCollections(IndalekoSingleton):
                     ic("skipping view (already processed)", view_name)
                     continue
 
+                if (view_def.get("type") == "search-alias"):
+                    """This needs to be created."""
+                    existing_views = IndalekoDBConfig().get_arangodb().views()
+                    if view_name in existing_views:
+                        ic("skipping view (already exists)", view_name)
+                        continue
+                    import arango.exceptions
+                    try:
+                        result = IndalekoDBConfig().get_arangodb().create_view(
+                            name=view_name,
+                            view_type=view_def["type"],
+                            properties=view_def["properties"],
+                        )
+                    except arango.exceptions.ViewCreateError as e:
+                        ic(f"Failed to create view {view_name}")
+                        ic(view_def["properties"])
+                        continue
+
+
                 # Create the view definition
                 fields_dict = {collection_name: view_def["fields"]}
 

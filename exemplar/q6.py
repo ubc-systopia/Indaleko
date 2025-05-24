@@ -56,7 +56,7 @@ class ExemplarQuery6:
     ]
     limit = 50
     bind_variables = {
-        "@collection": IndalekoDBCollections.Indaleko_Objects_Text_View,
+        "@collection": IndalekoDBCollections.Indaleko_Objects_MimeType_View,
         "reference_time": reference_date,
         "mime_type": KnownStorageAttributes.STORAGE_ATTRIBUTES_MIMETYPE_FROM_SUFFIX,
         "semantic_mimetype" : KnownStorageAttributes.STORAGE_ATTRIBUTES_MIME_TYPE,

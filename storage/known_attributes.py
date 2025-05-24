@@ -60,8 +60,8 @@ class KnownStorageAttributes:
     STORAGE_ATTRIBUTES_UID = '1bd30cfc-9320-427d-bdde-60d9e8aa4400'  # st_uid
     STORAGE_ATTRIBUTES_INODE = '882d75c6-a424-4d8b-a938-c264a281204c'  # st_ino
 
-    STORAGE_ATTRIBUTES_MIMETYPE_FROM_SUFFIX = 'f425ae89-fff2-4b93-a90e-0e2fd9220411' #  suffix based MIME type
-    STORAGE_ATTRIBUTES_MIME_TYPE = 'bce15d05-d4fd-4d37-933f-ff6b4e5dde9d'  # MIME type from file analysis
+    STORAGE_ATTRIBUTES_MIMETYPE_FROM_SUFFIX = StorageSemanticAttributes.STORAGE_ATTRIBUTES_MIMETYPE_FROM_SUFFIX #  suffix based MIME type
+    STORAGE_ATTRIBUTES_MIME_TYPE = StorageSemanticAttributes.STORAGE_ATTRIBUTES_MIMETYPE_FROM_CONTENT  # MIME type from file analysis
     STORAGE_ATTRIBUTES_FILE_SUFFIX = 'd4282ceb-ec50-4bbf-8718-680c67a4d257'  # File suffix
     STORAGE_ATTRIBUTES_LOWERCASE_FILE_NAME = 'c6724410-a717-44a7-b9d3-6b276e250c1d'  # Lowercase file name
 

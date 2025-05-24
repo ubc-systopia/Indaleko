@@ -30,6 +30,7 @@ from typing import Any
 
 import arango
 
+import arango.exceptions
 from icecream import ic
 
 
@@ -103,6 +104,16 @@ class IndalekoCollectionView:
             except arango.exceptions.ViewGetError:
                 result = db.create_arangosearch_view(
                     name=view_name,
+                    properties=properties,
+                )
+        elif view_type == "search-alias":
+            try:
+                db.view(name=view_name)
+            except arango.exceptions.ViewGetError:
+                ic("Creating SEARCH alias view", view_name)
+                result = db.create_view(
+                    name=view_name,
+                    view_type=view_type,
                     properties=properties,
                 )
         else:

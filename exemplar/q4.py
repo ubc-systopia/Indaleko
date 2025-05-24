@@ -5,6 +5,7 @@ import sys
 
 from pathlib import Path
 
+from icecream import ic
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -15,15 +16,16 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from data_models.named_entity import IndalekoNamedEntityType
+from db.utils.query_performance import TimedAQLExecute
 from exemplar.exemplar_data_model import ExemplarQuery
 from exemplar.reference_date import reference_date
 
 
 # pylint: enable=wrong-import-position
 
-class ExemplarQuery4(ExemplarQuery):
+class ExemplarQuery4:
     """Exemplar Query 4."""
-    query = "Show me files I created while on vacation in Bali last June.",
+    query = "Show me files I created while on vacation in Bali last June."
     aql_query = """
         LET now = @reference_date
         LET vacation_year = DATE_YEAR(now) - 1
@@ -44,15 +46,6 @@ class ExemplarQuery4(ExemplarQuery):
                 FILTER (entity.name == @basename OR @basename IN entity.aliases)
                 AND entity.category == @category_type
                 RETURN entity.gis_location
-        )
-
-        // Find all location logs in Bali intersecting with June
-        LET bali_locations_in_june = (
-        FOR loc IN @@location_collection
-            FILTER loc.timestamp >= june_start AND loc.timestamp < july_start
-            FILTER GEO_CONTAINS(bali.gis_location, loc.coordinates)
-            SORT loc.timestamp ASC
-            RETURN loc
         )
 
         // Define a reasonable radius around Bali (e.g., 50 kilometers)
@@ -94,10 +87,11 @@ class ExemplarQuery4(ExemplarQuery):
         // Now retrieve files created within the computed "vacation" timeframe
         LET vacation_files = (
         FOR file IN @@file_collection
-            FILTER (
-                file.Timestamps[@creation_timestamp] >= vacation_start_entry.timestamp
+            SEARCH (
+                file[@creation_timestamp] >= vacation_start_entry.timestamp
                 AND
-                file.Timestamps[@creation_timestamp] <= vacation_end_entry.timestamp
+                file[@creation_timestamp] <= vacation_end_entry.timestamp
+            )
             RETURN file
         )
 
@@ -126,6 +120,12 @@ class ExemplarQuery4(ExemplarQuery):
     ]
     bind_variables = {
         "reference_date": reference_date,
+        "@named_entities": "NamedEntities",
+        "@location_collection": "ActivityProviderData_7e85669b-ecc7-4d57-8b51-8d325ea84930",
+        "@file_collection": "ObjectsTimestampView",
+        "category_type": IndalekoNamedEntityType.location,
+        "basename": "home",
+        "creation_timestamp": "8aeb9b5a-3d08-4d1f-9921-0795343d9eb3",
     }
 
     @staticmethod
@@ -138,3 +138,19 @@ class ExemplarQuery4(ExemplarQuery):
             named_entities=ExemplarQuery4.named_entities,
             bind_variables=ExemplarQuery4.bind_variables,
         )
+
+def main():
+    """Main function for testing functionality."""
+    # Example usage
+    exemplar_query = ExemplarQuery4.get_exemplar_query()
+    ic(exemplar_query)
+    result = TimedAQLExecute(
+        query=exemplar_query.aql_query,
+        count_query=exemplar_query.aql_count_query,
+        bind_vars=exemplar_query.bind_variables,
+    )
+    ic(result.get_data())
+    ic(len(list(result.get_cursor())))
+
+if __name__ == "__main__":
+    main()

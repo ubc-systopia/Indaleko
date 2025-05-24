@@ -5,6 +5,8 @@ import sys
 
 from pathlib import Path
 
+from icecream import ic
+
 
 if os.environ.get("INDALEKO_ROOT") is None:
     current_path = Path(__file__).parent.resolve()
@@ -15,42 +17,45 @@ if os.environ.get("INDALEKO_ROOT") is None:
 
 # pylint: disable=wrong-import-position
 from data_models.named_entity import IndalekoNamedEntityType
+from db.utils.query_performance import TimedAQLExecute
 from exemplar.exemplar_data_model import ExemplarQuery
+from storage.known_attributes import KnownStorageAttributes
+from storage.i_object import IndalekoObject
 
 
 # pylint: enable=wrong-import-position
 
-class ExemplarQuery3(ExemplarQuery):
+class ExemplarQuery3:
     """Exemplar Query 3."""
-    query = "Get documents I exchanged with Dr. Okafor regarding the conference paper.",
+    query = "Get documents I exchanged with Dr. Okafor regarding the conference paper."
     aql_query = """
         LET person1_ids = (
-            FOR entity in @@colleague_collection
-                FILTER en
-        )
-        FIRST(
-            FOR entity IN @@entity_collection,
-                FILTER (entity.name == @person_name OR
-                @person_name IN entity.aliases) AND
-                FILTER entity.type == "@entity_type"
-                RETURN entity
-            )
+            FOR entity in @@entity_collection
+                FILTER entity.name == @person_name OR @person_name IN entity.aliases
+                RETURN entity.uuid
         )
         LET conference_event = (
-            FOR entity IN @@event_collection
+            FOR entity IN @@entity_collection
                 FILTER (entity.name == "ICCS 2025 Conference" OR
                 "ICCS 2025" IN entity.aliases) AND
-                FILTER entity.type == "@event_type"
+                entity.type == "@event_type"
                 RETURN entity
-            )
         )
-        LET conference_paper = (
+        LET conference_paper = FIRST(
             FOR doc IN @@collection
-                FILTER doc.type == "conference_paper" AND
-                doc.timestamp >= conference_event.start_date AND
-                doc.timestamp <= conference_event.end_date
+                SEARCH doc[@create_timestamp] >= conference_event.start_date AND
+                doc[@create_timestamp] <= conference_event.end_date
+                FILTER doc[@mime_type] == "application/pdf"
                 RETURN doc
         )
+        RETURN conference_paper
+        // Get the list of documents exchanged with Dr. Okafor
+        //FOR doc IN @@exchange_collection
+        //    FILTER doc.type == "email" AND
+        //        doc.timestamp >= conference_paper.timestamp AND
+        //        doc.timestamp <= @reference_time AND
+        //        (doc.sender IN person1_ids OR doc.recipient IN person1_ids)
+        //    RETURN doc
     """
     aql_count_query = None  # TODO
     named_entities = [
@@ -68,7 +73,15 @@ class ExemplarQuery3(ExemplarQuery):
             "category" : IndalekoNamedEntityType.event,
         },
     ]
-    bind_variables = None
+    from db.db_collections import IndalekoDBCollections
+
+    bind_variables = {
+        "@entity_collection": IndalekoDBCollections.Indaleko_Named_Entity_Collection,
+        "@collection": IndalekoDBCollections.Indaleko_Objects_Timestamp_View,
+        "person_name": "Dr. Okafor",
+        "create_timestamp": IndalekoObject.CREATION_TIMESTAMP,
+        "mime_type": KnownStorageAttributes.STORAGE_ATTRIBUTES_MIMETYPE_FROM_SUFFIX,
+    }
 
     @staticmethod
     def get_exemplar_query() -> ExemplarQuery:
@@ -80,3 +93,19 @@ class ExemplarQuery3(ExemplarQuery):
             named_entities=ExemplarQuery3.named_entities,
             bind_variables=ExemplarQuery3.bind_variables,
         )
+
+def main():
+    """Main function for testing functionality."""
+    # Example usage
+    exemplar_query = ExemplarQuery3.get_exemplar_query()
+    ic(exemplar_query)
+    result = TimedAQLExecute(
+        query=exemplar_query.aql_query,
+        count_query=exemplar_query.aql_count_query,
+        bind_vars=exemplar_query.bind_variables,
+    )
+    ic(result.get_data())
+    ic(len(list(result.get_cursor())))
+
+if __name__ == "__main__":
+    main()

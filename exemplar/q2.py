@@ -30,16 +30,42 @@ from storage.known_attributes import KnownStorageAttributes
 class ExemplarQuery2:
     """Exemplar Query 2."""
     query = "Find files I edited on my phone while traveling last month."
-    aql_query = """
-        LET start_time = DATE_ROUND(DATE_SUBTRACT(@reference_time, 1, "week"), 1, "day")
+    doc_format = [
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # .docx
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",  # .xlsx
+        "application/vnd.ms-powerpoint",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",  # .pptx
+        "text/plain",
+        "text/csv",
+        "text/markdown",
+        "text/html",
+        "application/rtf",
+        "application/epub+zip",
+        "application/x-7z-compressed",
+        "application/zip",
+        "application/x-tar",
+        "application/x-rar-compressed",
+        "application/x-bzip2",
+        "application/x-gzip",
+    ]
+    search_conditions = (
+        " OR ".join(f'ANALYZER(doc[@mime_type] == "{fmt}", "identity")\n ' for fmt in doc_format) +
+        " OR " +
+        " OR ".join(f'ANALYZER(doc[@semantic_mime_type] == "{fmt}", "identity") ' for fmt in doc_format)
+    )
+    ic(search_conditions)
+    aql_query = f"""
         LET doc_format = [
             "application/pdf",
             "application/msword",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  // .docx
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # .docx
             "application/vnd.ms-excel",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",        // .xlsx
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",  # .xlsx
             "application/vnd.ms-powerpoint",
-            "application/vnd.openxmlformats-officedocument.presentationml.presentation", // .pptx
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",  # .pptx
             "text/plain",
             "text/csv",
             "text/markdown",
@@ -51,13 +77,9 @@ class ExemplarQuery2:
             "application/x-tar",
             "application/x-rar-compressed",
             "application/x-bzip2",
-            "application/x-gzip",
-            "application/json",
-            "application/xml",
-            "application/vnd.apple.keynote",
-            "application/vnd.apple.numbers",
-            "application/vnd.apple.pages",
+            "application/x-gzip"
         ]
+        LET start_time = DATE_ROUND(DATE_SUBTRACT(@reference_time, 1, "week"), 1, "day")
         // This simulates the results of files on the phone that have been edited in the
         // last month of travel.
         LET files_edited_on_phone = [
@@ -70,7 +92,7 @@ class ExemplarQuery2:
             "a6ef9f99-4eae-4a38-9ede-c1959d388cd1"
         ]
         FOR doc IN @@collection
-            SEARCH (doc[@mime_type] IN doc_format OR doc[@semantic_mime_type] IN doc_format) AND NOT ANALYZER(PHRASE(doc.URI, "Volume"), "text_en")
+            SEARCH (doc[@mime_type] IN {doc_format} OR doc[@semantic_mime_type] IN {doc_format})
             FILTER doc.ObjectIdentifier in files_edited_on_phone AND
                 ((doc[@creation_timestamp] >= start_time AND doc[@creation_timestamp] <= @reference_time) OR
                     (doc[@modified_timestamp] >= start_time AND doc[@modified_timestamp] <= @reference_time))

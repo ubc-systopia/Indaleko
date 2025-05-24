@@ -132,6 +132,8 @@ class IndalekoCollectionIndex(IndalekoSingleton):
             raise ValueError("type is a required parameter")
         if kwargs.get("fields") is None:
             raise ValueError("fields is a required parameter")
+        if "inBackground" not in kwargs:
+            kwargs["inBackground"] = True # build async
         self.index = self.collection.add_index(data=kwargs, formatter=False)
         self.debug = kwargs.get("debug", False)
         if self.debug:
