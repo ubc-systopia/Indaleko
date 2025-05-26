@@ -1347,7 +1347,7 @@ class IndalekoQueryCLI(IndalekoBaseCLI):
             mapped_entities.append(
                 IndalekoNamedEntityDataModel(
                     name=entity.name,
-                    uuid=doc.uuid,
+                    entity_uuid=doc.uuid,
                     category=doc.category,
                     description=doc.description,
                     gis_location=doc.gis_location,
