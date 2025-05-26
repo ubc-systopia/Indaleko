@@ -60,7 +60,7 @@ class ExemplarNamedEntity:
         """Add a person to the named entity."""
         entity = IndalekoNamedEntityDataModel(
             name=name,
-            uuid=identifier,
+            entity_uuid=identifier,
             category=IndalekoNamedEntityType.person,
             description=description,
             aliases=aliase,
@@ -82,7 +82,7 @@ class ExemplarNamedEntity:
         """Add an organization to the named entity."""
         entity = IndalekoNamedEntityDataModel(
             name=name,
-            uuid=identifier,
+            entity_uuid=identifier,
             category=IndalekoNamedEntityType.organization,
             description=description,
             aliases=aliase,
@@ -100,7 +100,7 @@ class ExemplarNamedEntity:
             identifier : str | UUID = uuid4(),
             aliase: list[str] = [],
             gis_location : LocationDataModel | tuple[float, float] | None = None,
-    ) -> IndalekoNamedEntityDataModel:
+    ) -> IndalekoNamedEntityDataModel | None:
         """Add a location to the named entity."""
         if gis_location is None:
             latitiude, longitude, altitude = get_location_name_coordinates(name)
@@ -113,7 +113,7 @@ class ExemplarNamedEntity:
             )
         entity = IndalekoNamedEntityDataModel(
             name=name,
-            uuid=identifier,
+            entity_uuid=identifier,
             category=IndalekoNamedEntityType.location,
             description=description,
             gis_location=gis_location,
@@ -132,11 +132,17 @@ class ExemplarNamedEntity:
             identifier : str | UUID = uuid4(),
             aliase: list[str] = [],
             timestamp: datetime | AwareDatetime | None = datetime.now(UTC),
-    ) -> IndalekoNamedEntityDataModel:
+    ) -> IndalekoNamedEntityDataModel | None:
         """Add a date to the named entity."""
+        if isinstance(identifier, str):
+            try:
+                identifier = UUID(identifier)
+            except ValueError as error:
+                ic(f"Invalid UUID string: {identifier}. Error: {error}")
+                raise
         entity = IndalekoNamedEntityDataModel(
             name=name,
-            uuid=identifier,
+            entity_uuid=identifier,
             category=IndalekoNamedEntityType.date,
             description=description,
             timestamp=timestamp,
@@ -159,7 +165,7 @@ class ExemplarNamedEntity:
         """Add an event to the named entity."""
         entity = IndalekoNamedEntityDataModel(
             name=name,
-            uuid=identifier,
+            entity_uuid=identifier,
             category=IndalekoNamedEntityType.event,
             description=description,
             timestamp=timestamp,
@@ -181,7 +187,7 @@ class ExemplarNamedEntity:
         """Add a product to the named entity."""
         entity = IndalekoNamedEntityDataModel(
             name=name,
-            uuid=identifier,
+            entity_uuid=identifier,
             category=IndalekoNamedEntityType.product,
             description=description,
             aliases=aliase,
@@ -202,7 +208,7 @@ class ExemplarNamedEntity:
         """Add an item to the named entity."""
         entity = IndalekoNamedEntityDataModel(
             name=name,
-            uuid=identifier,
+            entity_uuid=identifier,
             category=IndalekoNamedEntityType.item,
             description=description,
             aliases=aliase,

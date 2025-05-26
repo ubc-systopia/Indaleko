@@ -21,12 +21,13 @@ from data_models.named_entity import IndalekoNamedEntityDataModel
 
 # pylint: enable=wrong-import-position
 
+class ExemplarAQLQuery(BaseModel):
+    """Data model for AQL queries."""
+    aql_query: str
+    bind_variables: dict[str, str | int] | None = None
+
 
 class ExemplarQuery(BaseModel):
     """Data model for exemplar queries."""
-    query: str
-    aql_query: str | None = None
-    aql_count_query: str | None = None
-    named_entities: list[IndalekoNamedEntityDataModel] | None = None
-    bind_variables: dict[str, str | int] | None = None
-    count_bind_variables: dict[str, str | int] | None = None
+    user_query: str
+    aql_queries: dict[str, ExemplarAQLQuery] | None = None

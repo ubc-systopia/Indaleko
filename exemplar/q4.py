@@ -132,11 +132,11 @@ class ExemplarQuery4:
     def get_exemplar_query() -> ExemplarQuery:
         """Get the query object."""
         return ExemplarQuery(
-            query=ExemplarQuery4.query,
-            aql_query=ExemplarQuery4.aql_query,
+            user_query=ExemplarQuery4.query,
+            aql_query_with_limits=ExemplarQuery4.aql_query,
             aql_count_query=ExemplarQuery4.aql_count_query,
             named_entities=ExemplarQuery4.named_entities,
-            bind_variables=ExemplarQuery4.bind_variables,
+            bind_variables_with_limits=ExemplarQuery4.bind_variables,
         )
 
 def main():
@@ -145,9 +145,9 @@ def main():
     exemplar_query = ExemplarQuery4.get_exemplar_query()
     ic(exemplar_query)
     result = TimedAQLExecute(
-        query=exemplar_query.aql_query,
+        query=exemplar_query.aql_query_with_limits,
         count_query=exemplar_query.aql_count_query,
-        bind_vars=exemplar_query.bind_variables,
+        bind_vars=exemplar_query.bind_variables_with_limits,
     )
     ic(result.get_data())
     ic(len(list(result.get_cursor())))

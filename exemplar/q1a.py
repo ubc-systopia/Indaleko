@@ -63,11 +63,11 @@ class ExemplarQuery1a:
     }
 
     exemplar_query = ExemplarQuery(
-        query=query,
-        aql_query=aql_query,
+        user_query=query,
+        aql_query_with_limits=aql_query,
         aql_count_query=aql_count_query,
         named_entities=named_entities,
-        bind_variables=bind_variables,
+        bind_variables_with_limits=bind_variables,
     )
     """Exemplar query object."""
 
@@ -75,11 +75,11 @@ class ExemplarQuery1a:
     def get_exemplar_query() -> ExemplarQuery:
         """Get the query object."""
         return ExemplarQuery(
-            query=ExemplarQuery1a.query,
-            aql_query=ExemplarQuery1a.aql_query,
+            user_query=ExemplarQuery1a.query,
+            aql_query_with_limits=ExemplarQuery1a.aql_query,
             aql_count_query=ExemplarQuery1a.aql_count_query,
             named_entities=ExemplarQuery1a.named_entities,
-            bind_variables=ExemplarQuery1a.bind_variables,
+            bind_variables_with_limits=ExemplarQuery1a.bind_variables,
         )
 
 def main():
@@ -88,9 +88,9 @@ def main():
     exemplar_query = ExemplarQuery1a.get_exemplar_query()
     ic(exemplar_query)
     result = TimedAQLExecute(
-        query=exemplar_query.aql_query,
+        query=exemplar_query.aql_query_with_limits,
         count_query=exemplar_query.aql_count_query,
-        bind_vars=exemplar_query.bind_variables,
+        bind_vars=exemplar_query.bind_variables_with_limits,
     )
     ic(result.get_data())
 
