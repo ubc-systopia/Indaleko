@@ -26,6 +26,7 @@ import sys
 
 from pathlib import Path
 
+from arango.collection import StandardCollection
 from icecream import ic
 
 
@@ -117,7 +118,7 @@ class IndalekoCollectionIndex(IndalekoSingleton):
         },
     }
 
-    def __init__(self, collection: str, **kwargs: dict) -> None:
+    def __init__(self, collection: str | StandardCollection, **kwargs: dict) -> None:
         """
         This class is used to create indices for IndalekoCollection objects.
 
@@ -127,7 +128,7 @@ class IndalekoCollectionIndex(IndalekoSingleton):
         kwargs: the parameters to pass to the add_index method of the collection.
             Note: these vary by index type.
         """
-        self.collection = collection
+        self.collection: StandardCollection = collection
         if kwargs.get("type") is None:
             raise ValueError("type is a required parameter")
         if kwargs.get("fields") is None:

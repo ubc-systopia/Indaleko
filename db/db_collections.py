@@ -166,6 +166,18 @@ class IndalekoDBCollections:
                     "type": "inverted",
                     "sparse": True,
                 },
+                "machine_uuid": {
+                    "fields": ["MachineUUID"],
+                    "unique": False,
+                    "type": "persistent",
+                    "sparse": True,
+                },
+                "inv_machine_uuid": {
+                    "fields": ["MachineUUID"],
+                    "unique": False,
+                    "type": "inverted",
+                    "sparse": True,
+                },
                 "persist_6b3f16ec-52d2-4e9b-afd0-e02a875ec6e6": { # Created
                     "fields": ["6b3f16ec-52d2-4e9b-afd0-e02a875ec6e6"],
                     "unique": False,
@@ -270,14 +282,16 @@ class IndalekoDBCollections:
                             "identity",
                         ],  # Changed
                         # Size for numeric range queries
-                        "Size": [],
+                        "Size": [
+                            "identity"
+                        ],
                         # Semantic Attributes (e.g., MIME type, file suffix)
                         "8aeb9b5a-3d08-4d1f-9921-0795343d9eb3": [
                             "text_en",
                             "identity",
                         ],  # MIME type
                         "f980b0c8-3d24-4a77-b985-5e945803991f": [
-                            "text_en"
+                            "text_en",
                             "identity",
                         ],  # File suffix
                         "MachineUUID" : [

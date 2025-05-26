@@ -162,6 +162,7 @@ class IndalekoCollection:
     def create_index(self, name, **kwargs: dict[str, Any]) -> "IndalekoCollection":
         """Create an index for the given collection."""
         self.indices[name] = IndalekoCollectionIndex(
+            name=name,
             collection=self._arangodb_collection,
             **kwargs,
         )

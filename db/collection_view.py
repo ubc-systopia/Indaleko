@@ -102,10 +102,18 @@ class IndalekoCollectionView:
                     properties=properties,
                 )
             except arango.exceptions.ViewGetError:
-                result = db.create_arangosearch_view(
-                    name=view_name,
-                    properties=properties,
-                )
+                try:
+                    result = db.create_arangosearch_view(
+                        name=view_name,
+                        properties=properties,
+                    )
+                except arango.exceptions.ViewCreateError as error:
+                    ic("\n*** Failed to create ArangoSearch view:", {
+                        "view_name": view_name,
+                        "status": "failure",
+                        "message": str(error),
+                        "properties": properties,
+                    }, "   ***\n")
         elif view_type == "search-alias":
             try:
                 db.view(name=view_name)

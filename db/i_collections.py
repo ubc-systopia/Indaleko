@@ -27,6 +27,7 @@ import sys
 from pathlib import Path
 
 import arango
+import arango.exceptions
 
 from icecream import ic
 
@@ -70,7 +71,7 @@ class IndalekoCollections(IndalekoSingleton):
         self.db_config.start()
         self.collections = {}
 
-        # Create or update collections
+        #  or update collections
         for name in IndalekoDBCollections.Collections.items():
             name = name[0]
             logging.debug("Processing collection %s", name)
@@ -165,8 +166,9 @@ class IndalekoCollections(IndalekoSingleton):
         ) in IndalekoDBCollections.Collections.items():
             # Skip collections without view definitions
             if "views" not in collection_def:
-                ic("skipping collection (no views)", collection_name)
                 continue
+
+            existing_views = [view["name"] for view in IndalekoDBConfig().get_arangodb().views()]
 
             # Process each view definition for this collection
             for view_def in collection_def["views"]:
@@ -178,18 +180,15 @@ class IndalekoCollections(IndalekoSingleton):
                     collection_name,
                 )
 
+                if view_name in existing_views:
+                    continue
+
                 # Skip if already processed
                 if view_name in created_views:
-                    ic("skipping view (already processed)", view_name)
                     continue
 
                 if (view_def.get("type") == "search-alias"):
                     """This needs to be created."""
-                    existing_views = IndalekoDBConfig().get_arangodb().views()
-                    if view_name in existing_views:
-                        ic("skipping view (already exists)", view_name)
-                        continue
-                    import arango.exceptions
                     try:
                         result = IndalekoDBConfig().get_arangodb().create_view(
                             name=view_name,
@@ -197,13 +196,16 @@ class IndalekoCollections(IndalekoSingleton):
                             properties=view_def["properties"],
                         )
                     except arango.exceptions.ViewCreateError as e:
-                        ic(f"Failed to create view {view_name}")
+                        ic(f"Failed to create view {view_name}, with properties {view_def['properties']} due to {e}")
                         ic(view_def["properties"])
-                        continue
-
+                        raise
+                    continue
 
                 # Create the view definition
-                fields_dict = {collection_name: view_def["fields"]}
+                try:
+                    fields_dict = {collection_name: view_def["fields"]}
+                except KeyError as e:
+                    ic(f"view_def is: {view_def} while creating for collection {collection_name}")
 
                 # Handle the case where fields are defined with specific analyzers per field
                 # Format: {"Field1": ["analyzer1", "analyzer2"], "Field2": ["analyzer3"]}  # noqa: ERA001
