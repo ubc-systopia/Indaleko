@@ -30,6 +30,7 @@ from typing import Any
 
 from arango import ArangoClient
 from arango.cursor import Cursor
+from arango.exceptions import AQLQueryExecuteError
 from icecream import ic
 
 
@@ -58,10 +59,9 @@ class TimedAQLExecute:
             self,
             *,
             db: IndalekoDBConfig | None = IndalekoDBConfig(),
+            description: str | None = None,
             query: str | None = None,
-            count_query: str | None = None,
             bind_vars: dict[str, Any] | None = None,
-            count_bind_vars: dict[str, Any] | None = None,
             threshold: float = 5.0,
             capture_explain: bool = True,
     ) -> None:
@@ -79,20 +79,15 @@ class TimedAQLExecute:
         if not isinstance(db, IndalekoDBConfig):
             raise TypeError("db must be an instance of IndalekoDBConfig")
         self._arango_client : ArangoClient = db.get_arangodb()
+        self._description = description or "Timed AQL Execute"
         self._query = query
-        self._count_query = count_query
         self._bind_vars = bind_vars
-        self._count_bind_vars = bind_vars
-        if count_bind_vars is not None:
-            ic('Override count_bind_vars', count_bind_vars)
-            self._count_bind_vars = count_bind_vars
-        ic('TimedExecute', self._count_bind_vars, count_bind_vars)
         self._threshold = threshold
         self._capture_explain = capture_explain
         self._log_data = {}
         self.execute()
 
-    def execute(self) -> list:
+    def execute(self) -> None:
         """
         Execute the AQL query and log performance metrics for slow queries.
 
@@ -110,7 +105,11 @@ class TimedAQLExecute:
         start_time = time.time()
 
         # Execute the query
-        self._cursor = execute_method(self._query, bind_vars=self._bind_vars)
+        try:
+            self._cursor = execute_method(self._query, bind_vars=self._bind_vars)
+        except AQLQueryExecuteError as error:
+            print(f"Error {error} executing AQL query: {self._query} with bind variables: {self._bind_vars}")
+            raise
 
         # Calculate execution time
         query_time = time.time() - start_time
@@ -126,10 +125,11 @@ class TimedAQLExecute:
                     sanitized_bind_vars[k] = v
 
             self._log_data = {
+                "bind_vars": sanitized_bind_vars,
                 "cursor": self._cursor,
+                "description": self._description,
                 "query_time": query_time,
                 "query": self._query,
-                "bind_vars": sanitized_bind_vars,
             }
 
             # Capture EXPLAIN data for slow queries if requested
@@ -143,20 +143,6 @@ class TimedAQLExecute:
                 if explain_data:
                     self._log_data["explain"] = explain_data
 
-        if self._count_query:
-            # Execute the count query
-            count_start_time = time.time()
-            ic(self._count_bind_vars)
-            count_cursor = execute_method(self._count_query, bind_vars=self._count_bind_vars)
-            count_result = list(count_cursor)
-            count_time = time.time() - count_start_time
-            ic(count_time)
-            # Add count result to log data
-            self._log_data["count"] = count_result[0]
-            self._log_data["count_time"] = count_time
-            self._log_data["count_query"] = self._count_query
-            self._log_data["count_bind_vars"] = sanitized_bind_vars
-            self._log_data["count_result"] = count_result
 
     def get_cursor(self) -> Cursor:
         """Return the cursor for the executed query."""

@@ -126,6 +126,7 @@ class IndalekoDBCollections:
     Indaleko_Objects_Text_View_Legacy = "ObjectsTextViewLegacy"
     Indaleko_Objects_MimeType_View = "ObjectsMimeTypeView"
     Indaleko_Objects_Timestamp_View = "ObjectsTimestampView"
+    Indaleko_Objects_Essential_View = "ObjectsEssentialView"
     Indaleko_Named_Entity_Text_View = "NamedEntityTextView"
     Indaleko_Activity_Text_View = "ActivityTextView"
     Indaleko_Entity_Equivalence_Text_View = "EntityEquivalenceTextView"
@@ -355,7 +356,51 @@ class IndalekoDBCollections:
                             },
                         ]
                     }
-                }
+                },
+                {
+                    "name": Indaleko_Objects_Essential_View,
+                    "type": "search-alias",
+                    "properties": {
+                        "indexes": [
+                            {
+                                "collection": Indaleko_Object_Collection,
+                                "index": "inv_3bdc4130-774f-4e99-914e-0bec9ee47aab",
+                            },
+                            {
+                                "collection": Indaleko_Object_Collection,
+                                "index": "inv_6b3f16ec-52d2-4e9b-afd0-e02a875ec6e6",
+                            },
+                            {
+                                "collection": Indaleko_Object_Collection,
+                                "index": "inv_8aeb9b5a-3d08-4d1f-9921-0795343d9eb3",
+                            },
+                            {
+                                "collection": Indaleko_Object_Collection,
+                                "index": "inv_434f7ac1-f71a-4cea-a830-e2ea9a47db5a",
+                            },
+                            {
+                                "collection": Indaleko_Object_Collection,
+                                "index" : "inv_581b5332-4d37-49c7-892a-854824f5d66f",
+                            },
+                            {
+                                "collection": Indaleko_Object_Collection,
+                                "index": "inv_bce15d05-d4fd-4d37-933f-ff6b4e5dde9d",
+                            },
+                            {
+                                "collection": Indaleko_Object_Collection,
+                                "index": "inv_machine_uuid",
+                            },
+                            {
+                                "collection": Indaleko_Object_Collection,
+                                "index": "inv_sizes",
+                            },
+                            {
+                                "collection": Indaleko_Object_Collection,
+                                "index": "inv_ObjectIdentifier",
+                            }
+                        ],
+                    },
+                },
             ],
         },
         Indaleko_Relationship_Collection: {

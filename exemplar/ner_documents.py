@@ -35,13 +35,34 @@ class ExemplarNamedEntity:
     """Build named entity data for exemplar."""
 
     @staticmethod
+    def lookup_entity_in_db(
+        entity_name: str,
+    ) -> IndalekoNamedEntityDataModel | None:
+        """Lookup an entity in the database."""
+        query = """
+            FOR entity IN @@collection
+                FILTER entity.name == @name OR @name IN entity.aliases
+                RETURN entity
+        """
+        bind_vars = {
+            "@collection": IndalekoDBCollections.Indaleko_Named_Entity_Collection,
+            "name": entity_name,
+        }
+        result = IndalekoDBConfig().get_arangodb().aql.execute(query, bind_vars=bind_vars)
+        result = list(result)
+        if len(result) == 0:
+            return None
+        ic(result)
+        return IndalekoNamedEntityDataModel(**result[0])
+
+    @staticmethod
     def add_entity_to_db(
             entity: IndalekoNamedEntityDataModel | dict[str, object],
     ) -> bool:
         """Add an entity to the database."""
         ner_collection = IndalekoDBConfig().get_collection(IndalekoDBCollections.Indaleko_Named_Entity_Collection)
         if isinstance(entity, dict):
-            entity = IndalekoNamedEntityDataModel(**entity)
+            entity = IndalekoNamedEntityDataModel(**entity) # type: ignore
         try:
             ner_collection.insert(entity.serialize())
             return True
@@ -58,6 +79,12 @@ class ExemplarNamedEntity:
             aliase: list[str] = [],
     ) -> IndalekoNamedEntityDataModel | None:
         """Add a person to the named entity."""
+        if isinstance(identifier, str):
+            try:
+                identifier = UUID(identifier)
+            except ValueError as error:
+                ic(f"Invalid UUID string: {identifier}. Error: {error}")
+                raise
         entity = IndalekoNamedEntityDataModel(
             name=name,
             entity_uuid=identifier,
@@ -78,8 +105,14 @@ class ExemplarNamedEntity:
             description: str | None,
             identifier : str | UUID = uuid4(),
             aliase: list[str] = [],
-    ) -> IndalekoNamedEntityDataModel:
+    ) -> IndalekoNamedEntityDataModel | None:
         """Add an organization to the named entity."""
+        if isinstance(identifier, str):
+            try:
+                identifier = UUID(identifier)
+            except ValueError as error:
+                ic(f"Invalid UUID string: {identifier}. Error: {error}")
+                raise
         entity = IndalekoNamedEntityDataModel(
             name=name,
             entity_uuid=identifier,

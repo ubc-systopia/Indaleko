@@ -1,10 +1,10 @@
-"""Exemplar Query 2"""
+"""Exemplar Query 2 - Documents edited on my phone."""
 
 import os
 import sys
 
-from pathlib import Path
 from typing import Self
+from pathlib import Path
 
 from icecream import ic
 
@@ -17,26 +17,25 @@ if os.environ.get("INDALEKO_ROOT") is None:
     sys.path.insert(0, str(current_path))
 
 # pylint: disable=wrong-import-position
+
+from typing import Self
+
+# pylint: disable=wrong-import-position
 from data_models.named_entity import IndalekoNamedEntityType
 from db.db_collections import IndalekoDBCollections
-from db.utils.query_performance import TimedAQLExecute
-from exemplar.exemplar_data_model import ExemplarAQLQuery, ExemplarQuery
+from exemplar.qbase import ExemplarQueryBase, exemplar_main
 from exemplar.reference_date import reference_date
-from storage.i_object import IndalekoObject
 from storage.known_attributes import KnownStorageAttributes
-
-
+from storage.i_object import IndalekoObject
 # pylint: enable=wrong-import-position
 
-default_limit = 50
 
-class ExemplarQuery2:
-    """Exemplar Query 2."""
+class ExemplarQuery2(ExemplarQueryBase):
+    """Exemplar Query 2 - Search for documents edited on my phone."""
 
-    def __init__(self: Self, *, limit: int | str = default_limit) -> None:
+    def __init__(self: Self, *, limit: int | str = ExemplarQueryBase.DEFAULT_LIMIT) -> None:
         """Initialize the exemplar query."""
-        self._query = 'Show me documents with "report" in their titles.'
-        self._limit = limit if isinstance(limit, int) else int(limit)  # type: ignore
+        # Define document formats before calling parent init
         self._doc_format = [
             "application/pdf",
             "application/msword",
@@ -58,105 +57,61 @@ class ExemplarQuery2:
             "application/x-bzip2",
             "application/x-gzip",
         ]
-        self._base_aql = """
+        super().__init__(limit=limit)
+
+    def _get_user_query(self: Self) -> str:
+        """Return the natural language query string."""
+        return 'Show me documents with "report" in their titles.'
+
+    def _get_base_aql(self: Self) -> str:
+        """Return the base AQL query without LIMIT or RETURN."""
+        return f"""
+            LET doc_format = {self._doc_format}
+            LET start_time = DATE_ROUND(DATE_SUBTRACT(@reference_time, 1, "week"), 1, "day")
+            // This simulates the results of files on the phone that have been edited in the
+            // last month of travel.
+            LET files_edited_on_phone = [
+                "458357ae-867c-41d3-b958-740f3bf14aaf",
+                "d5c15c99-82f4-48fb-8b75-1b63a0ccd427",
+                "02e1b2ac-7fbf-4e00-9d7b-c1191a080f31",
+                "5a4af4d3-ca7f-4b46-91d6-a21dc8312419",
+                "b8b471d6-9628-45c5-9a9e-ec8d85f4c3a6",
+                "efc73465-dea7-4ef2-85d3-b55f39937abc",
+                "a6ef9f99-4eae-4a38-9ede-c1959d388cd1"
+            ]
             FOR doc IN @@collection
                 SEARCH
-                (doc[@mime_type] IN {doc_format} OR doc[@semantic_mime_type] IN {doc_format})
-                FILTER doc.ObjectIdentifier in files_edited_on_phone AND
+                (doc[@mime_type] IN doc_format OR doc[@semantic_mime_type] IN doc_format)
+                AND doc.ObjectIdentifier in files_edited_on_phone AND
                     ((doc[@creation_timestamp] >= start_time AND doc[@creation_timestamp] <= @reference_time) OR
                         (doc[@modified_timestamp] >= start_time AND doc[@modified_timestamp] <= @reference_time))
             """
-        self._aql_query_limit = f"""
-            {self._base_aql}
-            LIMIT @limit
-            RETURN doc
-        """
-        self._aql_query_no_limit = f"""
-            {self._base_aql}
-            RETURN doc
-        """
-        self._aql_count_query = f"""
-            RETURN LENGTH(
-            {self._base_aql}
-            RETURN 1
-        )
-        """
-        self._named_entities = [
-            {
-                "name": "my phone",
-                "category": IndalekoNamedEntityType.item,
-            },
-        ]
-        self._base_bind_variables = {
-            "@collection": IndalekoDBCollections.Indaleko_Objects_Text_View,
+
+    def _get_base_bind_variables(self: Self) -> dict[str, object]:
+        """Return the base bind variables including @collection."""
+        return {
+            "@collection": IndalekoDBCollections.Indaleko_Objects_Essential_View,
             "modified_timestamp": IndalekoObject.MODIFICATION_TIMESTAMP,
             "creation_timestamp": IndalekoObject.CREATION_TIMESTAMP,
             "semantic_mime_type": KnownStorageAttributes.STORAGE_ATTRIBUTES_MIME_TYPE,
             "mime_type": KnownStorageAttributes.STORAGE_ATTRIBUTES_MIMETYPE_FROM_SUFFIX,  # windows GPS
             "reference_time": reference_date,   # Reference date for the query
         }
-        self._limit_bind_variables = self._base_bind_variables.copy()
-        self._limit_bind_variables["limit"] = self._limit if isinstance(limit, int) else int(limit)
-        self._no_limit_bind_variables = self._base_bind_variables
-        self._exemplar_query = self._get_exemplar_query()
-        self._named_entities = [
+
+    def _get_named_entities(self: Self) -> list:
+        """Return named entities used in this query."""
+        return [
             {
                 "name": "my phone",
                 "category": IndalekoNamedEntityType.item,
             },
         ]
 
-    def _get_exemplar_query(self: Self) -> ExemplarQuery:
-        """Get the query object."""
-        return ExemplarQuery(
-        user_query=self._query,
-        aql_queries = {
-            "with_limits": ExemplarAQLQuery(
-                aql_query=self._aql_query_limit,
-                bind_variables=self._limit_bind_variables, # type: ignore
-            ),
-            "no_limit": ExemplarAQLQuery(
-                aql_query=self._aql_query_no_limit,
-                bind_variables=self._no_limit_bind_variables, # type: ignore
-            ),
-            "count": ExemplarAQLQuery(
-                aql_query=self._aql_count_query,
-                bind_variables=self._no_limit_bind_variables, # type: ignore
-            ),
-        }
-    )
-
-    def get_exemplar_query(self: Self) -> ExemplarQuery | None:
-        """Get the exemplar query."""
-        if self._exemplar_query is None:
-            ic("Exemplar query is None.")
-            return None
-        return self._exemplar_query
 
 def main():
     """Main function for testing functionality."""
-    # Example usage
-    exemplar_query: ExemplarQuery | None = ExemplarQuery2().get_exemplar_query()
-    if exemplar_query is None:
-        ic("Exemplar query is None.")
-        return
-    result = {}
-    for key, value in exemplar_query.aql_queries.items(): # type: ignore - this is not going to be None
-        result[key] = TimedAQLExecute(
-            description=f"{exemplar_query.user_query} - {key}",
-            query=value.aql_query,
-            bind_vars=value.bind_variables,
-        )
-    for key, timed_query in result.items():
-        data = timed_query.get_data()
-        ic(f"Query: {data['description']} (type {key})")
-        results_cursor = list(timed_query.get_cursor())
-        ic(f"Number of results: {len(results_cursor)}")
-        if len(results_cursor) == 1:
-            ic(f"Result: {results_cursor[0]}")
-        query_time = data.get("query_time")
-        if query_time is not None:
-            ic(f"Query time: {query_time} seconds")
+    exemplar_main(ExemplarQuery2)
+
 
 if __name__ == "__main__":
     main()

@@ -57,7 +57,7 @@ class IndalekoNamedEntityType(str, Enum):
 class IndalekoNamedEntityDataModel(IndalekoBaseModel):
     """Data model for named entities."""
     name: str
-    uuid: UUID = uuid4()
+    entity_uuid: UUID = uuid4()
     category: IndalekoNamedEntityType
     description: str | None = None
     gis_location: LocationDataModel | None = None  # GIS location for places
@@ -101,7 +101,7 @@ example_entities = NamedEntityCollection(
             name="Tony",
             category=IndalekoNamedEntityType.person,
             description="The user",
-            uuid=UUID("981a3522-c394-40b0-a82c-a9d7fa1f7e01"),
+            entity_uuid=UUID("981a3522-c394-40b0-a82c-a9d7fa1f7e01"),
         ),
         IndalekoNamedEntityDataModel(
             name="Paris",
@@ -112,13 +112,13 @@ example_entities = NamedEntityCollection(
                 timestamp=datetime.now(UTC),
                 latitude=48.8566,
                 longitude=2.3522,
-            ),
+            ), # type: ignore
         ),
         IndalekoNamedEntityDataModel(
             name="Laptop",
             category=IndalekoNamedEntityType.item,
             description="User's personal laptop",
-            device_id="3dd1f5f6-1bd1-4822-864a-7470eeb8eebc",
+            device_id=UUID("3dd1f5f6-1bd1-4822-864a-7470eeb8eebc"),
         ),
     ],
 )

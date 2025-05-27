@@ -368,11 +368,11 @@ build_storage_activity_documents()
 
 def run_aql_query(query : ExemplarQuery) -> None:
     """Run the AQL query."""
-    ic(query.aql_query, query.bind_variables)
+    ic(query.aql_query_with_limits, query.bind_variables_with_limits)
     timed_aql = TimedAQLExecute(
-        query=query.aql_query,
+        query=query.aql_query_with_limits,
         count_query=query.aql_count_query,
-        bind_vars=query.bind_variables,
+        bind_vars=query.bind_variables_with_limits,
     )
     cursor = timed_aql.get_cursor()
     results = list(cursor)
@@ -380,7 +380,7 @@ def run_aql_query(query : ExemplarQuery) -> None:
     if len(results) > 49 and query.aql_count_query:
         timed_query = TimedAQLExecute(
             query=query.aql_count_query,
-            bind_vars=query.bind_variables,
+            bind_vars=query.bind_variables_with_limits,
         )
         cursor = timed_query.get_cursor()
         count = list(cursor)[0]
